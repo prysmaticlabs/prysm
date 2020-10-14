@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -69,6 +70,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
 		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
+	// prevRoot is used to ensure that returned chains are strictly linear for singular steps.
 	var prevRoot [32]byte
 	for startSlot <= endReqSlot {
 		if err := s.rateLimiter.validateRequest(stream, allowedBlocksPerSecond); err != nil {
@@ -83,13 +85,19 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			return err
 		}
 
-		if err := s.writeBlockRangeToStream(ctx, startSlot, endSlot, m.Step, stream); err != nil {
+		err := s.writeBlockRangeToStream(ctx, startSlot, endSlot, m.Step, &prevRoot, stream)
+		if err != nil && err != errInvalidParent {
 			return err
 		}
-
+		// Reduce capacity of peer in the rate limiter first.
 		// Decrease allowed blocks capacity by the number of streamed blocks.
 		if startSlot <= endSlot {
 			s.rateLimiter.add(stream, int64(1+(endSlot-startSlot)/m.Step))
+		}
+		// Exit in the event we have a disjoint chain to
+		// return.
+		if err == errInvalidParent {
+			break
 		}
 
 		// Recalculate start and end slots for the next batch to be returned to the remote peer.
@@ -155,34 +163,27 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		return err
 	}
 	blks, roots = s.sortBlocksAndRoots(blks, roots)
-	for i, b := range blks {
+
+	blks, err = s.filterBlocks(ctx, blks, roots, prevRoot, step, startSlot)
+	if err != nil && err != errInvalidParent {
+		s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+	for _, b := range blks {
 		if b == nil || b.Block == nil {
 			continue
 		}
-		blk := b.Block
-
-		// Check that the block is valid according to the request and part of the canonical chain.
-		isRequestedSlotStep := (blk.Slot-startSlot)%step == 0
-		if isRequestedSlotStep {
-			canonical, err := s.chain.IsCanonical(ctx, roots[i])
-			if err != nil {
-				log.WithError(err).Debug("Failed to determine canonical block")
-				s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
-				traceutil.AnnotateError(span, err)
-				return err
-			}
-			if !canonical {
-				continue
-			}
-			if err := s.chunkWriter(stream, b); err != nil {
-				log.WithError(err).Debug("Failed to send a chunked response")
-				s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
-				traceutil.AnnotateError(span, err)
-				return err
-			}
+		if chunkErr := s.chunkWriter(stream, b); chunkErr != nil {
+			log.WithError(chunkErr).Debug("Failed to send a chunked response")
+			s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+			traceutil.AnnotateError(span, chunkErr)
+			return chunkErr
 		}
+
 	}
-	return nil
+	// Return error in the event we have an invalid parent.
+	return err
 }
 
 func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
@@ -214,6 +215,37 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 		return errors.New(reqError)
 	}
 	return nil
+}
+
+// filters all the provided blocks to ensure they are canonical
+// and are strictly linear.
+func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
+	step, startSlot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+
+	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
+
+	for i, b := range blks {
+		isRequestedSlotStep := (b.Block.Slot-startSlot)%step == 0
+		isCanonical, err := s.chain.IsCanonical(ctx, roots[i])
+		if err != nil {
+			return nil, err
+		}
+		parentValid := *prevRoot != [32]byte{}
+		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block.ParentRoot)
+		isSingular := step == 1
+		if isRequestedSlotStep && isCanonical {
+			// Exit early if our valid block is non linear.
+			if parentValid && isSingular && !isLinear {
+				return newBlks, errInvalidParent
+			}
+			newBlks = append(newBlks, blks[i])
+			// Set the previous root as the
+			// newly added block's root
+			currRoot := roots[i]
+			prevRoot = &currRoot
+		}
+	}
+	return newBlks, nil
 }
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {

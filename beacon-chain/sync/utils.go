@@ -1,12 +1,10 @@
 package sync
 
 import (
-	"context"
 	"errors"
 	"sort"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // A type to represent beacon blocks and roots which have methods
@@ -73,23 +71,4 @@ func (s *Service) sortBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][3
 	}
 	sort.Sort(obj)
 	return obj.blks, obj.roots
-}
-
-func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
-	step, startSlot uint64) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
-
-	parentRoot := *prevRoot
-	for i, b := range blks {
-		isRequestedSlotStep := (b.Block.Slot-startSlot)%step == 0
-		isCanonical, err := s.chain.IsCanonical(ctx, roots[i])
-		if err != nil {
-			return nil, nil, err
-		}
-		parentValid := parentRoot != [32]byte{}
-		isLinear := parentRoot == bytesutil.ToBytes32(b.Block.ParentRoot)
-		if isRequestedSlotStep && isCanonical {
-
-		}
-	}
-
 }
