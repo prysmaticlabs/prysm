@@ -111,14 +111,6 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "max_cover",
 	}
-	disableNewBeaconStateLocks = &cli.BoolFlag{
-		Name:  "disable-new-beacon-state-locks",
-		Usage: "Disable new beacon state locking",
-	}
-	initSyncVerbose = &cli.BoolFlag{
-		Name:  "init-sync-verbose",
-		Usage: "Enable logging every processed block during initial syncing.",
-	}
 	enableBlst = &cli.BoolFlag{
 		Name:  "blst",
 		Usage: "Enable new BLS library, blst, from Supranational",
@@ -208,13 +200,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
-	initSyncVerbose,
 	disableFinalizedDepositsCache,
 	enableBlst,
 	enableEth1DataMajorityVote,

@@ -31,8 +31,6 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	// State locks
-	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
 	// Testnet Flags.
 	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the Altona testnet.
 	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the Onyx testnet.
@@ -56,7 +54,6 @@ type Flags struct {
 	DontPruneStateStartUp               bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	WaitForSynced                       bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	EnableAccountsV2                    bool // EnableAccountsV2 for Prysm validator clients.
-	InitSyncVerbose                     bool // InitSyncVerbose logs every processed block during initial syncing.
 	EnableFinalizedDepositsCache        bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
 	EnableEth1DataMajorityVote          bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
@@ -217,15 +214,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
 
-	cfg.NewBeaconStateLocks = true
-	if ctx.Bool(disableNewBeaconStateLocks.Name) {
-		log.Warn("Disabling new beacon state locks")
-		cfg.NewBeaconStateLocks = false
-	}
-	if ctx.Bool(initSyncVerbose.Name) {
-		log.Warn("Logging every processed block during initial syncing.")
-		cfg.InitSyncVerbose = true
-	}
 	cfg.EnableFinalizedDepositsCache = true
 	if ctx.Bool(disableFinalizedDepositsCache.Name) {
 		log.Warn("Disabling finalized deposits cache")
