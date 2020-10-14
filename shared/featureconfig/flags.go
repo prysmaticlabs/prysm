@@ -77,23 +77,9 @@ var (
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
 			"transmitting a slashable offence over the network.",
 	}
-	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
-		Name:  "disable-strict-attestation-pubsub-verification",
-		Usage: "Disable strict signature verification of attestations in pubsub. See PR 4782 for details.",
-	}
 	disableUpdateHeadPerAttestation = &cli.BoolFlag{
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
-	}
-	disableDomainDataCacheFlag = &cli.BoolFlag{
-		Name: "disable-domain-data-cache",
-		Usage: "Disable caching of domain data requests per epoch. This feature reduces the total " +
-			"calls to the beacon node for each assignment.",
-	}
-	enableStateGenSigVerify = &cli.BoolFlag{
-		Name: "enable-state-gen-sig-verify",
-		Usage: "Enable signature verification for state gen. This feature increases the cost to generate a historical state," +
-			"the resulting state is signature verified.",
 	}
 	checkHeadState = &cli.BoolFlag{
 		Name:  "check-head-state",
@@ -116,10 +102,6 @@ var (
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
 	}
-	disableReduceAttesterStateCopy = &cli.BoolFlag{
-		Name:  "disable-reduce-attester-state-copy",
-		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -132,10 +114,6 @@ var (
 	disableNewBeaconStateLocks = &cli.BoolFlag{
 		Name:  "disable-new-beacon-state-locks",
 		Usage: "Disable new beacon state locking",
-	}
-	disableBatchBlockVerify = &cli.BoolFlag{
-		Name:  "disable-batch-block-verify",
-		Usage: "Disable full signature verification of blocks in batches instead of singularly.",
 	}
 	initSyncVerbose = &cli.BoolFlag{
 		Name:  "init-sync-verbose",
@@ -188,7 +166,6 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
-	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
@@ -223,15 +200,12 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	cacheFilteredBlockTreeFlag,
-	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
-	enableStateGenSigVerify,
 	checkHeadState,
 	disableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	disableNewBeaconStateLocks,
@@ -240,7 +214,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
-	disableBatchBlockVerify,
 	initSyncVerbose,
 	disableFinalizedDepositsCache,
 	enableBlst,
@@ -254,7 +227,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
-	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",

@@ -582,10 +582,6 @@ func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot u
 // is very rare, a validator should check these data every epoch to be sure the validator is
 // participating on the correct fork version.
 func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
-	if !featureconfig.Get().EnableDomainDataCache {
-		return
-	}
-
 	for _, d := range [][]byte{
 		params.BeaconConfig().DomainRandao[:],
 		params.BeaconConfig().DomainBeaconAttester[:],
@@ -611,10 +607,8 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 
 	key := strings.Join([]string{strconv.FormatUint(req.Epoch, 10), hex.EncodeToString(req.Domain)}, ",")
 
-	if featureconfig.Get().EnableDomainDataCache {
-		if val, ok := v.domainDataCache.Get(key); ok {
-			return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
-		}
+	if val, ok := v.domainDataCache.Get(key); ok {
+		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
 	}
 
 	res, err := v.validatorClient.DomainData(ctx, req)
@@ -622,9 +616,7 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 		return nil, err
 	}
 
-	if featureconfig.Get().EnableDomainDataCache {
-		v.domainDataCache.Set(key, proto.Clone(res), 1)
-	}
+	v.domainDataCache.Set(key, proto.Clone(res), 1)
 
 	return res, nil
 }
