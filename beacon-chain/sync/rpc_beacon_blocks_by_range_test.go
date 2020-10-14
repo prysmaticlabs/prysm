@@ -162,18 +162,21 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		Count:     4,
 	}
 
+	prevRoot := [32]byte{}
 	// Populate the database with blocks that would match the request.
 	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i++ {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.Slot = i
+		blk.Block.ParentRoot = prevRoot[:]
+		rt, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
 
 		// Save genesis block
 		if i == 0 {
-			rt, err := blk.Block.HashTreeRoot()
-			require.NoError(t, err)
 			require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), rt))
 		}
 		require.NoError(t, d.SaveBlock(context.Background(), blk))
+		prevRoot = rt
 	}
 
 	r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
@@ -211,14 +214,21 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	hook := logTest.NewGlobal()
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
+		parentRoot := [32]byte{}
 		for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
 			block := testutil.NewBeaconBlock()
 			block.Block.Slot = i
+			if req.Step == 1 {
+				block.Block.ParentRoot = parentRoot[:]
+			}
 			require.NoError(t, d.SaveBlock(context.Background(), block))
+			rt, err := block.Block.HashTreeRoot()
+			require.NoError(t, err)
+			parentRoot = rt
 		}
 	}
 	sendRequest := func(p1, p2 *p2ptest.TestP2P, r *Service,
-		req *pb.BeaconBlocksByRangeRequest, validateBlocks bool) error {
+		req *pb.BeaconBlocksByRangeRequest, validateBlocks bool, success bool) error {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		pcl := protocol.ID("/testing")
@@ -228,6 +238,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 				return
 			}
 			for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+				if !success {
+					continue
+				}
 				expectSuccess(t, stream)
 				res := testutil.NewBeaconBlock()
 				assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -267,7 +280,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		saveBlocks(req)
 
 		hook.Reset()
-		assert.NoError(t, sendRequest(p1, p2, r, req, true))
+		assert.NoError(t, sendRequest(p1, p2, r, req, true, true))
 		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
@@ -297,7 +310,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 
 		hook.Reset()
 		for i := 0; i < p2.Peers().Scorers().BadResponsesScorer().Params().Threshold; i++ {
-			err := sendRequest(p1, p2, r, req, false)
+			err := sendRequest(p1, p2, r, req, false, true)
 			assert.ErrorContains(t, rateLimitedError, err)
 		}
 		// Make sure that we were blocked indeed.
@@ -329,14 +342,14 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 
 		hook.Reset()
 		for i := 0; i < flags.Get().BlockBatchLimitBurstFactor; i++ {
-			assert.NoError(t, sendRequest(p1, p2, r, req, true))
+			assert.NoError(t, sendRequest(p1, p2, r, req, true, false))
 		}
 		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
 
 		// One more request should result in overflow.
 		hook.Reset()
 		for i := 0; i < p2.Peers().Scorers().BadResponsesScorer().Params().Threshold; i++ {
-			err := sendRequest(p1, p2, r, req, false)
+			err := sendRequest(p1, p2, r, req, false, false)
 			assert.ErrorContains(t, rateLimitedError, err)
 		}
 		require.LogsContain(t, hook, "Disconnecting bad peer")
