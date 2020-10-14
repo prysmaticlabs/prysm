@@ -24,9 +24,7 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
-				flags.AccountPasswordFileFlag,
 				flags.NumAccountsFlag,
-				flags.DeprecatedPasswordsDirFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.MedallaTestnet,
@@ -50,7 +48,6 @@ this command outputs a deposit data string which is required to become a validat
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
-				flags.AccountPasswordFileFlag,
 				flags.DeletePublicKeysFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
@@ -82,7 +79,6 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
-				flags.DeprecatedPasswordsDirFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
@@ -138,7 +134,6 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
-				flags.DeprecatedPasswordsDirFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)

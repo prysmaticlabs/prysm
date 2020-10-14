@@ -151,7 +151,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, blkRoot
 	if rate == 0 {
 		rate = 1
 	}
-	if featureconfig.Get().InitSyncVerbose || helpers.IsEpochStart(blk.Slot) {
+	if helpers.IsEpochStart(blk.Slot) {
 		timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
 		log.WithFields(logrus.Fields{
 			"peers":           len(s.p2p.Peers().Connected()),

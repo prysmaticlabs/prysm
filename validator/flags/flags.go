@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,8 +15,6 @@ const (
 	// WalletDefaultDirName for accounts-v2.
 	WalletDefaultDirName = "prysm-wallet-v2"
 )
-
-var log = logrus.WithField("prefix", "flags")
 
 var (
 	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
@@ -120,55 +117,11 @@ var (
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
 		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200",
 	}
-	// KeyManager specifies the key manager to use.
-	KeyManager = &cli.StringFlag{
-		Name:  "keymanager",
-		Usage: "The keymanger to use (unencrypted, interop, keystore, wallet)",
-		Value: "",
-	}
-	// KeyManagerOpts specifies the key manager options.
-	KeyManagerOpts = &cli.StringFlag{
-		Name:  "keymanageropts",
-		Usage: "The options for the keymanger, either a JSON string or path to same",
-		Value: "",
-	}
-	// KeystorePathFlag defines the location of the keystore directory for a validator's account.
-	KeystorePathFlag = &cli.StringFlag{
-		Name:  "keystore-path",
-		Usage: "Path to the desired keystore directory",
-	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8081,
-	}
-	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
-	PasswordFlag = &cli.StringFlag{
-		Name:  "password",
-		Usage: "String value of the password for your validator private keys",
-	}
-	// SourceDirectories defines the locations of the source validator databases while managing validators.
-	SourceDirectories = &cli.StringFlag{
-		Name:  "source-dirs",
-		Usage: "The directory of source validator databases",
-	}
-	// SourceDirectory defines the location of the source validator database while managing validators.
-	SourceDirectory = &cli.StringFlag{
-		Name:  "source-dir",
-		Usage: "The directory of the source validator database",
-	}
-	// TargetDirectory defines the location of the target validator database while managing validators.
-	TargetDirectory = &cli.StringFlag{
-		Name:  "target-dir",
-		Usage: "The directory of the target validator database",
-	}
-	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
-	// alternative from launching the validator client from decrypting a keystore directory.
-	UnencryptedKeysFlag = &cli.StringFlag{
-		Name:  "unencrypted-keys",
-		Usage: "Filepath to a JSON file of unencrypted validator keys for easier launching of the validator client",
-		Value: "",
 	}
 	// WalletDirFlag defines the path to a wallet directory for Prysm accounts-v2.
 	WalletDirFlag = &cli.StringFlag{
@@ -311,32 +264,6 @@ var (
 		Value: 4242,
 	}
 )
-
-// Deprecated flags list.
-const deprecatedUsage = "DEPRECATED. DO NOT USE."
-
-var (
-	// DeprecatedPasswordsDirFlag is a deprecated flag.
-	DeprecatedPasswordsDirFlag = &cli.StringFlag{
-		Name:   "passwords-dir",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-)
-
-// DeprecatedFlags is a slice holding all of the validator client's deprecated flags.
-var DeprecatedFlags = []cli.Flag{
-	DeprecatedPasswordsDirFlag,
-}
-
-// ComplainOnDeprecatedFlags logs out a error log if a deprecated flag is used, letting the user know it will be removed soon.
-func ComplainOnDeprecatedFlags(ctx *cli.Context) {
-	for _, f := range DeprecatedFlags {
-		if ctx.IsSet(f.Names()[0]) {
-			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
-		}
-	}
-}
 
 // DefaultValidatorDir returns OS-specific default validator directory.
 func DefaultValidatorDir() string {

@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
@@ -69,7 +68,6 @@ type validator struct {
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
-	keyManager                         keymanager.KeyManager
 	node                               ethpb.NodeClient
 	keyManagerV2                       v2keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
@@ -243,13 +241,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
-	var validatingKeys [][48]byte
-	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
-	} else {
-		validatingKeys, err = v.keyManager.FetchValidatingKeys()
-	}
+	validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating keys")
 	}
@@ -389,12 +381,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
-	var validatingKeys [][48]byte
-	if featureconfig.Get().EnableAccountsV2 {
-		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
-	} else {
-		validatingKeys, err = v.keyManager.FetchValidatingKeys()
-	}
+	validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}
