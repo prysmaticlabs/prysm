@@ -60,6 +60,11 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 			want:  false,
 		},
 		{
+			name:  "erroneous topic that has the correct amount of slashes",
+			topic: "hey, want to foobar?////",
+			want:  false,
+		},
+		{
 			name:  "bad prefix",
 			topic: fmt.Sprintf("/eth3/%x/foobar", currentFork) + validProtocolSuffix,
 			want:  false,
@@ -109,6 +114,13 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_subscriptionFilter_CanSubscribe_uninitialized(t *testing.T) {
+	sf := &subscriptionFilter{
+		initialized: false,
+	}
+	require.False(t, sf.CanSubscribe("foo"))
 }
 
 func Test_scanfcheck(t *testing.T) {
