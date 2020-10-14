@@ -29,7 +29,6 @@ var WalletCommands = &cli.Command{
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
-				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -53,7 +52,6 @@ var WalletCommands = &cli.Command{
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
-				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -76,7 +74,6 @@ var WalletCommands = &cli.Command{
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
-				flags.DeprecatedPasswordsDirFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)

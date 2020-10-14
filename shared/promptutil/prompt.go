@@ -148,12 +148,12 @@ func InputPassword(
 	for !hasValidPassword {
 		password, err = PasswordPrompt(promptText, passwordValidator)
 		if err != nil {
-			return "", fmt.Errorf("could not read password: %v", err)
+			return "", fmt.Errorf("could not read password: %w", err)
 		}
 		if shouldConfirmPassword {
 			passwordConfirmation, err := PasswordPrompt(confirmText, passwordValidator)
 			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
+				return "", fmt.Errorf("could not read password confirmation: %w", err)
 			}
 			if password != passwordConfirmation {
 				log.Error("Passwords do not match")
