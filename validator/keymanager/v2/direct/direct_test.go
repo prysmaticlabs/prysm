@@ -145,6 +145,39 @@ func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 }
 
+func TestDirectKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
+	password := "secretPassw0rd$1999"
+	wallet := &mock.Wallet{
+		Files:          make(map[string]map[string][]byte),
+		WalletPassword: password,
+	}
+	dr := &Keymanager{
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
+	}
+	// First, generate accounts and their keystore.json files.
+	ctx := context.Background()
+	numAccounts := 10
+	wantedPrivateKeys := make([][32]byte, numAccounts)
+	for i := 0; i < numAccounts; i++ {
+		privKey := bls.RandKey()
+		privKeyData := privKey.Marshal()
+		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
+		wantedPrivateKeys[i] = bytesutil.ToBytes32(privKeyData)
+		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pubKey[:])
+		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, privKeyData)
+	}
+	require.NoError(t, dr.initializeKeysCachesFromKeystore())
+	privateKeys, err := dr.FetchValidatingPrivateKeys(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, numAccounts, len(privateKeys))
+	// FetchValidatingPrivateKeys is also used in generating the output of account list
+	// therefore the results must be in the same order as the order in which the accounts were created
+	for i, key := range wantedPrivateKeys {
+		assert.Equal(t, key, privateKeys[i])
+	}
+}
+
 func TestDirectKeymanager_Sign(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{

@@ -360,9 +360,11 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
-func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][]byte, error) {
+func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
 	dr.lock.RLock()
-	privKeys := make([][]byte, len(dr.secretKeysCache))
+	defer dr.lock.RUnlock()
+
+	privKeys := make([][32]byte, len(dr.secretKeysCache))
 	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
@@ -372,9 +374,8 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][]byte,
 		if !ok {
 			return nil, errors.New("Could not fetch private key")
 		}
-		privKeys[i] = seckey.Marshal()
+		privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
 	}
-	dr.lock.RUnlock()
 	return privKeys, nil
 }
 
@@ -393,15 +394,15 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // FetchWithdrawalPrivateKeys fetches the list of withdrawal private keys from the keymanager.
-func (dr *Keymanager) FetchWithdrawalPrivateKeys(ctx context.Context) ([][]byte, error) {
-	privKeys := make([][]byte, 0)
+func (dr *Keymanager) FetchWithdrawalPrivateKeys(ctx context.Context) ([][32]byte, error) {
+	privKeys := make([][32]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
 		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", i)
 		}
-		privKeys = append(privKeys, withdrawalKey.Marshal())
+		privKeys = append(privKeys, bytesutil.ToBytes32(withdrawalKey.Marshal()))
 	}
 	return privKeys, nil
 }

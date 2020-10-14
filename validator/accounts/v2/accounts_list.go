@@ -96,7 +96,7 @@ func listDirectKeymanagerAccounts(
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
-	var privateKeys [][]byte
+	var privateKeys [][32]byte
 	if showPrivateKeys {
 		privateKeys, err = keymanager.FetchValidatingPrivateKeys(ctx)
 		if err != nil {
@@ -137,7 +137,7 @@ func listDerivedKeymanagerAccounts(
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
-	var validatingPrivateKeys [][]byte
+	var validatingPrivateKeys [][32]byte
 	if showPrivateKeys {
 		validatingPrivateKeys, err = keymanager.FetchValidatingPrivateKeys(ctx)
 		if err != nil {
@@ -148,7 +148,7 @@ func listDerivedKeymanagerAccounts(
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
-	var withdrawalPrivateKeys [][]byte
+	var withdrawalPrivateKeys [][32]byte
 	if showPrivateKeys {
 		withdrawalPrivateKeys, err = keymanager.FetchWithdrawalPrivateKeys(ctx)
 		if err != nil {

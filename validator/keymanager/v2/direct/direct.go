@@ -336,9 +336,9 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // FetchValidatingPrivateKeys fetches the list of private keys from the secret keys cache
-func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][]byte, error) {
+func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
 	dr.lock.RLock()
-	privKeys := make([][]byte, len(dr.secretKeysCache))
+	privKeys := make([][32]byte, len(dr.secretKeysCache))
 	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
@@ -348,7 +348,7 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][]byte,
 		if !ok {
 			return nil, errors.New("Could not fetch private key")
 		}
-		privKeys[i] = seckey.Marshal()
+		privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
 	}
 	dr.lock.RUnlock()
 	return privKeys, nil
