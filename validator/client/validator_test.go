@@ -453,7 +453,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: nil,
+			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -769,36 +769,15 @@ func TestSaveProtections_OK(t *testing.T) {
 }
 
 func TestRolesAt_OK(t *testing.T) {
-	v, m, _, finish := setup(t)
+	v, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	sks := make([]bls.SecretKey, 4)
-	sks[0] = bls.RandKey()
-	sks[1] = bls.RandKey()
-	sks[2] = bls.RandKey()
-	sks[3] = bls.RandKey()
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   1,
-				PublicKey:      sks[0].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				ProposerSlots:  []uint64{1},
-				PublicKey:      sks[1].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   2,
-				PublicKey:      sks[2].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				AttesterSlot:   1,
-				ProposerSlots:  []uint64{1, 5},
-				PublicKey:      sks[3].PublicKey().Marshal(),
+				PublicKey:      validatorKey.PublicKey().Marshal(),
 			},
 		},
 	}
@@ -808,49 +787,23 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1])
-	assert.Equal(t, ValidatorRole(roleAggregator), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
-	v, m, _, finish := setup(t)
+	v, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	sks := make([]bls.SecretKey, 3)
-	sks[0] = bls.RandKey()
-	sks[1] = bls.RandKey()
-	sks[2] = bls.RandKey()
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
 				ProposerSlots:  []uint64{0},
-				PublicKey:      sks[0].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				AttesterSlot:   4,
-				ProposerSlots:  nil,
-				PublicKey:      sks[1].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   3,
-				ProposerSlots:  nil,
-				PublicKey:      sks[2].PublicKey().Marshal(),
+				PublicKey:      validatorKey.PublicKey().Marshal(),
 			},
 		},
 	}
@@ -863,9 +816,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)
 
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
