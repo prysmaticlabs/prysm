@@ -132,7 +132,7 @@ func (is *infostream) handleConnection() error {
 	go func() {
 		for {
 			msg, err := is.stream.Recv()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return
 			}
 			if err != nil {
