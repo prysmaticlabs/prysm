@@ -61,7 +61,7 @@ type Keymanager struct {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
+func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	// Load the client certificates.
 	if cfg.Opts.RemoteCertificate == nil {
 		return nil, errors.New("certificates are required")
@@ -134,7 +134,7 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 }
 
 // MarshalOptionsFile for the keymanager.
-func MarshalOptionsFile(ctx context.Context, cfg *KeymanagerOpts) ([]byte, error) {
+func MarshalOptionsFile(_ context.Context, cfg *KeymanagerOpts) ([]byte, error) {
 	return json.MarshalIndent(cfg, "", "\t")
 }
 

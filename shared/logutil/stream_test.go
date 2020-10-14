@@ -39,9 +39,9 @@ type fakeNetConn struct {
 func (c fakeNetConn) Close() error                       { return nil }
 func (c fakeNetConn) LocalAddr() net.Addr                { return localAddr }
 func (c fakeNetConn) RemoteAddr() net.Addr               { return remoteAddr }
-func (c fakeNetConn) SetDeadline(t time.Time) error      { return nil }
-func (c fakeNetConn) SetReadDeadline(t time.Time) error  { return nil }
-func (c fakeNetConn) SetWriteDeadline(t time.Time) error { return nil }
+func (c fakeNetConn) SetDeadline(_ time.Time) error      { return nil }
+func (c fakeNetConn) SetReadDeadline(_ time.Time) error  { return nil }
+func (c fakeNetConn) SetWriteDeadline(_ time.Time) error { return nil }
 
 type testResponseWriter struct {
 	brw *bufio.ReadWriter

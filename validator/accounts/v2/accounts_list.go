@@ -155,7 +155,7 @@ func listDerivedKeymanagerAccounts(
 			return errors.Wrap(err, "could not fetch withdrawal private keys")
 		}
 	}
-	nextAccountNumber := keymanager.NextAccountNumber(ctx)
+	nextAccountNumber := keymanager.NextAccountNumber()
 	currentAccountNumber := nextAccountNumber
 	if nextAccountNumber > 0 {
 		currentAccountNumber--

@@ -43,7 +43,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
 	bootnodeENR := components.StartBootnode(t)
 	components.StartBeaconNodes(t, config, bootnodeENR)
-	components.StartValidatorClients(t, config, keystorePath)
+	components.StartValidatorClients(t, config)
 	defer helpers.LogOutput(t, config)
 	if config.UsePprof {
 		defer func() {

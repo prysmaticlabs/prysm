@@ -118,7 +118,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200",
+		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200",
 	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
@@ -209,7 +209,7 @@ var (
 		Value: false,
 	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
-	NumAccountsFlag = &cli.Int64Flag{
+	NumAccountsFlag = &cli.IntFlag{
 		Name:  "num-accounts",
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,
@@ -297,6 +297,18 @@ var (
 		Name:  "web",
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
+	}
+	// WebHostFlag specifies the host name to bind the Prysm web UI server.
+	WebHostFlag = &cli.StringFlag{
+		Name:  "web-host",
+		Usage: "The host address which to serve the Prysm web UI",
+		Value: "127.0.0.1",
+	}
+	// WebPortFlag specifies the port number to bind the Prysm web UI server.
+	WebPortFlag = &cli.Uint64Flag{
+		Name:  "web-port",
+		Usage: "The host port which to serve the Prysm web UI",
+		Value: 4242,
 	}
 )
 

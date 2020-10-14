@@ -17,7 +17,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = shared.Service(&ValidatorService{})
+var _ shared.Service = (*ValidatorService)(nil)
 var validatorKey *keystore.Key
 var validatorPubKey [48]byte
 var keyMap map[[48]byte]*keystore.Key
