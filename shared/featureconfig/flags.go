@@ -42,10 +42,6 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	disableDynamicCommitteeSubnets = &cli.BoolFlag{
-		Name:  "disable-dynamic-committee-subnets",
-		Usage: "Disable dynamic committee attestation subnets.",
-	}
 	enableBackupWebhookFlag = &cli.BoolFlag{
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
@@ -69,15 +65,6 @@ var (
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
-	disableNoiseHandshake = &cli.BoolFlag{
-		Name: "disable-noise",
-		Usage: "This disables the beacon node from using NOISE and instead uses SECIO instead for performing handshakes between peers and " +
-			"securing transports between peers",
-	}
-	waitForSyncedFlag = &cli.BoolFlag{
-		Name:  "wait-for-synced",
-		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
-	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
@@ -94,10 +81,6 @@ var (
 	enableBlst = &cli.BoolFlag{
 		Name:  "blst",
 		Usage: "Enable new BLS library, blst, from Supranational",
-	}
-	disableFinalizedDepositsCache = &cli.BoolFlag{
-		Name:  "disable-finalized-deposits-cache",
-		Usage: "Disables utilization of cached finalized deposits",
 	}
 	enableEth1DataMajorityVote = &cli.BoolFlag{
 		Name:  "enable-eth1-data-majority-vote",
@@ -138,7 +121,6 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
-	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
 	MedallaTestnet,
@@ -167,12 +149,9 @@ var E2EValidatorFlags = []string{
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
-	disableDynamicCommitteeSubnets,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	disableNoiseHandshake,
 	disableBroadcastSlashingFlag,
-	waitForSyncedFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	AltonaTestnet,
@@ -180,7 +159,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
-	disableFinalizedDepositsCache,
 	enableBlst,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,

@@ -539,38 +539,18 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 	var depositTrie *trieutil.SparseMerkleTrie
 
 	var finalizedDeposits *depositcache.FinalizedDeposits
-	if featureconfig.Get().EnableFinalizedDepositsCache {
-		finalizedDeposits = vs.DepositFetcher.FinalizedDeposits(ctx)
-		depositTrie = finalizedDeposits.Deposits
-		upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
-		insertIndex := finalizedDeposits.MerkleTrieIndex + 1
+	finalizedDeposits = vs.DepositFetcher.FinalizedDeposits(ctx)
+	depositTrie = finalizedDeposits.Deposits
+	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
-		for _, dep := range upToEth1DataDeposits {
-			depHash, err := dep.Data.HashTreeRoot()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not hash deposit data")
-			}
-			depositTrie.Insert(depHash[:], int(insertIndex))
-			insertIndex++
-		}
-
-		return depositTrie, nil
-	}
-
-	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
-	var depositData [][]byte
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := dep.Data.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash deposit data")
 		}
-		depositData = append(depositData, depHash[:])
-	}
-
-	var err error
-	depositTrie, err = trieutil.GenerateTrieFromItems(depositData, params.BeaconConfig().DepositContractTreeDepth)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+		depositTrie.Insert(depHash[:], int(insertIndex))
+		insertIndex++
 	}
 
 	return depositTrie, nil

@@ -9,8 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -94,17 +92,11 @@ func (s *Service) updateMetrics() {
 	indices := s.aggregatorSubnetIndices(s.chain.CurrentSlot())
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	attTopic += s.p2p.Encoding().ProtocolSuffix()
-	if featureconfig.Get().DisableDynamicCommitteeSubnets {
-		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-			formattedTopic := fmt.Sprintf(attTopic, digest, i)
-			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
-		}
-	} else {
-		for _, committeeIdx := range indices {
-			formattedTopic := fmt.Sprintf(attTopic, digest, committeeIdx)
-			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
-		}
+	for _, committeeIdx := range indices {
+		formattedTopic := fmt.Sprintf(attTopic, digest, committeeIdx)
+		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
 	}
+
 	// We update all other gossip topics.
 	for topic := range p2p.GossipTopicMappings {
 		// We already updated attestation subnet topics.

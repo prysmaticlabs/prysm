@@ -40,7 +40,6 @@ type Flags struct {
 
 	// Feature related flags.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
-	DisableDynamicCommitteeSubnets      bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                       bool // Skips BLS verification across the runtime.
 	EnableBlst                          bool // Enables new BLS library from supranational.
 	EnableBackupWebhook                 bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
@@ -50,9 +49,7 @@ type Flags struct {
 	SlasherProtection                   bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableUpdateHeadPerAttestation     bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableNoise                         bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	WaitForSynced                       bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	EnableAccountsV2                    bool // EnableAccountsV2 for Prysm validator clients.
-	EnableFinalizedDepositsCache        bool // EnableFinalizedDepositsCache enables utilization of cached finalized deposits.
 	EnableEth1DataMajorityVote          bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnableAttBroadcastDiscoveryAttempts bool // EnableAttBroadcastDiscoveryAttempts allows the p2p service to attempt to ensure a subnet peer is present before broadcasting an attestation.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
@@ -155,10 +152,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.Bool(disableDynamicCommitteeSubnets.Name) {
-		log.Warn("Disabled dynamic attestation committee subnets")
-		cfg.DisableDynamicCommitteeSubnets = true
-	}
 
 	cfg.EnableSSZCache = true
 
@@ -174,22 +167,13 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
 	}
-	cfg.EnableNoise = true
-	if ctx.Bool(disableNoiseHandshake.Name) {
-		log.Warn("Disabling noise handshake for peer")
-		cfg.EnableNoise = false
-	}
+
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
 
-	cfg.EnableFinalizedDepositsCache = true
-	if ctx.Bool(disableFinalizedDepositsCache.Name) {
-		log.Warn("Disabling finalized deposits cache")
-		cfg.EnableFinalizedDepositsCache = false
-	}
 	if ctx.Bool(enableEth1DataMajorityVote.Name) {
 		log.Warn("Enabling eth1data majority vote")
 		cfg.EnableEth1DataMajorityVote = true
