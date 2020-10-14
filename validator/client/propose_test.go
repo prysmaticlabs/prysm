@@ -562,9 +562,10 @@ func TestSignBlock(t *testing.T) {
 	keyManager := v1.NewDirect(sks)
 	validator.keyManager = keyManager
 	publicKeys := publicKeys(t, keyManager)
+	proposerDomain := make([]byte, 32)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
-		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 	ctx := context.Background()
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 1
@@ -572,9 +573,11 @@ func TestSignBlock(t *testing.T) {
 	var pubKey [48]byte
 	copy(pubKey[:], publicKeys[0])
 	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
-	require.NoError(t, err, "%x,%v,%v", sig, domain, err)
+	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
 		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
 		"faa9a09a88beaff697404ca028b1c7052b0de37dbcff985dfa500459783370312bdd"+
 		"36d6e0f224", hex.EncodeToString(sig))
+	// proposer domain
+	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }
