@@ -71,7 +71,7 @@ func (s *Store) insert(ctx context.Context,
 		return nil
 	}
 
-	index := len(s.nodes)
+	index := uint64(len(s.nodes))
 	parentIndex, ok := s.nodesIndices[parent]
 	// Mark genesis block's parent as non existent.
 	if !ok {
@@ -90,12 +90,12 @@ func (s *Store) insert(ctx context.Context,
 		weight:         0,
 	}
 
-	s.nodesIndices[root] = uint64(index)
+	s.nodesIndices[root] = index
 	s.nodes = append(s.nodes, n)
 
 	// Update parent with the best child and descendent only if it's available.
 	if n.parent != NonExistentNode {
-		if err := s.updateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
+		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
 			return err
 		}
 	}
