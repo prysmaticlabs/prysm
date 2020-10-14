@@ -262,6 +262,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 
+	go s.awaitStateInitialized()
 	fd := initializeStateWithForkDigest(ctx, t, s.stateNotifier.StateFeed())
 
 	assert.Equal(t, 0, len(s.joinedTopics))

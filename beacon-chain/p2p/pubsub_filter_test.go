@@ -21,7 +21,6 @@ import (
 
 func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
-	previousFork := [4]byte{0x11, 0x12, 0x13, 0x14}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	type test struct {
 		name  string
@@ -32,11 +31,6 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 		{
 			name:  "block topic on current fork",
 			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + validProtocolSuffix,
-			want:  true,
-		},
-		{
-			name:  "block topic on previous fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, previousFork) + validProtocolSuffix,
 			want:  true,
 		},
 		{
@@ -104,12 +98,12 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sf := &subscriptionFilter{
-				currentForkDigest:  fmt.Sprintf("%x", currentFork),
-				previousForkDigest: fmt.Sprintf("%x", previousFork),
-				initialized:        true,
+			s := &Service{
+				currentForkDigest:     currentFork,
+				genesisValidatorsRoot: make([]byte, 32),
+				genesisTime:           time.Now(),
 			}
-			if got := sf.CanSubscribe(tt.topic); got != tt.want {
+			if got := s.CanSubscribe(tt.topic); got != tt.want {
 				t.Errorf("CanSubscribe(%s) = %v, want %v", tt.topic, got, tt.want)
 			}
 		})
@@ -117,10 +111,8 @@ func Test_subscriptionFilter_CanSubscribe(t *testing.T) {
 }
 
 func Test_subscriptionFilter_CanSubscribe_uninitialized(t *testing.T) {
-	sf := &subscriptionFilter{
-		initialized: false,
-	}
-	require.False(t, sf.CanSubscribe("foo"))
+	s := &Service{}
+	require.False(t, s.CanSubscribe("foo"))
 }
 
 func Test_scanfcheck(t *testing.T) {
@@ -213,7 +205,6 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 
 func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
-	previousFork := [4]byte{0x11, 0x12, 0x13, 0x14}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	type args struct {
 		id   peer.ID
@@ -313,12 +304,12 @@ func Test_subscriptionFilter_FilterIncomingSubscriptions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sf := &subscriptionFilter{
-				currentForkDigest:  fmt.Sprintf("%x", currentFork),
-				previousForkDigest: fmt.Sprintf("%x", previousFork),
-				initialized:        true,
+			s := &Service{
+				currentForkDigest:     currentFork,
+				genesisValidatorsRoot: make([]byte, 32),
+				genesisTime:           time.Now(),
 			}
-			got, err := sf.FilterIncomingSubscriptions(tt.args.id, tt.args.subs)
+			got, err := s.FilterIncomingSubscriptions(tt.args.id, tt.args.subs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FilterIncomingSubscriptions() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -334,12 +325,14 @@ func Test_subscriptionFilter_MonitorsStateForkUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	notifier := &mock.MockStateNotifier{}
-	sf, ok := newSubscriptionFilter(ctx, notifier).(*subscriptionFilter)
-	if !ok {
-		t.Fatal("newSubscriptionFilter did not return *subscriptionFilter")
-	}
+	s, err := NewService(ctx, &Config{
+		StateNotifier: notifier,
+	})
+	require.NoError(t, err)
 
-	require.False(t, sf.initialized)
+	require.False(t, s.isInitialized())
+
+	go s.awaitStateInitialized()
 
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
@@ -356,9 +349,8 @@ func Test_subscriptionFilter_MonitorsStateForkUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	require.True(t, sf.initialized)
-	require.NotEmpty(t, sf.previousForkDigest)
-	require.NotEmpty(t, sf.currentForkDigest)
+	require.True(t, s.isInitialized())
+	require.NotEmpty(t, s.currentForkDigest)
 }
 
 func Test_subscriptionFilter_doesntSupportForksYet(t *testing.T) {

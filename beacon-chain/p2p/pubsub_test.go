@@ -23,7 +23,12 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
+	go s.awaitStateInitialized()
 	fd := initializeStateWithForkDigest(ctx, t, s.stateNotifier.StateFeed())
+
+	if !s.isInitialized() {
+		t.Fatal("service was not initialized")
+	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(10)

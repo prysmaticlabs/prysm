@@ -64,6 +64,7 @@ var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 type Service struct {
 	started               bool
 	isPreGenesis          bool
+	currentForkDigest     [4]byte
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
 	cfg                   *Config
@@ -153,7 +154,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
-		pubsub.WithSubscriptionFilter(newSubscriptionFilter(ctx, cfg.StateNotifier)),
+		pubsub.WithSubscriptionFilter(s),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
@@ -393,6 +394,11 @@ func (s *Service) awaitStateInitialized() {
 				}
 				s.genesisTime = data.StartTime
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
+				_, err := s.forkDigest() // initialize fork digest cache
+				if err != nil {
+					log.WithError(err).Error("Could not initialize fork digest")
+				}
+
 				return
 			}
 		case <-s.ctx.Done():
