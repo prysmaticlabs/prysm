@@ -215,7 +215,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 		} else {
 			slot, err := strconv.ParseUint(string(req.BlockId), 10, 64)
 			if err != nil {
-				return nil, errors.Wrap(err, "could not decode block id")
+				return nil, status.Errorf(codes.Internal, "could not decode block id: %v", err)
 			}
 			roots, err := bs.BeaconDB.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
 			if err != nil {
