@@ -133,7 +133,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 		return wallet.ErrNoWalletFound
 	}
 	valid, err := wallet.IsValid(cfg.WalletDir)
-	if err == wallet.ErrNoWalletFound {
+	if errors.Is(err, wallet.ErrNoWalletFound) {
 		return wallet.ErrNoWalletFound
 	}
 	if err != nil {
