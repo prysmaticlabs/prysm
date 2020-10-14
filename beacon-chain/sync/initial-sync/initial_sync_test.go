@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -182,7 +183,8 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
 			_, err := stream.Write([]byte{0x01})
 			assert.NoError(t, err)
-			_, err = p.Encoding().EncodeWithMaxLength(stream, "bad")
+			msg := types.ErrorMessage("bad")
+			_, err = p.Encoding().EncodeWithMaxLength(stream, &msg)
 			assert.NoError(t, err)
 			return
 		}
