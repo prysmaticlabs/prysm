@@ -44,13 +44,7 @@ var appFlags = []cli.Flag{
 	flags.BeaconRPCGatewayProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
-	flags.KeystorePathFlag,
-	flags.SourceDirectories,
-	flags.SourceDirectory,
-	flags.TargetDirectory,
-	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
-	flags.UnencryptedKeysFlag,
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
 	flags.EnableRPCFlag,
@@ -62,15 +56,12 @@ var appFlags = []cli.Flag{
 	flags.GrpcRetryDelayFlag,
 	flags.GrpcHeadersFlag,
 	flags.GPRCGatewayCorsDomain,
-	flags.KeyManager,
-	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
 	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
-	flags.DeprecatedPasswordsDirFlag,
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
@@ -122,8 +113,6 @@ func main() {
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
 			return err
 		}
-
-		flags.ComplainOnDeprecatedFlags(ctx)
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {

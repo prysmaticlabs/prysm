@@ -183,7 +183,6 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	if err != nil {
 		return nil, err
 	}
-	log.Info(cliCtx.String(flags.WalletPasswordFileFlag.Name))
 	walletPassword, err := inputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,

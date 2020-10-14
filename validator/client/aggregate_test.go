@@ -141,7 +141,6 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 }
 
 func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
-	t.Skip()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 

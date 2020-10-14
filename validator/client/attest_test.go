@@ -35,7 +35,6 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
-	t.Skip()
 	hook := logTest.NewGlobal()
 
 	validator, _, validatorKey, finish := setup(t)

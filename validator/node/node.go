@@ -165,7 +165,6 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not generate interop keys")
 		}
-		accountsDir = cliCtx.String(flags.KeystorePathFlag.Name)
 	} else {
 		// Read the wallet from the specified path.
 		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
