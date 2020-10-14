@@ -536,13 +536,13 @@ func inputPassword(
 	for !hasValidPassword {
 		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
 		if err != nil {
-			return "", fmt.Errorf("could not read account password: %v", err)
+			return "", fmt.Errorf("could not read account password: %w", err)
 		}
 
 		if confirmPassword {
 			passwordConfirmation, err := promptutil.PasswordPrompt(ConfirmPasswordPromptText, passwordValidator)
 			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
+				return "", fmt.Errorf("could not read password confirmation: %w", err)
 			}
 			if walletPassword != passwordConfirmation {
 				log.Error("Passwords do not match")
