@@ -302,7 +302,8 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	}
 
 	res := &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 55, Root: make([]byte, 32)},
+		CommitteeIndex: 1,
+		Target:         &ethpb.Checkpoint{Epoch: 55, Root: make([]byte, 32)},
 	}
 
 	require.NoError(t, server.AttestationCache.MarkInProgress(req))
