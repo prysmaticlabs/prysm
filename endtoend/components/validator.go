@@ -76,7 +76,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 
 	cmd := exec.Command(binaryPath, args...)
 	t.Logf("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
-	if err := cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -94,20 +94,20 @@ func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := SendDeposits(web3, keystoreBytes, validatorNum, offset); err != nil {
+	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset); err != nil {
 		t.Fatal(err)
 	}
 	mineKey, err := keystore.DecryptKey(keystoreBytes, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := mineBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
+	if err = mineBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		t.Fatalf("failed to mine blocks %v", err)
 	}
 }
 
-// SendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
-func SendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int) error {
+// sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
+func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int) error {
 	txOps, err := bind.NewTransactor(bytes.NewReader(keystoreBytes), "" /*password*/)
 	if err != nil {
 		return err
