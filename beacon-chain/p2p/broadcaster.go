@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -58,7 +59,12 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 		return err
 	}
 
-	go s.broadcastAttestation(ctx, subnet, att, forkDigest)
+	if featureconfig.Get().EnableAttBroadcastDiscoveryAttempts {
+		// Non-blocking broadcast.
+		go s.broadcastAttestation(ctx, subnet, att, forkDigest)
+	} else {
+		return s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest))
+	}
 
 	return nil
 }

@@ -298,6 +298,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	}()
 
 	f := featureconfig.Get()
+	f.EnableAttBroadcastDiscoveryAttempts = true
 	rst := featureconfig.InitWithReset(f)
 	defer rst()
 
