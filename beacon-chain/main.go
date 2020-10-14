@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -111,6 +112,14 @@ func main() {
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
+		// verify if ToS accepted
+		if accepted, err := tos.VerifyTosAcceptedOrPrompt(ctx); accepted != true {
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("you have to accept TERMS AND CONDITIONS in order to continue")
+		}
+
 		// Load flags from config file, if specified.
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
 			return err
