@@ -24,7 +24,7 @@ as “you” or the “user”) certify that you have read and agreed to the ter
 TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md
 
 
-Type "accept" to accept this terms and conditions[accept/decline]:`
+Type "accept" to accept this terms and conditions [accept/decline]:`
 )
 
 var (
@@ -32,7 +32,7 @@ var (
 	log = logrus.WithField("prefix", "tos")
 )
 
-// VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept
+// VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept.
 func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	if ctx.Bool(cmd.E2EConfigFlag.Name) {
 		return nil
@@ -58,7 +58,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	return nil
 }
 
-// saveTosAccepted creates a file when Tos accepted
+// saveTosAccepted creates a file when Tos accepted.
 func saveTosAccepted(ctx *cli.Context) {
 	err := ioutil.WriteFile(ctx.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename, []byte(""), 0644)
 	if err != nil {
