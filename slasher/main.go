@@ -95,7 +95,6 @@ func main() {
 			return err
 		}
 
-
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":
