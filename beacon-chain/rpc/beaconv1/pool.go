@@ -17,13 +17,7 @@ import (
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.AttestationsPoolRequest) (*ethpb.AttestationsPoolResponse, error) {
 	atts := bs.AttestationsPool.AggregatedAttestations()
-	numAtts := len(atts)
-	if numAtts == 0 {
-		return &ethpb.AttestationsPoolResponse{
-			Data: make([]*ethpb.Attestation, 0),
-		}, nil
-	}
-	filtered := make([]*ethpb_alpha.Attestation, 0, numAtts)
+	filtered := make([]*ethpb_alpha.Attestation, 0, len(atts))
 	for _, item := range atts {
 		slotEqual := req.Slot != 0 && req.Slot == item.Data.Slot
 		committeeEqual := req.CommitteeIndex != 0 && req.CommitteeIndex == item.Data.CommitteeIndex
@@ -60,12 +54,6 @@ func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Emp
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	attSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /*noLimit*/)
-	numAttSlashings := len(attSlashings)
-	if numAttSlashings == 0 {
-		return &ethpb.AttesterSlashingsPoolResponse{
-			Data: make([]*ethpb.AttesterSlashing, 0),
-		}, nil
-	}
 	v1AttSlashings := make([]*ethpb.AttesterSlashing, len(attSlashings))
 	for i, slashing := range attSlashings {
 		v1Slashing, err := V1Alpha1AttSlashingToV1(slashing)
@@ -93,12 +81,6 @@ func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *ptypes.Emp
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	slashings := bs.SlashingsPool.PendingProposerSlashings(ctx, headState, true /*noLimit*/)
-	numSlashings := len(slashings)
-	if numSlashings == 0 {
-		return &ethpb.ProposerSlashingPoolResponse{
-			Data: make([]*ethpb.ProposerSlashing, 0),
-		}, nil
-	}
 	v1Slashings := make([]*ethpb.ProposerSlashing, len(slashings))
 	for i, slashing := range slashings {
 		v1Slashing, err := V1Alpha1ProposerSlashingToV1(slashing)
@@ -126,12 +108,6 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty)
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	exits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot(), true /*noLimit*/)
-	numExits := len(exits)
-	if numExits == 0 {
-		return &ethpb.VoluntaryExitsPoolResponse{
-			Data: make([]*ethpb.SignedVoluntaryExit, 0),
-		}, nil
-	}
 	v1Exits := make([]*ethpb.SignedVoluntaryExit, len(exits))
 	for i, exit := range exits {
 		v1Exit, err := V1Alpha1ExitToV1(exit)
