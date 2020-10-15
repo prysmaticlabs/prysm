@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/urfave/cli/v2"
 )
 
 type recoverCfgStruct struct {

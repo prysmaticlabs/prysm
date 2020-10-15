@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestCreateAccount_Derived(t *testing.T) {

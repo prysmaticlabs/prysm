@@ -10,9 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -20,6 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
 )
 
 // Test that the sharding node can build with default flag values.

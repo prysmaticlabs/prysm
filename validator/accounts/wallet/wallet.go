@@ -11,10 +11,6 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,6 +21,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var log = logrus.WithField("prefix", "wallet")

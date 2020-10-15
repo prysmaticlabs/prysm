@@ -8,11 +8,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -20,6 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/tyler-smith/go-bip39"
+	util "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {

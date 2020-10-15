@@ -6,9 +6,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/urfave/cli/v2"
 )
 
 func filterPublicKeysFromUserInput(

@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
@@ -16,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/urfave/cli/v2"
 )
 
 // DeleteAccountConfig specifies parameters to run the delete account function.

@@ -11,16 +11,15 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/tyler-smith/go-bip39"
-	"github.com/tyler-smith/go-bip39/wordlists"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
+	"github.com/urfave/cli/v2"
 )
 
 const phraseWordCount = 24

@@ -19,9 +19,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -34,6 +31,8 @@ import (
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // reconnectPeriod is the frequency that we try to restart our

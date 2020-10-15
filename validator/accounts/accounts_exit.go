@@ -8,9 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -19,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
 )
 
 type performExitCfg struct {

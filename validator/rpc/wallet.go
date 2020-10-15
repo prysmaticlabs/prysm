@@ -10,11 +10,6 @@ import (
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -25,6 +20,10 @@ import (
 	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (

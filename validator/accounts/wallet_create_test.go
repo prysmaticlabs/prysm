@@ -14,11 +14,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -28,6 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 const (

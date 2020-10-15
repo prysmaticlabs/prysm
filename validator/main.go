@@ -11,10 +11,6 @@ import (
 	"time"
 
 	joonix "github.com/joonix/log"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -26,6 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 // connTimeout defines a period after which connection to beacon node is cancelled.
