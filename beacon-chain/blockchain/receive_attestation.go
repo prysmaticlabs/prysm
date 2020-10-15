@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -43,14 +42,9 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process attestation")
 	}
 
-	if !featureconfig.Get().DisableUpdateHeadPerAttestation {
-		// This updates fork choice head, if a new head could not be updated due to
-		// long range or intermediate forking. It simply logs a warning and returns nil
-		// as that's more appropriate than returning errors.
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.Warnf("Resolving fork due to new attestation: %v", err)
-			return nil
-		}
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		log.Warnf("Resolving fork due to new attestation: %v", err)
+		return nil
 	}
 
 	return nil

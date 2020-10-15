@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -133,11 +132,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 
 	var pks [][48]byte
 	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		pks, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
-	} else {
-		pks, err = v.keyManager.FetchValidatingKeys()
-	}
+	pks, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}

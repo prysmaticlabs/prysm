@@ -203,6 +203,11 @@ var (
 		Usage: "Integer to define max recieve message call size (default: 4194304 (for 4MB))",
 		Value: 1 << 22,
 	}
+	// AcceptTosFlag specifies user acceptance of ToS for non-interactive environments.
+	AcceptTosFlag = &cli.BoolFlag{
+		Name:  "accept-terms-of-use",
+		Usage: "Accept Terms and Conditions (for non-interactive environments)",
+	}
 )
 
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
