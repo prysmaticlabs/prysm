@@ -82,7 +82,7 @@ type Config struct {
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
-	keyManager                 keymanager.IKeymanager
+	KeyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
 	CertFlag                   string
 	DataDir                    string

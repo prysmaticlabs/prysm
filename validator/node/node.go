@@ -338,7 +338,7 @@ func (s *ValidatorClient) registerClientService(
 	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
-		keyManager:                 keyManager,
+		KeyManager:                 keyManager,
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
