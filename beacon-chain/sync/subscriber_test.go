@@ -54,7 +54,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		wg.Done()
 		return nil
 	})
-	r.chainStarted = true
+	r.markForChainStart()
 
 	p2p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
@@ -94,7 +94,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	})
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
-	r.chainStarted = true
+	r.markForChainStart()
 	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
 		beaconState,
 		privKeys[1],
@@ -145,7 +145,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	})
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
-	r.chainStarted = true
+	r.markForChainStart()
 	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
 		beaconState,
 		privKeys[1],
@@ -185,7 +185,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		defer wg.Done()
 		panic("bad")
 	})
-	r.chainStarted = true
+	r.markForChainStart()
 	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -251,10 +251,11 @@ func TestStaticSubnets(t *testing.T) {
 
 func Test_wrapAndReportValidation(t *testing.T) {
 	type args struct {
-		topic string
-		v     pubsub.ValidatorEx
-		pid   peer.ID
-		msg   *pubsub.Message
+		topic        string
+		v            pubsub.ValidatorEx
+		chainstarted bool
+		pid          peer.ID
+		msg          *pubsub.Message
 	}
 	tests := []struct {
 		name string
@@ -262,12 +263,24 @@ func Test_wrapAndReportValidation(t *testing.T) {
 		want pubsub.ValidationResult
 	}{
 		{
+			name: "validator Before chainstart",
+			args: args{
+				topic: "foo",
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+					return pubsub.ValidationAccept
+				},
+				chainstarted: false,
+			},
+			want: pubsub.ValidationReject,
+		},
+		{
 			name: "validator panicked",
 			args: args{
 				topic: "foo",
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					panic("oh no!")
 				},
+				chainstarted: true,
 			},
 			want: pubsub.ValidationIgnore,
 		},
@@ -278,13 +291,17 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					return pubsub.ValidationAccept
 				},
+				chainstarted: true,
 			},
 			want: pubsub.ValidationAccept,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, v := wrapAndReportValidation(tt.args.topic, tt.args.v)
+			s := &Service{
+				chainStarted: tt.args.chainstarted,
+			}
+			_, v := s.wrapAndReportValidation(tt.args.topic, tt.args.v)
 			got := v(context.Background(), tt.args.pid, tt.args.msg)
 			if got != tt.want {
 				t.Errorf("wrapAndReportValidation() got = %v, want %v", got, tt.want)
