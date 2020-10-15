@@ -142,6 +142,7 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 			NextAccount: 0,
 		},
 		seed: make([]byte, 32),
+		opts: DefaultKeymanagerOpts(),
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	// First, generate accounts and their keystore.json files.
