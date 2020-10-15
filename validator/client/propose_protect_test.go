@@ -12,7 +12,6 @@ import (
 
 func TestPreBlockSignValidation(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   false,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
@@ -37,7 +36,6 @@ func TestPreBlockSignValidation(t *testing.T) {
 
 func TestPostBlockSignUpdate(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   false,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)

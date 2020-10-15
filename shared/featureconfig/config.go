@@ -45,7 +45,6 @@ type Flags struct {
 	EnableBackupWebhook                 bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates            bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression           bool // EnableSnappyDBCompression in the database.
-	LocalProtection                     bool // LocalProtection prevents the validator client from signing any messages that would be considered a slashable offense from the validators view.
 	SlasherProtection                   bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	EnableNoise                         bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	WaitForSynced                       bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
@@ -215,12 +214,6 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
-
-	if ctx.Bool(enableLocalProtectionFlag.Name) {
-		cfg.LocalProtection = true
-	} else {
-		log.Warn("Validator slashing protection not enabled!")
-	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
 		cfg.SlasherProtection = true
