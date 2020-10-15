@@ -224,7 +224,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 
 			numRoots := len(roots)
 			if numRoots == 0 {
-				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
+				return nil, status.Error(codes.NotFound, "Could not find any blocks with given slot")
 			}
 			root = roots[0][:]
 			if numRoots == 1 {
