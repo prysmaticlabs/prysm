@@ -19,22 +19,19 @@ var failedPostBlockSignErr = "made a double proposal, considered slashable by re
 func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	epoch := helpers.SlotToEpoch(block.Slot)
-	if featureconfig.Get().LocalProtection {
-		slotBits, err := v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
-		if err != nil {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.Wrap(err, "failed to get proposal history")
+	slotBits, err := v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-
-		// If the bit for the current slot is marked, do not propose.
-		if slotBits.BitAt(block.Slot % params.BeaconConfig().SlotsPerEpoch) {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPreBlockSignLocalErr)
+		return errors.Wrap(err, "failed to get proposal history")
+	}
+	// If the bit for the current slot is marked, do not propose.
+	if slotBits.BitAt(block.Slot % params.BeaconConfig().SlotsPerEpoch) {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return errors.New(failedPreBlockSignLocalErr)
 	}
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
@@ -73,21 +70,19 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 		}
 	}
 
-	if featureconfig.Get().LocalProtection {
-		slotBits, err := v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
-		if err != nil {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.Wrap(err, "failed to get proposal history")
+	slotBits, err := v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		slotBits.SetBitAt(block.Block.Slot%params.BeaconConfig().SlotsPerEpoch, true)
-		if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.Wrap(err, "failed to save updated proposal history")
+		return errors.Wrap(err, "failed to get proposal history")
+	}
+	slotBits.SetBitAt(block.Block.Slot%params.BeaconConfig().SlotsPerEpoch, true)
+	if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return errors.Wrap(err, "failed to save updated proposal history")
 	}
 	return nil
 }

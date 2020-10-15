@@ -36,13 +36,14 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
+	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
 	switch w.KeymanagerKind() {
 	case v2keymanager.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDirectKeymanagerAccounts(cliCtx.Context, showDepositData, km); err != nil {
+		if err := listDirectKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with direct keymanager")
 		}
 	case v2keymanager.Derived:
@@ -50,7 +51,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showDepositData, km); err != nil {
+		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
 	case v2keymanager.Remote:
@@ -70,6 +71,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 func listDirectKeymanagerAccounts(
 	ctx context.Context,
 	showDepositData bool,
+	showPrivateKeys bool,
 	keymanager *direct.Keymanager,
 ) error {
 	// We initialize the wallet's keymanager.
@@ -94,10 +96,20 @@ func listDirectKeymanagerAccounts(
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
+	var privateKeys [][32]byte
+	if showPrivateKeys {
+		privateKeys, err = keymanager.FetchValidatingPrivateKeys(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch private keys")
+		}
+	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
 		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
+		if showPrivateKeys {
+			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+		}
 		if !showDepositData {
 			continue
 		}
@@ -115,6 +127,7 @@ func listDirectKeymanagerAccounts(
 func listDerivedKeymanagerAccounts(
 	ctx context.Context,
 	showDepositData bool,
+	showPrivateKeys bool,
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
@@ -124,9 +137,23 @@ func listDerivedKeymanagerAccounts(
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
+	var validatingPrivateKeys [][32]byte
+	if showPrivateKeys {
+		validatingPrivateKeys, err = keymanager.FetchValidatingPrivateKeys(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch validating private keys")
+		}
+	}
 	withdrawalPublicKeys, err := keymanager.FetchWithdrawalPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	var withdrawalPrivateKeys [][32]byte
+	if showPrivateKeys {
+		withdrawalPrivateKeys, err = keymanager.FetchWithdrawalPrivateKeys(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch withdrawal private keys")
+		}
 	}
 	nextAccountNumber := keymanager.NextAccountNumber()
 	currentAccountNumber := nextAccountNumber
@@ -153,10 +180,16 @@ func listDerivedKeymanagerAccounts(
 		// Retrieve the withdrawal key account metadata.
 		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
+		if showPrivateKeys {
+			fmt.Printf("%s %#x\n", au.BrightRed("[withdrawal private key]").Bold(), withdrawalPrivateKeys[i])
+		}
 		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
 
 		// Retrieve the validating key account metadata.
 		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
+		if showPrivateKeys {
+			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), validatingPrivateKeys[i])
+		}
 		fmt.Printf("%s %s\n", au.BrightCyan("[derivation path]").Bold(), validatingKeyPath)
 
 		if !showDepositData {
