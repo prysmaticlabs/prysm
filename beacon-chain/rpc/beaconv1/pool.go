@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/proto/migration"
-
-	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
