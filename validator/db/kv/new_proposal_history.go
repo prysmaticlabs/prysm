@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -57,10 +56,10 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 	return err
 }
 
-// ImportOldProposalFormat accepts a validator public key and returns the corresponding signing root.
+// MigrateV2ProposalFormat accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ImportOldProposalFormat(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.ImportOldProposalFormat")
+func (store *Store) MigrateV2ProposalFormat(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.MigrateV2ProposalFormat")
 	defer span.End()
 
 	var allKeys [][48]byte
@@ -114,7 +113,7 @@ func (store *Store) ImportOldProposalFormat(ctx context.Context) error {
 					if slotBitlist.BitAt(i) {
 						ss, err := helpers.StartSlot(bytesutil.FromBytes8(epochProposals.Epoch))
 						if err != nil {
-							return err
+							return errors.Wrapf(err, "failed to get start slot of epoch: %d", epochProposals.Epoch)
 						}
 						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(ss+i), []byte{1}); err != nil {
 							return err
@@ -161,9 +160,9 @@ func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot uint64) error
 	return nil
 }
 
-// UpdateProposalsProtectionDb exports old proposal protection data format to the
+// MigrateV2ProposalsProtectionDb exports old proposal protection data format to the
 // new format and save the exported flag to database.
-func (store *Store) UpdateProposalsProtectionDb(ctx context.Context) error {
+func (store *Store) MigrateV2ProposalsProtectionDb(ctx context.Context) error {
 	importProposals, err := store.shouldImportProposals()
 	if err != nil {
 		return err
@@ -172,23 +171,19 @@ func (store *Store) UpdateProposalsProtectionDb(ctx context.Context) error {
 	if !importProposals {
 		return nil
 	}
-	if err := store.ImportOldProposalFormat(ctx); err != nil {
+	if err := store.MigrateV2ProposalFormat(ctx); err != nil {
 		return err
 	}
 	err = store.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		if bucket != nil {
 			if err := bucket.Put([]byte(proposalExported), []byte{1}); err != nil {
-				return err
+				return errors.Wrap(err, "failed to set exported proposals flag in db")
 			}
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (store *Store) shouldImportProposals() (bool, error) {
@@ -197,19 +192,10 @@ func (store *Store) shouldImportProposals() (bool, error) {
 		proposalBucket := tx.Bucket(historicProposalsBucket)
 		if proposalBucket != nil && proposalBucket.Stats().KeyN != 0 {
 			if exported := proposalBucket.Get([]byte(proposalExported)); exported == nil {
-				if err := proposalBucket.ForEach(func(k, v []byte) error {
-					log.Infof("k: %v , v: %v", k, v)
-					return nil
-				}); err != nil {
-					return err
-				}
 				importProposals = true
 			}
 		}
 		return nil
 	})
-	if err != nil {
-		return false, err
-	}
 	return importProposals, err
 }

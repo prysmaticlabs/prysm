@@ -177,7 +177,7 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 		err = db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot), slotBitlist)
 		require.NoError(t, err)
 	}
-	err := db.ImportOldProposalFormat(ctx)
+	err := db.MigrateV2ProposalFormat(ctx)
 	require.NoError(t, err)
 
 	for slot := uint64(0); slot <= lastIndex; slot++ {
@@ -217,7 +217,7 @@ func TestStore_UpdateProposalsProtectionDb(t *testing.T) {
 	shouldImport, err := db.shouldImportProposals()
 	require.NoError(t, err)
 	require.Equal(t, true, shouldImport, "Bucket with content should be imported")
-	err = db.UpdateProposalsProtectionDb(ctx)
+	err = db.MigrateV2ProposalsProtectionDb(ctx)
 	require.NoError(t, err)
 	shouldImport, err = db.shouldImportProposals()
 	require.NoError(t, err)
