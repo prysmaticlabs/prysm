@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"strings"
+	"path/filepath"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -38,7 +39,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 		return nil
 	}
 
-	if fileutil.FileExists(ctx.String(cmd.DataDirFlag.Name) + "/" + acceptTosFilename) {
+	if fileutil.FileExists(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)) {
 		return nil
 	}
 	if ctx.Bool(cmd.AcceptTosFlag.Name) {
@@ -60,8 +61,8 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 
 // saveTosAccepted creates a file when Tos accepted.
 func saveTosAccepted(ctx *cli.Context) {
-	err := ioutil.WriteFile(ctx.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename, []byte(""), 0644)
+	err := ioutil.WriteFile(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""), 0644)
 	if err != nil {
-		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name, ctx.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename)
+		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name, filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename))
 	}
 }

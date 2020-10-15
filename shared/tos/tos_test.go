@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/urfave/cli/v2"
+	"path/filepath"
 )
 
 func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
@@ -41,18 +42,18 @@ func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
 	_, err = tmpfile.Seek(0, 0)
 	require.NoError(t, err)
 	require.NoError(t, VerifyTosAcceptedOrPrompt(context))
-	require.NoError(t, os.Remove(context.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename))
+	require.NoError(t, os.Remove(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename)))
 
 	require.NoError(t, tmpfile.Close())
 	require.NoError(t, os.Remove(tmpfile.Name()))
 
 	// saved in file
-	require.NoError(t, ioutil.WriteFile(context.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename, []byte(""), 0666))
+	require.NoError(t, ioutil.WriteFile(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""), 0666))
 	require.NoError(t, VerifyTosAcceptedOrPrompt(context))
-	require.NoError(t, os.Remove(context.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename))
+	require.NoError(t, os.Remove(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename)))
 
 	// flag is set
 	set.Bool(cmd.AcceptTosFlag.Name, true, "")
 	require.NoError(t, VerifyTosAcceptedOrPrompt(context))
-	require.NoError(t, os.Remove(context.String(cmd.DataDirFlag.Name)+"/"+acceptTosFilename))
+	require.NoError(t, os.Remove(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename)))
 }
