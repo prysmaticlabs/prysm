@@ -100,7 +100,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:              cfg.CertFlag,
 		dataDir:               cfg.DataDir,
 		graffiti:              []byte(cfg.GraffitiFlag),
-		keyManager:            cfg.keyManager,
+		keyManager:            cfg.KeyManager,
 		logValidatorBalances:  cfg.LogValidatorBalances,
 		emitAccountMetrics:    cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
