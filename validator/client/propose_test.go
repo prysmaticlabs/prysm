@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -617,16 +616,12 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 }
 
 func TestSignBlock(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, _, finish := setup(t)
 	defer finish()
 
 	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
 	require.NoError(t, err, "Failed to generate key from bytes")
-	sks := make([]bls.SecretKey, 1)
-	sks[0] = secretKey
-	keyManager := v1.NewDirect(sks)
-	validator.keyManager = keyManager
-	publicKeys := publicKeys(t, keyManager)
+	publicKey := secretKey.PublicKey()
 	proposerDomain := make([]byte, 32)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
@@ -636,7 +631,13 @@ func TestSignBlock(t *testing.T) {
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
 	var pubKey [48]byte
-	copy(pubKey[:], publicKeys[0])
+	copy(pubKey[:], publicKey.Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: secretKey,
+		},
+	}
+	validator.keyManagerV2 = km
 	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+

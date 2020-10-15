@@ -18,19 +18,21 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 
 	block := &ethpb.BeaconBlock{
 		Slot:          10,
 		ProposerIndex: 0,
 	}
-	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorPubKey[:], 10, []byte{1})
+	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorKey.PublicKey().Marshal(), 10, []byte{1})
 	require.NoError(t, err)
-	err = validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
 	block.Slot = 9
-	err = validator.preBlockSignValidations(context.Background(), validatorPubKey, block)
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
@@ -79,9 +81,9 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
-	err := validator.postBlockSignUpdate(context.Background(), pubKey, block)
+	err := validator.postBlockSignUpdate(context.Background(), pubKey, block, nil)
 	require.ErrorContains(t, failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
 	mockProtector.AllowBlock = true
-	err = validator.postBlockSignUpdate(context.Background(), pubKey, block)
+	err = validator.postBlockSignUpdate(context.Background(), pubKey, block, nil)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
