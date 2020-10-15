@@ -22,7 +22,7 @@ go_library(
         "//shared/maxprocs:go_default_library",
         "//shared/tos:go_default_library",
         "//shared/version:go_default_library",
-        "//validator/accounts/v2:go_default_library",
+        "//validator/accounts:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/node:go_default_library",
         "@com_github_joonix_log//:go_default_library",

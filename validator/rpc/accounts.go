@@ -9,17 +9,18 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type accountCreator interface {
@@ -203,7 +204,7 @@ func (s *Server) DeleteAccounts(
 	if s.wallet.KeymanagerKind() != v2keymanager.Direct {
 		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can delete accounts")
 	}
-	if err := v2.DeleteAccount(ctx, &v2.DeleteAccountConfig{
+	if err := accounts.DeleteAccount(ctx, &accounts.DeleteAccountConfig{
 		Wallet:     s.wallet,
 		Keymanager: s.keymanager,
 		PublicKeys: req.PublicKeys,
@@ -221,7 +222,7 @@ func createAccountWithDepositData(ctx context.Context, km accountCreator) (*pb.D
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create account in wallet")
 	}
-	data, err := v2.DepositDataJSON(depositData)
+	data, err := accounts.DepositDataJSON(depositData)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create deposit data JSON")
 	}

@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func createRandomKeystore(t testing.TB, password string) *v2keymanager.Keystore {

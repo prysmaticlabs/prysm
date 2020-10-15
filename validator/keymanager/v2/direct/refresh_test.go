@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 )
 
 func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {

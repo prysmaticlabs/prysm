@@ -10,20 +10,21 @@ import (
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 const (
@@ -91,7 +92,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_DIRECT:
-		w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+		w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
 				KeymanagerKind: v2keymanager.Direct,
@@ -125,7 +126,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if req.Mnemonic == "" {
 			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
 		}
-		_, depositData, err := v2.RecoverWallet(ctx, &v2.RecoverWalletConfig{
+		_, depositData, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
 			WalletDir:      walletDir,
 			WalletPassword: req.WalletPassword,
 			Mnemonic:       req.Mnemonic,
@@ -144,7 +145,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 
 		depositDataList := make([]*pb.DepositDataResponse_DepositData, len(depositData))
 		for i, item := range depositData {
-			data, err := v2.DepositDataJSON(item)
+			data, err := accounts.DepositDataJSON(item)
 			if err != nil {
 				return nil, err
 			}
@@ -351,7 +352,7 @@ func (s *Server) ImportKeystores(
 		importedPubKeys[i] = pubKey
 	}
 	// Import the uploaded accounts.
-	if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
+	if err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
 		Keymanager:      keymanager,
 		Keystores:       keystores,
 		AccountPassword: req.KeystoresPassword,

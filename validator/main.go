@@ -11,6 +11,10 @@ import (
 	"time"
 
 	joonix "github.com/joonix/log"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -19,12 +23,9 @@ import (
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 // connTimeout defines a period after which connection to beacon node is cancelled.
@@ -105,8 +106,8 @@ func main() {
 	app.Version = version.GetVersion()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
-		v2.WalletCommands,
-		v2.AccountCommands,
+		accounts.WalletCommands,
+		accounts.AccountCommands,
 	}
 
 	app.Flags = appFlags
