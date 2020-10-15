@@ -37,7 +37,7 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) err
 		return false, nil
 	}
 
-	if len(slashings) == 0 {
+	if totalSlashing == 0 {
 		return nil
 	}
 	return state.ApplyToEveryValidator(validatorFunc)
