@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
@@ -40,13 +40,13 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager2.Direct,
+		keymanagerKind:     keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager2.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: "Passwordz0320$",
 		},
 	})
@@ -183,13 +183,13 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager2.Derived,
+		keymanagerKind:     keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager2.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: "Passwordz0320$",
 		},
 	})
@@ -352,12 +352,12 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	walletDir, _, _ := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
-		keymanagerKind: keymanager2.Remote,
+		keymanagerKind: keymanager.Remote,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager2.Remote,
+			KeymanagerKind: keymanager.Remote,
 			WalletPassword: password,
 		},
 	})

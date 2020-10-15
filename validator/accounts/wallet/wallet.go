@@ -11,7 +11,6 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"

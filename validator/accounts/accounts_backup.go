@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	"github.com/urfave/cli/v2"
@@ -48,16 +48,16 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
-	if w.KeymanagerKind() == keymanager2.Remote {
+	if w.KeymanagerKind() == keymanager.Remote {
 		return errors.New(
 			"remote wallets cannot backup accounts",
 		)
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(cliCtx.Context, true /* skip mnemonic confirm */)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -93,10 +93,10 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not determine password for backed up accounts")
 	}
 
-	var keystoresToBackup []*keymanager2.Keystore
+	var keystoresToBackup []*keymanager.Keystore
 	switch w.KeymanagerKind() {
-	case keymanager2.Direct:
-		km, ok := keymanager.(*direct.Keymanager)
+	case keymanager.Direct:
+		km, ok := km.(*direct.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
@@ -104,8 +104,8 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not backup accounts for direct keymanager")
 		}
-	case keymanager2.Derived:
-		km, ok := keymanager.(*derived.Keymanager)
+	case keymanager.Derived:
+		km, ok := km.(*derived.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
@@ -113,7 +113,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not backup accounts for derived keymanager")
 		}
-	case keymanager2.Remote:
+	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
 		return errors.New("keymanager kind not supported")
@@ -199,7 +199,7 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey
 
 // Zips a list of keystore into respective EIP-2335 keystore.json files and
 // writes their zipped format into the specified output directory.
-func zipKeystoresToOutputDir(keystoresToBackup []*keymanager2.Keystore, outputDir string) error {
+func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir string) error {
 	if len(keystoresToBackup) == 0 {
 		return errors.New("nothing to backup")
 	}

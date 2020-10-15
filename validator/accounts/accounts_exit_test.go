@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
@@ -65,7 +65,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager2.Direct,
+		keymanagerKind:      keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flag required for ImportAccounts to work.
@@ -76,7 +76,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager2.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: password,
 		},
 	})
@@ -116,14 +116,14 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager2.Direct,
+		keymanagerKind:      keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager2.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: "Passwordz0320$",
 		},
 	})

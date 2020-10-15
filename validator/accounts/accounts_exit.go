@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 )
@@ -23,7 +23,7 @@ import (
 type performExitCfg struct {
 	validatorClient  ethpb.BeaconNodeValidatorClient
 	nodeClient       ethpb.NodeClient
-	keymanager       keymanager2.IKeymanager
+	keymanager       keymanager.IKeymanager
 	rawPubKeys       [][]byte
 	formattedPubKeys []string
 }
@@ -73,7 +73,7 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	return nil
 }
 
-func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager2.IKeymanager, error) {
+func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, error) {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
 			"no wallet found, no accounts to exit",

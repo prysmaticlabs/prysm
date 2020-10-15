@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
@@ -52,7 +52,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:          walletDir,
-		keymanagerKind:     keymanager2.Derived,
+		keymanagerKind:     keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 		// Flags required for BackupAccounts to work.
 		backupPasswordFile: backupPasswordFile,
@@ -61,7 +61,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager2.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: password,
 		},
 	})
@@ -74,14 +74,14 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	keymanager, err := w.InitializeKeymanager(
+	km, err := w.InitializeKeymanager(
 		cliCtx.Context,
 		true, /* skip mnemonic confirm */
 	)
 	require.NoError(t, err)
 
 	// Obtain the public keys of the accounts we created
-	pubkeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	pubkeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	var generatedPubKeys []string
 	for _, pubkey := range pubkeys {
@@ -95,7 +95,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	cliCtx = setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:          walletDir,
-		keymanagerKind:     keymanager2.Derived,
+		keymanagerKind:     keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 		// Flags required for BackupAccounts to work.
 		backupPublicKeys:   backupPublicKeys,
@@ -129,7 +129,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 		require.NoError(t, err)
 		encodedBytes, err := ioutil.ReadAll(ff)
 		require.NoError(t, err)
-		keystoreFile := &keymanager2.Keystore{}
+		keystoreFile := &keymanager.Keystore{}
 		require.NoError(t, json.Unmarshal(encodedBytes, keystoreFile))
 		require.NoError(t, ff.Close())
 		unzippedPublicKeys[i] = keystoreFile.Pubkey
@@ -176,7 +176,7 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager2.Direct,
+		keymanagerKind:      keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flags required for ImportAccounts to work.
@@ -189,7 +189,7 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager2.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: password,
 		},
 	})
@@ -226,7 +226,7 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 		require.NoError(t, err)
 		encodedBytes, err := ioutil.ReadAll(ff)
 		require.NoError(t, err)
-		keystoreFile := &keymanager2.Keystore{}
+		keystoreFile := &keymanager.Keystore{}
 		require.NoError(t, json.Unmarshal(encodedBytes, keystoreFile))
 		require.NoError(t, ff.Close())
 		unzippedPublicKeys[i] = keystoreFile.Pubkey

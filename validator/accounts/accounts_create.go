@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	"github.com/sirupsen/logrus"
@@ -45,7 +45,7 @@ func CreateAccountCli(cliCtx *cli.Context) error {
 // CreateAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
 func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
-	keymanager, err := cfg.Wallet.InitializeKeymanager(ctx, false /* skip mnemonic confirm */)
+	km, err := cfg.Wallet.InitializeKeymanager(ctx, false /* skip mnemonic confirm */)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}
@@ -53,10 +53,10 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	switch cfg.Wallet.KeymanagerKind() {
-	case keymanager2.Remote:
+	case keymanager.Remote:
 		return errors.New("cannot create a new account for a remote keymanager")
-	case keymanager2.Direct:
-		km, ok := keymanager.(*direct.Keymanager)
+	case keymanager.Direct:
+		km, ok := km.(*direct.Keymanager)
 		if !ok {
 			return errors.New("not a direct keymanager")
 		}
@@ -64,8 +64,8 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 		if _, _, err := km.CreateAccount(ctx); err != nil {
 			return errors.Wrap(err, "could not create account in wallet")
 		}
-	case keymanager2.Derived:
-		km, ok := keymanager.(*derived.Keymanager)
+	case keymanager.Derived:
+		km, ok := km.(*derived.Keymanager)
 		if !ok {
 			return errors.New("not a derived keymanager")
 		}
