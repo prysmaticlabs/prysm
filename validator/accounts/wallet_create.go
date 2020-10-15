@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -69,7 +69,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	switch w.KeymanagerKind() {
 	case keymanager.Direct:
 		if err = createDirectKeymanagerWallet(ctx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with direct keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet with imported keymanager")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with on-disk keymanager configuration. " +
@@ -142,8 +142,8 @@ func createDirectKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) er
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	defaultOpts := direct.DefaultKeymanagerOpts()
-	keymanagerConfig, err := direct.MarshalOptionsFile(ctx, defaultOpts)
+	defaultOpts := imported.DefaultKeymanagerOpts()
+	keymanagerConfig, err := imported.MarshalOptionsFile(ctx, defaultOpts)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}

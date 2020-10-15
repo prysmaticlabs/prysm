@@ -1,4 +1,4 @@
-package direct
+package imported
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-// ImportKeystores into the direct keymanager from an external source.
+// ImportKeystores into the imported keymanager from an external source.
 func (dr *Keymanager) ImportKeystores(
 	ctx context.Context,
 	keystores []*keymanager.Keystore,

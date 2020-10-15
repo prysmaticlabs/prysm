@@ -43,7 +43,7 @@ func TestNode_Builds(t *testing.T) {
 	}()
 	set.String("wallet-dir", dir, "path to wallet")
 	set.String("wallet-password-file", passwordFile, "path to wallet password")
-	set.String("keymanager-kind", "direct", "keymanager kind")
+	set.String("keymanager-kind", "imported", "keymanager kind")
 	set.String("verbosity", "debug", "log verbosity")
 	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	context := cli.NewContext(&app, set, nil)

@@ -25,13 +25,13 @@ type Keystore struct {
 	Name    string                 `json:"name"`
 }
 
-// Kind defines an enum for either direct, derived, or remote-signing
+// Kind defines an enum for either imported, derived, or remote-signing
 // keystores for Prysm wallets.
 type Kind int
 
 const (
 	// Direct keymanager defines an on-disk, encrypted keystore-capable store.
-	Direct Kind = iota
+	Imported Kind = iota
 	// Derived keymanager using a hierarchical-deterministic algorithm.
 	Derived
 	// Remote keymanager capable of remote-signing data.
@@ -43,7 +43,7 @@ func (k Kind) String() string {
 	switch k {
 	case Derived:
 		return "derived"
-	case Direct:
+	case Imported:
 		return "direct"
 	case Remote:
 		return "remote"
@@ -58,7 +58,7 @@ func ParseKind(k string) (Kind, error) {
 	case "derived":
 		return Derived, nil
 	case "direct":
-		return Direct, nil
+		return Imported, nil
 	case "remote":
 		return Remote, nil
 	default:

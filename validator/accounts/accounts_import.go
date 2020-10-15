@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -69,7 +69,7 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 // ImportAccountsConfig defines values to run the import accounts function.
 type ImportAccountsConfig struct {
 	Keystores       []*keymanager.Keystore
-	Keymanager      *direct.Keymanager
+	Keymanager      *imported.Keymanager
 	AccountPassword string
 }
 
@@ -107,7 +107,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	k, ok := km.(*direct.Keymanager)
+	k, ok := km.(*imported.Keymanager)
 	if !ok {
 		return errors.Wrap(err, "Only non-HD wallets can import keystores")
 	}
@@ -206,7 +206,7 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 
 // Imports a one-off file containing a private key as a hex string into
 // the Prysm validator's accounts.
-func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *direct.Keymanager) error {
+func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *imported.Keymanager) error {
 	privKeyFile := cliCtx.String(flags.ImportPrivateKeyFileFlag.Name)
 	fullPath, err := fileutil.ExpandPath(privKeyFile)
 	if err != nil {

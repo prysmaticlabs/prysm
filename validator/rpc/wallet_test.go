@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -200,7 +200,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	resp, err := s.WalletConfig(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 
-	expectedConfig := direct.DefaultKeymanagerOpts()
+	expectedConfig := imported.DefaultKeymanagerOpts()
 	enc, err := json.Marshal(expectedConfig)
 	require.NoError(t, err)
 	var jsonMap map[string]string
@@ -314,7 +314,7 @@ func TestServer_HasWallet(t *testing.T) {
 		WalletExists: false,
 	}, resp)
 
-	// We now create the folder but without a valid wallet, i.e. lacking a subdirectory such as 'direct'
+	// We now create the folder but without a valid wallet, i.e. lacking a subdirectory such as 'imported'
 	// We expect an empty directory to behave similarly as if there were no directory
 	require.NoError(t, os.MkdirAll(defaultWalletPath, os.ModePerm))
 	resp, err = ss.HasWallet(ctx, &ptypes.Empty{})
@@ -401,7 +401,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_ImportKeystores_OK(t *testing.T) {
-	direct.ResetCaches()
+	imported.ResetCaches()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()

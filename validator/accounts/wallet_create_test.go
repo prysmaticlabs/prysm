@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -175,11 +175,11 @@ func TestCreateWallet_Direct(t *testing.T) {
 	// We read the keymanager config for the newly created wallet.
 	encoded, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	assert.NoError(t, err)
-	cfg, err := direct.UnmarshalOptionsFile(encoded)
+	cfg, err := imported.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	wantedCfg := direct.DefaultKeymanagerOpts()
+	wantedCfg := imported.DefaultKeymanagerOpts()
 	assert.DeepEqual(t, wantedCfg, cfg)
 }
 

@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -39,12 +39,12 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
 	switch w.KeymanagerKind() {
 	case keymanager.Direct:
-		km, ok := km.(*direct.Keymanager)
+		km, ok := km.(*imported.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDirectKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with direct keymanager")
+			return errors.Wrap(err, "could not list validator accounts with imported keymanager")
 		}
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
@@ -72,7 +72,7 @@ func listDirectKeymanagerAccounts(
 	ctx context.Context,
 	showDepositData,
 	showPrivateKeys bool,
-	keymanager *direct.Keymanager,
+	keymanager *imported.Keymanager,
 ) error {
 	// We initialize the wallet's keymanager.
 	accountNames, err := keymanager.ValidatingAccountNames()

@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -58,7 +58,7 @@ func (s *Server) DefaultWalletPath(ctx context.Context, _ *ptypes.Empty) (*pb.De
 }
 
 // CreateWallet via an API request, allowing a user to save a new
-// derived, direct, or remote wallet.
+// derived, imported, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	if strings.TrimSpace(req.WalletPath) != "" {
@@ -287,9 +287,13 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	}
 	switch s.wallet.KeymanagerKind() {
 	case keymanager.Direct:
+<<<<<<< HEAD
 		km, ok := s.keymanager.(*direct.Keymanager)
+=======
+		km, ok := s.keymanager.(*imported.Keymanager)
+>>>>>>> 6c2a65f60... rename direct to imported
 		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Not a valid direct keymanager")
+			return nil, status.Error(codes.FailedPrecondition, "Not a valid imported keymanager")
 		}
 		s.wallet.SetPassword(req.Password)
 		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
@@ -324,7 +328,11 @@ func (s *Server) ImportKeystores(
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
+<<<<<<< HEAD
 	km, ok := s.keymanager.(*direct.Keymanager)
+=======
+	keymanager, ok := s.keymanager.(*imported.Keymanager)
+>>>>>>> 6c2a65f60... rename direct to imported
 	if !ok {
 		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
 	}

@@ -172,11 +172,11 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// We initialize a wallet with a direct keymanager.
+	// We initialize a wallet with a imported keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flags required for ImportAccounts to work.
@@ -189,7 +189,7 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: password,
 		},
 	})

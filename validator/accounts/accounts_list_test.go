@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 )
 
@@ -40,22 +40,22 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Direct,
+		keymanagerKind:     keymanager.Imported,
 		walletPasswordFile: walletPasswordFile,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: "Passwordz0320$",
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := direct.NewKeymanager(
+	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list direct keymanager accounts function.
+	// We call the list imported keymanager accounts function.
 	require.NoError(t, listDirectKeymanagerAccounts(context.Background(), true /* show deposit data */, true /*show private keys */, keymanager))
 
 	require.NoError(t, writer.Close())
@@ -220,7 +220,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list direct keymanager accounts function.
+	// We call the list imported keymanager accounts function.
 	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true /* show deposit data */, true /*show private keys */, keymanager))
 
 	require.NoError(t, writer.Close())

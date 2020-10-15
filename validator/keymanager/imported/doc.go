@@ -1,8 +1,8 @@
 /*
-Package direct defines an implementation of an on-disk, EIP-2335 keystore.json
+Package imported defines an implementation of an on-disk, EIP-2335 keystore.json
 approach towards defining validator accounts in Prysm. A validating private key is
 encrypted using a passphrase and its resulting encrypted file is stored as a
-keystore.json file under a unique, human-readable, account namespace. This direct keymanager approach
+keystore.json file under a unique, human-readable, account namespace. This imported keymanager approach
 relies on storing account information on-disk, making it trivial to import, backup and
 list all associated accounts for a user.
 
@@ -36,7 +36,7 @@ containing a raw bytes eth1 transaction data ready to be used to submit a 32ETH 
 eth2 deposit contract for a validator. Passwords are stored in a separate directory for easy unlocking
 of the associated keystores by an account namespace.
 
-This direct keymanager can be customized via a keymanageropts.json file, which has the following
+This imported keymanager can be customized via a keymanageropts.json file, which has the following
 JSON schema as its options:
 
  {
@@ -45,4 +45,4 @@ JSON schema as its options:
 
 Currently, the only supported value for `direct_eip_version` is "EIP-2335".
 */
-package direct
+package imported

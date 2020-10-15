@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -28,7 +28,7 @@ import (
 var log = logrus.WithField("prefix", "wallet")
 
 const (
-	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
+	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// HashedPasswordFileName for the wallet.
 	HashedPasswordFileName = "hash"
@@ -79,7 +79,7 @@ type Config struct {
 // Wallet is a primitive in Prysm's account management which
 // has the capability of creating new accounts, reading existing accounts,
 // and providing secure access to eth2 secrets depending on an
-// associated keymanager (either direct, derived, or remote signing enabled).
+// associated keymanager (either imported, derived, or remote signing enabled).
 type Wallet struct {
 	walletDir      string
 	accountsPath   string
@@ -115,7 +115,7 @@ func Exists(walletDir string) (bool, error) {
 	return dirExists && isValid, nil
 }
 
-// IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `direct`.
+// IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `imported`.
 // Returns true if one of those subdirectories exist, false otherwise.
 func IsValid(walletDir string) (bool, error) {
 	expanded, err := fileutil.ExpandPath(walletDir)
@@ -147,7 +147,7 @@ func IsValid(walletDir string) (bool, error) {
 	// Count how many wallet types we have in the directory
 	numWalletTypes := 0
 	for _, name := range names {
-		// Nil error means input name is `derived`, `remote` or `direct`
+		// Nil error means input name is `derived`, `remote` or `imported`
 		_, err = keymanager.ParseKind(name)
 		if err == nil {
 			numWalletTypes++
@@ -284,16 +284,16 @@ func (w *Wallet) InitializeKeymanager(
 	var km keymanager.IKeymanager
 	switch w.KeymanagerKind() {
 	case keymanager.Direct:
-		opts, err := direct.UnmarshalOptionsFile(configFile)
+		opts, err := imported.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanageropts file")
 		}
-		km, err = direct.NewKeymanager(ctx, &direct.SetupConfig{
+		km, err = imported.NewKeymanager(ctx, &imported.SetupConfig{
 			Wallet: w,
 			Opts:   opts,
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize direct keymanager")
+			return nil, errors.Wrap(err, "could not initialize imported keymanager")
 		}
 		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
 			keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -506,7 +506,7 @@ func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error
 			return keymanagerKind, nil
 		}
 	}
-	return 0, errors.New("no keymanager folder, 'direct', 'remote', nor 'derived' found in wallet path")
+	return 0, errors.New("no keymanager folder, 'imported', 'remote', nor 'derived' found in wallet path")
 }
 
 func inputPassword(

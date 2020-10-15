@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/urfave/cli/v2"
 )
 
@@ -110,9 +110,9 @@ func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
 	case keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
 	case keymanager.Direct:
-		km, ok := cfg.Keymanager.(*direct.Keymanager)
+		km, ok := cfg.Keymanager.(*imported.Keymanager)
 		if !ok {
-			return errors.New("not a direct keymanager")
+			return errors.New("not a imported keymanager")
 		}
 		if len(cfg.PublicKeys) == 1 {
 			log.Info("Deleting account...")
