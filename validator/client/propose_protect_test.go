@@ -13,7 +13,6 @@ import (
 func TestPreBlockSignLocalValidation(t *testing.T) {
 	ctx := context.Background()
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
