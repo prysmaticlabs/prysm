@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -21,8 +23,18 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 			Data: make([]*ethpb.Attestation, 0),
 		}, nil
 	}
-	v1Atts := make([]*ethpb.Attestation, len(atts))
-	for i, att := range atts {
+	filtered := make([]*ethpb_alpha.Attestation, 0, numAtts)
+	for _, item := range atts {
+		slotEqual := req.Slot != 0 && req.Slot == item.Data.Slot
+		committeeEqual := req.CommitteeIndex != 0 && req.CommitteeIndex == item.Data.CommitteeIndex
+		if slotEqual && committeeEqual {
+			filtered = append(filtered, item)
+		} else if slotEqual || committeeEqual {
+			filtered = append(filtered, item)
+		}
+	}
+	v1Atts := make([]*ethpb.Attestation, len(filtered))
+	for i, att := range filtered {
 		marshaledAtt, err := att.Marshal()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not marshal attestation: %v", err)
@@ -51,7 +63,7 @@ func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Emp
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	attSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState)
+	attSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /*noLimit*/)
 	numAttSlashings := len(attSlashings)
 	if numAttSlashings == 0 {
 		return &ethpb.AttesterSlashingsPoolResponse{
