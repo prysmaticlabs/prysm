@@ -3,8 +3,8 @@ package tos
 import (
 	"errors"
 	"io/ioutil"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/prysmaticlabs/prysm/shared/cmd"

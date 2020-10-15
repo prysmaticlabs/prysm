@@ -4,12 +4,12 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/urfave/cli/v2"
-	"path/filepath"
 )
 
 func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
