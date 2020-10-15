@@ -649,6 +649,7 @@ func (s *Service) initPOWService() {
 				s.retryETH1Node(err)
 				continue
 			}
+			s.cacheHeadersForEth1DataVote(header)
 
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
@@ -725,4 +726,21 @@ func (s *Service) logTillChainStart() {
 		"Extra validators needed":   valNeeded,
 		"Time till minimum genesis": time.Duration(secondsLeft) * time.Second,
 	}).Infof("Currently waiting for chainstart")
+}
+
+// cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
+// instead of making multiple RPC requests to the ETH1 endpoint.
+func (s *Service) cacheHeadersForEth1DataVote(lastKnownHeader *gethTypes.Header) {
+	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
+		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
+
+	end := lastKnownHeader.Number.Uint64() - params.BeaconConfig().Eth1FollowDistance
+	// We fetch twice the number of headers just to be safe.
+	start := end - 2*blocksPerVotingPeriod
+	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
+	_, err := s.batchRequestHeaders(start, end)
+	if err != nil {
+		// Caching failure is not critical, so we just log a warning.
+		log.Warningf("Unable to cache headers: %v", err)
+	}
 }
