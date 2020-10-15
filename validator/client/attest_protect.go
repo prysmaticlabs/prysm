@@ -17,18 +17,17 @@ var failedPostAttSignExternalErr = "external slasher service detected a submitte
 
 func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().LocalProtection {
-		v.attesterHistoryByPubKeyLock.RLock()
-		attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
-		v.attesterHistoryByPubKeyLock.RUnlock()
-		if ok && isNewAttSlashable(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch) {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPreAttSignLocalErr)
-		} else if !ok {
-			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
+
+	v.attesterHistoryByPubKeyLock.RLock()
+	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
+	v.attesterHistoryByPubKeyLock.RUnlock()
+	if ok && isNewAttSlashable(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch) {
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return errors.New(failedPreAttSignLocalErr)
+	} else if !ok {
+		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
 	}
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
@@ -44,17 +43,15 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 
 func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().LocalProtection {
-		v.attesterHistoryByPubKeyLock.Lock()
-		attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
-		if ok {
-			attesterHistory = markAttestationForTargetEpoch(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
-			v.attesterHistoryByPubKey[pubKey] = attesterHistory
-		} else {
-			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
-		}
-		v.attesterHistoryByPubKeyLock.Unlock()
+	v.attesterHistoryByPubKeyLock.Lock()
+	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
+	if ok {
+		attesterHistory = markAttestationForTargetEpoch(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
+		v.attesterHistoryByPubKey[pubKey] = attesterHistory
+	} else {
+		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
 	}
+	v.attesterHistoryByPubKeyLock.Unlock()
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
