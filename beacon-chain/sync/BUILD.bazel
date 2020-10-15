@@ -116,7 +116,6 @@ go_test(
         "rpc_test.go",
         "service_test.go",
         "subscriber_beacon_aggregate_proof_test.go",
-        "subscriber_beacon_attestation_test.go",
         "subscriber_beacon_blocks_test.go",
         "subscriber_test.go",
         "sync_test.go",
