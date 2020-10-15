@@ -475,10 +475,15 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 	hook := logTest.NewGlobal()
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
+		parentRoot := [32]byte{}
 		for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
 			block := testutil.NewBeaconBlock()
 			block.Block.Slot = i
+			block.Block.ParentRoot = parentRoot[:]
 			require.NoError(t, d.SaveBlock(context.Background(), block))
+			rt, err := block.Block.HashTreeRoot()
+			require.NoError(t, err)
+			parentRoot = rt
 		}
 	}
 	pcl := protocol.ID("/testing")
@@ -588,6 +593,55 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			}))
 		}
 	}
+	saveBadBlocks := func(d db2.Database, chain *chainMock.ChainService,
+		req *pb.BeaconBlocksByRangeRequest, badBlockNum uint64, finalized bool) {
+		blk := testutil.NewBeaconBlock()
+		blk.Block.Slot = 0
+		previousRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		genRoot := previousRoot
+
+		require.NoError(t, d.SaveBlock(context.Background(), blk))
+		require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), previousRoot))
+		blocks := make([]*ethpb.SignedBeaconBlock, req.Count)
+		// Populate the database with blocks with non linear roots.
+		for i, j := req.StartSlot, 0; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
+			parentRoot := make([]byte, 32)
+			copy(parentRoot, previousRoot[:])
+			blocks[j] = testutil.NewBeaconBlock()
+			blocks[j].Block.Slot = i
+			blocks[j].Block.ParentRoot = parentRoot
+			// Make the 2nd block have a bad root.
+			if j == int(badBlockNum) {
+				blocks[j].Block.ParentRoot = genRoot[:]
+			}
+			var err error
+			previousRoot, err = blocks[j].Block.HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, d.SaveBlock(context.Background(), blocks[j]))
+			j++
+		}
+		stateSummaries := make([]*pb.StateSummary, len(blocks))
+		if finalized {
+			if chain.CanonicalRoots == nil {
+				chain.CanonicalRoots = map[[32]byte]bool{}
+			}
+			for i, b := range blocks {
+				bRoot, err := b.Block.HashTreeRoot()
+				require.NoError(t, err)
+				stateSummaries[i] = &pb.StateSummary{
+					Slot: b.Block.Slot,
+					Root: bRoot[:],
+				}
+				chain.CanonicalRoots[bRoot] = true
+			}
+			require.NoError(t, d.SaveStateSummaries(context.Background(), stateSummaries))
+			require.NoError(t, d.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{
+				Epoch: helpers.SlotToEpoch(stateSummaries[len(stateSummaries)-1].Slot),
+				Root:  stateSummaries[len(stateSummaries)-1].Root,
+			}))
+		}
+	}
 	pcl := protocol.ID("/testing")
 	sendRequest := func(p1, p2 *p2ptest.TestP2P, r *Service,
 		req *pb.BeaconBlocksByRangeRequest, processBlocks func([]*ethpb.SignedBeaconBlock)) error {
@@ -655,7 +709,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
 	})
 
-	t.Run("process normal range", func(t *testing.T) {
+	t.Run("process non linear blocks", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		d, _ := db.SetupDB(t)
@@ -670,11 +724,46 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			Step:      1,
 			Count:     64,
 		}
-		saveBlocks(d, r.chain.(*chainMock.ChainService), req, true)
+		saveBadBlocks(d, r.chain.(*chainMock.ChainService), req, 2, true)
 
 		hook.Reset()
 		err := sendRequest(p1, p2, r, req, func(blocks []*ethpb.SignedBeaconBlock) {
-			assert.Equal(t, req.Count, uint64(len(blocks)))
+			assert.Equal(t, uint64(2), uint64(len(blocks)))
+			prevRoot := [32]byte{}
+			for _, blk := range blocks {
+				if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
+					t.Errorf("Block slot is out of range: %d is not within [%d, %d)",
+						blk.Block.Slot, req.StartSlot, req.StartSlot+req.Count*req.Step)
+				}
+				if prevRoot != [32]byte{} && bytesutil.ToBytes32(blk.Block.ParentRoot) != prevRoot {
+					t.Errorf("non linear chain received, expected %#x but got %#x", prevRoot, blk.Block.ParentRoot)
+				}
+			}
+		})
+		assert.NoError(t, err)
+		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
+	})
+
+	t.Run("process non linear blocks with 2nd bad batch", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		p2 := p2ptest.NewTestP2P(t)
+		d, _ := db.SetupDB(t)
+
+		p1.Connect(p2)
+		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+
+		r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
+		r.rateLimiter.limiterMap[string(pcl)] = leakybucket.NewCollector(0.000001, 640, false)
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot: 1,
+			Step:      1,
+			Count:     128,
+		}
+		saveBadBlocks(d, r.chain.(*chainMock.ChainService), req, 65, true)
+
+		hook.Reset()
+		err := sendRequest(p1, p2, r, req, func(blocks []*ethpb.SignedBeaconBlock) {
+			assert.Equal(t, uint64(65), uint64(len(blocks)))
 			prevRoot := [32]byte{}
 			for _, blk := range blocks {
 				if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {

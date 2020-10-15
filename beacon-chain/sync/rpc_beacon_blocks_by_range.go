@@ -70,7 +70,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
 		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
-	// prevRoot is used to ensure that returned chains are strictly linear for singular steps.
+	// prevRoot is used to ensure that returned chains are strictly linear for singular steps
+	// by comparing the previous root of the block in the list with the current block's parent.
 	var prevRoot [32]byte
 	for startSlot <= endReqSlot {
 		if err := s.rateLimiter.validateRequest(stream, allowedBlocksPerSecond); err != nil {
@@ -86,7 +87,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 
 		err := s.writeBlockRangeToStream(ctx, startSlot, endSlot, m.Step, &prevRoot, stream)
-		if err != nil && err != errInvalidParent {
+		if err != nil && !errors.Is(err, errInvalidParent) {
 			return err
 		}
 		// Reduce capacity of peer in the rate limiter first.
@@ -96,7 +97,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 		// Exit in the event we have a disjoint chain to
 		// return.
-		if err == errInvalidParent {
+		if errors.Is(err, errInvalidParent) {
 			break
 		}
 
@@ -221,9 +222,11 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 // and are strictly linear.
 func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
 	step, startSlot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+	if len(blks) != len(roots) {
+		return nil, errors.New("input blks and roots are diff lengths")
+	}
 
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
-
 	for i, b := range blks {
 		isRequestedSlotStep := (b.Block.Slot-startSlot)%step == 0
 		isCanonical, err := s.chain.IsCanonical(ctx, roots[i])
