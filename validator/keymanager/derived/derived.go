@@ -462,16 +462,6 @@ func (dr *Keymanager) rewriteSeedConfig(ctx context.Context) error {
 	return nil
 }
 
-// Append the public and the secret key for the provided secret key to their respective caches
-func (dr *Keymanager) appendKeysToCaches(secretKey bls.SecretKey) error {
-	publicKey := bytesutil.ToBytes48(secretKey.PublicKey().Marshal())
-	lock.Lock()
-	orderedPublicKeys = append(orderedPublicKeys, publicKey)
-	secretKeysCache[publicKey] = secretKey
-	lock.Unlock()
-	return nil
-}
-
 // Initialize public and secret key caches used to speed up the functions
 // FetchValidatingPublicKeys and Sign as part of the Keymanager instance initialization
 func (dr *Keymanager) initializeKeysCachesFromSeed() error {

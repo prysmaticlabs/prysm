@@ -82,13 +82,12 @@ type Config struct {
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
-	walletDir           string
-	accountsPath        string
-	configFilePath      string
-	walletPassword      string
-	walletFileLock      *flock.Flock
-	keymanagerKind      keymanager.Kind
-	accountsChangedFeed *event.Feed
+	walletDir      string
+	accountsPath   string
+	configFilePath string
+	walletPassword string
+	walletFileLock *flock.Flock
+	keymanagerKind keymanager.Kind
 }
 
 // New creates a struct from config values.

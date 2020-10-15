@@ -104,7 +104,7 @@ func DeriveChildSK(parentSK *big.Int, index uint32) (*big.Int, error) {
 }
 
 // ikmToLamportSK creates a Lamport secret key.
-func ikmToLamportSK(ikm []byte, salt []byte) ([255][32]byte, error) {
+func ikmToLamportSK(ikm, salt []byte) ([255][32]byte, error) {
 	prk := hkdf.Extract(sha256.New, ikm, salt)
 	okm := hkdf.Expand(sha256.New, prk, nil)
 	var lamportSK [255][32]byte

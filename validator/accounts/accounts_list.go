@@ -70,7 +70,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 
 func listDirectKeymanagerAccounts(
 	ctx context.Context,
-	showDepositData bool,
+	showDepositData,
 	showPrivateKeys bool,
 	keymanager *direct.Keymanager,
 ) error {
@@ -126,7 +126,7 @@ func listDirectKeymanagerAccounts(
 
 func listDerivedKeymanagerAccounts(
 	ctx context.Context,
-	showDepositData bool,
+	showDepositData,
 	showPrivateKeys bool,
 	keymanager *derived.Keymanager,
 ) error {
