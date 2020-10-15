@@ -90,6 +90,11 @@ func main() {
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
 			return err
 		}
+		// verify if ToS accepted
+		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
+			return err
+		}
+
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
