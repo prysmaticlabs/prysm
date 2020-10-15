@@ -29,7 +29,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 		}
 
 		// If the bit for the current slot is marked, do not propose.
-		if !bytes.Equal(signingRoot, params.BeaconConfig.ZeroHash[:]) {
+		if !bytes.Equal(signingRoot, params.BeaconConfig().ZeroHash[:]) {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
