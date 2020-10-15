@@ -93,6 +93,18 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			// 3000000000 = (32  * 1e9 - 1*1e9)         / (1 * 1e9) * (3*1e9)             / (31*1e9)             * (1 * 1e9)
 			want: uint64(28000000000), // 31 * 1e9 - 3000000000
 		},
+		{ // Test for no slashings.
+			state: &pb.BeaconState{
+				Validators: []*ethpb.Validator{
+					{Slashed: true,
+						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance},
+					{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}},
+				Balances:  []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+				Slashings: []uint64{},
+			},
+			want: uint64(32000000000),
+		},
 	}
 
 	for i, tt := range tests {
