@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/golang/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -26,11 +26,7 @@ func TestServer_ListPoolAttesterSlashings(t *testing.T) {
 		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
 		require.NoError(t, err)
 		slashingsInPool[i] = sl
-		marshaledSlashing, err := sl.Marshal()
-		require.NoError(t, err)
-		v1Slashing := &ethpb.AttesterSlashing{}
-		require.NoError(t, proto.Unmarshal(marshaledSlashing, v1Slashing))
-		v1Slashings[i] = v1Slashing
+		v1Slashings[i] = migration.V1Alpha1AttSlashingToV1(sl)
 	}
 	tests := []struct {
 		name    string
@@ -60,8 +56,8 @@ func TestServer_ListPoolAttesterSlashings(t *testing.T) {
 				require.NoError(t, pool.InsertAttesterSlashing(ctx, beaconState, slashing))
 			}
 			p := &Server{
-				HeadFetcher:   &mock.ChainService{State: beaconState},
-				SlashingsPool: pool,
+				ChainInfoFetcher: &mock.ChainService{State: beaconState},
+				SlashingsPool:    pool,
 			}
 			attSlashings, err := p.ListPoolAttesterSlashings(ctx, &ptypes.Empty{})
 			require.NoError(t, err)
@@ -80,11 +76,7 @@ func TestServer_ListPoolProposerSlashings(t *testing.T) {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
 		require.NoError(t, err)
 		slashingsInPool[i] = sl
-		marshaledSlashing, err := sl.Marshal()
-		require.NoError(t, err)
-		v1Slashing := &ethpb.ProposerSlashing{}
-		require.NoError(t, proto.Unmarshal(marshaledSlashing, v1Slashing))
-		v1Slashings[i] = v1Slashing
+		v1Slashings[i] = migration.V1Alpha1ProposerSlashingToV1(sl)
 	}
 	tests := []struct {
 		name    string
@@ -114,8 +106,8 @@ func TestServer_ListPoolProposerSlashings(t *testing.T) {
 				require.NoError(t, pool.InsertProposerSlashing(ctx, beaconState, slashing))
 			}
 			p := &Server{
-				HeadFetcher:   &mock.ChainService{State: beaconState},
-				SlashingsPool: pool,
+				ChainInfoFetcher: &mock.ChainService{State: beaconState},
+				SlashingsPool:    pool,
 			}
 			attSlashings, err := p.ListPoolProposerSlashings(ctx, &ptypes.Empty{})
 			require.NoError(t, err)
@@ -134,11 +126,7 @@ func TestServer_ListPoolVoluntaryExits(t *testing.T) {
 		exit, err := testutil.GenerateVoluntaryExit(beaconState, privKeys[i], uint64(i))
 		require.NoError(t, err)
 		exitsInPool[i] = exit
-		marshaledExit, err := exit.Marshal()
-		require.NoError(t, err)
-		v1Exit := &ethpb.SignedVoluntaryExit{}
-		require.NoError(t, proto.Unmarshal(marshaledExit, v1Exit))
-		v1Exits[i] = v1Exit
+		v1Exits[i] = migration.V1Alpha1ExitToV1(exit)
 	}
 	tests := []struct {
 		name    string
@@ -168,7 +156,7 @@ func TestServer_ListPoolVoluntaryExits(t *testing.T) {
 				pool.InsertVoluntaryExit(ctx, beaconState, slashing)
 			}
 			p := &Server{
-				HeadFetcher:        &mock.ChainService{State: beaconState},
+				ChainInfoFetcher:   &mock.ChainService{State: beaconState},
 				VoluntaryExitsPool: pool,
 			}
 			exits, err := p.ListPoolVoluntaryExits(ctx, &ptypes.Empty{})
