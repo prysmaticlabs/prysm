@@ -76,6 +76,38 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
 }
 
+func TestSyncHandlers_WaitForChainStart(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	r := Service{
+		ctx:           context.Background(),
+		p2p:           p2p,
+		chain:         chainService,
+		stateNotifier: chainService.StateNotifier(),
+		initialSync:   &mockSync.Sync{IsSyncing: false},
+	}
+
+	go r.registerHandlers()
+	time.Sleep(100 * time.Millisecond)
+	i := r.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{
+			StartTime: time.Now().Add(2 * time.Second),
+		},
+	})
+	if i == 0 {
+		t.Fatal("didn't send genesis time to subscribers")
+	}
+	require.Equal(t, false, r.chainStarted, "Chainstart was marked prematurely")
+
+	// wait for chainstart to be sent
+	time.Sleep(3 * time.Second)
+	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
+}
+
 func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	chainService := &mockChain.ChainService{

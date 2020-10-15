@@ -54,6 +54,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 		"--verbosity=debug",
 		"--force-clear-db",
 		"--e2e-config",
+		"--accept-terms-of-use",
 	}
 	if config.UsePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50))

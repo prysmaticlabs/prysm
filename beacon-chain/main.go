@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -94,6 +95,7 @@ var appFlags = []cli.Flag{
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
 	cmd.GrpcMaxCallRecvMsgSizeFlag,
+	cmd.AcceptTosFlag,
 }
 
 func init() {
@@ -113,6 +115,10 @@ func main() {
 	app.Before = func(ctx *cli.Context) error {
 		// Load flags from config file, if specified.
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
+			return err
+		}
+		// verify if ToS accepted
+		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 			return err
 		}
 

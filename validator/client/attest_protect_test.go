@@ -15,7 +15,6 @@ import (
 
 func TestPreSignatureValidation(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
@@ -51,7 +50,6 @@ func TestPreSignatureValidation(t *testing.T) {
 
 func TestPreSignatureValidation_NilLocal(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
@@ -81,7 +79,6 @@ func TestPreSignatureValidation_NilLocal(t *testing.T) {
 
 func TestPostSignatureUpdate(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
@@ -117,7 +114,6 @@ func TestPostSignatureUpdate(t *testing.T) {
 
 func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
