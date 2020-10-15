@@ -13,7 +13,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -66,19 +65,11 @@ func (s *Service) registerSubscribers() {
 		s.validateAttesterSlashing,
 		s.attesterSlashingSubscriber,
 	)
-	if featureconfig.Get().DisableDynamicCommitteeSubnets {
-		s.subscribeStaticWithSubnets(
-			"/eth2/%x/beacon_attestation_%d",
-			s.validateCommitteeIndexBeaconAttestation,   /* validator */
-			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
-		)
-	} else {
-		s.subscribeDynamicWithSubnets(
-			"/eth2/%x/beacon_attestation_%d",
-			s.validateCommitteeIndexBeaconAttestation,   /* validator */
-			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
-		)
-	}
+	s.subscribeDynamicWithSubnets(
+		"/eth2/%x/beacon_attestation_%d",
+		s.validateCommitteeIndexBeaconAttestation,   /* validator */
+		s.committeeIndexBeaconAttestationSubscriber, /* message handler */
+	)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
