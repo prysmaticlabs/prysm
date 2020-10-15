@@ -393,7 +393,7 @@ func (dr *Keymanager) FetchWithdrawalPrivateKeys(ctx context.Context) ([][32]byt
 	privKeys := make([][32]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+		withdrawalKey, err := dr.deriveKey(withdrawalKeyPath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", i)
 		}
