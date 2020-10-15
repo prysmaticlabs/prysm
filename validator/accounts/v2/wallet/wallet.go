@@ -57,8 +57,8 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[v2keymanager.Kind]string{
-		v2keymanager.Derived: "HD Wallet (Recommended)",
-		v2keymanager.Direct:  "Non-HD Wallet (Most Basic)",
+		v2keymanager.Direct:  "Non-HD Wallet (Recommended)",
+		v2keymanager.Derived: "HD Wallet (Least secure)",
 		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
@@ -109,7 +109,7 @@ func Exists(walletDir string) (bool, error) {
 		return false, errors.Wrap(err, "could not parse wallet directory")
 	}
 	isValid, err := IsValid(walletDir)
-	if err == ErrNoWalletFound {
+	if errors.Is(err, ErrNoWalletFound) {
 		return false, nil
 	} else if err != nil {
 		return false, errors.Wrap(err, "could not check if dir is valid")
@@ -169,7 +169,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		return otherwise(cliCtx)
 	}
 	isValid, err := IsValid(cliCtx.String(flags.WalletDirFlag.Name))
-	if err == ErrNoWalletFound {
+	if errors.Is(err, ErrNoWalletFound) {
 		return otherwise(cliCtx)
 	}
 	if err != nil {
@@ -222,7 +222,7 @@ func OpenWallet(_ context.Context, cfg *Config) (*Wallet, error) {
 	}
 	valid, err := IsValid(cfg.WalletDir)
 	// ErrNoWalletFound represents both a directory that does not exist as well as an empty directory
-	if err == ErrNoWalletFound {
+	if errors.Is(err, ErrNoWalletFound) {
 		return nil, ErrNoWalletFound
 	}
 	if err != nil {
@@ -536,13 +536,13 @@ func inputPassword(
 	for !hasValidPassword {
 		walletPassword, err = promptutil.PasswordPrompt(promptText, passwordValidator)
 		if err != nil {
-			return "", fmt.Errorf("could not read account password: %v", err)
+			return "", fmt.Errorf("could not read account password: %w", err)
 		}
 
 		if confirmPassword {
 			passwordConfirmation, err := promptutil.PasswordPrompt(ConfirmPasswordPromptText, passwordValidator)
 			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
+				return "", fmt.Errorf("could not read password confirmation: %w", err)
 			}
 			if walletPassword != passwordConfirmation {
 				log.Error("Passwords do not match")

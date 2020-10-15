@@ -11,7 +11,6 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -117,9 +116,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			Deposits:          deposits,
 			Attestations:      atts,
 			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head),
-			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head),
-			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot),
+			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:          graffiti[:],
 		},
 	}
@@ -538,39 +537,18 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 
 	var depositTrie *trieutil.SparseMerkleTrie
 
-	var finalizedDeposits *depositcache.FinalizedDeposits
-	if featureconfig.Get().EnableFinalizedDepositsCache {
-		finalizedDeposits = vs.DepositFetcher.FinalizedDeposits(ctx)
-		depositTrie = finalizedDeposits.Deposits
-		upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
-		insertIndex := finalizedDeposits.MerkleTrieIndex + 1
+	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
+	depositTrie = finalizedDeposits.Deposits
+	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
-		for _, dep := range upToEth1DataDeposits {
-			depHash, err := dep.Data.HashTreeRoot()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not hash deposit data")
-			}
-			depositTrie.Insert(depHash[:], int(insertIndex))
-			insertIndex++
-		}
-
-		return depositTrie, nil
-	}
-
-	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
-	var depositData [][]byte
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := dep.Data.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash deposit data")
 		}
-		depositData = append(depositData, depHash[:])
-	}
-
-	var err error
-	depositTrie, err = trieutil.GenerateTrieFromItems(depositData, params.BeaconConfig().DepositContractTreeDepth)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+		depositTrie.Insert(depHash[:], int(insertIndex))
+		insertIndex++
 	}
 
 	return depositTrie, nil

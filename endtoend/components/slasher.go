@@ -35,6 +35,7 @@ func StartSlashers(t *testing.T) {
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+i),
 			"--force-clear-db",
 			"--e2e-config",
+			"--accept-terms-of-use",
 		}
 
 		t.Logf("Starting slasher %d with flags: %s", i, strings.Join(args[2:], " "))
