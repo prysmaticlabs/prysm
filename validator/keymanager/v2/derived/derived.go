@@ -67,7 +67,7 @@ type SeedConfig struct {
 type KeymanagerOpts struct {
 	DerivedPathStructure string `json:"derived_path_structure"`
 	DerivedEIPNumber     string `json:"derived_eip_number"`
-	DerivedVersion       uint   `json:"derived_version"`
+	DerivedVersion       string `json:"derived_version"`
 }
 
 // SetupConfig includes configuration values for initializing
@@ -101,7 +101,7 @@ func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{
 		DerivedPathStructure: "m / purpose / coin_type / account_index / withdrawal_key / validating_key",
 		DerivedEIPNumber:     EIPVersion,
-		DerivedVersion:       2,
+		DerivedVersion:       "2",
 	}
 }
 
@@ -140,7 +140,7 @@ func NewKeymanager(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize keys caches from seed")
 	}
-	if cfg.Opts.DerivedVersion != 2 {
+	if cfg.Opts.DerivedVersion != "2" {
 		if err := k.rewriteSeedConfig(ctx); err != nil {
 			return nil, err
 		}
@@ -468,7 +468,7 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 }
 
 func (dr *Keymanager) deriveKey(path string) (*types.BLSPrivateKey, error) {
-	if dr.opts.DerivedVersion == 2 {
+	if dr.opts.DerivedVersion == "2" {
 		return v2derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
 	}
 	return v1derivation.PrivateKeyFromSeedAndPath(dr.seed, path)

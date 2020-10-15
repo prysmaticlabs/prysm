@@ -49,7 +49,7 @@ const (
 // KeymanagerOpts for a direct keymanager.
 type KeymanagerOpts struct {
 	EIPVersion string `json:"direct_eip_version"`
-	Version    uint   `json:"direct_version"`
+	Version    string `json:"direct_version"`
 }
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
@@ -71,7 +71,7 @@ type AccountStore struct {
 func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{
 		EIPVersion: eipVersion,
-		Version:    2,
+		Version:    "2",
 	}
 }
 
@@ -104,7 +104,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err := k.initializeAccountKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to initialize account store")
 	}
-	if k.opts.Version != 2 {
+	if k.opts.Version != "2" {
 		if err := k.rewriteAccountsKeystore(ctx); err != nil {
 			return nil, errors.Wrap(err, "failed to write accounts keystore")
 		}
