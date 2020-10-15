@@ -102,6 +102,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
+	if err := ValidatorClient.db.MigrateV2ProposalsProtectionDb(cliCtx.Context); err != nil {
+		return nil, err
+	}
 	return ValidatorClient, nil
 }
 
