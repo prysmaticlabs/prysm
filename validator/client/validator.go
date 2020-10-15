@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
@@ -69,7 +68,6 @@ type validator struct {
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
-	keyManager                         keymanager.KeyManager
 	node                               ethpb.NodeClient
 	keyManagerV2                       v2keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
@@ -243,13 +241,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
-	var validatingKeys [][48]byte
-	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
-	} else {
-		validatingKeys, err = v.keyManager.FetchValidatingKeys()
-	}
+	validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating keys")
 	}
@@ -263,7 +255,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		// If context is canceled we stop the loop.
@@ -389,12 +381,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
-	var validatingKeys [][48]byte
-	if featureconfig.Get().EnableAccountsV2 {
-		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
-	} else {
-		validatingKeys, err = v.keyManager.FetchValidatingKeys()
-	}
+	validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}
@@ -582,10 +569,6 @@ func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot u
 // is very rare, a validator should check these data every epoch to be sure the validator is
 // participating on the correct fork version.
 func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
-	if !featureconfig.Get().EnableDomainDataCache {
-		return
-	}
-
 	for _, d := range [][]byte{
 		params.BeaconConfig().DomainRandao[:],
 		params.BeaconConfig().DomainBeaconAttester[:],
@@ -611,10 +594,8 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 
 	key := strings.Join([]string{strconv.FormatUint(req.Epoch, 10), hex.EncodeToString(req.Domain)}, ",")
 
-	if featureconfig.Get().EnableDomainDataCache {
-		if val, ok := v.domainDataCache.Get(key); ok {
-			return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
-		}
+	if val, ok := v.domainDataCache.Get(key); ok {
+		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
 	}
 
 	res, err := v.validatorClient.DomainData(ctx, req)
@@ -622,9 +603,7 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 		return nil, err
 	}
 
-	if featureconfig.Get().EnableDomainDataCache {
-		v.domainDataCache.Set(key, proto.Clone(res), 1)
-	}
+	v.domainDataCache.Set(key, proto.Clone(res), 1)
 
 	return res, nil
 }

@@ -70,6 +70,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
 		"--force-clear-db",
 		"--e2e-config",
+		"--accept-terms-of-use",
 	}
 	args = append(args, featureconfig.E2EValidatorFlags...)
 	args = append(args, config.ValidatorFlags...)

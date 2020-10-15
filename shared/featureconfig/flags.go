@@ -34,24 +34,9 @@ var (
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
 	}
-	disableBroadcastSlashingFlag = &cli.BoolFlag{
-		Name:  "disable-broadcast-slashings",
-		Usage: "Disables broadcasting slashings submitted to the beacon node.",
-	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
-	}
-	disableDynamicCommitteeSubnets = &cli.BoolFlag{
-		Name:  "disable-dynamic-committee-subnets",
-		Usage: "Disable dynamic committee attestation subnets.",
-	}
-	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
-	// the head of the chain based on attestations and instead accepts any valid received block
-	// as the chain head. UNSAFE, use with caution.
-	disableForkChoiceUnsafeFlag = &cli.BoolFlag{
-		Name:  "disable-fork-choice-unsafe",
-		Usage: "UNSAFE: disable fork choice for determining head of the beacon chain.",
 	}
 	enableBackupWebhookFlag = &cli.BoolFlag{
 		Name:  "enable-db-backup-webhook",
@@ -60,11 +45,6 @@ var (
 	kafkaBootstrapServersFlag = &cli.StringFlag{
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
-	}
-	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
-		Name: "cache-filtered-block-tree",
-		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
-			"this is used for fork choice.",
 	}
 	enableLocalProtectionFlag = &cli.BoolFlag{
 		Name: "enable-local-protection",
@@ -77,37 +57,6 @@ var (
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
 			"transmitting a slashable offence over the network.",
 	}
-	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
-		Name:  "disable-strict-attestation-pubsub-verification",
-		Usage: "Disable strict signature verification of attestations in pubsub. See PR 4782 for details.",
-	}
-	disableUpdateHeadPerAttestation = &cli.BoolFlag{
-		Name:  "disable-update-head-attestation",
-		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
-	}
-	disableDomainDataCacheFlag = &cli.BoolFlag{
-		Name: "disable-domain-data-cache",
-		Usage: "Disable caching of domain data requests per epoch. This feature reduces the total " +
-			"calls to the beacon node for each assignment.",
-	}
-	enableStateGenSigVerify = &cli.BoolFlag{
-		Name: "enable-state-gen-sig-verify",
-		Usage: "Enable signature verification for state gen. This feature increases the cost to generate a historical state," +
-			"the resulting state is signature verified.",
-	}
-	checkHeadState = &cli.BoolFlag{
-		Name:  "check-head-state",
-		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
-	}
-	disableNoiseHandshake = &cli.BoolFlag{
-		Name: "disable-noise",
-		Usage: "This disables the beacon node from using NOISE and instead uses SECIO instead for performing handshakes between peers and " +
-			"securing transports between peers",
-	}
-	dontPruneStateStartUp = &cli.BoolFlag{
-		Name:  "dont-prune-state-start-up",
-		Usage: "Don't prune historical states upon start up",
-	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -115,10 +64,6 @@ var (
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
-	}
-	disableReduceAttesterStateCopy = &cli.BoolFlag{
-		Name:  "disable-reduce-attester-state-copy",
-		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
@@ -129,25 +74,9 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "max_cover",
 	}
-	disableNewBeaconStateLocks = &cli.BoolFlag{
-		Name:  "disable-new-beacon-state-locks",
-		Usage: "Disable new beacon state locking",
-	}
-	disableBatchBlockVerify = &cli.BoolFlag{
-		Name:  "disable-batch-block-verify",
-		Usage: "Disable full signature verification of blocks in batches instead of singularly.",
-	}
-	initSyncVerbose = &cli.BoolFlag{
-		Name:  "init-sync-verbose",
-		Usage: "Enable logging every processed block during initial syncing.",
-	}
 	enableBlst = &cli.BoolFlag{
 		Name:  "blst",
 		Usage: "Enable new BLS library, blst, from Supranational",
-	}
-	disableFinalizedDepositsCache = &cli.BoolFlag{
-		Name:  "disable-finalized-deposits-cache",
-		Usage: "Disables utilization of cached finalized deposits",
 	}
 	enableEth1DataMajorityVote = &cli.BoolFlag{
 		Name:  "enable-eth1-data-majority-vote",
@@ -188,7 +117,6 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
-	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
 	OnyxTestnet,
@@ -218,31 +146,16 @@ var E2EValidatorFlags = []string{
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
-	disableForkChoiceUnsafeFlag,
-	disableDynamicCommitteeSubnets,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	cacheFilteredBlockTreeFlag,
-	disableStrictAttestationPubsubVerificationFlag,
-	disableUpdateHeadPerAttestation,
-	enableStateGenSigVerify,
-	checkHeadState,
-	disableNoiseHandshake,
-	dontPruneStateStartUp,
-	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
-	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	disableNewBeaconStateLocks,
 	AltonaTestnet,
 	OnyxTestnet,
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
-	disableBatchBlockVerify,
-	initSyncVerbose,
-	disableFinalizedDepositsCache,
 	enableBlst,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
@@ -253,9 +166,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--cache-filtered-block-tree",
-	"--enable-state-gen-sig-verify",
-	"--check-head-state",
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 	"--enable-eth1-data-majority-vote",

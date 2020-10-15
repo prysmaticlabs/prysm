@@ -33,7 +33,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if err == errInvalidSequenceNum {
+		if errors.Is(err, errInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, seqError, stream)
 		}
@@ -122,7 +122,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if err == errInvalidSequenceNum {
+		if errors.Is(err, errInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 		return err
