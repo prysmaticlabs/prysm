@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -171,6 +172,7 @@ func (store *Store) MigrateV2ProposalsProtectionDb(ctx context.Context) error {
 	if !importProposals {
 		return nil
 	}
+	log.Info("Starting proposals protection db migration to v2...")
 	if err := store.MigrateV2ProposalFormat(ctx); err != nil {
 		return err
 	}
@@ -183,6 +185,7 @@ func (store *Store) MigrateV2ProposalsProtectionDb(ctx context.Context) error {
 		}
 		return nil
 	})
+	log.Info("Finished proposals protection db migration to v2")
 	return err
 }
 
