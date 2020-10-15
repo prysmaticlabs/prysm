@@ -155,6 +155,12 @@ var (
 		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
 		Value: false,
 	}
+	// ShowPrivateKeysFlag for accounts-v2.
+	ShowPrivateKeysFlag = &cli.BoolFlag{
+		Name:  "show-private-keys",
+		Usage: "Display the private keys for validator accounts-v2",
+		Value: false,
+	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
 	NumAccountsFlag = &cli.IntFlag{
 		Name:  "num-accounts",
