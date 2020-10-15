@@ -177,6 +177,8 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
+	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
+	defer cancel()
 
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
@@ -216,6 +218,8 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 //    - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
 //    - This vote's block is the eth1 block to use for the block proposal.
 func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTrie.BeaconState) (*ethpb.Eth1Data, error) {
+	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
+	defer cancel()
 
 	slot := beaconState.Slot()
 	votingPeriodStartTime := vs.slotStartTime(slot)
@@ -304,7 +308,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 
 	var inRangeVotes []eth1DataSingleVote
 	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		ok, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
+		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
 		if err != nil {
 			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
 		}
@@ -315,7 +319,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		// firstValidBlockNumber.Cmp(height) < 1 filters out all blocks before firstValidBlockNumber
 		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
 		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
-		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
+		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
 	}

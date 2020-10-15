@@ -7,10 +7,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -88,7 +84,6 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 	res := &ethpb.ValidatorActivationResponse{
 		Statuses: validatorStatuses,
 	}
-	go vs.randomStuff(vs.GenesisTimeFetcher.GenesisTime())
 	if activeValidatorExists {
 		return stream.Send(res)
 	}
@@ -136,7 +131,7 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 }
 
 // DomainData fetches the current domain version information from the beacon state.
-func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
+func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
 	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
@@ -150,7 +145,7 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
-func (vs *Server) CanonicalHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
+func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
 	headBlk, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
@@ -162,7 +157,7 @@ func (vs *Server) CanonicalHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Si
 // has started its runtime and validators begin their responsibilities. If it has not, it then
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
-func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
+func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
 	head, err := vs.HeadFetcher.HeadState(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
@@ -192,7 +187,6 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 					Started:     true,
 					GenesisTime: uint64(data.StartTime.Unix()),
 				}
-				go vs.randomStuff(data.StartTime)
 				return stream.Send(res)
 			}
 			// Handle race condition in the event the blockchain
@@ -206,7 +200,6 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 					Started:     true,
 					GenesisTime: uint64(data.StartTime.Unix()),
 				}
-				go vs.randomStuff(data.StartTime)
 				return stream.Send(res)
 			}
 		case <-stateSub.Err():
@@ -219,7 +212,7 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 
 // WaitForSynced subscribes to the state channel and ends the stream when the state channel
 // indicates the beacon node has been initialized and is ready
-func (vs *Server) WaitForSynced(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
+func (vs *Server) WaitForSynced(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
 	head, err := vs.HeadFetcher.HeadState(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
@@ -255,62 +248,6 @@ func (vs *Server) WaitForSynced(_ *ptypes.Empty, stream ethpb.BeaconNodeValidato
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-vs.Ctx.Done():
 			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
-}
-
-func (vs *Server) randomStuff(gTime time.Time) {
-	ticker := slotutil.GetSlotTicker(gTime, params.BeaconConfig().SecondsPerSlot)
-	defer ticker.Done()
-
-	for {
-		select {
-		case slot := <-ticker.C():
-			ctx := context.Background()
-			//votingPeriodStartTime := vs.slotStartTime(slot)
-
-			//eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-			//earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
-			//latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
-			/*earliestBlk, err := vs.BlockFetcher.BlockNumberByTimestamp(ctx, earliestValidTime)
-			if err != nil {
-				log.WithError(err).Error("")
-				continue
-			}
-			latestBlk, err := vs.BlockFetcher.BlockNumberByTimestamp(ctx, latestValidTime)
-			if err != nil {
-				log.WithError(err).Error("")
-				continue
-			} */
-
-			//log.Errorf("batch requesting from %d and %d", earliestBlk.Uint64(), latestBlk.Uint64())
-			//_, err = vs.BlockFetcher.BatchRequestHeaders(earliestBlk.Uint64(), latestBlk.Uint64())
-			//if err != nil {
-			//	log.Error(err)
-			//	continue
-			//}
-			head, err := vs.HeadFetcher.HeadState(ctx)
-			if err != nil {
-				log.WithError(err).Error("")
-				continue
-			}
-
-			currTime := time.Now()
-			eth1d, err := vs.eth1Data(context.Background(), slot)
-			if err != nil {
-				log.WithError(err).Error("")
-				continue
-			}
-			log.Infof("normal eth1 time %d: bRoot %#x , dRoot %#x , count %d ", timeutils.Since(currTime).Microseconds(), eth1d.BlockHash, eth1d.DepositRoot, eth1d.DepositCount)
-
-			currTime = time.Now()
-			eth1d, err = vs.eth1DataMajorityVote(context.Background(), head)
-			if err != nil {
-				log.WithError(err).Error("")
-				continue
-			}
-			log.Infof("optimized eth1 time %d: bRoot %#x , dRoot %#x , count %d ", timeutils.Since(currTime).Milliseconds(), eth1d.BlockHash, eth1d.DepositRoot, eth1d.DepositCount)
-
 		}
 	}
 }
