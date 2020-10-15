@@ -79,7 +79,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	}
 	validator := &validator{
 		db:                             valDB,
-		keyManagerV2:                   km,
+		keyManager:                     km,
 		validatorClient:                m.validatorClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
@@ -616,7 +616,7 @@ func TestSignBlock(t *testing.T) {
 			pubKey: secretKey,
 		},
 	}
-	validator.keyManagerV2 = km
+	validator.keyManager = km
 	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+

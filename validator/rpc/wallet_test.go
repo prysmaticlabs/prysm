@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -26,10 +26,10 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -55,7 +55,7 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 		require.NoError(t, err)
 		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
 		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
+		item := &keymanager.Keystore{
 			Crypto:  cryptoFields,
 			ID:      id.String(),
 			Version: encryptor.Version(),
@@ -118,7 +118,7 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		require.NoError(t, err)
 		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
 		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
+		item := &keymanager.Keystore{
 			Crypto:  cryptoFields,
 			ID:      id.String(),
 			Version: encryptor.Version(),
@@ -183,10 +183,10 @@ func TestServer_WalletConfig(t *testing.T) {
 		walletDir:             defaultWalletPath,
 	}
 	// We attempt to create the wallet.
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -226,10 +226,10 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	})
 	assert.ErrorContains(t, noWalletMsg, err)
 	// We attempt to create the wallet.
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -271,10 +271,10 @@ func TestServer_ChangePassword_DerivedKeymanager(t *testing.T) {
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -324,10 +324,10 @@ func TestServer_HasWallet(t *testing.T) {
 	}, resp)
 
 	// We attempt to create the wallet.
-	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	_, err = accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -345,10 +345,10 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -369,10 +369,10 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -406,10 +406,10 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -435,7 +435,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		require.NoError(t, err)
 		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
 		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
+		item := &keymanager.Keystore{
 			Crypto:  cryptoFields,
 			ID:      id.String(),
 			Version: encryptor.Version(),
