@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -25,7 +26,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		valBucket := bucket.Bucket(publicKey)
 		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key %#x", publicKey)
+			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
 		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if len(sr) == 0 {
@@ -56,10 +57,10 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 	return err
 }
 
-// ImportProposalHistory accepts a validator public key and returns the corresponding signing root.
+// MigrateV2ProposalFormat accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ImportProposalHistory(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.ImportProposalHistory")
+func (store *Store) MigrateV2ProposalFormat(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.MigrateV2ProposalFormat")
 	defer span.End()
 
 	var allKeys [][48]byte
@@ -113,7 +114,7 @@ func (store *Store) ImportProposalHistory(ctx context.Context) error {
 					if slotBitlist.BitAt(i) {
 						ss, err := helpers.StartSlot(bytesutil.FromBytes8(epochProposals.Epoch))
 						if err != nil {
-							return err
+							return errors.Wrapf(err, "failed to get start slot of epoch: %d", epochProposals.Epoch)
 						}
 						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(ss+i), []byte{1}); err != nil {
 							return err
@@ -128,8 +129,8 @@ func (store *Store) ImportProposalHistory(ctx context.Context) error {
 	return err
 }
 
-// UpdatePublicKeysNewBuckets for a specified list of keys.
-func (store *Store) UpdatePublicKeysNewBuckets(pubKeys [][48]byte) error {
+// UpdatePublicKeysBuckets for a specified list of keys.
+func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		for _, pubKey := range pubKeys {
@@ -158,4 +159,46 @@ func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot uint64) error
 		}
 	}
 	return nil
+}
+
+// MigrateV2ProposalsProtectionDb exports old proposal protection data format to the
+// new format and save the exported flag to database.
+func (store *Store) MigrateV2ProposalsProtectionDb(ctx context.Context) error {
+	importProposals, err := store.shouldImportProposals()
+	if err != nil {
+		return err
+	}
+
+	if !importProposals {
+		return nil
+	}
+	log.Info("Starting proposals protection db migration to v2...")
+	if err := store.MigrateV2ProposalFormat(ctx); err != nil {
+		return err
+	}
+	err = store.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicProposalsBucket)
+		if bucket != nil {
+			if err := bucket.Put([]byte(proposalExported), []byte{1}); err != nil {
+				return errors.Wrap(err, "failed to set exported proposals flag in db")
+			}
+		}
+		return nil
+	})
+	log.Info("Finished proposals protection db migration to v2")
+	return err
+}
+
+func (store *Store) shouldImportProposals() (bool, error) {
+	var importProposals bool
+	err := store.db.View(func(tx *bolt.Tx) error {
+		proposalBucket := tx.Bucket(historicProposalsBucket)
+		if proposalBucket != nil && proposalBucket.Stats().KeyN != 0 {
+			if exported := proposalBucket.Get([]byte(proposalExported)); exported == nil {
+				importProposals = true
+			}
+		}
+		return nil
+	})
+	return importProposals, err
 }

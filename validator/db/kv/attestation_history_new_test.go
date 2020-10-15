@@ -186,7 +186,7 @@ func TestStore_ImportOldAttestationFormatBadSourceFormat(t *testing.T) {
 		return nil
 	})
 	require.NoError(t, err)
-	require.ErrorContains(t, "could not retrieve data for public keys", db.ImportOldAttestationFormat(ctx))
+	require.ErrorContains(t, "could not retrieve data for public keys", db.MigrateV2AttestationProtection(ctx))
 }
 
 func TestStore_ImportOldAttestationFormat(t *testing.T) {
@@ -221,7 +221,7 @@ func TestStore_ImportOldAttestationFormat(t *testing.T) {
 	attestationHistory[pubKeys[1]] = history2
 
 	require.NoError(t, db.SaveAttestationHistoryForPubKeys(context.Background(), attestationHistory), "Saving attestation history failed")
-	require.NoError(t, db.ImportOldAttestationFormat(ctx), "Import attestation history failed")
+	require.NoError(t, db.MigrateV2AttestationProtection(ctx), "Import attestation history failed")
 
 	attHis, err := db.AttestationHistoryNewForPubKeys(ctx, pubKeys)
 	require.NoError(t, err)
@@ -238,4 +238,51 @@ func TestStore_ImportOldAttestationFormat(t *testing.T) {
 			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), hd.SigningRoot, "Signing root differs in imported data")
 		}
 	}
+}
+
+func TestShouldImportAttestations(t *testing.T) {
+	pubkey := [48]byte{3}
+	db := setupDB(t, [][48]byte{pubkey})
+	ctx := context.Background()
+
+	shouldImport, err := db.shouldMigrateAttestations()
+	require.NoError(t, err)
+	require.Equal(t, false, shouldImport, "Empty bucket should not be imported")
+	newMap := make(map[uint64]uint64)
+	newMap[2] = 1
+	history := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 2,
+	}
+	attestationHistory := make(map[[48]byte]*slashpb.AttestationHistory)
+	attestationHistory[pubkey] = history
+	err = db.SaveAttestationHistoryForPubKeys(ctx, attestationHistory)
+	require.NoError(t, err)
+	shouldImport, err = db.shouldMigrateAttestations()
+	require.NoError(t, err)
+	require.Equal(t, true, shouldImport, "Bucket with content should be imported")
+}
+
+func TestStore_UpdateAttestationProtectionDb(t *testing.T) {
+	pubkey := [48]byte{3}
+	db := setupDB(t, [][48]byte{pubkey})
+	ctx := context.Background()
+	newMap := make(map[uint64]uint64)
+	newMap[2] = 1
+	history := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 2,
+	}
+	attestationHistory := make(map[[48]byte]*slashpb.AttestationHistory)
+	attestationHistory[pubkey] = history
+	err := db.SaveAttestationHistoryForPubKeys(ctx, attestationHistory)
+	require.NoError(t, err)
+	shouldImport, err := db.shouldMigrateAttestations()
+	require.NoError(t, err)
+	require.Equal(t, true, shouldImport, "Bucket with content should be imported")
+	err = db.MigrateV2AttestationProtectionDb(ctx)
+	require.NoError(t, err)
+	shouldImport, err = db.shouldMigrateAttestations()
+	require.NoError(t, err)
+	require.Equal(t, false, shouldImport, "Proposals should not be re-imported")
 }
