@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
@@ -68,7 +68,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	})
 	var err error
 	switch w.KeymanagerKind() {
-	case v2keymanager.Direct:
+	case keymanager.Direct:
 		if err = createDirectKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with direct keymanager")
 		}
@@ -76,7 +76,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with on-disk keymanager configuration. " +
 				"Make a new validator account with ./prysm.sh validator accounts-v2 create",
 		)
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		if err = createDerivedKeymanagerWallet(ctx, w, cfg.SkipMnemonicConfirm); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with derived keymanager")
 		}
@@ -84,7 +84,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created HD wallet and saved configuration to disk. " +
 				"Make a new validator account with ./prysm.sh validator accounts-2 create",
 		)
-	case v2keymanager.Remote:
+	case keymanager.Remote:
 		if err = createRemoteKeymanagerWallet(ctx, w, cfg.RemoteKeymanagerOpts); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with remote keymanager")
 		}
@@ -97,11 +97,11 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	return w, nil
 }
 
-func extractKeymanagerKindFromCli(cliCtx *cli.Context) (v2keymanager.Kind, error) {
+func extractKeymanagerKindFromCli(cliCtx *cli.Context) (keymanager.Kind, error) {
 	return inputKeymanagerKind(cliCtx)
 }
 
-func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2keymanager.Kind) (*CreateWalletConfig, error) {
+func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keymanager.Kind) (*CreateWalletConfig, error) {
 	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind v2ke
 		SkipMnemonicConfirm: cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name),
 	}
 
-	if keymanagerKind == v2keymanager.Remote {
+	if keymanagerKind == keymanager.Remote {
 		opts, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not input remote keymanager config")
@@ -186,21 +186,21 @@ func createRemoteKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, op
 	return nil
 }
 
-func inputKeymanagerKind(cliCtx *cli.Context) (v2keymanager.Kind, error) {
+func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	if cliCtx.IsSet(flags.KeymanagerKindFlag.Name) {
-		return v2keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))
+		return keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))
 	}
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			wallet.KeymanagerKindSelections[v2keymanager.Direct],
-			wallet.KeymanagerKindSelections[v2keymanager.Derived],
-			wallet.KeymanagerKindSelections[v2keymanager.Remote],
+			wallet.KeymanagerKindSelections[keymanager.Direct],
+			wallet.KeymanagerKindSelections[keymanager.Derived],
+			wallet.KeymanagerKindSelections[keymanager.Remote],
 		},
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
+		return keymanager.Direct, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
 	}
-	return v2keymanager.Kind(selection), nil
+	return keymanager.Kind(selection), nil
 }

@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
 func TestDeleteAccounts_Noninteractive(t *testing.T) {
@@ -43,7 +43,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      v2keymanager.Direct,
+		keymanagerKind:      keymanager2.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flags required for ImportAccounts to work.
@@ -54,7 +54,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager2.Direct,
 			WalletPassword: password,
 		},
 	})

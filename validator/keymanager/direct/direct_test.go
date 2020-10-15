@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 func TestDirectKeymanager_CreateAccount(t *testing.T) {
@@ -44,7 +44,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 		}
 	}
 	require.NotNil(t, encodedKeystore, "could not find keystore file")
-	keystoreFile := &v2keymanager.Keystore{}
+	keystoreFile := &keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We extract the accounts from the keystore.
@@ -98,7 +98,7 @@ func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
 		}
 	}
 	require.NotNil(t, encodedKeystore, "could not find keystore file")
-	keystoreFile := &v2keymanager.Keystore{}
+	keystoreFile := &keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We extract the accounts from the keystore.
@@ -205,7 +205,7 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 			encodedKeystore = v
 		}
 	}
-	keystoreFile := &v2keymanager.Keystore{}
+	keystoreFile := &keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We extract the validator signing private key from the keystore
@@ -288,7 +288,7 @@ func TestDirectKeymanager_RefreshWalletPassword(t *testing.T) {
 			encodedKeystore = v
 		}
 	}
-	keystoreFile := &v2keymanager.Keystore{}
+	keystoreFile := &keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We attempt to decrypt with the wallet password and expect no error.
@@ -309,7 +309,7 @@ func TestDirectKeymanager_RefreshWalletPassword(t *testing.T) {
 			encodedKeystore = v
 		}
 	}
-	keystoreFile = &v2keymanager.Keystore{}
+	keystoreFile = &keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 	_, err = decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
 	require.NoError(t, err)

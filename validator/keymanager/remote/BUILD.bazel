@@ -7,7 +7,7 @@ go_library(
         "doc.go",
         "remote.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote",
+    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote",
     visibility = [
         "//validator:__pkg__",
         "//validator:__subpackages__",

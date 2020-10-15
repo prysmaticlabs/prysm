@@ -8,8 +8,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 )
 
 // EditWalletConfigurationCli for a user's on-disk wallet, being able to change
@@ -25,11 +25,11 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	switch w.KeymanagerKind() {
-	case v2keymanager.Direct:
+	case keymanager.Direct:
 		return errors.New("not possible to edit direct keymanager configuration")
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		return errors.New("derived keymanager is not yet supported")
-	case v2keymanager.Remote:
+	case keymanager.Remote:
 		enc, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 		if err != nil {
 			return errors.Wrap(err, "could not read config")

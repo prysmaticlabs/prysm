@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 )
 
 type recoverCfgStruct struct {
@@ -53,12 +53,12 @@ func createRecoverCliCtx(t *testing.T, cfg *recoverCfgStruct) *cli.Context {
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath, "")
-	set.String(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String(), "")
+	set.String(flags.KeymanagerKindFlag.Name, keymanager.Derived.String(), "")
 	set.String(flags.MnemonicFileFlag.Name, cfg.mnemonicFilePath, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
 	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath))
-	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, v2keymanager.Derived.String()))
+	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanager.Derived.String()))
 	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, cfg.mnemonicFilePath))
 	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
 	return cli.NewContext(&app, set, nil)

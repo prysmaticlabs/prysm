@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 )
 
 const (

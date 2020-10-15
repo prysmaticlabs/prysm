@@ -14,9 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -54,9 +54,9 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	switch cfg.Wallet.KeymanagerKind() {
-	case v2keymanager.Remote:
+	case keymanager2.Remote:
 		return errors.New("cannot create a new account for a remote keymanager")
-	case v2keymanager.Direct:
+	case keymanager2.Direct:
 		km, ok := keymanager.(*direct.Keymanager)
 		if !ok {
 			return errors.New("not a direct keymanager")
@@ -65,7 +65,7 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 		if _, _, err := km.CreateAccount(ctx); err != nil {
 			return errors.Wrap(err, "could not create account in wallet")
 		}
-	case v2keymanager.Derived:
+	case keymanager2.Derived:
 		km, ok := keymanager.(*derived.Keymanager)
 		if !ok {
 			return errors.New("not a derived keymanager")

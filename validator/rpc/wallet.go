@@ -22,9 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
 const (
@@ -78,9 +78,9 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		keymanagerKind := pb.KeymanagerKind_DIRECT
 		switch s.wallet.KeymanagerKind() {
-		case v2keymanager.Derived:
+		case keymanager2.Derived:
 			keymanagerKind = pb.KeymanagerKind_DERIVED
-		case v2keymanager.Remote:
+		case keymanager2.Remote:
 			keymanagerKind = pb.KeymanagerKind_REMOTE
 		}
 		return &pb.CreateWalletResponse{
@@ -95,7 +95,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
-				KeymanagerKind: v2keymanager.Direct,
+				KeymanagerKind: keymanager2.Direct,
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
@@ -108,7 +108,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager2.Direct,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -137,7 +137,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager2.Direct,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -201,11 +201,11 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	}
 	var keymanagerKind pb.KeymanagerKind
 	switch s.wallet.KeymanagerKind() {
-	case v2keymanager.Derived:
+	case keymanager2.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
-	case v2keymanager.Direct:
+	case keymanager2.Direct:
 		keymanagerKind = pb.KeymanagerKind_DIRECT
-	case v2keymanager.Remote:
+	case keymanager2.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
 	}
 	f, err := s.wallet.ReadKeymanagerConfigFromDisk(ctx)
@@ -287,7 +287,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
 	}
 	switch s.wallet.KeymanagerKind() {
-	case v2keymanager.Direct:
+	case keymanager2.Direct:
 		km, ok := s.keymanager.(*direct.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid direct keymanager")
@@ -299,7 +299,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
-	case v2keymanager.Derived:
+	case keymanager2.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid derived keymanager")
@@ -311,7 +311,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
-	case v2keymanager.Remote:
+	case keymanager2.Remote:
 		return nil, status.Error(codes.Internal, "Cannot change password for remote keymanager")
 	}
 	return &ptypes.Empty{}, nil
@@ -336,11 +336,11 @@ func (s *Server) ImportKeystores(
 	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
 	}
-	keystores := make([]*v2keymanager.Keystore, len(req.KeystoresImported))
+	keystores := make([]*keymanager2.Keystore, len(req.KeystoresImported))
 	importedPubKeys := make([][]byte, len(req.KeystoresImported))
 	for i := 0; i < len(req.KeystoresImported); i++ {
 		encoded := req.KeystoresImported[i]
-		keystore := &v2keymanager.Keystore{}
+		keystore := &keymanager2.Keystore{}
 		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
 		}

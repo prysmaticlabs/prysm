@@ -29,7 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/v1derivation"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived/v1derivation"
 )
 
 var (

@@ -31,8 +31,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -159,7 +159,7 @@ func (s *ValidatorClient) Close() {
 }
 
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
-	var keyManagerV2 v2.IKeymanager
+	var keyManagerV2 keymanager.IKeymanager
 	var err error
 	var accountsDir string
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
@@ -320,7 +320,7 @@ func (s *ValidatorClient) registerPrometheusService() error {
 }
 
 func (s *ValidatorClient) registerClientService(
-	keyManagerV2 v2.IKeymanager,
+	keyManagerV2 keymanager.IKeymanager,
 ) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)

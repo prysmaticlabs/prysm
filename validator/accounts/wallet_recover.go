@@ -19,8 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 )
 
 const phraseWordCount = 24
@@ -92,7 +92,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 	}
 	w := wallet.New(&wallet.Config{
 		WalletDir:      cfg.WalletDir,
-		KeymanagerKind: v2keymanager.Derived,
+		KeymanagerKind: keymanager.Derived,
 		WalletPassword: cfg.WalletPassword,
 	})
 	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())

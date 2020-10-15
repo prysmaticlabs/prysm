@@ -8,15 +8,14 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/urfave/cli/v2"
 )
 
 // ListAccountsCli displays all available validator accounts in a Prysm wallet.
@@ -29,7 +28,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(cliCtx.Context, true /* skip mnemonic confirm */)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}
@@ -39,24 +38,24 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
 	switch w.KeymanagerKind() {
-	case v2keymanager.Direct:
-		km, ok := keymanager.(*direct.Keymanager)
+	case keymanager.Direct:
+		km, ok := km.(*direct.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDirectKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with direct keymanager")
 		}
-	case v2keymanager.Derived:
-		km, ok := keymanager.(*derived.Keymanager)
+	case keymanager.Derived:
+		km, ok := km.(*derived.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
-	case v2keymanager.Remote:
-		km, ok := keymanager.(*remote.Keymanager)
+	case keymanager.Remote:
+		km, ok := km.(*remote.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
@@ -214,7 +213,7 @@ func listDerivedKeymanagerAccounts(
 func listRemoteKeymanagerAccounts(
 	ctx context.Context,
 	w *wallet.Wallet,
-	keymanager v2keymanager.IKeymanager,
+	keymanager keymanager.IKeymanager,
 	opts *remote.KeymanagerOpts,
 ) error {
 	au := aurora.NewAurora(true)

@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
 
@@ -70,7 +70,7 @@ type validator struct {
 	startBalances                      map[[48]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
 	node                               ethpb.NodeClient
-	keyManagerV2                       v2keymanager.IKeymanager
+	keyManagerV2                       keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	protector                          slashingprotection.Protector

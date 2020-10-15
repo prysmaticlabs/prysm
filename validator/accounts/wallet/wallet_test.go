@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 const (
@@ -49,7 +49,7 @@ type testWalletConfig struct {
 	privateKeyFile          string
 	skipDepositConfirm      bool
 	numAccounts             int64
-	keymanagerKind          v2keymanager.Kind
+	keymanagerKind          keymanager.Kind
 }
 
 func setupWalletCtx(
@@ -160,7 +160,7 @@ func Test_LockUnlockFile(t *testing.T) {
 		passwordsDir:        passwordsDir,
 		walletPasswordFile:  passwordFile,
 		accountPasswordFile: passwordFile,
-		keymanagerKind:      v2keymanager.Derived,
+		keymanagerKind:      keymanager.Derived,
 		numAccounts:         numAccounts,
 	})
 

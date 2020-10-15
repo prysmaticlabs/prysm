@@ -18,9 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
 type accountCreator interface {
@@ -34,15 +34,15 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 	}
 	var creator accountCreator
 	switch s.wallet.KeymanagerKind() {
-	case v2keymanager.Remote:
+	case keymanager.Remote:
 		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
-	case v2keymanager.Direct:
+	case keymanager.Direct:
 		km, ok := s.keymanager.(*direct.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a direct keymanager")
 		}
 		creator = km
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
@@ -82,7 +82,7 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 			ValidatingPublicKey: keys[i][:],
 			AccountName:         petnames.DeterministicName(keys[i][:], "-"),
 		}
-		if s.wallet.KeymanagerKind() == v2keymanager.Derived {
+		if s.wallet.KeymanagerKind() == keymanager.Derived {
 			accounts[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		}
 	}
@@ -122,7 +122,7 @@ func (s *Server) BackupAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != v2keymanager.Direct && s.wallet.KeymanagerKind() != v2keymanager.Derived {
+	if s.wallet.KeymanagerKind() != keymanager.Direct && s.wallet.KeymanagerKind() != keymanager.Derived {
 		return nil, status.Error(codes.FailedPrecondition, "Only HD or direct wallets can backup accounts")
 	}
 	pubKeys := make([]bls.PublicKey, len(req.PublicKeys))
@@ -133,10 +133,10 @@ func (s *Server) BackupAccounts(
 		}
 		pubKeys[i] = pubKey
 	}
-	var keystoresToBackup []*v2keymanager.Keystore
+	var keystoresToBackup []*keymanager.Keystore
 	var err error
 	switch s.wallet.KeymanagerKind() {
-	case v2keymanager.Direct:
+	case keymanager.Direct:
 		km, ok := s.keymanager.(*direct.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
@@ -145,7 +145,7 @@ func (s *Server) BackupAccounts(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for direct keymanager: %v", err)
 		}
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
@@ -201,7 +201,7 @@ func (s *Server) DeleteAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != v2keymanager.Direct {
+	if s.wallet.KeymanagerKind() != keymanager.Direct {
 		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can delete accounts")
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.DeleteAccountConfig{

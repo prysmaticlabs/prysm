@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 )
 
 var log = logrus.WithField("prefix", "wallet")
@@ -57,10 +57,10 @@ var (
 		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
 	)
 	// KeymanagerKindSelections as friendly text.
-	KeymanagerKindSelections = map[v2keymanager.Kind]string{
-		v2keymanager.Direct:  "Non-HD Wallet (Recommended)",
-		v2keymanager.Derived: "HD Wallet (Least secure)",
-		v2keymanager.Remote:  "Remote Signing Wallet (Advanced)",
+	KeymanagerKindSelections = map[keymanager.Kind]string{
+		keymanager.Direct:  "Non-HD Wallet (Recommended)",
+		keymanager.Derived: "HD Wallet (Least secure)",
+		keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -74,7 +74,7 @@ var (
 // Config to open a wallet programmatically.
 type Config struct {
 	WalletDir      string
-	KeymanagerKind v2keymanager.Kind
+	KeymanagerKind keymanager.Kind
 	WalletPassword string
 }
 
@@ -88,7 +88,7 @@ type Wallet struct {
 	configFilePath      string
 	walletPassword      string
 	walletFileLock      *flock.Flock
-	keymanagerKind      v2keymanager.Kind
+	keymanagerKind      keymanager.Kind
 	accountsChangedFeed *event.Feed
 }
 
@@ -151,7 +151,7 @@ func IsValid(walletDir string) (bool, error) {
 	numWalletTypes := 0
 	for _, name := range names {
 		// Nil error means input name is `derived`, `remote` or `direct`
-		_, err = v2keymanager.ParseKind(name)
+		_, err = keymanager.ParseKind(name)
 		if err == nil {
 			numWalletTypes++
 		}
@@ -255,7 +255,7 @@ func (w *Wallet) SaveWallet() error {
 }
 
 // KeymanagerKind used by the wallet.
-func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
+func (w *Wallet) KeymanagerKind() keymanager.Kind {
 	return w.keymanagerKind
 }
 
@@ -279,19 +279,19 @@ func (w *Wallet) SetPassword(newPass string) {
 func (w *Wallet) InitializeKeymanager(
 	ctx context.Context,
 	skipMnemonicConfirm bool,
-) (v2keymanager.IKeymanager, error) {
+) (keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager config")
 	}
-	var keymanager v2keymanager.IKeymanager
+	var km keymanager.IKeymanager
 	switch w.KeymanagerKind() {
-	case v2keymanager.Direct:
+	case keymanager.Direct:
 		opts, err := direct.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanageropts file")
 		}
-		keymanager, err = direct.NewKeymanager(ctx, &direct.SetupConfig{
+		km, err = direct.NewKeymanager(ctx, &direct.SetupConfig{
 			Wallet: w,
 			Opts:   opts,
 		})
@@ -299,7 +299,7 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize direct keymanager")
 		}
 		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
-			keys, err := keymanager.FetchValidatingPublicKeys(ctx)
+			keys, err := km.FetchValidatingPublicKeys(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -310,12 +310,12 @@ func (w *Wallet) InitializeKeymanager(
 				return nil, errors.Wrap(err, "could not save hashed password to disk")
 			}
 		}
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		opts, err := derived.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
+		km, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
 			Opts:                opts,
 			Wallet:              w,
 			SkipMnemonicConfirm: skipMnemonicConfirm,
@@ -328,12 +328,12 @@ func (w *Wallet) InitializeKeymanager(
 				return nil, errors.Wrap(err, "could not save hashed password to disk")
 			}
 		}
-	case v2keymanager.Remote:
+	case keymanager.Remote:
 		opts, err := remote.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager, err = remote.NewKeymanager(ctx, &remote.SetupConfig{
+		km, err = remote.NewKeymanager(ctx, &remote.SetupConfig{
 			Opts:           opts,
 			MaxMessageSize: 100000000,
 		})
@@ -343,7 +343,7 @@ func (w *Wallet) InitializeKeymanager(
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)
 	}
-	return keymanager, nil
+	return km, nil
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
@@ -487,7 +487,7 @@ func (w *Wallet) SaveHashedPassword(_ context.Context) error {
 	return nil
 }
 
-func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, error) {
+func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error) {
 	walletItem, err := os.Open(walletPath)
 	if err != nil {
 		return 0, err
@@ -504,7 +504,7 @@ func readKeymanagerKindFromWalletPath(walletPath string) (v2keymanager.Kind, err
 		return 0, fmt.Errorf("could not read files in directory: %s", walletPath)
 	}
 	for _, n := range list {
-		keymanagerKind, err := v2keymanager.ParseKind(n)
+		keymanagerKind, err := keymanager.ParseKind(n)
 		if err == nil {
 			return keymanagerKind, nil
 		}

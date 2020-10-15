@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
-func createRandomKeystore(t testing.TB, password string) *v2keymanager.Keystore {
+func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
@@ -25,7 +25,7 @@ func createRandomKeystore(t testing.TB, password string) *v2keymanager.Keystore 
 	pubKey := validatingKey.PublicKey().Marshal()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
-	return &v2keymanager.Keystore{
+	return &keymanager.Keystore{
 		Crypto:  cryptoFields,
 		Pubkey:  fmt.Sprintf("%x", pubKey),
 		ID:      id.String(),
@@ -103,7 +103,7 @@ func TestDirectKeymanager_ImportKeystores(t *testing.T) {
 
 	// Create a duplicate keystore and attempt to import it.
 	numAccounts := 5
-	keystores := make([]*v2keymanager.Keystore, numAccounts+1)
+	keystores := make([]*keymanager.Keystore, numAccounts+1)
 	for i := 1; i < numAccounts+1; i++ {
 		keystores[i] = createRandomKeystore(t, password)
 	}
@@ -130,7 +130,7 @@ func TestDirectKeymanager_ImportKeystores(t *testing.T) {
 		}
 	}
 	require.NotNil(t, encodedKeystore, "could not find keystore file")
-	keystoreFile := &v2keymanager.Keystore{}
+	keystoreFile := &keymanager.Keystore{}
 	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
 
 	// We decrypt the crypto fields of the accounts keystore.

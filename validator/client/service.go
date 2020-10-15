@@ -27,8 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
 
@@ -65,7 +65,7 @@ type ValidatorService struct {
 	validator             Validator
 	protector             slashingprotection.Protector
 	ctx                   context.Context
-	keyManagerV2          v2.IKeymanager
+	keyManagerV2          keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
 }
@@ -83,7 +83,7 @@ type Config struct {
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
-	KeyManagerV2               v2.IKeymanager
+	KeyManagerV2               keymanager.IKeymanager
 	GraffitiFlag               string
 	CertFlag                   string
 	DataDir                    string
@@ -322,7 +322,7 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
-func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
+func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keymanager.IKeymanager) {
 	directKeymanager, ok := km.(*direct.Keymanager)
 	if !ok {
 		return

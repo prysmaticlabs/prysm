@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -17,11 +17,11 @@ import (
 // and returns their respective EIP-2335 keystores.
 func (dr *Keymanager) ExtractKeystores(
 	_ context.Context, publicKeys []bls.PublicKey, password string,
-) ([]*v2keymanager.Keystore, error) {
+) ([]*keymanager.Keystore, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	encryptor := keystorev4.New()
-	keystores := make([]*v2keymanager.Keystore, len(publicKeys))
+	keystores := make([]*keymanager.Keystore, len(publicKeys))
 	for i, pk := range publicKeys {
 		pubKeyBytes := pk.Marshal()
 		secretKey, ok := secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
@@ -43,7 +43,7 @@ func (dr *Keymanager) ExtractKeystores(
 		if err != nil {
 			return nil, err
 		}
-		keystores[i] = &v2keymanager.Keystore{
+		keystores[i] = &keymanager.Keystore{
 			Crypto:  cryptoFields,
 			ID:      id.String(),
 			Pubkey:  fmt.Sprintf("%x", pubKeyBytes),

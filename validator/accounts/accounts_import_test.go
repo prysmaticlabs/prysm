@@ -24,8 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
 func TestImport_Noninteractive(t *testing.T) {
@@ -43,14 +43,14 @@ func TestImport_Noninteractive(t *testing.T) {
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
 		keysDir:             keysDir,
-		keymanagerKind:      v2keymanager.Direct,
+		keymanagerKind:      keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: password,
 		},
 	})
@@ -105,14 +105,14 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
 		keysDir:             keysDir,
-		keymanagerKind:      v2keymanager.Direct,
+		keymanagerKind:      keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: password,
 		},
 	})
@@ -168,14 +168,14 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
 		keysDir:             keystorePath,
-		keymanagerKind:      v2keymanager.Direct,
+		keymanagerKind:      keymanager.Direct,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: password,
 		},
 	})
@@ -294,7 +294,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	// We instantiate a new wallet from a cli context.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
-		keymanagerKind:     v2keymanager.Direct,
+		keymanagerKind:     keymanager.Direct,
 		walletPasswordFile: passwordFilePath,
 		privateKeyFile:     privKeyFileName,
 	})
@@ -302,7 +302,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: walletPass,
 		},
 	})
@@ -334,14 +334,14 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 }
 
 // Returns the fullPath to the newly created keystore file.
-func createKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) {
+func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	validatingKey := bls.RandKey()
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
-	keystoreFile := &v2keymanager.Keystore{
+	keystoreFile := &keymanager.Keystore{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
@@ -358,14 +358,14 @@ func createKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) 
 }
 
 // Returns the fullPath to the newly created keystore file.
-func createRandomNameKeystore(t *testing.T, path string) (*v2keymanager.Keystore, string) {
+func createRandomNameKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	validatingKey := bls.RandKey()
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
-	keystoreFile := &v2keymanager.Keystore{
+	keystoreFile := &keymanager.Keystore{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),

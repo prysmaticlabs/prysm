@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 )
 
 func TestCreateAccount_Derived(t *testing.T) {
@@ -28,7 +28,7 @@ func TestCreateAccount_Derived(t *testing.T) {
 		passwordsDir:        passwordsDir,
 		walletPasswordFile:  passwordFile,
 		accountPasswordFile: passwordFile,
-		keymanagerKind:      v2keymanager.Derived,
+		keymanagerKind:      keymanager.Derived,
 		numAccounts:         numAccounts,
 	})
 
@@ -91,7 +91,7 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     v2keymanager.Direct,
+		keymanagerKind:     keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
 

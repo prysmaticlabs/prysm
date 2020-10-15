@@ -14,14 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
 // DeleteAccountConfig specifies parameters to run the delete account function.
 type DeleteAccountConfig struct {
 	Wallet     *wallet.Wallet
-	Keymanager v2keymanager.IKeymanager
+	Keymanager keymanager.IKeymanager
 	PublicKeys [][]byte
 }
 
@@ -108,9 +108,9 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
-	case v2keymanager.Remote:
+	case keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
-	case v2keymanager.Direct:
+	case keymanager.Direct:
 		km, ok := cfg.Keymanager.(*direct.Keymanager)
 		if !ok {
 			return errors.New("not a direct keymanager")
@@ -123,7 +123,7 @@ func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
 		if err := km.DeleteAccounts(ctx, cfg.PublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		return errors.New("cannot delete accounts for a derived keymanager")
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())

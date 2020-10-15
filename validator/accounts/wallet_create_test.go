@@ -24,10 +24,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/remote"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 )
 
 const (
@@ -57,7 +57,7 @@ type testWalletConfig struct {
 	privateKeyFile          string
 	skipDepositConfirm      bool
 	numAccounts             int64
-	keymanagerKind          v2keymanager.Kind
+	keymanagerKind          keymanager.Kind
 }
 
 func setupWalletCtx(
@@ -123,11 +123,11 @@ func TestCreateOrOpenWallet(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     v2keymanager.Direct,
+		keymanagerKind:     keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
 	createDirectWallet := func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCli(cliCtx, v2keymanager.Direct)
+		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Direct)
 		if err != nil {
 			return nil, err
 		}
@@ -159,7 +159,7 @@ func TestCreateWallet_Direct(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     v2keymanager.Direct,
+		keymanagerKind:     keymanager.Direct,
 		walletPasswordFile: walletPasswordFile,
 	})
 
@@ -190,7 +190,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
-		keymanagerKind:     v2keymanager.Derived,
+		keymanagerKind:     keymanager.Derived,
 	})
 
 	// We attempt to create the wallet.
@@ -221,7 +221,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
-		keymanagerKind:     v2keymanager.Derived,
+		keymanagerKind:     keymanager.Derived,
 	})
 
 	// We attempt to create the wallet.
@@ -236,7 +236,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
-		keymanagerKind:     v2keymanager.Direct,
+		keymanagerKind:     keymanager.Direct,
 	})
 
 	// We attempt to create another wallet of different type at the same location. We expect an error.
@@ -255,7 +255,7 @@ func TestCorrectPassphrase_Derived(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		walletPasswordFile: passwordFile,
-		keymanagerKind:     v2keymanager.Derived,
+		keymanagerKind:     keymanager.Derived,
 		skipDepositConfirm: true,
 	})
 
@@ -265,7 +265,7 @@ func TestCorrectPassphrase_Derived(t *testing.T) {
 
 	w := wallet.New(&wallet.Config{
 		WalletDir:      walletDir,
-		KeymanagerKind: v2keymanager.Derived,
+		KeymanagerKind: keymanager.Derived,
 	})
 
 	seedConfigFile, err := w.ReadEncryptedSeedFromDisk(cliCtx.Context)

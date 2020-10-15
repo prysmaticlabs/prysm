@@ -28,7 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 var (
@@ -423,7 +423,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	} else if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
 	}
-	keystoreFile := &v2keymanager.Keystore{}
+	keystoreFile := &keymanager.Keystore{}
 	if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 		return errors.Wrapf(err, "could not decode keystore file for accounts %s", accountsKeystoreFileName)
 	}
@@ -460,7 +460,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 func (dr *Keymanager) createAccountsKeystore(
 	_ context.Context,
 	privateKeys, publicKeys [][]byte,
-) (*v2keymanager.Keystore, error) {
+) (*keymanager.Keystore, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -509,7 +509,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}
-	return &v2keymanager.Keystore{
+	return &keymanager.Keystore{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Version: encryptor.Version(),

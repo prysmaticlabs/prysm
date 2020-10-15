@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -63,7 +63,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.WithError(err).Errorf("Could not read file at path: %s", ev.Name)
 			return
 		}
-		accountsKeystore := &v2keymanager.Keystore{}
+		accountsKeystore := &keymanager.Keystore{}
 		if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
 			log.WithError(
 				err,
@@ -94,7 +94,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 
 // Replaces the accounts store struct in the direct keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
-func (dr *Keymanager) reloadAccountsFromKeystore(keystore *v2keymanager.Keystore) error {
+func (dr *Keymanager) reloadAccountsFromKeystore(keystore *keymanager.Keystore) error {
 	decryptor := keystorev4.New()
 	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.wallet.Password())
 	if err != nil {

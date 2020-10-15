@@ -22,7 +22,7 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 var log logrus.FieldLogger
@@ -54,7 +54,7 @@ type Server struct {
 	host                  string
 	port                  string
 	listener              net.Listener
-	keymanager            v2keymanager.IKeymanager
+	keymanager            keymanager2.IKeymanager
 	withCert              string
 	withKey               string
 	credentialError       error

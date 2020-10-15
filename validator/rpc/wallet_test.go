@@ -18,8 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 )
 
 func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][]byte) {
@@ -30,7 +30,7 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -56,7 +56,7 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 		require.NoError(t, err)
 		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
 		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
+		item := &keymanager.Keystore{
 			Crypto:  cryptoFields,
 			ID:      id.String(),
 			Version: encryptor.Version(),
@@ -119,7 +119,7 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 		require.NoError(t, err)
 		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
 		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
+		item := &keymanager.Keystore{
 			Crypto:  cryptoFields,
 			ID:      id.String(),
 			Version: encryptor.Version(),
@@ -187,7 +187,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -230,7 +230,7 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -275,7 +275,7 @@ func TestServer_ChangePassword_DerivedKeymanager(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -328,7 +328,7 @@ func TestServer_HasWallet(t *testing.T) {
 	_, err = accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -349,7 +349,7 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -373,7 +373,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -410,7 +410,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -436,7 +436,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		require.NoError(t, err)
 		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
 		require.NoError(t, err)
-		item := &v2keymanager.Keystore{
+		item := &keymanager.Keystore{
 			Crypto:  cryptoFields,
 			ID:      id.String(),
 			Version: encryptor.Version(),

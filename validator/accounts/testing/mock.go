@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.
@@ -94,6 +94,6 @@ func (m *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) err
 }
 
 // InitializeKeymanager --
-func (m *Wallet) InitializeKeymanager(_ context.Context, _ bool) (v2keymanager.IKeymanager, error) {
+func (m *Wallet) InitializeKeymanager(_ context.Context, _ bool) (keymanager.IKeymanager, error) {
 	return nil, nil
 }

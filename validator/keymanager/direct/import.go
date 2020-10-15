@@ -10,7 +10,7 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -18,7 +18,7 @@ import (
 // ImportKeystores into the direct keymanager from an external source.
 func (dr *Keymanager) ImportKeystores(
 	ctx context.Context,
-	keystores []*v2keymanager.Keystore,
+	keystores []*keymanager.Keystore,
 	importsPassword string,
 ) error {
 	decryptor := keystorev4.New()
@@ -63,7 +63,7 @@ func (dr *Keymanager) ImportKeystores(
 // by decrypting using a specified password. If the password fails,
 // it prompts the user for the correct password until it confirms.
 func (dr *Keymanager) attemptDecryptKeystore(
-	enc *keystorev4.Encryptor, keystore *v2keymanager.Keystore, password string,
+	enc *keystorev4.Encryptor, keystore *keymanager.Keystore, password string,
 ) ([]byte, []byte, string, error) {
 	// Attempt to decrypt the keystore with the specifies password.
 	var privKeyBytes []byte

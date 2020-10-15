@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 // Test that the sharding node can build with default flag values.
@@ -51,7 +51,7 @@ func TestNode_Builds(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      dir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Direct,
 			WalletPassword: walletPassword,
 		},
 	})
