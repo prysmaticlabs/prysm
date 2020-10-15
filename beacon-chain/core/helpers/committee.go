@@ -3,6 +3,7 @@
 package helpers
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 
@@ -205,7 +206,9 @@ func CommitteeAssignments(
 		return nil, nil, err
 	}
 	proposerIndexToSlots := make(map[uint64][]uint64, params.BeaconConfig().SlotsPerEpoch)
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+	// Proposal epochs do not have a look ahead, so we skip them over here.
+	validProposalEpoch := epoch < nextEpoch
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch && validProposalEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
 			continue
@@ -369,6 +372,10 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	r, err := BlockRootAtSlot(state, s)
 	if err != nil {
 		return err
+	}
+	// Don't save zero-hash as key in cache.
+	if bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+		return nil
 	}
 	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
 		BlockRoot:       bytesutil.ToBytes32(r),
