@@ -73,6 +73,7 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.ShowDepositDataFlag,
+				flags.ShowPrivateKeysFlag,
 				featureconfig.AltonaTestnet,
 				featureconfig.OnyxTestnet,
 				featureconfig.MedallaTestnet,
