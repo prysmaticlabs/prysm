@@ -67,6 +67,7 @@ func TestDerivedKeymanager_CreateAccount(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
+		opts: DefaultKeymanagerOpts(),
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	ctx := context.Background()
@@ -103,6 +104,7 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 			NextAccount: 0,
 		},
 		seed: make([]byte, 32),
+		opts: DefaultKeymanagerOpts(),
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	// First, generate accounts and their keystore.json files.
@@ -140,6 +142,7 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 			NextAccount: 0,
 		},
 		seed: make([]byte, 32),
+		opts: DefaultKeymanagerOpts(),
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	// First, generate accounts and their keystore.json files.
@@ -177,6 +180,7 @@ func TestDerivedKeymanager_FetchWithdrawalPrivateKeys(t *testing.T) {
 			NextAccount: 0,
 		},
 		seed: make([]byte, 32),
+		opts: DefaultKeymanagerOpts(),
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 	// First, generate accounts and their keystore.json files.
@@ -216,6 +220,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 		seedCfg: &SeedConfig{
 			NextAccount: 0,
 		},
+		opts: DefaultKeymanagerOpts(),
 	}
 	require.NoError(t, dr.initializeKeysCachesFromSeed())
 
@@ -275,6 +280,7 @@ func TestDerivedKeymanager_RefreshWalletPassword(t *testing.T) {
 	}
 	dr := &Keymanager{
 		wallet: wallet,
+		opts:   DefaultKeymanagerOpts(),
 	}
 	seedCfg, err := initializeWalletSeedFile(wallet.Password(), true /* skip mnemonic confirm */)
 	require.NoError(t, err)

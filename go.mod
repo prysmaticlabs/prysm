@@ -35,14 +35,14 @@ require (
 	github.com/google/gofuzz v1.1.1-0.20200604201612-c04b05f3adfa
 	github.com/google/gopacket v1.1.18 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.4.2
 	github.com/graph-gophers/graphql-go v0.0.0-20200309224638-dae41bde9ef9 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/herumi/bls-eth-go-binary v0.0.0-20200722032157-41fc56eba7b4
+	github.com/herumi/bls-eth-go-binary v0.0.0-20201008062400-71567a52ad65
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-ipfs-addr v0.0.1
@@ -71,8 +71,9 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/manifoldco/promptui v0.7.0
-	github.com/minio/highwayhash v1.0.0
+	github.com/minio/highwayhash v1.0.1
 	github.com/minio/sha256-simd v0.1.1
+	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.2.2
 	github.com/multiformats/go-multiaddr-net v0.1.5
@@ -99,15 +100,17 @@ require (
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/go-bytesutil v1.1.1
-	github.com/wealdtech/go-eth2-util v1.5.0
-	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.0
+	github.com/wealdtech/go-eth2-types/v2 v2.5.0
+	github.com/wealdtech/go-eth2-util v1.6.0
+	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.1
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.4
 	go.opencensus.io v0.22.4
 	go.uber.org/automaxprocs v1.3.0
-	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
+	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
+	golang.org/x/sys v0.0.0-20201013132646-2da7054afaeb // indirect
 	golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e
 	google.golang.org/genproto v0.0.0-20200730144737-007c33dbd381
 	google.golang.org/grpc v1.29.1

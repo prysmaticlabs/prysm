@@ -49,6 +49,7 @@ const (
 // KeymanagerOpts for a direct keymanager.
 type KeymanagerOpts struct {
 	EIPVersion string `json:"direct_eip_version"`
+	Version    string `json:"direct_version"`
 }
 
 // Keymanager implementation for direct keystores utilizing EIP-2335.
@@ -70,6 +71,7 @@ type AccountStore struct {
 func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{
 		EIPVersion: eipVersion,
+		Version:    "2",
 	}
 }
 
@@ -99,9 +101,13 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		accountsChangedFeed: new(event.Feed),
 	}
 
-	err := k.initializeAccountKeystore(ctx)
-	if err != nil {
+	if err := k.initializeAccountKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to initialize account store")
+	}
+	if k.opts.Version != "2" {
+		if err := k.rewriteAccountsKeystore(ctx); err != nil {
+			return nil, errors.Wrap(err, "failed to write accounts keystore")
+		}
 	}
 
 	// We begin a goroutine to listen for file changes to our
@@ -389,6 +395,10 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 // RefreshWalletPassword re-encrypts the accounts store and stores
 // it to disk using a wallet's password which was recently changed.
 func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
+	return dr.rewriteAccountsKeystore(ctx)
+}
+
+func (dr *Keymanager) rewriteAccountsKeystore(ctx context.Context) error {
 	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
 	if err != nil {
 		return err

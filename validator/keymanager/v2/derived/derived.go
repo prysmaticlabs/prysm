@@ -23,9 +23,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/v1derivation"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
+	types "github.com/wealdtech/go-eth2-types/v2"
+	v2derivation "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -65,6 +67,7 @@ type SeedConfig struct {
 type KeymanagerOpts struct {
 	DerivedPathStructure string `json:"derived_path_structure"`
 	DerivedEIPNumber     string `json:"derived_eip_number"`
+	DerivedVersion       string `json:"derived_version"`
 }
 
 // SetupConfig includes configuration values for initializing
@@ -98,6 +101,7 @@ func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{
 		DerivedPathStructure: "m / purpose / coin_type / account_index / withdrawal_key / validating_key",
 		DerivedEIPNumber:     EIPVersion,
+		DerivedVersion:       "2",
 	}
 }
 
@@ -108,33 +112,9 @@ func NewKeymanager(
 ) (*Keymanager, error) {
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
-	var encodedSeedFile []byte
-	if !fileutil.FileExists(filepath.Join(cfg.Wallet.AccountsDir(), EncryptedSeedFileName)) {
-		seedConfig, err := initializeWalletSeedFile(cfg.Wallet.Password(), cfg.SkipMnemonicConfirm)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize new wallet seed file")
-		}
-		encodedSeedFile, err = marshalEncryptedSeedFile(seedConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not marshal encrypted wallet seed file")
-		}
-		if err = cfg.Wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
-			return nil, errors.Wrap(err, "could not write encrypted wallet seed config to disk")
-		}
-	} else {
-		seedConfigFile, err := cfg.Wallet.ReadEncryptedSeedFromDisk(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
-		}
-		encodedSeedFile, err = ioutil.ReadAll(seedConfigFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read seed configuration file contents")
-		}
-		defer func() {
-			if err := seedConfigFile.Close(); err != nil {
-				log.Errorf("Could not close keymanager config file: %v", err)
-			}
-		}()
+	encodedSeedFile, err := checkEncodedKeyFile(ctx, cfg.Wallet, cfg.SkipMnemonicConfirm)
+	if err != nil {
+		return nil, err
 	}
 	seedConfig := &SeedConfig{}
 	if err := json.Unmarshal(encodedSeedFile, seedConfig); err != nil {
@@ -159,6 +139,11 @@ func NewKeymanager(
 	err = k.initializeKeysCachesFromSeed()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize keys caches from seed")
+	}
+	if cfg.Opts.DerivedVersion != "2" {
+		if err := k.rewriteSeedConfig(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return k, nil
 }
@@ -275,11 +260,11 @@ func (dr *Keymanager) ValidatingAccountNames(_ context.Context) ([]string, error
 func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, *pb.Deposit_Data, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
-	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+	withdrawalKey, err := dr.deriveKey(withdrawalKeyPath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
 	}
-	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+	validatingKey, err := dr.deriveKey(validatingKeyPath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
 	}
@@ -394,7 +379,7 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(_ context.Context) ([][48]byte, 
 	publicKeys := make([][48]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+		withdrawalKey, err := dr.deriveKey(withdrawalKeyPath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", i)
 		}
@@ -408,7 +393,7 @@ func (dr *Keymanager) FetchWithdrawalPrivateKeys(ctx context.Context) ([][32]byt
 	privKeys := make([][32]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+		withdrawalKey, err := dr.deriveKey(withdrawalKeyPath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", i)
 		}
@@ -421,11 +406,11 @@ func (dr *Keymanager) FetchWithdrawalPrivateKeys(ctx context.Context) ([][32]byt
 func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, accountIndex)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, accountIndex)
-	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+	withdrawalKey, err := dr.deriveKey(withdrawalKeyPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", accountIndex)
 	}
-	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+	validatingKey, err := dr.deriveKey(validatingKeyPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create validating key for account %d", accountIndex)
 	}
@@ -450,6 +435,10 @@ func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error)
 // RefreshWalletPassword encrypts the seed config with the wallet password and
 // writes it to disk, such as when the wallet password was modified by the user.
 func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
+	return dr.rewriteSeedConfig(ctx)
+}
+
+func (dr *Keymanager) rewriteSeedConfig(ctx context.Context) error {
 	encryptor := keystorev4.New()
 	encryptedFields, err := encryptor.Encrypt(dr.seed, dr.wallet.Password())
 	if err != nil {
@@ -493,7 +482,7 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 	secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
 	for i := uint64(0); i < count; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		derivedKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		derivedKey, err := dr.deriveKey(validatingKeyPath)
 		if err != nil {
 			return errors.Wrapf(err, "failed to derive validating key for account %s", validatingKeyPath)
 		}
@@ -510,6 +499,48 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 		secretKeysCache[publicKey] = secretKey
 	}
 	return nil
+}
+
+func (dr *Keymanager) deriveKey(path string) (*types.BLSPrivateKey, error) {
+	if dr.opts.DerivedVersion == "2" {
+		return v2derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
+	}
+	return v1derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
+}
+
+func checkEncodedKeyFile(
+	ctx context.Context,
+	wallet iface.Wallet,
+	skipMnemonicConfirm bool,
+) ([]byte, error) {
+	if !fileutil.FileExists(filepath.Join(wallet.AccountsDir(), EncryptedSeedFileName)) {
+		seedConfig, err := initializeWalletSeedFile(wallet.Password(), skipMnemonicConfirm)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize new wallet seed file")
+		}
+		encodedSeedFile, err := marshalEncryptedSeedFile(seedConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not marshal encrypted wallet seed file")
+		}
+		if err = wallet.WriteEncryptedSeedToDisk(ctx, encodedSeedFile); err != nil {
+			return nil, errors.Wrap(err, "could not write encrypted wallet seed config to disk")
+		}
+		return encodedSeedFile, nil
+	}
+	seedConfigFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read encrypted seed file from disk")
+	}
+	defer func() {
+		if err := seedConfigFile.Close(); err != nil {
+			log.Errorf("Could not close keymanager config file: %v", err)
+		}
+	}()
+	encodedSeedFile, err := ioutil.ReadAll(seedConfigFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read seed configuration file contents")
+	}
+	return encodedSeedFile, nil
 }
 
 // Creates a new, encrypted seed using a password input
