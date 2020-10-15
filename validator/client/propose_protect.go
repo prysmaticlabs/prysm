@@ -19,22 +19,19 @@ var failedPostBlockSignErr = "made a double proposal, considered slashable by re
 
 func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().LocalProtection {
-		signingRoot, err := v.db.ProposalHistoryForSlot(ctx, pubKey[:], block.Slot)
-		if err != nil {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.Wrap(err, "failed to get proposal history")
+	signingRoot, err := v.db.ProposalHistoryForSlot(ctx, pubKey[:], block.Slot)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-
-		// If the bit for the current slot is marked, do not propose.
-		if !bytes.Equal(signingRoot, params.BeaconConfig().ZeroHash[:]) {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPreBlockSignLocalErr)
+		return errors.Wrap(err, "failed to get proposal history")
+	}
+	// If the bit for the current slot is marked, do not propose.
+	if !bytes.Equal(signingRoot, params.BeaconConfig().ZeroHash[:]) {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return errors.New(failedPreBlockSignLocalErr)
 	}
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
@@ -71,21 +68,18 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 			return fmt.Errorf(failedPostBlockSignErr)
 		}
 	}
-
-	if featureconfig.Get().LocalProtection {
-		signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)
-		if err != nil {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.Wrap(err, "failed to compute signing root for block")
+	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot, signingRoot[:]); err != nil {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.Wrap(err, "failed to save updated proposal history")
+		return errors.Wrap(err, "failed to compute signing root for block")
+	}
+	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot, signingRoot[:]); err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return errors.Wrap(err, "failed to save updated proposal history")
 	}
 	return nil
 }

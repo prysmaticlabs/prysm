@@ -112,12 +112,10 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 
-			if featureconfig.Get().LocalProtection {
-				if err := v.UpdateProtections(ctx, slot); err != nil {
-					log.WithError(err).Error("Could not update validator protection")
-					span.End()
-					continue
-				}
+			if err := v.UpdateProtections(ctx, slot); err != nil {
+				log.WithError(err).Error("Could not update validator protection")
+				span.End()
+				continue
 			}
 
 			// Start fetching domain data for the next epoch.
@@ -157,10 +155,8 @@ func run(ctx context.Context, v Validator) {
 			go func() {
 				wg.Wait()
 				v.LogAttestationsSubmitted()
-				if featureconfig.Get().LocalProtection {
-					if err := v.SaveProtections(ctx); err != nil {
-						log.WithError(err).Error("Could not save validator protection")
-					}
+				if err := v.SaveProtections(ctx); err != nil {
+					log.WithError(err).Error("Could not save validator protection")
 				}
 				span.End()
 			}()

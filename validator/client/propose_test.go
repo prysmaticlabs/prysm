@@ -15,7 +15,6 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -187,11 +186,6 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 }
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -227,11 +221,6 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -267,11 +256,6 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -316,11 +300,6 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 }
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
