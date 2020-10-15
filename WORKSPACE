@@ -374,10 +374,3 @@ load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 geth_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
-
-go_repository(
-    name = "com_github_jmespath_go_jmespath_internal_testify",
-    importpath = "github.com/jmespath/go-jmespath/internal/testify",
-    sum = "h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=",
-    version = "v1.5.1",
-)
