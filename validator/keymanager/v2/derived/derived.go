@@ -23,9 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	newutil "github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/oldutil"
+	//newutil "github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/util"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -275,11 +276,11 @@ func (dr *Keymanager) ValidatingAccountNames(_ context.Context) ([]string, error
 func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, *pb.Deposit_Data, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, dr.seedCfg.NextAccount)
-	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+	withdrawalKey, err := newutil.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", dr.seedCfg.NextAccount)
 	}
-	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+	validatingKey, err := newutil.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create validating key for account %d", dr.seedCfg.NextAccount)
 	}
@@ -374,7 +375,7 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(_ context.Context) ([][48]byte, 
 	publicKeys := make([][48]byte, 0)
 	for i := uint64(0); i < dr.seedCfg.NextAccount; i++ {
 		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+		withdrawalKey, err := newutil.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create validating key for account %d", i)
 		}
@@ -387,11 +388,11 @@ func (dr *Keymanager) FetchWithdrawalPublicKeys(_ context.Context) ([][48]byte, 
 func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error) {
 	withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, accountIndex)
 	validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, accountIndex)
-	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
+	withdrawalKey, err := newutil.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create withdrawal key for account %d", accountIndex)
 	}
-	validatingKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+	validatingKey, err := newutil.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create validating key for account %d", accountIndex)
 	}
@@ -459,7 +460,7 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 	secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
 	for i := uint64(0); i < count; i++ {
 		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
-		derivedKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
+		derivedKey, err := newutil.PrivateKeyFromSeedAndPath(dr.seed, validatingKeyPath)
 		if err != nil {
 			return errors.Wrapf(err, "failed to derive validating key for account %s", validatingKeyPath)
 		}
