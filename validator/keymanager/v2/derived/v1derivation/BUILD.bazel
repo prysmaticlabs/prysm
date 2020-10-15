@@ -2,8 +2,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["oldutil.go"],
-    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/oldutil",
+    srcs = ["util.go"],
+    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/v1derivation",
     visibility = ["//visibility:public"],
     deps = [
         "//shared/hashutil:go_default_library",

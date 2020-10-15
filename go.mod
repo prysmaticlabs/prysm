@@ -99,6 +99,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/go-bytesutil v1.1.1
+	github.com/wealdtech/go-eth2-types/v2 v2.5.0
 	github.com/wealdtech/go-eth2-util v1.6.0
 	github.com/wealdtech/go-eth2-wallet v1.14.1 // indirect
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.1
