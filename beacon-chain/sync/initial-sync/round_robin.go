@@ -111,20 +111,8 @@ func (s *Service) processFetchedData(
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
-	if featureconfig.Get().BatchBlockVerify {
-		batchReceiver := s.chain.ReceiveBlockBatch
-		if err := s.processBatchedBlocks(ctx, genesis, data.blocks, batchReceiver); err != nil {
-			log.WithError(err).Debug("Batch is not processed")
-		}
-		return
-	}
-
-	blockReceiver := s.chain.ReceiveBlockInitialSync
-	for _, blk := range data.blocks {
-		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Debug("Block is not processed")
-			continue
-		}
+	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
+		log.WithError(err).Debug("Batch is not processed")
 	}
 }
 
@@ -163,7 +151,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, blkRoot
 	if rate == 0 {
 		rate = 1
 	}
-	if featureconfig.Get().InitSyncVerbose || helpers.IsEpochStart(blk.Slot) {
+	if helpers.IsEpochStart(blk.Slot) {
 		timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
 		log.WithFields(logrus.Fields{
 			"peers":           len(s.p2p.Peers().Connected()),

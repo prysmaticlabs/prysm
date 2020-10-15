@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -896,8 +895,6 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 
 func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	ctx := context.Background()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableFinalizedDepositsCache: true})
-	defer resetCfg()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOW.POWChain{

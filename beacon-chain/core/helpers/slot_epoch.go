@@ -139,11 +139,11 @@ func VerifySlotTime(genesisTime, slot uint64, timeTolerance time.Duration) error
 func SlotToTime(genesisTimeSec, slot uint64) (time.Time, error) {
 	timeSinceGenesis, err := mathutil.Mul64(slot, params.BeaconConfig().SecondsPerSlot)
 	if err != nil {
-		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %v", slot, err)
+		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
 	sTime, err := mathutil.Add64(genesisTimeSec, timeSinceGenesis)
 	if err != nil {
-		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %v", slot, err)
+		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
 	return time.Unix(int64(sTime), 0), nil
 }

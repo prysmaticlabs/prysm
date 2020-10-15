@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Params struct defines the parameters needed for running E2E tests to properly handle test sharding.
-type Params struct {
+// params struct defines the parameters needed for running E2E tests to properly handle test sharding.
+type params struct {
 	TestPath              string
 	LogPath               string
 	TestShardIndex        int
@@ -31,7 +31,7 @@ type Params struct {
 }
 
 // TestParams is the globally accessible var for getting config elements.
-var TestParams *Params
+var TestParams *params
 
 // BootNodeLogFileName is the file name used for the beacon chain node logs.
 var BootNodeLogFileName = "bootnode.log"
@@ -67,7 +67,7 @@ func Init(beaconNodeCount int) error {
 		return err
 	}
 
-	TestParams = &Params{
+	TestParams = &params{
 		TestPath:              path.Join(testPath, fmt.Sprintf("shard-%d", testIndex)),
 		LogPath:               logPath,
 		TestShardIndex:        testIndex,

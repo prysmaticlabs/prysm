@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
 )
 
@@ -30,32 +29,18 @@ func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, 
 			if state.Slot() >= signed[i].Block.Slot {
 				continue
 			}
-			if featureconfig.Get().EnableStateGenSigVerify {
-				state, err = transition.ExecuteStateTransition(ctx, state, signed[i])
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				state, err = executeStateTransitionStateGen(ctx, state, signed[i])
-				if err != nil {
-					return nil, err
-				}
+			state, err = executeStateTransitionStateGen(ctx, state, signed[i])
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
 
 	// If there is skip slots at the end.
 	if targetSlot > state.Slot() {
-		if featureconfig.Get().EnableStateGenSigVerify {
-			state, err = transition.ProcessSlots(ctx, state, targetSlot)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			state, err = processSlotsStateGen(ctx, state, targetSlot)
-			if err != nil {
-				return nil, err
-			}
+		state, err = processSlotsStateGen(ctx, state, targetSlot)
+		if err != nil {
+			return nil, err
 		}
 	}
 
