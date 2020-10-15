@@ -23,10 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
-	newutil "github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/oldutil"
-	//newutil "github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/util"
+	//"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/oldutil"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
+	newutil "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
