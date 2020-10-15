@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"bytes"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -182,16 +184,18 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		r, err := BlockRootAtSlot(state, s)
+		r, err := StateRootAtSlot(state, s)
 		if err != nil {
 			return 0, err
 		}
-		proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
-		if err != nil {
-			return 0, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if proposerIndices != nil {
-			return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+		if !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
+			if err != nil {
+				return 0, errors.Wrap(err, "could not interface with committee cache")
+			}
+			if proposerIndices != nil {
+				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+			}
 		}
 		if err := UpdateProposerIndicesInCache(state, e); err != nil {
 			return 0, errors.Wrap(err, "could not update committee cache")

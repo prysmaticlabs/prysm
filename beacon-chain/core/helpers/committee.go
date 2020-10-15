@@ -3,6 +3,7 @@
 package helpers
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 
@@ -366,9 +367,13 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return err
 	}
-	r, err := BlockRootAtSlot(state, s)
+	r, err := StateRootAtSlot(state, s)
 	if err != nil {
 		return err
+	}
+	// Skip Cache if we have an invalid key
+	if bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+		return nil
 	}
 	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
 		BlockRoot:       bytesutil.ToBytes32(r),

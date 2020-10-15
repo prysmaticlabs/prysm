@@ -23,6 +23,13 @@ func BlockRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) 
 	return state.BlockRootAtIndex(slot % params.BeaconConfig().SlotsPerHistoricalRoot)
 }
 
+func StateRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) {
+	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
+		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
+	}
+	return state.StateRootAtIndex(slot % params.BeaconConfig().SlotsPerHistoricalRoot)
+}
+
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.
 //
 // Spec pseudocode definition:
