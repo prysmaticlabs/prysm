@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
@@ -94,7 +94,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Direct,
+				KeymanagerKind: keymanager.Imported,
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
@@ -107,7 +107,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -136,7 +136,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -202,7 +202,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	switch s.wallet.KeymanagerKind() {
 	case keymanager.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
-	case keymanager.Direct:
+	case keymanager.Imported:
 		keymanagerKind = pb.KeymanagerKind_DIRECT
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
@@ -286,12 +286,8 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
 	}
 	switch s.wallet.KeymanagerKind() {
-	case keymanager.Direct:
-<<<<<<< HEAD
-		km, ok := s.keymanager.(*direct.Keymanager)
-=======
+	case keymanager.Imported:
 		km, ok := s.keymanager.(*imported.Keymanager)
->>>>>>> 6c2a65f60... rename direct to imported
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid imported keymanager")
 		}
@@ -328,11 +324,7 @@ func (s *Server) ImportKeystores(
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
-<<<<<<< HEAD
-	km, ok := s.keymanager.(*direct.Keymanager)
-=======
-	keymanager, ok := s.keymanager.(*imported.Keymanager)
->>>>>>> 6c2a65f60... rename direct to imported
+	km, ok := s.keymanager.(*imported.Keymanager)
 	if !ok {
 		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
 	}
