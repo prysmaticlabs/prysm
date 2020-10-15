@@ -177,7 +177,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	if err != nil {
 		return nil, err
 	}
-	randaoReveal, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+	randaoReveal, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -204,7 +204,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if err != nil {
 		return nil, nil, errors.Wrap(err, signingRootErr)
 	}
-	sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     blockRoot[:],
 		SignatureDomain: domain.SignatureDomain,

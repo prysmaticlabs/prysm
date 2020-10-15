@@ -74,7 +74,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with on-disk keymanager configuration. " +
-				"Make a new validator account with ./prysm.sh validator accounts-v2 create",
+				"Make a new validator account with ./prysm.sh validator accounts create",
 		)
 	case keymanager.Derived:
 		if err = createDerivedKeymanagerWallet(ctx, w, cfg.SkipMnemonicConfirm); err != nil {
@@ -82,7 +82,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created HD wallet and saved configuration to disk. " +
-				"Make a new validator account with ./prysm.sh validator accounts-2 create",
+				"Make a new validator account with ./prysm.sh validator accounts create",
 		)
 	case keymanager.Remote:
 		if err = createRemoteKeymanagerWallet(ctx, w, cfg.RemoteKeymanagerOpts); err != nil {

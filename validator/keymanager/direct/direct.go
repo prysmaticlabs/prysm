@@ -14,10 +14,6 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -29,10 +25,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/sirupsen/logrus"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	"go.opencensus.io/trace"
 )
 
 var (
-	log               = logrus.WithField("prefix", "direct-keymanager-v2")
+	log               = logrus.WithField("prefix", "direct-keymanager")
 	lock              sync.RWMutex
 	orderedPublicKeys = make([][48]byte, 0)
 	secretKeysCache   = make(map[[48]byte]bls.SecretKey)

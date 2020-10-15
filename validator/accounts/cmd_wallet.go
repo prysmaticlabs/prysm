@@ -1,16 +1,15 @@
 package accounts
 
 import (
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/urfave/cli/v2"
 )
 
-// WalletCommands for accounts-v2 for Prysm validators.
+// WalletCommands for accounts for Prysm validators.
 var WalletCommands = &cli.Command{
-	Name:     "wallet-v2",
-	Category: "wallet-v2",
+	Name:     "wallet",
+	Category: "wallet",
 	Usage:    "defines commands for interacting with eth2 validator wallets (work in progress)",
 	Subcommands: []*cli.Command{
 		{

@@ -65,7 +65,7 @@ type ValidatorService struct {
 	validator             Validator
 	protector             slashingprotection.Protector
 	ctx                   context.Context
-	keyManagerV2          keymanager.IKeymanager
+	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
 }
@@ -83,7 +83,7 @@ type Config struct {
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
-	KeyManagerV2               keymanager.IKeymanager
+	keyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
 	CertFlag                   string
 	DataDir                    string
@@ -101,7 +101,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:              cfg.CertFlag,
 		dataDir:               cfg.DataDir,
 		graffiti:              []byte(cfg.GraffitiFlag),
-		keyManagerV2:          cfg.KeyManagerV2,
+		keyManager:            cfg.keyManager,
 		logValidatorBalances:  cfg.LogValidatorBalances,
 		emitAccountMetrics:    cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -165,7 +165,7 @@ func (v *ValidatorService) Start() {
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
-		keyManagerV2:                   v.keyManagerV2,
+		keyManager:                     v.keyManager,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -210,7 +210,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		cleanup := sub.Unsubscribe
 		defer cleanup()
 		w := <-initializedChan
-		keyManagerV2, err := w.InitializeKeymanager(
+		keyManager, err := w.InitializeKeymanager(
 			ctx, true, /* skipMnemonicConfirm */
 		)
 		if err != nil {
@@ -218,16 +218,16 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 			cleanup()
 			log.Fatalf("Could not read keymanager for wallet: %v", err)
 		}
-		v.keyManagerV2 = keyManagerV2
+		v.keyManager = keyManager
 	}
-	validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	validatingKeys, err = v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		log.WithError(err).Debug("Could not fetch validating keys")
 	}
 	if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
 		log.WithError(err).Debug("Could not update public keys buckets")
 	}
-	go recheckValidatingKeysBucket(ctx, v.db, v.keyManagerV2)
+	go recheckValidatingKeysBucket(ctx, v.db, v.keyManager)
 	for _, key := range validatingKeys {
 		log.WithField(
 			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),

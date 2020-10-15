@@ -43,7 +43,7 @@ const (
 func BackupAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
-			"no wallet found, nothing to backup. Create a new wallet by running wallet-v2 create",
+			"no wallet found, nothing to backup. Create a new wallet by running wallet create",
 		)
 	})
 	if err != nil {

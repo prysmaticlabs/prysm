@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	log = logrus.WithField("prefix", "remote-keymanager-v2")
+	log = logrus.WithField("prefix", "remote-keymanager")
 	// ErrSigningFailed defines a failure from the remote server
 	// when performing a signing operation.
 	ErrSigningFailed = errors.New("signing failed in the remote server")

@@ -9,20 +9,19 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
-
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/db"
-	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 var log logrus.FieldLogger
@@ -54,7 +53,7 @@ type Server struct {
 	host                  string
 	port                  string
 	listener              net.Listener
-	keymanager            keymanager2.IKeymanager
+	keymanager            keymanager.IKeymanager
 	withCert              string
 	withKey               string
 	credentialError       error
@@ -64,7 +63,7 @@ type Server struct {
 	syncChecker           client.SyncChecker
 	genesisFetcher        client.GenesisFetcher
 	walletDir             string
-	wallet                *v2.Wallet
+	wallet                *wallet.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
 	nodeGatewayEndpoint   string

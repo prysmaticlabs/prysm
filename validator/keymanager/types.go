@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-// IKeymanager defines a general keymanager-v2 interface for Prysm wallets.
+// IKeymanager defines a general keymanager interface for Prysm wallets.
 type IKeymanager interface {
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)

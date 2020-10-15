@@ -54,7 +54,7 @@ const (
 var (
 	// ErrNoWalletFound signifies there was no wallet directory found on-disk.
 	ErrNoWalletFound = errors.New(
-		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet-v2 create`",
+		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet create`",
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
@@ -78,7 +78,7 @@ type Config struct {
 	WalletPassword string
 }
 
-// Wallet is a primitive in Prysm's v2 account management which
+// Wallet is a primitive in Prysm's account management which
 // has the capability of creating new accounts, reading existing accounts,
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
@@ -304,7 +304,7 @@ func (w *Wallet) InitializeKeymanager(
 				return nil, err
 			}
 			if len(keys) == 0 {
-				return nil, errors.New("please recreate your wallet with wallet-v2 create")
+				return nil, errors.New("please recreate your wallet with wallet create")
 			}
 			if err := w.SaveHashedPassword(ctx); err != nil {
 				return nil, errors.Wrap(err, "could not save hashed password to disk")

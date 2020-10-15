@@ -7,9 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -17,9 +14,11 @@ import (
 	keymanager2 "github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "accounts-v2")
+var log = logrus.WithField("prefix", "accounts")
 
 // CreateAccountConfig to run the create account function.
 type CreateAccountConfig struct {
@@ -82,7 +81,7 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 				}
 			}
 			log.Infof(
-				"Successfully created %d accounts. Please use accounts-v2 list to view details for accounts %d through %d",
+				"Successfully created %d accounts. Please use accounts list to view details for accounts %d through %d",
 				cfg.NumAccounts,
 				startNum,
 				startNum+uint64(cfg.NumAccounts)-1,

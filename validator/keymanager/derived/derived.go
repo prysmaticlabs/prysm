@@ -13,12 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-	"github.com/tyler-smith/go-bip39"
-	types "github.com/wealdtech/go-eth2-types/v2"
-	v2derivation "github.com/wealdtech/go-eth2-util"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -30,10 +24,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived/v1derivation"
+	"github.com/sirupsen/logrus"
+	"github.com/tyler-smith/go-bip39"
+	types "github.com/wealdtech/go-eth2-types/v2"
+	v2derivation "github.com/wealdtech/go-eth2-util"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var (
-	log               = logrus.WithField("prefix", "derived-keymanager-v2")
+	log               = logrus.WithField("prefix", "derived-keymanager")
 	lock              sync.RWMutex
 	orderedPublicKeys = make([][48]byte, 0)
 	secretKeysCache   = make(map[[48]byte]bls.SecretKey)
