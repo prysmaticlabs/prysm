@@ -105,7 +105,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		return nil, errors.Wrap(err, "failed to initialize account store")
 	}
 	if k.opts.Version != 2 {
-		log.Info("Rewrote")
 		if err := k.rewriteAccountsKeystore(ctx); err != nil {
 			return nil, errors.Wrap(err, "failed to write accounts keystore")
 		}

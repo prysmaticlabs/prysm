@@ -4,7 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = ["util.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived/v1derivation",
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//validator:__pkg__",
+        "//validator:__subpackages__",
+    ],
     deps = [
         "//shared/hashutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
