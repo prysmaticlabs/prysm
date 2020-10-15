@@ -75,6 +75,9 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 	if featureconfig.Get().LocalProtection {
 		signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)
 		if err != nil {
+			if v.emitAccountMetrics {
+				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
 			return errors.Wrap(err, "failed to compute signing root for block")
 		}
 		if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot, signingRoot[:]); err != nil {
