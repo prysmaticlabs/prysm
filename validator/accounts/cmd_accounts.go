@@ -2,7 +2,9 @@ package accounts
 
 import (
 	"os"
+	"strings"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -171,6 +173,11 @@ this command outputs a deposit data string which is required to become a validat
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
 				if err := ExitAccountsCli(cliCtx, os.Stdin); err != nil {
+					msg := err.Error()
+					if strings.Contains(msg, blocks.ValidatorAlreadyExitedMsg) ||
+						strings.Contains(msg, blocks.ValidatorCannotExitYetMsg) {
+						log.Errorf("Could not perform voluntary exit: %s", msg)
+					}
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}
 				return nil
