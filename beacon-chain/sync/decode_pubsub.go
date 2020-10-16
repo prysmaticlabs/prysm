@@ -9,18 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
-var errTooManyTopics = errors.New("too many topic IDs")
 var errNilPubsubMessage = errors.New("nil pubsub message")
 var errInvalidTopic = errors.New("invalid topic format")
 
 func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error) {
-	if msg == nil || msg.TopicIDs == nil {
+	if msg == nil || msg.Topic == nil || *msg.Topic == "" {
 		return nil, errNilPubsubMessage
 	}
-	if len(msg.TopicIDs) != 1 {
-		return nil, errTooManyTopics
-	}
-	topic := msg.TopicIDs[0]
+	topic := *msg.Topic
 	topic = strings.TrimSuffix(topic, s.p2p.Encoding().ProtocolSuffix())
 	topic, err := s.replaceForkDigest(topic)
 	if err != nil {

@@ -80,7 +80,8 @@ func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
 
 // MockStateNotifier mocks the state notifier.
 type MockStateNotifier struct {
-	feed *event.Feed
+	feed     *event.Feed
+	feedLock sync.Mutex
 
 	recv     []*feed.Event
 	recvLock sync.Mutex
@@ -98,6 +99,9 @@ func (msn *MockStateNotifier) ReceivedEvents() []*feed.Event {
 
 // StateFeed returns a state feed.
 func (msn *MockStateNotifier) StateFeed() *event.Feed {
+	msn.feedLock.Lock()
+	defer msn.feedLock.Unlock()
+
 	if msn.feed == nil && msn.recvCh == nil {
 		msn.feed = new(event.Feed)
 		if msn.RecordEvents {

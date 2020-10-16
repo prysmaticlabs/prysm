@@ -94,9 +94,10 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 	sub, err := s.p2p.SubscribeToTopic(topic)
 	if err != nil {
 		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
-		// libp2p PubSub library. This should not happen at normal runtime, unless the config
-		// changes to a fatal configuration.
-		panic(err)
+		// libp2p PubSub library or a subscription request to a topic that fails to match the topic
+		// subscription filter.
+		log.WithError(err).WithField("topic", topic).Error("Failed to subscribe to topic")
+		return nil
 	}
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
@@ -164,6 +165,10 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
+		if msg.Topic == nil {
+			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+			return pubsub.ValidationReject
+		}
 		// Reject any messages received before chainstart.
 		if !s.chainStarted {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
