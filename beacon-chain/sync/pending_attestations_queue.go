@@ -54,7 +54,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	}
 	s.pendingAttsLock.RUnlock()
 
-	pendingRoots := [][32]byte{}
+	var pendingRoots [][32]byte
 	randGen := rand.NewGenerator()
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()
@@ -140,6 +140,13 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 	if !ok {
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
 		return
+	}
+
+	// Skip if the attestation from the same aggregator already exists in the pending queue.
+	for _, a := range s.blkRootToPendingAtts[root] {
+		if a.Message.AggregatorIndex == att.Message.AggregatorIndex {
+			return
+		}
 	}
 
 	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)

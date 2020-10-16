@@ -55,11 +55,13 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
 			flags.MonitoringPortFlag,
+			cmd.DisableMonitoringFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
 			cmd.ForceClearDB,
 			cmd.ClearDB,
 			cmd.ConfigFileFlag,
+			cmd.AcceptTosFlag,
 		},
 	},
 	{

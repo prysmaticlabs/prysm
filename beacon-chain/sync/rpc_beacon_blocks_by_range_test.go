@@ -52,7 +52,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
-			expectSuccess(t, r, stream)
+			expectSuccess(t, stream)
 			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 			if (res.Block.Slot-req.StartSlot)%req.Step != 0 {
@@ -117,7 +117,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 		prevSlot := uint64(0)
 		require.Equal(t, uint64(len(expectedRoots)), req.Count, "Number of roots not expected")
 		for i, j := req.StartSlot, 0; i < req.StartSlot+req.Count*req.Step; i += req.Step {
-			expectSuccess(t, r, stream)
+			expectSuccess(t, stream)
 			res := &ethpb.SignedBeaconBlock{}
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 			if res.Block.Slot < prevSlot {
@@ -177,12 +177,12 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		// check for genesis block
-		expectSuccess(t, r, stream)
+		expectSuccess(t, stream)
 		res := &ethpb.SignedBeaconBlock{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 		assert.Equal(t, uint64(0), res.Block.Slot, "genesis block was not returned")
 		for i := req.StartSlot + req.Step; i < req.Count*req.Step; i += req.Step {
-			expectSuccess(t, r, stream)
+			expectSuccess(t, stream)
 			res := &ethpb.SignedBeaconBlock{}
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 		}
@@ -219,7 +219,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 				return
 			}
 			for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
-				expectSuccess(t, r, stream)
+				expectSuccess(t, stream)
 				res := testutil.NewBeaconBlock()
 				assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 				if (res.Block.Slot-req.StartSlot)%req.Step != 0 {
@@ -434,7 +434,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 			name: "Valid Request",
 			req: &pb.BeaconBlocksByRangeRequest{
 				Step:      1,
-				Count:     uint64(params.BeaconNetworkConfig().MaxRequestBlocks) - 1,
+				Count:     params.BeaconNetworkConfig().MaxRequestBlocks - 1,
 				StartSlot: 50,
 			},
 			errorToLog: "validation failed with valid params",
@@ -472,7 +472,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 			defer wg.Done()
 			blocks := make([]*ethpb.SignedBeaconBlock, 0, req.Count)
 			for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
-				expectSuccess(t, r, stream)
+				expectSuccess(t, stream)
 				blk := testutil.NewBeaconBlock()
 				assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, blk))
 				if (blk.Block.Slot-req.StartSlot)%req.Step != 0 {

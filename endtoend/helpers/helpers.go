@@ -29,29 +29,12 @@ const (
 	maxFileBufferSize   = 1024 * 1024
 )
 
-// KillProcesses finds the passed in process IDs and kills the process.
-func KillProcesses(t *testing.T, pIDs []int) {
-	for _, id := range pIDs {
-		process, err := os.FindProcess(id)
-		if err != nil {
-			t.Fatalf("Could not find process %d: %v", id, err)
-		}
-		if err := process.Kill(); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := process.Wait(); err != nil {
-			t.Fatal(err)
-		}
-	}
-	time.Sleep(5 * time.Second)
-}
-
 // DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
 // If not, it just creates the requested file.
-func DeleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {
+func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 	filePath := path.Join(tmpPath, fileName)
 	if _, err := os.Stat(filePath); os.IsExist(err) {
-		if err := os.Remove(filePath); err != nil {
+		if err = os.Remove(filePath); err != nil {
 			return nil, err
 		}
 	}
@@ -160,17 +143,20 @@ func WritePprofFiles(testDir string, index int) error {
 	}
 	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.BeaconNodeRPCPort+50+index)
 	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
-	if err := writeURLRespAtPath(url, filePath); err != nil {
-		return err
-	}
-	return nil
+	return writeURLRespAtPath(url, filePath)
 }
 
-func writeURLRespAtPath(url string, filePath string) error {
+func writeURLRespAtPath(url, filePath string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err = resp.Body.Close(); err != nil {
+			return
+		}
+	}()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -179,7 +165,7 @@ func writeURLRespAtPath(url string, filePath string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := file.Write(body); err != nil {
+	if _, err = file.Write(body); err != nil {
 		return err
 	}
 	return nil

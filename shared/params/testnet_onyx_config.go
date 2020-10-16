@@ -11,12 +11,6 @@ func UseOnyxNetworkConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
-// OnyxConfig returns the configuration to be used in the main network. Currently, Onyx uses the
-// unchanged mainnet configuration.
-func OnyxConfig() *BeaconChainConfig {
-	return mainnetBeaconConfig
-}
-
 // UseOnyxConfig for beacon chain services. Currently, Onyx uses the unchanged mainnet
 // configuration.
 func UseOnyxConfig() {

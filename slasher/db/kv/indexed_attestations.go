@@ -51,7 +51,7 @@ func (db *Store) IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch 
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsWithPrefix")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
-	key := encodeEpochSig(targetEpoch, sigBytes[:])
+	key := encodeEpochSig(targetEpoch, sigBytes)
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
 		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:len(key)], key); k, enc = c.Next() {
@@ -162,7 +162,7 @@ func (db *Store) DeleteIndexedAttestation(ctx context.Context, idxAttestation *e
 }
 
 // PruneAttHistory removes all attestations from the DB older than the pruning epoch age.
-func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
+func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch, pruningEpochAge uint64) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneAttHistory")
 	defer span.End()
 	pruneFromEpoch := int64(currentEpoch) - int64(pruningEpochAge)

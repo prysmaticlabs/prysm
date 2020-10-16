@@ -50,13 +50,13 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err, "Could not get signing root of beacon block header")
-	aggSigs := []bls.Signature{}
+	var aggSigs []bls.Signature
 	for _, index := range setA {
 		sig := privKeys[index].Sign(signingRoot[:])
 		aggSigs = append(aggSigs, sig)
 	}
 	aggregateSig := bls.AggregateSignatures(aggSigs)
-	att1.Signature = aggregateSig.Marshal()[:]
+	att1.Signature = aggregateSig.Marshal()
 
 	root2 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
 	att2 := &ethpb.IndexedAttestation{
@@ -76,7 +76,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		aggSigs = append(aggSigs, sig)
 	}
 	aggregateSig = bls.AggregateSignatures(aggSigs)
-	att2.Signature = aggregateSig.Marshal()[:]
+	att2.Signature = aggregateSig.Marshal()
 
 	slashings := []*ethpb.AttesterSlashing{
 		{

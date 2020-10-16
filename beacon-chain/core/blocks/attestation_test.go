@@ -238,7 +238,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 		require.NoError(t, err)
 		sigs[i] = sig
 	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	block := testutil.NewBeaconBlock()
 	block.Block.Body.Attestations = []*ethpb.Attestation{att}
@@ -282,7 +282,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		require.NoError(t, err)
 		sigs[i] = sig
 	}
-	att1.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att1.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	aggBits2 := bitfield.NewBitlist(4)
 	aggBits2.SetBitAt(1, true)
@@ -305,7 +305,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		require.NoError(t, err)
 		sigs[i] = sig
 	}
-	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	_, err = attaggregation.AggregatePair(att1, att2)
 	assert.ErrorContains(t, aggregation.ErrBitsOverlap.Error(), err)
@@ -347,7 +347,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		require.NoError(t, err)
 		sigs[i] = sig
 	}
-	att1.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att1.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	aggBits2 := bitfield.NewBitlist(9)
 	aggBits2.SetBitAt(2, true)
@@ -370,7 +370,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		require.NoError(t, err)
 		sigs[i] = sig
 	}
-	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	aggregatedAtt, err := attaggregation.AggregatePair(att1, att2)
 	require.NoError(t, err)
@@ -639,7 +639,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 
 	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
 	list := bitfield.Bitlist{0b11111111}
-	atts := []*ethpb.Attestation{}
+	var atts []*ethpb.Attestation
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
@@ -807,6 +807,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		Signature: make([]byte, 96),
 	}
 	currDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	require.NoError(t, err)
 	root, err = helpers.ComputeSigningRoot(att2.Data, currDomain)
 	require.NoError(t, err)
 	sigs = nil

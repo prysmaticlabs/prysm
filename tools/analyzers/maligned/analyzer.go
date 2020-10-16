@@ -1,3 +1,4 @@
+// Package maligned implements a static analyzer to ensure that Go structs take up the least possible memory.
 package maligned
 
 import (

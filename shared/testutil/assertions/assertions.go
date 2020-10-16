@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/d4l3k/messagediff"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -41,7 +42,8 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 	if !reflect.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
-		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
+		diff, _ := messagediff.PrettyDiff(expected, actual)
+		loggerFn("%s:%d %s, want: %#v, got: %#v, diff: %s", filepath.Base(file), line, errMsg, expected, actual, diff)
 	}
 }
 
@@ -74,11 +76,24 @@ func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...in
 
 // NotNil asserts that passed value is not nil.
 func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...interface{}) {
-	if obj == nil {
+	if isNil(obj) {
 		errMsg := parseMsg("Unexpected nil value", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s", filepath.Base(file), line, errMsg)
 	}
+}
+
+// isNil checks that underlying value of obj is nil.
+func isNil(obj interface{}) bool {
+	if obj == nil {
+		return true
+	}
+	value := reflect.ValueOf(obj)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
+		return value.IsNil()
+	}
+	return false
 }
 
 // LogsContain checks whether a given substring is a part of logs. If flag=false, inverse is checked.

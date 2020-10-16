@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/pkg/errors"
@@ -82,6 +83,19 @@ func StartSlot(epoch uint64) (uint64, error) {
 	return slot, nil
 }
 
+// EndSlot returns the last slot number of the
+// current epoch.
+func EndSlot(epoch uint64) (uint64, error) {
+	if epoch == math.MaxUint64 {
+		return 0, errors.New("start slot calculation overflows")
+	}
+	slot, err := StartSlot(epoch + 1)
+	if err != nil {
+		return 0, err
+	}
+	return slot - 1, nil
+}
+
 // IsEpochStart returns true if the given slot number is an epoch starting slot
 // number.
 func IsEpochStart(slot uint64) bool {
@@ -100,7 +114,7 @@ func SlotsSinceEpochStarts(slot uint64) uint64 {
 }
 
 // VerifySlotTime validates the input slot is not from the future.
-func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration) error {
+func VerifySlotTime(genesisTime, slot uint64, timeTolerance time.Duration) error {
 	slotTime, err := SlotToTime(genesisTime, slot)
 	if err != nil {
 		return err
@@ -122,14 +136,14 @@ func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration
 }
 
 // SlotToTime takes the given slot and genesis time to determine the start time of the slot.
-func SlotToTime(genesisTimeSec uint64, slot uint64) (time.Time, error) {
+func SlotToTime(genesisTimeSec, slot uint64) (time.Time, error) {
 	timeSinceGenesis, err := mathutil.Mul64(slot, params.BeaconConfig().SecondsPerSlot)
 	if err != nil {
-		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %v", slot, err)
+		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
 	sTime, err := mathutil.Add64(genesisTimeSec, timeSinceGenesis)
 	if err != nil {
-		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %v", slot, err)
+		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
 	return time.Unix(int64(sTime), 0), nil
 }
@@ -153,7 +167,7 @@ func CurrentSlot(genesisTimeSec uint64) uint64 {
 // ValidateSlotClock validates a provided slot against the local
 // clock to ensure slots that are unreasonable are returned with
 // an error.
-func ValidateSlotClock(slot uint64, genesisTimeSec uint64) error {
+func ValidateSlotClock(slot, genesisTimeSec uint64) error {
 	maxPossibleSlot := CurrentSlot(genesisTimeSec) + MaxSlotBuffer
 	// Defensive check to ensure that we only process slots up to a hard limit
 	// from our local clock.

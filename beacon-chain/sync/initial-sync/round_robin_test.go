@@ -2,7 +2,6 @@ package initialsync
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -322,7 +321,7 @@ func TestService_processBlock(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewInitialSync(context.Background(), &Config{
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -333,6 +332,7 @@ func TestService_processBlock(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		StateNotifier: &mock.MockStateNotifier{},
 	})
 	ctx := context.Background()
 	genesis := makeGenesisTime(32)
@@ -381,7 +381,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewInitialSync(context.Background(), &Config{
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -392,6 +392,7 @@ func TestService_processBlockBatch(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		StateNotifier: &mock.MockStateNotifier{},
 	})
 	ctx := context.Background()
 	genesis := makeGenesisTime(32)
@@ -439,8 +440,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			ctx context.Context, blocks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
-		expectedErr := fmt.Sprintf("no good blocks in batch")
-		assert.ErrorContains(t, expectedErr, err)
+		assert.ErrorContains(t, "no good blocks in batch", err)
 
 		var badBatch2 []*eth.SignedBeaconBlock
 		for i, b := range batch2 {

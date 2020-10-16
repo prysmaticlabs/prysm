@@ -75,6 +75,9 @@ type Service struct {
 	justifiedBalances         []uint64
 	justifiedBalancesLock     sync.RWMutex
 	checkPtInfoCache          *checkPtInfoCache
+	wsEpoch                   uint64
+	wsRoot                    []byte
+	wsVerified                bool
 }
 
 // Config options for the service.
@@ -92,6 +95,8 @@ type Config struct {
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
+	WspBlockRoot      []byte
+	WspEpoch          uint64
 }
 
 // NewService instantiates a new block service instance that will
@@ -120,6 +125,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		recentCanonicalBlocks: make(map[[32]byte]bool),
 		justifiedBalances:     make([]uint64, 0),
 		checkPtInfoCache:      newCheckPointInfoCache(),
+		wsEpoch:               cfg.WspEpoch,
+		wsRoot:                cfg.WspBlockRoot,
 	}, nil
 }
 
@@ -139,7 +146,23 @@ func (s *Service) Start() {
 	}
 
 	if beaconState == nil {
-		beaconState, err = s.stateGen.StateByRoot(s.ctx, bytesutil.ToBytes32(cp.Root))
+		r := bytesutil.ToBytes32(cp.Root)
+		// Before the first finalized epoch, in the current epoch,
+		// the finalized root is defined as zero hashes instead of genesis root hash.
+		// We want to use genesis root to retrieve for state.
+		if r == params.BeaconConfig().ZeroHash {
+			genesisBlock, err := s.beaconDB.GenesisBlock(s.ctx)
+			if err != nil {
+				log.Fatalf("Could not fetch finalized cp: %v", err)
+			}
+			if genesisBlock != nil {
+				r, err = genesisBlock.Block.HashTreeRoot()
+				if err != nil {
+					log.Fatalf("Could not tree hash genesis block: %v", err)
+				}
+			}
+		}
+		beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
 		if err != nil {
 			log.Fatalf("Could not fetch beacon state by root: %v", err)
 		}
@@ -183,6 +206,11 @@ func (s *Service) Start() {
 		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
+
+		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+			// Exit run time if the node failed to verify weak subjectivity checkpoint.
+			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+		}
 
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
@@ -302,11 +330,7 @@ func (s *Service) Stop() error {
 	}
 
 	// Save initial sync cached blocks to the DB before stop.
-	if err := s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks()); err != nil {
-		return err
-	}
-
-	return nil
+	return s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
 
 // Status always returns nil unless there is an error condition that causes
@@ -427,7 +451,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
+	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	var finalizedState *stateTrie.BeaconState
 
 	finalizedState, err = s.stateGen.Resume(ctx)
@@ -450,7 +474,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 
 // This is called when a client starts from non-genesis slot. This passes last justified and finalized
 // information to fork choice service to initializes fork choice store.
-func (s *Service) resumeForkChoice(justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) {
+func (s *Service) resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint *ethpb.Checkpoint) {
 	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	s.forkChoiceStore = store
 }

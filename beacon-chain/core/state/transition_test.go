@@ -151,7 +151,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	set, beaconState, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
+	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
 	assert.NoError(t, err)
 	verified, err := set.Verify()
 	assert.NoError(t, err)
@@ -387,7 +387,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 		},
 	}
 	validators := beaconState.Validators()
-	validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
+	validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()
 	require.NoError(t, beaconState.SetValidators(validators))
 
 	mockRoot2 := [32]byte{'A'}
@@ -407,7 +407,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	sig0 := privKeys[0].Sign(hashTreeRoot[:])
 	sig1 := privKeys[1].Sign(hashTreeRoot[:])
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
-	att1.Signature = aggregateSig.Marshal()[:]
+	att1.Signature = aggregateSig.Marshal()
 
 	mockRoot3 := [32]byte{'B'}
 	att2 := &ethpb.IndexedAttestation{
@@ -425,7 +425,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	sig0 = privKeys[0].Sign(hashTreeRoot[:])
 	sig1 = privKeys[1].Sign(hashTreeRoot[:])
 	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
-	att2.Signature = aggregateSig.Marshal()[:]
+	att2.Signature = aggregateSig.Marshal()
 
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
@@ -466,7 +466,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
-	blockAtt.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	blockAtt.Signature = bls.AggregateSignatures(sigs).Marshal()
 
 	exit := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
@@ -665,7 +665,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	}
 	leaf, err := deposit.Data.HashTreeRoot()
 	require.NoError(b, err)
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(b, err, "Could not generate trie")
 	proof, err := depositTrie.MerkleProof(0)
 	require.NoError(b, err, "Could not generate proof")
@@ -784,7 +784,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			sig := privKeys[indice].Sign(hashTreeRoot[:])
 			sigs[i] = sig
 		}
-		att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+		att.Signature = bls.AggregateSignatures(sigs).Marshal()
 		atts[i] = att
 	}
 

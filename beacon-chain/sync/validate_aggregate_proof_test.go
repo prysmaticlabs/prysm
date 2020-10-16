@@ -165,12 +165,11 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -235,12 +234,11 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -256,10 +254,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 
 	msg = &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
@@ -318,12 +314,11 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -372,7 +367,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
 	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
@@ -409,12 +404,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -463,7 +457,7 @@ func TestValidateAggregateAndProofUseCheckptCache_CanValidate(t *testing.T) {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
 	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
@@ -500,12 +494,11 @@ func TestValidateAggregateAndProofUseCheckptCache_CanValidate(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -550,7 +543,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
 	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
@@ -589,12 +582,11 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -607,10 +599,8 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, err)
 	msg = &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -658,7 +648,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
 	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
@@ -697,12 +687,11 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 

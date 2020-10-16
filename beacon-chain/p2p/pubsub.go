@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"encoding/base64"
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -70,6 +69,8 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 
 // SubscribeToTopic joins (if necessary) and subscribes to PubSub topic.
 func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error) {
+	s.awaitStateInitialized() // Genesis time and genesis validator root are required to subscribe.
+
 	topicHandle, err := s.JoinTopic(topic)
 	if err != nil {
 		return nil, err
@@ -80,12 +81,10 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 // Content addressable ID function.
 //
 // ETH2 spec defines the message ID as:
-//    message-id: base64(SHA256(message.data))
-// where base64 is the URL-safe base64 alphabet with
-// padding characters omitted.
+//    message-id: SHA256(message.data)
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
 	h := hashutil.Hash(pmsg.Data)
-	return base64.RawURLEncoding.EncodeToString(h[:])
+	return string(h[:])
 }
 
 func setPubSubParameters() {

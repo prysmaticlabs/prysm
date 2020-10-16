@@ -118,7 +118,7 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 // it reads the epoch spans from cache and gets the requested value from there if it exists
 // when caching is enabled.
 // Returns error if the spans for this validator index and epoch does not exist.
-func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (types.Span, error) {
+func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx, epoch uint64) (types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpanByValidatorIndex")
 	defer span.End()
 	if db.spanCacheEnabled {
@@ -224,12 +224,7 @@ func (db *Store) SaveEpochsSpanByValidatorsIndices(ctx context.Context, epochsSp
 // it reads the epoch spans from cache, updates it and save it back to cache
 // if caching is enabled.
 // Returns error if the spans for this validator index and epoch does not exist.
-func (db *Store) SaveValidatorEpochSpan(
-	ctx context.Context,
-	validatorIdx uint64,
-	epoch uint64,
-	span types.Span,
-) error {
+func (db *Store) SaveValidatorEpochSpan(ctx context.Context, validatorIdx, epoch uint64, span types.Span) error {
 	ctx, traceSpan := trace.StartSpan(ctx, "slasherDB.SaveValidatorEpochSpan")
 	defer traceSpan.End()
 	if db.spanCacheEnabled {
@@ -329,7 +324,7 @@ func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
 // DeleteValidatorSpanByEpoch deletes a validator span for a certain epoch
 // deletes spans from cache if caching is enabled.
 // using a validator index as bucket key.
-func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
+func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx, epoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteValidatorSpanByEpoch")
 	defer span.End()
 	if db.spanCacheEnabled {

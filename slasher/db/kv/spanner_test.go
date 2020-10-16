@@ -2,14 +2,12 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"testing"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/urfave/cli/v2"
 )
 
 type spanMapTestStruct struct {
@@ -49,9 +47,8 @@ func init() {
 }
 
 func TestValidatorSpanMap_NilDB(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
@@ -61,9 +58,8 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 }
 
 func TestStore_SaveSpans(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -80,9 +76,8 @@ func TestStore_SaveSpans(t *testing.T) {
 }
 
 func TestStore_SaveCachedSpans(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -102,9 +97,8 @@ func TestStore_SaveCachedSpans(t *testing.T) {
 }
 
 func TestStore_DeleteEpochSpans(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 	db.spanCacheEnabled = false
 	for _, tt := range spanTests {
@@ -126,9 +120,8 @@ func TestStore_DeleteEpochSpans(t *testing.T) {
 }
 
 func TestValidatorSpanMap_DeletesOnCacheSavesToDB(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -182,9 +175,8 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 }
 
 func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -203,9 +195,8 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 }
 
 func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+
+	db := setupDB(t)
 	ctx := context.Background()
 	db.spanCacheEnabled = false
 
@@ -219,7 +210,7 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 	for _, tt := range spanTests {
 		assert.DeepEqual(t, tt.spanMap, res[tt.epoch], "Unexpected span map")
 	}
-	db1 := setupDB(t, cli.NewContext(&app, set, nil))
+	db1 := setupDB(t)
 	require.NoError(t, db1.SaveEpochsSpanByValidatorsIndices(ctx, res))
 	res, err = db1.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
 	require.NoError(t, err)

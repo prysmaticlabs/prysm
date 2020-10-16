@@ -19,11 +19,11 @@ import (
 
 const nilDepositErr = "Ignoring nil deposit insertion"
 
-var _ = DepositFetcher(&DepositCache{})
+var _ DepositFetcher = (*DepositCache)(nil)
 
 func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{})
@@ -33,7 +33,7 @@ func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 }
 
 func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	insertions := []struct {
@@ -75,7 +75,7 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 }
 
 func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	deposits := []*dbpb.DepositContainer{
@@ -115,7 +115,7 @@ func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
 }
 
 func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	deposits := []*dbpb.DepositContainer{
@@ -155,7 +155,7 @@ func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 }
 
 func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
@@ -238,7 +238,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 }
 
 func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOldestDeposit(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
@@ -272,7 +272,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 }
 
 func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	dc.deposits = []*dbpb.DepositContainer{
@@ -329,7 +329,7 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 }
 
 func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
@@ -387,13 +387,13 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
-	trie, err := trieutil.GenerateTrieFromItems(deps, int(params.BeaconConfig().DepositContractTreeDepth))
+	trie, err := trieutil.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
 	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
 }
 
 func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	oldFinalizedDeposits := []*dbpb.DepositContainer{
@@ -445,13 +445,13 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
-	trie, err := trieutil.GenerateTrieFromItems(deps, int(params.BeaconConfig().DepositContractTreeDepth))
+	trie, err := trieutil.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
 	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
 }
 
 func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := dc.finalizedDeposits
@@ -461,7 +461,7 @@ func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
 }
 
 func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
@@ -518,7 +518,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 }
 
 func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *testing.T) {
-	dc, err := NewDepositCache()
+	dc, err := New()
 	require.NoError(t, err)
 
 	finalizedDeposits := []*dbpb.DepositContainer{
@@ -572,4 +572,138 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 
 	deps := dc.NonFinalizedDeposits(context.Background(), big.NewInt(10))
 	assert.Equal(t, 1, len(deps))
+}
+
+func TestPruneProofs_Ok(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	deposits := []struct {
+		blkNum  uint64
+		deposit *ethpb.Deposit
+		index   int64
+	}{
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   0,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   1,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   2,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   3,
+		},
+	}
+
+	for _, ins := range deposits {
+		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+	}
+
+	require.NoError(t, dc.PruneProofs(context.Background(), 1))
+
+	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[0].Deposit.Proof)
+	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[1].Deposit.Proof)
+	assert.NotNil(t, dc.deposits[2].Deposit.Proof)
+	assert.NotNil(t, dc.deposits[3].Deposit.Proof)
+}
+
+func TestPruneProofs_SomeAlreadyPruned(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	deposits := []struct {
+		blkNum  uint64
+		deposit *ethpb.Deposit
+		index   int64
+	}{
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: nil},
+			index:   0,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: nil},
+			index:   1,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   2,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   3,
+		},
+	}
+
+	for _, ins := range deposits {
+		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+	}
+
+	require.NoError(t, dc.PruneProofs(context.Background(), 2))
+
+	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[2].Deposit.Proof)
+}
+
+func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	deposits := []struct {
+		blkNum  uint64
+		deposit *ethpb.Deposit
+		index   int64
+	}{
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   0,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   1,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   2,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   3,
+		},
+	}
+
+	for _, ins := range deposits {
+		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+	}
+
+	require.NoError(t, dc.PruneProofs(context.Background(), 99))
+
+	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[0].Deposit.Proof)
+	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[1].Deposit.Proof)
+	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[2].Deposit.Proof)
+	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[3].Deposit.Proof)
+}
+
+func makeDepositProof() [][]byte {
+	proof := make([][]byte, int(params.BeaconConfig().DepositContractTreeDepth)+1)
+	for i := range proof {
+		proof[i] = make([]byte, 32)
+	}
+	return proof
 }

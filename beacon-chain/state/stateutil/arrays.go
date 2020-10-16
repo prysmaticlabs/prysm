@@ -70,7 +70,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 			changedIndices = append(changedIndices, maxChangedIndex+1)
 		}
 		for i := 0; i < len(changedIndices); i++ {
-			rt, err = recomputeRoot(changedIndices[i], chunks, length, fieldName, hashFunc)
+			rt, err = recomputeRoot(changedIndices[i], chunks, fieldName, hashFunc)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -133,8 +133,7 @@ func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 	return layers, hashLayer
 }
 
-func recomputeRoot(idx int, chunks [][32]byte, length uint64,
-	fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
+func recomputeRoot(idx int, chunks [][32]byte, fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
 	items, ok := layersCache[fieldName]
 	if !ok {
 		return [32]byte{}, errors.New("could not recompute root as there was no cache found")

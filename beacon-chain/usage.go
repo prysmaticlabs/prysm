@@ -67,6 +67,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ConfigFileFlag,
 			cmd.ChainConfigFileFlag,
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
+			cmd.AcceptTosFlag,
 		},
 	},
 	{
@@ -108,6 +109,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.HistoricalSlasherNode,
 			flags.ChainID,
 			flags.NetworkID,
+			flags.WeakSubjectivityCheckpt,
 		},
 	},
 	{

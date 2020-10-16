@@ -76,6 +76,38 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
 
+func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
+	db, _ := testDB.SetupDB(t)
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	require.NoError(t, beaconState.SetSlot(1))
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:       genesisBlock.Block.Slot,
+		ParentRoot: genesisBlock.Block.ParentRoot,
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		BodyRoot:   bodyRoot[:],
+	})
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)))
+	cp := beaconState.CurrentJustifiedCheckpoint()
+	mockRoot := [32]byte{}
+	copy(mockRoot[:], "hello-world")
+	cp.Root = mockRoot[:]
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
+	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
+
+	service := New(db, cache.NewStateSummaryCache())
+	targetSlot := beaconState.Slot()
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = beaconState.Slot() - 1
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{b}, targetSlot)
+	require.NoError(t, err)
+	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
+}
+
 func TestLoadBlocks_FirstBranch(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
@@ -706,5 +738,6 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 
 	require.NoError(t, s.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: roots[8][:]}))
 	filteredBlocks, err = s.loadFinalizedBlocks(ctx, 0, 8)
+	require.NoError(t, err)
 	require.Equal(t, 10, len(filteredBlocks))
 }

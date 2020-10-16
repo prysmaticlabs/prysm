@@ -36,7 +36,7 @@ import (
 //
 //    slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
-	ctx context.Context,
+	_ context.Context,
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
@@ -86,7 +86,7 @@ func VerifyProposerSlashing(
 	if err != nil {
 		return err
 	}
-	if !helpers.IsSlashableValidatorUsingTrie(proposer, helpers.SlotToEpoch(beaconState.Slot())) {
+	if !helpers.IsSlashableValidatorUsingTrie(proposer, helpers.SlotToEpoch(hSlot)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey())
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
