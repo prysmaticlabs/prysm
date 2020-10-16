@@ -122,12 +122,11 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -160,12 +159,11 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
@@ -187,12 +185,11 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err := p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
