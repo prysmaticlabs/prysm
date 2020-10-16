@@ -30,6 +30,9 @@ var bufReaderPool = new(sync.Pool)
 // with snappy compression (if enabled).
 type SszNetworkEncoder struct{}
 
+// ProtocolSuffixSSZSnappy is the last part of the topic string to identify the encoding protocol.
+const ProtocolSuffixSSZSnappy = "ssz_snappy"
+
 func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
 	if v, ok := msg.(fastssz.Marshaler); ok {
 		return v.MarshalSSZ()
@@ -136,7 +139,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
 func (e SszNetworkEncoder) ProtocolSuffix() string {
-	return "/ssz_snappy"
+	return "/" + ProtocolSuffixSSZSnappy
 }
 
 // MaxLength specifies the maximum possible length of an encoded
