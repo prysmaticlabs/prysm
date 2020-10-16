@@ -11,6 +11,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
+	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -39,50 +40,43 @@ var depositEndEpoch = depositActivationStartEpoch + uint64(math.Ceil(float64(dep
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
 var ProcessesDepositsInBlocks = types.Evaluator{
 	Name:       "processes_deposits_in_blocks_epoch_%d",
-	Policy:     onEpoch(depositsInBlockStart), // We expect all deposits to enter in one epoch.
+	Policy:     policies.OnEpoch(depositsInBlockStart), // We expect all deposits to enter in one epoch.
 	Evaluation: processesDepositsInBlocks,
 }
 
 // ActivatesDepositedValidators ensures the expected amount of validator deposits are activated into the state.
 var ActivatesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     isBetweenEpochs(depositActivationStartEpoch, depositEndEpoch),
+	Policy:     policies.BetweenEpochs(depositActivationStartEpoch, depositEndEpoch),
 	Evaluation: activatesDepositedValidators,
 }
 
 // DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
 var DepositedValidatorsAreActive = types.Evaluator{
 	Name:       "deposited_validators_are_active_epoch_%d",
-	Policy:     afterNthEpoch(depositEndEpoch),
+	Policy:     policies.AfterNthEpoch(depositEndEpoch),
 	Evaluation: depositedValidatorsAreActive,
 }
 
 // ProposeVoluntaryExit sends a voluntary exit from randomly selected validator in the genesis set.
 var ProposeVoluntaryExit = types.Evaluator{
 	Name:       "propose_voluntary_exit_epoch_%d",
-	Policy:     onEpoch(7),
+	Policy:     policies.OnEpoch(7),
 	Evaluation: proposeVoluntaryExit,
 }
 
 // ValidatorHasExited checks the beacon state for the exited validator and ensures its marked as exited.
 var ValidatorHasExited = types.Evaluator{
 	Name:       "voluntary_has_exited_%d",
-	Policy:     onEpoch(8),
+	Policy:     policies.OnEpoch(8),
 	Evaluation: validatorIsExited,
 }
 
 // ValidatorsVoteWithTheMajority verifies whether validator vote for eth1data using the majority algorithm.
 var ValidatorsVoteWithTheMajority = types.Evaluator{
 	Name:       "validators_vote_with_the_majority_%d",
-	Policy:     afterNthEpoch(0),
+	Policy:     policies.AfterNthEpoch(0),
 	Evaluation: validatorsVoteWithTheMajority,
-}
-
-// Not including first epoch because of issues with genesis.
-func isBetweenEpochs(fromEpoch, toEpoch uint64) func(uint64) bool {
-	return func(currentEpoch uint64) bool {
-		return fromEpoch < currentEpoch && currentEpoch < toEpoch
-	}
 }
 
 func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
