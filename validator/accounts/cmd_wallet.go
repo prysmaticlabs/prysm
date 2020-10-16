@@ -15,7 +15,7 @@ var WalletCommands = &cli.Command{
 		{
 			Name: "create",
 			Usage: "creates a new wallet with a desired type of keymanager: " +
-				"either on-disk (direct), derived, or using remote credentials",
+				"either on-disk (imported), derived, or using remote credentials",
 			Flags: []cli.Flag{
 				flags.WalletDirFlag,
 				flags.KeymanagerKindFlag,

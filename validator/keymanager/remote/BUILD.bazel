@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
-        "remote.go",
+        "keymanager.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote",
     visibility = [
@@ -27,7 +27,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["remote_test.go"],
+    srcs = ["keymanager_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
