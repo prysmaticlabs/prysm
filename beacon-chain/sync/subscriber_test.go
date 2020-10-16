@@ -270,6 +270,14 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					return pubsub.ValidationAccept
 				},
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: func() *string {
+							s := "foo"
+							return &s
+						}(),
+					},
+				},
 				chainstarted: false,
 			},
 			want: pubsub.ValidationReject,
