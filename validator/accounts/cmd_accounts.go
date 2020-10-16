@@ -20,7 +20,7 @@ var AccountCommands = &cli.Command{
 		{
 			Name: "create",
 			Description: `creates a new validator account for eth2. If no wallet exists at the given wallet path, creates a new wallet for a user based on
-specified input, capable of creating a direct, derived, or remote wallet.
+specified input, capable of creating a imported, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,

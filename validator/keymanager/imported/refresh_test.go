@@ -1,4 +1,4 @@
-package direct
+package imported
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 )
 
-func TestDirectKeymanager_reloadAccountsFromKeystore(t *testing.T) {
+func TestImportedKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	password := "Passw03rdz293**%#2"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),

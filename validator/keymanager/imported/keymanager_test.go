@@ -1,4 +1,4 @@
-package direct
+package imported
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-func TestDirectKeymanager_CreateAccount(t *testing.T) {
+func TestImportedKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
@@ -63,7 +63,7 @@ func TestDirectKeymanager_CreateAccount(t *testing.T) {
 	require.LogsContain(t, hook, "Successfully created new validator account")
 }
 
-func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
+func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	hook := logTest.NewGlobal()
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
@@ -113,7 +113,7 @@ func TestDirectKeymanager_RemoveAccounts(t *testing.T) {
 	require.LogsContain(t, hook, "Successfully deleted validator account")
 }
 
-func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
@@ -145,7 +145,7 @@ func TestDirectKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 }
 
-func TestDirectKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
+func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
@@ -178,7 +178,7 @@ func TestDirectKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	}
 }
 
-func TestDirectKeymanager_Sign(t *testing.T) {
+func TestImportedKeymanager_Sign(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
@@ -243,7 +243,7 @@ func TestDirectKeymanager_Sign(t *testing.T) {
 	}
 }
 
-func TestDirectKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
+func TestImportedKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: nil,
 	}
@@ -252,7 +252,7 @@ func TestDirectKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	assert.ErrorContains(t, "nil public key", err)
 }
 
-func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
+func TestImportedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
@@ -262,7 +262,7 @@ func TestDirectKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	assert.ErrorContains(t, "no signing key found in keys cache", err)
 }
 
-func TestDirectKeymanager_RefreshWalletPassword(t *testing.T) {
+func TestImportedKeymanager_RefreshWalletPassword(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
