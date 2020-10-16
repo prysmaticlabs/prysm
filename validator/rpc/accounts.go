@@ -190,7 +190,7 @@ func (s *Server) BackupAccounts(
 	}, nil
 }
 
-// DeleteAccounts deletes accounts from a user if their wallet is a non-HD wallet.
+// DeleteAccounts deletes accounts from a user if their wallet is an imported wallet.
 func (s *Server) DeleteAccounts(
 	ctx context.Context, req *pb.DeleteAccountsRequest,
 ) (*pb.DeleteAccountsResponse, error) {
@@ -201,7 +201,7 @@ func (s *Server) DeleteAccounts(
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Imported {
-		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can delete accounts")
+		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can delete accounts")
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.DeleteAccountConfig{
 		Wallet:     s.wallet,

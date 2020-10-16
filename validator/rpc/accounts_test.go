@@ -224,7 +224,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeys: make([][]byte, 1),
 	})
-	assert.ErrorContains(t, "Only Non-HD wallets can delete accounts", err)
+	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {

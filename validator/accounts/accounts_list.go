@@ -80,7 +80,7 @@ func listImportedKeymanagerAccounts(
 		return errors.Wrap(err, "could not fetch account names")
 	}
 	numAccounts := au.BrightYellow(len(accountNames))
-	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("non-HD wallet").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("imported wallet").Bold())
 	fmt.Println("")
 	if len(accountNames) == 1 {
 		fmt.Printf("Showing %d validator account\n", numAccounts)

@@ -109,7 +109,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	}
 	k, ok := km.(*imported.Keymanager)
 	if !ok {
-		return errors.Wrap(err, "Only non-HD wallets can import keystores")
+		return errors.Wrap(err, "Only imported wallets can import more keystores")
 	}
 
 	// Check if the user wishes to import a one-off, private key directly

@@ -84,7 +84,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) non-HD wallet
+		(keymanager kind) imported wallet
 
 		Showing 5 validator accounts
 		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
@@ -135,7 +135,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	require.Equal(t, lineCount, len(lines))
 
 	// Assert the keymanager kind is printed on the first line.
-	kindString := "non-HD"
+	kindString := "imported"
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 

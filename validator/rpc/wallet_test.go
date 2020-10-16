@@ -361,7 +361,7 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 		keymanager: km,
 	}
 	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
-	assert.ErrorContains(t, "Only Non-HD wallets can import", err)
+	assert.ErrorContains(t, "Only imported wallets can import more", err)
 }
 
 func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {

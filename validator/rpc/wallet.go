@@ -326,7 +326,7 @@ func (s *Server) ImportKeystores(
 	}
 	km, ok := s.keymanager.(*imported.Keymanager)
 	if !ok {
-		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
+		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import more keystores")
 	}
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
