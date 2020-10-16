@@ -139,7 +139,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
@@ -281,7 +281,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 
@@ -314,7 +314,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
@@ -343,7 +343,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
@@ -376,7 +376,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
@@ -443,7 +443,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 		genesisTime:     1,
 	}
 
@@ -479,7 +479,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
@@ -600,7 +600,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 	}
 	v := validator{
 		validatorClient: client,
-		keyManagerV2:    km,
+		keyManager:      km,
 		duties: &ethpb.DutiesResponse{
 			Duties: []*ethpb.DutiesResponse_Duty{
 				{
@@ -648,7 +648,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		},
 	}
 	v := validator{
-		keyManagerV2:    km,
+		keyManager:      km,
 		validatorClient: client,
 	}
 	client.EXPECT().GetDuties(
