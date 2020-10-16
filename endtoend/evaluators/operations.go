@@ -1,6 +1,7 @@
 package evaluators
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -8,7 +9,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -68,6 +69,13 @@ var ValidatorHasExited = types.Evaluator{
 	Name:       "voluntary_has_exited_%d",
 	Policy:     onEpoch(8),
 	Evaluation: validatorIsExited,
+}
+
+// ValidatorsVoteWithTheMajority verifies whether validator vote for eth1data using the majority algorithm.
+var ValidatorsVoteWithTheMajority = types.Evaluator{
+	Name:       "validators_vote_with_the_majority_%d",
+	Policy:     afterNthEpoch(0),
+	Evaluation: validatorsVoteWithTheMajority,
 }
 
 // Not including first epoch because of issues with genesis.
@@ -191,7 +199,7 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 
 	inactiveCount, belowBalanceCount := 0, 0
 	for _, item := range validators.ValidatorList {
-		if !helpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
+		if !corehelpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
 			inactiveCount++
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
@@ -247,7 +255,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	signingData, err := helpers.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
+	signingData, err := corehelpers.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
 	if err != nil {
 		return err
 	}
@@ -280,3 +288,50 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 	}
 	return nil
 }
+
+func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	client := eth.NewBeaconChainClient(conn)
+
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get chain head")
+	}
+
+	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBlocks(context.Background(), req)
+	if err != nil {
+		return errors.Wrap(err, "failed to get blocks from beacon-chain")
+	}
+
+	for _, blk := range blks.BlockContainers {
+		slot, vote := blk.Block.Block.Slot, blk.Block.Block.Body.Eth1Data.BlockHash
+		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch * params.E2ETestConfig().EpochsPerEth1VotingPeriod
+
+		// We treat epoch 1 differently from other epoch for two reasons:
+		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently
+		// - for some reason the vote for the first slot in epoch 1 is 0x000... so we skip this slot
+		var isFirstSlotInVotingPeriod bool
+		if chainHead.HeadEpoch == 1 && slot%params.E2ETestConfig().SlotsPerEpoch == 0 {
+			continue
+		}
+		// We skipped the first slot so we treat the second slot as the starting slot of epoch 1.
+		if chainHead.HeadEpoch == 1 {
+			isFirstSlotInVotingPeriod = slot%params.E2ETestConfig().SlotsPerEpoch == 1
+		} else {
+			isFirstSlotInVotingPeriod = slot%slotsPerVotingPeriod == 0
+		}
+		if isFirstSlotInVotingPeriod {
+			expectedEth1DataVote = vote
+			return nil
+		}
+
+		if !bytes.Equal(vote, expectedEth1DataVote) {
+			return fmt.Errorf("incorrect eth1data vote for slot %d; expected: %#x vs voted: %#x",
+				slot, expectedEth1DataVote, vote)
+		}
+	}
+	return nil
+}
+
+var expectedEth1DataVote []byte
