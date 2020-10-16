@@ -56,9 +56,9 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
-		keymanager.Direct:  "Non-HD Wallet (Recommended)",
-		keymanager.Derived: "HD Wallet (Least secure)",
-		keymanager.Remote:  "Remote Signing Wallet (Advanced)",
+		keymanager.Imported: "Imported Wallet (Recommended)",
+		keymanager.Derived:  "HD Wallet (Least secure)",
+		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {

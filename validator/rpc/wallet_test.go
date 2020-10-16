@@ -21,7 +21,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][]byte) {
+func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][]byte) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
@@ -29,7 +29,7 @@ func createDirectWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -186,7 +186,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -254,7 +254,7 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 }
 
 func TestServer_ChangePassword_DirectKeymanager(t *testing.T) {
-	ss, _ := createDirectWalletWithAccounts(t, 1)
+	ss, _ := createImportedWalletWithAccounts(t, 1)
 	newPassword := "NewPassw0rdz%%%%pass"
 	_, err := ss.ChangePassword(context.Background(), &pb.ChangePasswordRequest{
 		CurrentPassword:      ss.wallet.Password(),
@@ -327,7 +327,7 @@ func TestServer_HasWallet(t *testing.T) {
 	_, err = accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -372,7 +372,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -409,7 +409,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,

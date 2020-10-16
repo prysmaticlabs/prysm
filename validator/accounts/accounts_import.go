@@ -78,7 +78,7 @@ type ImportAccountsConfig struct {
 // values necessary to run the function.
 func ImportAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Direct)
+		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
 		if err != nil {
 			return nil, err
 		}
