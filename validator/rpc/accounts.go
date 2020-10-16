@@ -31,26 +31,16 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
-	var creator accountCreator
-	switch s.wallet.KeymanagerKind() {
-	case keymanager.Remote:
-		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
-	case keymanager.Imported:
-		km, ok := s.keymanager.(*imported.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "Not a imported keymanager")
-		}
-		creator = km
-	case keymanager.Derived:
-		km, ok := s.keymanager.(*derived.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
-		}
-		creator = km
+	if s.wallet.KeymanagerKind() != keymanager.Derived {
+		return nil, status.Error(codes.InvalidArgument, "Only HD wallets can create accounts")
+	}
+	km, ok := s.keymanager.(*derived.Keymanager)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
 	}
 	dataList := make([]*pb.DepositDataResponse_DepositData, req.NumAccounts)
 	for i := uint64(0); i < req.NumAccounts; i++ {
-		data, err := createAccountWithDepositData(ctx, creator)
+		data, err := createAccountWithDepositData(ctx, km)
 		if err != nil {
 			return nil, err
 		}

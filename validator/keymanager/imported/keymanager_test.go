@@ -31,10 +31,11 @@ func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	}
 	numAccounts := 5
 	ctx := context.Background()
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
 	accounts, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accounts))
@@ -148,10 +149,11 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
 	numAccounts := 10
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
 
 	var encodedKeystore []byte
 	for k, v := range wallet.Files[AccountsPath] {
@@ -231,10 +233,11 @@ func TestImportedKeymanager_RefreshWalletPassword(t *testing.T) {
 
 	ctx := context.Background()
 	numAccounts := 5
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
 
 	var encodedKeystore []byte
 	for k, v := range wallet.Files[AccountsPath] {
