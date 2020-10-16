@@ -131,16 +131,16 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		},
 		{
 			name:   "256 attestations with single bit set",
-			inputs: aggtesting.BitlistsWithSingleBitSet(t, 256, bitlistLen),
+			inputs: aggtesting.BitlistsWithSingleBitSet(256, bitlistLen),
 			want: []bitfield.Bitlist{
-				aggtesting.BitlistWithAllBitsSet(t, 256),
+				aggtesting.BitlistWithAllBitsSet(256),
 			},
 		},
 		{
 			name:   "1024 attestations with single bit set",
-			inputs: aggtesting.BitlistsWithSingleBitSet(t, 1024, bitlistLen),
+			inputs: aggtesting.BitlistsWithSingleBitSet(1024, bitlistLen),
 			want: []bitfield.Bitlist{
-				aggtesting.BitlistWithAllBitsSet(t, 1024),
+				aggtesting.BitlistWithAllBitsSet(1024),
 			},
 		},
 		{
@@ -216,7 +216,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 
 	for _, tt := range tests {
 		runner := func() {
-			got, err := Aggregate(aggtesting.MakeAttestationsFromBitlists(t, tt.inputs))
+			got, err := Aggregate(aggtesting.MakeAttestationsFromBitlists(tt.inputs))
 			require.NoError(t, err)
 			sort.Slice(got, func(i, j int) bool {
 				return got[i].AggregationBits.Bytes()[0] < got[j].AggregationBits.Bytes()[0]

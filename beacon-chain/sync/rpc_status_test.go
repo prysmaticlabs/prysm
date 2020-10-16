@@ -7,10 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -19,6 +18,7 @@ import (
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -60,7 +60,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
+		expectSuccess(t, stream)
 		out := &pb.Status{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		if !bytes.Equal(out.FinalizedRoot, root[:]) {
@@ -76,7 +76,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	wg2.Add(1)
 	p2.BHost.SetStreamHandler(pcl2, func(stream network.Stream) {
 		defer wg2.Done()
-		msg := new(uint64)
+		msg := new(p2pTypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, msg))
 		assert.Equal(t, codeWrongNetwork, *msg)
 		assert.NoError(t, stream.Close())
@@ -126,7 +126,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
+		expectSuccess(t, stream)
 		out := &pb.Status{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		if !bytes.Equal(out.FinalizedRoot, root[:]) {
@@ -206,7 +206,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
+		expectSuccess(t, stream)
 		out := &pb.Status{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		expected := &pb.Status{
@@ -324,9 +324,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	wg2.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg2.Done()
-		out := new(uint64)
+		out := new(p2pTypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		assert.Equal(t, uint64(2), *out)
+		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
 		assert.NoError(t, stream.Close())
 	})

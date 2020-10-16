@@ -15,37 +15,41 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 var (
-	tokenExpiryLength = 20 * time.Minute
+	tokenExpiryLength = time.Hour
 	hashCost          = 8
 )
 
 // Signup to authenticate access to the validator RPC API using bcrypt and
 // a sufficiently strong password check.
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+	walletDir := s.walletDir
+	if strings.TrimSpace(req.WalletDir) != "" {
+		walletDir = req.WalletDir
+	}
 	// First, we check if the validator already has a password. In this case,
-	// the user should NOT be able to signup and the function will return an error.
-	if fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)) {
-		return nil, status.Error(codes.PermissionDenied, "Validator already has a password set, cannot signup")
+	// the user should be logged in as normal.
+	if fileutil.FileExists(filepath.Join(walletDir, wallet.HashedPasswordFileName)) {
+		return s.Login(ctx, req)
 	}
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Could not validate password input")
+		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), hashCost)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate hashed password")
 	}
-	hashFilePath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
+	hashFilePath := filepath.Join(walletDir, wallet.HashedPasswordFileName)
 	// Write the config file to disk.
-	if err := os.MkdirAll(defaultWalletPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(walletDir, os.ModePerm); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
@@ -56,19 +60,29 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-	hashedPasswordPath := filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName)
-	if fileutil.FileExists(hashedPasswordPath) {
-		hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
-		}
-		// Compare the stored hashed password, with the hashed version of the password that was received.
-		if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
-			return nil, status.Error(codes.Unauthenticated, "Incorrect password")
-		}
+	walletDir := s.walletDir
+	if strings.TrimSpace(req.WalletDir) != "" {
+		walletDir = req.WalletDir
+	}
+	// We check the strength of the password to ensure it is high-entropy,
+	// has the required character count, and contains only unicode characters.
+	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
+	}
+	hashedPasswordPath := filepath.Join(walletDir, wallet.HashedPasswordFileName)
+	if !fileutil.FileExists(hashedPasswordPath) {
+		return nil, status.Error(codes.Internal, "Could not find hashed password on disk")
+	}
+	hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
+	}
+	// Compare the stored hashed password, with the hashed version of the password that was received.
+	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
-		WalletDir:      defaultWalletPath,
+		WalletDir:      walletDir,
 		WalletPassword: req.Password,
 	}); err != nil {
 		if strings.Contains(err.Error(), "invalid checksum") {
@@ -119,7 +133,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 		return wallet.ErrNoWalletFound
 	}
 	valid, err := wallet.IsValid(cfg.WalletDir)
-	if err == wallet.ErrNoWalletFound {
+	if errors.Is(err, wallet.ErrNoWalletFound) {
 		return wallet.ErrNoWalletFound
 	}
 	if err != nil {
@@ -146,6 +160,15 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 	s.keymanager = km
 	s.wallet = w
-	s.walletInitializedFeed.Send(w)
+	s.walletDir = cfg.WalletDir
+
+	// Only send over feed if we have validating keys.
+	validatingPublicKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not check for validating public keys")
+	}
+	if len(validatingPublicKeys) > 0 {
+		s.walletInitializedFeed.Send(w)
+	}
 	return nil
 }

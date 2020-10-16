@@ -37,7 +37,7 @@ import (
 //    # Initiate exit
 //    initiate_validator_exit(state, exit.validator_index)
 func ProcessVoluntaryExits(
-	ctx context.Context,
+	_ context.Context,
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {

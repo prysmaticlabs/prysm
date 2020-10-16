@@ -158,8 +158,7 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 			if err != nil {
 				return nil, err
 			}
-			depositSig := deposit.Data.Signature
-			if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
+			if err := verifyDepositDataSigningRoot(deposit.Data, domain); err != nil {
 				// Ignore this error as in the spec pseudo code.
 				log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
 				return beaconState, nil
@@ -223,7 +222,7 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 }
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
-func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain []byte) error {
+func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error {
 	return depositutil.VerifyDepositSignature(obj, domain)
 }
 

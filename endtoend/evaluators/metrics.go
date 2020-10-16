@@ -23,7 +23,7 @@ import (
 const maxMemStatsBytes = 2000000000 // 2 GiB.
 
 // MetricsCheck performs a check on metrics to make sure caches are functioning, and
-// overall health is good. Not checking the first 2 epochs so the sample size isn't too small.
+// overall health is good. Not checking the first epoch so the sample size isn't too small.
 var MetricsCheck = types.Evaluator{
 	Name:       "metrics_check_epoch_%d",
 	Policy:     afterNthEpoch(0),
@@ -103,7 +103,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 			return err
 		}
 		pageContent := string(dataInBytes)
-		if err := response.Body.Close(); err != nil {
+		if err = response.Body.Close(); err != nil {
 			return err
 		}
 		time.Sleep(connTimeDelay)
@@ -125,7 +125,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 			if strings.Contains(topic, "%x") {
 				topic = fmt.Sprintf(topic, forkDigest)
 			}
-			if err := metricCheckLessThan(pageContent, topic, test.value); err != nil {
+			if err = metricCheckLessThan(pageContent, topic, test.value); err != nil {
 				return errors.Wrapf(err, "failed %s check", test.name)
 			}
 		}
@@ -138,7 +138,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 			if strings.Contains(topic2, "%x") {
 				topic2 = fmt.Sprintf(topic2, forkDigest)
 			}
-			if err := metricCheckComparison(pageContent, topic1, topic2, test.expectedComparison); err != nil {
+			if err = metricCheckComparison(pageContent, topic1, topic2, test.expectedComparison); err != nil {
 				return err
 			}
 		}
@@ -146,7 +146,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func metricCheckLessThan(pageContent string, topic string, value int) error {
+func metricCheckLessThan(pageContent, topic string, value int) error {
 	topicValue, err := getValueOfTopic(pageContent, topic)
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func metricCheckLessThan(pageContent string, topic string, value int) error {
 	return nil
 }
 
-func metricCheckComparison(pageContent string, topic1 string, topic2 string, comparison float64) error {
+func metricCheckComparison(pageContent, topic1, topic2 string, comparison float64) error {
 	topic2Value, err := getValueOfTopic(pageContent, topic2)
 	// If we can't find the first topic (error metrics), then assume the test passes.
 	if topic2Value != -1 {
@@ -191,7 +191,7 @@ func metricCheckComparison(pageContent string, topic1 string, topic2 string, com
 	return nil
 }
 
-func getValueOfTopic(pageContent string, topic string) (int, error) {
+func getValueOfTopic(pageContent, topic string) (int, error) {
 	regexExp, err := regexp.Compile(topic + " ")
 	if err != nil {
 		return -1, errors.Wrap(err, "could not create regex expression")

@@ -163,7 +163,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 }
 
 // Returns true if the block is not the first block proposed for the proposer for the slot.
-func (s *Service) hasSeenBlockIndexSlot(slot uint64, proposerIdx uint64) bool {
+func (s *Service) hasSeenBlockIndexSlot(slot, proposerIdx uint64) bool {
 	s.seenBlockLock.RLock()
 	defer s.seenBlockLock.RUnlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
@@ -172,7 +172,7 @@ func (s *Service) hasSeenBlockIndexSlot(slot uint64, proposerIdx uint64) bool {
 }
 
 // Set block proposer index and slot as seen for incoming blocks.
-func (s *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
+func (s *Service) setSeenBlockIndexSlot(slot, proposerIdx uint64) {
 	s.seenBlockLock.Lock()
 	defer s.seenBlockLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
@@ -198,7 +198,7 @@ func (s *Service) setBadBlock(ctx context.Context, root [32]byte) {
 }
 
 // This captures metrics for block arrival time by subtracts slot start time.
-func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) error {
+func captureArrivalTimeMetric(genesisTime, currentSlot uint64) error {
 	startTime, err := helpers.SlotToTime(genesisTime, currentSlot)
 	if err != nil {
 		return err

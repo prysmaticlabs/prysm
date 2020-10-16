@@ -8,8 +8,7 @@ import (
 )
 
 // UnpackDepositLogData unpacks the data from a deposit log using the ABI decoder.
-func UnpackDepositLogData(data []byte) (pubkey []byte, withdrawalCredentials []byte, amount []byte,
-	signature []byte, index []byte, err error) {
+func UnpackDepositLogData(data []byte) (pubkey, withdrawalCredentials, amount, signature, index []byte, err error) {
 	reader := bytes.NewReader([]byte(DepositContractABI))
 	contractAbi, err := abi.JSON(reader)
 	if err != nil {

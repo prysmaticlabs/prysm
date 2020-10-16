@@ -11,7 +11,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -30,7 +29,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 
 	numValidators := 128
 	ctx := context.Background()
-	headState := setupActiveValidators(t, db, numValidators)
+	headState := setupActiveValidators(t, numValidators)
 
 	m := &mock.ChainService{
 		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
@@ -76,7 +75,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	helpers.ClearCache()
 
 	numValidators := 128
-	headState := setupActiveValidators(t, db, numValidators)
+	headState := setupActiveValidators(t, numValidators)
 
 	mixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(mixes); i++ {
@@ -144,7 +143,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	ctx := context.Background()
 
 	numValidators := 128
-	headState := setupActiveValidators(t, db, numValidators)
+	headState := setupActiveValidators(t, numValidators)
 
 	m := &mock.ChainService{
 		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
@@ -192,7 +191,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	assert.DeepEqual(t, wantedRes, receivedRes)
 }
 
-func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.BeaconState {
+func setupActiveValidators(t *testing.T, count int) *stateTrie.BeaconState {
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
@@ -208,9 +207,11 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.B
 	}
 	s := testutil.NewBeaconState()
 	if err := s.SetValidators(validators); err != nil {
+		t.Error(err)
 		return nil
 	}
 	if err := s.SetBalances(balances); err != nil {
+		t.Error(err)
 		return nil
 	}
 	return s
