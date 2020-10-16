@@ -87,7 +87,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
-		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
+		if err = createImportedKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		// We store the hashed password to disk.

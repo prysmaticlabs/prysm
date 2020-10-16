@@ -30,7 +30,7 @@ type Keystore struct {
 type Kind int
 
 const (
-	// Direct keymanager defines an on-disk, encrypted keystore-capable store.
+	// Imported keymanager defines an on-disk, encrypted keystore-capable store.
 	Imported Kind = iota
 	// Derived keymanager using a hierarchical-deterministic algorithm.
 	Derived

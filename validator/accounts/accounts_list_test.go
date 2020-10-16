@@ -35,7 +35,7 @@ func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (
 	return nil, nil
 }
 
-func TestListAccounts_DirectKeymanager(t *testing.T) {
+func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
@@ -71,7 +71,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	os.Stdout = writer
 
 	// We call the list imported keymanager accounts function.
-	require.NoError(t, listDirectKeymanagerAccounts(context.Background(), true /* show deposit data */, true /*show private keys */, keymanager))
+	require.NoError(t, listImportedKeymanagerAccounts(context.Background(), true /* show deposit data */, true /*show private keys */, keymanager))
 
 	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)

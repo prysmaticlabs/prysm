@@ -67,8 +67,8 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	})
 	var err error
 	switch w.KeymanagerKind() {
-	case keymanager.Direct:
-		if err = createDirectKeymanagerWallet(ctx, w); err != nil {
+	case keymanager.Imported:
+		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet with imported keymanager")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
@@ -135,7 +135,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 	return createWalletConfig, nil
 }
 
-func createDirectKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
+func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
 	if wallet == nil {
 		return errors.New("nil wallet")
 	}
@@ -192,14 +192,14 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			wallet.KeymanagerKindSelections[keymanager.Direct],
+			wallet.KeymanagerKindSelections[keymanager.Imported],
 			wallet.KeymanagerKindSelections[keymanager.Derived],
 			wallet.KeymanagerKindSelections[keymanager.Remote],
 		},
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return keymanager.Direct, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
+		return keymanager.Imported, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
 	}
 	return keymanager.Kind(selection), nil
 }

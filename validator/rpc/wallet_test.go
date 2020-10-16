@@ -77,7 +77,7 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 	return ss, pubKeys
 }
 
-func TestServer_CreateWallet_Direct(t *testing.T) {
+func TestServer_CreateWallet_Imported(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
@@ -93,7 +93,7 @@ func TestServer_CreateWallet_Direct(t *testing.T) {
 	require.NoError(t, err)
 	req := &pb.CreateWalletRequest{
 		WalletPath:     localWalletDir,
-		Keymanager:     pb.KeymanagerKind_DIRECT,
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: strongPass,
 	}
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
@@ -207,7 +207,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	require.NoError(t, json.Unmarshal(enc, &jsonMap))
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
 		WalletPath:       localWalletDir,
-		KeymanagerKind:   pb.KeymanagerKind_DIRECT,
+		KeymanagerKind:   pb.KeymanagerKind_IMPORTED,
 		KeymanagerConfig: jsonMap,
 	})
 }
@@ -253,7 +253,7 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	assert.ErrorContains(t, "does not match", err)
 }
 
-func TestServer_ChangePassword_DirectKeymanager(t *testing.T) {
+func TestServer_ChangePassword_ImportedKeymanager(t *testing.T) {
 	ss, _ := createImportedWalletWithAccounts(t, 1)
 	newPassword := "NewPassw0rdz%%%%pass"
 	_, err := ss.ChangePassword(context.Background(), &pb.ChangePasswordRequest{

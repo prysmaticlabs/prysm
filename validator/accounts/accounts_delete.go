@@ -109,7 +109,7 @@ func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
-	case keymanager.Direct:
+	case keymanager.Imported:
 		km, ok := cfg.Keymanager.(*imported.Keymanager)
 		if !ok {
 			return errors.New("not a imported keymanager")

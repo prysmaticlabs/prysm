@@ -283,7 +283,7 @@ func (w *Wallet) InitializeKeymanager(
 	}
 	var km keymanager.IKeymanager
 	switch w.KeymanagerKind() {
-	case keymanager.Direct:
+	case keymanager.Imported:
 		opts, err := imported.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanageropts file")

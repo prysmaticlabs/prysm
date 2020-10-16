@@ -139,7 +139,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	assert.DeepEqual(t, unzippedPublicKeys, generatedPubKeys)
 }
 
-func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
+func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")

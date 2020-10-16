@@ -38,12 +38,12 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
 	switch w.KeymanagerKind() {
-	case keymanager.Direct:
+	case keymanager.Imported:
 		km, ok := km.(*imported.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDirectKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
+		if err := listImportedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with imported keymanager")
 		}
 	case keymanager.Derived:
@@ -68,7 +68,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	return nil
 }
 
-func listDirectKeymanagerAccounts(
+func listImportedKeymanagerAccounts(
 	ctx context.Context,
 	showDepositData,
 	showPrivateKeys bool,

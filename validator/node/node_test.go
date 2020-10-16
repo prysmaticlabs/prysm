@@ -50,7 +50,7 @@ func TestNode_Builds(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      dir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: walletPassword,
 		},
 	})

@@ -122,11 +122,11 @@ func TestCreateOrOpenWallet(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Direct,
+		keymanagerKind:     keymanager.Imported,
 		walletPasswordFile: walletPasswordFile,
 	})
-	createDirectWallet := func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Direct)
+	createImportedWallet := func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +135,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
-		if err = createDirectKeymanagerWallet(cliCtx.Context, w); err != nil {
+		if err = createImportedKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
@@ -143,22 +143,22 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		)
 		return w, nil
 	}
-	createdWallet, err := wallet.OpenWalletOrElseCli(cliCtx, createDirectWallet)
+	createdWallet, err := wallet.OpenWalletOrElseCli(cliCtx, createImportedWallet)
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "Successfully created new wallet")
 
-	openedWallet, err := wallet.OpenWalletOrElseCli(cliCtx, createDirectWallet)
+	openedWallet, err := wallet.OpenWalletOrElseCli(cliCtx, createImportedWallet)
 	require.NoError(t, err)
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
 }
 
-func TestCreateWallet_Direct(t *testing.T) {
+func TestCreateWallet_Imported(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Direct,
+		keymanagerKind:     keymanager.Imported,
 		walletPasswordFile: walletPasswordFile,
 	})
 
@@ -235,7 +235,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
-		keymanagerKind:     keymanager.Direct,
+		keymanagerKind:     keymanager.Imported,
 	})
 
 	// We attempt to create another wallet of different type at the same location. We expect an error.

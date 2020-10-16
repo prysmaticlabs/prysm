@@ -75,7 +75,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		keymanagerKind := pb.KeymanagerKind_DIRECT
+		keymanagerKind := pb.KeymanagerKind_IMPORTED
 		switch s.wallet.KeymanagerKind() {
 		case keymanager.Derived:
 			keymanagerKind = pb.KeymanagerKind_DERIVED
@@ -90,7 +90,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}, nil
 	}
 	switch req.Keymanager {
-	case pb.KeymanagerKind_DIRECT:
+	case pb.KeymanagerKind_IMPORTED:
 		w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
@@ -115,7 +115,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
 				WalletPath:     walletDir,
-				KeymanagerKind: pb.KeymanagerKind_DIRECT,
+				KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 			},
 		}, nil
 	case pb.KeymanagerKind_DERIVED:
@@ -203,7 +203,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	case keymanager.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
 	case keymanager.Imported:
-		keymanagerKind = pb.KeymanagerKind_DIRECT
+		keymanagerKind = pb.KeymanagerKind_IMPORTED
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
 	}

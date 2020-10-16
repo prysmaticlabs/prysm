@@ -35,7 +35,7 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 	switch s.wallet.KeymanagerKind() {
 	case keymanager.Remote:
 		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
-	case keymanager.Direct:
+	case keymanager.Imported:
 		km, ok := s.keymanager.(*imported.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, "Not a imported keymanager")
@@ -121,7 +121,7 @@ func (s *Server) BackupAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Direct && s.wallet.KeymanagerKind() != keymanager.Derived {
+	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
 		return nil, status.Error(codes.FailedPrecondition, "Only HD or imported wallets can backup accounts")
 	}
 	pubKeys := make([]bls.PublicKey, len(req.PublicKeys))
@@ -135,7 +135,7 @@ func (s *Server) BackupAccounts(
 	var keystoresToBackup []*keymanager.Keystore
 	var err error
 	switch s.wallet.KeymanagerKind() {
-	case keymanager.Direct:
+	case keymanager.Imported:
 		km, ok := s.keymanager.(*imported.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
@@ -200,7 +200,7 @@ func (s *Server) DeleteAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Direct {
+	if s.wallet.KeymanagerKind() != keymanager.Imported {
 		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can delete accounts")
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.DeleteAccountConfig{
