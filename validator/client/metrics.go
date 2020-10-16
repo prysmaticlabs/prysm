@@ -132,7 +132,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 
 	var pks [][48]byte
 	var err error
-	pks, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	pks, err = v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}

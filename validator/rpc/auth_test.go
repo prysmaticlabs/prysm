@@ -15,10 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 func setupWalletDir(t testing.TB) string {
@@ -62,10 +62,10 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	assert.Equal(t, true, passwordHashExists)
 
 	// We attempt to create the wallet.
-	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	_, err = accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,

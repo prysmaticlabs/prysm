@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -53,7 +53,7 @@ type Server struct {
 	host                  string
 	port                  string
 	listener              net.Listener
-	keymanager            v2keymanager.IKeymanager
+	keymanager            keymanager.IKeymanager
 	withCert              string
 	withKey               string
 	credentialError       error
@@ -63,7 +63,7 @@ type Server struct {
 	syncChecker           client.SyncChecker
 	genesisFetcher        client.GenesisFetcher
 	walletDir             string
-	wallet                *v2.Wallet
+	wallet                *wallet.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
 	nodeGatewayEndpoint   string
