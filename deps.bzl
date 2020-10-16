@@ -54,15 +54,15 @@ def prysm_deps():
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/bazel-go-ethereum",
         replace = "github.com/ethereum/go-ethereum",
-        sum = "h1:yoOj4FD6uNdWDjgZqlKGxmUYnR6tI9zN1NrE8tJ3/xE=",
-        version = "v0.0.0-20200922100503-3794d0d7ca25",
+        sum = "h1:+AspXGWVJzMtcy24DkGEJqut1grik397nnb7JybNBy8=",
+        version = "v0.0.0-20201016095414-974cbc1dd92e",
     )
 
     # Note: It is required to define com_github_ethereum_go_ethereum like this for some reason...
     # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        commit = "3794d0d7ca257542c40a8c55e35fe218cc216717",  # keep
+        commit = "974cbc1dd92e929f7856092b29d3f725dfab9803",  # keep
         importpath = "github.com/ethereum/go-ethereum",  # keep
         # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
         # a fork that has resolved these issues by disabling HID/USB support and
@@ -590,8 +590,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_go_sql_driver_mysql",
         importpath = "github.com/go-sql-driver/mysql",
-        sum = "h1:ozyZYNQW3x3HtqT1jira07DN2PArx2v7/mN66gGcHOs=",
-        version = "v1.5.0",
+        sum = "h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=",
+        version = "v1.4.1",
     )
     go_repository(
         name = "com_github_golang_protobuf",
@@ -784,8 +784,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_jmespath_go_jmespath",
         importpath = "github.com/jmespath/go-jmespath",
-        sum = "h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=",
-        version = "v0.4.0",
+        sum = "h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=",
+        version = "v0.0.0-20180206201540-c2b33e8439af",
     )
     go_repository(
         name = "com_github_jrick_logrotate",
@@ -1916,8 +1916,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_aws_aws_sdk_go",
         importpath = "github.com/aws/aws-sdk-go",
-        sum = "h1:FHMhVhyc/9jljgFAcGkQDYjpC9btM0B8VfkLBfctdNE=",
-        version = "v1.35.7",
+        sum = "h1:J82DYDGZHOKHdhx6hD24Tm30c2C3GchYGfN0mf9iKUk=",
+        version = "v1.25.48",
     )
     go_repository(
         name = "com_github_beorn7_perks",
