@@ -164,7 +164,7 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
-		// Reject any messages received before chainstart.
+		// Ignore any messages received before chainstart.
 		if !s.chainStarted {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 			return pubsub.ValidationIgnore
