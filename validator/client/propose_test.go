@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -78,7 +79,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	}
 	validator := &validator{
 		db:                             valDB,
-		keyManagerV2:                   km,
+		keyManager:                     km,
 		validatorClient:                m.validatorClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
@@ -185,11 +186,6 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 }
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -225,11 +221,6 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -265,11 +256,6 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -314,11 +300,6 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 }
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -611,4 +592,37 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		m.signExitFunc,
 		validatorKey.PublicKey().Marshal(),
 	))
+}
+
+func TestSignBlock(t *testing.T) {
+	validator, m, _, finish := setup(t)
+	defer finish()
+
+	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
+	require.NoError(t, err, "Failed to generate key from bytes")
+	publicKey := secretKey.PublicKey()
+	proposerDomain := make([]byte, 32)
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
+	ctx := context.Background()
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 1
+	blk.Block.ProposerIndex = 100
+	var pubKey [48]byte
+	copy(pubKey[:], publicKey.Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: secretKey,
+		},
+	}
+	validator.keyManager = km
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
+	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
+	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
+		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
+		"faa9a09a88beaff697404ca028b1c7052b0de37dbcff985dfa500459783370312bdd"+
+		"36d6e0f224", hex.EncodeToString(sig))
+	// proposer domain
+	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }

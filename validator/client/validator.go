@@ -27,9 +27,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -69,7 +69,7 @@ type validator struct {
 	startBalances                      map[[48]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
 	node                               ethpb.NodeClient
-	keyManagerV2                       v2keymanager.IKeymanager
+	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	protector                          slashingprotection.Protector
@@ -96,13 +96,13 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	for {
 		select {
 		case w := <-walletChan:
-			keyManagerV2, err := w.InitializeKeymanager(
+			keyManager, err := w.InitializeKeymanager(
 				ctx, true, /* skipMnemonicConfirm */
 			)
 			if err != nil {
 				return errors.Wrap(err, "could not read keymanager for wallet")
 			}
-			v.keyManagerV2 = keyManagerV2
+			v.keyManager = keyManager
 			return nil
 		case <-ctx.Done():
 			return errors.New("context canceled")
@@ -241,7 +241,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
-	validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating keys")
 	}
@@ -381,7 +381,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
-	validatingKeys, err := v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}
