@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
+	"strings"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
@@ -15,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
@@ -153,6 +155,19 @@ func main() {
 			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
+		}
+
+		// Expand the path if web3 endpoint is a file
+		web3endpoint := ctx.String(flags.HTTPWeb3ProviderFlag.Name)
+		if !strings.HasPrefix(web3endpoint, "http://") &&
+			!strings.HasPrefix(web3endpoint, "https://") &&
+			!strings.HasPrefix(web3endpoint, "ws://") &&
+			!strings.HasPrefix(web3endpoint, "wss://") {
+			web3endpoint, err := fileutil.ExpandPath(ctx.String(flags.HTTPWeb3ProviderFlag.Name))
+			if err != nil {
+				return err
+			}
+			ctx.Set(flags.HTTPWeb3ProviderFlag.Name, web3endpoint)
 		}
 
 		if ctx.IsSet(flags.SetGCPercent.Name) {
