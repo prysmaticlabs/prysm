@@ -86,6 +86,17 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorInclusionDistancesGaugeVec used to keep track of validator inclusion distances by public key.
+	ValidatorInclusionDistancesGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "inclusion_distance",
+			Help:      "Inclusion distance of last attestation.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
 	// ValidatorAttestSuccessVec used to count successful attestations.
 	ValidatorAttestSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -151,6 +162,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		for _, missingPubKey := range resp.MissingValidators {
 			fmtKey := fmt.Sprintf("%#x", missingPubKey)
 			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
+			ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(0)
 		}
 	}
 
@@ -196,6 +208,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
+				ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[i]))
 			}
 		}
 		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
