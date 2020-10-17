@@ -14,12 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -58,7 +58,7 @@ func (s *Server) DefaultWalletPath(ctx context.Context, _ *ptypes.Empty) (*pb.De
 }
 
 // CreateWallet via an API request, allowing a user to save a new
-// derived, direct, or remote wallet.
+// derived, imported, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	if strings.TrimSpace(req.WalletPath) != "" {
@@ -75,11 +75,11 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		keymanagerKind := pb.KeymanagerKind_DIRECT
+		keymanagerKind := pb.KeymanagerKind_IMPORTED
 		switch s.wallet.KeymanagerKind() {
-		case v2keymanager.Derived:
+		case keymanager.Derived:
 			keymanagerKind = pb.KeymanagerKind_DERIVED
-		case v2keymanager.Remote:
+		case keymanager.Remote:
 			keymanagerKind = pb.KeymanagerKind_REMOTE
 		}
 		return &pb.CreateWalletResponse{
@@ -90,11 +90,11 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}, nil
 	}
 	switch req.Keymanager {
-	case pb.KeymanagerKind_DIRECT:
-		w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	case pb.KeymanagerKind_IMPORTED:
+		w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
-				KeymanagerKind: v2keymanager.Direct,
+				KeymanagerKind: keymanager.Imported,
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
@@ -107,7 +107,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -115,7 +115,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
 				WalletPath:     walletDir,
-				KeymanagerKind: pb.KeymanagerKind_DIRECT,
+				KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 			},
 		}, nil
 	case pb.KeymanagerKind_DERIVED:
@@ -125,7 +125,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if req.Mnemonic == "" {
 			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
 		}
-		_, depositData, err := v2.RecoverWallet(ctx, &v2.RecoverWalletConfig{
+		_, depositData, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
 			WalletDir:      walletDir,
 			WalletPassword: req.WalletPassword,
 			Mnemonic:       req.Mnemonic,
@@ -136,7 +136,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -144,7 +144,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 
 		depositDataList := make([]*pb.DepositDataResponse_DepositData, len(depositData))
 		for i, item := range depositData {
-			data, err := v2.DepositDataJSON(item)
+			data, err := accounts.DepositDataJSON(item)
 			if err != nil {
 				return nil, err
 			}
@@ -200,11 +200,11 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	}
 	var keymanagerKind pb.KeymanagerKind
 	switch s.wallet.KeymanagerKind() {
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
-	case v2keymanager.Direct:
-		keymanagerKind = pb.KeymanagerKind_DIRECT
-	case v2keymanager.Remote:
+	case keymanager.Imported:
+		keymanagerKind = pb.KeymanagerKind_IMPORTED
+	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
 	}
 	f, err := s.wallet.ReadKeymanagerConfigFromDisk(ctx)
@@ -286,10 +286,10 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
 	}
 	switch s.wallet.KeymanagerKind() {
-	case v2keymanager.Direct:
-		km, ok := s.keymanager.(*direct.Keymanager)
+	case keymanager.Imported:
+		km, ok := s.keymanager.(*imported.Keymanager)
 		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Not a valid direct keymanager")
+			return nil, status.Error(codes.FailedPrecondition, "Not a valid imported keymanager")
 		}
 		s.wallet.SetPassword(req.Password)
 		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
@@ -298,7 +298,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
-	case v2keymanager.Derived:
+	case keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Not a valid derived keymanager")
@@ -310,7 +310,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		if err := km.RefreshWalletPassword(ctx); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
 		}
-	case v2keymanager.Remote:
+	case keymanager.Remote:
 		return nil, status.Error(codes.Internal, "Cannot change password for remote keymanager")
 	}
 	return &ptypes.Empty{}, nil
@@ -324,9 +324,9 @@ func (s *Server) ImportKeystores(
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
-	keymanager, ok := s.keymanager.(*direct.Keymanager)
+	km, ok := s.keymanager.(*imported.Keymanager)
 	if !ok {
-		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can import keystores")
+		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import more keystores")
 	}
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
@@ -335,11 +335,11 @@ func (s *Server) ImportKeystores(
 	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
 	}
-	keystores := make([]*v2keymanager.Keystore, len(req.KeystoresImported))
+	keystores := make([]*keymanager.Keystore, len(req.KeystoresImported))
 	importedPubKeys := make([][]byte, len(req.KeystoresImported))
 	for i := 0; i < len(req.KeystoresImported); i++ {
 		encoded := req.KeystoresImported[i]
-		keystore := &v2keymanager.Keystore{}
+		keystore := &keymanager.Keystore{}
 		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
 		}
@@ -351,8 +351,8 @@ func (s *Server) ImportKeystores(
 		importedPubKeys[i] = pubKey
 	}
 	// Import the uploaded accounts.
-	if err := v2.ImportAccounts(ctx, &v2.ImportAccountsConfig{
-		Keymanager:      keymanager,
+	if err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
+		Keymanager:      km,
 		Keystores:       keystores,
 		AccountPassword: req.KeystoresPassword,
 	}); err != nil {

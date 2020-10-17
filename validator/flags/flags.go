@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	// WalletDefaultDirName for accounts-v2.
+	// WalletDefaultDirName for accounts.
 	WalletDefaultDirName = "prysm-wallet-v2"
 )
 
@@ -123,7 +123,7 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8081,
 	}
-	// WalletDirFlag defines the path to a wallet directory for Prysm accounts-v2.
+	// WalletDirFlag defines the path to a wallet directory for Prysm accounts.
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
@@ -149,10 +149,16 @@ var (
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
 	}
-	// ShowDepositDataFlag for accounts-v2.
+	// ShowDepositDataFlag for accounts.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",
-		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
+		Usage: "Display raw eth1 tx deposit data for validator accounts",
+		Value: false,
+	}
+	// ShowPrivateKeysFlag for accounts.
+	ShowPrivateKeysFlag = &cli.BoolFlag{
+		Name:  "show-private-keys",
+		Usage: "Display the private keys for validator accounts",
 		Value: false,
 	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
@@ -230,7 +236,7 @@ var (
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",
-		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
+		Usage: "Kind of keymanager, either imported, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
 	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.

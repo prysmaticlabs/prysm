@@ -24,12 +24,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -102,6 +102,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
+	if err := ValidatorClient.db.MigrateV2ProposalsProtectionDb(cliCtx.Context); err != nil {
+		return nil, err
+	}
 	return ValidatorClient, nil
 }
 
@@ -155,20 +158,20 @@ func (s *ValidatorClient) Close() {
 }
 
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
-	var keyManagerV2 v2.IKeymanager
+	var keyManager keymanager.IKeymanager
 	var err error
 	var accountsDir string
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-		keyManagerV2, err = direct.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
+		keyManager, err = imported.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
 		if err != nil {
 			return errors.Wrap(err, "could not generate interop keys")
 		}
 	} else {
 		// Read the wallet from the specified path.
 		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-			return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
+			return nil, errors.New("no wallet found, create a new one with validator wallet create")
 		})
 		if err != nil {
 			return errors.Wrap(err, "could not open wallet")
@@ -178,7 +181,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManagerV2, err = w.InitializeKeymanager(
+		keyManager, err = w.InitializeKeymanager(
 			cliCtx.Context, false, /* skipMnemonicConfirm */
 		)
 		if err != nil {
@@ -225,7 +228,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := s.registerClientService(keyManagerV2); err != nil {
+	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
@@ -316,7 +319,7 @@ func (s *ValidatorClient) registerPrometheusService() error {
 }
 
 func (s *ValidatorClient) registerClientService(
-	keyManagerV2 v2.IKeymanager,
+	keyManager keymanager.IKeymanager,
 ) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
@@ -335,7 +338,7 @@ func (s *ValidatorClient) registerClientService(
 	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
-		KeyManagerV2:               keyManagerV2,
+		KeyManager:                 keyManager,
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,

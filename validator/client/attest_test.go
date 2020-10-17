@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -88,11 +87,6 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	hook := logTest.NewGlobal()
@@ -151,7 +145,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
-	sig, err := validator.keyManagerV2.Sign(context.Background(), &validatorpb.SignRequest{
+	sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
 		PublicKey:   validatorKey.PublicKey().Marshal(),
 		SigningRoot: root[:],
 	})
@@ -166,11 +160,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 }
 
 func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -214,11 +203,6 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -263,11 +247,6 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()

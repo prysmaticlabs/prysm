@@ -255,7 +255,7 @@ func (s *Service) registerHandlers() {
 						time.Sleep(timeutils.Until(startTime))
 					}
 					log.WithField("starttime", startTime).Debug("Chain started in sync service")
-					s.chainStarted = true
+					s.markForChainStart()
 				}()
 			case statefeed.Synced:
 				_, ok := event.Data.(*statefeed.SyncedData)
@@ -275,6 +275,11 @@ func (s *Service) registerHandlers() {
 			return
 		}
 	}
+}
+
+// marks the chain as having started.
+func (s *Service) markForChainStart() {
+	s.chainStarted = true
 }
 
 // Checker defines a struct which can verify whether a node is currently

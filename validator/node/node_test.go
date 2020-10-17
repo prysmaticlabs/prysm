@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -43,14 +43,14 @@ func TestNode_Builds(t *testing.T) {
 	}()
 	set.String("wallet-dir", dir, "path to wallet")
 	set.String("wallet-password-file", passwordFile, "path to wallet password")
-	set.String("keymanager-kind", "direct", "keymanager kind")
+	set.String("keymanager-kind", "imported", "keymanager kind")
 	set.String("verbosity", "debug", "log verbosity")
 	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	context := cli.NewContext(&app, set, nil)
-	w, err := v2.CreateWalletWithKeymanager(context.Context, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      dir,
-			KeymanagerKind: v2keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: walletPassword,
 		},
 	})

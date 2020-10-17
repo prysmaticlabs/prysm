@@ -118,7 +118,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -159,7 +159,7 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, a
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManagerV2.Sign(ctx, &validatorpb.SignRequest{
+	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
