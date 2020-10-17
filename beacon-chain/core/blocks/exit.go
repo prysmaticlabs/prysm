@@ -13,6 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// ValidatorAlreadyExitedMsg defines a message saying that a validator has already exited.
+var ValidatorAlreadyExitedMsg = "validator has already submitted an exit, which will take place at epoch"
+
+// ValidatorCannotExitYetMsg defines a message saying that a validator cannot exit
+// because it has not been active long enough.
+var ValidatorCannotExitYetMsg = "validator has not been active long enough to exit"
+
 // ProcessVoluntaryExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
@@ -162,9 +169,7 @@ func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot ui
 	}
 	// Verify the validator has not yet submitted an exit.
 	if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf(
-			"validator has already submitted an exit, which will take place at epoch: %v",
-			validator.ExitEpoch())
+		return fmt.Errorf("%s: %v", ValidatorAlreadyExitedMsg, validator.ExitEpoch())
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
@@ -173,7 +178,8 @@ func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot ui
 	// Verify the validator has been active long enough.
 	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod {
 		return fmt.Errorf(
-			"validator has not been active long enough to exit: %d epochs vs required %d epochs",
+			"%s: %d epochs vs required %d epochs",
+			ValidatorCannotExitYetMsg,
 			currentEpoch,
 			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)
