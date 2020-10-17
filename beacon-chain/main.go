@@ -167,7 +167,9 @@ func main() {
 			if err != nil {
 				return fmt.Errorf("could not expand path for %s with error: %s", web3endpoint, err)
 			}
-			ctx.Set(flags.HTTPWeb3ProviderFlag.Name, web3endpoint)
+			if ctx.Set(flags.HTTPWeb3ProviderFlag.Name, web3endpoint) != nil {
+				return fmt.Errorf("could not set %s to %s with error: %s", web3endpoint, flags.HTTPWeb3ProviderFlag.Name, err)
+			}
 		}
 
 		if ctx.IsSet(flags.SetGCPercent.Name) {
