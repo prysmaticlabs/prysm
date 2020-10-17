@@ -165,7 +165,7 @@ func main() {
 			!strings.HasPrefix(web3endpoint, "wss://") {
 			web3endpoint, err := fileutil.ExpandPath(ctx.String(flags.HTTPWeb3ProviderFlag.Name))
 			if err != nil {
-				return err
+				return fmt.Errorf("could not expand path for %s with error: %s", web3endpoint, err)
 			}
 			ctx.Set(flags.HTTPWeb3ProviderFlag.Name, web3endpoint)
 		}
