@@ -11,6 +11,7 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -157,19 +158,8 @@ func main() {
 			}
 		}
 
-		// Expand the path if web3 endpoint is a file
-		web3endpoint := ctx.String(flags.HTTPWeb3ProviderFlag.Name)
-		if !strings.HasPrefix(web3endpoint, "http://") &&
-			!strings.HasPrefix(web3endpoint, "https://") &&
-			!strings.HasPrefix(web3endpoint, "ws://") &&
-			!strings.HasPrefix(web3endpoint, "wss://") {
-			web3endpoint, err := fileutil.ExpandPath(ctx.String(flags.HTTPWeb3ProviderFlag.Name))
-			if err != nil {
-				return fmt.Errorf("could not expand path for %s with error: %s", web3endpoint, err)
-			}
-			if err := ctx.Set(flags.HTTPWeb3ProviderFlag.Name, web3endpoint); err != nil {
-				return fmt.Errorf("could not set %s to %s with error: %s", web3endpoint, flags.HTTPWeb3ProviderFlag.Name, err)
-			}
+		if err := expandWeb3EndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
+			return err
 		}
 
 		if ctx.IsSet(flags.SetGCPercent.Name) {
@@ -213,5 +203,23 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	beacon.Start()
+	return nil
+}
+
+// expandWeb3EndpointIfFile expends the path for --http-web3provider if specified as a file
+func expandWeb3EndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
+	web3endpoint := ctx.String(flag.Name)
+	if !strings.HasPrefix(web3endpoint, "http://") &&
+		!strings.HasPrefix(web3endpoint, "https://") &&
+		!strings.HasPrefix(web3endpoint, "ws://") &&
+		!strings.HasPrefix(web3endpoint, "wss://") {
+		web3endpoint, err := fileutil.ExpandPath(ctx.String(flag.Name))
+		if err != nil {
+			return errors.Wrapf(err, "could not expand path for %s", web3endpoint)
+		}
+		if err := ctx.Set(flag.Name, web3endpoint); err != nil {
+			return errors.Wrapf(err, "could not set %s to %s", flag.Name, web3endpoint)
+		}
+	}
 	return nil
 }
