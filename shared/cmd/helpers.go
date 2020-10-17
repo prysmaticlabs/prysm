@@ -73,7 +73,7 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 	return passphrase, nil
 }
 
-// expandWeb3EndpointIfFile expends the path for --http-web3provider if specified as a file
+// ExpandWeb3EndpointIfFile expands the path for --http-web3provider if specified as a file.
 func ExpandWeb3EndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
 	web3endpoint := ctx.String(flag.Name)
 	if !strings.HasPrefix(web3endpoint, "http://") &&
