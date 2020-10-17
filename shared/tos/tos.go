@@ -28,6 +28,11 @@ TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_O
 
 
 Type "accept" to accept this terms and conditions [accept/decline]:`
+	acceptTosPromptErrText = `
+Could not scan text input. If you are trying to run it in non-interactive environment you
+should use --accept-terms-of-use flag (only once) after reading the terms and conditions here: 
+https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md
+`
 )
 
 var (
@@ -51,7 +56,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 
 	input, err := promptutil.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "decline")
 	if err != nil {
-		return err
+		return errors.New(acceptTosPromptErrText)
 	}
 	if strings.ToLower(input) != "accept" {
 		return errors.New("you have to accept Terms and Conditions in order to continue")
