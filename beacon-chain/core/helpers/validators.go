@@ -188,17 +188,17 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		if !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
 			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
 			if err != nil {
 				return 0, errors.Wrap(err, "could not interface with committee cache")
 			}
-			if proposerIndices != nil {
+			if proposerIndices != nil && len(proposerIndices) == int(params.BeaconConfig().SlotsPerEpoch) {
 				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
 			}
-		}
-		if err := UpdateProposerIndicesInCache(state, e); err != nil {
-			return 0, errors.Wrap(err, "could not update committee cache")
+			if err := UpdateProposerIndicesInCache(state, e); err != nil {
+				return 0, errors.Wrap(err, "could not update committee cache")
+			}
 		}
 	}
 
