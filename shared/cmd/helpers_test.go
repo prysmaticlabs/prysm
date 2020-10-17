@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"testing"
 	"flag"
 	"os"
 	"os/user"
+	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
@@ -97,12 +97,12 @@ func TestExpandWeb3EndpointIfFile(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "~/relative/path.ipc"))
 	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
-	require.Equal(t, usr.HomeDir + "/relative/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
+	require.Equal(t, usr.HomeDir+"/relative/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
 
 	// current dir path
 	curentdir, err := os.Getwd()
 	require.NoError(t, err)
 	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "./path.ipc"))
 	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
-	require.Equal(t, curentdir + "/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
+	require.Equal(t, curentdir+"/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
 }

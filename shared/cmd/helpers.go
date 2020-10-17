@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
