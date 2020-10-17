@@ -6,18 +6,15 @@ import (
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
-	"strings"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
@@ -158,7 +155,7 @@ func main() {
 			}
 		}
 
-		if err := expandWeb3EndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
+		if err := cmd.ExpandWeb3EndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
 			return err
 		}
 
@@ -203,23 +200,5 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	beacon.Start()
-	return nil
-}
-
-// expandWeb3EndpointIfFile expends the path for --http-web3provider if specified as a file
-func expandWeb3EndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
-	web3endpoint := ctx.String(flag.Name)
-	if !strings.HasPrefix(web3endpoint, "http://") &&
-		!strings.HasPrefix(web3endpoint, "https://") &&
-		!strings.HasPrefix(web3endpoint, "ws://") &&
-		!strings.HasPrefix(web3endpoint, "wss://") {
-		web3endpoint, err := fileutil.ExpandPath(ctx.String(flag.Name))
-		if err != nil {
-			return errors.Wrapf(err, "could not expand path for %s", web3endpoint)
-		}
-		if err := ctx.Set(flag.Name, web3endpoint); err != nil {
-			return errors.Wrapf(err, "could not set %s to %s", flag.Name, web3endpoint)
-		}
-	}
 	return nil
 }
