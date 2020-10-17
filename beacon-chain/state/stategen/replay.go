@@ -56,9 +56,14 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBl
 		return nil, err
 	}
 
-	blockRoots, err := s.beaconDB.BlockRoots(ctx, filter)
-	if err != nil {
-		return nil, err
+	// Calculate respective block roots.
+	blockRoots := make([][32]byte, 0, len(blocks))
+	for _, b := range blocks {
+		root, err := b.Block.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		blockRoots = append(blockRoots, root)
 	}
 	// The retrieved blocks and block roots have to be in the same length given same filter.
 	if len(blocks) != len(blockRoots) {
@@ -256,9 +261,14 @@ func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot uint
 	if err != nil {
 		return nil, err
 	}
-	bRoots, err := s.beaconDB.BlockRoots(ctx, f)
-	if err != nil {
-		return nil, err
+	// Calculate respective block roots.
+	bRoots := make([][32]byte, 0, len(bs))
+	for _, b := range bs {
+		root, err := b.Block.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		bRoots = append(bRoots, root)
 	}
 	if len(bs) != len(bRoots) {
 		return nil, errors.New("length of blocks and roots don't match")
