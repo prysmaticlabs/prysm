@@ -23,6 +23,8 @@ func BlockRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) 
 	return state.BlockRootAtIndex(slot % params.BeaconConfig().SlotsPerHistoricalRoot)
 }
 
+// StateRootAtSlot returns the cached state root at that particular slot. If no state
+// root has been cached it will return a zero-hash.
 func StateRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) {
 	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
