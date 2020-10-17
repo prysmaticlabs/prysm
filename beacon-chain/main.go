@@ -167,7 +167,7 @@ func main() {
 			if err != nil {
 				return fmt.Errorf("could not expand path for %s with error: %s", web3endpoint, err)
 			}
-			if ctx.Set(flags.HTTPWeb3ProviderFlag.Name, web3endpoint) != nil {
+			if err := ctx.Set(flags.HTTPWeb3ProviderFlag.Name, web3endpoint) ; err != nil {
 				return fmt.Errorf("could not set %s to %s with error: %s", web3endpoint, flags.HTTPWeb3ProviderFlag.Name, err)
 			}
 		}
