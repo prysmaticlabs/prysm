@@ -162,7 +162,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		for _, missingPubKey := range resp.MissingValidators {
 			fmtKey := fmt.Sprintf("%#x", missingPubKey)
 			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
-			ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(0)
+			ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(1)
 		}
 	}
 
