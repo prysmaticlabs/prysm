@@ -58,11 +58,13 @@ func (s *Store) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	return headBlock, err
 }
 
-// Blocks retrieves a list of beacon blocks by filter criteria.
-func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.SignedBeaconBlock, error) {
+// Blocks retrieves a list of beacon blocks and its respective roots by filter criteria.
+func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Blocks")
 	defer span.End()
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+	blockRoots := make([][32]byte, 0)
+
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
@@ -78,10 +80,11 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Si
 				return err
 			}
 			blocks = append(blocks, block)
+			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
 		return nil
 	})
-	return blocks, err
+	return blocks, blockRoots, err
 }
 
 // BlockRoots retrieves a list of beacon block roots by filter criteria.

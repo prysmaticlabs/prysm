@@ -51,19 +51,9 @@ func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, 
 // The Blocks are returned in slot-descending order.
 func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	blocks, err := s.beaconDB.Blocks(ctx, filter)
+	blocks, blockRoots, err := s.beaconDB.Blocks(ctx, filter)
 	if err != nil {
 		return nil, err
-	}
-
-	// Calculate respective block roots.
-	blockRoots := make([][32]byte, 0, len(blocks))
-	for _, b := range blocks {
-		root, err := b.Block.HashTreeRoot()
-		if err != nil {
-			return nil, err
-		}
-		blockRoots = append(blockRoots, root)
 	}
 	// The retrieved blocks and block roots have to be in the same length given same filter.
 	if len(blocks) != len(blockRoots) {
@@ -257,18 +247,9 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 // Since hot states don't have finalized blocks, this should ONLY be used for replaying cold state.
 func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	bs, err := s.beaconDB.Blocks(ctx, f)
+	bs, bRoots, err := s.beaconDB.Blocks(ctx, f)
 	if err != nil {
 		return nil, err
-	}
-	// Calculate respective block roots.
-	bRoots := make([][32]byte, 0, len(bs))
-	for _, b := range bs {
-		root, err := b.Block.HashTreeRoot()
-		if err != nil {
-			return nil, err
-		}
-		bRoots = append(bRoots, root)
 	}
 	if len(bs) != len(bRoots) {
 		return nil, errors.New("length of blocks and roots don't match")
