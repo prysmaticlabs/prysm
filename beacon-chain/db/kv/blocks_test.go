@@ -379,3 +379,29 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 500, len(blks), "Did not get wanted blocks")
 }
+
+func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	b := make([]*ethpb.SignedBeaconBlock, 500)
+	for i := 0; i < 500; i++ {
+		blk := testutil.NewBeaconBlock()
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		blk.Block.Slot = uint64(i)
+		b[i] = blk
+	}
+
+	require.NoError(t, db.SaveBlocks(ctx, b))
+	f := filters.NewFilter().SetStartSlot(0).SetEndSlot(500)
+
+	blks, roots, err := db.Blocks(ctx, f)
+	require.NoError(t, err)
+	assert.Equal(t, 500, len(blks), "Did not get wanted blocks")
+
+	for i, blk := range blks {
+		rt, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, roots[i], rt, "mismatch of block roots")
+	}
+}
