@@ -63,13 +63,14 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersRequest) (*ethpb.BlockHeadersResponse, error) {
 	var err error
 	var blks []*ethpb_alpha.SignedBeaconBlock
+	var blkRoots [][32]byte
 	if len(req.ParentRoot) == 32 {
-		blks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(req.ParentRoot))
+		blks, blkRoots, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(req.ParentRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 		}
 	} else {
-		blks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(req.Slot).SetEndSlot(req.Slot))
+		blks, blkRoots, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(req.Slot).SetEndSlot(req.Slot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", req.Slot, err)
 		}
@@ -84,11 +85,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 		}
-		blkRoot, err := blk.Block.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
-		}
-		canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoot)
+		canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoots[i])
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
@@ -301,7 +298,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 			if err != nil {
 				return nil, errors.Wrap(err, "could not decode block id")
 			}
-			blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
+			blks, roots, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
 			}
@@ -314,12 +311,8 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 			if numBlks == 1 {
 				break
 			}
-			for _, block := range blks {
-				blkRoot, err := block.Block.HashTreeRoot()
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
-				}
-				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoot)
+			for i, block := range blks {
+				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, roots[i])
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 				}
