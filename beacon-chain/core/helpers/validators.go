@@ -197,7 +197,10 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 			if err != nil {
 				return 0, errors.Wrap(err, "could not interface with committee cache")
 			}
-			if proposerIndices != nil && len(proposerIndices) == int(params.BeaconConfig().SlotsPerEpoch) {
+			if proposerIndices != nil {
+				if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+					return 0, errors.Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
+				}
 				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
 			}
 			if err := UpdateProposerIndicesInCache(state, e); err != nil {
