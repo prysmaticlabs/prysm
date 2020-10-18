@@ -87,7 +87,11 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Si
 	return blocks, blockRoots, err
 }
 
-// BlockRoots retrieves a list of beacon block roots by filter criteria.
+// BlockRoots retrieves a list of beacon block roots by filter criteria. If the caller
+// requires both the blocks and the block roots for a certain filter they should instead
+// use the Blocks function rather than use BlockRoots. During periods of non finality
+// there are potential race conditions which leads to differing roots when calling the db
+// multiple times for the same filter.
 func (s *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRoots")
 	defer span.End()
