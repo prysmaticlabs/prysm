@@ -5,12 +5,12 @@ go_library(
     name = "go_default_library",
     srcs = [
         "backup.go",
-        "direct.go",
         "doc.go",
         "import.go",
+        "keymanager.go",
         "refresh.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/direct",
+    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/imported",
     visibility = [
         "//validator:__pkg__",
         "//validator:__subpackages__",
@@ -46,8 +46,8 @@ go_test(
     name = "go_default_test",
     srcs = [
         "backup_test.go",
-        "direct_test.go",
         "import_test.go",
+        "keymanager_test.go",
         "refresh_test.go",
     ],
     embed = [":go_default_library"],

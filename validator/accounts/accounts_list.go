@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -38,13 +38,13 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
 	switch w.KeymanagerKind() {
-	case keymanager.Direct:
-		km, ok := km.(*direct.Keymanager)
+	case keymanager.Imported:
+		km, ok := km.(*imported.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDirectKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with direct keymanager")
+		if err := listImportedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
+			return errors.Wrap(err, "could not list validator accounts with imported keymanager")
 		}
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
@@ -68,11 +68,11 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	return nil
 }
 
-func listDirectKeymanagerAccounts(
+func listImportedKeymanagerAccounts(
 	ctx context.Context,
 	showDepositData,
 	showPrivateKeys bool,
-	keymanager *direct.Keymanager,
+	keymanager *imported.Keymanager,
 ) error {
 	// We initialize the wallet's keymanager.
 	accountNames, err := keymanager.ValidatingAccountNames()
@@ -80,7 +80,7 @@ func listDirectKeymanagerAccounts(
 		return errors.Wrap(err, "could not fetch account names")
 	}
 	numAccounts := au.BrightYellow(len(accountNames))
-	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("non-HD wallet").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("imported wallet").Bold())
 	fmt.Println("")
 	if len(accountNames) == 1 {
 		fmt.Printf("Showing %d validator account\n", numAccounts)
