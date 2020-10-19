@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -26,7 +27,7 @@ type AttestationReceiver interface {
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
 	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
-	VerifyFinalizedConsistency(ctx context.Context, r []byte) error
+	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -98,8 +99,23 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 }
 
 // VerifyFinalizedConsistency verifies input root is consistent with finalized store.
-func (s *Service) VerifyFinalizedConsistency(ctx context.Context, r []byte) error {
-	return s.verifyFinalizedConsistency(ctx, r)
+// When the input root is not be consistent with finalized store then we know it is not
+// on the finalized check point that leads to current canonical chain and should be rejected accordingly.
+func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
+	f := s.FinalizedCheckpt()
+	ss, err := helpers.StartSlot(f.Epoch)
+	if err != nil {
+		return err
+	}
+	r, err := s.ancestor(ctx, root, ss)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(f.Root, r) {
+		return errors.New("Root and finalized store are not consistent")
+	}
+
+	return nil
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.

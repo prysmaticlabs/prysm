@@ -178,24 +178,6 @@ func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, f
 	return nil
 }
 
-// verifyFinalizedConsistency verifies input root is consistent with finalized store.
-func (s *Service) verifyFinalizedConsistency(ctx context.Context, root []byte) error {
-	f := s.FinalizedCheckpt()
-	ss, err := helpers.StartSlot(f.Epoch)
-	if err != nil {
-		return err
-	}
-	r, err := s.ancestor(ctx, root, ss)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(f.Root, r) {
-		return errors.New("Root and finalized store are not consistent")
-	}
-
-	return nil
-}
-
 // verifyAttestation validates input attestation is valid.
 func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
