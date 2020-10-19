@@ -649,7 +649,7 @@ func (s *Service) initPOWService() {
 				s.retryETH1Node(err)
 				continue
 			}
-			s.cacheHeadersForEth1DataVote(header)
+			s.cacheHeadersForEth1DataVote(ctx)
 
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
@@ -730,15 +730,15 @@ func (s *Service) logTillChainStart() {
 
 // cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
 // instead of making multiple RPC requests to the ETH1 endpoint.
-func (s *Service) cacheHeadersForEth1DataVote(lastKnownHeader *gethTypes.Header) {
+func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
 	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
 		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
 
-	if lastKnownHeader.Number.Uint64() < params.BeaconConfig().Eth1FollowDistance {
-		return
+	end, err := s.followBlockHeight(ctx)
+	if err != nil {
+		log.Errorf("Unable to fetch height of follow block: %v", err)
 	}
 
-	end := lastKnownHeader.Number.Uint64() - params.BeaconConfig().Eth1FollowDistance
 	var start uint64
 	// We fetch twice the number of headers just to be safe.
 	if end-2*blocksPerVotingPeriod >= 0 {
@@ -747,7 +747,7 @@ func (s *Service) cacheHeadersForEth1DataVote(lastKnownHeader *gethTypes.Header)
 		start = 0
 	}
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
-	_, err := s.batchRequestHeaders(start, end)
+	_, err = s.batchRequestHeaders(start, end)
 	if err != nil {
 		log.Errorf("Unable to cache headers: %v", err)
 	}
