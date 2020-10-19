@@ -15,6 +15,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
+	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"google.golang.org/grpc"
@@ -26,7 +27,7 @@ const maxMemStatsBytes = 2000000000 // 2 GiB.
 // overall health is good. Not checking the first epoch so the sample size isn't too small.
 var MetricsCheck = types.Evaluator{
 	Name:       "metrics_check_epoch_%d",
-	Policy:     afterNthEpoch(0),
+	Policy:     policies.AfterNthEpoch(0),
 	Evaluation: metricsTest,
 }
 
