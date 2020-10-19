@@ -36,7 +36,7 @@ func Init(c *GlobalFlags) {
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg := &GlobalFlags{}
-	if ctx.Bool(UnsafeSync.Name) {
+	if ctx.Bool(HeadSync.Name) {
 		log.Warn("Using Unsafe Sync flag, it is insecure to use this flag with your beacon node.")
 		cfg.UnsafeSync = true
 	}

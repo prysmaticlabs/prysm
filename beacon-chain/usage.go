@@ -98,7 +98,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
 			flags.SetGCPercent,
-			flags.UnsafeSync,
+			flags.HeadSync,
 			flags.DisableSync,
 			flags.SlotsPerArchivedPoint,
 			flags.DisableDiscv5,
