@@ -7,8 +7,8 @@ import (
 	"context"
 	"io"
 
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	detectionTypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
