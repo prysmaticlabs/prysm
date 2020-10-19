@@ -392,6 +392,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			ValidAttestation: true,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
+				Root:  att.Data.BeaconBlockRoot,
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
@@ -569,6 +570,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 			ValidAttestation: true,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
+				Root:  signedAggregateAndProof.Message.Aggregate.Data.BeaconBlockRoot,
 			}},
 
 		attPool:              attestations.NewPool(),
