@@ -166,7 +166,7 @@ func TestStore_SlasherObservedEpoch(t *testing.T) {
 	ctx := context.Background()
 
 	prevConfig := params.BeaconConfig().Copy()
-	params.BeaconConfig().PruneSlasherStoragePeriod = 1
+
 	defer params.OverrideBeaconConfig(prevConfig)
 
 	for _, tt := range tests {
@@ -176,7 +176,18 @@ func TestStore_SlasherObservedEpoch(t *testing.T) {
 		require.NoError(t, err, "Failed to get indexed attestation")
 		require.Equal(t, true, found, "Expected to find attestation in DB")
 	}
+	//dont prune when not multiple of PruneSlasherStoragePeriod
+	params.BeaconConfig().PruneSlasherStoragePeriod = 2
+	highestObservedEpoch = params.BeaconConfig().WeakSubjectivityPeriod
+	require.NoError(t, db.setObservedEpochs(ctx, highestObservedEpoch+1))
+	for _, tt := range tests {
+		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt)
+		require.NoError(t, err)
+		require.Equal(t, true, exists, "Expected to find attestation newer than prune age in DB")
 
+	}
+	//prune on PruneSlasherStoragePeriod
+	params.BeaconConfig().PruneSlasherStoragePeriod = 1
 	highestObservedEpoch = params.BeaconConfig().WeakSubjectivityPeriod
 	currentEpoch := highestObservedEpoch + 1
 	historyToKeep := highestObservedEpoch
