@@ -15,13 +15,6 @@ func UnpackDepositLogData(data []byte) (pubkey, withdrawalCredentials, amount, s
 		return nil, nil, nil, nil, nil, errors.Wrap(err, "unable to generate contract abi")
 	}
 
-	_ = []interface{}{
-		&pubkey,
-		&withdrawalCredentials,
-		&amount,
-		&signature,
-		&index,
-	}
 	unpackedLogs, err := contractAbi.Unpack("DepositEvent", data)
 	if err != nil {
 		return nil, nil, nil, nil, nil, errors.Wrap(err, "unable to unpack logs")
