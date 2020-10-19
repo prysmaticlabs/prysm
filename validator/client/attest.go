@@ -163,12 +163,7 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 
 // Given validator's public key, this returns the signature of an attestation data.
 func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, error) {
-	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester[:])
-	if err != nil {
-		return nil, err
-	}
-
-	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +179,18 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 	}
 
 	return sig.Marshal(), nil
+}
+
+func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {
+	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester[:])
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	return domain, root, nil
 }
 
 // For logging, this saves the last submitted attester index to its attestation data. The purpose of this
