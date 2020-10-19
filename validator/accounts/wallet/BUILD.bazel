@@ -14,7 +14,7 @@ go_library(
         "//validator/flags:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
-        "//validator/keymanager/direct:go_default_library",
+        "//validator/keymanager/imported:go_default_library",
         "//validator/keymanager/remote:go_default_library",
         "@com_github_gofrs_flock//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "backup.go",
-        "derived.go",
+        "keymanager.go",
         "mnemonic.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/derived",
@@ -42,7 +42,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "backup_test.go",
-        "derived_test.go",
+        "keymanager_test.go",
         "mnemonic_test.go",
     ],
     embed = [":go_default_library"],

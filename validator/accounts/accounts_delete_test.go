@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 )
 
 func TestDeleteAccounts_Noninteractive(t *testing.T) {
@@ -39,11 +39,11 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	// Only delete keys 0 and 1.
 	deletePublicKeys := strings.Join(generatedPubKeys[0:2], ",")
 
-	// We initialize a wallet with a direct keymanager.
+	// We initialize a wallet with a imported keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flags required for ImportAccounts to work.
@@ -54,7 +54,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: password,
 		},
 	})
@@ -67,11 +67,11 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	// We attempt to delete the accounts specified.
 	require.NoError(t, DeleteAccountCli(cliCtx))
 
-	keymanager, err := direct.NewKeymanager(
+	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)

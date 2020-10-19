@@ -35,7 +35,7 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, block))
 	}
 	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
-	retrieved, err := db.Blocks(ctx, f)
+	retrieved, _, err := db.Blocks(ctx, f)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(retrieved))
 	// We reset the block cache size.
@@ -85,13 +85,13 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 		}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
+	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
 	require.NoError(t, err)
 	assert.Equal(t, numBlocks, len(retrieved), "Unexpected number of blocks received")
 	// We delete all even indexed blocks.
 	require.NoError(t, db.deleteBlocks(ctx, blockRoots))
 	// When we retrieve the data, only the odd indexed blocks should remain.
-	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
+	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
 	require.NoError(t, err)
 	sort.Slice(retrieved, func(i, j int) bool {
 		return retrieved[i].Block.Slot < retrieved[j].Block.Slot
@@ -213,7 +213,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		retrievedBlocks, err := db.Blocks(ctx, tt.filter)
+		retrievedBlocks, _, err := db.Blocks(ctx, tt.filter)
 		require.NoError(t, err)
 		assert.Equal(t, tt.expectedNumBlocks, len(retrievedBlocks), "Unexpected number of blocks")
 	}
@@ -252,7 +252,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399))
+	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399))
 	require.NoError(t, err)
 	assert.Equal(t, 300, len(retrieved))
 }
@@ -269,11 +269,11 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartEpoch(5).SetEndEpoch(6))
+	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetStartEpoch(5).SetEndEpoch(6))
 	require.NoError(t, err)
 	want := params.BeaconConfig().SlotsPerEpoch * 2
 	assert.Equal(t, want, uint64(len(retrieved)))
-	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
+	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
 	require.NoError(t, err)
 	want = params.BeaconConfig().SlotsPerEpoch
 	assert.Equal(t, want, uint64(len(retrieved)))
@@ -291,7 +291,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	const step = 2
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399).SetSlotStep(step))
+	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399).SetSlotStep(step))
 	require.NoError(t, err)
 	assert.Equal(t, 150, len(retrieved))
 	for _, b := range retrieved {
@@ -375,7 +375,33 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 	require.NoError(t, db.SaveBlocks(ctx, b))
 	f := filters.NewFilter().SetStartSlot(0).SetEndSlot(500)
 
-	blks, err := db.Blocks(ctx, f)
+	blks, _, err := db.Blocks(ctx, f)
 	require.NoError(t, err)
 	assert.Equal(t, 500, len(blks), "Did not get wanted blocks")
+}
+
+func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	b := make([]*ethpb.SignedBeaconBlock, 500)
+	for i := 0; i < 500; i++ {
+		blk := testutil.NewBeaconBlock()
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		blk.Block.Slot = uint64(i)
+		b[i] = blk
+	}
+
+	require.NoError(t, db.SaveBlocks(ctx, b))
+	f := filters.NewFilter().SetStartSlot(0).SetEndSlot(500)
+
+	blks, roots, err := db.Blocks(ctx, f)
+	require.NoError(t, err)
+	assert.Equal(t, 500, len(blks), "Did not get wanted blocks")
+
+	for i, blk := range blks {
+		rt, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, roots[i], rt, "mismatch of block roots")
+	}
 }
