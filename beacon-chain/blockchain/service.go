@@ -434,7 +434,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not hash head block")
 		}
-		headState, err := s.beaconDB.HeadState(ctx)
+		headState, err := s.stateGen.StateByRoot(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state")
 		}
