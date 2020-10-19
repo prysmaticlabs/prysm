@@ -127,5 +127,5 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 	})
 	require.NoError(t, err)
 	_, _, err = prepareWallet(cliCtx)
-	assert.ErrorContains(t, "please recreate your wallet", err)
+	assert.ErrorContains(t, "wallet is empty", err)
 }

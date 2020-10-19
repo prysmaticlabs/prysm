@@ -311,12 +311,6 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
-// RefreshWalletPassword re-encrypts the accounts store and stores
-// it to disk using a wallet's password which was recently changed.
-func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
-	return dr.rewriteAccountsKeystore(ctx)
-}
-
 func (dr *Keymanager) rewriteAccountsKeystore(ctx context.Context) error {
 	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
 	if err != nil {

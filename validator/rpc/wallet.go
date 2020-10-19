@@ -11,15 +11,12 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -231,35 +228,6 @@ func (s *Server) GenerateMnemonic(_ context.Context, _ *ptypes.Empty) (*pb.Gener
 	return &pb.GenerateMnemonicResponse{
 		Mnemonic: mnemonic,
 	}, nil
-}
-
-// ChangePassword allows changing the RPC password via the API as an authenticated method.
-func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
-	if req.CurrentPassword == "" {
-		return nil, status.Error(codes.InvalidArgument, "Current wallet password cannot be empty")
-	}
-	hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
-	if !fileutil.FileExists(hashedPasswordPath) {
-		return nil, status.Error(codes.FailedPrecondition, "Could not compare password from disk")
-	}
-	hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "Could not retrieve hashed password from disk")
-	}
-	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.CurrentPassword)); err != nil {
-		return nil, status.Error(codes.Unauthenticated, "Incorrect wallet password")
-	}
-	if req.Password != req.PasswordConfirmation {
-		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
-	}
-	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
-	}
-	// Write the new password hash to disk.
-	if err := s.SaveHashedPassword(req.Password); err != nil {
-		return nil, status.Errorf(codes.Internal, "could not write hashed password to disk: %v", err)
-	}
-	return &ptypes.Empty{}, nil
 }
 
 // ImportKeystores allows importing new keystores via RPC into the wallet

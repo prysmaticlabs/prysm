@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -100,6 +101,35 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 		Token:           tokenString,
 		TokenExpiration: expirationTime,
 	}, nil
+}
+
+// ChangePassword allows changing the RPC password via the API as an authenticated method.
+func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
+	if req.CurrentPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Current password cannot be empty")
+	}
+	hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
+	if !fileutil.FileExists(hashedPasswordPath) {
+		return nil, status.Error(codes.FailedPrecondition, "Could not compare password from disk")
+	}
+	hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "Could not retrieve hashed password from disk")
+	}
+	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.CurrentPassword)); err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Incorrect password")
+	}
+	if req.Password != req.PasswordConfirmation {
+		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
+	}
+	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Could not validate password input")
+	}
+	// Write the new password hash to disk.
+	if err := s.SaveHashedPassword(req.Password); err != nil {
+		return nil, status.Errorf(codes.Internal, "could not write hashed password to disk: %v", err)
+	}
+	return &ptypes.Empty{}, nil
 }
 
 // Creates a JWT token string using the JWT key with an expiration timestamp.
