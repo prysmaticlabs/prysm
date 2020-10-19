@@ -3,12 +3,14 @@ package kv
 import (
 	"context"
 	"encoding/hex"
+	"flag"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"github.com/urfave/cli"
 )
 
 type spansTestStruct struct {
