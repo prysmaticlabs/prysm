@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -91,6 +92,17 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 		return nil, status.Errorf(codes.Internal, "Could not initialize wallet: %v", err)
 	}
 	return s.sendAuthResponse()
+}
+
+// Logout a user by invalidating their JWT key.
+func (s *Server) Logout(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty, error) {
+	// Invalidate the old JWT key, making all requests done with its token fail.
+	jwtKey, err := createRandomJWTKey()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not invalidate JWT key")
+	}
+	s.jwtKey = jwtKey
+	return &ptypes.Empty{}, nil
 }
 
 // Sends an auth response via gRPC containing a new JWT token.
