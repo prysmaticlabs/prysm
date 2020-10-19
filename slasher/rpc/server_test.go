@@ -83,8 +83,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 			iatt.Data.Slot += j
 			root, err := helpers.ComputeSigningRoot(iatt.Data, domain)
 			require.NoError(t, err)
-			var validatorSig bls.Signature
-			validatorSig = keys[iatt.AttestingIndices[0]].Sign(root[:])
+			validatorSig := keys[iatt.AttestingIndices[0]].Sign(root[:])
 			marshalledSig := validatorSig.Marshal()
 			iatt.Signature = marshalledSig
 			slashings, err := server.IsSlashableAttestation(ctx, iatt)
@@ -154,7 +153,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(savedAttestation.Data, domain)
 	require.NoError(t, err)
-	sig := []bls.Signature{}
+	var sig []bls.Signature
 	for _, idx := range savedAttestation.AttestingIndices {
 		validatorSig := keys[idx].Sign(root[:])
 		sig = append(sig, validatorSig)

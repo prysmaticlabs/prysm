@@ -15,7 +15,7 @@ import (
 )
 
 // retrieves the signature set from the raw data, public key,signature and domain provided.
-func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domain []byte) (*bls.SignatureSet, error) {
+func retrieveSignatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
@@ -36,7 +36,7 @@ func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domai
 }
 
 // verifies the signature from the raw data, public key and domain provided.
-func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
+func verifySignature(signedData, pub, signature, domain []byte) error {
 	set, err := retrieveSignatureSet(signedData, pub, signature, domain)
 	if err != nil {
 		return err

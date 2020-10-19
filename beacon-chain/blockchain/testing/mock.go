@@ -80,7 +80,8 @@ func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
 
 // MockStateNotifier mocks the state notifier.
 type MockStateNotifier struct {
-	feed *event.Feed
+	feed     *event.Feed
+	feedLock sync.Mutex
 
 	recv     []*feed.Event
 	recvLock sync.Mutex
@@ -98,6 +99,9 @@ func (msn *MockStateNotifier) ReceivedEvents() []*feed.Event {
 
 // StateFeed returns a state feed.
 func (msn *MockStateNotifier) StateFeed() *event.Feed {
+	msn.feedLock.Lock()
+	defer msn.feedLock.Unlock()
+
 	if msn.feed == nil && msn.recvCh == nil {
 		msn.feed = new(event.Feed)
 		if msn.RecordEvents {
@@ -141,7 +145,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if ms.State == nil {
 		ms.State = &stateTrie.BeaconState{}
 	}
@@ -168,7 +172,7 @@ func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethp
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (ms *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte) error {
+func (ms *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, _ [][32]byte) error {
 	if ms.State == nil {
 		ms.State = &stateTrie.BeaconState{}
 	}
@@ -197,7 +201,7 @@ func (ms *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.Sig
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if ms.State == nil {
 		ms.State = &stateTrie.BeaconState{}
 	}
@@ -232,7 +236,7 @@ func (ms *ChainService) HeadSlot() uint64 {
 }
 
 // HeadRoot mocks HeadRoot method in chain service.
-func (ms *ChainService) HeadRoot(ctx context.Context) ([]byte, error) {
+func (ms *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
 	if len(ms.Root) > 0 {
 		return ms.Root, nil
 	}
@@ -270,7 +274,7 @@ func (ms *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
-func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) error {
+func (ms *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
 	return nil
 }
 
@@ -280,12 +284,12 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (ms *ChainService) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*stateTrie.BeaconState, error) {
+func (ms *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (*stateTrie.BeaconState, error) {
 	return ms.State, nil
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (ms *ChainService) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
+func (ms *ChainService) HeadValidatorsIndices(_ context.Context, epoch uint64) ([]uint64, error) {
 	if ms.State == nil {
 		return []uint64{}, nil
 	}
@@ -293,7 +297,7 @@ func (ms *ChainService) HeadValidatorsIndices(ctx context.Context, epoch uint64)
 }
 
 // HeadSeed mocks the same method in the chain service.
-func (ms *ChainService) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) {
+func (ms *ChainService) HeadSeed(_ context.Context, epoch uint64) ([32]byte, error) {
 	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
@@ -323,18 +327,18 @@ func (ms *ChainService) CurrentSlot() uint64 {
 }
 
 // Participation mocks the same method in the chain service.
-func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
+func (ms *ChainService) Participation(_ uint64) *precompute.Balance {
 	return ms.Balance
 }
 
 // IsValidAttestation always returns true.
-func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
+func (ms *ChainService) IsValidAttestation(_ context.Context, _ *ethpb.Attestation) bool {
 	return ms.ValidAttestation
 }
 
 // IsCanonical returns and determines whether a block with the provided root is part of
 // the canonical chain.
-func (ms *ChainService) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+func (ms *ChainService) IsCanonical(_ context.Context, _ [32]byte) (bool, error) {
 	return true, nil
 }
 
@@ -342,7 +346,7 @@ func (ms *ChainService) IsCanonical(ctx context.Context, blockRoot [32]byte) (bo
 func (ms *ChainService) ClearCachedStates() {}
 
 // HasInitSyncBlock mocks the same method in the chain service.
-func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
+func (ms *ChainService) HasInitSyncBlock(_ [32]byte) bool {
 	return false
 }
 
@@ -352,17 +356,17 @@ func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
 }
 
 // VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
-func (ms *ChainService) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
+func (ms *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error {
 	return ms.VerifyBlkDescendantErr
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (ms *ChainService) VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error {
+func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, _ *ethpb.Attestation) error {
 	return nil
 }
 
 // AttestationCheckPtInfo mocks AttestationCheckPtInfo and always returns nil.
-func (ms *ChainService) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
+func (ms *ChainService) AttestationCheckPtInfo(_ context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
 	f := ms.State.Fork()
 	g := bytesutil.ToBytes32(ms.State.GenesisValidatorRoot())
 	seed, err := helpers.Seed(ms.State, helpers.SlotToEpoch(att.Data.Slot), params.BeaconConfig().DomainBeaconAttester)

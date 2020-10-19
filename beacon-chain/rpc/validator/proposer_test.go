@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -441,7 +440,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -576,7 +575,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -670,7 +669,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -766,7 +765,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -860,7 +859,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -896,8 +895,6 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 
 func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	ctx := context.Background()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableFinalizedDepositsCache: true})
-	defer resetCfg()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOW.POWChain{
@@ -975,7 +972,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(finalizedDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -1055,7 +1052,7 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 				}},
 		},
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -1154,7 +1151,7 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 				}},
 		},
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -1248,7 +1245,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 				WithdrawalCredentials: make([]byte, 32),
 			}},
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -1685,9 +1682,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("second")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 
 	t.Run("only one block at earliest valid time - choose this block", func(t *testing.T) {
@@ -1717,9 +1712,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("earliest")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 
 	t.Run("vote on last block before range - choose next block", func(t *testing.T) {
@@ -1754,9 +1747,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "first")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 
 	t.Run("no deposits - choose chain start eth1data", func(t *testing.T) {
@@ -1794,9 +1785,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("eth1data")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 }
 
@@ -2060,7 +2049,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()

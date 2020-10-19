@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -13,14 +12,13 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 func setupWalletDir(t testing.TB) string {
@@ -34,32 +32,6 @@ func setupWalletDir(t testing.TB) string {
 	return walletDir
 }
 
-func TestServer_Signup_PasswordAlreadyExists(t *testing.T) {
-	valDB := dbtest.SetupDB(t, [][48]byte{})
-	ctx := context.Background()
-	ss := &Server{
-		valDB: valDB,
-	}
-
-	// Save a hash password preemptively to the database.
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	hashedPassword := []byte("2093402934902839489238492")
-	require.NoError(t, ioutil.WriteFile(
-		filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName),
-		hashedPassword,
-		params.BeaconIoConfig().ReadWritePermissions,
-	))
-
-	// Attempt to signup despite already having a hashed password in the DB
-	// which should immediately fail.
-	strongPass := "29384283xasjasd32%%&*@*#*"
-	_, err := ss.Signup(ctx, &pb.AuthRequest{
-		Password: strongPass,
-	})
-	require.ErrorContains(t, "Validator already has a password set, cannot signup", err)
-}
-
 func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	valDB := dbtest.SetupDB(t, [][48]byte{})
 	ctx := context.Background()
@@ -71,12 +43,13 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	ss := &Server{
 		valDB:                 valDB,
 		walletInitializedFeed: new(event.Feed),
+		walletDir:             defaultWalletPath,
 	}
 	weakPass := "password"
 	_, err := ss.Signup(ctx, &pb.AuthRequest{
 		Password: weakPass,
 	})
-	require.ErrorContains(t, "Could not validate password input", err)
+	require.ErrorContains(t, "Could not validate wallet password input", err)
 
 	// We assert we are able to signup with a strong password.
 	_, err = ss.Signup(ctx, &pb.AuthRequest{
@@ -89,10 +62,10 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	assert.Equal(t, true, passwordHashExists)
 
 	// We attempt to create the wallet.
-	_, err = v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	_, err = accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,

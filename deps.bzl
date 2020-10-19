@@ -332,8 +332,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_coreos_go_systemd",
         importpath = "github.com/coreos/go-systemd",
-        sum = "h1:t5Wuyh53qYyg9eqn4BbnlIT+vmhyww0TatL+zT3uWgI=",
-        version = "v0.0.0-20181012123002-c6f51f82210d",
+        sum = "h1:iW4rZ826su+pqaw19uhpSCzhj44qo35pNgKFGqzDKkU=",
+        version = "v0.0.0-20191104093116-d3cd4ed1dbcf",
     )
     go_repository(
         name = "com_github_cpuguy83_go_md2man",
@@ -692,8 +692,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:TfBVK1MJ9vhrMXWVHu5p/MlVHZTeCGgDAEu5RykVZeI=",
-        version = "v0.0.0-20200722032157-41fc56eba7b4",
+        sum = "h1:KUHKqKMt9r78Ko07pTvlvEW6vPq24+efv1YXWk9Ba1U=",
+        version = "v0.0.0-20201008062400-71567a52ad65",
     )
     go_repository(
         name = "com_github_hpcloud_tail",
@@ -784,8 +784,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_jmespath_go_jmespath",
         importpath = "github.com/jmespath/go-jmespath",
-        sum = "h1:OS12ieG61fsCg5+qLJ+SsW9NicxNkg3b25OyT2yCeUc=",
-        version = "v0.3.0",
+        sum = "h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=",
+        version = "v0.4.0",
     )
     go_repository(
         name = "com_github_jrick_logrotate",
@@ -868,8 +868,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_kr_pty",
         importpath = "github.com/kr/pty",
-        sum = "h1:/Um6a/ZmD5tF7peoOJ5oN5KMQ0DrGVQSXLNwyckutPk=",
-        version = "v1.1.3",
+        sum = "h1:VkoXIwSboBpnk99O/KFauAEILuNHv5DVFKZMBN/gUgw=",
+        version = "v1.1.1",
     )
     go_repository(
         name = "com_github_kr_text",
@@ -980,8 +980,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mailru_easyjson",
         importpath = "github.com/mailru/easyjson",
-        sum = "h1:W/GaMY0y69G4cFlmsC6B9sbuo2fP8OFP1ABjt4kPz+w=",
-        version = "v0.0.0-20190312143242-1de009706dbe",
+        sum = "h1:2gxZ0XQIU/5z3Z3bUBu+FXuk2pFbkN6tcwi/pjyaDic=",
+        version = "v0.0.0-20180823135443-60711f1a8329",
     )
     go_repository(
         name = "com_github_marten_seemann_qpack",
@@ -1022,8 +1022,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mitchellh_mapstructure",
         importpath = "github.com/mitchellh/mapstructure",
-        sum = "h1:mRS76wmkOn3KkKAyXDu42V+6ebnXWIztFSYGN7GeoRg=",
-        version = "v1.3.2",
+        sum = "h1:SzB1nHZ2Xi+17FP0zVQBHIZqvwRN9408fJO8h+eeNA8=",
+        version = "v1.3.3",
     )
     go_repository(
         name = "com_github_mmcloughlin_avo",
@@ -1916,8 +1916,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_aws_aws_sdk_go",
         importpath = "github.com/aws/aws-sdk-go",
-        sum = "h1:JiYid0lBDcM12HNOND5EcaBd1namBuB5BJ4Iex0DFMw=",
-        version = "v1.33.15",
+        sum = "h1:FHMhVhyc/9jljgFAcGkQDYjpC9btM0B8VfkLBfctdNE=",
+        version = "v1.35.7",
     )
     go_repository(
         name = "com_github_beorn7_perks",
@@ -1976,8 +1976,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_golang_lint",
         importpath = "github.com/golang/lint",
-        sum = "h1:2hRPrmiwPrp3fQX967rNJIhQPtiGXdlQWAxKbKw3VHA=",
-        version = "v0.0.0-20180702182130-06c8688daad7",
+        sum = "h1:ior8LN6127GsA53E9mD9nH/oP/LVbJplmLH5V8o+/Uk=",
+        version = "v0.0.0-20170918230701-e5d664eb928e",
     )
     go_repository(
         name = "com_github_golang_snappy",
@@ -2278,8 +2278,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_pubsub",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-pubsub",
-        sum = "h1:/AzOAmjDc+IJWybEzhYj1UaV1HErqmo4v3pQVepbgi8=",
-        version = "v0.3.3",
+        sum = "h1:9oO8W7qIWCYQYyz5z8nUsPcb3rrFehBlkbqvbSVjBxY=",
+        version = "v0.3.6",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_record",
@@ -2401,8 +2401,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_minio_highwayhash",
         importpath = "github.com/minio/highwayhash",
-        sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
-        version = "v1.0.0",
+        sum = "h1:dZ6IIu8Z14VlC0VpfKofAhCy74wu/Qb5gcn52yWoz/0=",
+        version = "v1.0.1",
     )
     go_repository(
         name = "com_github_minio_sha256_simd",
@@ -2709,8 +2709,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_crypto",
         importpath = "golang.org/x/crypto",
-        sum = "h1:ikNHVSjEfnvz6sxdSPCaPt572qowuyMDMJLLm3Db3ig=",
-        version = "v0.0.0-20200728195943-123391ffb6de",
+        sum = "h1:4yd7jl+vXjalO5ztz6Vc1VADv+S/80LGJmyl1ROJ2AI=",
+        version = "v0.0.0-20201012173705-84dcc777aaee",
     )
     go_repository(
         name = "org_golang_x_exp",
@@ -2745,8 +2745,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:AvbQYmiaaaza3cW3QXRyPo5kYgpFIzOAfeAAN7m3qQ4=",
-        version = "v0.0.0-20200824131525-c12d262b63d8",
+        sum = "h1:HS9IzC4UFbpMBLQUDSQcU+ViVT1vdFCQVjdPVpTlZrs=",
+        version = "v0.0.0-20201013132646-2da7054afaeb",
     )
     go_repository(
         name = "org_golang_x_text",
@@ -2911,8 +2911,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_google_uuid",
         importpath = "github.com/google/uuid",
-        sum = "h1:Gkbcsh/GbpXz7lPftLA3P6TYMwjCLYm83jiFQZF/3gY=",
-        version = "v1.1.1",
+        sum = "h1:EVhdT+1Kseyi1/pUmXKaFxYsDNy9RQYkMWRH68J/W7Y=",
+        version = "v1.1.2",
     )
     go_repository(
         name = "com_github_graph_gophers_graphql_go",
@@ -3461,8 +3461,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_distributed",
         importpath = "github.com/wealdtech/go-eth2-wallet-distributed",
-        sum = "h1:OZjjuxcIYo+EhAfph7lYP1z+VeNs9ruOI32kqtYe1Jg=",
-        version = "v1.1.0",
+        sum = "h1:KSaNQbtj5XXjttTVHe1oy+LgvHmi4NHNfLl+jaTM8fU=",
+        version = "v1.1.1",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_types",
@@ -3501,26 +3501,26 @@ def prysm_deps():
     go_repository(
         name = "com_github_wealdtech_go_eth2_util",
         importpath = "github.com/wealdtech/go-eth2-util",
-        sum = "h1:b3fgyvoq/WocW9LkWT7zcO5VCKzKLCc97rPrk/B9oIc=",
-        version = "v1.5.0",
+        sum = "h1:l2OR0SqfYdEnb1I1Ggnk0w+B9/LA5aHdQ2KK2FPnGkY=",
+        version = "v1.6.0",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet",
         importpath = "github.com/wealdtech/go-eth2-wallet",
-        sum = "h1:nrwI3jPhehUhJGlBtNv/UmIo/57llvuVZZavLnfdQHI=",
-        version = "v1.12.0",
+        sum = "h1:0XQ6Bc2vZQCvDMg4qD6usObsXEVUPaNdv31qpwHpm0g=",
+        version = "v1.14.1",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",
         importpath = "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4",
-        sum = "h1:CWb82xeNaZQt1Z829RyDALUy7UZbc6VOfTS+82jRdEQ=",
-        version = "v1.1.0",
+        sum = "h1:PYwMOCt92iWEHXdnsBaAk1/xygPfuBMkrXEgO8WtFdw=",
+        version = "v1.1.1",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_hd_v2",
         importpath = "github.com/wealdtech/go-eth2-wallet-hd/v2",
-        sum = "h1:UORXUYRoUYgYF96Y+QiBq33OKQVtn/nEjnSoQbe1UOA=",
-        version = "v2.3.0",
+        sum = "h1:QoIyyVQ/vaztkeG88L1vOZKkKMM43Wo8hutH+qn8jA4=",
+        version = "v2.5.1",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_store_filesystem",
@@ -3531,8 +3531,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_store_s3",
         importpath = "github.com/wealdtech/go-eth2-wallet-store-s3",
-        sum = "h1:+q7p58NvOEfEDw8NgEoNaSG/s1eFHpyg91NEobA6RF0=",
-        version = "v1.8.0",
+        sum = "h1:O5211UskLbK1WDecTXwugUlINDBQ26MqtiFn6u66fmA=",
+        version = "v1.9.0",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_store_scratch",
@@ -3549,14 +3549,14 @@ def prysm_deps():
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_nd_v2",
         importpath = "github.com/wealdtech/go-eth2-wallet-nd/v2",
-        sum = "h1:L1aPK9nc+8Ctcw+8I05vM6408weFc4a5RtLQDUeS0eE=",
-        version = "v2.3.0",
+        sum = "h1:inSu0xN3LQN9/nEXTri5IbGLfhsvHwyrXiCI3rAHTzc=",
+        version = "v2.3.1",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_types_v2",
         importpath = "github.com/wealdtech/go-eth2-wallet-types/v2",
-        sum = "h1:vBrH5icPPSeb14cdShA7/P2PBZOgZscJ2IhBlTIaFrA=",
-        version = "v2.6.0",
+        sum = "h1:30sYrHQBchcOv+N2yIB2APnqf1RjwAbgXK+IzmXS6cw=",
+        version = "v2.8.0",
     )
     go_repository(
         name = "in_gopkg_yaml_v3",
@@ -3629,4 +3629,28 @@ def prysm_deps():
         importpath = "github.com/shirou/gopsutil",
         sum = "h1:tYH07UPoQt0OCQdgWWMgYHy3/a9bcxNpBIysykNIP7I=",
         version = "v2.20.5+incompatible",
+    )
+    go_repository(
+        name = "com_github_wadey_gocovmerge",
+        importpath = "github.com/wadey/gocovmerge",
+        sum = "h1:W0LEBv82YCGEtcmPA3uNZBI33/qF//HAAs3MawDjRa0=",
+        version = "v0.0.0-20160331181800-b5bfa59ec0ad",
+    )
+    go_repository(
+        name = "com_github_google_shlex",
+        importpath = "github.com/google/shlex",
+        sum = "h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=",
+        version = "v0.0.0-20191202100458-e7afc7fbc510",
+    )
+    go_repository(
+        name = "com_github_wercker_journalhook",
+        importpath = "github.com/wercker/journalhook",
+        sum = "h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=",
+        version = "v0.0.0-20180428041537-5d0a5ae867b3",
+    )
+    go_repository(
+        name = "com_github_jmespath_go_jmespath_internal_testify",
+        importpath = "github.com/jmespath/go-jmespath/internal/testify",
+        sum = "h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=",
+        version = "v1.5.1",
     )

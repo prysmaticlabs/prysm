@@ -116,7 +116,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		}
 	}
 
-	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.GenerateTrieFromItems(encodedDeposits, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate trie")
 
 	root := depositTrie.Root()

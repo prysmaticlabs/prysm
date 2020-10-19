@@ -21,7 +21,7 @@ type MockSlasher struct {
 }
 
 // IsSlashableAttestation returns slashbale attestation if slash attestation is set to true.
-func (ms MockSlasher) IsSlashableAttestation(ctx context.Context, in *eth.IndexedAttestation, opts ...grpc.CallOption) (*slashpb.AttesterSlashingResponse, error) {
+func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.AttesterSlashingResponse, error) {
 	ms.IsSlashableAttestationCalled = true
 	if ms.SlashAttestation {
 
@@ -43,7 +43,7 @@ func (ms MockSlasher) IsSlashableAttestation(ctx context.Context, in *eth.Indexe
 }
 
 // IsSlashableAttestationNoUpdate returns slashbale if slash attestation is set to true.
-func (ms MockSlasher) IsSlashableAttestationNoUpdate(ctx context.Context, in *eth.IndexedAttestation, opts ...grpc.CallOption) (*slashpb.Slashable, error) {
+func (ms MockSlasher) IsSlashableAttestationNoUpdate(_ context.Context, _ *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.Slashable, error) {
 	ms.IsSlashableAttestationNoUpdateCalled = true
 	return &slashpb.Slashable{
 		Slashable: ms.SlashAttestation,
@@ -52,7 +52,7 @@ func (ms MockSlasher) IsSlashableAttestationNoUpdate(ctx context.Context, in *et
 }
 
 // IsSlashableBlock returns proposer slashing if slash block is set to true.
-func (ms MockSlasher) IsSlashableBlock(ctx context.Context, in *eth.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*slashpb.ProposerSlashingResponse, error) {
+func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBlockHeader, _ ...grpc.CallOption) (*slashpb.ProposerSlashingResponse, error) {
 	ms.IsSlashableBlockCalled = true
 	if ms.SlashBlock {
 		slashingBlk, ok := proto.Clone(in).(*eth.SignedBeaconBlockHeader)
@@ -73,7 +73,7 @@ func (ms MockSlasher) IsSlashableBlock(ctx context.Context, in *eth.SignedBeacon
 }
 
 // IsSlashableBlockNoUpdate returns slashbale if slash block is set to true.
-func (ms MockSlasher) IsSlashableBlockNoUpdate(ctx context.Context, in *eth.BeaconBlockHeader, opts ...grpc.CallOption) (*slashpb.Slashable, error) {
+func (ms MockSlasher) IsSlashableBlockNoUpdate(_ context.Context, _ *eth.BeaconBlockHeader, _ ...grpc.CallOption) (*slashpb.Slashable, error) {
 	ms.IsSlashableBlockNoUpdateCalled = true
 	return &slashpb.Slashable{
 		Slashable: ms.SlashBlock,

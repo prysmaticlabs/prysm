@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -133,11 +132,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 
 	var pks [][48]byte
 	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		pks, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
-	} else {
-		pks, err = v.keyManager.FetchValidatingKeys()
-	}
+	pks, err = v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}
@@ -214,7 +209,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
 	summary := &v.voteStats
 	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
-	var included, correctSource, correctTarget, correctHead int
+	var included uint64
+	var correctSource, correctTarget, correctHead int
 
 	for i := range resp.PublicKeys {
 		if resp.InclusionSlots[i] != ^uint64(0) {
@@ -237,9 +233,9 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	summary.totalAttestedCount += uint64(len(resp.InclusionSlots))
-	summary.totalSources += uint64(included)
-	summary.totalTargets += uint64(included)
-	summary.totalHeads += uint64(included)
+	summary.totalSources += included
+	summary.totalTargets += included
+	summary.totalHeads += included
 
 	log.WithFields(logrus.Fields{
 		"epoch":                   currentEpoch - 1,

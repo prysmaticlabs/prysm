@@ -53,16 +53,13 @@ func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []by
 		if err := valBucket.Put(bytesutil.Bytes8(epoch), slotBits); err != nil {
 			return err
 		}
-		if err := pruneProposalHistory(valBucket, epoch); err != nil {
-			return err
-		}
-		return nil
+		return pruneProposalHistory(valBucket, epoch)
 	})
 	return err
 }
 
 // UpdatePublicKeysBuckets for a specified list of keys.
-func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
+func (store *Store) OldUpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKey := range pubKeys {

@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 var (
@@ -202,4 +203,19 @@ var (
 		Usage: "Integer to define max recieve message call size (default: 4194304 (for 4MB))",
 		Value: 1 << 22,
 	}
+	// AcceptTosFlag specifies user acceptance of ToS for non-interactive environments.
+	AcceptTosFlag = &cli.BoolFlag{
+		Name:  "accept-terms-of-use",
+		Usage: "Accept Terms and Conditions (for non-interactive environments)",
+	}
 )
+
+// LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
+func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
+	if cliCtx.IsSet(ConfigFileFlag.Name) {
+		if err := altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name))(cliCtx); err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
-func indexedAttestation(source uint64, target uint64, indices []uint64) *ethpb.IndexedAttestation {
+func indexedAttestation(source, target uint64, indices []uint64) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		AttestingIndices: indices,
 		Data: &ethpb.AttestationData{
