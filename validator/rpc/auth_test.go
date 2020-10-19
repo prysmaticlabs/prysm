@@ -49,7 +49,7 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	_, err := ss.Signup(ctx, &pb.AuthRequest{
 		Password: weakPass,
 	})
-	require.ErrorContains(t, "Could not validate wallet password input", err)
+	require.ErrorContains(t, "Could not validate RPC password input", err)
 
 	// We assert we are able to signup with a strong password.
 	_, err = ss.Signup(ctx, &pb.AuthRequest{
