@@ -35,7 +35,6 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
@@ -192,7 +191,6 @@ func TestServer_WalletConfig(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	s.wallet = w
@@ -378,7 +376,6 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
@@ -415,7 +412,6 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{

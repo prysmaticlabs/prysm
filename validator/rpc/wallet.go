@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/bcrypt"
@@ -83,7 +82,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_IMPORTED:
-		w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
 				KeymanagerKind: keymanager.Imported,
@@ -92,9 +91,6 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			SkipMnemonicConfirm: true,
 		})
 		if err != nil {
-			return nil, err
-		}
-		if err := w.SaveHashedPassword(ctx); err != nil {
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
@@ -237,30 +233,12 @@ func (s *Server) GenerateMnemonic(_ context.Context, _ *ptypes.Empty) (*pb.Gener
 	}, nil
 }
 
-// ChangePassword allows changing a wallet password via the API as
-// an authenticated method.
+// ChangePassword allows changing the RPC password via the API as an authenticated method.
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
-	exists, err := wallet.Exists(s.walletDir)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
-	}
-	if !exists {
-		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
-	}
-	valid, err := wallet.IsValid(s.walletDir)
-	if errors.Is(err, wallet.ErrNoWalletFound) {
-		return nil, status.Errorf(codes.FailedPrecondition, noWalletMsg)
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, checkValidityErrMsg)
-	}
-	if !valid {
-		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
-	}
 	if req.CurrentPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Current wallet password cannot be empty")
 	}
-	hashedPasswordPath := filepath.Join(s.walletDir, wallet.HashedPasswordFileName)
+	hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
 	if !fileutil.FileExists(hashedPasswordPath) {
 		return nil, status.Error(codes.FailedPrecondition, "Could not compare password from disk")
 	}
@@ -277,33 +255,9 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Could not validate wallet password input")
 	}
-	switch s.wallet.KeymanagerKind() {
-	case keymanager.Imported:
-		km, ok := s.keymanager.(*imported.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Not a valid imported keymanager")
-		}
-		s.wallet.SetPassword(req.Password)
-		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not save hashed password: %v", err)
-		}
-		if err := km.RefreshWalletPassword(ctx); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
-		}
-	case keymanager.Derived:
-		km, ok := s.keymanager.(*derived.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Not a valid derived keymanager")
-		}
-		s.wallet.SetPassword(req.Password)
-		if err := s.wallet.SaveHashedPassword(ctx); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not save hashed password: %v", err)
-		}
-		if err := km.RefreshWalletPassword(ctx); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not refresh wallet password: %v", err)
-		}
-	case keymanager.Remote:
-		return nil, status.Error(codes.Internal, "Cannot change password for remote keymanager")
+	// Write the new password hash to disk.
+	if err := s.SaveHashedPassword(req.Password); err != nil {
+		return nil, status.Errorf(codes.Internal, "could not write hashed password to disk: %v", err)
 	}
 	return &ptypes.Empty{}, nil
 }
@@ -354,4 +308,55 @@ func (s *Server) ImportKeystores(
 	return &pb.ImportKeystoresResponse{
 		ImportedPublicKeys: importedPubKeys,
 	}, nil
+}
+
+// Initialize a wallet and send it over a global feed.
+func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error {
+	// We first ensure the user has a wallet.
+	exists, err := wallet.Exists(cfg.WalletDir)
+	if err != nil {
+		return errors.Wrap(err, wallet.CheckExistsErrMsg)
+	}
+	if !exists {
+		return wallet.ErrNoWalletFound
+	}
+	valid, err := wallet.IsValid(cfg.WalletDir)
+	if errors.Is(err, wallet.ErrNoWalletFound) {
+		return wallet.ErrNoWalletFound
+	}
+	if err != nil {
+		return errors.Wrap(err, wallet.CheckValidityErrMsg)
+	}
+	if !valid {
+		return errors.New(wallet.InvalidWalletErrMsg)
+	}
+
+	// We fire an event with the opened wallet over
+	// a global feed signifying wallet initialization.
+	w, err := wallet.OpenWallet(ctx, &wallet.Config{
+		WalletDir:      cfg.WalletDir,
+		WalletPassword: cfg.WalletPassword,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not open wallet")
+	}
+
+	s.walletInitialized = true
+	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize keymanager")
+	}
+	s.keymanager = km
+	s.wallet = w
+	s.walletDir = cfg.WalletDir
+
+	// Only send over feed if we have validating keys.
+	validatingPublicKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not check for validating public keys")
+	}
+	if len(validatingPublicKeys) > 0 {
+		s.walletInitializedFeed.Send(w)
+	}
+	return nil
 }
