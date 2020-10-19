@@ -16,11 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 )
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
@@ -41,10 +41,10 @@ func TestServer_CreateAccount(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -67,10 +67,10 @@ func TestServer_ListAccounts(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -164,7 +164,7 @@ func Test_createAccountWithDepositData(t *testing.T) {
 }
 
 func TestServer_BackupAccounts(t *testing.T) {
-	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
+	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
 
 	// We now attempt to backup all public keys from the wallet.
 	res, err := ss.BackupAccounts(context.Background(), &pb.BackupAccountsRequest{
@@ -190,7 +190,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 			require.NoError(t, keystoreFile.Close())
 			t.Fatal(err)
 		}
-		keystore := &v2keymanager.Keystore{}
+		keystore := &keymanager.Keystore{}
 		if err := json.Unmarshal(encoded, &keystore); err != nil {
 			require.NoError(t, keystoreFile.Close())
 			t.Fatal(err)
@@ -205,10 +205,10 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := v2.CreateWalletWithKeymanager(ctx, &v2.CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: v2keymanager.Derived,
+			KeymanagerKind: keymanager.Derived,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -224,7 +224,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeys: make([][]byte, 1),
 	})
-	assert.ErrorContains(t, "Only Non-HD wallets can delete accounts", err)
+	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
@@ -239,7 +239,7 @@ func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_DeleteAccounts_OK(t *testing.T) {
-	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
+	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
 	ctx := context.Background()
 	keys, err := ss.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)

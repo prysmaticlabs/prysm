@@ -19,10 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -64,7 +64,7 @@ type ValidatorService struct {
 	validator             Validator
 	protector             slashingprotection.Protector
 	ctx                   context.Context
-	keyManagerV2          v2.IKeymanager
+	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
 }
@@ -82,7 +82,7 @@ type Config struct {
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
-	KeyManagerV2               v2.IKeymanager
+	KeyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
 	CertFlag                   string
 	DataDir                    string
@@ -100,7 +100,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:              cfg.CertFlag,
 		dataDir:               cfg.DataDir,
 		graffiti:              []byte(cfg.GraffitiFlag),
-		keyManagerV2:          cfg.KeyManagerV2,
+		keyManager:            cfg.KeyManager,
 		logValidatorBalances:  cfg.LogValidatorBalances,
 		emitAccountMetrics:    cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -164,7 +164,7 @@ func (v *ValidatorService) Start() {
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
-		keyManagerV2:                   v.keyManagerV2,
+		keyManager:                     v.keyManager,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -209,7 +209,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		cleanup := sub.Unsubscribe
 		defer cleanup()
 		w := <-initializedChan
-		keyManagerV2, err := w.InitializeKeymanager(
+		keyManager, err := w.InitializeKeymanager(
 			ctx, true, /* skipMnemonicConfirm */
 		)
 		if err != nil {
@@ -217,16 +217,16 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 			cleanup()
 			log.Fatalf("Could not read keymanager for wallet: %v", err)
 		}
-		v.keyManagerV2 = keyManagerV2
+		v.keyManager = keyManager
 	}
-	validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	validatingKeys, err = v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		log.WithError(err).Debug("Could not fetch validating keys")
 	}
 	if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
 		log.WithError(err).Debug("Could not update public keys buckets")
 	}
-	go recheckValidatingKeysBucket(ctx, v.db, v.keyManagerV2)
+	go recheckValidatingKeysBucket(ctx, v.db, v.keyManager)
 	for _, key := range validatingKeys {
 		log.WithField(
 			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
@@ -321,13 +321,13 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
-func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
-	directKeymanager, ok := km.(*direct.Keymanager)
+func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keymanager.IKeymanager) {
+	importedKeymanager, ok := km.(*imported.Keymanager)
 	if !ok {
 		return
 	}
 	validatingPubKeysChan := make(chan [][48]byte, 1)
-	sub := directKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
 	defer sub.Unsubscribe()
 	for {
 		select {

@@ -96,6 +96,25 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			want:                      true,
 		},
 		{
+			name: "valid attestation signature with nil topic",
+			msg: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0b101},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: validBlockRoot[:],
+					CommitteeIndex:  0,
+					Slot:            1,
+					Target: &ethpb.Checkpoint{
+						Epoch: 0,
+						Root:  validBlockRoot[:],
+					},
+					Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				},
+			},
+			topic:                     "",
+			validAttestationSignature: true,
+			want:                      false,
+		},
+		{
 			name: "bad target epoch",
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b101},
@@ -253,9 +272,12 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			require.NoError(t, err)
 			m := &pubsub.Message{
 				Message: &pubsubpb.Message{
-					Data:     buf.Bytes(),
-					TopicIDs: []string{tt.topic},
+					Data:  buf.Bytes(),
+					Topic: &tt.topic,
 				},
+			}
+			if tt.topic == "" {
+				m.Message.Topic = nil
 			}
 			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept
 			if received != tt.want {
@@ -498,8 +520,8 @@ func TestService_validateCommitteeIndexBeaconAttestationUseCheckptCache(t *testi
 			require.NoError(t, err)
 			m := &pubsub.Message{
 				Message: &pubsubpb.Message{
-					Data:     buf.Bytes(),
-					TopicIDs: []string{tt.topic},
+					Data:  buf.Bytes(),
+					Topic: &tt.topic,
 				},
 			}
 			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept

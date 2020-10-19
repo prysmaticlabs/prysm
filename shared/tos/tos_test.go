@@ -15,7 +15,7 @@ import (
 func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(cmd.DataDirFlag.Name, ".", "")
+	set.String(cmd.DataDirFlag.Name, "./tmpdir/", "")
 	context := cli.NewContext(&app, set, nil)
 
 	// replacing stdin
@@ -50,10 +50,10 @@ func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
 	// saved in file
 	require.NoError(t, ioutil.WriteFile(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""), 0666))
 	require.NoError(t, VerifyTosAcceptedOrPrompt(context))
-	require.NoError(t, os.Remove(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename)))
+	require.NoError(t, os.RemoveAll(context.String(cmd.DataDirFlag.Name)))
 
 	// flag is set
 	set.Bool(cmd.AcceptTosFlag.Name, true, "")
 	require.NoError(t, VerifyTosAcceptedOrPrompt(context))
-	require.NoError(t, os.Remove(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename)))
+	require.NoError(t, os.RemoveAll(context.String(cmd.DataDirFlag.Name)))
 }

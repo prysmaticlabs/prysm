@@ -46,12 +46,6 @@ var (
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
 	}
-	enableLocalProtectionFlag = &cli.BoolFlag{
-		Name: "enable-local-protection",
-		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting any messages that could be considered slashable according to its own history.",
-		Value: true,
-	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
@@ -106,7 +100,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	checkPtInfoCache,
 	enableEth1DataMajorityVote,
 	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
@@ -115,7 +108,6 @@ var devModeFlags = []cli.Flag{
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
-	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
 	waitForSyncedFlag,
 	AltonaTestnet,
