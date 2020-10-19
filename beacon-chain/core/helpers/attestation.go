@@ -6,34 +6,14 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-// SlotSignature returns the signed signature of the hash tree root of input slot.
-//
-// Spec pseudocode definition:
-//   def get_slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
-//    domain = get_domain(state, DOMAIN_SELECTION_PROOF, compute_epoch_at_slot(slot))
-//    signing_root = compute_signing_root(slot, domain)
-//    return bls.Sign(privkey, signing_root)
-func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey bls.SecretKey) (bls.Signature, error) {
-	d, err := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
-	if err != nil {
-		return nil, err
-	}
-	s, err := ComputeSigningRoot(slot, d)
-	if err != nil {
-		return nil, err
-	}
-	return privKey.Sign(s[:]), nil
-}
-
 // IsAggregator returns true if the signature is from the input validator. The committee
-// count is provided as an argument rather than direct implementation from spec. Having
+// count is provided as an argument rather than imported implementation from spec. Having
 // committee count as an argument allows cheaper computation at run time.
 //
 // Spec pseudocode definition:

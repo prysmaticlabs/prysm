@@ -162,7 +162,7 @@ func (db *Store) DeleteIndexedAttestation(ctx context.Context, idxAttestation *e
 }
 
 // PruneAttHistory removes all attestations from the DB older than the pruning epoch age.
-func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
+func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch, pruningEpochAge uint64) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneAttHistory")
 	defer span.End()
 	pruneFromEpoch := int64(currentEpoch) - int64(pruningEpochAge)

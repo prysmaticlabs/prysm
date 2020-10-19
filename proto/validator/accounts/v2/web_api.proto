@@ -12,7 +12,7 @@ service Wallet {
             get: "/v2/validator/wallet/exists"
         };
     }
-    rpc CreateWallet(CreateWalletRequest) returns (WalletResponse) {
+    rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/create",
             body: "*"
@@ -100,7 +100,7 @@ service Auth {
 // Type of key manager for the wallet, either direct, derived, or remote.
 enum KeymanagerKind {
     DERIVED = 0;
-    DIRECT = 1;
+    IMPORTED = 1;
     REMOTE = 2;
 }
 
@@ -115,19 +115,20 @@ message CreateWalletRequest {
     string mnemonic = 4;
     // Number of accounts.
     uint64 num_accounts = 5;
-    // JSON-encoded keystore files to import during wallet creation.
-    repeated string keystores_imported = 6;
-    // Password to unlock imported keystore files.
-    string keystores_password = 7;
 
     // Remote address such as host.example.com:4000 for a gRPC remote signer server.
-    string remote_addr = 8;
+    string remote_addr = 6;
     // Path to client.crt for secure TLS connections to a remote signer server.
-    string remote_crt_path = 9;
+    string remote_crt_path = 7;
     // Path to client.key for secure TLS connections to a remote signer server.
-    string remote_key_path = 10;
+    string remote_key_path = 8;
     // Path to ca.crt for secure TLS connections to a remote signer server.
-    string remote_ca_crt_path = 11;
+    string remote_ca_crt_path = 9;
+}
+
+message CreateWalletResponse {
+    WalletResponse wallet = 1;
+    DepositDataResponse accounts_created = 2;
 }
 
 message EditWalletConfigRequest {
@@ -200,6 +201,7 @@ message AccountRequest {
 
 message AuthRequest {
     string password = 1;
+    string wallet_dir = 2;
 }
 
 message AuthResponse {
@@ -223,8 +225,9 @@ message NodeConnectionResponse {
 }
 
 message ChangePasswordRequest {
-    string password = 1;
-    string password_confirmation = 2;
+    string current_password = 1;
+    string password = 2;
+    string password_confirmation = 3;
 }
 
 message HasWalletResponse {

@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -69,7 +68,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 
 	rpcService.Start()
 
-	require.LogsContain(t, hook, fmt.Sprint("listening on port"))
+	require.LogsContain(t, hook, "listening on port")
 	require.LogsContain(t, hook, "You are using an insecure gRPC server")
 	assert.NoError(t, rpcService.Stop())
 }

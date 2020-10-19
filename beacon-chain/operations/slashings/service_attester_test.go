@@ -15,14 +15,14 @@ import (
 )
 
 func validAttesterSlashingForValIdx(t *testing.T, beaconState *state.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
-	slashings := []*ethpb.AttesterSlashing{}
+	var slashings []*ethpb.AttesterSlashing
 	for _, idx := range valIdx {
 		slashing, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privs[idx], idx)
 		require.NoError(t, err)
 		slashings = append(slashings, slashing)
 	}
-	allSig1 := []bls.Signature{}
-	allSig2 := []bls.Signature{}
+	var allSig1 []bls.Signature
+	var allSig2 []bls.Signature
 	for _, slashing := range slashings {
 		sig1 := slashing.Attestation_1.Signature
 		sig2 := slashing.Attestation_2.Signature
@@ -451,6 +451,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 func TestPool_PendingAttesterSlashings(t *testing.T) {
 	type fields struct {
 		pending []*PendingAttesterSlashing
+		all     bool
 	}
 	params.SetupTestConfigCleanup(t)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
@@ -478,6 +479,14 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			want: []*ethpb.AttesterSlashing{},
 		},
 		{
+			name: "All pending",
+			fields: fields{
+				pending: pendingSlashings,
+				all:     true,
+			},
+			want: slashings,
+		},
+		{
 			name: "All eligible",
 			fields: fields{
 				pending: pendingSlashings,
@@ -497,7 +506,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			p := &Pool{
 				pendingAttesterSlashing: tt.fields.pending,
 			}
-			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState))
+			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, tt.fields.all))
 		})
 	}
 }
@@ -505,6 +514,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	type fields struct {
 		pending []*PendingAttesterSlashing
+		all     bool
 	}
 	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
@@ -515,15 +525,12 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	require.NoError(t, err)
 	val.Slashed = true
 	require.NoError(t, beaconState.UpdateValidatorAtIndex(0, val))
-	val, err = beaconState.ValidatorAtIndex(3)
-	require.NoError(t, err)
-	val.Slashed = true
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(3, val))
 	val, err = beaconState.ValidatorAtIndex(5)
 	require.NoError(t, err)
 	val.Slashed = true
 	require.NoError(t, beaconState.UpdateValidatorAtIndex(5, val))
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
+	pendingSlashings2 := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
 		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
@@ -532,32 +539,45 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 			attesterSlashing: sl,
 			validatorToSlash: uint64(i),
 		}
+		pendingSlashings2[i] = &PendingAttesterSlashing{
+			attesterSlashing: sl,
+			validatorToSlash: uint64(i),
+		}
 		slashings[i] = sl
 	}
+	result := append(slashings[1:5], slashings[6:]...)
 	tests := []struct {
 		name   string
 		fields fields
 		want   []*ethpb.AttesterSlashing
 	}{
 		{
-			name: "Skips slashed validator",
+			name: "One item",
 			fields: fields{
-				pending: pendingSlashings,
+				pending: pendingSlashings[:2],
 			},
-			want: slashings[1:3],
+			want: slashings[1:2],
 		},
 		{
-			name: "Skips gapped slashed validators",
+			name: "Skips gapped slashed",
 			fields: fields{
-				pending: pendingSlashings[2:],
+				pending: pendingSlashings[4:7],
 			},
-			want: []*ethpb.AttesterSlashing{slashings[4], slashings[6]},
+			want: result[3:5],
+		},
+		{
+			name: "All and skips gapped slashed validators",
+			fields: fields{
+				pending: pendingSlashings2,
+				all:     true,
+			},
+			want: result,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{pendingAttesterSlashing: tt.fields.pending}
-			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState))
+			assert.DeepEqual(t, tt.want, p.PendingAttesterSlashings(context.Background(), beaconState, tt.fields.all /*noLimit*/))
 		})
 	}
 }
@@ -585,5 +605,5 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	p := &Pool{
 		pendingAttesterSlashing: pendingSlashings,
 	}
-	assert.DeepEqual(t, slashings[0:2], p.PendingAttesterSlashings(context.Background(), beaconState))
+	assert.DeepEqual(t, slashings[0:2], p.PendingAttesterSlashings(context.Background(), beaconState, false /*noLimit*/))
 }

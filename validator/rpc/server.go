@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -37,6 +37,7 @@ type Config struct {
 	CertFlag              string
 	KeyFlag               string
 	ValDB                 db.Database
+	WalletDir             string
 	ValidatorService      *client.ValidatorService
 	SyncChecker           client.SyncChecker
 	GenesisFetcher        client.GenesisFetcher
@@ -52,7 +53,7 @@ type Server struct {
 	host                  string
 	port                  string
 	listener              net.Listener
-	keymanager            v2keymanager.IKeymanager
+	keymanager            keymanager.IKeymanager
 	withCert              string
 	withKey               string
 	credentialError       error
@@ -61,7 +62,8 @@ type Server struct {
 	validatorService      *client.ValidatorService
 	syncChecker           client.SyncChecker
 	genesisFetcher        client.GenesisFetcher
-	wallet                *v2.Wallet
+	walletDir             string
+	wallet                *wallet.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
 	nodeGatewayEndpoint   string
@@ -81,6 +83,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorService:      cfg.ValidatorService,
 		syncChecker:           cfg.SyncChecker,
 		genesisFetcher:        cfg.GenesisFetcher,
+		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,

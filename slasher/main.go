@@ -12,14 +12,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
+	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
-	"github.com/wercker/journalhook"
 	"github.com/urfave/cli/v2"
-	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
@@ -72,6 +72,7 @@ var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
 	flags.EnableHistoricalDetectionFlag,
 	flags.SpanCacheSize,
+	cmd.AcceptTosFlag,
 }
 
 func init() {
@@ -86,14 +87,13 @@ func main() {
 	app.Flags = appFlags
 	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
-		// Load any flags from file, if specified.
-		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
-			if err := altsrc.InitInputSourceWithContext(
-				appFlags,
-				altsrc.NewYamlSourceFromFlagFunc(
-					cmd.ConfigFileFlag.Name))(ctx); err != nil {
-				return err
-			}
+		// Load flags from config file, if specified.
+		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
+			return err
+		}
+		// verify if ToS accepted
+		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
+			return err
 		}
 
 		format := ctx.String(cmd.LogFormat.Name)
@@ -111,7 +111,9 @@ func main() {
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
 		case "journald":
-			journalhook.Enable()
+			if err := journald.Enable(); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

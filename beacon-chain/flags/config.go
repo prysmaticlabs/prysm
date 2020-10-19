@@ -9,7 +9,7 @@ import (
 // GlobalFlags specifies all the global flags for the
 // beacon node.
 type GlobalFlags struct {
-	UnsafeSync                 bool
+	HeadSync                   bool
 	DisableSync                bool
 	DisableDiscv5              bool
 	MinimumSyncPeers           int
@@ -36,9 +36,9 @@ func Init(c *GlobalFlags) {
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg := &GlobalFlags{}
-	if ctx.Bool(UnsafeSync.Name) {
-		log.Warn("Using Unsafe Sync flag, it is insecure to use this flag with your beacon node.")
-		cfg.UnsafeSync = true
+	if ctx.Bool(HeadSync.Name) {
+		log.Warn("Using Head Sync flag, it starts syncing from last saved head.")
+		cfg.HeadSync = true
 	}
 	if ctx.Bool(DisableSync.Name) {
 		log.Warn("Using Disable Sync flag, using this flag on a live network might lead to adverse consequences.")
@@ -54,7 +54,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 
 func configureMinimumPeers(ctx *cli.Context, cfg *GlobalFlags) {
 	cfg.MinimumSyncPeers = ctx.Int(MinSyncPeers.Name)
-	maxPeers := int(ctx.Int(cmd.P2PMaxPeers.Name))
+	maxPeers := ctx.Int(cmd.P2PMaxPeers.Name)
 	if cfg.MinimumSyncPeers > maxPeers {
 		log.Warnf("Changing Minimum Sync Peers to %d", maxPeers)
 		cfg.MinimumSyncPeers = maxPeers

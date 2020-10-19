@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -18,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -28,18 +29,34 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-var _ = Validator(&validator{})
+var _ Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
-func publicKeys(t *testing.T, km keymanager.KeyManager) [][]byte {
-	keys, err := km.FetchValidatingKeys()
-	assert.NoError(t, err, "Cannot fetch validating keys")
-	res := make([][]byte, len(keys))
-	for i := range keys {
-		res[i] = keys[i][:]
+type mockKeymanager struct {
+	lock    sync.RWMutex
+	keysMap map[[48]byte]bls.SecretKey
+}
+
+func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	keys := make([][48]byte, 0)
+	for pubKey := range m.keysMap {
+		keys = append(keys, pubKey)
 	}
-	return res
+	return keys, nil
+}
+
+func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	pubKey := [48]byte{}
+	copy(pubKey[:], req.PublicKey)
+	privKey, ok := m.keysMap[pubKey]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	sig := privKey.Sign(req.SigningRoot)
+	return sig, nil
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
@@ -61,7 +78,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
@@ -88,7 +105,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -114,9 +131,15 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: make(map[[48]byte]bls.SecretKey),
+	}
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
@@ -134,7 +157,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
@@ -157,7 +180,7 @@ func TestWaitForSynced_SetsGenesisTime(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
+		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
@@ -184,7 +207,6 @@ func TestWaitForSynced_ContextCanceled(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -211,7 +233,6 @@ func TestWaitForSynced_StreamSetupFails(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
@@ -230,7 +251,6 @@ func TestWaitForSynced_ReceiveErrorFromStream(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
@@ -251,17 +271,24 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -277,16 +304,23 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForActivation(context.Background())
@@ -299,15 +333,23 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
+		keyManager:      km,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -324,19 +366,26 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
+		keyManager:      km,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(t, v.keyManager))
+	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(t, v.keyManager),
+			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -352,7 +401,6 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconChainClient(ctrl)
 	v := validator{
-		keyManager:   testKeyManager,
 		beaconClient: client,
 		genesisTime:  1,
 	}
@@ -369,7 +417,6 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconChainClient(ctrl)
 	v := validator{
-		keyManager:   testKeyManager,
 		beaconClient: client,
 	}
 	client.EXPECT().GetChainHead(
@@ -386,21 +433,27 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	v := validator{
-		keyManager:      testKeyManagerThreeValidators,
 		validatorClient: client,
+		keyManager:      km,
 		genesisTime:     1,
 	}
-	publicKeys := publicKeys(t, v.keyManager)
-	resp := generateMockStatusResponse(publicKeys)
+
+	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	resp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys,
+			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -416,12 +469,20 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	v := validator{
-		keyManager:      testKeyManagerThreeValidators,
 		validatorClient: client,
+		keyManager:      km,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(t, v.keyManager))
+	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
@@ -505,7 +566,6 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 
 	slot := uint64(1)
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
 		duties: &ethpb.DutiesResponse{
 			Duties: []*ethpb.DutiesResponse_Duty{
@@ -530,9 +590,17 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	v := validator{
-		keyManager:      testKeyManager,
 		validatorClient: client,
+		keyManager:      km,
 		duties: &ethpb.DutiesResponse{
 			Duties: []*ethpb.DutiesResponse_Duty{
 				{
@@ -559,6 +627,14 @@ func TestUpdateDuties_OK(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
+	privKey := bls.RandKey()
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
 	resp := &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
@@ -572,7 +648,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		},
 	}
 	v := validator{
-		keyManager:      testKeyManager,
+		keyManager:      km,
 		validatorClient: client,
 	}
 	client.EXPECT().GetDuties(
@@ -650,7 +726,6 @@ func TestUpdateProtections_OK(t *testing.T) {
 	}
 	v := validator{
 		db:              db,
-		keyManager:      testKeyManager,
 		validatorClient: client,
 		duties:          duties,
 	}
@@ -672,7 +747,6 @@ func TestSaveProtections_OK(t *testing.T) {
 	require.NoError(t, err)
 	v := validator{
 		db:                      db,
-		keyManager:              testKeyManager,
 		validatorClient:         client,
 		attesterHistoryByPubKey: cleanHistories,
 	}
@@ -695,37 +769,15 @@ func TestSaveProtections_OK(t *testing.T) {
 }
 
 func TestRolesAt_OK(t *testing.T) {
-	v, m, finish := setup(t)
+	v, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	sks := make([]bls.SecretKey, 4)
-	sks[0] = bls.RandKey()
-	sks[1] = bls.RandKey()
-	sks[2] = bls.RandKey()
-	sks[3] = bls.RandKey()
-	v.keyManager = keymanager.NewDirect(sks)
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   1,
-				PublicKey:      sks[0].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				ProposerSlots:  []uint64{1},
-				PublicKey:      sks[1].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   2,
-				PublicKey:      sks[2].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				AttesterSlot:   1,
-				ProposerSlots:  []uint64{1, 5},
-				PublicKey:      sks[3].PublicKey().Marshal(),
+				PublicKey:      validatorKey.PublicKey().Marshal(),
 			},
 		},
 	}
@@ -735,50 +787,23 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleProposer), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1])
-	assert.Equal(t, ValidatorRole(roleAggregator), roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
-	v, m, finish := setup(t)
+	v, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	sks := make([]bls.SecretKey, 3)
-	sks[0] = bls.RandKey()
-	sks[1] = bls.RandKey()
-	sks[2] = bls.RandKey()
-	v.keyManager = keymanager.NewDirect(sks)
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
 				ProposerSlots:  []uint64{0},
-				PublicKey:      sks[0].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				AttesterSlot:   4,
-				ProposerSlots:  nil,
-				PublicKey:      sks[1].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   3,
-				ProposerSlots:  nil,
-				PublicKey:      sks[2].PublicKey().Marshal(),
+				PublicKey:      validatorKey.PublicKey().Marshal(),
 			},
 		},
 	}
@@ -791,9 +816,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)
 
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0])
-	assert.Equal(t, ValidatorRole(roleUnknown), roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0])
+	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
@@ -891,7 +914,6 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			defer ctrl.Finish()
 			client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 			v := validator{
-				keyManager:      testKeyManager,
 				validatorClient: client,
 				duties: &ethpb.DutiesResponse{
 					Duties: []*ethpb.DutiesResponse_Duty{

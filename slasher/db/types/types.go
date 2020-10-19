@@ -5,6 +5,7 @@ package types
 // SlashingStatus enum like structure.
 type SlashingStatus uint8
 
+//noinspection GoUnusedConst
 const (
 	// Unknown default status in case it is not set
 	Unknown = iota
