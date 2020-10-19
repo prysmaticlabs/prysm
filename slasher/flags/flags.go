@@ -57,7 +57,7 @@ var (
 		Usage: "Sets the span cache size.",
 		Value: 1500,
 	}
-	// HighestAttCacheSize is a flag that sets the size of span cache.
+	// HighestAttCacheSize is a flag that sets the size of highest attestation cache.
 	HighestAttCacheSize = &cli.IntFlag{
 		Name:  "highest-att-cache-size",
 		Usage: "Sets the highest attestation cache size.",

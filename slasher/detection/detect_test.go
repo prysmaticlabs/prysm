@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"

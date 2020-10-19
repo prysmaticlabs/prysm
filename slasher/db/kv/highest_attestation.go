@@ -24,9 +24,7 @@ func persistHighestAttestationCacheOnEviction(db *Store) func(key interface{}, v
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal")
 			}
-
 			dbKey := highestAttSetkeyBytes(key.(uint64))
-
 			bucket := tx.Bucket(highestAttestationBucket)
 			if err := bucket.Put(dbKey, enc); err != nil {
 				return errors.Wrap(err, "failed to add highest attestation to slasher db.")
