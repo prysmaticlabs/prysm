@@ -734,9 +734,18 @@ func (s *Service) cacheHeadersForEth1DataVote(lastKnownHeader *gethTypes.Header)
 	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
 		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
 
+	if lastKnownHeader.Number.Uint64() < params.BeaconConfig().Eth1FollowDistance {
+		return
+	}
+
 	end := lastKnownHeader.Number.Uint64() - params.BeaconConfig().Eth1FollowDistance
+	var start uint64
 	// We fetch twice the number of headers just to be safe.
-	start := end - 2*blocksPerVotingPeriod
+	if end-2*blocksPerVotingPeriod >= 0 {
+		start = end - 2*blocksPerVotingPeriod
+	} else {
+		start = 0
+	}
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 	_, err := s.batchRequestHeaders(start, end)
 	if err != nil {
