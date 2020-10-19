@@ -125,6 +125,7 @@ func IsValid(walletDir string) (bool, error) {
 	f, err := os.Open(expanded)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file") ||
+			strings.Contains(err.Error(), "cannot find the file") ||
 			strings.Contains(err.Error(), "cannot find the path") {
 			return false, nil
 		}
