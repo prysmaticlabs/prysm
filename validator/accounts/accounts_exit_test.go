@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 )
 
 func TestExitAccountsCli_Ok(t *testing.T) {
@@ -60,11 +60,11 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 	keystore, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a direct keymanager.
+	// We initialize a wallet with a imported keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flag required for ImportAccounts to work.
@@ -75,7 +75,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: password,
 		},
 	})
@@ -111,18 +111,18 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
-	direct.ResetCaches()
+	imported.ResetCaches()
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: "Passwordz0320$",
 		},
 	})

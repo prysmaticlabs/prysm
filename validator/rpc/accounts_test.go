@@ -164,7 +164,7 @@ func Test_createAccountWithDepositData(t *testing.T) {
 }
 
 func TestServer_BackupAccounts(t *testing.T) {
-	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
+	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
 
 	// We now attempt to backup all public keys from the wallet.
 	res, err := ss.BackupAccounts(context.Background(), &pb.BackupAccountsRequest{
@@ -224,7 +224,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeys: make([][]byte, 1),
 	})
-	assert.ErrorContains(t, "Only Non-HD wallets can delete accounts", err)
+	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
@@ -239,7 +239,7 @@ func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_DeleteAccounts_OK(t *testing.T) {
-	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
+	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
 	ctx := context.Background()
 	keys, err := ss.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)

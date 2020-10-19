@@ -1,4 +1,4 @@
-package direct
+package imported
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestDirectKeymanager_ExtractKeystores(t *testing.T) {
+func TestImportedKeymanager_ExtractKeystores(t *testing.T) {
 	secretKeysCache = make(map[[48]byte]bls.SecretKey)
 	lock.Lock()
 	dr := &Keymanager{}

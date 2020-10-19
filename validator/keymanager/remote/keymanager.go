@@ -60,7 +60,7 @@ type Keymanager struct {
 	accountsByPubkey map[[48]byte]string
 }
 
-// NewKeymanager instantiates a new direct keymanager from configuration options.
+// NewKeymanager instantiates a new imported keymanager from configuration options.
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	// Load the client certificates.
 	if cfg.Opts.RemoteCertificate == nil {

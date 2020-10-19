@@ -171,11 +171,11 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 
 func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {
 	dialOpts := client.ConstructDialOptions(
-		cmd.GrpcMaxCallRecvMsgSizeFlag.Value,
-		flags.CertFlag.Value,
-		strings.Split(flags.GrpcHeadersFlag.Value, ","),
-		flags.GrpcRetriesFlag.Value,
-		flags.GrpcRetryDelayFlag.Value,
+		cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
+		cliCtx.String(flags.CertFlag.Name),
+		strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
+		cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+		cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
 	)
 	if dialOpts == nil {
 		return nil, nil, errors.New("failed to construct dial options")

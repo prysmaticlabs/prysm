@@ -80,8 +80,8 @@ func (p *passwordReader) passwordReaderFunc(_ *os.File) ([]byte, error) {
 	return []byte(p.password), nil
 }
 
-// Test_KeysConsistency_Direct checks that the password does not change due to account creation in a Direct wallet
-func Test_KeysConsistency_Direct(t *testing.T) {
+// Test_KeysConsistency_Imported checks that the password does not change due to account creation in a Imported wallet
+func Test_KeysConsistency_Imported(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 
 	// Specify the 'initial'/correct password locally to this file for convenience.
@@ -90,7 +90,7 @@ func Test_KeysConsistency_Direct(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Direct,
+		keymanagerKind:     keymanager.Imported,
 		walletPasswordFile: walletPasswordFile,
 	})
 
