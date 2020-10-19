@@ -202,6 +202,12 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationReject
 	}
 
+	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+	if err := s.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
 	return pubsub.ValidationAccept
 }
 
