@@ -749,7 +749,6 @@ func (s *Service) cacheHeadersForEth1DataVote(lastKnownHeader *gethTypes.Header)
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 	_, err := s.batchRequestHeaders(start, end)
 	if err != nil {
-		// Caching failure is not critical, so we just log a warning.
-		log.Warningf("Unable to cache headers: %v", err)
+		log.Errorf("Unable to cache headers: %v", err)
 	}
 }
