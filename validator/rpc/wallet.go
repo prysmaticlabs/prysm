@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -47,13 +46,6 @@ func (s *Server) HasWallet(_ context.Context, _ *ptypes.Empty) (*pb.HasWalletRes
 	}
 	return &pb.HasWalletResponse{
 		WalletExists: true,
-	}, nil
-}
-
-// DefaultWalletPath for the user, which is dependent on operating system.
-func (s *Server) DefaultWalletPath(ctx context.Context, _ *ptypes.Empty) (*pb.DefaultWalletResponse, error) {
-	return &pb.DefaultWalletResponse{
-		WalletDir: filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName),
 	}, nil
 }
 
