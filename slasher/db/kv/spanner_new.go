@@ -97,7 +97,7 @@ func (db *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*t
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
-func (db *Store) SaveEpochSpans(_ context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
+func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
 	if len(es.Bytes())%int(types.SpannerEncodedLength) != 0 {
 		return types.ErrWrongSize
 	}

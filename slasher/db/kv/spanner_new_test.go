@@ -3,14 +3,12 @@ package kv
 import (
 	"context"
 	"encoding/hex"
-	"flag"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/urfave/cli"
 )
 
 type spansTestStruct struct {
@@ -156,9 +154,7 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 }
 
 func TestStore_SlasherObservedEpoch(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	prevConfig := params.BeaconConfig().Copy()
