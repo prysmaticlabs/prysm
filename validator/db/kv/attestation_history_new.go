@@ -152,9 +152,9 @@ func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, his
 	return err
 }
 
-// ImportOldAttestationFormat import old attestation format data into the new attestation format
-func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.ImportOldAttestationFormat")
+// MigrateV2AttestationProtection import old attestation format data into the new attestation format
+func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.MigrateV2AttestationProtection")
 	defer span.End()
 	var allKeys [][48]byte
 
@@ -183,7 +183,7 @@ func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 		dataMap[key] = newAttestationHistoryArray(atts.LatestEpochWritten)
 		dataMap[key], err = dataMap[key].setLatestEpochWritten(ctx, atts.LatestEpochWritten)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to set latest epoch while migrating attestations to v2")
 		}
 		for target, source := range atts.TargetToSource {
 			dataMap[key], err = dataMap[key].setTargetData(ctx, target, &HistoryData{
@@ -191,10 +191,52 @@ func (store *Store) ImportOldAttestationFormat(ctx context.Context) error {
 				SigningRoot: []byte{1},
 			})
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "failed to set target data while migrating attestations to v2")
 			}
 		}
 	}
 	err = store.SaveAttestationHistoryNewForPubKeys(ctx, dataMap)
 	return err
+}
+
+// MigrateV2AttestationProtectionDb exports old attestation protection data
+// format to the new format and save the exported flag to database.
+func (store *Store) MigrateV2AttestationProtectionDb(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.MigrateV2AttestationProtectionDb")
+	defer span.End()
+	importAttestations, err := store.shouldMigrateAttestations()
+	if err != nil {
+		return errors.Wrap(err, "failed to analyze whether attestations should be imported")
+	}
+	if !importAttestations {
+		return nil
+	}
+	err = store.MigrateV2AttestationProtection(ctx)
+	if err != nil {
+		return errors.Wrap(err, "filed to import attestations")
+	}
+	err = store.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicAttestationsBucket)
+		if bucket != nil {
+			if err := bucket.Put([]byte(attestationExported), []byte{1}); err != nil {
+				return errors.Wrap(err, "failed to set migrated attestations flag in db")
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func (store *Store) shouldMigrateAttestations() (bool, error) {
+	var importAttestations bool
+	err := store.db.View(func(tx *bolt.Tx) error {
+		attestationBucket := tx.Bucket(historicAttestationsBucket)
+		if attestationBucket != nil && attestationBucket.Stats().KeyN != 0 {
+			if exported := attestationBucket.Get([]byte(attestationExported)); exported == nil {
+				importAttestations = true
+			}
+		}
+		return nil
+	})
+	return importAttestations, err
 }

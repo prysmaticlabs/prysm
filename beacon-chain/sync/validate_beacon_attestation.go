@@ -36,10 +36,14 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	ctx, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexBeaconAttestation")
 	defer span.End()
 
+	if msg.Topic == nil {
+		return pubsub.ValidationReject
+	}
+
 	// Override topic for decoding.
-	originalTopic := msg.TopicIDs[0]
+	originalTopic := msg.Topic
 	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
-	msg.TopicIDs[0] = format
+	msg.Topic = &format
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
@@ -48,7 +52,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 	// Restore topic.
-	msg.TopicIDs[0] = originalTopic
+	msg.Topic = originalTopic
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
@@ -121,7 +125,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		}
 		// Is the attestation subnet correct.
 		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
-		if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
+		if !strings.HasPrefix(*originalTopic, fmt.Sprintf(format, digest, subnet)) {
 			return pubsub.ValidationReject
 		}
 		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
@@ -167,7 +171,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	subnet := helpers.ComputeSubnetForAttestation(valCount, att)
-	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
+	if !strings.HasPrefix(*originalTopic, fmt.Sprintf(format, digest, subnet)) {
 		return pubsub.ValidationReject
 	}
 
@@ -189,13 +193,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Attestation's signature is a valid BLS signature and belongs to correct public key..
-	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
-			log.WithError(err).Error("Could not verify attestation")
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
-		}
+	if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
+		log.WithError(err).Error("Could not verify attestation")
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
 	}
 
 	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)

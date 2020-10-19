@@ -161,7 +161,7 @@ type Web3ServiceConfig struct {
 func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
@@ -722,6 +722,6 @@ func (s *Service) logTillChainStart() {
 
 	log.WithFields(logrus.Fields{
 		"Extra validators needed":   valNeeded,
-		"Time till minimum genesis": fmt.Sprintf("%s", time.Duration(secondsLeft)*time.Second),
+		"Time till minimum genesis": time.Duration(secondsLeft) * time.Second,
 	}).Infof("Currently waiting for chainstart")
 }

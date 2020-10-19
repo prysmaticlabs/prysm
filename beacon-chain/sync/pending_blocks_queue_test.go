@@ -15,6 +15,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -371,15 +372,15 @@ func TestService_BatchRootRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	// Send in duplicated roots to also test deduplicaton.
-	sentRoots := [][32]byte{b2Root, b2Root, b3Root, b3Root, b4Root, b5Root}
-	expectedRoots := [][32]byte{b2Root, b3Root, b4Root, b5Root}
+	sentRoots := p2pTypes.BeaconBlockByRootsReq{b2Root, b2Root, b3Root, b3Root, b4Root, b5Root}
+	expectedRoots := p2pTypes.BeaconBlockByRootsReq{b2Root, b3Root, b4Root, b5Root}
 
 	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		var out [][32]byte
+		var out p2pTypes.BeaconBlockByRootsReq
 		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
 		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
 		response := []*ethpb.SignedBeaconBlock{b2, b3, b4, b5}

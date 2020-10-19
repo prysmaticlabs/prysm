@@ -105,7 +105,7 @@ service Auth {
 // Type of key manager for the wallet, either direct, derived, or remote.
 enum KeymanagerKind {
     DERIVED = 0;
-    DIRECT = 1;
+    IMPORTED = 1;
     REMOTE = 2;
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -26,7 +25,7 @@ func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
 
 func TestSszNetworkEncoder_FailsSnappyLength(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{}
-	att := &testpb.TestSimpleMessage{}
+	att := &pb.Fork{}
 	data := make([]byte, 32)
 	binary.PutUvarint(data, encoder.MaxGossipSize+32)
 	err := e.DecodeGossip(data, att)
@@ -35,13 +34,14 @@ func TestSszNetworkEncoder_FailsSnappyLength(t *testing.T) {
 
 func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
 	buf := new(bytes.Buffer)
-	msg := &testpb.TestSimpleMessage{
-		Foo: []byte("fooooo"),
-		Bar: 9001,
+	msg := &pb.Fork{
+		PreviousVersion: []byte("fooo"),
+		CurrentVersion:  []byte("barr"),
+		Epoch:           9001,
 	}
 	_, err := e.EncodeWithMaxLength(buf, msg)
 	require.NoError(t, err)
-	decoded := &testpb.TestSimpleMessage{}
+	decoded := &pb.Fork{}
 	require.NoError(t, e.DecodeWithMaxLength(buf, decoded))
 	if !proto.Equal(decoded, msg) {
 		t.Logf("decoded=%+v\n", decoded)
@@ -51,13 +51,14 @@ func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
 
 func testRoundTripWithGossip(t *testing.T, e *encoder.SszNetworkEncoder) {
 	buf := new(bytes.Buffer)
-	msg := &testpb.TestSimpleMessage{
-		Foo: []byte("fooooo"),
-		Bar: 9001,
+	msg := &pb.Fork{
+		PreviousVersion: []byte("fooo"),
+		CurrentVersion:  []byte("barr"),
+		Epoch:           9001,
 	}
 	_, err := e.EncodeGossip(buf, msg)
 	require.NoError(t, err)
-	decoded := &testpb.TestSimpleMessage{}
+	decoded := &pb.Fork{}
 	require.NoError(t, e.DecodeGossip(buf.Bytes(), decoded))
 	if !proto.Equal(decoded, msg) {
 		t.Logf("decoded=%+v\n", decoded)
@@ -67,9 +68,10 @@ func testRoundTripWithGossip(t *testing.T, e *encoder.SszNetworkEncoder) {
 
 func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 	buf := new(bytes.Buffer)
-	msg := &testpb.TestSimpleMessage{
-		Foo: []byte("fooooo"),
-		Bar: 9001,
+	msg := &pb.Fork{
+		PreviousVersion: []byte("fooo"),
+		CurrentVersion:  []byte("barr"),
+		Epoch:           9001,
 	}
 	e := &encoder.SszNetworkEncoder{}
 	params.SetupTestConfigCleanup(t)
@@ -83,9 +85,10 @@ func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 
 func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 	buf := new(bytes.Buffer)
-	msg := &testpb.TestSimpleMessage{
-		Foo: []byte("fooooo"),
-		Bar: 4242,
+	msg := &pb.Fork{
+		PreviousVersion: []byte("fooo"),
+		CurrentVersion:  []byte("barr"),
+		Epoch:           4242,
 	}
 	e := &encoder.SszNetworkEncoder{}
 	params.SetupTestConfigCleanup(t)
@@ -95,7 +98,7 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeGossip(buf, msg)
 	require.NoError(t, err)
-	decoded := &testpb.TestSimpleMessage{}
+	decoded := &pb.Fork{}
 	err = e.DecodeWithMaxLength(buf, decoded)
 	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxChunkSize)
 	assert.ErrorContains(t, wanted, err)

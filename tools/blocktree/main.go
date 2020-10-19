@@ -50,7 +50,7 @@ func main() {
 	startSlot := uint64(*startSlot)
 	endSlot := uint64(*endSlot)
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	blks, err := db.Blocks(context.Background(), filter)
+	blks, roots, err := db.Blocks(context.Background(), filter)
 	if err != nil {
 		panic(err)
 	}
@@ -59,10 +59,7 @@ func main() {
 	m := make(map[[32]byte]*node)
 	for i := 0; i < len(blks); i++ {
 		b := blks[i]
-		r, err := b.Block.HashTreeRoot()
-		if err != nil {
-			panic(err)
-		}
+		r := roots[i]
 		m[r] = &node{score: make(map[uint64]bool)}
 
 		state, err := db.State(context.Background(), r)
@@ -74,15 +71,11 @@ func main() {
 		for state == nil {
 			slot--
 			filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
-			bs, err := db.Blocks(context.Background(), filter)
+			rts, err := db.BlockRoots(context.Background(), filter)
 			if err != nil {
 				panic(err)
 			}
-			rs, err := bs[0].Block.HashTreeRoot()
-			if err != nil {
-				panic(err)
-			}
-			state, err = db.State(context.Background(), rs)
+			state, err = db.State(context.Background(), rts[0])
 			if err != nil {
 				panic(err)
 			}

@@ -35,7 +35,7 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		// If context is canceled we stop the loop.
@@ -103,7 +103,7 @@ func (bs *Service) ReceiveAttestations(ctx context.Context) {
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			log.Info("Attestation stream closed")
 			break
 		}

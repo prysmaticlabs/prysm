@@ -202,7 +202,7 @@ func (q *blocksQueue) loop() {
 						"start":                     fsm.start,
 						"error":                     err.Error(),
 					}).Debug("Can not trigger event")
-					if err == errNoRequiredPeers {
+					if errors.Is(err, errNoRequiredPeers) {
 						forceExit := q.exitConditions.noRequiredPeersErrRetries > noRequiredPeersErrMaxRetries
 						if q.mode == modeStopOnFinalizedEpoch || forceExit {
 							q.cancel()
