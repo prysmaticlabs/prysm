@@ -366,7 +366,10 @@ func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, _ *ethpb.Atte
 }
 
 // VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
-func (ms *ChainService) VerifyFinalizedConsistency(_ context.Context, _ []byte) error {
+func (ms *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) error {
+	if !bytes.Equal(r, ms.FinalizedCheckPoint.Root) {
+		return errors.New("Root and finalized store are not consistent")
+	}
 	return nil
 }
 
