@@ -187,9 +187,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling new BLS library blst")
 		cfg.EnableBlst = true
 	}
-	if ctx.Bool(enablePruningDepositProofs.Name) {
-		log.Warn("Enabling pruning deposit proofs")
-		cfg.EnablePruningDepositProofs = true
+	cfg.EnablePruningDepositProofs = true
+	if ctx.Bool(disablePruningDepositProofs.Name) {
+		log.Warn("Disabling pruning deposit proofs")
+		cfg.EnablePruningDepositProofs = false
 	}
 	Init(cfg)
 }

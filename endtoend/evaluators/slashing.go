@@ -8,7 +8,8 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -20,28 +21,28 @@ import (
 // InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
 var InjectDoubleVote = types.Evaluator{
 	Name:       "inject_double_vote_%d",
-	Policy:     onEpoch(1),
+	Policy:     policies.OnEpoch(1),
 	Evaluation: insertDoubleAttestationIntoPool,
 }
 
 // ProposeDoubleBlock broadcasts a double block to the beacon node for the slasher to detect.
 var ProposeDoubleBlock = types.Evaluator{
 	Name:       "propose_double_block_%d",
-	Policy:     onEpoch(1),
+	Policy:     policies.OnEpoch(1),
 	Evaluation: proposeDoubleBlock,
 }
 
 // ValidatorsSlashed ensures the expected amount of validators are slashed.
 var ValidatorsSlashed = types.Evaluator{
 	Name:       "validators_slashed_epoch_%d",
-	Policy:     afterNthEpoch(1),
+	Policy:     policies.AfterNthEpoch(1),
 	Evaluation: validatorsSlashed,
 }
 
 // SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
 var SlashedValidatorsLoseBalance = types.Evaluator{
 	Name:       "slashed_validators_lose_valance_epoch_%d",
-	Policy:     afterNthEpoch(1),
+	Policy:     policies.AfterNthEpoch(1),
 	Evaluation: validatorsLoseBalance,
 }
 
@@ -150,7 +151,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get domain data")
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(attData, resp.SignatureDomain)
+	signingRoot, err := corehelpers.ComputeSigningRoot(attData, resp.SignatureDomain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
@@ -246,7 +247,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get domain data")
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(blk, resp.SignatureDomain)
+	signingRoot, err := corehelpers.ComputeSigningRoot(blk, resp.SignatureDomain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
