@@ -19,6 +19,7 @@ type BlockReceiver interface {
 	ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
+	GetInitSyncBlock(root [32]byte) *ethpb.SignedBeaconBlock
 }
 
 // ReceiveBlock is a function that defines the the operations (minus pubsub)
@@ -155,6 +156,11 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
 func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
+}
+
+// GetInitSyncBlock returns the block of the input root that exists in initial sync blocks cache.
+func (s *Service) GetInitSyncBlock(root [32]byte) *ethpb.SignedBeaconBlock {
+	return s.getInitSyncBlock(root)
 }
 
 func (s *Service) handlePostBlockOperations(b *ethpb.BeaconBlock) error {

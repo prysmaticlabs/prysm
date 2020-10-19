@@ -109,6 +109,9 @@ type Service struct {
 	badBlockLock              sync.RWMutex
 	stateSummaryCache         *cache.StateSummaryCache
 	stateGen                  *stategen.State
+	costCtr                   *costCounter
+	attestationCostQueue      *aggregateCostPool
+	blockCostQueue            *blockCostPool
 }
 
 // NewService initializes new regular sync service.
@@ -134,6 +137,9 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateSummaryCache:    cfg.StateSummaryCache,
 		stateGen:             cfg.StateGen,
 		rateLimiter:          rLimiter,
+		costCtr:              new(costCounter),
+		attestationCostQueue: new(aggregateCostPool),
+		blockCostQueue:       new(blockCostPool),
 	}
 
 	go r.registerHandlers()
@@ -159,6 +165,8 @@ func (s *Service) Start() {
 	if !flags.Get().DisableSync {
 		s.resyncIfBehind()
 	}
+	go s.costCounter()
+	go s.costObjectQueue()
 
 	// Update sync metrics.
 	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)

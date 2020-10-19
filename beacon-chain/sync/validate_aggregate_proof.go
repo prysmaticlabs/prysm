@@ -77,6 +77,27 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
+	// Verify LMG GHOST and FFG votes are consistent with each other.
+	if err := s.chain.VerifyLmdFfgConsistency(ctx, m.Message.Aggregate); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
+	// Verify provided block root is a descendant of the current finalized block.
+	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+	valid, _, err := s.attestationCostChecker(ctx, m)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+	if !valid {
+		s.attestationCostQueue.addAggregate(m)
+		return pubsub.ValidationIgnore
+	}
+
 	validationRes := s.validateAggregatedAtt(ctx, m)
 	if validationRes != pubsub.ValidationAccept {
 		return validationRes
