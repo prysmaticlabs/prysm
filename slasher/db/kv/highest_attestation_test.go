@@ -2,19 +2,15 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"testing"
 
 	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/urfave/cli/v2"
 )
 
 func TestSaveHighestAttestation(t *testing.T) {
-	app := &cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -65,9 +61,7 @@ func TestSaveHighestAttestation(t *testing.T) {
 }
 
 func TestFetchNonExistingHighestAttestation(t *testing.T) {
-	app := &cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	t.Run("cached", func(t *testing.T) {
