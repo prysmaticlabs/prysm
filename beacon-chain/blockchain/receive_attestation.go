@@ -26,6 +26,7 @@ type AttestationReceiver interface {
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
 	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
+	VerifyFinalizedConsistency(ctx context.Context, r []byte) error
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -94,6 +95,11 @@ func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attesta
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
 	return s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot)
+}
+
+// VerifyFinalizedConsistency verifies input root is consistent with finalized store.
+func (s *Service) VerifyFinalizedConsistency(ctx context.Context, r []byte) error {
+	return s.verifyFinalizedConsistency(ctx, r)
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.

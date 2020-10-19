@@ -365,6 +365,11 @@ func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, _ *ethpb.Atte
 	return nil
 }
 
+// VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
+func (ms *ChainService) VerifyFinalizedConsistency(_ context.Context, _ []byte) error {
+	return nil
+}
+
 // AttestationCheckPtInfo mocks AttestationCheckPtInfo and always returns nil.
 func (ms *ChainService) AttestationCheckPtInfo(_ context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
 	f := ms.State.Fork()
