@@ -1,6 +1,7 @@
 package evaluators
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -8,8 +9,9 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
+	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -38,43 +40,43 @@ var depositEndEpoch = depositActivationStartEpoch + uint64(math.Ceil(float64(dep
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
 var ProcessesDepositsInBlocks = types.Evaluator{
 	Name:       "processes_deposits_in_blocks_epoch_%d",
-	Policy:     onEpoch(depositsInBlockStart), // We expect all deposits to enter in one epoch.
+	Policy:     policies.OnEpoch(depositsInBlockStart), // We expect all deposits to enter in one epoch.
 	Evaluation: processesDepositsInBlocks,
 }
 
 // ActivatesDepositedValidators ensures the expected amount of validator deposits are activated into the state.
 var ActivatesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     isBetweenEpochs(depositActivationStartEpoch, depositEndEpoch),
+	Policy:     policies.BetweenEpochs(depositActivationStartEpoch, depositEndEpoch),
 	Evaluation: activatesDepositedValidators,
 }
 
 // DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
 var DepositedValidatorsAreActive = types.Evaluator{
 	Name:       "deposited_validators_are_active_epoch_%d",
-	Policy:     afterNthEpoch(depositEndEpoch),
+	Policy:     policies.AfterNthEpoch(depositEndEpoch),
 	Evaluation: depositedValidatorsAreActive,
 }
 
 // ProposeVoluntaryExit sends a voluntary exit from randomly selected validator in the genesis set.
 var ProposeVoluntaryExit = types.Evaluator{
 	Name:       "propose_voluntary_exit_epoch_%d",
-	Policy:     onEpoch(7),
+	Policy:     policies.OnEpoch(7),
 	Evaluation: proposeVoluntaryExit,
 }
 
 // ValidatorHasExited checks the beacon state for the exited validator and ensures its marked as exited.
 var ValidatorHasExited = types.Evaluator{
 	Name:       "voluntary_has_exited_%d",
-	Policy:     onEpoch(8),
+	Policy:     policies.OnEpoch(8),
 	Evaluation: validatorIsExited,
 }
 
-// Not including first epoch because of issues with genesis.
-func isBetweenEpochs(fromEpoch, toEpoch uint64) func(uint64) bool {
-	return func(currentEpoch uint64) bool {
-		return fromEpoch < currentEpoch && currentEpoch < toEpoch
-	}
+// ValidatorsVoteWithTheMajority verifies whether validator vote for eth1data using the majority algorithm.
+var ValidatorsVoteWithTheMajority = types.Evaluator{
+	Name:       "validators_vote_with_the_majority_%d",
+	Policy:     policies.AfterNthEpoch(0),
+	Evaluation: validatorsVoteWithTheMajority,
 }
 
 func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
@@ -191,7 +193,7 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 
 	inactiveCount, belowBalanceCount := 0, 0
 	for _, item := range validators.ValidatorList {
-		if !helpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
+		if !corehelpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
 			inactiveCount++
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
@@ -247,7 +249,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	signingData, err := helpers.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
+	signingData, err := corehelpers.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
 	if err != nil {
 		return err
 	}
@@ -280,3 +282,50 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 	}
 	return nil
 }
+
+func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	client := eth.NewBeaconChainClient(conn)
+
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get chain head")
+	}
+
+	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBlocks(context.Background(), req)
+	if err != nil {
+		return errors.Wrap(err, "failed to get blocks from beacon-chain")
+	}
+
+	for _, blk := range blks.BlockContainers {
+		slot, vote := blk.Block.Block.Slot, blk.Block.Block.Body.Eth1Data.BlockHash
+		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch * params.E2ETestConfig().EpochsPerEth1VotingPeriod
+
+		// We treat epoch 1 differently from other epoch for two reasons:
+		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently
+		// - for some reason the vote for the first slot in epoch 1 is 0x000... so we skip this slot
+		var isFirstSlotInVotingPeriod bool
+		if chainHead.HeadEpoch == 1 && slot%params.E2ETestConfig().SlotsPerEpoch == 0 {
+			continue
+		}
+		// We skipped the first slot so we treat the second slot as the starting slot of epoch 1.
+		if chainHead.HeadEpoch == 1 {
+			isFirstSlotInVotingPeriod = slot%params.E2ETestConfig().SlotsPerEpoch == 1
+		} else {
+			isFirstSlotInVotingPeriod = slot%slotsPerVotingPeriod == 0
+		}
+		if isFirstSlotInVotingPeriod {
+			expectedEth1DataVote = vote
+			return nil
+		}
+
+		if !bytes.Equal(vote, expectedEth1DataVote) {
+			return fmt.Errorf("incorrect eth1data vote for slot %d; expected: %#x vs voted: %#x",
+				slot, expectedEth1DataVote, vote)
+		}
+	}
+	return nil
+}
+
+var expectedEth1DataVote []byte
