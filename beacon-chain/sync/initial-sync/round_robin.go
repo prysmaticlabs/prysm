@@ -125,7 +125,7 @@ func (s *Service) processFetchedDataRegSync(
 	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
-				"blk": blk,
+				"slot": blk.Block.Slot,
 			}).Warn("Block is not processed")
 			continue
 		}
