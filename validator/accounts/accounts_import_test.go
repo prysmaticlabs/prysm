@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -54,7 +53,6 @@ func TestImport_Noninteractive(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(context.Background()))
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
@@ -116,7 +114,6 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(context.Background()))
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
@@ -179,7 +176,6 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(context.Background()))
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
@@ -306,7 +302,6 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveHashedPassword(context.Background()))
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{

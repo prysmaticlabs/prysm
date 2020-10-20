@@ -432,12 +432,6 @@ func (dr *Keymanager) DepositDataForAccount(accountIndex uint64) ([]byte, error)
 	return tx.Data(), nil
 }
 
-// RefreshWalletPassword encrypts the seed config with the wallet password and
-// writes it to disk, such as when the wallet password was modified by the user.
-func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
-	return dr.rewriteSeedConfig(ctx)
-}
-
 func (dr *Keymanager) rewriteSeedConfig(ctx context.Context) error {
 	encryptor := keystorev4.New()
 	encryptedFields, err := encryptor.Encrypt(dr.seed, dr.wallet.Password())
