@@ -112,10 +112,7 @@ func (s *Service) processFetchedData(
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
-		log.WithFields(logrus.Fields{
-			"err":      err.Error(),
-			"headSlot": s.chain.HeadSlot(),
-		}).Warn("Batch is not processed")
+		log.WithField("err", err.Error()).Warn("Batch is not processed")
 	}
 }
 
@@ -127,11 +124,7 @@ func (s *Service) processFetchedDataRegSync(
 	blockReceiver := s.chain.ReceiveBlock
 	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithFields(logrus.Fields{
-				"err":      err.Error(),
-				"slot":     blk.Block.Slot,
-				"headSlot": s.chain.HeadSlot(),
-			}).Warn("Block is not processed")
+			log.WithField("err", err.Error()).Warn("Block is not processed")
 			continue
 		}
 	}
