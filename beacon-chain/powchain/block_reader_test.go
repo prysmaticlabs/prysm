@@ -178,6 +178,41 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	require.Equal(t, 0, height.Cmp(header.Number))
 }
 
+func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint: endpoint,
+		BeaconDB:     beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+
+	header := &gethTypes.Header{
+		Number: big.NewInt(0),
+	}
+
+	err = web3Service.headerCache.AddHeader(header)
+	require.NoError(t, err)
+
+	exists, height, err := web3Service.BlockExistsWithCache(context.Background(), header.Hash())
+	require.NoError(t, err, "Could not get block hash with given height")
+	require.Equal(t, true, exists)
+	require.Equal(t, 0, height.Cmp(header.Number))
+}
+
+func TestBlockExistsWithCache_HeaderNotCached(t *testing.T) {
+	beaconDB, _ := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint: endpoint,
+		BeaconDB:     beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+
+	exists, height, err := web3Service.BlockExistsWithCache(context.Background(), common.BytesToHash([]byte("hash")))
+	require.NoError(t, err, "Could not get block hash with given height")
+	require.Equal(t, false, exists)
+	require.Equal(t, (*big.Int)(nil), height)
+}
+
 func TestService_BlockNumberByTimestamp(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
