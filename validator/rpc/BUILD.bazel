@@ -73,6 +73,7 @@ go_test(
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "//shared/timeutils:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/accounts/wallet:go_default_library",
         "//validator/client:go_default_library",
