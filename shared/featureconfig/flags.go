@@ -72,13 +72,9 @@ var (
 		Name:  "blst",
 		Usage: "Enable new BLS library, blst, from Supranational",
 	}
-	disableFinalizedDepositsCache = &cli.BoolFlag{
-		Name:  "disable-finalized-deposits-cache",
-		Usage: "Disables utilization of cached finalized deposits",
-	}
-	enableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:  "enable-eth1-data-majority-vote",
-		Usage: "When enabled, voting on eth1 data will use the Voting With The Majority algorithm.",
+	disableEth1DataMajorityVote = &cli.BoolFlag{
+		Name:  "disable-eth1-data-majority-vote",
+		Usage: "Disables the Voting With The Majority algorithm when voting for eth1data.",
 	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
