@@ -361,7 +361,18 @@ func (ms *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, _ *ethpb.Attestation) error {
+func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
+	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
+		return errors.New("LMD and FFG miss matched")
+	}
+	return nil
+}
+
+// VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
+func (ms *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) error {
+	if !bytes.Equal(r, ms.FinalizedCheckPoint.Root) {
+		return errors.New("Root and finalized store are not consistent")
+	}
 	return nil
 }
 

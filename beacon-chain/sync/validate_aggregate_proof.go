@@ -77,14 +77,11 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
-	// Verify LMG GHOST and FFG votes are consistent with each other.
+	// Verify attestation target root is consistent with the head root.
+	// This verification is not in the spec, however we guard against it as it opens us up
+	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
+	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
 	if err := s.chain.VerifyLmdFfgConsistency(ctx, m.Message.Aggregate); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-
-	// Verify provided block root is a descendant of the current finalized block.
-	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -210,6 +207,12 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	// Verify aggregated attestation has a valid signature.
 	if err := blocks.VerifyAttestationSignature(ctx, bs, signed.Message.Aggregate); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
+	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+	if err := s.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
