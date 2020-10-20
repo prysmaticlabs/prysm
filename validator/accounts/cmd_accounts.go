@@ -31,6 +31,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
@@ -55,6 +56,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
@@ -80,6 +82,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
@@ -109,6 +112,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
@@ -135,6 +139,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
@@ -166,6 +171,7 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
