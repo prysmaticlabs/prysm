@@ -2,10 +2,9 @@ package kv
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashbp "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -15,13 +14,13 @@ func TestSaveHighestAttestation(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		toSave       []*ethereum_slashing.HighestAttestation
+		toSave       []*slashbp.HighestAttestation
 		cacheEnabled bool
 	}{
 		{
 			name: "save to cache",
-			toSave: []*ethereum_slashing.HighestAttestation{
-				&ethereum_slashing.HighestAttestation{
+			toSave: []*slashbp.HighestAttestation{
+				{
 					HighestTargetEpoch: 1,
 					HighestSourceEpoch: 0,
 					ValidatorId:        1,
@@ -31,8 +30,8 @@ func TestSaveHighestAttestation(t *testing.T) {
 		},
 		{
 			name: "save to db",
-			toSave: []*ethereum_slashing.HighestAttestation{
-				&ethereum_slashing.HighestAttestation{
+			toSave: []*slashbp.HighestAttestation{
+				{
 					HighestTargetEpoch: 1,
 					HighestSourceEpoch: 0,
 					ValidatorId:        2,
@@ -68,18 +67,14 @@ func TestFetchNonExistingHighestAttestation(t *testing.T) {
 		db.highestAttCacheEnabled = true
 		found, err := db.HighestAttestation(ctx, 1)
 		require.NoError(t, err)
-		if found != nil {
-			require.NoError(t, fmt.Errorf("should not find HighestAttestation"))
-		}
+		require.Equal(t, (*slashbp.HighestAttestation)(nil), found, "should not find HighestAttestation")
 	})
 
 	t.Run("disk", func(t *testing.T) {
 		db.highestAttCacheEnabled = false
 		found, err := db.HighestAttestation(ctx, 1)
 		require.NoError(t, err)
-		if found != nil {
-			require.NoError(t, fmt.Errorf("should not find HighestAttestation"))
-		}
+		require.Equal(t, (*slashbp.HighestAttestation)(nil), found, "should not find HighestAttestation")
 	})
 
 }

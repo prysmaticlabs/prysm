@@ -44,7 +44,7 @@ func (db *Store) EnableHighestAttestationCache(enable bool) {
 
 // HighestAttestation returns the highest calculated attestation for a validatorID
 func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.HighestAttestation")
 	defer span.End()
 
 	if db.highestAttCacheEnabled {
@@ -74,7 +74,7 @@ func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*s
 
 // SaveHighestAttestation saves highest attestation for a validatorID
 func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SavePubKey")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.HighestAttestation")
 	defer span.End()
 
 	if db.highestAttCacheEnabled {
@@ -83,7 +83,6 @@ func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hi
 	}
 
 	key := highestAttSetkeyBytes(highest.ValidatorId)
-	// get set
 	set := map[uint64]*slashpb.HighestAttestation{}
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(highestAttestationBucket)
@@ -99,7 +98,6 @@ func (db *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hi
 		return err
 	}
 
-	// write in it
 	set[highest.ValidatorId] = highest
 	enc, err := json.Marshal(set)
 	if err != nil {
