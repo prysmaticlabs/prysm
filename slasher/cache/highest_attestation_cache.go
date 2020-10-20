@@ -66,7 +66,7 @@ func (c *HighestAttestationCache) Clear() {
 	c.cache.Purge()
 }
 
-// Purge removes all keys from the SpanCache and evicts all current data.
+// Purge removes all keys from cache and evicts all current data.
 func (c *HighestAttestationCache) Purge() {
 	log.Info("Saving all highest attestation cache data to DB, please wait for completion.")
 	c.cache.Purge()
