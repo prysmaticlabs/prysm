@@ -69,7 +69,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.chain.HeadSlot(),
 		"headSlot":   helpers.SlotsSince(genesis),
-	}).Debug("Synced to finalized epoch - now syncing blocks up to current head")
+	}).Info("Synced to finalized epoch - now syncing blocks up to current head")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
@@ -97,7 +97,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.chain.HeadSlot(),
 		"headSlot":   helpers.SlotsSince(genesis),
-	}).Debug("Synced to head of chain")
+	}).Info("Synced to head of chain")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
@@ -112,7 +112,7 @@ func (s *Service) processFetchedData(
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
-		log.WithError(err).Debug("Batch is not processed")
+		log.WithError(err).Warn("Batch is not processed")
 	}
 }
 
@@ -124,7 +124,9 @@ func (s *Service) processFetchedDataRegSync(
 	blockReceiver := s.chain.ReceiveBlock
 	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Debug("Block is not processed")
+			log.WithError(err).WithFields(logrus.Fields{
+				"blk": blk,
+			}).Warn("Block is not processed")
 			continue
 		}
 	}
