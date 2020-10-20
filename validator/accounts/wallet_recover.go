@@ -58,17 +58,13 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get number of accounts to recover")
 	}
-	w, _, err := RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
+	_, _, err = RecoverWallet(cliCtx.Context, &RecoverWalletConfig{
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
 		Mnemonic:       mnemonic,
 		NumAccounts:    numAccounts,
 	})
 	if err != nil {
-		return err
-	}
-	// We store the hashed password to disk.
-	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
 		return err
 	}
 	log.Infof(
