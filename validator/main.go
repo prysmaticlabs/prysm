@@ -69,6 +69,7 @@ var appFlags = []cli.Flag{
 	flags.EnableWebFlag,
 	flags.WebHostFlag,
 	flags.WebPortFlag,
+	flags.AllowEmptyProtectionDB,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,

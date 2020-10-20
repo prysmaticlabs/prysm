@@ -85,6 +85,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableWebFlag,
 			flags.WebHostFlag,
 			flags.WebPortFlag,
+			flags.AllowEmptyProtectionDB,
 			flags.DisablePenaltyRewardLogFlag,
 			flags.GraffitiFlag,
 			flags.EnableRPCFlag,

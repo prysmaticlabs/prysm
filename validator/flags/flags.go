@@ -263,6 +263,11 @@ var (
 		Usage: "The host port which to serve the Prysm web UI",
 		Value: 4242,
 	}
+	// AllowEmptyProtectionDB allow new protection db to be created without prompting the user.
+	AllowEmptyProtectionDB = &cli.BoolFlag{
+		Name:  "allow-new-protection-db",
+		Usage: "Use this flag allow new protection db to be created non-interactively",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

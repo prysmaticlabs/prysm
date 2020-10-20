@@ -12,6 +12,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -39,6 +41,17 @@ import (
 )
 
 var log = logrus.WithField("prefix", "node")
+var au = aurora.NewAurora(true)
+var warning = "Warning! protection db is the main method to prevent slashing.\nIf it is " +
+	"not the first time you are running the validator with the current keys please " +
+	"locate the db file!!!"
+var defaultWarning = "hitting return will start an empty db file"
+var specifyProtectionDBPath = fmt.Sprintf("%s\nSeems like your validator "+
+	"protection db is empty.\n"+
+	"If you have run the validator before and saved the protection db to a different "+
+	"location\nplease specify the path to that directory, db file name is %s\nplease "+
+	"locate the latest version of it and paste the path (%s)", au.BrightMagenta(warning),
+	au.BrightMagenta(kv.ProtectionDbFileName), au.Red(defaultWarning))
 
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
@@ -160,7 +173,6 @@ func (s *ValidatorClient) Close() {
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
-	var dbDir string
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
@@ -190,9 +202,9 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
-		dbDir = s.wallet.AccountsDir()
 	}
-	dataDir := s.moveDb(cliCtx, dbDir)
+	moveDb(cliCtx)
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
@@ -241,52 +253,33 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (s *ValidatorClient) moveDb(cliCtx *cli.Context, dbDir string) string {
+func moveDb(cliCtx *cli.Context) {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	if dbDir != "" {
-		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		var accountsDirDbFile string
-		if s.wallet != nil {
-			accountsDirDbFile = filepath.Join(s.wallet.AccountsDir(), kv.ProtectionDbFileName)
-		}
-		newDataFile := filepath.Join(dbDir, kv.ProtectionDbFileName)
-		accountsDBExistAndDifferent := accountsDirDbFile != "" && accountsDirDbFile != newDataFile
-		accountsDBExistsNoDataDirDb := fileutil.FileExists(accountsDirDbFile) && !fileutil.FileExists(newDataFile)
-		dataDirDBExistsAndDifferent := newDataFile != dataFile && fileutil.FileExists(dataFile)
-		accountsDirDBDoesntExist := !fileutil.FileExists(newDataFile)
-		if accountsDBExistAndDifferent && accountsDBExistsNoDataDirDb { //move files from account dir to datadir.
-			log.WithFields(logrus.Fields{
-				"oldDbPath":      s.wallet.AccountsDir(),
-				"validatorDbDir": dbDir,
-			}).Info("Moving validator protection db from wallet dir")
-			err := fileutil.CopyFile(accountsDirDbFile, newDataFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.WithFields(logrus.Fields{
-				"oldDbFile": dataFile,
-			}).Info("Deleting validator db in folder")
-			if err := os.Remove(accountsDirDbFile); err != nil {
-				log.Info(errors.Wrap(err, "could not delete old db file"))
-			}
-		} else if dataDirDBExistsAndDifferent && accountsDirDBDoesntExist { //move files to account dir.
-			log.WithFields(logrus.Fields{
-				"oldDbPath":      dataDir,
-				"validatorDbDir": dbDir,
-			}).Info("Copying validator protection db to wallet dir")
-			if err := fileutil.CopyFile(dataFile, newDataFile); err != nil {
-				log.Fatal(err)
-			}
-			log.WithFields(logrus.Fields{
-				"oldDbFile": dataFile,
-			}).Info("Deleting validator db in folder")
-			if err := os.Remove(dataFile); err != nil {
-				log.Info(errors.Wrap(err, "could not delete old db file"))
-			}
-		}
-		dataDir = dbDir
+	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
+	if clearFlag || forceClearFlag || cliCtx.Bool(flags.AllowEmptyProtectionDB.Name) {
+		return
 	}
-	return dataDir
+	if !fileutil.FileExists(dataFile) {
+		// Input the directory where the old protection db resides.
+		protectionDbPath, err := prompt.InputDirectory(cliCtx, specifyProtectionDBPath, cmd.DataDirFlag)
+		if err != nil {
+			log.WithError(err).Fatal("could not parse protection db directory")
+		}
+		if protectionDbPath == dataDir {
+			return
+		}
+		oldDataFile := filepath.Join(protectionDbPath, kv.ProtectionDbFileName)
+		log.WithFields(logrus.Fields{
+			"oldDbPath":      oldDataFile,
+			"validatorDbDir": dataFile,
+		}).Info("Moving validator protection db")
+		err = fileutil.CopyFile(oldDataFile, dataFile)
+		if err != nil {
+			log.WithError(err).Fatal("could not copy old db file")
+		}
+	}
 }
 
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
@@ -315,7 +308,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-
+	moveDb(cliCtx)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
