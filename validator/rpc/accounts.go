@@ -31,26 +31,13 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
-	var creator accountCreator
-	switch s.wallet.KeymanagerKind() {
-	case keymanager.Remote:
-		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
-	case keymanager.Imported:
-		km, ok := s.keymanager.(*imported.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "Not a imported keymanager")
-		}
-		creator = km
-	case keymanager.Derived:
-		km, ok := s.keymanager.(*derived.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
-		}
-		creator = km
+	km, ok := s.keymanager.(*derived.Keymanager)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "Only HD wallets can create accounts")
 	}
 	dataList := make([]*pb.DepositDataResponse_DepositData, req.NumAccounts)
 	for i := uint64(0); i < req.NumAccounts; i++ {
-		data, err := createAccountWithDepositData(ctx, creator)
+		data, err := createAccountWithDepositData(ctx, km)
 		if err != nil {
 			return nil, err
 		}
@@ -75,19 +62,19 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 	if err != nil {
 		return nil, err
 	}
-	accounts := make([]*pb.Account, len(keys))
+	accs := make([]*pb.Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		accounts[i] = &pb.Account{
+		accs[i] = &pb.Account{
 			ValidatingPublicKey: keys[i][:],
 			AccountName:         petnames.DeterministicName(keys[i][:], "-"),
 		}
 		if s.wallet.KeymanagerKind() == keymanager.Derived {
-			accounts[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
+			accs[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		}
 	}
 	if req.All {
 		return &pb.ListAccountsResponse{
-			Accounts:      accounts,
+			Accounts:      accs,
 			TotalSize:     int32(len(keys)),
 			NextPageToken: "",
 		}, nil
@@ -101,7 +88,7 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 		)
 	}
 	return &pb.ListAccountsResponse{
-		Accounts:      accounts[start:end],
+		Accounts:      accs[start:end],
 		TotalSize:     int32(len(keys)),
 		NextPageToken: nextPageToken,
 	}, nil
