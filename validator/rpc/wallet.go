@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
