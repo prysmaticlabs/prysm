@@ -138,8 +138,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateGen:             cfg.StateGen,
 		rateLimiter:          rLimiter,
 		costCtr:              new(costCounter),
-		attestationCostQueue: new(aggregateCostPool),
-		blockCostQueue:       new(blockCostPool),
+		attestationCostQueue: &aggregateCostPool{aggregates: make([]*ethpb.SignedAggregateAttestationAndProof, 0)},
+		blockCostQueue:       &blockCostPool{blocks: make(map[[32]byte]*ethpb.SignedBeaconBlock)},
 	}
 
 	go r.registerHandlers()

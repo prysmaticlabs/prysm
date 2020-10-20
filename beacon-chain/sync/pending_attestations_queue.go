@@ -115,7 +115,12 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			delete(s.blkRootToPendingAtts, bRoot)
 			s.pendingAttsLock.Unlock()
 		} else {
-			// Pending attestation's missing block has not arrived yet.
+			s.pendingQueueLock.RLock()
+			if s.seenPendingBlocks[bRoot] || s.blockCostQueue.blockExists(bRoot) {
+				s.pendingQueueLock.RUnlock()
+				continue
+			}
+			s.pendingQueueLock.RUnlock() // Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
 				"currentSlot": s.chain.CurrentSlot(),
 				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,

@@ -78,17 +78,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			valid, _, err := s.blockCostChecker(ctx, b)
-			if err != nil {
-				log.WithError(err).WithField("blockSlot", b.Block.Slot).Warn("No access to parent state")
-				traceutil.AnnotateError(span, err)
-				continue
-			}
-			if !valid || s.blockCostQueue.blockExists(bytesutil.ToBytes32(b.Block.ParentRoot)) {
-				s.blockCostQueue.addBlock(b)
-				continue
-			}
-
 			s.pendingQueueLock.RLock()
 			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
 			s.pendingQueueLock.RUnlock()
@@ -133,6 +122,17 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			if !inDB {
 				span.End()
+				continue
+			}
+
+			valid, _, err := s.blockCostChecker(ctx, b)
+			if err != nil {
+				log.WithError(err).WithField("blockSlot", b.Block.Slot).Warn("No access to parent state")
+				traceutil.AnnotateError(span, err)
+				continue
+			}
+			if !valid || s.blockCostQueue.blockExists(bytesutil.ToBytes32(b.Block.ParentRoot)) {
+				s.blockCostQueue.addBlock(b)
 				continue
 			}
 
