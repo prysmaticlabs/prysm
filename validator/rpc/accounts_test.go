@@ -1,12 +1,8 @@
 package rpc
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 
@@ -160,43 +156,6 @@ func Test_createAccountWithDepositData(t *testing.T) {
 	assert.DeepEqual(
 		t, rawResp.Data["fork_version"], fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion),
 	)
-}
-
-func TestServer_BackupAccounts(t *testing.T) {
-	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
-
-	// We now attempt to backup all public keys from the wallet.
-	res, err := ss.BackupAccounts(context.Background(), &pb.BackupAccountsRequest{
-		PublicKeys:     pubKeys,
-		BackupPassword: ss.wallet.Password(),
-	})
-	require.NoError(t, err)
-	require.NotNil(t, res.ZipFile)
-
-	// Open a zip archive for reading.
-	buf := bytes.NewReader(res.ZipFile)
-	r, err := zip.NewReader(buf, int64(len(res.ZipFile)))
-	require.NoError(t, err)
-	require.Equal(t, len(pubKeys), len(r.File))
-
-	// Iterate through the files in the archive, checking they
-	// match the keystores we wanted to backup.
-	for i, f := range r.File {
-		keystoreFile, err := f.Open()
-		require.NoError(t, err)
-		encoded, err := ioutil.ReadAll(keystoreFile)
-		if err != nil {
-			require.NoError(t, keystoreFile.Close())
-			t.Fatal(err)
-		}
-		keystore := &keymanager.Keystore{}
-		if err := json.Unmarshal(encoded, &keystore); err != nil {
-			require.NoError(t, keystoreFile.Close())
-			t.Fatal(err)
-		}
-		assert.Equal(t, keystore.Pubkey, fmt.Sprintf("%x", pubKeys[i]))
-		require.NoError(t, keystoreFile.Close())
-	}
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {
