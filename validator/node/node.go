@@ -263,6 +263,32 @@ func moveDb(cliCtx *cli.Context, accountsDir string) string {
 }
 
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
+	var keyManager keymanager.IKeymanager
+	var err error
+	// Read the wallet from the specified path.
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+		return nil, nil
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not open wallet")
+	}
+	if w != nil {
+		s.wallet = w
+		log.WithFields(logrus.Fields{
+			"wallet":          w.AccountsDir(),
+			"keymanager-kind": w.KeymanagerKind().String(),
+		}).Info("Opened validator wallet")
+		keyManager, err = w.InitializeKeymanager(
+			cliCtx.Context, false, /* skipMnemonicConfirm */
+		)
+		if err != nil {
+			return errors.Wrap(err, "could not read keymanager for wallet")
+		}
+		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
+			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
+		}
+	}
+
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
@@ -297,7 +323,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := s.registerClientService(nil); err != nil {
+	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
 	if err := s.registerRPCService(cliCtx); err != nil {

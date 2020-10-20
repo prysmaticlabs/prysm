@@ -154,7 +154,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
-		log.Error("Failed to retrieve pre state")
+		log.WithError(err).Error("Failed to retrieve pre state")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -195,6 +195,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
 		log.WithError(err).Error("Could not verify attestation")
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
+	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+	if err := s.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}

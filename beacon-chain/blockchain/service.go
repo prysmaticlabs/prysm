@@ -425,7 +425,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	s.genesisRoot = genesisBlkRoot
 
-	if flags.Get().UnsafeSync {
+	if flags.Get().HeadSync {
 		headBlock, err := s.beaconDB.HeadBlock(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head block")
