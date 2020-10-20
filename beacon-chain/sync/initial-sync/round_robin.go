@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
-	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -26,18 +26,17 @@ const (
 // blockReceiverFn defines block receiving function.
 type blockReceiverFn func(ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error
 
+// batchBlockReceiverFn defines batch receiving function.
 type batchBlockReceiverFn func(ctx context.Context, blks []*eth.SignedBeaconBlock, roots [][32]byte) error
 
-// Round Robin sync looks at the latest peer statuses and syncs with the highest
-// finalized peer.
+// Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
 // Step 1 - Sync to finalized epoch.
-// Sync with peers of lowest finalized root with epoch greater than head state.
+// Sync with peers having the majority on best finalized epoch greater than node's head state.
 //
 // Step 2 - Sync to head from finalized epoch.
-// Using the finalized root as the head_block_root and the epoch start slot
-// after the finalized epoch, request blocks to head from some subset of peers
-// where step = 1.
+// Using enough peers (at least, MinimumSyncPeers*2, for example) obtain best non-finalized epoch,
+// known to majority of the peers, and keep fetching blocks, up until that epoch is reached.
 func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
@@ -70,21 +69,18 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.chain.HeadSlot(),
 		"headSlot":   helpers.SlotsSince(genesis),
-	}).Debug("Synced to finalized epoch - now syncing blocks up to current head")
+	}).Info("Synced to finalized epoch - now syncing blocks up to current head")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
 
+	// Already at head, no need for 2nd phase.
 	if s.chain.HeadSlot() == helpers.SlotsSince(genesis) {
 		return nil
 	}
 
-	// Step 2 - sync to head from any single peer.
-	// This step might need to be improved for cases where there has been a long period since
-	// finality. This step is less important than syncing to finality in terms of threat
-	// mitigation. We are already convinced that we are on the correct finalized chain. Any blocks
-	// we receive there after must build on the finalized chain or be considered invalid during
-	// fork choice resolution / block processing.
+	// Step 2 - sync to head from majority of peers (from no less than MinimumSyncPeers*2 peers) having the same
+	// world view on non-finalized epoch.
 	queue = newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		headFetcher:         s.chain,
@@ -101,7 +97,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.chain.HeadSlot(),
 		"headSlot":   helpers.SlotsSince(genesis),
-	}).Debug("Synced to head of chain")
+	}).Info("Synced to head of chain")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
@@ -114,21 +110,9 @@ func (s *Service) processFetchedData(
 	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
-	blockReceiver := s.chain.ReceiveBlockInitialSync
-	batchReceiver := s.chain.ReceiveBlockBatch
-
 	// Use Batch Block Verify to process and verify batches directly.
-	if featureconfig.Get().BatchBlockVerify {
-		if err := s.processBatchedBlocks(ctx, genesis, data.blocks, batchReceiver); err != nil {
-			log.WithError(err).Debug("Batch is not processed")
-		}
-		return
-	}
-	for _, blk := range data.blocks {
-		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Debug("Block is not processed")
-			continue
-		}
+	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
+		log.WithField("err", err.Error()).Warn("Batch is not processed")
 	}
 }
 
@@ -138,10 +122,13 @@ func (s *Service) processFetchedDataRegSync(
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.chain.ReceiveBlock
-
 	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Debug("Block is not processed")
+			if errors.Is(err, errBlockAlreadyProcessed) {
+				log.WithField("err", err.Error()).Debug("Block is not processed")
+			} else {
+				log.WithField("err", err.Error()).Warn("Block is not processed")
+			}
 			continue
 		}
 	}
@@ -168,7 +155,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, blkRoot
 	if rate == 0 {
 		rate = 1
 	}
-	if featureconfig.Get().InitSyncVerbose || helpers.IsEpochStart(blk.Slot) {
+	if helpers.IsEpochStart(blk.Slot) {
 		timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
 		log.WithFields(logrus.Fields{
 			"peers":           len(s.p2p.Peers().Connected()),
@@ -212,7 +199,7 @@ func (s *Service) processBlock(
 		return err
 	}
 	if s.isProcessedBlock(ctx, blk, blkRoot) {
-		return errors.Wrapf(errBlockAlreadyProcessed, "slot: %d , root %#x", blk.Block.Slot, blkRoot)
+		return fmt.Errorf("slot: %d , root %#x: %w", blk.Block.Slot, blkRoot, errBlockAlreadyProcessed)
 	}
 
 	s.logSyncStatus(genesis, blk.Block, blkRoot)

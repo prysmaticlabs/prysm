@@ -15,13 +15,14 @@ import (
 
 func TestPreSignatureValidation(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
@@ -40,21 +41,20 @@ func TestPreSignatureValidation(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
-	err := validator.preAttSignValidations(context.Background(), att, validatorPubKey)
+	err := validator.preAttSignValidations(context.Background(), att, pubKey)
 	require.ErrorContains(t, failedPreAttSignExternalErr, err)
 	mockProtector.AllowAttestation = true
-	err = validator.preAttSignValidations(context.Background(), att, validatorPubKey)
+	err = validator.preAttSignValidations(context.Background(), att, pubKey)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func TestPreSignatureValidation_NilLocal(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, finish := setup(t)
+	validator, _, _, finish := setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -79,13 +79,14 @@ func TestPreSignatureValidation_NilLocal(t *testing.T) {
 
 func TestPostSignatureUpdate(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
@@ -104,21 +105,20 @@ func TestPostSignatureUpdate(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
-	err := validator.postAttSignUpdate(context.Background(), att, validatorPubKey)
+	err := validator.postAttSignUpdate(context.Background(), att, pubKey)
 	require.ErrorContains(t, failedPostAttSignExternalErr, err, "Expected error on post signature update is detected as slashable")
 	mockProtector.AllowAttestation = true
-	err = validator.postAttSignUpdate(context.Background(), att, validatorPubKey)
+	err = validator.postAttSignUpdate(context.Background(), att, pubKey)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 	config := &featureconfig.Flags{
-		LocalProtection:   true,
 		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, finish := setup(t)
+	validator, _, _, finish := setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},

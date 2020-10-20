@@ -16,7 +16,7 @@ import (
 // PendingAttestationRoot describes a method from which the hash tree root
 // of a pending attestation is returned.
 func PendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
-	fieldRoots := [][32]byte{}
+	var fieldRoots [][32]byte
 	if att != nil {
 		// Bitfield.
 		aggregationRoot, err := htrutils.BitlistRoot(hasher, att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)

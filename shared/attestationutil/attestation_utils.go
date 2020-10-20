@@ -53,7 +53,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The
-// committee is provided as an argument rather than a direct implementation from the spec definition.
+// committee is provided as an argument rather than a imported implementation from the spec definition.
 // Having the committee as an argument allows for re-use of beacon committees when possible.
 //
 // Spec pseudocode definition:
@@ -162,7 +162,7 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 }
 
 // AttDataIsEqual this function performs an equality check between 2 attestation data, if they're unequal, it will return false.
-func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.AttestationData) bool {
+func AttDataIsEqual(attData1, attData2 *ethpb.AttestationData) bool {
 	if attData1.Slot != attData2.Slot {
 		return false
 	}
@@ -188,7 +188,7 @@ func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.Attestation
 }
 
 // CheckPointIsEqual performs an equality check between 2 check points, returns false if unequal.
-func CheckPointIsEqual(checkPt1 *ethpb.Checkpoint, checkPt2 *ethpb.Checkpoint) bool {
+func CheckPointIsEqual(checkPt1, checkPt2 *ethpb.Checkpoint) bool {
 	if checkPt1.Epoch != checkPt2.Epoch {
 		return false
 	}

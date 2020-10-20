@@ -14,7 +14,6 @@ import (
 )
 
 // StartSlashers starts slasher clients for use within E2E, connected to all beacon nodes.
-// It returns the process IDs of the slashers.
 func StartSlashers(t *testing.T) {
 	binaryPath, found := bazel.FindBinary("slasher", "slasher")
 	if !found {
@@ -36,11 +35,12 @@ func StartSlashers(t *testing.T) {
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+i),
 			"--force-clear-db",
 			"--e2e-config",
+			"--accept-terms-of-use",
 		}
 
 		t.Logf("Starting slasher %d with flags: %s", i, strings.Join(args[2:], " "))
 		cmd := exec.Command(binaryPath, args...)
-		if err := cmd.Start(); err != nil {
+		if err = cmd.Start(); err != nil {
 			t.Fatalf("Failed to start slasher client: %v", err)
 		}
 	}

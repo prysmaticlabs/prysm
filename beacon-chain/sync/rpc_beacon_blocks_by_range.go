@@ -114,23 +114,12 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	defer span.End()
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(step)
-	blks, err := s.db.Blocks(ctx, filter)
+	blks, roots, err := s.db.Blocks(ctx, filter)
 	if err != nil {
 		log.WithError(err).Debug("Failed to retrieve blocks")
 		s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 		traceutil.AnnotateError(span, err)
 		return err
-	}
-	roots := make([][32]byte, 0, len(blks))
-	for _, b := range blks {
-		root, err := b.Block.HashTreeRoot()
-		if err != nil {
-			log.WithError(err).Debug("Failed to retrieve block root")
-			s.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-		roots = append(roots, root)
 	}
 	// handle genesis case
 	if startSlot == 0 {

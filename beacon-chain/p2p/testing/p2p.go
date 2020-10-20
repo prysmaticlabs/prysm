@@ -143,13 +143,13 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 }
 
 // Broadcast a message.
-func (p *TestP2P) Broadcast(ctx context.Context, msg proto.Message) error {
+func (p *TestP2P) Broadcast(_ context.Context, _ proto.Message) error {
 	p.BroadcastCalled = true
 	return nil
 }
 
 // BroadcastAttestation broadcasts an attestation.
-func (p *TestP2P) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
+func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
 	p.BroadcastCalled = true
 	return nil
 }
@@ -314,7 +314,7 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *TestP2P) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
+func (p *TestP2P) FindPeersWithSubnet(_ context.Context, _ uint64) (bool, error) {
 	return false, nil
 }
 
@@ -337,7 +337,7 @@ func (p *TestP2P) MetadataSeq() uint64 {
 }
 
 // AddPingMethod mocks the p2p func.
-func (p *TestP2P) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+func (p *TestP2P) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {
 	// no-op
 }
 
@@ -352,7 +352,7 @@ func (p *TestP2P) InterceptAddrDial(peer.ID, multiaddr.Multiaddr) (allow bool) {
 }
 
 // InterceptAccept .
-func (p *TestP2P) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
+func (p *TestP2P) InterceptAccept(_ network.ConnMultiaddrs) (allow bool) {
 	return true
 }
 

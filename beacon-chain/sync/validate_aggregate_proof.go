@@ -77,6 +77,15 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
+	// Verify attestation target root is consistent with the head root.
+	// This verification is not in the spec, however we guard against it as it opens us up
+	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
+	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
+	if err := s.chain.VerifyLmdFfgConsistency(ctx, m.Message.Aggregate); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
 	validationRes := s.validateAggregatedAtt(ctx, m)
 	if validationRes != pubsub.ValidationAccept {
 		return validationRes
@@ -188,11 +197,15 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	}
 
 	// Verify aggregated attestation has a valid signature.
-	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
-		if err := blocks.VerifyAttestationSignature(ctx, bs, signed.Message.Aggregate); err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
-		}
+	if err := blocks.VerifyAttestationSignature(ctx, bs, signed.Message.Aggregate); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
+	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+	if err := s.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
 	}
 
 	return pubsub.ValidationAccept
@@ -214,7 +227,7 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 }
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
-func (s *Service) hasSeenAggregatorIndexEpoch(epoch uint64, aggregatorIndex uint64) bool {
+func (s *Service) hasSeenAggregatorIndexEpoch(epoch, aggregatorIndex uint64) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
@@ -223,7 +236,7 @@ func (s *Service) hasSeenAggregatorIndexEpoch(epoch uint64, aggregatorIndex uint
 }
 
 // Set aggregate's aggregator index target epoch as seen.
-func (s *Service) setAggregatorIndexEpochSeen(epoch uint64, aggregatorIndex uint64) {
+func (s *Service) setAggregatorIndexEpochSeen(epoch, aggregatorIndex uint64) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)

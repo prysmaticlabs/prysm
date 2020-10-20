@@ -21,7 +21,6 @@ var databaseFileName = "slasher.db"
 type Store struct {
 	db               *bolt.DB
 	databasePath     string
-	spanCache        *cache.EpochSpansCache
 	flatSpanCache    *cache.EpochFlatSpansCache
 	spanCacheEnabled bool
 }
@@ -90,18 +89,13 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
-		if err == bolt.ErrTimeout {
+		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err
 	}
 	kv := &Store{db: boltDB, databasePath: datafile}
 	kv.EnableSpanCache(true)
-	spanCache, err := cache.NewEpochSpansCache(cfg.SpanCacheSize, persistSpanMapsOnEviction(kv))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create new cache")
-	}
-	kv.spanCache = spanCache
 	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistFlatSpanMapsOnEviction(kv))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new flat cache")
