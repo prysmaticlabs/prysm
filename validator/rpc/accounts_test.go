@@ -172,7 +172,6 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
