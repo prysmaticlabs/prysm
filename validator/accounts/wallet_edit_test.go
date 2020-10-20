@@ -14,7 +14,7 @@ import (
 )
 
 func TestEditWalletConfiguration(t *testing.T) {
-	walletDir, _, _ := setupWalletAndPasswordsDir(t)
+	walletDir, _, passwordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:      walletDir,
 		keymanagerKind: keymanager.Remote,
@@ -51,11 +51,13 @@ func TestEditWalletConfiguration(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.WalletDirFlag.Name, walletDir, "")
+	set.String(flags.WalletPasswordFileFlag.Name, passwordFile, "")
 	set.String(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr, "")
 	set.String(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath, "")
 	set.String(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath, "")
 	set.String(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath, "")
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	assert.NoError(t, set.Set(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr))
 	assert.NoError(t, set.Set(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath))
 	assert.NoError(t, set.Set(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath))
