@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"google.golang.org/grpc"
@@ -63,15 +62,12 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 }
 
 func TestServer_JWTInterceptor_InvalidSigningType(t *testing.T) {
-	r := rand.NewGenerator()
-	jwtKey := make([]byte, 32)
-	ss := &Server{jwtKey: jwtKey}
-	_, err := r.Read(jwtKey)
+	ss := &Server{jwtKey: make([]byte, 32)}
 	expirationTime := timeutils.Now().Add(tokenExpiryLength)
 	// Use a different signing type than the expected, HMAC.
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.StandardClaims{
 		ExpiresAt: expirationTime.Unix(),
 	})
-	_, err = ss.validateJWT(token)
+	_, err := ss.validateJWT(token)
 	require.ErrorContains(t, "unexpected JWT signing method", err)
 }
