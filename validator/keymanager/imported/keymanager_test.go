@@ -10,7 +10,6 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
@@ -18,50 +17,6 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
-
-func TestImportedKeymanager_CreateAccount(t *testing.T) {
-	hook := logTest.NewGlobal()
-	password := "secretPassw0rd$1999"
-	wallet := &mock.Wallet{
-		Files:          make(map[string]map[string][]byte),
-		WalletPassword: password,
-	}
-	dr := &Keymanager{
-		wallet:        wallet,
-		accountsStore: &AccountStore{},
-	}
-	ctx := context.Background()
-	createdPubKey, _, err := dr.CreateAccount(ctx)
-	require.NoError(t, err)
-
-	// Ensure the keystore file was written to the wallet
-	// and ensure we can decrypt it using the EIP-2335 standard.
-	var encodedKeystore []byte
-	for k, v := range wallet.Files[AccountsPath] {
-		if strings.Contains(k, "keystore") {
-			encodedKeystore = v
-		}
-	}
-	require.NotNil(t, encodedKeystore, "could not find keystore file")
-	keystoreFile := &keymanager.Keystore{}
-	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
-
-	// We extract the accounts from the keystore.
-	decryptor := keystorev4.New()
-	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
-	require.NoError(t, err, "Could not decrypt validator accounts")
-	store := &AccountStore{}
-	require.NoError(t, json.Unmarshal(encodedAccounts, store))
-
-	require.Equal(t, 1, len(store.PublicKeys))
-	require.Equal(t, 1, len(store.PrivateKeys))
-	privKey, err := bls.SecretKeyFromBytes(store.PrivateKeys[0])
-	require.NoError(t, err)
-	pubKey := privKey.PublicKey().Marshal()
-	assert.DeepEqual(t, pubKey, store.PublicKeys[0])
-	require.LogsContain(t, hook, petnames.DeterministicName(createdPubKey, "-"))
-	require.LogsContain(t, hook, "Successfully created new validator account")
-}
 
 func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -76,10 +31,11 @@ func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	}
 	numAccounts := 5
 	ctx := context.Background()
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
 	accounts, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accounts))
@@ -193,10 +149,11 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
 	numAccounts := 10
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
 
 	var encodedKeystore []byte
 	for k, v := range wallet.Files[AccountsPath] {
@@ -276,10 +233,11 @@ func TestImportedKeymanager_RefreshWalletPassword(t *testing.T) {
 
 	ctx := context.Background()
 	numAccounts := 5
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
 
 	var encodedKeystore []byte
 	for k, v := range wallet.Files[AccountsPath] {
