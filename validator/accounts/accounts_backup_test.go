@@ -139,7 +139,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	assert.DeepEqual(t, unzippedPublicKeys, generatedPubKeys)
 }
 
-func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
+func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -172,11 +172,11 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// We initialize a wallet with a direct keymanager.
+	// We initialize a wallet with a imported keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flags required for ImportAccounts to work.
@@ -186,15 +186,14 @@ func TestBackupAccounts_Noninteractive_Direct(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(cliCtx.Context))
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.

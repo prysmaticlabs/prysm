@@ -18,11 +18,6 @@ service Wallet {
             body: "*"
         };
     }
-    rpc DefaultWalletPath(google.protobuf.Empty) returns (DefaultWalletResponse) {
-        option (google.api.http) = {
-            get: "/v2/validator/wallet/default",
-        };
-    }
     rpc EditConfig(EditWalletConfigRequest) returns (WalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/config/edit",
@@ -105,7 +100,7 @@ service Auth {
 // Type of key manager for the wallet, either direct, derived, or remote.
 enum KeymanagerKind {
     DERIVED = 0;
-    DIRECT = 1;
+    IMPORTED = 1;
     REMOTE = 2;
 }
 
@@ -134,10 +129,6 @@ message CreateWalletRequest {
 message CreateWalletResponse {
     WalletResponse wallet = 1;
     DepositDataResponse accounts_created = 2;
-}
-
-message DefaultWalletResponse {
-    string wallet_dir = 1;
 }
 
 message EditWalletConfigRequest {

@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -31,26 +31,13 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
-	var creator accountCreator
-	switch s.wallet.KeymanagerKind() {
-	case keymanager.Remote:
-		return nil, status.Error(codes.InvalidArgument, "Cannot create account for remote keymanager")
-	case keymanager.Direct:
-		km, ok := s.keymanager.(*direct.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "Not a direct keymanager")
-		}
-		creator = km
-	case keymanager.Derived:
-		km, ok := s.keymanager.(*derived.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "Not a derived keymanager")
-		}
-		creator = km
+	km, ok := s.keymanager.(*derived.Keymanager)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "Only HD wallets can create accounts")
 	}
 	dataList := make([]*pb.DepositDataResponse_DepositData, req.NumAccounts)
 	for i := uint64(0); i < req.NumAccounts; i++ {
-		data, err := createAccountWithDepositData(ctx, creator)
+		data, err := createAccountWithDepositData(ctx, km)
 		if err != nil {
 			return nil, err
 		}
@@ -75,19 +62,19 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 	if err != nil {
 		return nil, err
 	}
-	accounts := make([]*pb.Account, len(keys))
+	accs := make([]*pb.Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		accounts[i] = &pb.Account{
+		accs[i] = &pb.Account{
 			ValidatingPublicKey: keys[i][:],
 			AccountName:         petnames.DeterministicName(keys[i][:], "-"),
 		}
 		if s.wallet.KeymanagerKind() == keymanager.Derived {
-			accounts[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
+			accs[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 		}
 	}
 	if req.All {
 		return &pb.ListAccountsResponse{
-			Accounts:      accounts,
+			Accounts:      accs,
 			TotalSize:     int32(len(keys)),
 			NextPageToken: "",
 		}, nil
@@ -101,7 +88,7 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 		)
 	}
 	return &pb.ListAccountsResponse{
-		Accounts:      accounts[start:end],
+		Accounts:      accs[start:end],
 		TotalSize:     int32(len(keys)),
 		NextPageToken: nextPageToken,
 	}, nil
@@ -121,8 +108,8 @@ func (s *Server) BackupAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Direct && s.wallet.KeymanagerKind() != keymanager.Derived {
-		return nil, status.Error(codes.FailedPrecondition, "Only HD or direct wallets can backup accounts")
+	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
+		return nil, status.Error(codes.FailedPrecondition, "Only HD or imported wallets can backup accounts")
 	}
 	pubKeys := make([]bls.PublicKey, len(req.PublicKeys))
 	for i, key := range req.PublicKeys {
@@ -135,14 +122,14 @@ func (s *Server) BackupAccounts(
 	var keystoresToBackup []*keymanager.Keystore
 	var err error
 	switch s.wallet.KeymanagerKind() {
-	case keymanager.Direct:
-		km, ok := s.keymanager.(*direct.Keymanager)
+	case keymanager.Imported:
+		km, ok := s.keymanager.(*imported.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
 		}
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not backup accounts for direct keymanager: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not backup accounts for imported keymanager: %v", err)
 		}
 	case keymanager.Derived:
 		km, ok := s.keymanager.(*derived.Keymanager)
@@ -190,7 +177,7 @@ func (s *Server) BackupAccounts(
 	}, nil
 }
 
-// DeleteAccounts deletes accounts from a user if their wallet is a non-HD wallet.
+// DeleteAccounts deletes accounts from a user if their wallet is an imported wallet.
 func (s *Server) DeleteAccounts(
 	ctx context.Context, req *pb.DeleteAccountsRequest,
 ) (*pb.DeleteAccountsResponse, error) {
@@ -200,8 +187,8 @@ func (s *Server) DeleteAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Direct {
-		return nil, status.Error(codes.FailedPrecondition, "Only Non-HD wallets can delete accounts")
+	if s.wallet.KeymanagerKind() != keymanager.Imported {
+		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can delete accounts")
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.DeleteAccountConfig{
 		Wallet:     s.wallet,
