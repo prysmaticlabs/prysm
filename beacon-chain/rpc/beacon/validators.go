@@ -162,6 +162,10 @@ func (bs *Server) ListValidatorBalances(
 		}, nil
 	}
 
+	if end > len(res) || end < start {
+		return nil, status.Error(codes.OutOfRange, "Request exceeds response length")
+	}
+
 	return &ethpb.ValidatorBalances{
 		Epoch:         requestedEpoch,
 		Balances:      res[start:end],
