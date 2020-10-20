@@ -84,6 +84,7 @@ type POWBlockFetcher interface {
 	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
 
 // Chain defines a standard interface for the powchain service in Prysm.
@@ -648,6 +649,7 @@ func (s *Service) initPOWService() {
 				s.retryETH1Node(err)
 				continue
 			}
+			s.cacheHeadersForEth1DataVote(ctx)
 
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
@@ -724,4 +726,29 @@ func (s *Service) logTillChainStart() {
 		"Extra validators needed":   valNeeded,
 		"Time till minimum genesis": time.Duration(secondsLeft) * time.Second,
 	}).Infof("Currently waiting for chainstart")
+}
+
+// cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
+// instead of making multiple RPC requests to the ETH1 endpoint.
+func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
+	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
+		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
+
+	end, err := s.followBlockHeight(ctx)
+	if err != nil {
+		log.Errorf("Unable to fetch height of follow block: %v", err)
+	}
+
+	var start uint64
+	// We fetch twice the number of headers just to be safe.
+	if end-2*blocksPerVotingPeriod >= 0 {
+		start = end - 2*blocksPerVotingPeriod
+	} else {
+		start = 0
+	}
+	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
+	_, err = s.batchRequestHeaders(start, end)
+	if err != nil {
+		log.Errorf("Unable to cache headers: %v", err)
+	}
 }
