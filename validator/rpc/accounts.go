@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
