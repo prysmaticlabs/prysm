@@ -332,6 +332,7 @@ func TestPool_MarkIncluded(t *testing.T) {
 func TestPool_PendingExits(t *testing.T) {
 	type fields struct {
 		pending []*ethpb.SignedVoluntaryExit
+		noLimit bool
 	}
 	type args struct {
 		slot uint64
@@ -375,7 +376,60 @@ func TestPool_PendingExits(t *testing.T) {
 			},
 		},
 		{
-			name: "All eligible, more than max",
+			name: "All eligible, above max",
+			fields: fields{
+				noLimit: true,
+				pending: []*ethpb.SignedVoluntaryExit{
+					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 16}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 17}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 18}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 19}},
+				},
+			},
+			args: args{
+				slot: 1000000,
+			},
+			want: []*ethpb.SignedVoluntaryExit{
+				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 16}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 17}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 18}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 19}},
+			},
+		},
+		{
+			name: "All eligible, block max",
 			fields: fields{
 				pending: []*ethpb.SignedVoluntaryExit{
 					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
@@ -450,7 +504,7 @@ func TestPool_PendingExits(t *testing.T) {
 			}
 			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
 			require.NoError(t, err)
-			if got := p.PendingExits(s, tt.args.slot); !reflect.DeepEqual(got, tt.want) {
+			if got := p.PendingExits(s, tt.args.slot, tt.fields.noLimit); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
 			}
 		})

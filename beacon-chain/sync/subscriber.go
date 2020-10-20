@@ -13,7 +13,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -66,19 +65,11 @@ func (s *Service) registerSubscribers() {
 		s.validateAttesterSlashing,
 		s.attesterSlashingSubscriber,
 	)
-	if featureconfig.Get().DisableDynamicCommitteeSubnets {
-		s.subscribeStaticWithSubnets(
-			"/eth2/%x/beacon_attestation_%d",
-			s.validateCommitteeIndexBeaconAttestation,   /* validator */
-			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
-		)
-	} else {
-		s.subscribeDynamicWithSubnets(
-			"/eth2/%x/beacon_attestation_%d",
-			s.validateCommitteeIndexBeaconAttestation,   /* validator */
-			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
-		)
-	}
+	s.subscribeDynamicWithSubnets(
+		"/eth2/%x/beacon_attestation_%d",
+		s.validateCommitteeIndexBeaconAttestation,   /* validator */
+		s.committeeIndexBeaconAttestationSubscriber, /* message handler */
+	)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
@@ -96,16 +87,17 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 	topic += s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
-	if err := s.p2p.PubSub().RegisterTopicValidator(wrapAndReportValidation(topic, validator)); err != nil {
+	if err := s.p2p.PubSub().RegisterTopicValidator(s.wrapAndReportValidation(topic, validator)); err != nil {
 		log.WithError(err).Error("Failed to register validator")
 	}
 
 	sub, err := s.p2p.SubscribeToTopic(topic)
 	if err != nil {
 		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
-		// libp2p PubSub library. This should not happen at normal runtime, unless the config
-		// changes to a fatal configuration.
-		panic(err)
+		// libp2p PubSub library or a subscription request to a topic that fails to match the topic
+		// subscription filter.
+		log.WithError(err).WithField("topic", topic).Error("Failed to subscribe to topic")
+		return nil
 	}
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
@@ -166,13 +158,22 @@ func (s *Service) subscribeWithBase(base proto.Message, topic string, validator 
 
 // Wrap the pubsub validator with a metric monitoring function. This function increments the
 // appropriate counter if the particular message fails to validate.
-func wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
+func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) (res pubsub.ValidationResult) {
 		defer messagehandler.HandlePanic(ctx, msg)
 		res = pubsub.ValidationIgnore // Default: ignore any message that panics.
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
+		if msg.Topic == nil {
+			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+			return pubsub.ValidationReject
+		}
+		// Reject any messages received before chainstart.
+		if !s.chainStarted {
+			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+			return pubsub.ValidationReject
+		}
 		b := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()

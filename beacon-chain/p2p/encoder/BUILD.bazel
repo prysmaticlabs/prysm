@@ -20,7 +20,6 @@ go_library(
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
 
@@ -34,7 +33,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/testing:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

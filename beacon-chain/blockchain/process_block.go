@@ -125,7 +125,17 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err != nil {
 			return errors.Wrap(err, "could not fetch finalized state")
 		}
-		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount-1))
+		// We update the cache up to the last deposit index in the finalized block's state.
+		// We can be confident that these deposits will be included in some block
+		// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
+		eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+		s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+		if featureconfig.Get().EnablePruningDepositProofs {
+			// Deposit proofs are only used during state transition and can be safely removed to save space.
+			if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+				return errors.Wrap(err, "could not prune deposit proofs")
+			}
+		}
 	}
 
 	defer reportAttestationInclusion(b)
@@ -165,12 +175,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return nil
 	}
 
-	var postState *stateTrie.BeaconState
-	if featureconfig.Get().InitSyncNoVerify {
-		postState, err = state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
-	} else {
-		postState, err = state.ExecuteStateTransition(ctx, preState, signed)
-	}
+	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
@@ -284,7 +289,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 // handles a block after the block's batch has been verified, where we can save blocks
 // their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb.SignedBeaconBlock,
-	blockRoot [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	b := signed.Block
 
 	s.saveInitSyncBlock(blockRoot, signed)
@@ -358,7 +363,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 }
 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock,
-	root [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}

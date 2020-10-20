@@ -50,7 +50,7 @@ func ValidatePrompt(r io.Reader, promptText string, validateFunc func(string) er
 }
 
 // DefaultPrompt prompts the user for any text and performs no validation. If nothing is entered it returns the default.
-func DefaultPrompt(promptText string, defaultValue string) (string, error) {
+func DefaultPrompt(promptText, defaultValue string) (string, error) {
 	var response string
 	if defaultValue != "" {
 		fmt.Printf("%s %s:\n", promptText, fmt.Sprintf("(%s: %s)", au.BrightGreen("default"), defaultValue))
@@ -71,7 +71,7 @@ func DefaultPrompt(promptText string, defaultValue string) (string, error) {
 
 // DefaultAndValidatePrompt prompts the user for any text and expects it to fulfill a validation function. If nothing is entered
 // the default value is returned.
-func DefaultAndValidatePrompt(promptText string, defaultValue string, validateFunc func(string) error) (string, error) {
+func DefaultAndValidatePrompt(promptText, defaultValue string, validateFunc func(string) error) (string, error) {
 	var responseValid bool
 	var response string
 	for !responseValid {
@@ -122,8 +122,7 @@ func PasswordPrompt(promptText string, validateFunc func(string) error) (string,
 func InputPassword(
 	cliCtx *cli.Context,
 	passwordFileFlag *cli.StringFlag,
-	promptText string,
-	confirmText string,
+	promptText, confirmText string,
 	shouldConfirmPassword bool,
 	passwordValidator func(input string) error,
 ) (string, error) {
@@ -149,12 +148,12 @@ func InputPassword(
 	for !hasValidPassword {
 		password, err = PasswordPrompt(promptText, passwordValidator)
 		if err != nil {
-			return "", fmt.Errorf("could not read password: %v", err)
+			return "", fmt.Errorf("could not read password: %w", err)
 		}
 		if shouldConfirmPassword {
 			passwordConfirmation, err := PasswordPrompt(confirmText, passwordValidator)
 			if err != nil {
-				return "", fmt.Errorf("could not read password confirmation: %v", err)
+				return "", fmt.Errorf("could not read password confirmation: %w", err)
 			}
 			if password != passwordConfirmation {
 				log.Error("Passwords do not match")

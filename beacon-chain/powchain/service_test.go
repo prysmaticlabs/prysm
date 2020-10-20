@@ -407,6 +407,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
 
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	for i := 0; i < 30; i++ {
 		testAcc.Backend.Commit()

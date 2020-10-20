@@ -112,6 +112,6 @@ func RandKey() iface.SecretKey {
 }
 
 // VerifyCompressed -- stub
-func VerifyCompressed(_ []byte, _ []byte, _ []byte) bool {
+func VerifyCompressed(_, _, _ []byte) bool {
 	panic(err)
 }

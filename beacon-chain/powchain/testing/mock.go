@@ -160,3 +160,8 @@ func (m *POWChain) InsertBlock(height int, time uint64, hash []byte) *POWChain {
 	m.BlockNumberByTime[time] = big.NewInt(int64(height))
 	return m
 }
+
+// BlockExistsWithCache --
+func (m *POWChain) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
+	return m.BlockExists(ctx, hash)
+}

@@ -5,7 +5,6 @@ package node
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -25,13 +24,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -104,6 +102,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
+	if err := ValidatorClient.db.MigrateV2ProposalsProtectionDb(cliCtx.Context); err != nil {
+		return nil, err
+	}
 	return ValidatorClient, nil
 }
 
@@ -157,51 +158,39 @@ func (s *ValidatorClient) Close() {
 }
 
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
-	var keyManagerV1 v1.KeyManager
-	var keyManagerV2 v2.IKeymanager
+	var keyManager keymanager.IKeymanager
 	var err error
 	var dbDir string
-	if featureconfig.Get().EnableAccountsV2 {
-		if cliCtx.IsSet(flags.InteropNumValidators.Name) {
-			numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
-			offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-			keyManagerV2, err = direct.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
-			if err != nil {
-				return errors.Wrap(err, "could not generate interop keys")
-			}
-			dbDir = cliCtx.String(flags.KeystorePathFlag.Name)
-		} else {
-			// Read the wallet from the specified path.
-			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-				return nil, errors.New("no wallet found, create a new one with validator wallet-v2 create")
-			})
-			if err != nil {
-				return errors.Wrap(err, "could not open wallet")
-			}
-			s.wallet = w
-			log.WithFields(logrus.Fields{
-				"wallet":          w.AccountsDir(),
-				"keymanager-kind": w.KeymanagerKind().String(),
-			}).Info("Opened validator wallet")
-			keyManagerV2, err = w.InitializeKeymanager(
-				cliCtx.Context, false, /* skipMnemonicConfirm */
-			)
-			if err != nil {
-				return errors.Wrap(err, "could not read keymanager for wallet")
-			}
-			if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
-				log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
-			}
-			dbDir = cliCtx.String(cmd.DataDirFlag.Name)
-			if dbDir == cmd.DefaultDataDir() {
-				dbDir = s.wallet.AccountsDir()
-			}
+	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
+		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
+		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
+		keyManager, err = imported.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
+		if err != nil {
+			return errors.Wrap(err, "could not generate interop keys")
 		}
 	} else {
-		keyManagerV1, err = selectV1Keymanager(cliCtx)
+		// Read the wallet from the specified path.
+		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+			return nil, errors.New("no wallet found, create a new one with validator wallet create")
+		})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not open wallet")
 		}
+		s.wallet = w
+		log.WithFields(logrus.Fields{
+			"wallet":          w.AccountsDir(),
+			"keymanager-kind": w.KeymanagerKind().String(),
+		}).Info("Opened validator wallet")
+		keyManager, err = w.InitializeKeymanager(
+			cliCtx.Context, false, /* skipMnemonicConfirm */
+		)
+		if err != nil {
+			return errors.Wrap(err, "could not read keymanager for wallet")
+		}
+		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
+			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
+		}
+		dbDir = s.wallet.AccountsDir()
 	}
 	dataDir := s.moveDb(cliCtx, dbDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
@@ -238,7 +227,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := s.registerClientService(keyManagerV1, keyManagerV2); err != nil {
+	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
@@ -301,6 +290,32 @@ func (s *ValidatorClient) moveDb(cliCtx *cli.Context, dbDir string) string {
 }
 
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
+	var keyManager keymanager.IKeymanager
+	var err error
+	// Read the wallet from the specified path.
+	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+		return nil, nil
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not open wallet")
+	}
+	if w != nil {
+		s.wallet = w
+		log.WithFields(logrus.Fields{
+			"wallet":          w.AccountsDir(),
+			"keymanager-kind": w.KeymanagerKind().String(),
+		}).Info("Opened validator wallet")
+		keyManager, err = w.InitializeKeymanager(
+			cliCtx.Context, false, /* skipMnemonicConfirm */
+		)
+		if err != nil {
+			return errors.Wrap(err, "could not read keymanager for wallet")
+		}
+		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
+			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
+		}
+	}
+
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
@@ -335,7 +350,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := s.registerClientService(nil, nil); err != nil {
+	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
 	if err := s.registerRPCService(cliCtx); err != nil {
@@ -357,8 +372,7 @@ func (s *ValidatorClient) registerPrometheusService() error {
 }
 
 func (s *ValidatorClient) registerClientService(
-	keyManager v1.KeyManager,
-	keyManagerV2 v2.IKeymanager,
+	keyManager keymanager.IKeymanager,
 ) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
@@ -378,7 +392,6 @@ func (s *ValidatorClient) registerClientService(
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
-		KeyManagerV2:               keyManagerV2,
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
@@ -468,74 +481,6 @@ func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
 	webAddress := fmt.Sprintf("%s:%d", host, port)
 	srv := web.NewServer(webAddress)
 	return s.services.RegisterService(srv)
-}
-
-// Selects the key manager depending on the options provided by the user.
-func selectV1Keymanager(ctx *cli.Context) (v1.KeyManager, error) {
-	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
-	opts := ctx.String(flags.KeyManagerOpts.Name)
-	if opts == "" {
-		opts = "{}"
-	} else if !strings.HasPrefix(opts, "{") {
-		fileopts, err := ioutil.ReadFile(opts)
-		if err != nil {
-			return nil, errors.Wrap(err, "Failed to read keymanager options file")
-		}
-		opts = string(fileopts)
-	}
-
-	if manager == "" {
-		// Attempt to work out keymanager from deprecated vars.
-		if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
-			manager = "unencrypted"
-			opts = fmt.Sprintf(`{"path":%q}`, unencryptedKeys)
-			log.Warn(fmt.Sprintf("--unencrypted-keys flag is deprecated.  Please use --keymanager=unencrypted --keymanageropts='%s'", opts))
-		} else if numValidatorKeys := ctx.Uint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
-			manager = "interop"
-			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.Uint64(flags.InteropStartIndex.Name))
-			log.Warn(fmt.Sprintf("--interop-num-validators and --interop-start-index flags are deprecated.  Please use --keymanager=interop --keymanageropts='%s'", opts))
-		} else if keystorePath := ctx.String(flags.KeystorePathFlag.Name); keystorePath != "" {
-			manager = "keystore"
-			opts = fmt.Sprintf(`{"path":%q,"passphrase":%q}`, keystorePath, ctx.String(flags.PasswordFlag.Name))
-			log.Warn(fmt.Sprintf("--keystore-path flag is deprecated.  Please use --keymanager=keystore --keymanageropts='%s'", opts))
-		} else {
-			// Default if no choice made
-			manager = "keystore"
-			passphrase := ctx.String(flags.PasswordFlag.Name)
-			if passphrase == "" {
-				log.Warn("Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore or select a different keymanager")
-			} else {
-				opts = fmt.Sprintf(`{"passphrase":%q}`, passphrase)
-				log.Warn(`Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore --keymanageropts='{"passphrase":"<password>"}' or select a different keymanager`)
-			}
-		}
-	}
-
-	var km v1.KeyManager
-	var help string
-	var err error
-	switch manager {
-	case "interop":
-		km, help, err = v1.NewInterop(opts)
-	case "unencrypted":
-		km, help, err = v1.NewUnencrypted(opts)
-	case "keystore":
-		km, help, err = v1.NewKeystore(opts)
-	case "wallet":
-		km, help, err = v1.NewWallet(opts)
-	case "remote":
-		km, help, err = v1.NewRemoteWallet(opts)
-	default:
-		return nil, fmt.Errorf("unknown keymanager %q", manager)
-	}
-	if err != nil {
-		if help != "" {
-			// Print help for the keymanager
-			fmt.Println(help)
-		}
-		return nil, err
-	}
-	return km, nil
 }
 
 func clearDB(dataDir string, force bool) error {
