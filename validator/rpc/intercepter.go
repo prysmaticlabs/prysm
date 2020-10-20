@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -60,16 +61,20 @@ func (s *Server) authorize(ctx context.Context) error {
 	if !ok {
 		return status.Errorf(codes.Unauthenticated, "Authorization token could not be found")
 	}
-	checkParsedKey := func(*jwt.Token) (interface{}, error) {
-		return s.jwtKey, nil
-	}
 	if len(authHeader) < 1 || !strings.Contains(authHeader[0], "Bearer ") {
 		return status.Error(codes.Unauthenticated, "Invalid auth header, needs Bearer {token}")
 	}
 	token := strings.Split(authHeader[0], "Bearer ")[1]
-	_, err := jwt.Parse(token, checkParsedKey)
+	_, err := jwt.Parse(token, s.validateJWT)
 	if err != nil {
 		return status.Errorf(codes.Unauthenticated, "Could not parse JWT token: %v", err)
 	}
 	return nil
+}
+
+func (s *Server) validateJWT(token *jwt.Token) (interface{}, error) {
+	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
+	}
+	return s.jwtKey, nil
 }
