@@ -2,7 +2,7 @@ package beaconv1
 
 import (
 	"context"
-	"encoding/hex"
+	"strconv"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -31,7 +31,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
 	}
 
-	genValRoot := bs.GenesisFetcher.GenesisValidatorRoot()
+	genValRoot := bs.ChainInfoFetcher.GenesisValidatorRoot()
 	return &ethpb.GenesisResponse{
 		GenesisTime:           gt,
 		GenesisValidatorsRoot: genValRoot[:],
@@ -97,10 +97,10 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	return resp, nil
 }
 
-func (bs *Server) getState(ctx context.Context, stateId string) (*state.BeaconState, error) {
-	switch stateId {
+func (bs *Server) getState(ctx context.Context, stateId []byte) (*state.BeaconState, error) {
+	switch string(stateId) {
 	case "head":
-		headState, err := bs.HeadFetcher.HeadState(ctx)
+		headState, err := bs.ChainInfoFetcher.HeadState(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get head state")
 		}
@@ -112,32 +112,31 @@ func (bs *Server) getState(ctx context.Context, stateId string) (*state.BeaconSt
 		}
 		return genesisState, nil
 	case "finalized":
-		finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
+		finalizedCheckpoint := bs.ChainInfoFetcher.FinalizedCheckpt()
 		finalizedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized checkpoint")
 		}
 		return finalizedState, nil
 	case "justified":
-		justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
+		justifiedCheckpoint := bs.ChainInfoFetcher.CurrentJustifiedCheckpt()
 		justifiedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified checkpoint")
 		}
 		return justifiedState, nil
 	default:
-		parsed, err := hex.DecodeString(stateId)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not parse string")
-		}
-		if len(parsed) == 32 {
-			requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(parsed))
+		if len(stateId) == 32 {
+			requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(stateId))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get state")
 			}
 			return requestedState, nil
 		} else {
-			requestedSlot := bytesutil.FromBytes8(parsed)
+			requestedSlot, err := strconv.ParseUint(string(stateId), 10, 64)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Cannot parse slot from input %#x: %v", stateId, err)
+			}
 			requestedEpoch := helpers.SlotToEpoch(requestedSlot)
 			currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 			if requestedEpoch > currentEpoch {
