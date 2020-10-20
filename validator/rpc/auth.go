@@ -90,6 +90,17 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 	return s.sendAuthResponse()
 }
 
+// Logout a user by invalidating their JWT key.
+func (s *Server) Logout(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty, error) {
+	// Invalidate the old JWT key, making all requests done with its token fail.
+	jwtKey, err := createRandomJWTKey()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not invalidate JWT key")
+	}
+	s.jwtKey = jwtKey
+	return &ptypes.Empty{}, nil
+}
+
 // Sends an auth response via gRPC containing a new JWT token.
 func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 	// If everything is fine here, construct the auth token.

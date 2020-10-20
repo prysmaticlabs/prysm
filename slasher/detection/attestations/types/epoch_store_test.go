@@ -214,18 +214,7 @@ func TestEpochStore_SetValidatorSpan(t *testing.T) {
 
 func BenchmarkEpochStore_Save(b *testing.B) {
 	amount := uint64(100000)
-	store, spansMap := generateEpochStore(b, amount)
-
-	b.Run(fmt.Sprintf("%d old", amount), func(b *testing.B) {
-		db := testDB.SetupSlasherDB(b, false)
-		db.EnableSpanCache(false)
-		b.ResetTimer()
-		b.ReportAllocs()
-		b.N = 5
-		for i := 0; i < b.N; i++ {
-			require.NoError(b, db.SaveEpochSpansMap(context.Background(), 0, spansMap))
-		}
-	})
+	store, _ := generateEpochStore(b, amount)
 
 	b.Run(fmt.Sprintf("%d new", amount), func(b *testing.B) {
 		db := testDB.SetupSlasherDB(b, false)
