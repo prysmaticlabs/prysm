@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -264,6 +265,7 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		}
 		log.Debugf("Private key %x", b)
 	}
+	privKey.Curve = gcrypto.S256()
 
 	return privKey
 }
