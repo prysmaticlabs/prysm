@@ -69,6 +69,8 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 
 // SubscribeToTopic joins (if necessary) and subscribes to PubSub topic.
 func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error) {
+	s.awaitStateInitialized() // Genesis time and genesis validator root are required to subscribe.
+
 	topicHandle, err := s.JoinTopic(topic)
 	if err != nil {
 		return nil, err
@@ -79,10 +81,10 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 // Content addressable ID function.
 //
 // ETH2 spec defines the message ID as:
-//    message-id: SHA256(message.data)[:8]
+//    message-id: SHA256(message.data)
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
 	h := hashutil.Hash(pmsg.Data)
-	return string(h[:8])
+	return string(h[:])
 }
 
 func setPubSubParameters() {

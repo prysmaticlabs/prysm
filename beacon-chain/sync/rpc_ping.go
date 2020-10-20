@@ -11,14 +11,15 @@ import (
 	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
-func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	SetRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*uint64)
+	m, ok := msg.(*types.SSZUint64)
 	if !ok {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Debug("Failed to close stream")
@@ -32,7 +33,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if err == errInvalidSequenceNum {
+		if errors.Is(err, errInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, seqError, stream)
 		}
@@ -47,7 +48,8 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		}
 		return err
 	}
-	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.MetadataSeq()); err != nil {
+	sq := types.SSZUint64(s.p2p.MetadataSeq())
+	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Debug("Failed to close stream")
 		}
@@ -90,7 +92,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	metadataSeq := s.p2p.MetadataSeq()
+	metadataSeq := types.SSZUint64(s.p2p.MetadataSeq())
 	stream, err := s.p2p.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
 	if err != nil {
 		return err
@@ -113,14 +115,14 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
-	msg := new(uint64)
+	msg := new(types.SSZUint64)
 	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if err == errInvalidSequenceNum {
+		if errors.Is(err, errInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 		return err
@@ -139,7 +141,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 }
 
 // validates the peer's sequence number.
-func (s *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
+func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, error) {
 	md, err := s.p2p.Peers().Metadata(id)
 	if err != nil {
 		return false, err
@@ -148,8 +150,8 @@ func (s *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
 		return false, nil
 	}
 	// Return error on invalid sequence number.
-	if md.SeqNumber > seq {
+	if md.SeqNumber > uint64(seq) {
 		return false, errInvalidSequenceNum
 	}
-	return md.SeqNumber == seq, nil
+	return md.SeqNumber == uint64(seq), nil
 }

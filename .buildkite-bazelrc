@@ -34,19 +34,5 @@ build --flaky_test_attempts=5
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
 
-# Enable kafka for CI tests only.
-test --config=kafka_enabled
-
-# Disable blst for CI tests.
-test --define blst_enabled=true
-
-build --bes_backend=grpcs://builds.prylabs.net:1985
-build --bes_results_url=https://builds.prylabs.net/invocation/
-
 # Disable flaky test detection for fuzzing.
 test:fuzz --flaky_test_attempts=1
-
-# Expose test environment variables in CI
-test:fuzzit --test_env=GITHUB_REF
-test:fuzzit --test_env=GITHUB_SHA
-test:fuzzit --test_env=DOCKER_HOST

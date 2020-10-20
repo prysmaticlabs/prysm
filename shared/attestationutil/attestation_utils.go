@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -54,7 +53,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The
-// committee is provided as an argument rather than a direct implementation from the spec definition.
+// committee is provided as an argument rather than a imported implementation from the spec definition.
 // Having the committee as an argument allows for re-use of beacon committees when possible.
 //
 // Spec pseudocode definition:
@@ -154,26 +153,16 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
 		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}
-	set := make(map[uint64]bool, len(indices))
-	setIndices := make([]uint64, 0, len(indices))
-	for _, i := range indices {
-		if ok := set[i]; ok {
-			continue
+	for i := 1; i < len(indices); i++ {
+		if indices[i-1] >= indices[i] {
+			return errors.New("attesting indices is not uniquely sorted")
 		}
-		setIndices = append(setIndices, i)
-		set[i] = true
-	}
-	sort.SliceStable(setIndices, func(i, j int) bool {
-		return setIndices[i] < setIndices[j]
-	})
-	if !reflect.DeepEqual(setIndices, indices) {
-		return errors.New("attesting indices is not uniquely sorted")
 	}
 	return nil
 }
 
 // AttDataIsEqual this function performs an equality check between 2 attestation data, if they're unequal, it will return false.
-func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.AttestationData) bool {
+func AttDataIsEqual(attData1, attData2 *ethpb.AttestationData) bool {
 	if attData1.Slot != attData2.Slot {
 		return false
 	}
@@ -199,7 +188,7 @@ func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.Attestation
 }
 
 // CheckPointIsEqual performs an equality check between 2 check points, returns false if unequal.
-func CheckPointIsEqual(checkPt1 *ethpb.Checkpoint, checkPt2 *ethpb.Checkpoint) bool {
+func CheckPointIsEqual(checkPt1, checkPt2 *ethpb.Checkpoint) bool {
 	if checkPt1.Epoch != checkPt2.Epoch {
 		return false
 	}

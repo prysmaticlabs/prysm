@@ -34,6 +34,7 @@ go_library(
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/prereq:go_default_library",
         "//shared/prometheus:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/tracing:go_default_library",
@@ -56,6 +57,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/feed/state:go_default_library",
+        "//shared/cmd:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

@@ -20,7 +20,7 @@ import (
 	_ "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka/librdkafka" // Required for c++ kafka library.
 )
 
-var _ = iface.Database(&Exporter{})
+var _ iface.Database = (*Exporter)(nil)
 var log = logrus.WithField("prefix", "exporter")
 var marshaler = &jsonpb.Marshaler{}
 

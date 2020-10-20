@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	fssz "github.com/ferranbt/fastssz"
 	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -16,19 +15,14 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
-	v2 "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -64,14 +58,13 @@ type ValidatorService struct {
 	walletInitializedFeed *event.Feed
 	cancel                context.CancelFunc
 	db                    db.Database
-	keyManager            keymanager.KeyManager
 	dataDir               string
 	withCert              string
 	endpoint              string
 	validator             Validator
 	protector             slashingprotection.Protector
 	ctx                   context.Context
-	keyManagerV2          v2.IKeymanager
+	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
 }
@@ -89,8 +82,7 @@ type Config struct {
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
-	KeyManagerV2               v2.IKeymanager
-	KeyManager                 keymanager.KeyManager
+	KeyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
 	CertFlag                   string
 	DataDir                    string
@@ -109,7 +101,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		dataDir:               cfg.DataDir,
 		graffiti:              []byte(cfg.GraffitiFlag),
 		keyManager:            cfg.KeyManager,
-		keyManagerV2:          cfg.KeyManagerV2,
 		logValidatorBalances:  cfg.LogValidatorBalances,
 		emitAccountMetrics:    cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -174,7 +165,6 @@ func (v *ValidatorService) Start() {
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
 		keyManager:                     v.keyManager,
-		keyManagerV2:                   v.keyManagerV2,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -213,76 +203,35 @@ func (v *ValidatorService) Status() error {
 func (v *ValidatorService) recheckKeys(ctx context.Context) {
 	var validatingKeys [][48]byte
 	var err error
-	if featureconfig.Get().EnableAccountsV2 {
-		if v.useWeb {
-			initializedChan := make(chan *wallet.Wallet)
-			sub := v.walletInitializedFeed.Subscribe(initializedChan)
-			defer sub.Unsubscribe()
-			w := <-initializedChan
-			keyManagerV2, err := w.InitializeKeymanager(
-				ctx, true, /* skipMnemonicConfirm */
-			)
-			if err != nil {
-				log.Fatalf("Could not read keymanager for wallet: %v", err)
-			}
-			v.keyManagerV2 = keyManagerV2
-		}
-		validatingKeys, err = v.keyManagerV2.FetchValidatingPublicKeys(ctx)
+	if v.useWeb {
+		initializedChan := make(chan *wallet.Wallet)
+		sub := v.walletInitializedFeed.Subscribe(initializedChan)
+		cleanup := sub.Unsubscribe
+		defer cleanup()
+		w := <-initializedChan
+		keyManager, err := w.InitializeKeymanager(
+			ctx, true, /* skipMnemonicConfirm */
+		)
 		if err != nil {
-			log.WithError(err).Debug("Could not fetch validating keys")
+			// log.Fatalf will prevent defer from being called
+			cleanup()
+			log.Fatalf("Could not read keymanager for wallet: %v", err)
 		}
-		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
-			log.WithError(err).Debug("Could not update public keys buckets")
-		}
-		go recheckValidatingKeysBucket(ctx, v.db, v.keyManagerV2)
-	} else {
-		validatingKeys, err = v.keyManager.FetchValidatingKeys()
-		if err != nil {
-			log.WithError(err).Debug("Could not fetch validating keys")
-		}
-		if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
-			log.WithError(err).Debug("Could not update public keys buckets")
-		}
+		v.keyManager = keyManager
 	}
+	validatingKeys, err = v.keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		log.WithError(err).Debug("Could not fetch validating keys")
+	}
+	if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+		log.WithError(err).Debug("Could not update public keys buckets")
+	}
+	go recheckValidatingKeysBucket(ctx, v.db, v.keyManager)
 	for _, key := range validatingKeys {
 		log.WithField(
 			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
 		).Info("Validating for public key")
 	}
-}
-
-// signObject signs a generic object, with protection if available.
-// This should only be used for accounts v1.
-func (v *validator) signObject(
-	ctx context.Context,
-	pubKey [48]byte,
-	object interface{},
-	domain []byte,
-) (bls.Signature, error) {
-	if featureconfig.Get().EnableAccountsV2 {
-		return nil, errors.New("signObject not supported for accounts v2")
-	}
-
-	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		var root [32]byte
-		var err error
-		if v, ok := object.(fssz.HashRoot); ok {
-			root, err = v.HashTreeRoot()
-		} else {
-			root, err = ssz.HashTreeRoot(object)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-		return protectingKeymanager.SignGeneric(pubKey, root, bytesutil.ToBytes32(domain))
-	}
-
-	root, err := helpers.ComputeSigningRoot(object, domain)
-	if err != nil {
-		return nil, err
-	}
-	return v.keyManager.Sign(ctx, pubKey, root)
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
@@ -372,13 +321,13 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
-func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km v2.IKeymanager) {
-	directKeymanager, ok := km.(*direct.Keymanager)
+func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keymanager.IKeymanager) {
+	importedKeymanager, ok := km.(*imported.Keymanager)
 	if !ok {
 		return
 	}
 	validatingPubKeysChan := make(chan [][48]byte, 1)
-	sub := directKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
 	defer sub.Unsubscribe()
 	for {
 		select {

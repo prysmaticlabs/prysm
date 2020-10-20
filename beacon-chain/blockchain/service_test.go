@@ -67,7 +67,7 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 	return nil
 }
 
-var _ = p2p.Broadcaster(&mockBroadcaster{})
+var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummaryCache) *Service {
 	endpoint := "http://127.0.0.1"
@@ -156,6 +156,32 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	require.LogsContain(t, hook, "data already exists")
 }
 
+func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, sc := testDB.SetupDB(t)
+
+	chainService := setupBeaconChain(t, db, sc)
+
+	genesisBlk := testutil.NewBeaconBlock()
+	blkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
+	s := testutil.NewBeaconState()
+	require.NoError(t, db.SaveState(ctx, s, blkRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}))
+
+	// Test the start function.
+	chainService.Start()
+
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+
+	// The context should have been canceled.
+	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
+	require.LogsContain(t, hook, "data already exists")
+}
+
 func TestChainService_InitializeBeaconChain(t *testing.T) {
 	helpers.ClearCache()
 	db, sc := testDB.SetupDB(t)
@@ -178,6 +204,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    make([]byte, 32),
 	})
+	require.NoError(t, err)
 	genState, err = b.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)
 
@@ -191,7 +218,9 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if headBlk == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
-	if bc.headRoot() == params.BeaconConfig().ZeroHash {
+	r, err := bc.HeadRoot(ctx)
+	require.NoError(t, err)
+	if bytesutil.ToBytes32(r) == params.BeaconConfig().ZeroHash {
 		t.Error("Canonical root for slot 0 can't be zeros after initialize beacon chain")
 	}
 }

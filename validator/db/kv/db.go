@@ -13,6 +13,9 @@ import (
 // ProtectionDbFileName Validator slashing protection db file name.
 var ProtectionDbFileName = "validator.db"
 
+const proposalExported = "PROPOSALS_IMPORTED"
+const attestationExported = "ATTESTATIONS_IMPORTED"
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
@@ -64,7 +67,7 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	datafile := filepath.Join(dirPath, ProtectionDbFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
-		if err == bolt.ErrTimeout {
+		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err
@@ -77,6 +80,7 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 			tx,
 			historicProposalsBucket,
 			historicAttestationsBucket,
+			newHistoricAttestationsBucket,
 			newhistoricProposalsBucket,
 		)
 	}); err != nil {
@@ -86,9 +90,6 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	// Initialize the required public keys into the DB to ensure they're not empty.
 	if pubKeys != nil {
 		if err := kv.UpdatePublicKeysBuckets(pubKeys); err != nil {
-			return nil, err
-		}
-		if err := kv.UpdatePublicKeysNewBuckets(pubKeys); err != nil {
 			return nil, err
 		}
 	}
@@ -104,7 +105,7 @@ func GetKVStore(directory string) (*Store, error) {
 	}
 	boltDb, err := bolt.Open(fileName, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
-		if err == bolt.ErrTimeout {
+		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err

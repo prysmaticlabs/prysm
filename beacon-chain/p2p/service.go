@@ -23,6 +23,7 @@ import (
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -36,7 +37,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-var _ = shared.Service(&Service{})
+var _ shared.Service = (*Service)(nil)
 
 // In the event that we are at our peer limit, we
 // stop looking for new peers and instead poll
@@ -63,6 +64,7 @@ var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 type Service struct {
 	started               bool
 	isPreGenesis          bool
+	currentForkDigest     [4]byte
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
 	cfg                   *Config
@@ -77,6 +79,7 @@ type Service struct {
 	joinedTopicsLock      sync.Mutex
 	subnetsLock           map[uint64]*sync.RWMutex
 	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
+	initializationLock    sync.Mutex
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -151,6 +154,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
+		pubsub.WithSubscriptionFilter(s),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
@@ -164,8 +168,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit: int(s.cfg.MaxPeers),
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold:     maxBadResponses,
 				Weight:        -100,
 				DecayInterval: time.Hour,
@@ -367,21 +371,39 @@ func (s *Service) pingPeers() {
 // for initializing the p2p service as p2p needs to be aware
 // of genesis information for peering.
 func (s *Service) awaitStateInitialized() {
+	s.initializationLock.Lock()
+	defer s.initializationLock.Unlock()
+
+	if s.isInitialized() {
+		return
+	}
+
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
+	cleanup := stateSub.Unsubscribe
+	defer cleanup()
 	for {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
+					// log.Fatalf will prevent defer from being called
+					cleanup()
 					log.Fatalf("Received wrong data over state initialized feed: %v", data)
 				}
 				s.genesisTime = data.StartTime
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
+				_, err := s.forkDigest() // initialize fork digest cache
+				if err != nil {
+					log.WithError(err).Error("Could not initialize fork digest")
+				}
+
 				return
 			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
 		}
 	}
 }
@@ -440,4 +462,10 @@ func (s *Service) connectToBootnodes() error {
 	multiAddresses := convertToMultiAddr(nodes)
 	s.connectWithAllPeers(multiAddresses)
 	return nil
+}
+
+// Returns true if the service is aware of the genesis time and genesis validator root. This is
+// required for discovery and pubsub validation.
+func (s *Service) isInitialized() bool {
+	return !s.genesisTime.IsZero() && len(s.genesisValidatorsRoot) == 32
 }

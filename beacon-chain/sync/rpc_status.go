@@ -156,7 +156,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
-		if err == errWrongForkDigestVersion {
+		if errors.Is(err, errWrongForkDigestVersion) {
 			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
 			}
@@ -312,7 +312,30 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if blk == nil {
 		return errGeneric
 	}
-	// TODO(#5827) Verify the finalized block with the epoch in the
-	// status message
-	return nil
+	if helpers.SlotToEpoch(blk.Block.Slot) == msg.FinalizedEpoch {
+		return nil
+	}
+
+	startSlot, err := helpers.StartSlot(msg.FinalizedEpoch)
+	if err != nil {
+		return errGeneric
+	}
+	if startSlot > blk.Block.Slot {
+		childBlock, err := s.db.FinalizedChildBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
+		if err != nil {
+			return errGeneric
+		}
+		// Is a valid finalized block if no
+		// other child blocks exist yet.
+		if childBlock == nil {
+			return nil
+		}
+		// If child finalized block also has a smaller or
+		// equal slot number we return an error.
+		if startSlot >= childBlock.Block.Slot {
+			return errInvalidEpoch
+		}
+		return nil
+	}
+	return errInvalidEpoch
 }

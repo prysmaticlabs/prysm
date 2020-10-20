@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
@@ -45,8 +46,10 @@ func TestService_Broadcast(t *testing.T) {
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 
-	msg := &testpb.TestSimpleMessage{
-		Bar: 55,
+	msg := &pb.Fork{
+		Epoch:           55,
+		CurrentVersion:  []byte("fooo"),
+		PreviousVersion: []byte("barr"),
 	}
 
 	topic := "/eth2/%x/testing"
@@ -74,7 +77,7 @@ func TestService_Broadcast(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &testpb.TestSimpleMessage{}
+		result := &pb.Fork{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)
@@ -157,7 +160,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		}),
 	}
 
@@ -322,7 +325,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		}),
 	}
 
@@ -337,7 +340,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
-			ScorerParams: &peers.PeerScorerConfig{},
+			ScorerParams: &scorers.Config{},
 		}),
 	}
 

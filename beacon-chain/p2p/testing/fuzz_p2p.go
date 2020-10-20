@@ -33,22 +33,22 @@ func (p *FakeP2P) Encoding() encoder.NetworkEncoding {
 }
 
 // AddConnectionHandler -- fake.
-func (p *FakeP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error) {
+func (p *FakeP2P) AddConnectionHandler(_ func(ctx context.Context, id peer.ID) error) {
 
 }
 
 // AddDisconnectionHandler -- fake.
-func (p *FakeP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error) {
+func (p *FakeP2P) AddDisconnectionHandler(_ func(ctx context.Context, id peer.ID) error) {
 }
 
 // AddPingMethod -- fake.
-func (p *FakeP2P) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+func (p *FakeP2P) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {
 
 }
 
 // PeerID -- fake.
 func (p *FakeP2P) PeerID() peer.ID {
-	return peer.ID("fake")
+	return "fake"
 }
 
 // ENR returns the enr of the local peer.
@@ -57,19 +57,16 @@ func (p *FakeP2P) ENR() *enr.Record {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *FakeP2P) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
+func (p *FakeP2P) FindPeersWithSubnet(_ context.Context, _ uint64) (bool, error) {
 	return false, nil
 }
 
 // RefreshENR mocks the p2p func.
-func (p *FakeP2P) RefreshENR() {
-	return
-}
+func (p *FakeP2P) RefreshENR() {}
 
 // LeaveTopic -- fake.
-func (p *FakeP2P) LeaveTopic(topic string) error {
+func (p *FakeP2P) LeaveTopic(_ string) error {
 	return nil
-
 }
 
 // Metadata -- fake.
@@ -83,12 +80,12 @@ func (p *FakeP2P) Peers() *peers.Status {
 }
 
 // PublishToTopic -- fake.
-func (p *FakeP2P) PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error {
+func (p *FakeP2P) PublishToTopic(_ context.Context, _ string, _ []byte, _ ...pubsub.PubOpt) error {
 	return nil
 }
 
 // Send -- fake.
-func (p *FakeP2P) Send(ctx context.Context, msg interface{}, topic string, pid peer.ID) (network.Stream, error) {
+func (p *FakeP2P) Send(_ context.Context, _ interface{}, _ string, _ peer.ID) (network.Stream, error) {
 	return nil, nil
 }
 
@@ -103,17 +100,17 @@ func (p *FakeP2P) MetadataSeq() uint64 {
 }
 
 // SetStreamHandler -- fake.
-func (p *FakeP2P) SetStreamHandler(topic string, handler network.StreamHandler) {
+func (p *FakeP2P) SetStreamHandler(_ string, _ network.StreamHandler) {
 
 }
 
 // SubscribeToTopic -- fake.
-func (p *FakeP2P) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error) {
+func (p *FakeP2P) SubscribeToTopic(_ string, _ ...pubsub.SubOpt) (*pubsub.Subscription, error) {
 	return nil, nil
 }
 
 // JoinTopic -- fake.
-func (p *FakeP2P) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
+func (p *FakeP2P) JoinTopic(_ string, _ ...pubsub.TopicOpt) (*pubsub.Topic, error) {
 	return nil, nil
 }
 
@@ -123,17 +120,17 @@ func (p *FakeP2P) Host() host.Host {
 }
 
 // Disconnect -- fake.
-func (p *FakeP2P) Disconnect(pid peer.ID) error {
+func (p *FakeP2P) Disconnect(_ peer.ID) error {
 	return nil
 }
 
 // Broadcast -- fake.
-func (p *FakeP2P) Broadcast(ctx context.Context, msg proto.Message) error {
+func (p *FakeP2P) Broadcast(_ context.Context, _ proto.Message) error {
 	return nil
 }
 
 // BroadcastAttestation -- fake.
-func (p *FakeP2P) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
+func (p *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
 	return nil
 }
 
@@ -148,7 +145,7 @@ func (p *FakeP2P) InterceptAddrDial(peer.ID, multiaddr.Multiaddr) (allow bool) {
 }
 
 // InterceptAccept -- fake.
-func (p *FakeP2P) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
+func (p *FakeP2P) InterceptAccept(_ network.ConnMultiaddrs) (allow bool) {
 	return true
 }
 

@@ -13,7 +13,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
+	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
@@ -40,17 +40,18 @@ func SerializeENR(record *enr.Record) (string, error) {
 }
 
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
-	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
+	typeAssertedKey := (*ecdsa.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey))
+	typeAssertedKey.Curve = gcrypto.S256() // Temporary hack, so libp2p Secp256k1 is recognized as geth Secp256k1 in disc v5.1.
 	return typeAssertedKey
 }
 
 func convertToInterfacePrivkey(privkey *ecdsa.PrivateKey) crypto.PrivKey {
-	typeAssertedKey := crypto.PrivKey((*crypto.Secp256k1PrivateKey)((*btcec.PrivateKey)(privkey)))
+	typeAssertedKey := crypto.PrivKey((*crypto.Secp256k1PrivateKey)(privkey))
 	return typeAssertedKey
 }
 
 func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
-	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)((*btcec.PublicKey)(pubkey)))
+	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)(pubkey))
 	return typeAssertedKey
 }
 

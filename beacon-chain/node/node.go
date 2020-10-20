@@ -41,6 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -90,6 +91,9 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
+
+	// Warn if user's platform is not supported
+	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
@@ -312,6 +316,9 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	}
 	if clearDBConfirmed || forceClearDB {
 		log.Warning("Removing database")
+		if err := d.Close(); err != nil {
+			return errors.Wrap(err, "could not close db prior to clearing")
+		}
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
@@ -505,6 +512,8 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
 		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
 	}
+
+	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
 	return b.services.RegisterService(web3Service)
 }
 
@@ -606,6 +615,7 @@ func (b *BeaconNode) registerRPCService() error {
 		Broadcaster:             p2pService,
 		PeersFetcher:            p2pService,
 		PeerManager:             p2pService,
+		ChainInfoFetcher:        chainService,
 		HeadFetcher:             chainService,
 		ForkFetcher:             chainService,
 		FinalizationFetcher:     chainService,

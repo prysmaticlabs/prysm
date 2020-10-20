@@ -143,7 +143,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -282,8 +282,6 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
@@ -427,8 +425,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 func TestWaitForSynced_ContextClosed(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{

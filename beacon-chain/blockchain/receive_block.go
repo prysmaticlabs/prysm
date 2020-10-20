@@ -59,7 +59,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	}
 
 	// Reports on block and fork choice metrics.
-	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+	reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log block sync status.
 	logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt)
@@ -95,7 +95,7 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 	})
 
 	// Reports on blockCopy and fork choice metrics.
-	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+	reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log state transition data.
 	log.WithFields(logrus.Fields{
@@ -139,10 +139,12 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+		reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 	}
 
 	if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+		// log.Fatalf will prevent defer from being called
+		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
 		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 	}

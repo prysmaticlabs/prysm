@@ -22,7 +22,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
+	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -53,6 +53,7 @@ var (
 	externalIP           = flag.String("external-ip", "", "External IP for the bootnode")
 	forkVersion          = flag.String("fork-version", "", "Fork Version that the bootnode uses")
 	genesisValidatorRoot = flag.String("genesis-root", "", "Genesis Validator Root the beacon node uses")
+	seedNode             = flag.String("seed-node", "", "External node to connect to")
 	log                  = logrus.WithField("prefix", "bootnode")
 	discv5PeersCount     = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bootstrap_node_discv5_peers",
@@ -92,7 +93,15 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	ipAddr, err := iputils.ExternalIPv4()
+	if *seedNode != "" {
+		log.Debugf("Adding seed node %s", *seedNode)
+		node, err := enode.Parse(enode.ValidSchemes, *seedNode)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cfg.Bootnodes = []*enode.Node{node}
+	}
+	ipAddr, err := iputils.ExternalIP()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,11 +134,23 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
 	}
+	var bindIP net.IP
+	var networkVersion string
+	switch {
+	case ip.To16() != nil && ip.To4() == nil:
+		bindIP = net.IPv6zero
+		networkVersion = "udp6"
+	case ip.To4() != nil:
+		bindIP = net.IPv4zero
+		networkVersion = "udp4"
+	default:
+		log.Fatalf("Valid ip address not provided instead %s was provided", ipAddr)
+	}
 	udpAddr := &net.UDPAddr{
-		IP:   ip,
+		IP:   bindIP,
 		Port: port,
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -145,7 +166,7 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	return network
 }
 
-func (h *handler) httpHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	write := func(w io.Writer, b []byte) {
 		if _, err := w.Write(b); err != nil {
@@ -229,14 +250,14 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
+		privKey = (*ecdsa.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey))
 
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey)))
+		privKey = (*ecdsa.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey))
 		log.Warning("No private key was provided. Using default/random private key")
 		b, err := privInterfaceKey.Raw()
 		if err != nil {
@@ -244,6 +265,7 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		}
 		log.Debugf("Private key %x", b)
 	}
+	privKey.Curve = gcrypto.S256()
 
 	return privKey
 }

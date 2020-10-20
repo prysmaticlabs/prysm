@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -26,8 +27,8 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	}
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 0,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: 3,
 			},
 		},
@@ -53,6 +54,7 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 		require.NoError(t, err)
 	}()
 	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr, 2000, h1.ID()))
+	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
 	err = h2.Connect(context.Background(), *addrInfo)
@@ -94,8 +96,8 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	}
 	s.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 1,
-		ScorerParams: &peers.PeerScorerConfig{
-			BadResponsesScorerConfig: &peers.BadResponsesScorerConfig{
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: 3,
 			},
 		},
@@ -121,6 +123,7 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 		require.NoError(t, err)
 	}()
 	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr, 2000, h1.ID()))
+	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
 	err = h2.Connect(context.Background(), *addrInfo)
@@ -162,6 +165,7 @@ func TestPeerAllowList(t *testing.T) {
 		require.NoError(t, err)
 	}()
 	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr2, 3000, h2.ID()))
+	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
 	err = h1.Connect(context.Background(), *addrInfo)
@@ -204,6 +208,7 @@ func TestPeerDenyList(t *testing.T) {
 		require.NoError(t, err)
 	}()
 	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr2, 3000, h2.ID()))
+	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
 	err = h1.Connect(context.Background(), *addrInfo)

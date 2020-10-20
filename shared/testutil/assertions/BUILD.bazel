@@ -6,7 +6,10 @@ go_library(
     srcs = ["assertions.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil/assertions",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_sirupsen_logrus//hooks/test:go_default_library"],
+    deps = [
+        "@com_github_d4l3k_messagediff//:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+    ],
 )
 
 go_test(

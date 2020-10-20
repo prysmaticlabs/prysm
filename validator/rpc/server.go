@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -13,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2/wallet"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -37,6 +38,7 @@ type Config struct {
 	CertFlag              string
 	KeyFlag               string
 	ValDB                 db.Database
+	WalletDir             string
 	ValidatorService      *client.ValidatorService
 	SyncChecker           client.SyncChecker
 	GenesisFetcher        client.GenesisFetcher
@@ -52,7 +54,7 @@ type Server struct {
 	host                  string
 	port                  string
 	listener              net.Listener
-	keymanager            v2keymanager.IKeymanager
+	keymanager            keymanager.IKeymanager
 	withCert              string
 	withKey               string
 	credentialError       error
@@ -61,7 +63,8 @@ type Server struct {
 	validatorService      *client.ValidatorService
 	syncChecker           client.SyncChecker
 	genesisFetcher        client.GenesisFetcher
-	wallet                *v2.Wallet
+	walletDir             string
+	wallet                *wallet.Wallet
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
 	nodeGatewayEndpoint   string
@@ -81,6 +84,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorService:      cfg.ValidatorService,
 		syncChecker:           cfg.SyncChecker,
 		genesisFetcher:        cfg.GenesisFetcher,
+		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		walletInitialized:     false,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
@@ -127,14 +131,9 @@ func (s *Server) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	// We create a new, random JWT key upon validator startup.
-	r := rand.NewGenerator()
-	jwtKey := make([]byte, 32)
-	n, err := r.Read(jwtKey)
+	jwtKey, err := createRandomJWTKey()
 	if err != nil {
 		log.WithError(err).Fatal("Could not initialize validator jwt key")
-	}
-	if n != len(jwtKey) {
-		log.WithError(err).Fatal("Could not create random jwt key for validator")
 	}
 	s.jwtKey = jwtKey
 
@@ -168,4 +167,17 @@ func (s *Server) Stop() error {
 // Status returns nil or credentialError.
 func (s *Server) Status() error {
 	return s.credentialError
+}
+
+func createRandomJWTKey() ([]byte, error) {
+	r := rand.NewGenerator()
+	jwtKey := make([]byte, 32)
+	n, err := r.Read(jwtKey)
+	if err != nil {
+		return nil, err
+	}
+	if n != len(jwtKey) {
+		return nil, errors.New("could not create appropriately sized random JWT key")
+	}
+	return jwtKey, nil
 }

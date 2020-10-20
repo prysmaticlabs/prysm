@@ -4,11 +4,35 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+)
+
+// Tracks the highest and lowest observed epochs from the validator span maps
+// used for attester slashing detection. This value is purely used
+// as a cache key and only needs to be maintained in memory.
+var highestObservedEpoch uint64
+var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
+
+var (
+	slasherLowestObservedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "slasher_lowest_observed_epoch",
+		Help: "The lowest epoch number seen by slasher",
+	})
+	slasherHighestObservedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "slasher_highest_observed_epoch",
+		Help: "The highest epoch number seen by slasher",
+	})
+	epochSpansCacheEvictions = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "epoch_spans_cache_evictions_total",
+		Help: "The number of cache evictions seen by slasher",
+	})
 )
 
 // This function defines a function which triggers upon a span map being
@@ -45,7 +69,7 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 // for slashing detection.
 // Returns span byte array, and error in case of db error.
 // returns empty byte array if no entry for this epoch exists in db.
-func (db *Store) EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (*types.EpochStore, error) {
+func (db *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*types.EpochStore, error) {
 	// Get from the cache if it exists or is requested, if not, go to DB.
 	if fromCache && db.flatSpanCache.Has(epoch) || db.flatSpanCache.Has(epoch) {
 		spans, _ := db.flatSpanCache.Get(epoch)
@@ -77,7 +101,10 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 	if len(es.Bytes())%int(types.SpannerEncodedLength) != 0 {
 		return types.ErrWrongSize
 	}
-
+	//also prune indexed attestations older then weak subjectivity period
+	if err := db.setObservedEpochs(ctx, epoch); err != nil {
+		return err
+	}
 	// Saving to the cache if it exists so cache and DB never conflict.
 	if toCache || db.flatSpanCache.Has(epoch) {
 		db.flatSpanCache.Set(epoch, es)
@@ -102,4 +129,28 @@ func (db *Store) CacheLength(ctx context.Context) int {
 	length := db.flatSpanCache.Length()
 	log.Debugf("Span cache length %d", length)
 	return length
+}
+
+// EnableSpanCache used to enable or disable span map cache in tests.
+func (db *Store) EnableSpanCache(enable bool) {
+	db.spanCacheEnabled = enable
+}
+
+func (db *Store) setObservedEpochs(ctx context.Context, epoch uint64) error {
+	var err error
+	if epoch > highestObservedEpoch {
+		slasherHighestObservedEpoch.Set(float64(epoch))
+		highestObservedEpoch = epoch
+		// Prune block header history every PruneSlasherStoragePeriod epoch.
+		if highestObservedEpoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
+			if err = db.PruneAttHistory(ctx, epoch, params.BeaconConfig().WeakSubjectivityPeriod); err != nil {
+				return errors.Wrap(err, "failed to prune indexed attestations store")
+			}
+		}
+	}
+	if epoch < lowestObservedEpoch {
+		slasherLowestObservedEpoch.Set(float64(epoch))
+		lowestObservedEpoch = epoch
+	}
+	return err
 }

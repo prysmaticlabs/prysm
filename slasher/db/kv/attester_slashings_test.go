@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"sort"
 	"testing"
 
@@ -10,13 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
-	"github.com/urfave/cli/v2"
 )
 
 func TestStore_AttesterSlashingNilBucket(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	as := &ethpb.AttesterSlashing{
@@ -48,9 +44,7 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 }
 
 func TestStore_SaveAttesterSlashing(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	data := &ethpb.AttestationData{
@@ -89,9 +83,7 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 }
 
 func TestStore_SaveAttesterSlashings(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	ckpt := &ethpb.Checkpoint{Root: make([]byte, 32)}
@@ -114,9 +106,7 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 }
 
 func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	data := &ethpb.AttestationData{
@@ -164,6 +154,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 		require.Equal(t, tt.ss, st, "Failed to find attester slashing with the correct status: %v", tt.as)
 
 		err = db.SaveAttesterSlashing(ctx, types.SlashingStatus(types.Included), tt.as)
+		require.NoError(t, err)
 		has, st, err = db.HasAttesterSlashing(ctx, tt.as)
 		require.NoError(t, err, "Failed to get attester slashing")
 		require.Equal(t, true, has, "Failed to find attester slashing: %v", tt.as)
@@ -172,9 +163,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 }
 
 func TestStore_LatestEpochDetected(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	e, err := db.GetLatestEpochDetected(ctx)

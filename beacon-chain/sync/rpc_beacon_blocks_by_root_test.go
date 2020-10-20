@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -32,7 +33,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	d, _ := db.SetupDB(t)
 
-	var blkRoots [][32]byte
+	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
 	for i := 1; i < 11; i++ {
 		blk := testutil.NewBeaconBlock()
@@ -53,9 +54,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		for i := range blkRoots {
-			expectSuccess(t, r, stream)
+			expectSuccess(t, stream)
 			res := testutil.NewBeaconBlock()
-			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, &res))
+			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 			if res.Block.Slot != uint64(i+1) {
 				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)
 			}
@@ -64,7 +65,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	err = r.beaconBlocksRootRPCHandler(context.Background(), blkRoots, stream1)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), &blkRoots, stream1)
 	assert.NoError(t, err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -95,7 +96,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		Root:  blockBRoot[:],
 	}
 
-	expectedRoots := [][32]byte{blockBRoot, blockARoot}
+	expectedRoots := p2pTypes.BeaconBlockByRootsReq{blockBRoot, blockARoot}
 
 	r := &Service{
 		p2p: p1,
@@ -119,9 +120,9 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := [][32]byte{}
-		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, &out))
-		assert.DeepEqual(t, expectedRoots, out, "Did not receive expected message")
+		out := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, out))
+		assert.DeepEqual(t, &expectedRoots, out, "Did not receive expected message")
 		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
 		for _, blk := range response {
 			_, err := stream.Write([]byte{responseCodeSuccess})
@@ -133,7 +134,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	})
 
 	p1.Connect(p2)
-	require.NoError(t, r.sendRecentBeaconBlocksRequest(context.Background(), expectedRoots, p2.PeerID()))
+	require.NoError(t, r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
@@ -161,7 +162,7 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	err = r.beaconBlocksRootRPCHandler(context.Background(), [][32]byte{}, stream1)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), &p2pTypes.BeaconBlockByRootsReq{}, stream1)
 	assert.ErrorContains(t, "no block roots provided", err)
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")

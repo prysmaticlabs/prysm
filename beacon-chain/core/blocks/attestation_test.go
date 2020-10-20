@@ -639,7 +639,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 
 	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
 	list := bitfield.Bitlist{0b11111111}
-	atts := []*ethpb.Attestation{}
+	var atts []*ethpb.Attestation
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
@@ -807,6 +807,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		Signature: make([]byte, 96),
 	}
 	currDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	require.NoError(t, err)
 	root, err = helpers.ComputeSigningRoot(att2.Data, currDomain)
 	require.NoError(t, err)
 	sigs = nil
