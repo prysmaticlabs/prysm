@@ -50,11 +50,6 @@ func (m *Wallet) Password() string {
 	return m.WalletPassword
 }
 
-// SetPassword sets a new password for the wallet.
-func (m *Wallet) SetPassword(newPass string) {
-	m.WalletPassword = newPass
-}
-
 // WriteFileAtPath --
 func (m *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
 	m.lock.Lock()

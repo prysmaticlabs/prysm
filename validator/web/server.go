@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/browser"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,21 +35,13 @@ func NewServer(addr string) *Server {
 // Start the web server.
 func (s *Server) Start() {
 	go func() {
-		log.WithField("address", s.http.Addr).Info("Starting Prysm web UI")
+		log.WithField("address", "http://"+s.http.Addr).Info(
+			"Starting Prysm web UI on address, open in browser to access",
+		)
 		if err := s.http.ListenAndServe(); err != nil {
-			log.WithError(err).Error("Failed to start validator web server")
+			log.WithError(err).Error("Failed to run validator web server")
 		}
 	}()
-	time.Sleep(time.Second * 1)
-	cmd, err := browser.Command("http://" + s.http.Addr)
-	if err != nil {
-		log.WithError(err).Errorf("Could not open Prysm web UI in browser")
-		return
-	}
-	if err := cmd.Run(); err != nil {
-		log.WithError(err).Errorf("Could not open Prysm web UI in browser")
-		return
-	}
 }
 
 // Stop the web server gracefully with 1s timeout.

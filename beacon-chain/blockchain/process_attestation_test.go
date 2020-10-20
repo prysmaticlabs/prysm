@@ -491,6 +491,60 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	assert.NoError(t, err, "Could not verify LMD and FFG votes to be consistent")
 }
 
+func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	b32 := testutil.NewBeaconBlock()
+	b32.Block.Slot = 32
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
+	r32, err := b32.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1}
+
+	b33 := testutil.NewBeaconBlock()
+	b33.Block.Slot = 33
+	b33.Block.ParentRoot = r32[:]
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
+	r33, err := b33.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	require.ErrorContains(t, "Root and finalized store are not consistent", err)
+}
+
+func TestVerifyFinalizedConsistency_OK(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	b32 := testutil.NewBeaconBlock()
+	b32.Block.Slot = 32
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
+	r32, err := b32.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
+
+	b33 := testutil.NewBeaconBlock()
+	b33.Block.Slot = 33
+	b33.Block.ParentRoot = r32[:]
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
+	r33, err := b33.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	require.NoError(t, err)
+}
+
 func TestGetAttCheckptInfo(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)

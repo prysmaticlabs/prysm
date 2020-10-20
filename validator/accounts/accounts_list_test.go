@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 type mockRemoteKeymanager struct {
@@ -33,6 +35,23 @@ func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][
 
 func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
+}
+
+func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	validatingKey := bls.RandKey()
+	pubKey := validatingKey.PublicKey().Marshal()
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
+	require.NoError(t, err)
+	return &keymanager.Keystore{
+		Crypto:  cryptoFields,
+		Pubkey:  fmt.Sprintf("%x", pubKey),
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 }
 
 func TestListAccounts_ImportedKeymanager(t *testing.T) {
@@ -51,7 +70,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := imported.NewKeymanager(
+	km, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
@@ -61,17 +80,27 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := keymanager.CreateAccount(cliCtx.Context)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, km.ImportKeystores(cliCtx.Context, keystores, password))
+
 	rescueStdout := os.Stdout
 	r, writer, err := os.Pipe()
 	require.NoError(t, err)
 	os.Stdout = writer
 
 	// We call the list imported keymanager accounts function.
-	require.NoError(t, listImportedKeymanagerAccounts(context.Background(), true /* show deposit data */, true /*show private keys */, keymanager))
+	require.NoError(
+		t,
+		listImportedKeymanagerAccounts(
+			context.Background(),
+			true, /* show deposit data */
+			true, /*show private keys */
+			km,
+		),
+	)
 
 	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)
@@ -140,7 +169,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
-	accountNames, err := keymanager.ValidatingAccountNames()
+	accountNames, err := km.ValidatingAccountNames()
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accountNames))
 
@@ -152,7 +181,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	}
 
 	// Get public keys and require the correct count
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
@@ -165,7 +194,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	}
 
 	// Get private keys and require the correct count
-	privKeys, err := keymanager.FetchValidatingPrivateKeys(cliCtx.Context)
+	privKeys, err := km.FetchValidatingPrivateKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
