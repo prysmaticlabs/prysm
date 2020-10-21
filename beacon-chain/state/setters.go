@@ -348,6 +348,8 @@ func (b *BeaconState) ApplyToEveryValidatorModified(indices []uint64, f func(idx
 	for _, i := range indices {
 		m[i] = true
 	}
+
+	// Only copy validators that are `indices`.
 	v := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(v); i++ {
 		if m[uint64(i)] {
