@@ -90,6 +90,9 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	if !v.useWeb {
 		return nil
 	}
+	if v.keyManager != nil {
+		return nil
+	}
 	walletChan := make(chan *wallet.Wallet)
 	sub := v.walletInitializedFeed.Subscribe(walletChan)
 	defer sub.Unsubscribe()

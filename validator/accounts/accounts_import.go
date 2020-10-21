@@ -90,10 +90,6 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		if err = createImportedKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
-		// We store the hashed password to disk.
-		if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
-			return nil, err
-		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created new wallet",
 		)
