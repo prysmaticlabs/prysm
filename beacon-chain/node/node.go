@@ -62,7 +62,6 @@ const testSkipPowFlag = "test-skip-pow"
 type BeaconNode struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
-	cancel            context.CancelFunc
 	services          *shared.ServiceRegistry
 	lock              sync.RWMutex
 	stop              chan struct{} // Channel to wait for termination notifications.
