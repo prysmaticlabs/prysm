@@ -16,6 +16,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// used to represent errors for inconsistent slot ranges.
+var errInvalidSlotRange = errors.New("invalid end slot and start slot provided")
+
 // Block retrieval by root.
 func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
@@ -415,20 +418,14 @@ func fetchBlockRootsBySlotRange(
 	}
 	min := bytesutil.Uint64ToBytesBigEndian(startSlot)
 	max := bytesutil.Uint64ToBytesBigEndian(endSlot)
-	var conditional func(key, max []byte) bool
-	if endSlot == 0 {
-		conditional = func(key, max []byte) bool {
-			return key != nil
-		}
-	} else {
-		conditional = func(key, max []byte) bool {
-			return key != nil && bytes.Compare(key, max) <= 0
-		}
+
+	conditional := func(key, max []byte) bool {
+		return key != nil && bytes.Compare(key, max) <= 0
+	}
+	if endSlot < startSlot {
+		return nil, errInvalidSlotRange
 	}
 	rootsRange := (endSlot - startSlot) / step
-	if endSlot < startSlot {
-		rootsRange = 0
-	}
 	roots := make([][]byte, 0, rootsRange)
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
