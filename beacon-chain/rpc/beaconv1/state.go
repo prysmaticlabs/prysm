@@ -43,15 +43,15 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateRootResponse, error) {
 	requestedState, err := bs.getState(ctx, req.StateId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state from ID")
+		return nil, status.Errorf(codes.Internal, "Could not get state from ID: %v", err)
 	}
 	stateRoot, err := requestedState.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state root")
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
 	return &ethpb.StateRootResponse{
 		StateRoot: stateRoot[:],
-	}, errors.New("unimplemented")
+	}, nil
 }
 
 // GetStateFork returns Fork object for state with given 'stateId'.

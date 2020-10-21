@@ -18,7 +18,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 }
 
 // ListValidatorBalances returns a filterable list of validator balances.
-func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.ValidatorBalancesResponse, error) {
+func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
 	return nil, errors.New("unimplemented")
 }
 
