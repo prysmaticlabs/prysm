@@ -39,7 +39,7 @@ var appFlags = []cli.Flag{
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
-	flags.UnsafeSync,
+	flags.HeadSync,
 	flags.DisableSync,
 	flags.DisableDiscv5,
 	flags.BlockBatchLimit,
@@ -117,10 +117,6 @@ func main() {
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
 			return err
 		}
-		// verify if ToS accepted
-		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
-			return err
-		}
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
@@ -176,6 +172,11 @@ func main() {
 }
 
 func startNode(ctx *cli.Context) error {
+	// verify if ToS accepted
+	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
+		return err
+	}
+
 	verbosity := ctx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {

@@ -18,11 +18,6 @@ service Wallet {
             body: "*"
         };
     }
-    rpc DefaultWalletPath(google.protobuf.Empty) returns (DefaultWalletResponse) {
-        option (google.api.http) = {
-            get: "/v2/validator/wallet/default",
-        };
-    }
     rpc EditConfig(EditWalletConfigRequest) returns (WalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/config/edit",
@@ -65,12 +60,6 @@ service Accounts {
             get: "/v2/validator/accounts"
         };
     }
-    rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/accounts/backup",
-            body: "*"
-        };
-    }
     rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/accounts/delete",
@@ -97,6 +86,12 @@ service Auth {
     rpc Signup(AuthRequest) returns (AuthResponse) {
         option (google.api.http) = {
             post: "/v2/validator/signup",
+            body: "*"
+        };
+    }
+    rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/logout",
             body: "*"
         };
     }
@@ -134,10 +129,6 @@ message CreateWalletRequest {
 message CreateWalletResponse {
     WalletResponse wallet = 1;
     DepositDataResponse accounts_created = 2;
-}
-
-message DefaultWalletResponse {
-    string wallet_dir = 1;
 }
 
 message EditWalletConfigRequest {
@@ -274,18 +265,6 @@ message DepositDataResponse {
     message DepositData {
         map<string, string> data = 1;
     }
-}
-
-message BackupAccountsRequest {
-    // List of public keys to backup.
-    repeated bytes public_keys = 1;
-
-    string backup_password = 2;
-}
-
-message BackupAccountsResponse {
-    // Zip file containing backed up keystores.
-    bytes zip_file = 1;
 }
 
 message DeleteAccountsRequest {

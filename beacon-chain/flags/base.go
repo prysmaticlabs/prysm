@@ -90,9 +90,9 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// UnsafeSync starts the beacon node from the previously saved head state and syncs from there.
-	UnsafeSync = &cli.BoolFlag{
-		Name:  "unsafe-sync",
+	// HeadSync starts the beacon node from the previously saved head state and syncs from there.
+	HeadSync = &cli.BoolFlag{
+		Name:  "head-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
