@@ -287,6 +287,9 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
 func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
+	defer span.End()
+
 	// Stop recursive ancestry lookup if context is cancelled.
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
