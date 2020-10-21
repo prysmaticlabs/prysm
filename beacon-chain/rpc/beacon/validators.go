@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -25,7 +26,9 @@ import (
 // archived, persistent data.
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
-	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
+	req *ethpb.ListValidatorBalancesRequest,
+) (*ethpb.ValidatorBalances, error) {
+	ctx, _ = context.WithTimeout(ctx, time.Second*10)
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
