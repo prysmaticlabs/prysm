@@ -9,6 +9,7 @@ import (
 )
 
 func TestInitFeatureConfig(t *testing.T) {
+	defer Init(&Flags{})
 	cfg := &Flags{
 		MedallaTestnet: true,
 	}
@@ -22,6 +23,7 @@ func TestInitFeatureConfig(t *testing.T) {
 }
 
 func TestInitWithReset(t *testing.T) {
+	defer Init(&Flags{})
 	Init(&Flags{
 		OnyxTestnet: true,
 	})
