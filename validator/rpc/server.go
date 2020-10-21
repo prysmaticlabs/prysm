@@ -44,6 +44,8 @@ type Config struct {
 	GenesisFetcher        client.GenesisFetcher
 	WalletInitializedFeed *event.Feed
 	NodeGatewayEndpoint   string
+	Wallet                *wallet.Wallet
+	Keymanager            keymanager.IKeymanager
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -86,7 +88,9 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		genesisFetcher:        cfg.GenesisFetcher,
 		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
-		walletInitialized:     false,
+		walletInitialized:     cfg.Wallet != nil,
+		wallet:                cfg.Wallet,
+		keymanager:            cfg.Keymanager,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
 	}
 }
