@@ -25,7 +25,7 @@ func (s *Service) CurrentSlot() uint64 {
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
 func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkChoice.getBlockPreState")
+	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
 	// Verify incoming block has a valid pre state.
@@ -56,7 +56,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) error {
-	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
+	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
 	parentRoot := bytesutil.ToBytes32(b.ParentRoot)
@@ -87,7 +87,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 // VerifyBlkDescendant validates input block root is a descendant of the
 // current finalized block root.
 func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "forkChoice.VerifyBlkDescendant")
+	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyBlkDescendant")
 	defer span.End()
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
 	finalizedBlkSigned, err := s.beaconDB.Block(ctx, fRoot)
@@ -255,7 +255,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 //        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
 //        return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "forkChoice.ancestor")
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
 	defer span.End()
 
 	r := bytesutil.ToBytes32(root)
@@ -276,6 +276,9 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 
 // This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
 func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByForkChoiceStore")
+	defer span.End()
+
 	if !s.forkChoiceStore.HasParent(r) {
 		return nil, errors.New("could not find root in fork choice store")
 	}
@@ -284,6 +287,9 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
 func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
+	defer span.End()
+
 	// Stop recursive ancestry lookup if context is cancelled.
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
