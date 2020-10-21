@@ -6,19 +6,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,8 +27,9 @@ import (
 )
 
 type stateContainer struct {
-	state *beaconstate.BeaconState
-	root  []byte
+	state     *beaconstate.BeaconState
+	blockRoot []byte
+	stateRoot []byte
 }
 
 func fillDBTestState(ctx context.Context, t *testing.T, db db.Database) ([]*stateContainer, *stategen.State) {
@@ -49,20 +50,26 @@ func fillDBTestState(ctx context.Context, t *testing.T, db db.Database) ([]*stat
 	stateContainers := make([]*stateContainer, count)
 	blks[0] = genesisBlk
 	stateContainers[0] = &stateContainer{
-		state: beaconState,
-		root:  genesisBlkRoot[:],
+		state:     beaconState,
+		blockRoot: genesisBlkRoot[:],
+		stateRoot: stateRoot[:],
 	}
-	for i := uint64(0); i < count-1; i++ {
-		b, err := testutil.GenerateFullBlock(beaconState, keys, testutil.DefaultBlockGenConfig(), i)
+	blockConf := &testutil.BlockGenConfig{
+		NumAttestations: 2,
+	}
+	for i := uint64(1); i < count; i++ {
+		b, err := testutil.GenerateFullBlock(beaconState, keys, blockConf, i-1)
 		assert.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, b))
 		beaconState, err = state.ExecuteStateTransition(ctx, beaconState, b)
 		require.NoError(t, err)
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
 
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		blks[i+1] = b
-		stateContainers[i+1] = &stateContainer{state: beaconState, root: root[:]}
+		blks[i] = b
+		stateContainers[i] = &stateContainer{state: beaconState, blockRoot: root[:], stateRoot: stateRoot[:]}
 		if i == 32 {
 			stateSum := &p2ppb.StateSummary{
 				Slot: i,
@@ -70,6 +77,7 @@ func fillDBTestState(ctx context.Context, t *testing.T, db db.Database) ([]*stat
 			}
 			require.NoError(t, db.SaveStateSummary(ctx, stateSum))
 			stateSumCache.SaveStateSummary(ctx, b, root)
+			stateSumCache.SaveFinalizedState(beaconState.Slot(), root, beaconState)
 			finalChkpt := &ethpb_alpha.Checkpoint{
 				Epoch: helpers.SlotToEpoch(i),
 				Root:  root[:],
@@ -119,9 +127,9 @@ func TestServer_GetStateRoot(t *testing.T) {
 		},
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                         db,
-			Root:                       headState.root,
-			FinalizedCheckPoint:        &ethpb_alpha.Checkpoint{Root: stateContainers[32].root},
-			CurrentJustifiedCheckPoint: &ethpb_alpha.Checkpoint{Root: stateContainers[64].root},
+			Root:                       headState.blockRoot,
+			FinalizedCheckPoint:        &ethpb_alpha.Checkpoint{Root: stateContainers[32].blockRoot},
+			CurrentJustifiedCheckPoint: &ethpb_alpha.Checkpoint{Root: stateContainers[64].blockRoot},
 			State:                      headState.state,
 		},
 		StateGen: sc,
@@ -136,37 +144,37 @@ func TestServer_GetStateRoot(t *testing.T) {
 		{
 			name:    "slot",
 			stateId: []byte("30"),
-			want:    stateContainers[30].root,
+			want:    stateContainers[30].stateRoot,
 		},
 		{
 			name:    "root",
-			stateId: stateContainers[20].root,
-			want:    stateContainers[20].root,
+			stateId: stateContainers[20].blockRoot,
+			want:    stateContainers[20].stateRoot,
 		},
 		{
 			name:    "genesis",
 			stateId: []byte("genesis"),
-			want:    stateContainers[0].root,
+			want:    stateContainers[0].stateRoot,
 		},
 		{
 			name:    "genesis root",
-			stateId: stateContainers[0].root,
-			want:    stateContainers[0].root,
+			stateId: params.BeaconConfig().ZeroHash[:],
+			want:    stateContainers[0].stateRoot,
 		},
 		{
 			name:    "head",
 			stateId: []byte("head"),
-			want:    headState.root,
+			want:    headState.stateRoot,
 		},
 		{
 			name:    "justified",
 			stateId: []byte("justified"),
-			want:    stateContainers[65].root,
+			want:    stateContainers[64].stateRoot,
 		},
 		{
 			name:    "finalized",
 			stateId: []byte("finalized"),
-			want:    stateContainers[33].root,
+			want:    stateContainers[32].stateRoot,
 		},
 		{
 			name:    "no state",
@@ -186,8 +194,8 @@ func TestServer_GetStateRoot(t *testing.T) {
 				return
 			}
 
-			if !reflect.DeepEqual(stateRootResp.StateRoot, tt.stateId) {
-				t.Error("Expected roots to equal")
+			if !reflect.DeepEqual(stateRootResp.StateRoot, tt.want) {
+				t.Errorf("Expected roots to equal, expected: %#x, received: %#x", tt.want, stateRootResp.StateRoot)
 			}
 		})
 	}

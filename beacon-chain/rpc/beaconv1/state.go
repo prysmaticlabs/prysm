@@ -98,40 +98,37 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 }
 
 func (bs *Server) getState(ctx context.Context, stateId []byte) (*state.BeaconState, error) {
+	var requestedState *state.BeaconState
+	var err error
 	switch string(stateId) {
 	case "head":
-		headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+		requestedState, err = bs.ChainInfoFetcher.HeadState(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get head state")
 		}
-		return headState, nil
 	case "genesis":
-		genesisState, err := bs.StateGen.StateByRoot(ctx, params.BeaconConfig().ZeroHash)
+		requestedState, err = bs.StateGen.StateByRoot(ctx, params.BeaconConfig().ZeroHash)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get genesis checkpoint")
 		}
-		return genesisState, nil
 	case "finalized":
 		finalizedCheckpoint := bs.ChainInfoFetcher.FinalizedCheckpt()
-		finalizedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+		requestedState, err = bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized checkpoint")
 		}
-		return finalizedState, nil
 	case "justified":
 		justifiedCheckpoint := bs.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		justifiedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+		requestedState, err = bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified checkpoint")
 		}
-		return justifiedState, nil
 	default:
 		if len(stateId) == 32 {
-			requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(stateId))
+			requestedState, err = bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(stateId))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get state")
 			}
-			return requestedState, nil
 		} else {
 			requestedSlot, err := strconv.ParseUint(string(stateId), 10, 64)
 			if err != nil {
@@ -148,11 +145,14 @@ func (bs *Server) getState(ctx context.Context, stateId []byte) (*state.BeaconSt
 				)
 			}
 
-			requestedState, err := bs.StateGen.StateBySlot(ctx, requestedSlot)
+			requestedState, err = bs.StateGen.StateBySlot(ctx, requestedSlot)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get state")
 			}
-			return requestedState, nil
 		}
 	}
+	if requestedState == nil {
+		return nil, errors.New("could not find state with state id")
+	}
+	return requestedState, nil
 }

@@ -208,7 +208,7 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 	// Gather last saved state, that is where node starts to replay the blocks.
 	startState, err := s.lastSavedState(ctx, slot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get last saved state")
 	}
 
 	// Gather the last saved block root and the slot number.
@@ -220,7 +220,7 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 	// Load and replay blocks to get the intermediate state.
 	replayBlks, err := s.LoadBlocks(ctx, startState.Slot()+1, lastValidSlot, lastValidRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not load blocks")
 	}
 
 	// If there's no blocks to replay, a node doesn't need to recalculate the start state.
@@ -232,7 +232,7 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 	pRoot := bytesutil.ToBytes32(replayBlks[0].Block.ParentRoot)
 	replayStartState, err := s.loadStateByRoot(ctx, pRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not load state by root")
 	}
 	return s.ReplayBlocks(ctx, replayStartState, replayBlks, slot)
 }
