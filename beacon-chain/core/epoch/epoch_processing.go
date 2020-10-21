@@ -248,37 +248,43 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
 
 	bals := state.Balances()
+	vals := state.ValidatorsReadOnly()
 	var updateEffective bool
-	vs := state.ValidatorsReadOnly()
-	for idx, v := range vs {
-		balance := bals[idx]
+	for i, v := range vals {
+		if v == nil {
+			return nil, fmt.Errorf("validator %d is nil in state", i)
+		}
+		if i >= len(bals) {
+			return nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", i, len(state.Balances()))
+		}
+		balance := bals[i]
 		if balance+downwardThreshold < v.EffectiveBalance() || v.EffectiveBalance()+upwardThreshold < balance {
 			updateEffective = true
 			break
 		}
 	}
 
-	// Update effective balances with hysteresis.
-	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
-		if val == nil {
-			return false, fmt.Errorf("validator %d is nil in state", idx)
-		}
-		if idx >= len(bals) {
-			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
-		}
-		balance := bals[idx]
-
-		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			val.EffectiveBalance = maxEffBalance
-			if val.EffectiveBalance > balance-balance%effBalanceInc {
-				val.EffectiveBalance = balance - balance%effBalanceInc
-			}
-			return true, nil
-		}
-		return false, nil
-	}
-
 	if updateEffective {
+		// Update effective balances with hysteresis.
+		validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+			if val == nil {
+				return false, fmt.Errorf("validator %d is nil in state", idx)
+			}
+			if idx >= len(bals) {
+				return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+			}
+			balance := bals[idx]
+
+			if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
+				val.EffectiveBalance = maxEffBalance
+				if val.EffectiveBalance > balance-balance%effBalanceInc {
+					val.EffectiveBalance = balance - balance%effBalanceInc
+				}
+				return true, nil
+			}
+			return false, nil
+		}
+
 		if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
 			return nil, err
 		}
