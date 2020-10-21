@@ -58,6 +58,13 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
+	if s.saveStateDuringHot && state.Slot()%s.saveStateDuringHotDuration == 0 {
+		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
+			return err
+		}
+		s.savedStatesDuringHot = append(s.savedStatesDuringHot, blockRoot)
+	}
+
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
 	if s.hotStateCache.Has(blockRoot) {
 		return nil
