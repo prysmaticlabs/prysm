@@ -81,11 +81,12 @@ func Test_MoveDb(t *testing.T) {
 	hook := logTest.NewGlobal()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
+	dataDir := testutil.TempDir() + "/datadir"
+	set.String("datadir", dataDir, "the node data directory")
 	set.Bool("allow-new-protection-db", true, "dont prompt")
 	context := cli.NewContext(&app, set, nil)
 	// dont prompt when non interactive flag is on.
-	moveDb(context)
+	moveDb(context, flags.WalletDirFlag)
 	require.LogsDoNotContain(t, hook, "protection db is empty.")
 	require.LogsDoNotContain(t, hook, "Moving validator protection db")
 }
@@ -113,7 +114,7 @@ func Test_moveDBDefaultValue(t *testing.T) {
 
 	// prompt when flag is not present and db is new.
 	context := cli.NewContext(&app, set, nil)
-	moveDb(context)
+	moveDb(context, flags.WalletDirFlag)
 	require.LogsDoNotContain(t, hook, "Moving validator protection db")
 }
 
@@ -149,6 +150,6 @@ func Test_moveDBToNewLocation(t *testing.T) {
 
 	// prompt when flag is not present and db is new.
 	context := cli.NewContext(&app, set, nil)
-	moveDb(context)
+	moveDb(context, flags.WalletDirFlag)
 	require.LogsContain(t, hook, "Moving validator protection db")
 }

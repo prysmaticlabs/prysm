@@ -203,8 +203,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-	moveDb(cliCtx)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+
+	dataFlag := flags.WalletDirFlag
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataFlag = cmd.DataDirFlag
+	}
+	dataDir := cliCtx.String(dataFlag.Name)
+	moveDb(cliCtx, dataFlag)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
@@ -253,9 +258,11 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context) {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+func moveDb(cliCtx *cli.Context, defaultDir *cli.StringFlag) {
+	log.Infof("starting move db: %s", defaultDir.Name)
+	dataDir := cliCtx.String(defaultDir.Name)
 	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	log.Infof("datafile: %s", dataFile)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag || cliCtx.Bool(flags.AllowEmptyProtectionDB.Name) {
@@ -263,7 +270,7 @@ func moveDb(cliCtx *cli.Context) {
 	}
 	if !fileutil.FileExists(dataFile) {
 		// Input the directory where the old protection db resides.
-		protectionDbPath, err := prompt.InputDirectory(cliCtx, specifyProtectionDBPath, cmd.DataDirFlag)
+		protectionDbPath, err := prompt.InputDir(cliCtx, specifyProtectionDBPath, defaultDir)
 		if err != nil {
 			log.WithError(err).Fatal("could not parse protection db directory")
 		}
@@ -308,10 +315,15 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-	moveDb(cliCtx)
+	dataFlag := flags.WalletDirFlag
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataFlag = cmd.DataDirFlag
+	}
+	dataDir := cliCtx.String(dataFlag.Name)
+	moveDb(cliCtx, dataFlag)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
