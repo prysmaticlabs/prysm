@@ -425,6 +425,10 @@ func fetchBlockRootsBySlotRange(
 	if endSlot < startSlot {
 		return nil, errInvalidSlotRange
 	}
+	// Return nothing with an end slot of 0.
+	if endSlot == 0 {
+		return [][]byte{}, nil
+	}
 	rootsRange := (endSlot - startSlot) / step
 	roots := make([][]byte, 0, rootsRange)
 	c := bkt.Cursor()
