@@ -207,7 +207,7 @@ func (s *Service) Start() {
 			s.privKey,
 		)
 		if err != nil {
-			log.WithError(err).Error("Failed to start discovery")
+			log.WithError(err).Fatal("Failed to start discovery")
 			s.startupErr = err
 			return
 		}
