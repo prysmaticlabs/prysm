@@ -47,6 +47,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		stateSummaryCache:          stateSummaryCache,
 		epochBoundaryStateCache:    newBoundaryStateCache(),
 		saveStateDuringHotDuration: 128,
+		saveStateDuringHot:         true,
 	}
 }
 

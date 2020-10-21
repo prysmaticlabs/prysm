@@ -63,6 +63,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 			return err
 		}
 		s.savedStatesDuringHot = append(s.savedStatesDuringHot, blockRoot)
+		log.Info("Saving state to db during non-finality, slot: ", state.Slot())
 	}
 
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
