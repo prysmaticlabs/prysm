@@ -89,3 +89,16 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 
 	return nil
 }
+
+// TurnOnSaveStateDuringHot sets saveStateDuringHot to true.
+func (s *State) TurnOnSaveStateDuringHot(_ context.Context) {
+	s.saveStateDuringHot = true
+}
+
+// TurnOnSaveStateDuringHot sets saveStateDuringHot to false.
+func (s *State) TurnOffSaveStateDuringHot(ctx context.Context) error {
+	if err := s.beaconDB.DeleteStates(ctx, s.savedStatesDuringHot); err != nil {
+		return err
+	}
+	s.saveStateDuringHot = false
+}

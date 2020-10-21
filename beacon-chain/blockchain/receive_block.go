@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -56,6 +57,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	// Handle post block operations such as attestations and exits.
 	if err := s.handlePostBlockOperations(blockCopy.Block); err != nil {
 		return err
+	}
+
+	// Have we been finalizing? Should we start saving hot state in db?
+	if helpers.SlotToEpoch(s.CurrentSlot())-s.finalizedCheckpt.Epoch >= 100 {
+		s.stateGen.TurnOnSaveStateDuringHot(ctx)
+	} else {
+		if err := s.stateGen.TurnOffSaveStateDuringHot(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Reports on block and fork choice metrics.
