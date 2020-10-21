@@ -209,7 +209,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		dataFlag = cmd.DataDirFlag
 	}
 	dataDir := cliCtx.String(dataFlag.Name)
-	moveDb(cliCtx, dataFlag)
+	moveSlashingProtectionDatabase(cliCtx, dataFlag)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
@@ -258,7 +258,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context, defaultDir *cli.StringFlag) {
+func moveSlashingProtectionDatabase(cliCtx *cli.Context, defaultDir *cli.StringFlag) {
 	log.Infof("starting move db: %s", defaultDir.Name)
 	dataDir := cliCtx.String(defaultDir.Name)
 	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
@@ -320,7 +320,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		dataFlag = cmd.DataDirFlag
 	}
 	dataDir := cliCtx.String(dataFlag.Name)
-	moveDb(cliCtx, dataFlag)
+	moveSlashingProtectionDatabase(cliCtx, dataFlag)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 

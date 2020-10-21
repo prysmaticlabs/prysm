@@ -77,7 +77,7 @@ func TestClearDB(t *testing.T) {
 	require.LogsContain(t, hook, "Removing database")
 }
 
-func Test_MoveDb(t *testing.T) {
+func Test_moveSlashingProtectionDatabase_doesntPromptWithFlag(t *testing.T) {
 	hook := logTest.NewGlobal()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -86,12 +86,12 @@ func Test_MoveDb(t *testing.T) {
 	set.Bool("allow-new-protection-db", true, "dont prompt")
 	context := cli.NewContext(&app, set, nil)
 	// dont prompt when non interactive flag is on.
-	moveDb(context, flags.WalletDirFlag)
+	moveSlashingProtectionDatabase(context, flags.WalletDirFlag)
 	require.LogsDoNotContain(t, hook, "protection db is empty.")
 	require.LogsDoNotContain(t, hook, "Moving validator protection db")
 }
 
-func Test_moveDBDefaultValue(t *testing.T) {
+func Test_moveSlashingProtectionDatabaseDefaultValue(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "content")
 	require.NoError(t, err)
 	defer func() {
@@ -114,11 +114,11 @@ func Test_moveDBDefaultValue(t *testing.T) {
 
 	// prompt when flag is not present and db is new.
 	context := cli.NewContext(&app, set, nil)
-	moveDb(context, flags.WalletDirFlag)
+	moveSlashingProtectionDatabase(context, flags.WalletDirFlag)
 	require.LogsDoNotContain(t, hook, "Moving validator protection db")
 }
 
-func Test_moveDBToNewLocation(t *testing.T) {
+func Test_moveSlashingProtectionDatabaseToNewLocation(t *testing.T) {
 	tmpDBDir, err := ioutil.TempDir("", "dbdir")
 	require.NoError(t, err)
 	tmpfile, err := ioutil.TempFile("", "content")
@@ -150,6 +150,6 @@ func Test_moveDBToNewLocation(t *testing.T) {
 
 	// prompt when flag is not present and db is new.
 	context := cli.NewContext(&app, set, nil)
-	moveDb(context, flags.WalletDirFlag)
+	moveSlashingProtectionDatabase(context, flags.WalletDirFlag)
 	require.LogsContain(t, hook, "Moving validator protection db")
 }
