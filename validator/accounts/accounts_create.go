@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -55,15 +54,8 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
 		return errors.New("cannot create a new account for a remote keymanager")
-	case keymanager.Direct:
-		km, ok := km.(*direct.Keymanager)
-		if !ok {
-			return errors.New("not a direct keymanager")
-		}
-		// Create a new validator account using the specified keymanager.
-		if _, _, err := km.CreateAccount(ctx); err != nil {
-			return errors.Wrap(err, "could not create account in wallet")
-		}
+	case keymanager.Imported:
+		return errors.New("cannot create a new account for an imported wallet")
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
 		if !ok {

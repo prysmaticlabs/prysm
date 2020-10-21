@@ -1,4 +1,4 @@
-package direct
+package imported
 
 import (
 	"bytes"
@@ -13,15 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -31,7 +27,7 @@ import (
 )
 
 var (
-	log               = logrus.WithField("prefix", "direct-keymanager")
+	log               = logrus.WithField("prefix", "imported-keymanager")
 	lock              sync.RWMutex
 	orderedPublicKeys = make([][48]byte, 0)
 	secretKeysCache   = make(map[[48]byte]bls.SecretKey)
@@ -40,19 +36,19 @@ var (
 const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
-	// AccountsPath where all direct keymanager keystores are kept.
+	// AccountsPath where all imported keymanager keystores are kept.
 	AccountsPath             = "accounts"
 	accountsKeystoreFileName = "all-accounts.keystore.json"
 	eipVersion               = "EIP-2335"
 )
 
-// KeymanagerOpts for a direct keymanager.
+// KeymanagerOpts for a imported keymanager.
 type KeymanagerOpts struct {
 	EIPVersion string `json:"direct_eip_version"`
 	Version    string `json:"direct_version"`
 }
 
-// Keymanager implementation for direct keystores utilizing EIP-2335.
+// Keymanager implementation for imported keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet              iface.Wallet
 	opts                *KeymanagerOpts
@@ -67,7 +63,7 @@ type AccountStore struct {
 	PublicKeys  [][]byte `json:"public_keys"`
 }
 
-// DefaultKeymanagerOpts for a direct keymanager implementation.
+// DefaultKeymanagerOpts for a imported keymanager implementation.
 func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{
 		EIPVersion: eipVersion,
@@ -92,7 +88,7 @@ func ResetCaches() {
 	lock.Unlock()
 }
 
-// NewKeymanager instantiates a new direct keymanager from configuration options.
+// NewKeymanager instantiates a new imported keymanager from configuration options.
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:              cfg.Wallet,
@@ -116,7 +112,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	return k, nil
 }
 
-// NewInteropKeymanager instantiates a new direct keymanager with the deterministically generated interop keys.
+// NewInteropKeymanager instantiates a new imported keymanager with the deterministically generated interop keys.
 func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		accountsChangedFeed: new(event.Feed),
@@ -140,7 +136,7 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 	return k, nil
 }
 
-// UnmarshalOptionsFile attempts to JSON unmarshal a direct keymanager
+// UnmarshalOptionsFile attempts to JSON unmarshal a imported keymanager
 // options file into a struct.
 func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	enc, err := ioutil.ReadAll(r)
@@ -164,12 +160,12 @@ func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error)
 	return json.MarshalIndent(opts, "", "\t")
 }
 
-// KeymanagerOpts for the direct keymanager.
+// KeymanagerOpts for the imported keymanager.
 func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return dr.opts
 }
 
-// String pretty-print of a direct keymanager options.
+// String pretty-print of a imported keymanager options.
 func (opts *KeymanagerOpts) String() string {
 	au := aurora.NewAurora(true)
 	var b strings.Builder
@@ -188,7 +184,7 @@ func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event
 	return dr.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
-// ValidatingAccountNames for a direct keymanager.
+// ValidatingAccountNames for a imported keymanager.
 func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 	lock.RLock()
 	names := make([]string, len(orderedPublicKeys))
@@ -217,83 +213,6 @@ func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
 		secretKeysCache[publicKey48] = secretKey
 	}
 	return nil
-}
-
-// CreateAccount for a direct keymanager implementation. This utilizes
-// the EIP-2335 keystore standard for BLS12-381 keystores. It
-// stores the generated keystore.json file in the wallet and additionally
-// generates withdrawal credentials. At the end, it logs
-// the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, *ethpb.Deposit_Data, error) {
-	// Create a petname for an account from its public key and write its password to disk.
-	validatingKey := bls.RandKey()
-	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
-	dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, validatingKey.Marshal())
-	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, validatingKey.PublicKey().Marshal())
-	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not create accounts keystore")
-	}
-
-	// Generate a withdrawal key and confirm user
-	// acknowledgement of a 256-bit entropy mnemonic phrase.
-	withdrawalKey := bls.RandKey()
-	log.Info(
-		"Write down the private key, as it is your unique " +
-			"withdrawal private key for eth2",
-	)
-	fmt.Printf(`
-==========================Withdrawal Key===========================
-
-%#x
-
-===================================================================
-	`, withdrawalKey.Marshal())
-	fmt.Println(" ")
-
-	// Upon confirmation of the withdrawal key, proceed to display
-	// and write associated deposit data to disk.
-	tx, data, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit transaction data")
-	}
-	domain, err := helpers.ComputeDomain(
-		params.BeaconConfig().DomainDeposit,
-		nil, /*forkVersion*/
-		nil, /*genesisValidatorsRoot*/
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
-	}
-
-	// Log the deposit transaction data to the user.
-	fmt.Printf(`
-==================Eth1 Deposit Transaction Data=================
-%#x
-================Verified for the %s network================`, tx.Data(), params.BeaconConfig().NetworkName)
-	fmt.Println("")
-
-	// Write the encoded keystore.
-	encoded, err := json.MarshalIndent(newStore, "", "\t")
-	if err != nil {
-		return nil, nil, err
-	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
-		return nil, nil, errors.Wrap(err, "could not write keystore file for accounts")
-	}
-
-	log.WithFields(logrus.Fields{
-		"name": accountName,
-	}).Info("Successfully created new validator account")
-
-	err = dr.initializeKeysCachesFromKeystore()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to initialize keys caches")
-	}
-	return validatingKey.PublicKey().Marshal(), data, nil
 }
 
 // DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
@@ -342,7 +261,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 	return nil
 }
 
-// FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
+// FetchValidatingPublicKeys fetches the list of public keys from the imported account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
@@ -390,12 +309,6 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("no signing key found in keys cache")
 	}
 	return secretKey.Sign(req.SigningRoot), nil
-}
-
-// RefreshWalletPassword re-encrypts the accounts store and stores
-// it to disk using a wallet's password which was recently changed.
-func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
-	return dr.rewriteAccountsKeystore(ctx)
 }
 
 func (dr *Keymanager) rewriteAccountsKeystore(ctx context.Context) error {

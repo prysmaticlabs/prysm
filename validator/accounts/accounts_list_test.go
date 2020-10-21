@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,8 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 type mockRemoteKeymanager struct {
@@ -35,43 +37,70 @@ func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (
 	return nil, nil
 }
 
-func TestListAccounts_DirectKeymanager(t *testing.T) {
+func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	validatingKey := bls.RandKey()
+	pubKey := validatingKey.PublicKey().Marshal()
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
+	require.NoError(t, err)
+	return &keymanager.Keystore{
+		Crypto:  cryptoFields,
+		Pubkey:  fmt.Sprintf("%x", pubKey),
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
+}
+
+func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Direct,
+		keymanagerKind:     keymanager.Imported,
 		walletPasswordFile: walletPasswordFile,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: "Passwordz0320$",
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := direct.NewKeymanager(
+	km, err := imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
 
 	numAccounts := 5
+	keystores := make([]*keymanager.Keystore, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		_, _, err := keymanager.CreateAccount(cliCtx.Context)
-		require.NoError(t, err)
+		keystores[i] = createRandomKeystore(t, password)
 	}
+	require.NoError(t, km.ImportKeystores(cliCtx.Context, keystores, password))
+
 	rescueStdout := os.Stdout
 	r, writer, err := os.Pipe()
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list direct keymanager accounts function.
-	require.NoError(t, listDirectKeymanagerAccounts(context.Background(), true /* show deposit data */, true /*show private keys */, keymanager))
+	// We call the list imported keymanager accounts function.
+	require.NoError(
+		t,
+		listImportedKeymanagerAccounts(
+			context.Background(),
+			true, /* show deposit data */
+			true, /*show private keys */
+			km,
+		),
+	)
 
 	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)
@@ -84,7 +113,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) non-HD wallet
+		(keymanager kind) imported wallet
 
 		Showing 5 validator accounts
 		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
@@ -135,12 +164,12 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	require.Equal(t, lineCount, len(lines))
 
 	// Assert the keymanager kind is printed on the first line.
-	kindString := "non-HD"
+	kindString := "imported"
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
-	accountNames, err := keymanager.ValidatingAccountNames()
+	accountNames, err := km.ValidatingAccountNames()
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accountNames))
 
@@ -152,7 +181,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	}
 
 	// Get public keys and require the correct count
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
@@ -165,7 +194,7 @@ func TestListAccounts_DirectKeymanager(t *testing.T) {
 	}
 
 	// Get private keys and require the correct count
-	privKeys, err := keymanager.FetchValidatingPrivateKeys(cliCtx.Context)
+	privKeys, err := km.FetchValidatingPrivateKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
@@ -220,7 +249,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list direct keymanager accounts function.
+	// We call the list imported keymanager accounts function.
 	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true /* show deposit data */, true /*show private keys */, keymanager))
 
 	require.NoError(t, writer.Close())

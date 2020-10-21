@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -23,12 +22,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestImport_Noninteractive(t *testing.T) {
-	direct.ResetCaches()
+	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -42,24 +41,23 @@ func TestImport_Noninteractive(t *testing.T) {
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
 		keysDir:             keysDir,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(context.Background()))
-	keymanager, err := direct.NewKeymanager(
+	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -90,7 +88,7 @@ func TestImport_Noninteractive(t *testing.T) {
 }
 
 func TestImport_Noninteractive_RandomName(t *testing.T) {
-	direct.ResetCaches()
+	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -104,24 +102,23 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
 		keysDir:             keysDir,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(context.Background()))
-	keymanager, err := direct.NewKeymanager(
+	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -152,7 +149,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 }
 
 func TestImport_Noninteractive_Filepath(t *testing.T) {
-	direct.ResetCaches()
+	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
@@ -167,24 +164,23 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		walletDir:           walletDir,
 		passwordsDir:        passwordsDir,
 		keysDir:             keystorePath,
-		keymanagerKind:      keymanager.Direct,
+		keymanagerKind:      keymanager.Imported,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(context.Background()))
-	keymanager, err := direct.NewKeymanager(
+	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -210,7 +206,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 }
 
 func TestImport_SortByDerivationPath(t *testing.T) {
-	direct.ResetCaches()
+	imported.ResetCaches()
 	type test struct {
 		name  string
 		input []string
@@ -293,7 +289,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	// We instantiate a new wallet from a cli context.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
-		keymanagerKind:     keymanager.Direct,
+		keymanagerKind:     keymanager.Imported,
 		walletPasswordFile: passwordFilePath,
 		privateKeyFile:     privKeyFileName,
 	})
@@ -301,28 +297,27 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: walletPass,
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, wallet.SaveHashedPassword(context.Background()))
-	keymanager, err := direct.NewKeymanager(
+	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: wallet,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
 	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
 
 	// We re-instantiate the keymanager and check we now have 1 public key.
-	keymanager, err = direct.NewKeymanager(
+	keymanager, err = imported.NewKeymanager(
 		cliCtx.Context,
-		&direct.SetupConfig{
+		&imported.SetupConfig{
 			Wallet: wallet,
-			Opts:   direct.DefaultKeymanagerOpts(),
+			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -351,7 +346,7 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	require.NoError(t, err)
 	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := timeutils.Now().Unix()
-	fullPath := filepath.Join(path, fmt.Sprintf(direct.KeystoreFileNameFormat, createdAt))
+	fullPath := filepath.Join(path, fmt.Sprintf(imported.KeystoreFileNameFormat, createdAt))
 	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
 	return keystoreFile, fullPath
 }

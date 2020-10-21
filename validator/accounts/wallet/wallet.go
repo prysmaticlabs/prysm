@@ -18,20 +18,17 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var log = logrus.WithField("prefix", "wallet")
 
 const (
-	// KeymanagerConfigFileName for the keymanager used by the wallet: direct, derived, or remote.
+	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
-	// HashedPasswordFileName for the wallet.
-	HashedPasswordFileName = "hash"
 	// DirectoryPermissions for directories created under the wallet path.
 	DirectoryPermissions = os.ModePerm
 	// NewWalletPasswordPromptText for wallet creation.
@@ -56,9 +53,9 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
-		keymanager.Direct:  "Non-HD Wallet (Recommended)",
-		keymanager.Derived: "HD Wallet (Least secure)",
-		keymanager.Remote:  "Remote Signing Wallet (Advanced)",
+		keymanager.Imported: "Imported Wallet (Recommended)",
+		keymanager.Derived:  "HD Wallet (Least secure)",
+		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -79,7 +76,7 @@ type Config struct {
 // Wallet is a primitive in Prysm's account management which
 // has the capability of creating new accounts, reading existing accounts,
 // and providing secure access to eth2 secrets depending on an
-// associated keymanager (either direct, derived, or remote signing enabled).
+// associated keymanager (either imported, derived, or remote signing enabled).
 type Wallet struct {
 	walletDir      string
 	accountsPath   string
@@ -115,7 +112,7 @@ func Exists(walletDir string) (bool, error) {
 	return dirExists && isValid, nil
 }
 
-// IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `direct`.
+// IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `imported`.
 // Returns true if one of those subdirectories exist, false otherwise.
 func IsValid(walletDir string) (bool, error) {
 	expanded, err := fileutil.ExpandPath(walletDir)
@@ -125,6 +122,7 @@ func IsValid(walletDir string) (bool, error) {
 	f, err := os.Open(expanded)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file") ||
+			strings.Contains(err.Error(), "cannot find the file") ||
 			strings.Contains(err.Error(), "cannot find the path") {
 			return false, nil
 		}
@@ -147,7 +145,7 @@ func IsValid(walletDir string) (bool, error) {
 	// Count how many wallet types we have in the directory
 	numWalletTypes := 0
 	for _, name := range names {
-		// Nil error means input name is `derived`, `remote` or `direct`
+		// Nil error means input name is `derived`, `remote` or `imported`
 		_, err = keymanager.ParseKind(name)
 		if err == nil {
 			numWalletTypes++
@@ -190,16 +188,6 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	)
 	if err != nil {
 		return nil, err
-	}
-	if fileutil.FileExists(filepath.Join(walletDir, HashedPasswordFileName)) {
-		hashedPassword, err := fileutil.ReadFileAsBytes(filepath.Join(walletDir, HashedPasswordFileName))
-		if err != nil {
-			return nil, err
-		}
-		// Compare the wallet password here.
-		if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(walletPassword)); err != nil {
-			return nil, errors.Wrap(err, "wrong password for wallet")
-		}
 	}
 	return OpenWallet(cliCtx.Context, &Config{
 		WalletDir:      walletDir,
@@ -266,11 +254,6 @@ func (w *Wallet) Password() string {
 	return w.walletPassword
 }
 
-// SetPassword sets a new password for the wallet.
-func (w *Wallet) SetPassword(newPass string) {
-	w.walletPassword = newPass
-}
-
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) InitializeKeymanager(
@@ -283,29 +266,17 @@ func (w *Wallet) InitializeKeymanager(
 	}
 	var km keymanager.IKeymanager
 	switch w.KeymanagerKind() {
-	case keymanager.Direct:
-		opts, err := direct.UnmarshalOptionsFile(configFile)
+	case keymanager.Imported:
+		opts, err := imported.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanageropts file")
 		}
-		km, err = direct.NewKeymanager(ctx, &direct.SetupConfig{
+		km, err = imported.NewKeymanager(ctx, &imported.SetupConfig{
 			Wallet: w,
 			Opts:   opts,
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize direct keymanager")
-		}
-		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
-			keys, err := km.FetchValidatingPublicKeys(ctx)
-			if err != nil {
-				return nil, err
-			}
-			if len(keys) == 0 {
-				return nil, errors.New("please recreate your wallet with wallet create")
-			}
-			if err := w.SaveHashedPassword(ctx); err != nil {
-				return nil, errors.Wrap(err, "could not save hashed password to disk")
-			}
+			return nil, errors.Wrap(err, "could not initialize imported keymanager")
 		}
 	case keymanager.Derived:
 		opts, err := derived.UnmarshalOptionsFile(configFile)
@@ -319,11 +290,6 @@ func (w *Wallet) InitializeKeymanager(
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
-		}
-		if !fileutil.FileExists(filepath.Join(w.walletDir, HashedPasswordFileName)) {
-			if err := w.SaveHashedPassword(ctx); err != nil {
-				return nil, errors.Wrap(err, "could not save hashed password to disk")
-			}
 		}
 	case keymanager.Remote:
 		opts, err := remote.UnmarshalOptionsFile(configFile)
@@ -470,20 +436,6 @@ func (w *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) err
 	return nil
 }
 
-// SaveHashedPassword to disk for the wallet.
-func (w *Wallet) SaveHashedPassword(_ context.Context) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(w.walletPassword), hashCost)
-	if err != nil {
-		return errors.Wrap(err, "could not generate hashed password")
-	}
-	hashFilePath := filepath.Join(w.walletDir, HashedPasswordFileName)
-	// Write the config file to disk.
-	if err := ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions); err != nil {
-		return errors.Wrap(err, "could not write hashed password for wallet to disk")
-	}
-	return nil
-}
-
 func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error) {
 	walletItem, err := os.Open(walletPath)
 	if err != nil {
@@ -506,7 +458,7 @@ func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error
 			return keymanagerKind, nil
 		}
 	}
-	return 0, errors.New("no keymanager folder, 'direct', 'remote', nor 'derived' found in wallet path")
+	return 0, errors.New("no keymanager folder, 'imported', 'remote', nor 'derived' found in wallet path")
 }
 
 func inputPassword(

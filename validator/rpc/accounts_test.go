@@ -1,12 +1,8 @@
 package rpc
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 
@@ -24,7 +20,6 @@ import (
 )
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
-var _ accountCreator = (*mockAccountCreator)(nil)
 
 type mockAccountCreator struct {
 	data   *ethpb.Deposit_Data
@@ -163,43 +158,6 @@ func Test_createAccountWithDepositData(t *testing.T) {
 	)
 }
 
-func TestServer_BackupAccounts(t *testing.T) {
-	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
-
-	// We now attempt to backup all public keys from the wallet.
-	res, err := ss.BackupAccounts(context.Background(), &pb.BackupAccountsRequest{
-		PublicKeys:     pubKeys,
-		BackupPassword: ss.wallet.Password(),
-	})
-	require.NoError(t, err)
-	require.NotNil(t, res.ZipFile)
-
-	// Open a zip archive for reading.
-	buf := bytes.NewReader(res.ZipFile)
-	r, err := zip.NewReader(buf, int64(len(res.ZipFile)))
-	require.NoError(t, err)
-	require.Equal(t, len(pubKeys), len(r.File))
-
-	// Iterate through the files in the archive, checking they
-	// match the keystores we wanted to backup.
-	for i, f := range r.File {
-		keystoreFile, err := f.Open()
-		require.NoError(t, err)
-		encoded, err := ioutil.ReadAll(keystoreFile)
-		if err != nil {
-			require.NoError(t, keystoreFile.Close())
-			t.Fatal(err)
-		}
-		keystore := &keymanager.Keystore{}
-		if err := json.Unmarshal(encoded, &keystore); err != nil {
-			require.NoError(t, keystoreFile.Close())
-			t.Fatal(err)
-		}
-		assert.Equal(t, keystore.Pubkey, fmt.Sprintf("%x", pubKeys[i]))
-		require.NoError(t, keystoreFile.Close())
-	}
-}
-
 func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
@@ -214,7 +172,6 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(ctx))
 	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
 	require.NoError(t, err)
 	ss := &Server{
@@ -224,7 +181,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeys: make([][]byte, 1),
 	})
-	assert.ErrorContains(t, "Only Non-HD wallets can delete accounts", err)
+	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
@@ -239,7 +196,7 @@ func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_DeleteAccounts_OK(t *testing.T) {
-	ss, pubKeys := createDirectWalletWithAccounts(t, 3)
+	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
 	ctx := context.Background()
 	keys, err := ss.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)

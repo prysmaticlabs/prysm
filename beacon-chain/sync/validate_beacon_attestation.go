@@ -36,10 +36,14 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	ctx, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexBeaconAttestation")
 	defer span.End()
 
+	if msg.Topic == nil {
+		return pubsub.ValidationReject
+	}
+
 	// Override topic for decoding.
-	originalTopic := msg.TopicIDs[0]
+	originalTopic := msg.Topic
 	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
-	msg.TopicIDs[0] = format
+	msg.Topic = &format
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
@@ -48,7 +52,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 	// Restore topic.
-	msg.TopicIDs[0] = originalTopic
+	msg.Topic = originalTopic
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
@@ -121,7 +125,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		}
 		// Is the attestation subnet correct.
 		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
-		if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
+		if !strings.HasPrefix(*originalTopic, fmt.Sprintf(format, digest, subnet)) {
 			return pubsub.ValidationReject
 		}
 		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
@@ -150,7 +154,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
-		log.Error("Failed to retrieve pre state")
+		log.WithError(err).Error("Failed to retrieve pre state")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -167,7 +171,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	subnet := helpers.ComputeSubnetForAttestation(valCount, att)
-	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, subnet)) {
+	if !strings.HasPrefix(*originalTopic, fmt.Sprintf(format, digest, subnet)) {
 		return pubsub.ValidationReject
 	}
 
@@ -191,6 +195,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	if err := blocks.VerifyAttestationSignature(ctx, preState, att); err != nil {
 		log.WithError(err).Error("Could not verify attestation")
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
+	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+	if err := s.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}

@@ -1,4 +1,4 @@
-package direct
+package imported
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	}
 }
 
-func TestDirectKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
+func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 	numKeys := 50
 	pubKeys := make([][]byte, numKeys)
 	privKeys := make([][]byte, numKeys)
@@ -88,7 +88,7 @@ func TestDirectKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 	require.Equal(t, numKeys+1, len(dr.accountsStore.PrivateKeys))
 }
 
-func TestDirectKeymanager_ImportKeystores(t *testing.T) {
+func TestImportedKeymanager_ImportKeystores(t *testing.T) {
 	password := "secretPassw0rd$1999"
 	// Setup the keymanager.
 	wallet := &mock.Wallet{

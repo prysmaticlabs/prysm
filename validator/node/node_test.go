@@ -43,19 +43,18 @@ func TestNode_Builds(t *testing.T) {
 	}()
 	set.String("wallet-dir", dir, "path to wallet")
 	set.String("wallet-password-file", passwordFile, "path to wallet password")
-	set.String("keymanager-kind", "direct", "keymanager kind")
+	set.String("keymanager-kind", "imported", "keymanager kind")
 	set.String("verbosity", "debug", "log verbosity")
 	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	context := cli.NewContext(&app, set, nil)
-	w, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
+	_, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      dir,
-			KeymanagerKind: keymanager.Direct,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: walletPassword,
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(context.Context))
 
 	valClient, err := NewValidatorClient(context)
 	require.NoError(t, err, "Failed to create ValidatorClient")

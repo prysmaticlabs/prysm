@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/direct"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -51,10 +51,6 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create wallet with keymanager")
 	}
-	// We store the hashed password to disk.
-	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
-		return nil, errors.Wrap(err, "could not save hashed password to database")
-	}
 	return w, nil
 }
 
@@ -67,9 +63,9 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	})
 	var err error
 	switch w.KeymanagerKind() {
-	case keymanager.Direct:
-		if err = createDirectKeymanagerWallet(ctx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with direct keymanager")
+	case keymanager.Imported:
+		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
+			return nil, errors.Wrap(err, "could not initialize wallet with imported keymanager")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with on-disk keymanager configuration. " +
@@ -135,15 +131,15 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 	return createWalletConfig, nil
 }
 
-func createDirectKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
+func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
 	if wallet == nil {
 		return errors.New("nil wallet")
 	}
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	defaultOpts := direct.DefaultKeymanagerOpts()
-	keymanagerConfig, err := direct.MarshalOptionsFile(ctx, defaultOpts)
+	defaultOpts := imported.DefaultKeymanagerOpts()
+	keymanagerConfig, err := imported.MarshalOptionsFile(ctx, defaultOpts)
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}
@@ -192,14 +188,14 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			wallet.KeymanagerKindSelections[keymanager.Direct],
+			wallet.KeymanagerKindSelections[keymanager.Imported],
 			wallet.KeymanagerKindSelections[keymanager.Derived],
 			wallet.KeymanagerKindSelections[keymanager.Remote],
 		},
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return keymanager.Direct, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
+		return keymanager.Imported, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
 	}
 	return keymanager.Kind(selection), nil
 }
