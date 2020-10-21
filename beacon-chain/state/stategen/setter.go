@@ -107,4 +107,6 @@ func (s *State) TurnOffSaveStateDuringHot(ctx context.Context) error {
 		return err
 	}
 	s.saveStateDuringHot = false
+
+	return nil
 }
