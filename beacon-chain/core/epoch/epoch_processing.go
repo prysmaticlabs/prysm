@@ -248,6 +248,16 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
 
 	bals := state.Balances()
+	var updateEffective bool
+	vs := state.ValidatorsReadOnly()
+	for idx, v := range vs {
+		balance := bals[idx]
+		if balance+downwardThreshold < v.EffectiveBalance() || v.EffectiveBalance()+upwardThreshold < balance {
+			updateEffective = true
+			break
+		}
+	}
+
 	// Update effective balances with hysteresis.
 	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
 		if val == nil {
@@ -268,8 +278,10 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		return false, nil
 	}
 
-	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
-		return nil, err
+	if updateEffective {
+		if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
+			return nil, err
+		}
 	}
 
 	// Set total slashed balances.
