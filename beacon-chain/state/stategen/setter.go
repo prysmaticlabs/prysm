@@ -58,6 +58,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
+	s.saveStateDuringLock.Lock()
 	if s.saveStateDuringHot && state.Slot()%s.saveStateDuringHotDuration == 0 {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 			return err
@@ -65,6 +66,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 		s.savedStatesDuringHot = append(s.savedStatesDuringHot, blockRoot)
 		log.Info("Saving state to db during non-finality, slot: ", state.Slot())
 	}
+	s.saveStateDuringLock.Unlock()
 
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
 	if s.hotStateCache.Has(blockRoot) {
@@ -92,11 +94,15 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 
 // TurnOnSaveStateDuringHot sets saveStateDuringHot to true.
 func (s *State) TurnOnSaveStateDuringHot(_ context.Context) {
+	s.saveStateDuringLock.Lock()
+	defer s.saveStateDuringLock.Unlock()
 	s.saveStateDuringHot = true
 }
 
 // TurnOnSaveStateDuringHot sets saveStateDuringHot to false.
 func (s *State) TurnOffSaveStateDuringHot(ctx context.Context) error {
+	s.saveStateDuringLock.Lock()
+	defer s.saveStateDuringLock.Unlock()
 	if err := s.beaconDB.DeleteStates(ctx, s.savedStatesDuringHot); err != nil {
 		return err
 	}

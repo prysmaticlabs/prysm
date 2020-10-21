@@ -23,6 +23,7 @@ type State struct {
 	finalizedInfo              *finalizedInfo
 	stateSummaryCache          *cache.StateSummaryCache
 	epochBoundaryStateCache    *epochBoundaryState
+	saveStateDuringLock        sync.Mutex
 	saveStateDuringHot         bool
 	saveStateDuringHotDuration uint64
 	savedStatesDuringHot       [][32]byte
