@@ -3,6 +3,7 @@ package accounts
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +18,7 @@ var WalletCommands = &cli.Command{
 			Name: "create",
 			Usage: "creates a new wallet with a desired type of keymanager: " +
 				"either on-disk (imported), derived, or using remote credentials",
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.KeymanagerKindFlag,
 				flags.GrpcRemoteAddressFlag,
@@ -31,6 +32,12 @@ var WalletCommands = &cli.Command{
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
 				cmd.AcceptTosFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -43,7 +50,7 @@ var WalletCommands = &cli.Command{
 		{
 			Name:  "edit-config",
 			Usage: "edits a wallet configuration options, such as gRPC connection credentials and TLS certificates",
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.GrpcRemoteAddressFlag,
 				flags.RemoteSignerCertPathFlag,
@@ -55,6 +62,12 @@ var WalletCommands = &cli.Command{
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
 				cmd.AcceptTosFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -67,7 +80,7 @@ var WalletCommands = &cli.Command{
 		{
 			Name:  "recover",
 			Usage: "uses a derived wallet seed recovery phase to recreate an existing HD wallet",
-			Flags: []cli.Flag{
+			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.MnemonicFileFlag,
 				flags.WalletPasswordFileFlag,
@@ -78,6 +91,12 @@ var WalletCommands = &cli.Command{
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
 				cmd.AcceptTosFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
