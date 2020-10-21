@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
@@ -29,6 +30,7 @@ var WalletCommands = &cli.Command{
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -52,6 +54,7 @@ var WalletCommands = &cli.Command{
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -74,6 +77,7 @@ var WalletCommands = &cli.Command{
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
