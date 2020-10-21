@@ -9,8 +9,6 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -19,19 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-)
-
-var finalHitCount = promauto.NewCounter(
-	prometheus.CounterOpts{
-		Name: "final_hit",
-		Help: "The number of times someone called head.",
-	},
-)
-var finalMissCount = promauto.NewCounter(
-	prometheus.CounterOpts{
-		Name: "final_miss",
-		Help: "The number of times a block is processed for fork choice.",
-	},
 )
 
 // sortableIndices implements the Sort interface to sort newly activated validator indices
@@ -264,7 +249,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	bals := state.Balances()
 	vals := state.ValidatorsReadOnly()
-	var updateEffective bool
+	var updates []uint64
 	for i, v := range vals {
 		if v == nil {
 			return nil, fmt.Errorf("validator %d is nil in state", i)
@@ -274,38 +259,32 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		}
 		balance := bals[i]
 		if balance+downwardThreshold < v.EffectiveBalance() || v.EffectiveBalance()+upwardThreshold < balance {
-			updateEffective = true
-			break
+			updates = append(updates, uint64(i))
 		}
 	}
 
-	if updateEffective {
-		// Update effective balances with hysteresis.
-		validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
-			if val == nil {
-				return false, fmt.Errorf("validator %d is nil in state", idx)
-			}
-			if idx >= len(bals) {
-				return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
-			}
-			balance := bals[idx]
-
-			if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-				val.EffectiveBalance = maxEffBalance
-				if val.EffectiveBalance > balance-balance%effBalanceInc {
-					val.EffectiveBalance = balance - balance%effBalanceInc
-				}
-				return true, nil
-			}
-			return false, nil
+	// Update effective balances with hysteresis.
+	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+		if val == nil {
+			return false, fmt.Errorf("validator %d is nil in state", idx)
 		}
-
-		if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
-			return nil, err
+		if idx >= len(bals) {
+			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
-		finalHitCount.Inc()
-	} else {
-		finalMissCount.Inc()
+		balance := bals[idx]
+
+		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
+			val.EffectiveBalance = maxEffBalance
+			if val.EffectiveBalance > balance-balance%effBalanceInc {
+				val.EffectiveBalance = balance - balance%effBalanceInc
+			}
+			return true, nil
+		}
+		return false, nil
+	}
+
+	if err := state.ApplyToEveryValidatorModified(updates, validatorFunc); err != nil {
+		return nil, err
 	}
 
 	// Set total slashed balances.

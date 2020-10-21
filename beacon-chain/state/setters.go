@@ -339,6 +339,54 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	return nil
 }
 
+func (b *BeaconState) ApplyToEveryValidatorModified(indices []uint64, f func(idx int, val *ethpb.Validator) (bool, error)) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+
+	m := make(map[uint64]bool)
+	for _, i := range indices {
+		m[i] = true
+	}
+	v := make([]*ethpb.Validator, len(b.state.Validators))
+	for i := 0; i < len(v); i++ {
+		if m[uint64(i)] {
+			v[i] = CopyValidator(b.state.Validators[i])
+		} else {
+			v[i] = b.state.Validators[i]
+		}
+	}
+
+	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
+		// Perform a copy since this is a shared reference and we don't want to mutate others.
+		v = b.validators()
+
+		ref.MinusRef()
+		b.sharedFieldReferences[validators] = &reference{refs: 1}
+	}
+	b.lock.Unlock()
+	var changedVals []uint64
+	for i, val := range v {
+		changed, err := f(i, val)
+		if err != nil {
+			return err
+		}
+		if changed {
+			changedVals = append(changedVals, uint64(i))
+		}
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Validators = v
+	b.markFieldAsDirty(validators)
+	b.addDirtyIndices(validators, changedVals)
+
+	return nil
+}
+
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
