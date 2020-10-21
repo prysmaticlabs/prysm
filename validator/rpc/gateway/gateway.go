@@ -3,8 +3,8 @@ package gateway
 import (
 	"context"
 	"net/http"
+	"strings"
 
-	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
 	"github.com/prysmaticlabs/prysm/validator/web"
@@ -23,7 +23,7 @@ type Gateway struct {
 	gatewayAddr    string
 	remoteAddr     string
 	server         *http.Server
-	router         *mux.Router
+	mux            *http.ServeMux
 	allowedOrigins []string
 	startFailure   error
 }
@@ -40,7 +40,7 @@ func New(
 		remoteAddr:     remoteAddress,
 		gatewayAddr:    gatewayAddress,
 		ctx:            ctx,
-		router:         mux.NewRouter(),
+		mux:            http.NewServeMux(),
 		allowedOrigins: allowedOrigins,
 	}
 }
@@ -68,11 +68,17 @@ func (g *Gateway) Start() {
 			log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
 		}
 	}
-	g.router.Path("/").HandlerFunc(web.Handler)
-	g.router.PathPrefix("/api/").Handler(http.StripPrefix("/api/", g.corsMiddleware(gwmux)))
+	apiHandler := g.corsMiddleware(gwmux)
+	g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api") {
+			http.StripPrefix("/api", apiHandler).ServeHTTP(w, r)
+		} else {
+			web.Handler(w, r)
+		}
+	})
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
-		Handler: g.router,
+		Handler: g.mux,
 	}
 
 	go func() {

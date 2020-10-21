@@ -231,7 +231,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
-		if err := s.registerRPCService(cliCtx); err != nil {
+		if err := s.registerRPCService(cliCtx, keyManager); err != nil {
 			return err
 		}
 		if err := s.registerRPCGatewayService(cliCtx); err != nil {
@@ -325,7 +325,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx); err != nil {
+	if err := s.registerRPCService(cliCtx, keyManager); err != nil {
 		return err
 	}
 	if err := s.registerRPCGatewayService(cliCtx); err != nil {
@@ -413,7 +413,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	return s.services.RegisterService(sp)
 }
 
-func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
+func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
 	var vs *client.ValidatorService
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
@@ -432,6 +432,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		GenesisFetcher:        vs,
 		NodeGatewayEndpoint:   nodeGatewayEndpoint,
 		WalletDir:             walletDir,
+		Wallet:                s.wallet,
+		Keymanager:            km,
 	})
 	return s.services.RegisterService(server)
 }
