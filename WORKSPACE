@@ -373,10 +373,3 @@ load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 geth_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
-
-go_repository(
-    name = "com_github_gorilla_mux",
-    importpath = "github.com/gorilla/mux",
-    sum = "h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=",
-    version = "v1.8.0",
-)
