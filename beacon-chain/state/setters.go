@@ -344,7 +344,6 @@ func (b *BeaconState) ApplyToEveryValidatorModified(indices []uint64, f func(idx
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
-
 	m := make(map[uint64]bool)
 	for _, i := range indices {
 		m[i] = true
@@ -357,15 +356,8 @@ func (b *BeaconState) ApplyToEveryValidatorModified(indices []uint64, f func(idx
 			v[i] = b.state.Validators[i]
 		}
 	}
-
-	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.validators()
-
-		ref.MinusRef()
-		b.sharedFieldReferences[validators] = &reference{refs: 1}
-	}
 	b.lock.Unlock()
+
 	var changedVals []uint64
 	for i, val := range v {
 		changed, err := f(i, val)

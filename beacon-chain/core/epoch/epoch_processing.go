@@ -249,7 +249,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	bals := state.Balances()
 	vals := state.ValidatorsReadOnly()
-	var updates []uint64
+	var indicesToBeUpdated []uint64
 	for i, v := range vals {
 		if v == nil {
 			return nil, fmt.Errorf("validator %d is nil in state", i)
@@ -259,7 +259,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		}
 		balance := bals[i]
 		if balance+downwardThreshold < v.EffectiveBalance() || v.EffectiveBalance()+upwardThreshold < balance {
-			updates = append(updates, uint64(i))
+			indicesToBeUpdated = append(indicesToBeUpdated, uint64(i))
 		}
 	}
 
@@ -283,7 +283,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		return false, nil
 	}
 
-	if err := state.ApplyToEveryValidatorModified(updates, validatorFunc); err != nil {
+	if err := state.ApplyToEveryValidatorModified(indicesToBeUpdated, validatorFunc); err != nil {
 		return nil, err
 	}
 
