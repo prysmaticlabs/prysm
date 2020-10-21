@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -332,7 +331,13 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
-	return s.registerWebService(cliCtx)
+	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
+	webAddress := fmt.Sprintf("http://%s:%d", gatewayHost, gatewayPort)
+	log.WithField("address", webAddress).Info(
+		"Starting Prysm web UI on address, open in browser to access",
+	)
+	return nil
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
@@ -446,14 +451,6 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		allowedOrigins,
 	)
 	return s.services.RegisterService(gatewaySrv)
-}
-
-func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
-	host := cliCtx.String(flags.WebHostFlag.Name)
-	port := cliCtx.Uint64(flags.WebPortFlag.Name)
-	webAddress := fmt.Sprintf("%s:%d", host, port)
-	srv := web.NewServer(webAddress)
-	return s.services.RegisterService(srv)
 }
 
 func clearDB(dataDir string, force bool) error {
