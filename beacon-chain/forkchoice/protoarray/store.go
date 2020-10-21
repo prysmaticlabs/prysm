@@ -160,6 +160,9 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
+	defer span.End()
+
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
