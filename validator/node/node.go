@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -232,7 +231,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
-		if err := s.registerRPCService(cliCtx); err != nil {
+		if err := s.registerRPCService(cliCtx, keyManager); err != nil {
 			return err
 		}
 		if err := s.registerRPCGatewayService(cliCtx); err != nil {
@@ -326,13 +325,19 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx); err != nil {
+	if err := s.registerRPCService(cliCtx, keyManager); err != nil {
 		return err
 	}
 	if err := s.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
-	return s.registerWebService(cliCtx)
+	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
+	webAddress := fmt.Sprintf("http://%s:%d", gatewayHost, gatewayPort)
+	log.WithField("address", webAddress).Info(
+		"Starting Prysm web UI on address, open in browser to access",
+	)
+	return nil
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
@@ -408,7 +413,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	return s.services.RegisterService(sp)
 }
 
-func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
+func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
 	var vs *client.ValidatorService
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
@@ -427,6 +432,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		GenesisFetcher:        vs,
 		NodeGatewayEndpoint:   nodeGatewayEndpoint,
 		WalletDir:             walletDir,
+		Wallet:                s.wallet,
+		Keymanager:            km,
 	})
 	return s.services.RegisterService(server)
 }
@@ -446,14 +453,6 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		allowedOrigins,
 	)
 	return s.services.RegisterService(gatewaySrv)
-}
-
-func (s *ValidatorClient) registerWebService(cliCtx *cli.Context) error {
-	host := cliCtx.String(flags.WebHostFlag.Name)
-	port := cliCtx.Uint64(flags.WebPortFlag.Name)
-	webAddress := fmt.Sprintf("%s:%d", host, port)
-	srv := web.NewServer(webAddress)
-	return s.services.RegisterService(srv)
 }
 
 func clearDB(dataDir string, force bool) error {
