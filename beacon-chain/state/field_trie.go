@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -191,6 +192,9 @@ func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 		return roots, nil
 	}
 	for _, idx := range indices {
+		if idx > uint64(len(val))-1 || len(val) == 0 {
+			return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
+		}
 		rootCreater(val[idx])
 	}
 	return roots, nil
@@ -203,7 +207,7 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	}
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
-	rootCreater := func(input *ethpb.Eth1Data) error {
+	rootCreator := func(input *ethpb.Eth1Data) error {
 		newRoot, err := stateutil.Eth1Root(hasher, input)
 		if err != nil {
 			return err
@@ -213,17 +217,22 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	}
 	if convertAll {
 		for i := range val {
-			err := rootCreater(val[i])
+			err := rootCreator(val[i])
 			if err != nil {
 				return nil, err
 			}
 		}
 		return roots, nil
 	}
-	for _, idx := range indices {
-		err := rootCreater(val[idx])
-		if err != nil {
-			return nil, err
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of items in eth1 data slice %d", idx, len(val))
+			}
+			err := rootCreator(val[idx])
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return roots, nil
@@ -236,7 +245,7 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 	}
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
-	rootCreater := func(input *ethpb.Validator) error {
+	rootCreator := func(input *ethpb.Validator) error {
 		newRoot, err := stateutil.ValidatorRoot(hasher, input)
 		if err != nil {
 			return err
@@ -246,17 +255,22 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 	}
 	if convertAll {
 		for i := range val {
-			err := rootCreater(val[i])
+			err := rootCreator(val[i])
 			if err != nil {
 				return nil, err
 			}
 		}
 		return roots, nil
 	}
-	for _, idx := range indices {
-		err := rootCreater(val[idx])
-		if err != nil {
-			return nil, err
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
+			}
+			err := rootCreator(val[idx])
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return roots, nil
@@ -286,10 +300,15 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 		}
 		return roots, nil
 	}
-	for _, idx := range indices {
-		err := rootCreator(val[idx])
-		if err != nil {
-			return nil, err
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of pending attestations %d", idx, len(val))
+			}
+			err := rootCreator(val[idx])
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return roots, nil
