@@ -58,7 +58,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateForkResponse, error) {
 	requestedState, err := bs.getState(ctx, req.StateId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state from ID")
+		return nil, status.Errorf(codes.Internal, "Could not get state from ID: %f", err)
 	}
 	fork := requestedState.Fork()
 	return &ethpb.StateForkResponse{
@@ -75,7 +75,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateFinalityCheckpointResponse, error) {
 	requestedState, err := bs.getState(ctx, req.StateId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state from ID")
+		return nil, status.Errorf(codes.Internal, "Could not get state from ID: %v", err)
 	}
 	prevJustChkpt := requestedState.PreviousJustifiedCheckpoint()
 	curJustChkpt := requestedState.CurrentJustifiedCheckpoint()

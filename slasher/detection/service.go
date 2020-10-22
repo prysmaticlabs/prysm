@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
@@ -130,6 +132,12 @@ func (ds *Service) Start() {
 		ds.detectHistoricalChainData(ds.ctx)
 	}
 	ds.status = Ready
+
+	slashings, err := ds.slasherDB.AttesterSlashings(ds.ctx, types.Active)
+	if err != nil {
+		panic(err)
+	}
+	ds.submitAttesterSlashings(ds.ctx, slashings)
 	// We listen to a stream of blocks and attestations from the beacon node.
 	go ds.beaconClient.ReceiveBlocks(ds.ctx)
 	go ds.beaconClient.ReceiveAttestations(ds.ctx)
