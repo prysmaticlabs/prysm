@@ -19,10 +19,12 @@ var databaseFileName = "slasher.db"
 // Store defines an implementation of the slasher Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db               *bolt.DB
-	databasePath     string
-	flatSpanCache    *cache.EpochFlatSpansCache
-	spanCacheEnabled bool
+	db                      *bolt.DB
+	databasePath            string
+	flatSpanCache           *cache.EpochFlatSpansCache
+	spanCacheEnabled        bool
+	highestAttestationCache *cache.HighestAttestationCache
+	highestAttCacheEnabled  bool
 }
 
 // Config options for the slasher db.
@@ -98,6 +100,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	}
 	kv := &Store{db: boltDB, databasePath: datafile}
 	kv.EnableSpanCache(true)
+	kv.EnableHighestAttestationCache(true)
 	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistFlatSpanMapsOnEviction(kv))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new flat cache")
