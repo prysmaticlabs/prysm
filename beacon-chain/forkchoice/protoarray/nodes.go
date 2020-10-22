@@ -3,6 +3,7 @@ package protoarray
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -51,7 +52,40 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		lastHeadRoot = bestNode.root
 	}
 
+	// Update canonical mapping.
+	if err := s.updateCanonicalNodes(ctx, bestNode.root); err != nil {
+		return [32]byte{}, err
+	}
+
 	return bestNode.root, nil
+}
+
+func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateCanonicalNodes")
+	defer span.End()
+
+	s.canonicalNodes[root] = true
+	i := s.nodesIndices[root]
+	n := s.nodes[i]
+	p := n.parent
+
+	for p != NonExistentNode {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		n = s.nodes[p]
+		if s.canonicalNodes[n.root] {
+			break
+		}
+
+		s.canonicalNodes[n.root] = true
+		p = n.parent
+	}
+
+	fmt.Println(hex.EncodeToString(root[:]), len(s.canonicalNodes))
+
+	return nil
 }
 
 // insert registers a new block node to the fork choice store's node list.

@@ -255,9 +255,5 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 		return true, nil
 	}
 
-	// If the block has not been finalized, the block must be recent. Check recent canonical roots
-	// mapping which uses proto array fork choice.
-	s.recentCanonicalBlocksLock.RLock()
-	defer s.recentCanonicalBlocksLock.RUnlock()
-	return s.recentCanonicalBlocks[blockRoot], nil
+	return s.forkChoiceStore.IsCanonical(blockRoot), nil
 }
