@@ -103,7 +103,7 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 				ctx, true, /* skipMnemonicConfirm */
 			)
 			if err != nil {
-				return errors.Wrap(err, "could not read keymanager for wallet")
+				return errors.Wrap(err, "could not read keymanager")
 			}
 			v.keyManager = keyManager
 			return nil
