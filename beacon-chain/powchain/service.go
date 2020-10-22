@@ -160,7 +160,6 @@ type Web3ServiceConfig struct {
 // NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
 func NewService(config *Web3ServiceConfig) (*Service, error) {
-	// TODO: Czy WithCancel ma sens?
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
