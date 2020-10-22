@@ -91,7 +91,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		DepositContainers: []*protodb.DepositContainer{},
 	})
 	require.NoError(t, err)
-	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
+	web3Service, err = powchain.NewService(&powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
 		HTTPEndPoint:    endpoint,
 		DepositContract: common.Address{},
