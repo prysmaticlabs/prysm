@@ -38,6 +38,7 @@ type ChainService struct {
 	Balance                     *precompute.Balance
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
+	CanonicalRoots              map[[32]byte]bool
 	Fork                        *pb.Fork
 	ETH1Data                    *ethpb.Eth1Data
 	DB                          db.Database
@@ -338,7 +339,11 @@ func (ms *ChainService) IsValidAttestation(_ context.Context, _ *ethpb.Attestati
 
 // IsCanonical returns and determines whether a block with the provided root is part of
 // the canonical chain.
-func (ms *ChainService) IsCanonical(_ context.Context, _ [32]byte) (bool, error) {
+func (ms *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) {
+	if ms.CanonicalRoots != nil {
+		_, ok := ms.CanonicalRoots[r]
+		return ok, nil
+	}
 	return true, nil
 }
 
