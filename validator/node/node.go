@@ -41,15 +41,18 @@ import (
 
 var log = logrus.WithField("prefix", "node")
 var au = aurora.NewAurora(true)
-var warning = "Warning! protection db is the main method to prevent slashing.\nIf it is " +
-	"not the first time you are running the validator with the current keys please " +
-	"locate the db file!!!"
+var useEmptyDir = "hit the Enter key"
+var warning = "Warning!!! protection db is the main method to prevent slashing.\n" +
+	"If it is not the first time you are running the validator with the current" +
+	"keys please locate the db file!!!"
 var defaultWarning = "hitting return will start an empty db file"
-var specifyProtectionDBPath = fmt.Sprintf("%s\nSeems like your validator "+
-	"protection db is empty.\n"+
-	"If you have run the validator before and saved the protection db to a different "+
-	"location\nplease specify the path to that directory, db file name is %s\nplease "+
-	"locate the latest version of it and paste the path (%s)", au.BrightMagenta(warning),
+var specifyProtectionDBPath = fmt.Sprintf(
+	"\n\nIf this is the first time you are using these keys "+
+		"disregard this warning and %s. %sSeems like your validator "+
+		"protection db is empty. \nIf you have run the validator before and saved the"+
+		"protection db to a different location please specify the path to that"+
+		"directory, db file name is %s \nplease locate the latest version of it "+
+		"and paste the path (%s)", au.BrightGreen(useEmptyDir), au.BrightMagenta(warning),
 	au.BrightMagenta(kv.ProtectionDbFileName), au.Red(defaultWarning))
 
 // ValidatorClient defines an instance of an eth2 validator that manages
