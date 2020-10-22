@@ -34,7 +34,7 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	wg.Add(10)
 	for i := 0; i < 10; i++ {
 		go func(i int) {
-			topic := fmt.Sprintf(AttestationSubnetTopicFormat, fd, i) + "/" + encoder.ProtocolSuffixSSZSnappy
+			topic := fmt.Sprintf(BlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
 			assert.NoError(t, s.PublishToTopic(ctx, topic, []byte{}))
 			wg.Done()
 		}(i)
