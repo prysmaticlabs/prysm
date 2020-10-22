@@ -33,7 +33,7 @@ func TestStore_Head_Itself(t *testing.T) {
 
 	// Since the justified node does not have a best descendant so the best node
 	// is itself.
-	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: NonExistentNode}}}
+	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: NonExistentNode}}, canonicalNodes: make(map[[32]byte]bool)}
 	h, err := s.head(context.Background(), r)
 	require.NoError(t, err)
 	assert.Equal(t, r, h)
