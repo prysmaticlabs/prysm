@@ -129,9 +129,10 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	numBlocks := 10
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
+	// Save blocks from slot 1 onwards.
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
-		b.Block.Slot = uint64(i)
+		b.Block.Slot = uint64(i) + 1
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = b
 		r, err := totalBlocks[i].Block.HashTreeRoot()
@@ -146,7 +147,7 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	goodFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(1)
 	requested, _, err := db.Blocks(ctx, goodFilter)
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(requested), "Unexpected number of blocks received, only expected two")
+	assert.Equal(t, 1, len(requested), "Unexpected number of blocks received, only expected two")
 }
 
 func TestStore_GenesisBlock(t *testing.T) {
