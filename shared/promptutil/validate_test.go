@@ -43,6 +43,14 @@ func TestValidatePasswordInput(t *testing.T) {
 			name:  "allow spaces",
 			input: "x*329293@aAJSD i22903saj",
 		},
+		{
+			name:  "strong password from LastPass",
+			input: "jXl!q5pkQnXsyT6dbJ3X5plQ!9%iqJCTr&*UIoaDu#b6GYJD##^GI3qniKdr240f",
+		},
+		{
+			name:  "allow underscores",
+			input: "jXl!q5pkQn_syT6dbJ3X5plQ_9_iqJCTr_*UIoaDu#b6GYJD##^GI3qniKdr240f",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
