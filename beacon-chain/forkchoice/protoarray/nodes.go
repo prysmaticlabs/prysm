@@ -3,7 +3,6 @@ package protoarray
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -82,8 +81,6 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 		s.canonicalNodes[n.root] = true
 		p = n.parent
 	}
-
-	fmt.Println(hex.EncodeToString(root[:]), len(s.canonicalNodes))
 
 	return nil
 }
