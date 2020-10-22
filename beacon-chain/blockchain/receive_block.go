@@ -14,6 +14,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var epochsSinceFinalitySaveStateDB = 100
+
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
@@ -60,12 +62,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	}
 
 	// Have we been finalizing? Should we start saving hot state in db?
-	if helpers.SlotToEpoch(s.CurrentSlot())-s.finalizedCheckpt.Epoch >= 100 {
-		s.stateGen.TurnOnSaveStateDuringHot(ctx)
-	} else {
-		if err := s.stateGen.TurnOffSaveStateDuringHot(ctx); err != nil {
-			return err
-		}
+	sinceFinality := helpers.SlotToEpoch(s.CurrentSlot()) - s.finalizedCheckpt.Epoch
+	if sinceFinality >= uint64(epochsSinceFinalitySaveStateDB) {
+		s.stateGen.EnableSaveHotStateToDB(ctx)
+	} else if err := s.stateGen.DisableSaveHotStateToDB(ctx); err != nil {
+		return err
 	}
 
 	// Reports on block and fork choice metrics.

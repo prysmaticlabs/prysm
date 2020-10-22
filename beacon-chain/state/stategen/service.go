@@ -17,16 +17,23 @@ import (
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
-	beaconDB                   db.NoHeadAccessDatabase
-	slotsPerArchivedPoint      uint64
-	hotStateCache              *cache.HotStateCache
-	finalizedInfo              *finalizedInfo
-	stateSummaryCache          *cache.StateSummaryCache
-	epochBoundaryStateCache    *epochBoundaryState
-	saveStateDuringLock        sync.Mutex
-	saveStateDuringHot         bool
-	saveStateDuringHotDuration uint64
-	savedStatesDuringHot       [][32]byte
+	beaconDB                db.NoHeadAccessDatabase
+	slotsPerArchivedPoint   uint64
+	hotStateCache           *cache.HotStateCache
+	finalizedInfo           *finalizedInfo
+	stateSummaryCache       *cache.StateSummaryCache
+	epochBoundaryStateCache *epochBoundaryState
+	saveHotStateDB          *saveHotStateDbConfig
+}
+
+// This tracks the config in the event of long non-finality,
+// how often does the node save hot states to db? what are
+// the saved hot states in db?... etc
+type saveHotStateDbConfig struct {
+	enabled         bool
+	lock            sync.Mutex
+	duration        uint64
+	savedStateRoots [][32]byte
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
@@ -41,14 +48,15 @@ type finalizedInfo struct {
 // New returns a new state management object.
 func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
 	return &State{
-		beaconDB:                   db,
-		hotStateCache:              cache.NewHotStateCache(),
-		finalizedInfo:              &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
-		slotsPerArchivedPoint:      params.BeaconConfig().SlotsPerArchivedPoint,
-		stateSummaryCache:          stateSummaryCache,
-		epochBoundaryStateCache:    newBoundaryStateCache(),
-		saveStateDuringHotDuration: 128,
-		saveStateDuringHot:         true,
+		beaconDB:                db,
+		hotStateCache:           cache.NewHotStateCache(),
+		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
+		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
+		stateSummaryCache:       stateSummaryCache,
+		epochBoundaryStateCache: newBoundaryStateCache(),
+		saveHotStateDB: &saveHotStateDbConfig{
+			duration: 128, // TODO: Make this configurable.
+		},
 	}
 }
 
