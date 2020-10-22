@@ -72,8 +72,6 @@ var appFlags = []cli.Flag{
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
-	flags.WebHostFlag,
-	flags.WebPortFlag,
 	flags.AllowEmptyProtectionDB,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,

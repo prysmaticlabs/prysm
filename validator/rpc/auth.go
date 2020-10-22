@@ -53,7 +53,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 		return nil, status.Error(codes.FailedPrecondition, "Could not check if wallet directory exists")
 	}
 	if !hasDir {
-		if err := os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		if err := os.MkdirAll(walletDir, os.ModePerm); err != nil {
 			return nil, status.Errorf(codes.Internal, "could not write directory %s to disk: %v", walletDir, err)
 		}
 	}

@@ -3,9 +3,11 @@ package gateway
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
+	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -66,7 +68,14 @@ func (g *Gateway) Start() {
 			log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
 		}
 	}
-	g.mux.Handle("/", g.corsMiddleware(gwmux))
+	apiHandler := g.corsMiddleware(gwmux)
+	g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api") {
+			http.StripPrefix("/api", apiHandler).ServeHTTP(w, r)
+		} else {
+			web.Handler(w, r)
+		}
+	})
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
 		Handler: g.mux,
