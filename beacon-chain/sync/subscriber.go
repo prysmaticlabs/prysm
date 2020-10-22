@@ -167,7 +167,7 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 		messageReceivedCounter.WithLabelValues(topic).Inc()
 		if msg.Topic == nil {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
-			return pubsub.ValidationIgnore
+			return pubsub.ValidationReject
 		}
 		// Ignore any messages received before chainstart.
 		if !s.chainStarted {
