@@ -3,6 +3,7 @@
 package shared
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -15,7 +16,7 @@ var log = logrus.WithField("prefix", "registry")
 // easy dependency management.
 type Service interface {
 	// Start spawns any goroutines required by the service.
-	Start()
+	Start(ctx context.Context)
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
 	Stop() error
@@ -39,11 +40,11 @@ func NewServiceRegistry() *ServiceRegistry {
 }
 
 // StartAll initialized each service in order of registration.
-func (s *ServiceRegistry) StartAll() {
+func (s *ServiceRegistry) StartAll(ctx context.Context) {
 	log.Debugf("Starting %d services: %v", len(s.serviceTypes), s.serviceTypes)
 	for _, kind := range s.serviceTypes {
 		log.Debugf("Starting service type %v", kind)
-		go s.services[kind].Start()
+		go s.services[kind].Start(ctx)
 	}
 }
 

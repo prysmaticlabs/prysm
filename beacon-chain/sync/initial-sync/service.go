@@ -76,7 +76,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 }
 
 // Start the initial sync service.
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	// Wait for state initialized event.
 	genesis := <-s.genesisChan
 	if genesis.IsZero() {

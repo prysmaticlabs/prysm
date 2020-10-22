@@ -37,7 +37,7 @@ type Gateway struct {
 
 // Start the gateway service. This serves the HTTP JSON traffic on the specified
 // port.
-func (g *Gateway) Start() {
+func (g *Gateway) Start(ctx context.Context) {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 

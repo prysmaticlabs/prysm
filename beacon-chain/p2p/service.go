@@ -181,7 +181,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 }
 
 // Start the p2p service.
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	if s.started {
 		log.Error("Attempted to start p2p service when it was already started")
 		return

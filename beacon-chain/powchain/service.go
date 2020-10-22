@@ -221,7 +221,7 @@ func NewService(config *Web3ServiceConfig) (*Service, error) {
 }
 
 // Start a web3 service's main event loop.
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
 	if !s.chainStartData.Chainstarted && s.httpEndpoint == "" {

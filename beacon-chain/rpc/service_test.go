@@ -39,7 +39,7 @@ func TestLifecycle_OK(t *testing.T) {
 		StateNotifier:       chainService.StateNotifier(),
 	})
 
-	rpcService.Start()
+	rpcService.Start(context.Background())
 
 	require.LogsContain(t, hook, "listening on port")
 	assert.NoError(t, rpcService.Stop())
@@ -66,7 +66,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		StateNotifier:       chainService.StateNotifier(),
 	})
 
-	rpcService.Start()
+	rpcService.Start(context.Background())
 
 	require.LogsContain(t, hook, "listening on port")
 	require.LogsContain(t, hook, "You are using an insecure gRPC server")

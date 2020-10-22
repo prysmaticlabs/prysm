@@ -133,7 +133,7 @@ func TestStart_OK(t *testing.T) {
 	require.NoError(t, err)
 	testAcc.Backend.Commit()
 
-	web3Service.Start()
+	web3Service.Start(context.Background())
 	if len(hook.Entries) > 0 {
 		msg := hook.LastEntry().Message
 		want := "Could not connect to ETH1.0 chain RPC client"
@@ -173,7 +173,7 @@ func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 				wg.Done()
 			}
 		}()
-		s.Start()
+		s.Start(context.Background())
 	}()
 	testutil.WaitTimeout(wg, time.Second)
 	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
@@ -202,7 +202,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	wg.Add(1)
 
 	go func() {
-		s.Start()
+		s.Start(context.Background())
 		wg.Done()
 	}()
 	s.cancel()
@@ -228,7 +228,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	s.Start()
+	s.Start(context.Background())
 	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }

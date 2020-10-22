@@ -107,7 +107,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 }
 
 // Start initializes the genesis state from configured flags.
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop does nothing.

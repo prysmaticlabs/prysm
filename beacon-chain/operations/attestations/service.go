@@ -55,7 +55,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 }
 
 // Start an attestation pool service's main event loop.
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	go s.prepareForkChoiceAtts()
 	go s.pruneAttsPool()
 }

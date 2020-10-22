@@ -196,6 +196,6 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	beacon.Start()
+	beacon.Start(ctx.Context)
 	return nil
 }

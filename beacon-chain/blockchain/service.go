@@ -131,7 +131,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 }
 
 // Start a blockchain service's main event loop.
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	beaconState, err := s.beaconDB.HeadState(s.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)

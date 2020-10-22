@@ -49,7 +49,7 @@ func main() {
 	)
 	mux.HandleFunc("/swagger/", gateway.SwaggerServer())
 	mux.HandleFunc("/healthz", healthzServer(gw))
-	gw.Start()
+	gw.Start(context.Background())
 
 	select {}
 }

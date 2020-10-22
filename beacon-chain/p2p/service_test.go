@@ -92,6 +92,7 @@ func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
+	ctx := context.Background()
 
 	cfg := &Config{
 		TCPPort:       2000,
@@ -104,7 +105,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	s.dv5Listener = &mockListener{}
 	exitRoutine := make(chan bool)
 	go func() {
-		s.Start()
+		s.Start(ctx)
 		<-exitRoutine
 	}()
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
@@ -119,7 +120,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	}
 	time.Sleep(time.Second * 2)
 	assert.Equal(t, true, s.started, "Expected service to be started")
-	s.Start()
+	s.Start(ctx)
 	require.LogsContain(t, hook, "Attempted to start p2p service when it was already started")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
@@ -205,7 +206,7 @@ func TestListenForNewNodes(t *testing.T) {
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
-		s.Start()
+		s.Start(context.Background())
 		<-exitRoutine
 	}()
 	time.Sleep(1 * time.Second)

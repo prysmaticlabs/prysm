@@ -237,14 +237,14 @@ func (b *BeaconNode) OperationFeed() *event.Feed {
 }
 
 // Start the BeaconNode and kicks off every registered service.
-func (b *BeaconNode) Start() {
+func (b *BeaconNode) Start(ctx context.Context) {
 	b.lock.Lock()
 
 	log.WithFields(logrus.Fields{
 		"version": version.GetVersion(),
 	}).Info("Starting beacon node")
 
-	b.services.StartAll()
+	b.services.StartAll(ctx)
 
 	stop := b.stop
 	b.lock.Unlock()

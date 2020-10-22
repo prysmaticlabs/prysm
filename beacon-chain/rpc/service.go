@@ -187,7 +187,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 }
 
 // Start the gRPC server.
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	address := fmt.Sprintf("%s:%s", s.host, s.port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
