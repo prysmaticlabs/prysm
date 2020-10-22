@@ -111,7 +111,7 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop does nothing.
-func (s *Service) Stop() error {
+func (s *Service) Stop(ctx context.Context) error {
 	return nil
 }
 

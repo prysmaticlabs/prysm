@@ -320,17 +320,18 @@ func (s *Service) initializeBeaconChain(
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
-func (s *Service) Stop() error {
-	defer s.cancel()
+func (s *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	if s.stateGen != nil && s.head != nil && s.head.state != nil {
-		if err := s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
+		if err := s.stateGen.ForceCheckpoint(ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
 			return err
 		}
 	}
 
 	// Save initial sync cached blocks to the DB before stop.
-	return s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
+	return s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks())
 }
 
 // Status always returns nil unless there is an error condition that causes

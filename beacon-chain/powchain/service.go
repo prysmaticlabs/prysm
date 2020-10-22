@@ -248,13 +248,14 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
-func (s *Service) Stop() error {
-	if s.cancel != nil {
-		defer s.cancel()
-	}
+func (s *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	if s.headerChan != nil {
 		defer close(s.headerChan)
 	}
+
 	return nil
 }
 

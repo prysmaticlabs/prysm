@@ -19,7 +19,7 @@ type Service interface {
 	Start(ctx context.Context)
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
-	Stop() error
+	Stop(ctx context.Context) error
 	// Returns error if the service is not considered healthy.
 	Status() error
 }
@@ -55,8 +55,9 @@ func (s *ServiceRegistry) StartAll() {
 func (s *ServiceRegistry) StopAll() {
 	for i := len(s.serviceTypes) - 1; i >= 0; i-- {
 		kind := s.serviceTypes[i]
+		context := s.contexts[kind]
 		service := s.services[kind]
-		if err := service.Stop(); err != nil {
+		if err := service.Stop(context); err != nil {
 			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
 	}

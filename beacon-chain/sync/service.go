@@ -165,13 +165,15 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop the regular sync service.
-func (s *Service) Stop() error {
+func (s *Service) Stop(ctx context.Context) error {
 	defer func() {
 		if s.rateLimiter != nil {
 			s.rateLimiter.free()
 		}
 	}()
-	defer s.cancel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	return nil
 }
 

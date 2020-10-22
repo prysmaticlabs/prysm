@@ -45,9 +45,10 @@ func (s *Server) Start(ctx context.Context) {
 }
 
 // Stop the web server gracefully with 1s timeout.
-func (s *Server) Stop() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+func (s *Server) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
+
 	return s.http.Shutdown(ctx)
 }
 

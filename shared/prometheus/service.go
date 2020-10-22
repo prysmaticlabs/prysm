@@ -121,6 +121,7 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+// TODO: Co z kontekstami, które nie są wykorzystane?
 // Start the prometheus service.
 func (s *Service) Start(ctx context.Context) {
 	go func() {
@@ -145,9 +146,10 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop the service gracefully.
-func (s *Service) Stop() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func (s *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
+
 	return s.server.Shutdown(ctx)
 }
 

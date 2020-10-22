@@ -108,6 +108,7 @@ func (s *Service) Start(ctx context.Context) {
 		return
 	}
 	s.waitForMinimumPeers()
+	// TODO: Ten kontekst wypadałoby anulować w Stop
 	if err := s.roundRobinSync(genesis); err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
 			return
@@ -119,8 +120,10 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop initial sync.
-func (s *Service) Stop() error {
-	s.cancel()
+func (s *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	return nil
 }
 

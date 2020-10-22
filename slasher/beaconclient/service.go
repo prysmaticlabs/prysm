@@ -124,12 +124,15 @@ func (bs *Service) ClientReadyFeed() *event.Feed {
 }
 
 // Stop the beacon client service by closing the gRPC connection.
-func (bs *Service) Stop() error {
-	bs.cancel()
+func (bs *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	log.Info("Stopping service")
 	if bs.conn != nil {
 		return bs.conn.Close()
 	}
+
 	return nil
 }
 

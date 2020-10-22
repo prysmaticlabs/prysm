@@ -62,8 +62,10 @@ func (s *Service) Start(ctx context.Context) {
 
 // Stop the beacon block attestation pool service's main event loop
 // and associated goroutines.
-func (s *Service) Stop() error {
-	defer s.cancel()
+func (s *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	return nil
 }
 

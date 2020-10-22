@@ -259,12 +259,15 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop the p2p service and terminate all peer connections.
-func (s *Service) Stop() error {
-	defer s.cancel()
+func (s *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	s.started = false
 	if s.dv5Listener != nil {
 		s.dv5Listener.Close()
 	}
+
 	return nil
 }
 

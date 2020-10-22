@@ -137,12 +137,15 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 // Stop the service.
-func (s *Service) Stop() error {
-	s.cancel()
+func (s *Service) Stop(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of gRPC server")
 	}
+
 	return nil
 }
 
