@@ -94,8 +94,14 @@ func Init(c *Flags) {
 
 // InitWithReset sets the global config and returns function that is used to reset configuration.
 func InitWithReset(c *Flags) func() {
+	var prevConfig Flags
+	if featureConfig != nil {
+		prevConfig = *featureConfig
+	} else {
+		prevConfig = Flags{}
+	}
 	resetFunc := func() {
-		Init(&Flags{})
+		Init(&prevConfig)
 	}
 	Init(c)
 	return resetFunc
@@ -187,9 +193,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling new BLS library blst")
 		cfg.EnableBlst = true
 	}
-	if ctx.Bool(enablePruningDepositProofs.Name) {
-		log.Warn("Enabling pruning deposit proofs")
-		cfg.EnablePruningDepositProofs = true
+	cfg.EnablePruningDepositProofs = true
+	if ctx.Bool(disablePruningDepositProofs.Name) {
+		log.Warn("Disabling pruning deposit proofs")
+		cfg.EnablePruningDepositProofs = false
 	}
 	Init(cfg)
 }

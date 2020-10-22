@@ -207,6 +207,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
 				Epoch: 0,
 			}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),

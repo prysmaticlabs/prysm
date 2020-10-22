@@ -21,7 +21,6 @@ var databaseFileName = "slasher.db"
 type Store struct {
 	db               *bolt.DB
 	databasePath     string
-	spanCache        *cache.EpochSpansCache
 	flatSpanCache    *cache.EpochFlatSpansCache
 	spanCacheEnabled bool
 }
@@ -97,11 +96,6 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	}
 	kv := &Store{db: boltDB, databasePath: datafile}
 	kv.EnableSpanCache(true)
-	spanCache, err := cache.NewEpochSpansCache(cfg.SpanCacheSize, persistSpanMapsOnEviction(kv))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create new cache")
-	}
-	kv.spanCache = spanCache
 	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistFlatSpanMapsOnEviction(kv))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new flat cache")

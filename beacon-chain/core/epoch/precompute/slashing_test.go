@@ -13,10 +13,25 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestProcessSlashingsPrecompute_NotSlashed(t *testing.T) {
+func TestProcessSlashingsPrecompute_NotSlashedWithSlashedTrue(t *testing.T) {
 	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{{Slashed: true}},
+		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
+		Slashings:  []uint64{0, 1e9},
+	})
+	require.NoError(t, err)
+	pBal := &precompute.Balance{ActiveCurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
+	require.NoError(t, precompute.ProcessSlashingsPrecompute(s, pBal))
+
+	wanted := params.BeaconConfig().MaxEffectiveBalance
+	assert.Equal(t, wanted, s.Balances()[0], "Unexpected slashed balance")
+}
+
+func TestProcessSlashingsPrecompute_NotSlashedWithSlashedFalse(t *testing.T) {
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Slot:       0,
+		Validators: []*ethpb.Validator{{}},
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{0, 1e9},
 	})

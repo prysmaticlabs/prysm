@@ -2,9 +2,12 @@ package accounts
 
 import (
 	"os"
+	"strings"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -29,9 +32,13 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
-				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -53,9 +60,13 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
-				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -78,9 +89,13 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
-				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -107,9 +122,13 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
-				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -133,9 +152,13 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
-				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
@@ -164,13 +187,22 @@ this command outputs a deposit data string which is required to become a validat
 				featureconfig.MedallaTestnet,
 				featureconfig.SpadinaTestnet,
 				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
-				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
 				if err := ExitAccountsCli(cliCtx, os.Stdin); err != nil {
+					msg := err.Error()
+					if strings.Contains(msg, blocks.ValidatorAlreadyExitedMsg) ||
+						strings.Contains(msg, blocks.ValidatorCannotExitYetMsg) {
+						log.Errorf("Could not perform voluntary exit: %s", msg)
+					}
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}
 				return nil

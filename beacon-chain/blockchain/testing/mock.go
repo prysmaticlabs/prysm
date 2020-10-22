@@ -38,6 +38,7 @@ type ChainService struct {
 	Balance                     *precompute.Balance
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
+	CanonicalRoots              map[[32]byte]bool
 	Fork                        *pb.Fork
 	ETH1Data                    *ethpb.Eth1Data
 	DB                          db.Database
@@ -338,7 +339,11 @@ func (ms *ChainService) IsValidAttestation(_ context.Context, _ *ethpb.Attestati
 
 // IsCanonical returns and determines whether a block with the provided root is part of
 // the canonical chain.
-func (ms *ChainService) IsCanonical(_ context.Context, _ [32]byte) (bool, error) {
+func (ms *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) {
+	if ms.CanonicalRoots != nil {
+		_, ok := ms.CanonicalRoots[r]
+		return ok, nil
+	}
 	return true, nil
 }
 
@@ -361,7 +366,18 @@ func (ms *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, _ *ethpb.Attestation) error {
+func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
+	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
+		return errors.New("LMD and FFG miss matched")
+	}
+	return nil
+}
+
+// VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
+func (ms *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) error {
+	if !bytes.Equal(r, ms.FinalizedCheckPoint.Root) {
+		return errors.New("Root and finalized store are not consistent")
+	}
 	return nil
 }
 
