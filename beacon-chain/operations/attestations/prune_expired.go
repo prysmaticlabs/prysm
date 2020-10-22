@@ -1,6 +1,7 @@
 package attestations
 
 import (
+	"context"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -8,7 +9,7 @@ import (
 )
 
 // pruneAttsPool prunes attestations pool on every slot interval.
-func (s *Service) pruneAttsPool() {
+func (s *Service) pruneAttsPool(ctx context.Context) {
 	ticker := time.NewTicker(s.pruneInterval)
 	defer ticker.Stop()
 	for {
@@ -16,7 +17,7 @@ func (s *Service) pruneAttsPool() {
 		case <-ticker.C:
 			s.pruneExpiredAtts()
 			s.updateMetrics()
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
 		}

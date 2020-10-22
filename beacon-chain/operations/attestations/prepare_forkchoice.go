@@ -20,16 +20,16 @@ var prepareForkChoiceAttsPeriod = slotutil.DivideSlotBy(3 /* times-per-slot */)
 
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
-func (s *Service) prepareForkChoiceAtts() {
+func (s *Service) prepareForkChoiceAtts(ctx context.Context) {
 	ticker := time.NewTicker(prepareForkChoiceAttsPeriod)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
+			if err := s.batchForkChoiceAtts(ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
 		}

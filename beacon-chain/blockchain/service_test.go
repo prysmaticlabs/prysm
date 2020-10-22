@@ -98,7 +98,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
 
-	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
+	opsService, err := attestations.NewService(&attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
 	depositCache, err := depositcache.New()

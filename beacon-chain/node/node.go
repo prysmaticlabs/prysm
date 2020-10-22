@@ -418,7 +418,7 @@ func (b *BeaconNode) fetchP2P() p2p.P2P {
 }
 
 func (b *BeaconNode) registerAttestationPool() error {
-	s, err := attestations.NewService(b.ctx, &attestations.Config{
+	s, err := attestations.NewService(&attestations.Config{
 		Pool: b.attestationPool,
 	})
 	if err != nil {

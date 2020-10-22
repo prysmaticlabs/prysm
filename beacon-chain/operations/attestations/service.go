@@ -15,8 +15,6 @@ var forkChoiceProcessedRootsSize = 1 << 16
 
 // Service of attestation pool operations.
 type Service struct {
-	ctx                      context.Context
-	cancel                   context.CancelFunc
 	pool                     Pool
 	err                      error
 	forkChoiceProcessedRoots *lru.Cache
@@ -32,7 +30,7 @@ type Config struct {
 
 // NewService instantiates a new attestation pool service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(cfg *Config) (*Service, error) {
 	cache, err := lru.New(forkChoiceProcessedRootsSize)
 	if err != nil {
 		return nil, err
@@ -44,10 +42,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pruneInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                      ctx,
-		cancel:                   cancel,
 		pool:                     cfg.Pool,
 		forkChoiceProcessedRoots: cache,
 		pruneInterval:            pruneInterval,
@@ -56,8 +51,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 // Start an attestation pool service's main event loop.
 func (s *Service) Start(ctx context.Context) {
-	go s.prepareForkChoiceAtts()
-	go s.pruneAttsPool()
+	go s.prepareForkChoiceAtts(ctx)
+	go s.pruneAttsPool(ctx)
 }
 
 // Stop the beacon block attestation pool service's main event loop
