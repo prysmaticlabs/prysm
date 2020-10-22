@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
-	"time"
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
