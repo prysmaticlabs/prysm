@@ -445,7 +445,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	}
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
-	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
+	blockchainService, err := blockchain.NewService(&blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,
 		ChainStartFetcher: web3Service,
@@ -680,7 +680,6 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	return b.services.RegisterService(
 		gateway.New(
-			b.ctx,
 			selfAddress,
 			gatewayAddress,
 			nil, /*optional mux*/

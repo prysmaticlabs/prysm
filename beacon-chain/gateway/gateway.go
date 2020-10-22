@@ -23,8 +23,6 @@ var _ shared.Service = (*Gateway)(nil)
 // it to the beacon-chain gRPC server.
 type Gateway struct {
 	conn                    *grpc.ClientConn
-	ctx                     context.Context
-	cancel                  context.CancelFunc
 	gatewayAddr             string
 	remoteAddr              string
 	server                  *http.Server
@@ -38,9 +36,6 @@ type Gateway struct {
 // Start the gateway service. This serves the HTTP JSON traffic on the specified
 // port.
 func (g *Gateway) Start(ctx context.Context) {
-	ctx, cancel := context.WithCancel(ctx)
-	g.cancel = cancel
-
 	log.WithField("address", g.gatewayAddr).Info("Starting JSON-HTTP API")
 
 	conn, err := g.dial(ctx, "tcp", g.remoteAddr)
@@ -116,7 +111,6 @@ func (g *Gateway) Stop(ctx context.Context) error {
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
 func New(
-	ctx context.Context,
 	remoteAddress,
 	gatewayAddress string,
 	mux *http.ServeMux,
@@ -131,7 +125,6 @@ func New(
 	return &Gateway{
 		remoteAddr:              remoteAddress,
 		gatewayAddr:             gatewayAddress,
-		ctx:                     ctx,
 		mux:                     mux,
 		allowedOrigins:          allowedOrigins,
 		enableDebugRPCEndpoints: enableDebugRPCEndpoints,
