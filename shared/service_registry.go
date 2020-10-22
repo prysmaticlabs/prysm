@@ -54,7 +54,7 @@ func (s *ServiceRegistry) StopAll() {
 		kind := s.serviceTypes[i]
 		service := s.services[kind]
 		if err := service.Stop(); err != nil {
-			log.Panicf("Could not stop the following service: %v, %v", kind, err)
+			log.WithError(err).Errorf("Could not stop the following service: %v", kind)
 		}
 	}
 }
