@@ -127,16 +127,16 @@ func (ds *Service) Start(ctx context.Context) {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
 		ds.status = HistoricalDetection
-		ds.detectHistoricalChainData(ds.ctx)
+		ds.detectHistoricalChainData(ctx)
 	}
 	ds.status = Ready
 	// We listen to a stream of blocks and attestations from the beacon node.
-	go ds.beaconClient.ReceiveBlocks(ds.ctx)
-	go ds.beaconClient.ReceiveAttestations(ds.ctx)
+	go ds.beaconClient.ReceiveBlocks(ctx)
+	go ds.beaconClient.ReceiveAttestations(ctx)
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
-	go ds.detectIncomingBlocks(ds.ctx, ds.blocksChan)
-	go ds.detectIncomingAttestations(ds.ctx, ds.attsChan)
+	go ds.detectIncomingBlocks(ctx, ds.blocksChan)
+	go ds.detectIncomingAttestations(ctx, ds.attsChan)
 }
 
 func (ds *Service) detectHistoricalChainData(ctx context.Context) {

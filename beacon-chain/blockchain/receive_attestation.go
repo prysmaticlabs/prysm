@@ -119,7 +119,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
-func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
+func (s *Service) processAttestation(ctx context.Context, subscribedToStateEvents chan struct{}) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -130,10 +130,9 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	st := slotutil.GetSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-st.C():
-			ctx := s.ctx
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
 				// Based on the spec, don't process the attestation until the subsequent slot.

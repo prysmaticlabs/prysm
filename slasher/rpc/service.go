@@ -116,7 +116,7 @@ func (s *Service) Start(ctx context.Context) {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	slasherServer := &Server{
-		ctx:          s.ctx,
+		ctx:          ctx,
 		detector:     s.detector,
 		slasherDB:    s.slasherDB,
 		beaconClient: s.beaconclient,

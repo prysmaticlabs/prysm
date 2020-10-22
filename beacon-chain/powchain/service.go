@@ -160,6 +160,7 @@ type Web3ServiceConfig struct {
 // NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
 func NewService(config *Web3ServiceConfig) (*Service, error) {
+	// TODO: Czy WithCancel ma sens?
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -227,7 +228,7 @@ func (s *Service) Start(ctx context.Context) {
 	if !s.chainStartData.Chainstarted && s.httpEndpoint == "" {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
-		genState, err := s.beaconDB.GenesisState(s.ctx)
+		genState, err := s.beaconDB.GenesisState(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -242,7 +243,7 @@ func (s *Service) Start(ctx context.Context) {
 	}
 	go func() {
 		s.waitForConnection()
-		s.run(s.ctx.Done())
+		s.run(ctx.Done())
 	}()
 }
 

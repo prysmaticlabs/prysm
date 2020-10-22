@@ -109,7 +109,7 @@ func (s *Service) Start(ctx context.Context) {
 	}
 	s.waitForMinimumPeers()
 	if err := s.roundRobinSync(genesis); err != nil {
-		if errors.Is(s.ctx.Err(), context.Canceled) {
+		if errors.Is(ctx.Err(), context.Canceled) {
 			return
 		}
 		panic(err)

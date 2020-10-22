@@ -161,7 +161,7 @@ func (s *Service) Start(ctx context.Context) {
 	}
 
 	// Update sync metrics.
-	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
+	runutil.RunEvery(ctx, syncMetricsInterval, s.updateMetrics)
 }
 
 // Stop the regular sync service.

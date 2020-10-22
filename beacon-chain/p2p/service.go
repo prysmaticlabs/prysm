@@ -195,7 +195,7 @@ func (s *Service) Start(ctx context.Context) {
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
 		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
-		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
+		if err := dialRelayNode(ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
 	}
@@ -232,12 +232,12 @@ func (s *Service) Start(ctx context.Context) {
 	}
 
 	// Periodic functions.
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
-		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
+	runutil.RunEvery(ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
+		ensurePeerConnections(ctx, s.host, peersToWatch...)
 	})
-	runutil.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
-	runutil.RunEvery(s.ctx, refreshRate, func() {
+	runutil.RunEvery(ctx, 30*time.Minute, s.Peers().Prune)
+	runutil.RunEvery(ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
+	runutil.RunEvery(ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
 

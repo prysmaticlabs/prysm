@@ -231,7 +231,7 @@ func (s *Service) Start(ctx context.Context) {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	validatorServer := &validator.Server{
-		Ctx:                    s.ctx,
+		Ctx:                    ctx,
 		BeaconDB:               s.beaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.attestationsPool,
@@ -267,7 +267,7 @@ func (s *Service) Start(ctx context.Context) {
 		GenesisFetcher:     s.genesisFetcher,
 	}
 	beaconChainServer := &beacon.Server{
-		Ctx:                         s.ctx,
+		Ctx:                         ctx,
 		BeaconDB:                    s.beaconDB,
 		AttestationsPool:            s.attestationsPool,
 		SlashingsPool:               s.slashingsPool,
@@ -288,7 +288,7 @@ func (s *Service) Start(ctx context.Context) {
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
 	beaconChainServerV1 := &beaconv1.Server{
-		Ctx:                 s.ctx,
+		Ctx:                 ctx,
 		BeaconDB:            s.beaconDB,
 		AttestationsPool:    s.attestationsPool,
 		SlashingsPool:       s.slashingsPool,

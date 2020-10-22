@@ -134,7 +134,7 @@ func (v *ValidatorService) Start(ctx context.Context) {
 	if dialOpts == nil {
 		return
 	}
-	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
+	conn, err := grpc.DialContext(ctx, v.endpoint, dialOpts...)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return
@@ -178,8 +178,8 @@ func (v *ValidatorService) Start(ctx context.Context) {
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
 	}
-	go run(v.ctx, v.validator)
-	go v.recheckKeys(v.ctx)
+	go run(ctx, v.validator)
+	go v.recheckKeys(ctx)
 }
 
 // Stop the validator service.

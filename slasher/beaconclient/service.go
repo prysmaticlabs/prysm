@@ -176,7 +176,7 @@ func (bs *Service) Start(ctx context.Context) {
 			grpcutils.LogGRPCRequests,
 		)),
 	}
-	conn, err := grpc.DialContext(bs.ctx, bs.provider, beaconOpts...)
+	conn, err := grpc.DialContext(ctx, bs.provider, beaconOpts...)
 	if err != nil {
 		log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
 	}
@@ -187,7 +187,7 @@ func (bs *Service) Start(ctx context.Context) {
 	bs.nodeClient = ethpb.NewNodeClient(bs.conn)
 
 	// We poll for the sync status of the beacon node until it is fully synced.
-	bs.querySyncStatus(bs.ctx)
+	bs.querySyncStatus(ctx)
 
 	// We notify other services in slasher that the beacon client is ready
 	// and the connection is active.
@@ -196,7 +196,7 @@ func (bs *Service) Start(ctx context.Context) {
 	// We register subscribers for any detected proposer/attester slashings
 	// in the slasher services that we can submit to the beacon node
 	// as they are found.
-	go bs.subscribeDetectedProposerSlashings(bs.ctx, bs.proposerSlashingsChan)
-	go bs.subscribeDetectedAttesterSlashings(bs.ctx, bs.attesterSlashingsChan)
+	go bs.subscribeDetectedProposerSlashings(ctx, bs.proposerSlashingsChan)
+	go bs.subscribeDetectedAttesterSlashings(ctx, bs.attesterSlashingsChan)
 
 }

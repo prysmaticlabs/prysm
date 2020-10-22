@@ -45,7 +45,7 @@ func New(
 
 // Start the gateway service. This serves the HTTP JSON traffic.
 func (g *Gateway) Start(ctx context.Context) {
-	ctx, cancel := context.WithCancel(g.ctx)
+	ctx, cancel := context.WithCancel(ctx)
 	g.cancel = cancel
 
 	gwmux := gwruntime.NewServeMux(

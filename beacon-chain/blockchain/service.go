@@ -132,7 +132,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 // Start a blockchain service's main event loop.
 func (s *Service) Start(ctx context.Context) {
-	beaconState, err := s.beaconDB.HeadState(s.ctx)
+	beaconState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -140,7 +140,7 @@ func (s *Service) Start(ctx context.Context) {
 	// For running initial sync with state cache, in an event of restart, we use
 	// last finalized check point as start point to sync instead of head
 	// state. This is because we no longer save state every slot during sync.
-	cp, err := s.beaconDB.FinalizedCheckpoint(s.ctx)
+	cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch finalized cp: %v", err)
 	}
@@ -151,7 +151,7 @@ func (s *Service) Start(ctx context.Context) {
 		// the finalized root is defined as zero hashes instead of genesis root hash.
 		// We want to use genesis root to retrieve for state.
 		if r == params.BeaconConfig().ZeroHash {
-			genesisBlock, err := s.beaconDB.GenesisBlock(s.ctx)
+			genesisBlock, err := s.beaconDB.GenesisBlock(ctx)
 			if err != nil {
 				log.Fatalf("Could not fetch finalized cp: %v", err)
 			}
@@ -162,7 +162,7 @@ func (s *Service) Start(ctx context.Context) {
 				}
 			}
 		}
-		beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
+		beaconState, err = s.stateGen.StateByRoot(ctx, r)
 		if err != nil {
 			log.Fatalf("Could not fetch beacon state by root: %v", err)
 		}
@@ -176,29 +176,29 @@ func (s *Service) Start(ctx context.Context) {
 		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.opsService.SetGenesisTime(beaconState.GenesisTime())
-		if err := s.initializeChainInfo(s.ctx); err != nil {
+		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
 
 		// We start a counter to genesis, if needed.
-		gState, err := s.beaconDB.GenesisState(s.ctx)
+		gState, err := s.beaconDB.GenesisState(ctx)
 		if err != nil {
 			log.Fatalf("Could not retrieve genesis state: %v", err)
 		}
-		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()))
+		go slotutil.CountdownToGenesis(ctx, s.genesisTime, uint64(gState.NumValidators()))
 
-		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(s.ctx)
+		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(ctx)
 		if err != nil {
 			log.Fatalf("Could not get justified checkpoint: %v", err)
 		}
-		finalizedCheckpoint, err := s.beaconDB.FinalizedCheckpoint(s.ctx)
+		finalizedCheckpoint, err := s.beaconDB.FinalizedCheckpoint(ctx)
 		if err != nil {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
 		}
 
 		// Resume fork choice.
 		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
+		if err := s.cacheJustifiedStateBalances(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
 		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
@@ -207,7 +207,7 @@ func (s *Service) Start(ctx context.Context) {
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+		if err := s.VerifyWeakSubjectivityRoot(ctx); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 		}
@@ -240,10 +240,10 @@ func (s *Service) Start(ctx context.Context) {
 							return
 						}
 						log.WithField("starttime", data.StartTime).Debug("Received chain start event")
-						s.processChainStartTime(s.ctx, data.StartTime)
+						s.processChainStartTime(ctx, data.StartTime)
 						return
 					}
-				case <-s.ctx.Done():
+				case <-ctx.Done():
 					log.Debug("Context closed, exiting goroutine")
 					return
 				case err := <-stateSub.Err():
@@ -254,7 +254,7 @@ func (s *Service) Start(ctx context.Context) {
 		}()
 	}
 
-	go s.processAttestation(attestationProcessorSubscribed)
+	go s.processAttestation(ctx, attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
