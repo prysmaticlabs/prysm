@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -195,7 +196,14 @@ func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
 	for i, key := range cfg.rawPubKeys {
 		if err := client.ProposeExit(cliCtx.Context, cfg.validatorClient, cfg.nodeClient, cfg.keymanager.Sign, key); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
-			log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.formattedPubKeys[i])
+
+			msg := err.Error()
+			if strings.Contains(msg, blocks.ValidatorAlreadyExitedMsg) ||
+				strings.Contains(msg, blocks.ValidatorCannotExitYetMsg) {
+				log.Warningf("Could not perform voluntary exit for account %s: %s", cfg.formattedPubKeys[i], msg)
+			} else {
+				log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.formattedPubKeys[i])
+			}
 		}
 	}
 	var formattedExitedKeys []string
