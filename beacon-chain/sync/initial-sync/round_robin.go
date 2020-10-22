@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
-	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -69,7 +69,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.chain.HeadSlot(),
 		"headSlot":   helpers.SlotsSince(genesis),
-	}).Debug("Synced to finalized epoch - now syncing blocks up to current head")
+	}).Info("Synced to finalized epoch - now syncing blocks up to current head")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
@@ -97,7 +97,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.chain.HeadSlot(),
 		"headSlot":   helpers.SlotsSince(genesis),
-	}).Debug("Synced to head of chain")
+	}).Info("Synced to head of chain")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
 	}
@@ -112,7 +112,7 @@ func (s *Service) processFetchedData(
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
-		log.WithError(err).Debug("Batch is not processed")
+		log.WithField("err", err.Error()).Warn("Batch is not processed")
 	}
 }
 
@@ -124,7 +124,11 @@ func (s *Service) processFetchedDataRegSync(
 	blockReceiver := s.chain.ReceiveBlock
 	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Debug("Block is not processed")
+			if errors.Is(err, errBlockAlreadyProcessed) {
+				log.WithField("err", err.Error()).Debug("Block is not processed")
+			} else {
+				log.WithField("err", err.Error()).Warn("Block is not processed")
+			}
 			continue
 		}
 	}
@@ -195,7 +199,7 @@ func (s *Service) processBlock(
 		return err
 	}
 	if s.isProcessedBlock(ctx, blk, blkRoot) {
-		return errors.Wrapf(errBlockAlreadyProcessed, "slot: %d , root %#x", blk.Block.Slot, blkRoot)
+		return fmt.Errorf("slot: %d , root %#x: %w", blk.Block.Slot, blkRoot, errBlockAlreadyProcessed)
 	}
 
 	s.logSyncStatus(genesis, blk.Block, blkRoot)

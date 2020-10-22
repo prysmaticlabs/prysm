@@ -94,8 +94,14 @@ func Init(c *Flags) {
 
 // InitWithReset sets the global config and returns function that is used to reset configuration.
 func InitWithReset(c *Flags) func() {
+	var prevConfig Flags
+	if featureConfig != nil {
+		prevConfig = *featureConfig
+	} else {
+		prevConfig = Flags{}
+	}
 	resetFunc := func() {
-		Init(&Flags{})
+		Init(&prevConfig)
 	}
 	Init(c)
 	return resetFunc

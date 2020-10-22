@@ -33,6 +33,11 @@ const connTimeout = 10 * time.Second
 var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
+	// verify if ToS accepted
+	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
+		return err
+	}
+
 	validatorClient, err := node.NewValidatorClient(ctx)
 	if err != nil {
 		return err
@@ -67,8 +72,6 @@ var appFlags = []cli.Flag{
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
-	flags.WebHostFlag,
-	flags.WebPortFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -114,10 +117,6 @@ func main() {
 	app.Before = func(ctx *cli.Context) error {
 		// Load flags from config file, if specified.
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
-			return err
-		}
-		// verify if ToS accepted
-		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 			return err
 		}
 

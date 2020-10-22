@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -43,6 +44,8 @@ type Config struct {
 	GenesisFetcher        client.GenesisFetcher
 	WalletInitializedFeed *event.Feed
 	NodeGatewayEndpoint   string
+	Wallet                *wallet.Wallet
+	Keymanager            keymanager.IKeymanager
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -85,7 +88,9 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		genesisFetcher:        cfg.GenesisFetcher,
 		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
-		walletInitialized:     false,
+		walletInitialized:     cfg.Wallet != nil,
+		wallet:                cfg.Wallet,
+		keymanager:            cfg.Keymanager,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
 	}
 }
@@ -130,14 +135,9 @@ func (s *Server) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	// We create a new, random JWT key upon validator startup.
-	r := rand.NewGenerator()
-	jwtKey := make([]byte, 32)
-	n, err := r.Read(jwtKey)
+	jwtKey, err := createRandomJWTKey()
 	if err != nil {
 		log.WithError(err).Fatal("Could not initialize validator jwt key")
-	}
-	if n != len(jwtKey) {
-		log.WithError(err).Fatal("Could not create random jwt key for validator")
 	}
 	s.jwtKey = jwtKey
 
@@ -171,4 +171,17 @@ func (s *Server) Stop() error {
 // Status returns nil or credentialError.
 func (s *Server) Status() error {
 	return s.credentialError
+}
+
+func createRandomJWTKey() ([]byte, error) {
+	r := rand.NewGenerator()
+	jwtKey := make([]byte, 32)
+	n, err := r.Read(jwtKey)
+	if err != nil {
+		return nil, err
+	}
+	if n != len(jwtKey) {
+		return nil, errors.New("could not create appropriately sized random JWT key")
+	}
+	return jwtKey, nil
 }

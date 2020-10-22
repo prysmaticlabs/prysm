@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"context"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -126,8 +128,8 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot uint64, finalizedCheckpoin
 }
 
 // reportEpochMetrics reports epoch related metrics.
-func reportEpochMetrics(state *stateTrie.BeaconState) {
-	currentEpoch := state.Slot() / params.BeaconConfig().SlotsPerEpoch
+func reportEpochMetrics(ctx context.Context, postState *stateTrie.BeaconState, headState *stateTrie.BeaconState) error {
+	currentEpoch := postState.Slot() / params.BeaconConfig().SlotsPerEpoch
 
 	// Validator instances
 	pendingInstances := 0
@@ -145,8 +147,8 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 	slashingBalance := uint64(0)
 	slashingEffectiveBalance := uint64(0)
 
-	for i, validator := range state.Validators() {
-		bal, err := state.BalanceAtIndex(uint64(i))
+	for i, validator := range postState.Validators() {
+		bal, err := postState.BalanceAtIndex(uint64(i))
 		if err != nil {
 			log.Errorf("Could not load validator balance: %v", err)
 			continue
@@ -195,31 +197,40 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 	validatorsEffectiveBalance.WithLabelValues("Slashing").Set(float64(slashingEffectiveBalance))
 
 	// Last justified slot
-	beaconCurrentJustifiedEpoch.Set(float64(state.CurrentJustifiedCheckpoint().Epoch))
-	beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.CurrentJustifiedCheckpoint().Root)))
+	beaconCurrentJustifiedEpoch.Set(float64(postState.CurrentJustifiedCheckpoint().Epoch))
+	beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowInt64(postState.CurrentJustifiedCheckpoint().Root)))
 
 	// Last previous justified slot
-	beaconPrevJustifiedEpoch.Set(float64(state.PreviousJustifiedCheckpoint().Epoch))
-	beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.PreviousJustifiedCheckpoint().Root)))
+	beaconPrevJustifiedEpoch.Set(float64(postState.PreviousJustifiedCheckpoint().Epoch))
+	beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(postState.PreviousJustifiedCheckpoint().Root)))
 
 	// Last finalized slot
-	beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpointEpoch()))
-	beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint().Root)))
+	beaconFinalizedEpoch.Set(float64(postState.FinalizedCheckpointEpoch()))
+	beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(postState.FinalizedCheckpoint().Root)))
+	currentEth1DataDepositCount.Set(float64(postState.Eth1Data().DepositCount))
 
-	currentEth1DataDepositCount.Set(float64(state.Eth1Data().DepositCount))
-
-	if precompute.Balances != nil {
-		totalEligibleBalances.Set(float64(precompute.Balances.ActivePrevEpoch))
-		totalVotedTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttested))
-		prevEpochActiveBalances.Set(float64(precompute.Balances.ActivePrevEpoch))
-		prevEpochSourceBalances.Set(float64(precompute.Balances.PrevEpochAttested))
-		prevEpochTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttested))
-		prevEpochHeadBalances.Set(float64(precompute.Balances.PrevEpochHeadAttested))
+	// Validator participation should be viewed on the canonical chain.
+	v, b, err := precompute.New(ctx, headState)
+	if err != nil {
+		return err
 	}
-	refMap := state.FieldReferencesCount()
+	_, b, err = precompute.ProcessAttestations(ctx, headState, v, b)
+	if err != nil {
+		return err
+	}
+	totalEligibleBalances.Set(float64(b.ActivePrevEpoch))
+	totalVotedTargetBalances.Set(float64(b.PrevEpochTargetAttested))
+	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
+	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))
+	prevEpochTargetBalances.Set(float64(b.PrevEpochTargetAttested))
+	prevEpochHeadBalances.Set(float64(b.PrevEpochHeadAttested))
+
+	refMap := postState.FieldReferencesCount()
 	for name, val := range refMap {
 		stateTrieReferences.WithLabelValues(name).Set(float64(val))
 	}
+
+	return nil
 }
 
 func reportAttestationInclusion(blk *ethpb.BeaconBlock) {
