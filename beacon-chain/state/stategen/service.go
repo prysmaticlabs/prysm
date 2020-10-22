@@ -14,6 +14,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var defaultHotStateDBInterval uint64 = 128 // slots
+
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
@@ -55,7 +57,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		stateSummaryCache:       stateSummaryCache,
 		epochBoundaryStateCache: newBoundaryStateCache(),
 		saveHotStateDB: &saveHotStateDbConfig{
-			duration: 128, // TODO: Make this configurable.
+			duration: defaultHotStateDBInterval,
 		},
 	}
 }

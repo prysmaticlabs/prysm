@@ -69,7 +69,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 		log.WithFields(logrus.Fields{
 			"slot":                   state.Slot(),
 			"totalHotStateSavedInDB": len(s.saveHotStateDB.savedStateRoots),
-		}).Info("Saving hot state in DB")
+		}).Info("Saving hot state to DB")
 	}
 	s.saveHotStateDB.lock.Unlock()
 

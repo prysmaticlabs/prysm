@@ -14,7 +14,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var epochsSinceFinalitySaveStateDB = 100
+var epochsSinceFinalitySaveHotStateDB = 100
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
@@ -61,11 +61,8 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		return err
 	}
 
-	// Have we been finalizing? Should we start saving hot state in db?
-	sinceFinality := helpers.SlotToEpoch(s.CurrentSlot()) - s.finalizedCheckpt.Epoch
-	if sinceFinality >= uint64(epochsSinceFinalitySaveStateDB) {
-		s.stateGen.EnableSaveHotStateToDB(ctx)
-	} else if err := s.stateGen.DisableSaveHotStateToDB(ctx); err != nil {
+	// Have we been finalizing? Should we start saving hot states to db?
+	if err := s.checkSaveHotStateDB(ctx); err != nil {
 		return err
 	}
 
@@ -189,4 +186,22 @@ func (s *Service) handlePostBlockOperations(b *ethpb.BeaconBlock) error {
 		s.slashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil
+}
+
+// This checks whether it's time to start saving hot state to DB.
+// It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
+func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
+	currentEpoch := helpers.SlotToEpoch(s.CurrentSlot())
+	// Prevent `sinceFinality` going underflow.
+	var sinceFinality uint64
+	if currentEpoch > s.finalizedCheckpt.Epoch {
+		sinceFinality = currentEpoch - s.finalizedCheckpt.Epoch
+	}
+
+	if sinceFinality >= uint64(epochsSinceFinalitySaveHotStateDB) {
+		s.stateGen.EnableSaveHotStateToDB(ctx)
+		return nil
+	}
+
+	return s.stateGen.DisableSaveHotStateToDB(ctx)
 }
