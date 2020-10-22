@@ -97,7 +97,8 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	return nil
 }
 
-// EnableSaveHotStateToDB enters the mode that saves beacon state to DB for the hot states (e.g. post finalization).
+// EnableSaveHotStateToDB enters the mode that saves hot beacon state to the DB.
+// This usually gets triggered when there's long duration since finality.
 func (s *State) EnableSaveHotStateToDB(_ context.Context) {
 	s.saveHotStateDB.lock.Lock()
 	defer s.saveHotStateDB.lock.Unlock()
@@ -113,7 +114,8 @@ func (s *State) EnableSaveHotStateToDB(_ context.Context) {
 	}).Warn("Entering mode to save hot states in DB")
 }
 
-// DisableSaveHotStateToDB exits the mode that saves beacon state to DB for the hot states (e.g. post finalization).
+// DisableSaveHotStateToDB exits the mode that saves beacon state to DB for the hot states.
+// This usually gets triggered once there's finality after long duration since finality.
 func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 	s.saveHotStateDB.lock.Lock()
 	defer s.saveHotStateDB.lock.Unlock()
@@ -126,6 +128,7 @@ func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 		return err
 	}
 	s.saveHotStateDB.enabled = false
+
 	log.WithFields(logrus.Fields{
 		"enabled":          s.saveHotStateDB.enabled,
 		"deletedHotStates": len(s.saveHotStateDB.savedStateRoots),
