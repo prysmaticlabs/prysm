@@ -92,7 +92,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 }
 
 // Start the gRPC server.
-func (s *Server) Start() {
+func (s *Server) Start(ctx context.Context) {
 	// Setup the gRPC server options and TLS configuration.
 	address := fmt.Sprintf("%s:%s", s.host, s.port)
 	lis, err := net.Listen("tcp", address)

@@ -113,7 +113,7 @@ func (ds *Service) Status() error {
 }
 
 // Start the detection service runtime.
-func (ds *Service) Start() {
+func (ds *Service) Start(ctx context.Context) {
 	// We wait for the gRPC beacon client to be ready and the beacon node
 	// to be fully synced before proceeding.
 	ds.status = Started

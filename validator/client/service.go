@@ -117,7 +117,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 
 // Start the validator service. Launches the main go routine for the validator
 // client.
-func (v *ValidatorService) Start() {
+func (v *ValidatorService) Start(ctx context.Context) {
 	streamInterceptor := grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 		grpc_opentracing.StreamClientInterceptor(),
 		grpc_prometheus.StreamClientInterceptor,

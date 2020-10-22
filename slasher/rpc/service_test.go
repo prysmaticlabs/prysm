@@ -18,7 +18,7 @@ func TestLifecycle_OK(t *testing.T) {
 		KeyFlag:  "alice.key",
 	})
 
-	rpcService.Start()
+	rpcService.Start(context.Background())
 
 	require.LogsContain(t, hook, "listening on port")
 	require.NoError(t, rpcService.Stop())
@@ -37,7 +37,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		Port: "7777",
 	})
 
-	rpcService.Start()
+	rpcService.Start(context.Background())
 
 	require.LogsContain(t, hook, "listening on port")
 	require.NoError(t, rpcService.Stop())

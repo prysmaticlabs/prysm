@@ -33,7 +33,7 @@ func NewServer(addr string) *Server {
 }
 
 // Start the web server.
-func (s *Server) Start() {
+func (s *Server) Start(ctx context.Context) {
 	go func() {
 		log.WithField("address", "http://"+s.http.Addr).Info(
 			"Starting Prysm web UI on address, open in browser to access",

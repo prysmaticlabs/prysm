@@ -4,6 +4,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -109,14 +110,14 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 }
 
 // Start every service in the validator client.
-func (s *ValidatorClient) Start() {
+func (s *ValidatorClient) Start(ctx context.Context) {
 	s.lock.Lock()
 
 	log.WithFields(logrus.Fields{
 		"version": version.GetVersion(),
 	}).Info("Starting validator node")
 
-	s.services.StartAll()
+	s.services.StartAll(ctx)
 
 	stop := s.stop
 	s.lock.Unlock()

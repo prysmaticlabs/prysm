@@ -56,7 +56,7 @@ func TestLifecycle(t *testing.T) {
 		endpoint: "merkle tries",
 		withCert: "alice.crt",
 	}
-	validatorService.Start()
+	validatorService.Start(ctx)
 	require.NoError(t, validatorService.Stop(), "Could not stop service")
 	require.LogsContain(t, hook, "Stopping service")
 }
@@ -71,7 +71,7 @@ func TestLifecycle_Insecure(t *testing.T) {
 		cancel:   cancel,
 		endpoint: "merkle tries",
 	}
-	validatorService.Start()
+	validatorService.Start(ctx)
 	require.LogsContain(t, hook, "You are using an insecure gRPC connection")
 	require.NoError(t, validatorService.Stop(), "Could not stop service")
 	require.LogsContain(t, hook, "Stopping service")

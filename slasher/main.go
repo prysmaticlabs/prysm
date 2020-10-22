@@ -41,7 +41,7 @@ func startSlasher(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	slasher.Start()
+	slasher.Start(cliCtx.Context)
 	return nil
 }
 

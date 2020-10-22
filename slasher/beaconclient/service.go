@@ -146,7 +146,7 @@ func (bs *Service) Status() error {
 // a gRPC client connection with a beacon node, listening for
 // streamed blocks/attestations, and submitting slashing operations
 // after they are detected by other services in the slasher.
-func (bs *Service) Start() {
+func (bs *Service) Start(ctx context.Context) {
 	var dialOpt grpc.DialOption
 	if bs.cert != "" {
 		creds, err := credentials.NewClientTLSFromFile(bs.cert, "")
