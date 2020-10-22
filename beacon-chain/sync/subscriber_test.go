@@ -280,7 +280,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				},
 				chainstarted: false,
 			},
-			want: pubsub.ValidationReject,
+			want: pubsub.ValidationIgnore,
 		},
 		{
 			name: "validator panicked",
