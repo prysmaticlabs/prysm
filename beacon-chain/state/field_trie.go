@@ -191,11 +191,13 @@ func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 		}
 		return roots, nil
 	}
-	for _, idx := range indices {
-		if idx > uint64(len(val))-1 || len(val) == 0 {
-			return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
+			}
+			rootCreater(val[idx])
 		}
-		rootCreater(val[idx])
 	}
 	return roots, nil
 }
