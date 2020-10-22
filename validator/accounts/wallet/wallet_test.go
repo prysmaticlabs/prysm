@@ -140,7 +140,7 @@ func Test_IsValid_RandomFiles(t *testing.T) {
 	require.NoError(t, os.MkdirAll(path, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to create directory")
 
 	valid, err = wallet.IsValid(path)
-	require.ErrorContains(t, "no wallet found at path", err)
+	require.ErrorContains(t, "no wallet found", err)
 	require.Equal(t, false, valid)
 
 	walletDir := filepath.Join(path, "direct")
