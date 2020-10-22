@@ -27,9 +27,6 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-// connTimeout defines a period after which connection to beacon node is cancelled.
-const connTimeout = 10 * time.Second
-
 var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
@@ -171,6 +168,5 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
 	}
 }
