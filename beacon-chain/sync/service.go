@@ -171,8 +171,6 @@ func (s *Service) Stop(ctx context.Context) error {
 			s.rateLimiter.free()
 		}
 	}()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	return nil
 }

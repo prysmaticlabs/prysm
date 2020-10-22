@@ -121,9 +121,6 @@ func (s *Service) Start(ctx context.Context) {
 
 // Stop initial sync.
 func (s *Service) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	return nil
 }
 

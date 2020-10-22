@@ -147,9 +147,6 @@ func (s *Service) Start(ctx context.Context) {
 
 // Stop the service gracefully.
 func (s *Service) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
 	return s.server.Shutdown(ctx)
 }
 

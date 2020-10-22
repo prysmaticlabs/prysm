@@ -24,19 +24,24 @@ type Service interface {
 	Status() error
 }
 
+type cancellableContext struct {
+	context context.Context
+	cancel  context.CancelFunc
+}
+
 // ServiceRegistry provides a useful pattern for managing services.
 // It allows for ease of dependency management and ensures services
 // dependent on others use the same references in memory.
 type ServiceRegistry struct {
-	contexts     map[reflect.Type]context.Context // map of types to contexts.
-	services     map[reflect.Type]Service         // map of types to services.
-	serviceTypes []reflect.Type                   // keep an ordered slice of registered service types.
+	contexts     map[reflect.Type]cancellableContext // map of types to contexts that can be cancelled.
+	services     map[reflect.Type]Service            // map of types to services.
+	serviceTypes []reflect.Type                      // keep an ordered slice of registered service types.
 }
 
 // NewServiceRegistry starts a registry instance for convenience
 func NewServiceRegistry() *ServiceRegistry {
 	return &ServiceRegistry{
-		contexts: make(map[reflect.Type]context.Context),
+		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 }
@@ -46,7 +51,7 @@ func (s *ServiceRegistry) StartAll() {
 	log.Debugf("Starting %d services: %v", len(s.serviceTypes), s.serviceTypes)
 	for _, kind := range s.serviceTypes {
 		log.Debugf("Starting service type %v", kind)
-		go s.services[kind].Start(s.contexts[kind])
+		go s.services[kind].Start(s.contexts[kind].context)
 	}
 }
 
@@ -55,11 +60,12 @@ func (s *ServiceRegistry) StartAll() {
 func (s *ServiceRegistry) StopAll() {
 	for i := len(s.serviceTypes) - 1; i >= 0; i-- {
 		kind := s.serviceTypes[i]
-		context := s.contexts[kind]
+		ctx := s.contexts[kind]
 		service := s.services[kind]
-		if err := service.Stop(context); err != nil {
+		if err := service.Stop(ctx.context); err != nil {
 			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
+		ctx.cancel()
 	}
 }
 
@@ -80,8 +86,8 @@ func (s *ServiceRegistry) RegisterService(service Service) error {
 	if _, exists := s.services[kind]; exists {
 		return fmt.Errorf("service already exists: %v", kind)
 	}
-	ctx := context.Background()
-	s.contexts[kind] = ctx
+	ctx, cancel := context.WithCancel(context.Background())
+	s.contexts[kind] = cancellableContext{ctx, cancel}
 	s.services[kind] = service
 	s.serviceTypes = append(s.serviceTypes, kind)
 	return nil

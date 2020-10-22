@@ -99,9 +99,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Stop the notifier service.
 func (ds *Service) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	log.Info("Stopping service")
 
 	return nil

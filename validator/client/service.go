@@ -184,9 +184,6 @@ func (v *ValidatorService) Start(ctx context.Context) {
 
 // Stop the validator service.
 func (v *ValidatorService) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	log.Info("Stopping service")
 	if v.conn != nil {
 		return v.conn.Close()

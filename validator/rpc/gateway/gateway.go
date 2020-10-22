@@ -93,9 +93,6 @@ func (g *Gateway) Status() error {
 
 // Stop the gateway with a graceful shutdown.
 func (g *Gateway) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	if err := g.server.Shutdown(ctx); err != nil {
 		log.WithError(err).Error("Failed to shut down server")
 	}

@@ -156,9 +156,6 @@ func (s *Server) Start(ctx context.Context) {
 
 // Stop the gRPC server.
 func (s *Server) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of server")

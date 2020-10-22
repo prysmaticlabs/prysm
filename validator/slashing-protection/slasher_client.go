@@ -129,9 +129,6 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 
 // Stop the validator service.
 func (s *Service) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	log.Info("Stopping slashing protection service")
 	if s.conn != nil {
 		return s.conn.Close()
