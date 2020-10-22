@@ -14,6 +14,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// This defines how many epochs since finality the run time will begin to save hot state on to the DB.
 var epochsSinceFinalitySaveHotStateDB = 100
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.

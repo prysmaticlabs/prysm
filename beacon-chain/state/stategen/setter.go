@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"math"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -59,8 +60,11 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
+	// Duration can't be 0 to prevent panic for division.
+	duration := uint64(math.Max(float64(s.saveHotStateDB.duration), 1))
+
 	s.saveHotStateDB.lock.Lock()
-	if s.saveHotStateDB.enabled && state.Slot()%s.saveHotStateDB.duration == 0 {
+	if s.saveHotStateDB.enabled && state.Slot()%duration == 0 {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 			return err
 		}
@@ -123,16 +127,16 @@ func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 		return nil
 	}
 
-	// Delete previous saved states in DB as we are turning this mode off.
-	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.savedStateRoots); err != nil {
-		return err
-	}
-	s.saveHotStateDB.enabled = false
-
 	log.WithFields(logrus.Fields{
 		"enabled":          s.saveHotStateDB.enabled,
 		"deletedHotStates": len(s.saveHotStateDB.savedStateRoots),
 	}).Warn("Exiting mode to save hot states in DB")
+
+	// Delete previous saved states in DB as we are turning this mode off.
+	s.saveHotStateDB.enabled = false
+	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.savedStateRoots); err != nil {
+		return err
+	}
 	s.saveHotStateDB.savedStateRoots = nil
 
 	return nil
