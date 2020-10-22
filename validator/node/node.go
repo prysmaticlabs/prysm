@@ -259,10 +259,8 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 }
 
 func moveSlashingProtectionDatabase(cliCtx *cli.Context, defaultDir *cli.StringFlag) {
-	log.Infof("starting move db: %s", defaultDir.Name)
 	dataDir := cliCtx.String(defaultDir.Name)
 	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-	log.Infof("datafile: %s", dataFile)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag || cliCtx.Bool(flags.AllowEmptyProtectionDB.Name) {
