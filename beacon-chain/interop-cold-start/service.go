@@ -29,8 +29,6 @@ var _ powchain.ChainStartFetcher = (*Service)(nil)
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
 type Service struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
 	genesisTime        uint64
 	numValidators      uint64
 	beaconDB           db.HeadAccessDatabase
@@ -51,13 +49,12 @@ type Config struct {
 // NewService is an interoperability testing service to inject a deterministically generated genesis state
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func NewService(cfg *Config) *Service {
+	ctx := context.Background()
+
 	log.Warn("Saving generated genesis state in database for interop testing")
-	ctx, cancel := context.WithCancel(ctx)
 
 	s := &Service{
-		ctx:           ctx,
-		cancel:        cancel,
 		genesisTime:   cfg.GenesisTime,
 		numValidators: cfg.NumValidators,
 		beaconDB:      cfg.BeaconDB,
