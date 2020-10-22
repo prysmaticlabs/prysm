@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
@@ -111,6 +113,35 @@ func fillDBTestState(ctx context.Context, t *testing.T, db db.Database) ([]*stat
 	return stateContainers, stateSumCache
 }
 
+func TestServer_GetGenesis(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+	st := testutil.NewBeaconState()
+	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
+	bs := &Server{
+		BeaconDB:           db,
+		GenesisTimeFetcher: &mock.ChainService{},
+		ChainInfoFetcher: &mock.ChainService{
+			State:          st,
+			ValidatorsRoot: genValRoot,
+		},
+	}
+	res, err := bs.GetGenesis(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	assert.DeepEqual(t, params.BeaconConfig().GenesisForkVersion, res.GenesisForkVersion)
+	pUnix, err := ptypes.TimestampProto(time.Unix(0, 0))
+	require.NoError(t, err)
+	assert.Equal(t, true, res.GenesisTime.Equal(pUnix))
+	assert.DeepEqual(t, genValRoot[:], res.GenesisValidatorsRoot)
+
+	bs.GenesisTimeFetcher = &mock.ChainService{Genesis: time.Unix(10, 0)}
+	res, err = bs.GetGenesis(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	pUnix, err = ptypes.TimestampProto(time.Unix(10, 0))
+	require.NoError(t, err)
+	assert.Equal(t, true, res.GenesisTime.Equal(pUnix))
+}
+
 func TestServer_GetStateRoot(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -203,6 +234,105 @@ func TestServer_GetStateRoot(t *testing.T) {
 
 			if !reflect.DeepEqual(stateRootResp.StateRoot, tt.want) {
 				t.Errorf("Expected roots to equal, expected: %#x, received: %#x", tt.want, stateRootResp.StateRoot)
+			}
+		})
+	}
+}
+
+func TestServer_GetStateFork(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	stateContainers, sc := fillDBTestState(ctx, t, db)
+	headState := stateContainers[len(stateContainers)-1]
+	bs := &Server{
+		BeaconDB: db,
+		GenesisTimeFetcher: &mock.ChainService{
+			Genesis: time.Unix(0, 0),
+		},
+		ChainInfoFetcher: &mock.ChainService{
+			DB:   db,
+			Root: headState.blockRoot,
+			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{
+				Root:  headState.state.FinalizedCheckpoint().Root,
+				Epoch: headState.state.FinalizedCheckpointEpoch(),
+			},
+			CurrentJustifiedCheckPoint: &ethpb_alpha.Checkpoint{
+				Root:  headState.state.CurrentJustifiedCheckpoint().Root,
+				Epoch: headState.state.CurrentJustifiedCheckpoint().Epoch,
+			},
+			PreviousJustifiedCheckPoint: &ethpb_alpha.Checkpoint{
+				Root:  headState.state.PreviousJustifiedCheckpoint().Root,
+				Epoch: headState.state.PreviousJustifiedCheckpoint().Epoch,
+			},
+			State: headState.state,
+		},
+		StateGen: sc,
+	}
+
+	tests := []struct {
+		name    string
+		stateId []byte
+		want    *beaconstate.BeaconState
+		wantErr bool
+	}{
+		{
+			name:    "slot",
+			stateId: []byte("30"),
+			want:    stateContainers[30].state,
+		},
+		{
+			name:    "root",
+			stateId: stateContainers[20].blockRoot,
+			want:    stateContainers[20].state,
+		},
+		{
+			name:    "genesis",
+			stateId: []byte("genesis"),
+			want:    stateContainers[0].state,
+		},
+		{
+			name:    "genesis root",
+			stateId: params.BeaconConfig().ZeroHash[:],
+			want:    stateContainers[0].state,
+		},
+		{
+			name:    "head",
+			stateId: []byte("head"),
+			want:    headState.state,
+		},
+		{
+			name:    "justified",
+			stateId: []byte("justified"),
+			want:    stateContainers[96].state,
+		},
+		{
+			name:    "finalized",
+			stateId: []byte("finalized"),
+			want:    stateContainers[64].state,
+		},
+		{
+			name:    "no state",
+			stateId: stateContainers[20].stateRoot,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			forkResp, err := bs.GetStateFork(ctx, &ethpb.StateRequest{
+				StateId: tt.stateId,
+			})
+			if !tt.wantErr {
+				require.NoError(t, err)
+			} else {
+				require.NotEqual(t, err, nil)
+				return
+			}
+
+			compareBytes(t, "previous version", tt.want.Fork().PreviousVersion, forkResp.Fork.PreviousVersion)
+			compareBytes(t, "current version", tt.want.Fork().CurrentVersion, forkResp.Fork.CurrentVersion)
+			if tt.want.Fork().Epoch != forkResp.Fork.Epoch {
+				t.Errorf("Expected epoch to be: %d, received: %v", tt.want.Fork().Epoch, forkResp.Fork.Epoch)
 			}
 		})
 	}

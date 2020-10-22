@@ -65,7 +65,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 		Fork: &ethpb.Fork{
 			PreviousVersion: fork.PreviousVersion,
 			CurrentVersion:  fork.CurrentVersion,
-			Epoch:           helpers.SlotToEpoch(requestedState.Slot()),
+			Epoch:           fork.Epoch,
 		},
 	}, nil
 }
@@ -134,8 +134,17 @@ func (bs *Server) getState(ctx context.Context, stateId []byte) (*state.BeaconSt
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Cannot parse slot from input %#x: %v", stateId, err)
 			}
+			currentSlot := bs.ChainInfoFetcher.HeadSlot()
+			if requestedSlot > currentSlot {
+				return nil, status.Errorf(
+					codes.InvalidArgument,
+					"Cannot retrieve information about a slot in the future, current slot %d, requesting %d",
+					currentSlot,
+					requestedSlot,
+				)
+			}
 			requestedEpoch := helpers.SlotToEpoch(requestedSlot)
-			currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
 			if requestedEpoch > currentEpoch {
 				return nil, status.Errorf(
 					codes.InvalidArgument,
