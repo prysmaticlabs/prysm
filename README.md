@@ -8,7 +8,8 @@
 This is the core repository for Prysm, a [Golang](https://golang.org/) implementation of the Ethereum 2.0 client specifications developed by [Prysmatic Labs](https://prysmaticlabs.com).
 
 ### Getting Started
-A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.prylabs.network). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
+A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://
+docs.prylabs.network). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
 
 ### Come join the testnet!
 Participation is now open to the public for our Ethereum 2.0 phase 0 testnet release. Visit [prylabs.net](https://prylabs.net) for more information on the project or to sign up as a validator on the network. You can visualize the nodes in the network on [eth2stats.io](https://eth2stats.io), explore validator rewards/penalties via Bitfly's block explorer: [beaconcha.in](https://beaconcha.in), and follow the latest blocks added to the chain on [Etherscan](https://beacon.etherscan.io).
