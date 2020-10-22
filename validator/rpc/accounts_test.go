@@ -192,7 +192,7 @@ func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
 	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeys: make([][]byte, 1),
 	})
-	assert.ErrorContains(t, "No wallet nor keymanager found", err)
+	assert.ErrorContains(t, "No wallet found", err)
 }
 
 func TestServer_DeleteAccounts_OK(t *testing.T) {

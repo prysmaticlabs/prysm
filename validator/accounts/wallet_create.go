@@ -49,7 +49,7 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create wallet with keymanager")
+		return nil, errors.Wrap(err, "could not create wallet")
 	}
 	return w, nil
 }
