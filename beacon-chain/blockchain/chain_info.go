@@ -255,5 +255,6 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 		return true, nil
 	}
 
+	// If the block has not been finalized, check fork choice store to see if the block is canonical
 	return s.forkChoiceStore.IsCanonical(blockRoot), nil
 }

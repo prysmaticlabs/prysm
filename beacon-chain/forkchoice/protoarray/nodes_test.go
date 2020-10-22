@@ -435,3 +435,41 @@ func TestStore_AncestorRootOutOfBound(t *testing.T) {
 	_, err = f.AncestorRoot(ctx, [32]byte{'c'}, 1)
 	require.ErrorContains(t, "node index out of range", err)
 }
+
+func TestStore_UpdateCanonicalNodes_WholeList(t *testing.T) {
+	ctx := context.Background()
+	f := &ForkChoice{store: &Store{}}
+	f.store.canonicalNodes = map[[32]byte]bool{}
+	f.store.nodesIndices = map[[32]byte]uint64{}
+	f.store.nodes = []*Node{
+		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
+		{slot: 2, root: [32]byte{'b'}, parent: 0},
+		{slot: 3, root: [32]byte{'c'}, parent: 1},
+	}
+	f.store.nodesIndices[[32]byte{'c'}] = 2
+	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
+	require.Equal(t, len(f.store.nodes), len(f.store.canonicalNodes))
+
+	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
+	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
+	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
+}
+
+func TestStore_UpdateCanonicalNodes_ParentAlreadyIn(t *testing.T) {
+	ctx := context.Background()
+	f := &ForkChoice{store: &Store{}}
+	f.store.canonicalNodes = map[[32]byte]bool{}
+	f.store.nodesIndices = map[[32]byte]uint64{}
+	f.store.nodes = []*Node{
+		{},
+		{slot: 2, root: [32]byte{'b'}, parent: 0},
+		{slot: 3, root: [32]byte{'c'}, parent: 1},
+	}
+	f.store.nodesIndices[[32]byte{'c'}] = 2
+	f.store.canonicalNodes[[32]byte{'b'}] = true
+	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
+	require.Equal(t, len(f.store.nodes)-1, len(f.store.canonicalNodes))
+
+	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
+	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
+}
