@@ -47,7 +47,7 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 
 	// Since the justified node's best descendent is at index 1 and it's root is `best`,
 	// the head should be `best`.
-	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1}, {root: best}}}
+	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1}, {root: best}}, canonicalNodes: make(map[[32]byte]bool)}
 	h, err := s.head(context.Background(), r)
 	require.NoError(t, err)
 	assert.Equal(t, best, h)
