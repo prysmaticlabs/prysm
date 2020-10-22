@@ -41,9 +41,7 @@ const (
 // keystore.json files, which are compatible with importing in other eth2 clients.
 func BackupAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, errors.New(
-			"no wallet found, nothing to backup. Create a new wallet by running wallet create",
-		)
+		return nil, wallet.ErrNoWalletFound
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
