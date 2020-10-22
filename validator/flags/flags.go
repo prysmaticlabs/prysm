@@ -251,6 +251,11 @@ var (
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
 	}
+	// AllowEmptyProtectionDB allow new protection db to be created without prompting the user.
+	AllowEmptyProtectionDB = &cli.BoolFlag{
+		Name:  "allow-new-protection-db",
+		Usage: "Use this flag allow new protection db to be created non-interactively",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

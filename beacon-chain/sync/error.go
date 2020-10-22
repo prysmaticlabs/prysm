@@ -25,6 +25,7 @@ var errInvalidEpoch = errors.New("invalid epoch")
 var errInvalidFinalizedRoot = errors.New("invalid finalized root")
 var errInvalidSequenceNum = errors.New(seqError)
 var errGeneric = errors.New(genericError)
+var errInvalidParent = errors.New("mismatched parent root")
 
 var responseCodeSuccess = byte(0x00)
 var responseCodeInvalidRequest = byte(0x01)
