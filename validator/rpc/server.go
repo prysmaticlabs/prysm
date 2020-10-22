@@ -123,8 +123,7 @@ func (s *Server) Start() {
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
-			log.Errorf("Could not load TLS keys: %s", err)
-			s.credentialError = err
+			log.WithError(err).Fatal("Could not load TLS keys")
 		}
 		opts = append(opts, grpc.Creds(creds))
 		log.WithFields(logrus.Fields{
