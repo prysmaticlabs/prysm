@@ -226,7 +226,7 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 	require.NoError(t, err)
 	_, proposerIndxs, err := CommitteeAssignments(state, CurrentEpoch(state))
 	require.NoError(t, err)
-	require.NotEqual(t, 0, len(proposerIndxs), "wanted  non-zero proposer index set")
+	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
 
 	_, proposerIndxs, err = CommitteeAssignments(state, CurrentEpoch(state)+1)
 	require.NoError(t, err)
