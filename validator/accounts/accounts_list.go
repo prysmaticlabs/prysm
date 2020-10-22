@@ -21,11 +21,7 @@ import (
 // ListAccountsCli displays all available validator accounts in a Prysm wallet.
 func ListAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, errors.New(
-			"no wallet found, no accounts to list. " +
-				"Perhaps you created a wallet in a custom directory, which you can specify using " +
-				"--wallet-dir=/path/to/my/wallet",
-		)
+		return nil, wallet.ErrNoWalletFound
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")

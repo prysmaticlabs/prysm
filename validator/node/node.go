@@ -170,11 +170,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	} else {
 		// Read the wallet from the specified path.
 		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-			return nil, errors.New(
-				"no wallet found, create a new one with validator wallet create. " +
-					"Perhaps you created a wallet in a custom directory, which you can specify using " +
-					"--wallet-dir=/path/to/my/wallet",
-			)
+			return nil, wallet.ErrNoWalletFound
 		})
 		if err != nil {
 			return errors.Wrap(err, "could not open wallet")
