@@ -19,12 +19,12 @@ var databaseFileName = "slasher.db"
 // Store defines an implementation of the slasher Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                      *bolt.DB
-	databasePath            string
-	flatSpanCache           *cache.EpochFlatSpansCache
+	highestAttCacheEnabled  bool
 	spanCacheEnabled        bool
 	highestAttestationCache *cache.HighestAttestationCache
-	highestAttCacheEnabled  bool
+	flatSpanCache           *cache.EpochFlatSpansCache
+	db                      *bolt.DB
+	databasePath            string
 }
 
 // Config options for the slasher db.
