@@ -77,7 +77,9 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, error) {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
-			"no wallet found, no accounts to exit",
+			"no wallet found, no accounts to exit. " +
+				"Perhaps you created a wallet in a custom directory, which you can specify using " +
+				"--wallet-dir=/path/to/my/wallet",
 		)
 	})
 	if err != nil {

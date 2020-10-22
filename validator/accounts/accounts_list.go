@@ -22,7 +22,9 @@ import (
 func ListAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
-			"no wallet found, no accounts to list",
+			"no wallet found, no accounts to list. " +
+				"Perhaps you created a wallet in a custom directory, which you can specify using " +
+				"--wallet-dir=/path/to/my/wallet",
 		)
 	})
 	if err != nil {

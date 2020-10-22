@@ -29,7 +29,9 @@ type DeleteAccountConfig struct {
 func DeleteAccountCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, errors.New(
-			"no wallet found, nothing to delete",
+			"no wallet found, no accounts to delete. " +
+				"Perhaps you created a wallet in a custom directory, which you can specify using " +
+				"--wallet-dir=/path/to/my/wallet",
 		)
 	})
 	if err != nil {
