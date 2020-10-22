@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["types.go"],
+    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager",
+    visibility = [
+        "//validator:__pkg__",
+        "//validator:__subpackages__",
+        "//tools/keystores:__pkg__",
+    ],
+    deps = [
+        "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bls:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["types_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//validator/keymanager/derived:go_default_library",
+        "//validator/keymanager/imported:go_default_library",
+        "//validator/keymanager/remote:go_default_library",
+    ],
+)

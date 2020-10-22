@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -27,6 +27,7 @@ type AttestationReceiver interface {
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
 	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
+	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -43,14 +44,9 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process attestation")
 	}
 
-	if !featureconfig.Get().DisableUpdateHeadPerAttestation {
-		// This updates fork choice head, if a new head could not be updated due to
-		// long range or intermediate forking. It simply logs a warning and returns nil
-		// as that's more appropriate than returning errors.
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.Warnf("Resolving fork due to new attestation: %v", err)
-			return nil
-		}
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		log.Warnf("Resolving fork due to new attestation: %v", err)
+		return nil
 	}
 
 	return nil
@@ -100,6 +96,26 @@ func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attesta
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
 	return s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot)
+}
+
+// VerifyFinalizedConsistency verifies input root is consistent with finalized store.
+// When the input root is not be consistent with finalized store then we know it is not
+// on the finalized check point that leads to current canonical chain and should be rejected accordingly.
+func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
+	f := s.FinalizedCheckpt()
+	ss, err := helpers.StartSlot(f.Epoch)
+	if err != nil {
+		return err
+	}
+	r, err := s.ancestor(ctx, root, ss)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(f.Root, r) {
+		return errors.New("Root and finalized store are not consistent")
+	}
+
+	return nil
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.

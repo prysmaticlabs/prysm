@@ -837,3 +837,15 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
 }
+
+func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	s := testutil.NewBeaconState()
+	require.NoError(t, s.SetSlot(1))
+	service.head = &head{}
+	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
+}

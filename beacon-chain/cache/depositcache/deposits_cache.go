@@ -60,7 +60,7 @@ type DepositCache struct {
 
 // New instantiates a new deposit cache
 func New() (*DepositCache, error) {
-	finalizedDepositsTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	finalizedDepositsTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	defer dc.depositsLock.Unlock()
 
 	depositTrie := dc.finalizedDeposits.Deposits
-	insertIndex := dc.finalizedDeposits.MerkleTrieIndex + 1
+	insertIndex := int(dc.finalizedDeposits.MerkleTrieIndex + 1)
 	for _, d := range dc.deposits {
 		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
 			continue
@@ -132,7 +132,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return
 		}
-		depositTrie.Insert(depHash[:], int(insertIndex))
+		depositTrie.Insert(depHash[:], insertIndex)
 		insertIndex++
 	}
 
@@ -257,4 +257,29 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.
 	}
 
 	return deposits
+}
+
+// PruneProofs removes proofs from all deposits whose index is equal or less than untilDepositIndex.
+func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64) error {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.PruneProofs")
+	defer span.End()
+	dc.depositsLock.Lock()
+	defer dc.depositsLock.Unlock()
+
+	if untilDepositIndex > int64(len(dc.deposits)) {
+		untilDepositIndex = int64(len(dc.deposits) - 1)
+	}
+
+	for i := untilDepositIndex; i >= 0; i-- {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		// Finding a nil proof means that all proofs up to this deposit have been already pruned.
+		if dc.deposits[i].Deposit.Proof == nil {
+			break
+		}
+		dc.deposits[i].Deposit.Proof = nil
+	}
+
+	return nil
 }

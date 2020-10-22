@@ -10,7 +10,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -31,11 +30,14 @@ var bufReaderPool = new(sync.Pool)
 // with snappy compression (if enabled).
 type SszNetworkEncoder struct{}
 
+// ProtocolSuffixSSZSnappy is the last part of the topic string to identify the encoding protocol.
+const ProtocolSuffixSSZSnappy = "ssz_snappy"
+
 func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
 	if v, ok := msg.(fastssz.Marshaler); ok {
 		return v.MarshalSSZ()
 	}
-	return ssz.Marshal(msg)
+	return nil, errors.Errorf("non-supported type: %T", msg)
 }
 
 // EncodeGossip the proto gossip message to the io.Writer.
@@ -83,7 +85,7 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 	if v, ok := to.(fastssz.Unmarshaler); ok {
 		return v.UnmarshalSSZ(b)
 	}
-	return ssz.Unmarshal(b, to)
+	return errors.Errorf("non-supported type: %T", to)
 }
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
@@ -137,7 +139,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
 func (e SszNetworkEncoder) ProtocolSuffix() string {
-	return "/ssz_snappy"
+	return "/" + ProtocolSuffixSSZSnappy
 }
 
 // MaxLength specifies the maximum possible length of an encoded

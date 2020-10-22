@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -54,7 +55,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		wg.Done()
 		return nil
 	})
-	r.chainStarted = true
+	r.markForChainStart()
 
 	p2p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
@@ -94,7 +95,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	})
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
-	r.chainStarted = true
+	r.markForChainStart()
 	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
 		beaconState,
 		privKeys[1],
@@ -110,7 +111,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	as := r.slashingPool.PendingAttesterSlashings(ctx, beaconState)
+	as := r.slashingPool.PendingAttesterSlashings(ctx, beaconState, false /*noLimit*/)
 	assert.Equal(t, 1, len(as), "Expected attester slashing")
 }
 
@@ -145,7 +146,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	})
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
-	r.chainStarted = true
+	r.markForChainStart()
 	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
 		beaconState,
 		privKeys[1],
@@ -159,7 +160,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	ps := r.slashingPool.PendingProposerSlashings(ctx, beaconState)
+	ps := r.slashingPool.PendingProposerSlashings(ctx, beaconState, false /*noLimit*/)
 	assert.Equal(t, 1, len(ps), "Expected proposer slashing")
 }
 
@@ -185,7 +186,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		defer wg.Done()
 		panic("bad")
 	})
-	r.chainStarted = true
+	r.markForChainStart()
 	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -251,10 +252,11 @@ func TestStaticSubnets(t *testing.T) {
 
 func Test_wrapAndReportValidation(t *testing.T) {
 	type args struct {
-		topic string
-		v     pubsub.ValidatorEx
-		pid   peer.ID
-		msg   *pubsub.Message
+		topic        string
+		v            pubsub.ValidatorEx
+		chainstarted bool
+		pid          peer.ID
+		msg          *pubsub.Message
 	}
 	tests := []struct {
 		name string
@@ -262,11 +264,39 @@ func Test_wrapAndReportValidation(t *testing.T) {
 		want pubsub.ValidationResult
 	}{
 		{
+			name: "validator Before chainstart",
+			args: args{
+				topic: "foo",
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+					return pubsub.ValidationAccept
+				},
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: func() *string {
+							s := "foo"
+							return &s
+						}(),
+					},
+				},
+				chainstarted: false,
+			},
+			want: pubsub.ValidationReject,
+		},
+		{
 			name: "validator panicked",
 			args: args{
 				topic: "foo",
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					panic("oh no!")
+				},
+				chainstarted: true,
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: func() *string {
+							s := "foo"
+							return &s
+						}(),
+					},
 				},
 			},
 			want: pubsub.ValidationIgnore,
@@ -278,13 +308,40 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					return pubsub.ValidationAccept
 				},
+				chainstarted: true,
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: func() *string {
+							s := "foo"
+							return &s
+						}(),
+					},
+				},
 			},
 			want: pubsub.ValidationAccept,
+		},
+		{
+			name: "nil topic",
+			args: args{
+				topic: "foo",
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+					return pubsub.ValidationAccept
+				},
+				msg: &pubsub.Message{
+					Message: &pubsubpb.Message{
+						Topic: nil,
+					},
+				},
+			},
+			want: pubsub.ValidationReject,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, v := wrapAndReportValidation(tt.args.topic, tt.args.v)
+			s := &Service{
+				chainStarted: tt.args.chainstarted,
+			}
+			_, v := s.wrapAndReportValidation(tt.args.topic, tt.args.v)
 			got := v(context.Background(), tt.args.pid, tt.args.msg)
 			if got != tt.want {
 				t.Errorf("wrapAndReportValidation() got = %v, want %v", got, tt.want)

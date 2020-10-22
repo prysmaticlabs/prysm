@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
 )
 
@@ -30,32 +29,18 @@ func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, 
 			if state.Slot() >= signed[i].Block.Slot {
 				continue
 			}
-			if featureconfig.Get().EnableStateGenSigVerify {
-				state, err = transition.ExecuteStateTransition(ctx, state, signed[i])
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				state, err = executeStateTransitionStateGen(ctx, state, signed[i])
-				if err != nil {
-					return nil, err
-				}
+			state, err = executeStateTransitionStateGen(ctx, state, signed[i])
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
 
 	// If there is skip slots at the end.
 	if targetSlot > state.Slot() {
-		if featureconfig.Get().EnableStateGenSigVerify {
-			state, err = transition.ProcessSlots(ctx, state, targetSlot)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			state, err = processSlotsStateGen(ctx, state, targetSlot)
-			if err != nil {
-				return nil, err
-			}
+		state, err = processSlotsStateGen(ctx, state, targetSlot)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -66,12 +51,7 @@ func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, 
 // The Blocks are returned in slot-descending order.
 func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	blocks, err := s.beaconDB.Blocks(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	blockRoots, err := s.beaconDB.BlockRoots(ctx, filter)
+	blocks, blockRoots, err := s.beaconDB.Blocks(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -267,11 +247,7 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 // Since hot states don't have finalized blocks, this should ONLY be used for replaying cold state.
 func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	bs, err := s.beaconDB.Blocks(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-	bRoots, err := s.beaconDB.BlockRoots(ctx, f)
+	bs, bRoots, err := s.beaconDB.Blocks(ctx, f)
 	if err != nil {
 		return nil, err
 	}

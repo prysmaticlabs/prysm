@@ -139,11 +139,11 @@ func VerifySlotTime(genesisTime, slot uint64, timeTolerance time.Duration) error
 func SlotToTime(genesisTimeSec, slot uint64) (time.Time, error) {
 	timeSinceGenesis, err := mathutil.Mul64(slot, params.BeaconConfig().SecondsPerSlot)
 	if err != nil {
-		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %v", slot, err)
+		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
 	sTime, err := mathutil.Add64(genesisTimeSec, timeSinceGenesis)
 	if err != nil {
-		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %v", slot, err)
+		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
 	return time.Unix(int64(sTime), 0), nil
 }
@@ -217,4 +217,14 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
 		wsp += v
 	}
 	return wsp, nil
+}
+
+// VotingPeriodStartTime returns the current voting period's start time
+// depending on the provided genesis and current slot.
+func VotingPeriodStartTime(genesis uint64, slot uint64) uint64 {
+	startTime := genesis
+	startTime +=
+		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
+			params.BeaconConfig().SecondsPerSlot
+	return startTime
 }

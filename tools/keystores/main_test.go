@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -47,7 +47,7 @@ func setupCliContext(
 	return cli.NewContext(&app, set, nil)
 }
 
-func createRandomKeystore(t testing.TB, password string) (*v2keymanager.Keystore, bls.SecretKey) {
+func createRandomKeystore(t testing.TB, password string) (*keymanager.Keystore, bls.SecretKey) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
@@ -55,7 +55,7 @@ func createRandomKeystore(t testing.TB, password string) (*v2keymanager.Keystore
 	pubKey := validatingKey.PublicKey().Marshal()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
-	return &v2keymanager.Keystore{
+	return &keymanager.Keystore{
 		Crypto:  cryptoFields,
 		Pubkey:  fmt.Sprintf("%x", pubKey),
 		ID:      id.String(),

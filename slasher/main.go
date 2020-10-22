@@ -12,7 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
+	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
@@ -24,6 +26,11 @@ import (
 var log = logrus.WithField("prefix", "main")
 
 func startSlasher(cliCtx *cli.Context) error {
+	// verify if ToS accepted
+	if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+		return err
+	}
+
 	verbosity := cliCtx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
@@ -70,6 +77,7 @@ var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
 	flags.EnableHistoricalDetectionFlag,
 	flags.SpanCacheSize,
+	cmd.AcceptTosFlag,
 }
 
 func init() {
@@ -103,6 +111,10 @@ func main() {
 			logrus.SetFormatter(joonix.NewFormatter())
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
+		case "journald":
+			if err := journald.Enable(); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

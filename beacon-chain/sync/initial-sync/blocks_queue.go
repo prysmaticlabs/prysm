@@ -189,6 +189,13 @@ func (q *blocksQueue) loop() {
 			q.cancel()
 		}
 
+		log.WithFields(logrus.Fields{
+			"highestExpectedSlot":       q.highestExpectedSlot,
+			"noRequiredPeersErrRetries": q.exitConditions.noRequiredPeersErrRetries,
+			"headSlot":                  q.headFetcher.HeadSlot(),
+			"state":                     q.smm,
+		}).Debug("tick")
+
 		select {
 		case <-ticker.C:
 			for _, key := range q.smm.keys {
@@ -202,7 +209,7 @@ func (q *blocksQueue) loop() {
 						"start":                     fsm.start,
 						"error":                     err.Error(),
 					}).Debug("Can not trigger event")
-					if err == errNoRequiredPeers {
+					if errors.Is(err, errNoRequiredPeers) {
 						forceExit := q.exitConditions.noRequiredPeersErrRetries > noRequiredPeersErrMaxRetries
 						if q.mode == modeStopOnFinalizedEpoch || forceExit {
 							q.cancel()
