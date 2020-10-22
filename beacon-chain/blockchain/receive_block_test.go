@@ -133,7 +133,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
 				StateGen:      stategen.New(db, stateSummaryCache),
 			}
-			s, err := NewService(ctx, cfg)
+			s, err := NewService(cfg)
 			require.NoError(t, err)
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
@@ -174,7 +174,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
 		StateGen:      stategen.New(db, stateSummaryCache),
 	}
-	s, err := NewService(ctx, cfg)
+	s, err := NewService(cfg)
 	require.NoError(t, err)
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	gBlk, err := s.beaconDB.GenesisBlock(ctx)
@@ -255,7 +255,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
 				StateGen:      stategen.New(db, stateSummaryCache),
 			}
-			s, err := NewService(ctx, cfg)
+			s, err := NewService(cfg)
 			require.NoError(t, err)
 			err = s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
@@ -336,7 +336,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
 				StateGen:      stategen.New(db, stateSummaryCache),
 			}
-			s, err := NewService(ctx, cfg)
+			s, err := NewService(cfg)
 			require.NoError(t, err)
 			err = s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
@@ -362,7 +362,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &blockchainTesting.MockStateNotifier{}})
+	s, err := NewService(&Config{StateNotifier: &blockchainTesting.MockStateNotifier{}})
 	require.NoError(t, err)
 	r := [32]byte{'a'}
 	if s.HasInitSyncBlock(r) {

@@ -40,8 +40,6 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	ctx                       context.Context
-	cancel                    context.CancelFunc
 	beaconDB                  db.HeadAccessDatabase
 	depositCache              *depositcache.DepositCache
 	chainStartFetcher         powchain.ChainStartFetcher
@@ -101,11 +99,8 @@ type Config struct {
 
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
-	ctx, cancel := context.WithCancel(ctx)
+func NewService(cfg *Config) (*Service, error) {
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
 		beaconDB:              cfg.BeaconDB,
 		depositCache:          cfg.DepositCache,
 		chainStartFetcher:     cfg.ChainStartFetcher,

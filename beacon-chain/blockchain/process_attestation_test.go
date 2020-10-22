@@ -30,7 +30,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		StateGen:        stategen.New(db, sc),
 	}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	_, err = blockTree1(db, []byte{'g'})
@@ -142,7 +142,7 @@ func TestStore_OnAttestationUsingCheckptCache(t *testing.T) {
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		StateGen:        stategen.New(db, sc),
 	}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	_, err = blockTree1(db, []byte{'g'})
@@ -250,7 +250,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		BeaconDB: db,
 		StateGen: stategen.New(db, sc),
 	}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	s := testutil.NewBeaconState()
@@ -321,7 +321,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 		BeaconDB: db,
 		StateGen: stategen.New(db, sc),
 	}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	epoch := uint64(1)
@@ -359,7 +359,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	nowTime := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
@@ -371,7 +371,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	nowTime := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
@@ -383,7 +383,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	nowTime := 2 * params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
@@ -396,7 +396,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	d := &ethpb.AttestationData{
@@ -412,7 +412,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
@@ -430,7 +430,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
@@ -448,7 +448,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -472,7 +472,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -496,7 +496,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -523,7 +523,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -549,7 +549,7 @@ func TestGetAttCheckptInfo(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(cfg)
 	require.NoError(t, err)
 
 	baseState, _ := testutil.DeterministicGenesisState(t, 128)

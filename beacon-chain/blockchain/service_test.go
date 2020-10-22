@@ -120,7 +120,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
-	chainService, err := NewService(ctx, cfg)
+	chainService, err := NewService(cfg)
 	require.NoError(t, err, "Unable to setup chain service")
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
@@ -149,10 +149,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	// Test the start function.
 	chainService.Start(ctx)
 
-	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
-
-	// The context should have been canceled.
-	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
+	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
 	require.LogsContain(t, hook, "data already exists")
 }
 
@@ -175,10 +172,9 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	// Test the start function.
 	chainService.Start(ctx)
 
-	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
 
 	// The context should have been canceled.
-	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
 	require.LogsContain(t, hook, "data already exists")
 }
 
@@ -248,7 +244,7 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	require.DeepEqual(t, blkRoot[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.justifiedCheckpt.Root, "Justified Checkpoint root is incorrect")
 
-	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
 
 }
 
@@ -364,11 +360,9 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 }
 
 func TestServiceStop_SaveCachedBlocks(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 	s := &Service{
-		ctx:            ctx,
-		cancel:         cancel,
 		beaconDB:       db,
 		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
 	}
@@ -376,7 +370,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s.saveInitSyncBlock(r, b)
-	require.NoError(t, s.Stop())
+	require.NoError(t, s.Stop(ctx))
 	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
 }
 
