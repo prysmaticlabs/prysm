@@ -105,15 +105,6 @@ var (
 			Buckets: []float64{1, 2, 3, 4, 6, 32, 64},
 		},
 	)
-	// TODO(7141): Remove deprecated metrics below.
-	totalEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "total_eligible_balances",
-		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
-	})
-	totalVotedTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "total_voted_target_balances",
-		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
-	})
 )
 
 // reportSlotMetrics reports slot related metrics.
@@ -218,8 +209,6 @@ func reportEpochMetrics(ctx context.Context, postState *stateTrie.BeaconState, h
 	if err != nil {
 		return err
 	}
-	totalEligibleBalances.Set(float64(b.ActivePrevEpoch))
-	totalVotedTargetBalances.Set(float64(b.PrevEpochTargetAttested))
 	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
 	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))
 	prevEpochTargetBalances.Set(float64(b.PrevEpochTargetAttested))
