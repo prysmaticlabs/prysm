@@ -82,7 +82,7 @@ func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle s
 	return s.subscribeWithBase(s.addDigestToTopic(topic), validator, handle)
 }
 
-func (s *Service) subscribeWithBase(topic string, validator interface{}, handle subHandler) *interface{} {
+func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
 	topic += s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
