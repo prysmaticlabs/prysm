@@ -244,7 +244,7 @@ func (b *BeaconNode) Start(ctx context.Context) {
 		"version": version.GetVersion(),
 	}).Info("Starting beacon node")
 
-	b.services.StartAll(ctx)
+	b.services.StartAll()
 
 	stop := b.stop
 	b.lock.Unlock()

@@ -28,23 +28,25 @@ type Service interface {
 // It allows for ease of dependency management and ensures services
 // dependent on others use the same references in memory.
 type ServiceRegistry struct {
-	services     map[reflect.Type]Service // map of types to services.
-	serviceTypes []reflect.Type           // keep an ordered slice of registered service types.
+	contexts     map[reflect.Type]context.Context // map of types to contexts.
+	services     map[reflect.Type]Service         // map of types to services.
+	serviceTypes []reflect.Type                   // keep an ordered slice of registered service types.
 }
 
 // NewServiceRegistry starts a registry instance for convenience
 func NewServiceRegistry() *ServiceRegistry {
 	return &ServiceRegistry{
+		contexts: make(map[reflect.Type]context.Context),
 		services: make(map[reflect.Type]Service),
 	}
 }
 
 // StartAll initialized each service in order of registration.
-func (s *ServiceRegistry) StartAll(ctx context.Context) {
+func (s *ServiceRegistry) StartAll() {
 	log.Debugf("Starting %d services: %v", len(s.serviceTypes), s.serviceTypes)
 	for _, kind := range s.serviceTypes {
 		log.Debugf("Starting service type %v", kind)
-		go s.services[kind].Start(ctx)
+		go s.services[kind].Start(s.contexts[kind])
 	}
 }
 
@@ -77,6 +79,8 @@ func (s *ServiceRegistry) RegisterService(service Service) error {
 	if _, exists := s.services[kind]; exists {
 		return fmt.Errorf("service already exists: %v", kind)
 	}
+	ctx := context.Background()
+	s.contexts[kind] = ctx
 	s.services[kind] = service
 	s.serviceTypes = append(s.serviceTypes, kind)
 	return nil

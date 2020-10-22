@@ -118,7 +118,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 // Start the slasher and kick off every registered service.
 func (s *SlasherNode) Start(ctx context.Context) {
 	s.lock.Lock()
-	s.services.StartAll(ctx)
+	s.services.StartAll()
 	s.lock.Unlock()
 
 	log.WithFields(logrus.Fields{

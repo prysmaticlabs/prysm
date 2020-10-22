@@ -117,7 +117,7 @@ func (s *ValidatorClient) Start(ctx context.Context) {
 		"version": version.GetVersion(),
 	}).Info("Starting validator node")
 
-	s.services.StartAll(ctx)
+	s.services.StartAll()
 
 	stop := s.stop
 	s.lock.Unlock()
