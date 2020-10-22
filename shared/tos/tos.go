@@ -28,11 +28,9 @@ TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_O
 
 
 Type "accept" to accept this terms and conditions [accept/decline]:`
-	acceptTosPromptErrText = `
-Could not scan text input. If you are trying to run in non-interactive environment, you
+	acceptTosPromptErrText = `Could not scan text input, if you are trying to run in non-interactive environment, you
 should use --accept-terms-of-use flag (only once) after reading the terms and conditions here: 
-https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md
-`
+https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md`
 )
 
 var (
