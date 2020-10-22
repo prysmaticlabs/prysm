@@ -143,7 +143,7 @@ func InputPassword(
 		return enteredPassword, nil
 	}
 	if strings.Contains(strings.ToLower(promptText), "new wallet") {
-		fmt.Println("Password requirements: at least 8 characters, 1 number, and 1 special character. " +
+		fmt.Println("Password requirements: at least 8 characters including at least 1 alphabetical character, 1 number, and 1 unicode special character. " +
 			"Must not be a common password nor easy to guess")
 	}
 	var hasValidPassword bool
