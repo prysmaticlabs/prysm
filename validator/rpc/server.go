@@ -49,8 +49,6 @@ type Config struct {
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
 	valDB                 db.Database
-	ctx                   context.Context
-	cancel                context.CancelFunc
 	host                  string
 	port                  string
 	listener              net.Listener
@@ -71,11 +69,8 @@ type Server struct {
 }
 
 // NewServer instantiates a new gRPC server.
-func NewServer(ctx context.Context, cfg *Config) *Server {
-	ctx, cancel := context.WithCancel(ctx)
+func NewServer(cfg *Config) *Server {
 	return &Server{
-		ctx:                   ctx,
-		cancel:                cancel,
 		host:                  cfg.Host,
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,

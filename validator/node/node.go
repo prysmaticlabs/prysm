@@ -418,7 +418,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
+	server := rpc.NewServer(&rpc.Config{
 		ValDB:                 s.db,
 		Host:                  rpcHost,
 		Port:                  fmt.Sprintf("%d", rpcPort),
