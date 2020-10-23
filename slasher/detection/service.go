@@ -49,8 +49,6 @@ func (s Status) String() string {
 
 // Service struct for the detection service of the slasher.
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
 	slasherDB             db.Database
 	blocksChan            chan *ethpb.SignedBeaconBlock
 	attsChan              chan *ethpb.IndexedAttestation
@@ -77,11 +75,8 @@ type Config struct {
 }
 
 // NewService instantiation.
-func NewService(ctx context.Context, cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(ctx)
+func NewService(cfg *Config) *Service {
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
 		notifier:              cfg.Notifier,
 		chainFetcher:          cfg.ChainFetcher,
 		slasherDB:             cfg.SlasherDB,

@@ -170,7 +170,6 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
 			ds := Service{
-				ctx:                ctx,
 				slasherDB:          db,
 				minMaxSpanDetector: attestations.NewSpanDetector(db),
 			}
@@ -321,7 +320,6 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
 			ds := Service{
-				ctx:                ctx,
 				slasherDB:          db,
 				minMaxSpanDetector: attestations.NewSpanDetector(db),
 			}
@@ -394,7 +392,6 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
 			ds := Service{
-				ctx:               ctx,
 				slasherDB:         db,
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
@@ -473,7 +470,6 @@ func TestDetect_detectProposerSlashingNoUpdate(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
 			ds := Service{
-				ctx:               ctx,
 				slasherDB:         db,
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
@@ -490,7 +486,6 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, false)
 	ctx := context.Background()
 	ds := Service{
-		ctx:       ctx,
 		slasherDB: db,
 	}
 	// 3 unique results, but 7 validators in total.

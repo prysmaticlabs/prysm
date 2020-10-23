@@ -235,7 +235,7 @@ func (s *SlasherNode) registerDetectionService() error {
 	if err := s.services.FetchService(&bs); err != nil {
 		panic(err)
 	}
-	ds := detection.NewService(s.ctx, &detection.Config{
+	ds := detection.NewService(&detection.Config{
 		Notifier:              bs,
 		SlasherDB:             s.db,
 		BeaconClient:          bs,
