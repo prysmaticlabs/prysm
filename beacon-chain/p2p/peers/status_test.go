@@ -536,58 +536,50 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 	assert.Equal(t, pid1, pids[2], "Incorrect third peer")
 }
 
-func TestBestPeer(t *testing.T) {
-	maxBadResponses := 2
+func TestStatus_BestPeer(t *testing.T) {
 	expectedFinEpoch := uint64(4)
 	expectedRoot := [32]byte{'t', 'e', 's', 't'}
 	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
-	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
-		PeerLimit: 30,
-		ScorerParams: &scorers.Config{
-			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
-				Threshold: maxBadResponses,
+
+	type peerConfig struct {
+		finalizedEpoch uint64
+		finalizedRoot  [32]byte
+	}
+	tests := []struct {
+		name  string
+		peers []*peerConfig
+	}{
+		{
+			name: "head slot matches finalized epoch",
+			peers: []*peerConfig{
+				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
+				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
+				{finalizedEpoch: 3, finalizedRoot: junkRoot},
+				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
+				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
+				{finalizedEpoch: 3, finalizedRoot: junkRoot},
 			},
 		},
-	})
+	}
 
-	// Peer 1
-	pid1 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid1, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 2
-	pid2 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid2, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 3
-	pid3 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid3, &pb.Status{
-		FinalizedEpoch: 3,
-		FinalizedRoot:  junkRoot[:],
-	})
-	// Peer 4
-	pid4 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid4, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 5
-	pid5 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid5, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 6
-	pid6 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid6, &pb.Status{
-		FinalizedEpoch: 3,
-		FinalizedRoot:  junkRoot[:],
-	})
-	retEpoch, _ := p.BestFinalized(15, 0)
-	assert.Equal(t, expectedFinEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+				PeerLimit: 30,
+				ScorerParams: &scorers.Config{
+					BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{Threshold: 2},
+				},
+			})
+			for _, peerConfig := range tt.peers {
+				p.SetChainState(addPeer(t, p, peers.PeerConnected), &pb.Status{
+					FinalizedEpoch: peerConfig.finalizedEpoch,
+					FinalizedRoot:  peerConfig.finalizedRoot[:],
+				})
+			}
+			retEpoch, _ := p.BestFinalized(15, 0)
+			assert.Equal(t, expectedFinEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
+		})
+	}
 }
 
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
