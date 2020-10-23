@@ -537,29 +537,48 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 }
 
 func TestStatus_BestPeer(t *testing.T) {
-	expectedFinEpoch := uint64(4)
-	expectedRoot := [32]byte{'t', 'e', 's', 't'}
-	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
-
 	type peerConfig struct {
+		headSlot       uint64
 		finalizedEpoch uint64
-		finalizedRoot  [32]byte
 	}
 	tests := []struct {
-		name  string
-		peers []*peerConfig
+		name        string
+		peers       []*peerConfig
+		targetEpoch uint64
+		// targetEpochSupport denotes how many peers support returned epoch.
+		targetEpochSupport int
 	}{
 		{
 			name: "head slot matches finalized epoch",
 			peers: []*peerConfig{
-				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
-				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
-				{finalizedEpoch: 3, finalizedRoot: junkRoot},
-				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
-				{finalizedEpoch: expectedFinEpoch, finalizedRoot: expectedRoot},
-				{finalizedEpoch: 3, finalizedRoot: junkRoot},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 3 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 3 * params.BeaconConfig().SlotsPerEpoch},
 			},
+			targetEpoch:        4,
+			targetEpochSupport: 4,
 		},
+		{
+			// Peers are compared using their finalized epoch, head should not affect peer selection.
+			// Test case below is a regression case: to ensure that only epoch is used indeed.
+			name: "head slot ahead of finalized epoch (long period of non-finality)",
+			peers: []*peerConfig{
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			targetEpoch:        4,
+			targetEpochSupport: 4,
+		},
+		//{
+		//	name: "ignore lower epoch peers",
+		//},
 	}
 
 	for _, tt := range tests {
@@ -573,11 +592,12 @@ func TestStatus_BestPeer(t *testing.T) {
 			for _, peerConfig := range tt.peers {
 				p.SetChainState(addPeer(t, p, peers.PeerConnected), &pb.Status{
 					FinalizedEpoch: peerConfig.finalizedEpoch,
-					FinalizedRoot:  peerConfig.finalizedRoot[:],
+					HeadSlot:       peerConfig.headSlot,
 				})
 			}
-			retEpoch, _ := p.BestFinalized(15, 0)
-			assert.Equal(t, expectedFinEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
+			epoch, pids := p.BestFinalized(15, 0)
+			assert.Equal(t, tt.targetEpoch, epoch, "Unexpected epoch retrieved")
+			assert.Equal(t, tt.targetEpochSupport, len(pids), "Unexpected number of peers supporting retrieved epoch")
 		})
 	}
 }
