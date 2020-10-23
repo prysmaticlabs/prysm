@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -16,10 +17,10 @@ type secondMockService struct {
 	status error
 }
 
-func (m *mockService) Start() {
+func (m *mockService) Start(ctx context.Context) {
 }
 
-func (m *mockService) Stop() error {
+func (m *mockService) Stop(ctx context.Context) error {
 	return nil
 }
 
@@ -27,10 +28,10 @@ func (m *mockService) Status() error {
 	return m.status
 }
 
-func (s *secondMockService) Start() {
+func (s *secondMockService) Start(ctx context.Context) {
 }
 
-func (s *secondMockService) Stop() error {
+func (s *secondMockService) Stop(ctx context.Context) error {
 	return nil
 }
 

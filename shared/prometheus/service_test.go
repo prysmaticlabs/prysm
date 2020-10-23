@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -21,8 +22,10 @@ func init() {
 }
 
 func TestLifecycle(t *testing.T) {
+	ctx := context.Background()
+
 	prometheusService := NewService(":2112", nil)
-	prometheusService.Start()
+	prometheusService.Start(ctx)
 	// Give service time to start.
 	time.Sleep(time.Second)
 
@@ -31,7 +34,7 @@ func TestLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, uint64(0), resp.ContentLength, "Unexpected content length 0")
 
-	err = prometheusService.Stop()
+	err = prometheusService.Stop(ctx)
 	require.NoError(t, err)
 	// Give service time to stop.
 	time.Sleep(time.Second)
@@ -45,10 +48,10 @@ type mockService struct {
 	status error
 }
 
-func (m *mockService) Start() {
+func (m *mockService) Start(ctx context.Context) {
 }
 
-func (m *mockService) Stop() error {
+func (m *mockService) Stop(ctx context.Context) error {
 	return nil
 }
 

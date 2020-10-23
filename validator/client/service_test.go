@@ -36,7 +36,7 @@ func TestStop_CancelsContext(t *testing.T) {
 		cancel: cancel,
 	}
 
-	assert.NoError(t, vs.Stop())
+	assert.NoError(t, vs.Stop(ctx))
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -57,7 +57,7 @@ func TestLifecycle(t *testing.T) {
 		withCert: "alice.crt",
 	}
 	validatorService.Start(ctx)
-	require.NoError(t, validatorService.Stop(), "Could not stop service")
+	require.NoError(t, validatorService.Stop(ctx), "Could not stop service")
 	require.LogsContain(t, hook, "Stopping service")
 }
 
@@ -73,7 +73,7 @@ func TestLifecycle_Insecure(t *testing.T) {
 	}
 	validatorService.Start(ctx)
 	require.LogsContain(t, hook, "You are using an insecure gRPC connection")
-	require.NoError(t, validatorService.Stop(), "Could not stop service")
+	require.NoError(t, validatorService.Stop(ctx), "Could not stop service")
 	require.LogsContain(t, hook, "Stopping service")
 }
 
