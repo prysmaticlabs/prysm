@@ -260,7 +260,7 @@ func (s *SlasherNode) registerRPCService() error {
 	port := s.cliCtx.String(flags.RPCPort.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
 	key := s.cliCtx.String(flags.KeyFlag.Name)
-	rpcService := rpc.NewService(s.ctx, &rpc.Config{
+	rpcService := rpc.NewService(&rpc.Config{
 		Host:         host,
 		Port:         port,
 		CertFlag:     cert,

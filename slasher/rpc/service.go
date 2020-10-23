@@ -27,8 +27,6 @@ import (
 // Service defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Service struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
 	host            string
 	port            string
 	detector        *detection.Service
@@ -56,11 +54,8 @@ var log = logrus.WithField("prefix", "rpc")
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(ctx)
+func NewService(cfg *Config) *Service {
 	return &Service{
-		ctx:          ctx,
-		cancel:       cancel,
 		host:         cfg.Host,
 		port:         cfg.Port,
 		detector:     cfg.Detector,
