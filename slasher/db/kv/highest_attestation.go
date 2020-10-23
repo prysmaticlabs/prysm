@@ -44,7 +44,7 @@ func (db *Store) EnableHighestAttestationCache(enable bool) {
 
 // HighestAttestation returns the highest calculated attestation for a validatorID
 func (db *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.HighestAttestation")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.HighestAttestation")
 	defer span.End()
 
 	if db.highestAttCacheEnabled {
