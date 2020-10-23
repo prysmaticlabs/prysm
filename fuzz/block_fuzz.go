@@ -98,7 +98,7 @@ func (fakeChecker) Status() error {
 	return nil
 }
 
-func (fakeChecker) Resync() error {
+func (fakeChecker) Resync(ctx context.Context) error {
 	return nil
 }
 
@@ -145,7 +145,7 @@ func BeaconFuzzBlock(b []byte) {
 	if err != nil {
 		panic(err)
 	}
-	chain.Start()
+	chain.Start(context.Background())
 
 	s := sync.NewRegularSyncFuzz(&sync.Config{
 		DB:                  db1,
