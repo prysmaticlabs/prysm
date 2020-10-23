@@ -41,7 +41,7 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	topic := fmt.Sprintf(BlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
 
 	// Establish the remote peer to be subscribed to the outgoing topic.
-	_, err = p1.SubscribeToTopic(topic)
+	_, err = p1.SubscribeToTopic(ctx, topic)
 	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}

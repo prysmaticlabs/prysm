@@ -379,7 +379,7 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 	db, stateSummaryCache := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	s, err := NewService(&Config{StateGen: stategen.New(db, stateSummaryCache)})
 	require.NoError(t, err)
 	st := params.BeaconConfig().SlotsPerEpoch * uint64(epochsSinceFinalitySaveHotStateDB)
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
@@ -392,7 +392,7 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	db, stateSummaryCache := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	s, err := NewService(&Config{StateGen: stategen.New(db, stateSummaryCache)})
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
@@ -405,7 +405,7 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 	db, stateSummaryCache := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	s, err := NewService(&Config{StateGen: stategen.New(db, stateSummaryCache)})
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 10000000}
 	s.genesisTime = time.Now()
