@@ -602,7 +602,7 @@ func (b *BeaconNode) registerRPCService() error {
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	p2pService := b.fetchP2P()
-	rpcService := rpc.NewService(b.ctx, &rpc.Config{
+	rpcService := rpc.NewService(&rpc.Config{
 		Host:                    host,
 		Port:                    port,
 		CertFlag:                cert,

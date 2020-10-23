@@ -59,8 +59,6 @@ func init() {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                     context.Context
-	cancel                  context.CancelFunc
 	beaconDB                db.HeadAccessDatabase
 	chainInfoFetcher        blockchain.ChainInfoFetcher
 	headFetcher             blockchain.HeadFetcher
@@ -143,11 +141,8 @@ type Config struct {
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(ctx)
+func NewService(cfg *Config) *Service {
 	return &Service{
-		ctx:                     ctx,
-		cancel:                  cancel,
 		beaconDB:                cfg.BeaconDB,
 		chainInfoFetcher:        cfg.ChainInfoFetcher,
 		headFetcher:             cfg.HeadFetcher,
@@ -334,7 +329,7 @@ func (s *Service) Start(ctx context.Context) {
 	}()
 }
 
-func (s *Service) startSlasherClient() {
+func (s *Service) startSlasherClient(ctx context.Context) {
 	var dialOpt grpc.DialOption
 	if s.slasherCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(s.slasherCert, "")
@@ -359,7 +354,7 @@ func (s *Service) startSlasherClient() {
 			grpc_prometheus.UnaryClientInterceptor,
 		)),
 	}
-	conn, err := grpc.DialContext(s.ctx, s.slasherProvider, slasherOpts...)
+	conn, err := grpc.DialContext(ctx, s.slasherProvider, slasherOpts...)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", s.slasherProvider, err)
 		return
