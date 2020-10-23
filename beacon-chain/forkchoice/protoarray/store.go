@@ -23,6 +23,7 @@ func New(justifiedEpoch, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkCho
 		finalizedRoot:  finalizedRoot,
 		nodes:          make([]*Node, 0),
 		nodesIndices:   make(map[[32]byte]uint64),
+		canonicalNodes: make(map[[32]byte]bool),
 		pruneThreshold: defaultPruneThreshold,
 	}
 
@@ -158,8 +159,19 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 	return f.store.nodes[i].parent != NonExistentNode
 }
 
+// IsCanonical returns true if the given root is part of the canonical chain.
+func (f *ForkChoice) IsCanonical(root [32]byte) bool {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	return f.store.canonicalNodes[root]
+}
+
 // AncestorRoot returns the ancestor root of input block root at a given slot.
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
+	defer span.End()
+
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 

@@ -151,6 +151,10 @@ func main() {
 			}
 		}
 
+		if err := cmd.ExpandWeb3EndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
+			return err
+		}
+
 		if ctx.IsSet(flags.SetGCPercent.Name) {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}
@@ -167,7 +171,6 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
 	}
 }
 

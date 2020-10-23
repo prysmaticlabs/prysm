@@ -296,6 +296,9 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		c := bkt.Cursor()
 		for s, root := c.First(); s != nil; s, root = c.Next() {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			key := bytesutil.BytesToUint64BigEndian(s)
 			if root == nil {
 				continue

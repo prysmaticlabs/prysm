@@ -44,6 +44,8 @@ type Config struct {
 	GenesisFetcher        client.GenesisFetcher
 	WalletInitializedFeed *event.Feed
 	NodeGatewayEndpoint   string
+	Wallet                *wallet.Wallet
+	Keymanager            keymanager.IKeymanager
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -81,7 +83,9 @@ func NewServer(cfg *Config) *Server {
 		genesisFetcher:        cfg.GenesisFetcher,
 		walletDir:             cfg.WalletDir,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
-		walletInitialized:     false,
+		walletInitialized:     cfg.Wallet != nil,
+		wallet:                cfg.Wallet,
+		keymanager:            cfg.Keymanager,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
 	}
 }
@@ -114,8 +118,7 @@ func (s *Server) Start(ctx context.Context) {
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
-			log.Errorf("Could not load TLS keys: %s", err)
-			s.credentialError = err
+			log.WithError(err).Fatal("Could not load TLS keys")
 		}
 		opts = append(opts, grpc.Creds(creds))
 		log.WithFields(logrus.Fields{

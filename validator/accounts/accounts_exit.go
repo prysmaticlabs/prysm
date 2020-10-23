@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -75,9 +76,7 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 
 func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, error) {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, errors.New(
-			"no wallet found, no accounts to exit",
-		)
+		return nil, wallet.ErrNoWalletFound
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not open wallet")
@@ -154,7 +153,8 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 		"Please navigate to the following website and make sure you understand the current implications " +
 		"of a voluntary exit before making the final decision:"
 	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
-	promptQuestion := "If you still want to continue with the voluntary exit, please input the passphrase from the above URL"
+	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the end " +
+		"of the page from the above URL"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
 	resp, err := promptutil.ValidatePrompt(r, promptText, func(input string) error {
 		return promptutil.ValidatePhrase(input, exitPassphrase)
@@ -195,7 +195,14 @@ func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
 	for i, key := range cfg.rawPubKeys {
 		if err := client.ProposeExit(cliCtx.Context, cfg.validatorClient, cfg.nodeClient, cfg.keymanager.Sign, key); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
-			log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.formattedPubKeys[i])
+
+			msg := err.Error()
+			if strings.Contains(msg, blocks.ValidatorAlreadyExitedMsg) ||
+				strings.Contains(msg, blocks.ValidatorCannotExitYetMsg) {
+				log.Warningf("Could not perform voluntary exit for account %s: %s", cfg.formattedPubKeys[i], msg)
+			} else {
+				log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.formattedPubKeys[i])
+			}
 		}
 	}
 	var formattedExitedKeys []string

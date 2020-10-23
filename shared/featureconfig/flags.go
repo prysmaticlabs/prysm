@@ -80,10 +80,6 @@ var (
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
-	enableAttBroadcastDiscoveryAttempts = &cli.BoolFlag{
-		Name:  "enable-att-broadcast-discovery-attempts",
-		Usage: "Enable experimental attestation subnet discovery before broadcasting.",
-	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
@@ -102,7 +98,6 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableEth1DataMajorityVote,
-	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 }
 
@@ -150,7 +145,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	ZinkenTestnet,
 	enableBlst,
 	enableEth1DataMajorityVote,
-	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
