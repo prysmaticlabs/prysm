@@ -127,8 +127,6 @@ type Service struct {
 	isRunning               bool
 	depositContractAddress  common.Address
 	processingLock          sync.RWMutex
-	ctx                     context.Context
-	cancel                  context.CancelFunc
 	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
 	httpEndpoint            string
@@ -173,8 +171,6 @@ func NewService(config *Web3ServiceConfig) (*Service, error) {
 	}
 
 	s := &Service{
-		ctx:          ctx,
-		cancel:       cancel,
 		headerChan:   make(chan *gethTypes.Header),
 		httpEndpoint: config.HTTPEndPoint,
 		latestEth1Data: &protodb.LatestETH1Data{
@@ -241,8 +237,8 @@ func (s *Service) Start(ctx context.Context) {
 		return
 	}
 	go func() {
-		s.waitForConnection()
-		s.run(ctx.Done())
+		s.waitForConnection(ctx)
+		s.run(ctx)
 	}()
 }
 
@@ -320,7 +316,7 @@ func (s *Service) LatestBlockHash() common.Hash {
 
 // AreAllDepositsProcessed determines if all the logs from the deposit contract
 // are processed.
-func (s *Service) AreAllDepositsProcessed() (bool, error) {
+func (s *Service) AreAllDepositsProcessed(ctx context.Context) (bool, error) {
 	s.processingLock.RLock()
 	defer s.processingLock.RUnlock()
 	countByte, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
@@ -328,7 +324,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := s.depositCache.AllDeposits(s.ctx, nil)
+	deposits := s.depositCache.AllDeposits(ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
@@ -361,8 +357,8 @@ func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
 	return latestValidBlock, nil
 }
 
-func (s *Service) connectToPowChain() error {
-	httpClient, rpcClient, err := s.dialETH1Nodes()
+func (s *Service) connectToPowChain(ctx context.Context) error {
+	httpClient, rpcClient, err := s.dialETH1Nodes(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not dial eth1 nodes")
 	}
@@ -380,7 +376,7 @@ func (s *Service) connectToPowChain() error {
 	return nil
 }
 
-func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
+func (s *Service) dialETH1Nodes(ctx context.Context) (*ethclient.Client, *gethRPC.Client, error) {
 	httpRPCClient, err := gethRPC.Dial(s.httpEndpoint)
 	if err != nil {
 		return nil, nil, err
@@ -388,11 +384,11 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 	httpClient := ethclient.NewClient(httpRPCClient)
 
 	// Make a simple call to ensure we are actually connected to a working node.
-	cID, err := httpClient.ChainID(s.ctx)
+	cID, err := httpClient.ChainID(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-	nID, err := httpClient.NetworkID(s.ctx)
+	nID, err := httpClient.NetworkID(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -417,10 +413,10 @@ func (s *Service) initializeConnection(
 	s.rpcClient = rpcClient
 }
 
-func (s *Service) waitForConnection() {
-	errConnect := s.connectToPowChain()
+func (s *Service) waitForConnection(ctx context.Context) {
+	errConnect := s.connectToPowChain(ctx)
 	if errConnect == nil {
-		synced, errSynced := s.isEth1NodeSynced()
+		synced, errSynced := s.isEth1NodeSynced(ctx)
 		// Resume if eth1 node is synced.
 		if synced {
 			s.connectedETH1 = true
@@ -451,12 +447,12 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			errConnect := s.connectToPowChain()
+			errConnect := s.connectToPowChain(ctx)
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
 				continue
 			}
-			synced, errSynced := s.isEth1NodeSynced()
+			synced, errSynced := s.isEth1NodeSynced(ctx)
 			if errSynced != nil {
 				errorLogger(errSynced, "Could not check sync status of eth1 chain")
 				continue
@@ -469,7 +465,7 @@ func (s *Service) waitForConnection() {
 				return
 			}
 			log.Debug("Eth1 node is currently syncing")
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
 		}
@@ -478,8 +474,8 @@ func (s *Service) waitForConnection() {
 
 // checks if the eth1 node is healthy and ready to serve before
 // fetching data from  it.
-func (s *Service) isEth1NodeSynced() (bool, error) {
-	syncProg, err := s.eth1DataFetcher.SyncProgress(s.ctx)
+func (s *Service) isEth1NodeSynced(ctx context.Context) (bool, error) {
+	syncProg, err := s.eth1DataFetcher.SyncProgress(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -487,13 +483,13 @@ func (s *Service) isEth1NodeSynced() (bool, error) {
 }
 
 // Reconnect to eth1 node in case of any failure.
-func (s *Service) retryETH1Node(err error) {
+func (s *Service) retryETH1Node(ctx context.Context, err error) {
 	s.runError = err
 	s.connectedETH1 = false
 	// Back off for a while before
 	// resuming dialing the eth1 node.
 	time.Sleep(backOffPeriod)
-	s.waitForConnection()
+	s.waitForConnection(ctx)
 	// Reset run error in the event of a successful connection.
 	s.runError = nil
 }
@@ -593,9 +589,8 @@ func safelyHandlePanic() {
 	}
 }
 
-func (s *Service) handleETH1FollowDistance() {
+func (s *Service) handleETH1FollowDistance(ctx context.Context) {
 	defer safelyHandlePanic()
-	ctx := s.ctx
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
@@ -631,20 +626,18 @@ func (s *Service) handleETH1FollowDistance() {
 	}
 }
 
-func (s *Service) initPOWService() {
+func (s *Service) initPOWService(ctx context.Context) {
 
 	// Run in a select loop to retry in the event of any failures.
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
-			ctx := s.ctx
-
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
-				s.retryETH1Node(err)
+				s.retryETH1Node(ctx, err)
 				continue
 			}
 
@@ -654,7 +647,7 @@ func (s *Service) initPOWService() {
 
 			if err := s.processPastLogs(ctx); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
-				s.retryETH1Node(err)
+				s.retryETH1Node(ctx, err)
 				continue
 			}
 			// Cache eth1 headers from our voting period.
@@ -665,48 +658,48 @@ func (s *Service) initPOWService() {
 }
 
 // run subscribes to all the services for the ETH1.0 chain.
-func (s *Service) run(done <-chan struct{}) {
+func (s *Service) run(ctx context.Context) {
 	s.isRunning = true
 	s.runError = nil
 
-	s.initPOWService()
+	s.initPOWService(ctx)
 
 	chainstartTicker := time.NewTicker(logPeriod)
 	defer chainstartTicker.Stop()
 
 	for {
 		select {
-		case <-done:
+		case <-ctx.Done():
 			s.isRunning = false
 			s.runError = nil
 			s.connectedETH1 = false
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.headTicker.C:
-			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
+			head, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
-				s.retryETH1Node(err)
+				s.retryETH1Node(ctx, err)
 				continue
 			}
 			s.processBlockHeader(head)
-			s.handleETH1FollowDistance()
+			s.handleETH1FollowDistance(ctx)
 		case <-chainstartTicker.C:
 			if s.chainStartData.Chainstarted {
 				chainstartTicker.Stop()
 				continue
 			}
-			s.logTillChainStart()
+			s.logTillChainStart(ctx)
 		}
 	}
 }
 
 // logs the current thresholds required to hit chainstart every minute.
-func (s *Service) logTillChainStart() {
+func (s *Service) logTillChainStart(ctx context.Context) {
 	if s.chainStartData.Chainstarted {
 		return
 	}
-	_, blockTime, err := s.retrieveBlockHashAndTime(s.ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock)))
+	_, blockTime, err := s.retrieveBlockHashAndTime(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock)))
 	if err != nil {
 		log.Error(err)
 		return

@@ -72,7 +72,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	if len(logs) == 0 {
@@ -140,7 +140,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	web3Service.chainStartData.Chainstarted = true
@@ -191,7 +191,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		},
 	}
 
-	logz, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	logz, err := testAcc.Backend.FilterLogs(context.Background(), query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	loggedPubkey, withCreds, _, loggedSig, index, err := contracts.UnpackDepositLogData(logz[0].Data)
@@ -257,7 +257,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	for _, log := range logs {
@@ -325,7 +325,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
 	require.NoError(t, err, "Unable to retrieve logs")
 	require.Equal(t, depositsReqForChainStart, len(logs))
 
@@ -503,7 +503,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
 	require.NoError(t, err, "Unable to retrieve logs")
 	require.Equal(t, depositsWanted, len(logs), "Did not receive enough logs")
 
@@ -558,7 +558,7 @@ func TestConsistentGenesisState(t *testing.T) {
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
-	go web3Service.run(ctx.Done())
+	go web3Service.run(ctx)
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
@@ -589,7 +589,7 @@ func TestConsistentGenesisState(t *testing.T) {
 	newBeaconDB, _ := testDB.SetupDB(t)
 
 	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
-	go newWeb3Service.run(ctx.Done())
+	go newWeb3Service.run(ctx)
 
 	time.Sleep(2 * time.Second)
 	require.Equal(t, true, newWeb3Service.chainStartData.Chainstarted, fmt.Sprintf("Service hasn't chainstarted yet with a block height of %d", newWeb3Service.latestEth1Data.BlockHeight))

@@ -142,7 +142,6 @@ func TestStart_OK(t *testing.T) {
 		}
 	}
 	hook.Reset()
-	web3Service.cancel()
 }
 
 func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
@@ -205,7 +204,6 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 		s.Start(context.Background())
 		wg.Done()
 	}()
-	s.cancel()
 	testutil.WaitTimeout(wg, time.Second)
 	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
@@ -250,11 +248,8 @@ func TestStop_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	err = web3Service.Stop()
+	err = web3Service.Stop(context.Background())
 	require.NoError(t, err, "Unable to stop web3 ETH1.0 chain service")
-
-	// The context should have been canceled.
-	assert.NotNil(t, web3Service.ctx.Err(), "Context wasnt canceled")
 
 	hook.Reset()
 }
@@ -275,7 +270,7 @@ func TestService_Eth1Synced(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	synced, err := web3Service.isEth1NodeSynced()
+	synced, err := web3Service.isEth1NodeSynced(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, true, synced, "Expected eth1 nodes to be synced")
 }
@@ -414,10 +409,9 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	}
 	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: 0}
 	// Spin off to a separate routine
-	go web3Service.run(web3Service.ctx.Done())
+	go web3Service.run(context.Background())
 	// Wait for 2 seconds so that the
 	// info is logged.
 	time.Sleep(2 * time.Second)
-	web3Service.cancel()
 	assert.LogsContain(t, hook, "Currently waiting for chainstart")
 }

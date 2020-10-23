@@ -48,18 +48,19 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		web3Service.run(web3Service.ctx.Done())
+		web3Service.run(ctx)
 		<-exitRoutine
 	}()
 
-	header, err := web3Service.eth1DataFetcher.HeaderByNumber(web3Service.ctx, nil)
+	header, err := web3Service.eth1DataFetcher.HeaderByNumber(context.Background(), nil)
 	require.NoError(t, err)
 
 	tickerChan := make(chan time.Time)
 	web3Service.headTicker = &time.Ticker{C: tickerChan}
 	tickerChan <- time.Now()
-	web3Service.cancel()
+	cancel()
 	exitRoutine <- true
 
 	assert.Equal(t, web3Service.latestEth1Data.BlockHeight, header.Number.Uint64())
