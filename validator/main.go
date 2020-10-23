@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
-	"time"
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -26,9 +25,6 @@ import (
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
-
-// connTimeout defines a period after which connection to beacon node is cancelled.
-const connTimeout = 10 * time.Second
 
 var log = logrus.WithField("prefix", "main")
 
@@ -72,6 +68,7 @@ var appFlags = []cli.Flag{
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
+	flags.AllowEmptyProtectionDB,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -171,6 +168,5 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
 	}
 }
