@@ -181,13 +181,13 @@ func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	rootCreater := func(input []byte) {
+	rootCreator := func(input []byte) {
 		newRoot := bytesutil.ToBytes32(input)
 		roots = append(roots, newRoot)
 	}
 	if convertAll {
 		for i := range val {
-			rootCreater(val[i])
+			rootCreator(val[i])
 		}
 		return roots, nil
 	}
@@ -196,7 +196,7 @@ func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 			if idx > uint64(len(val))-1 {
 				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
 			}
-			rootCreater(val[idx])
+			rootCreator(val[idx])
 		}
 	}
 	return roots, nil
