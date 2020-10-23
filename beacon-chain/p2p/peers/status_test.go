@@ -651,6 +651,22 @@ func TestStatus_BestPeer(t *testing.T) {
 			targetEpoch:        6,
 			targetEpochSupport: 4,
 		},
+		{
+			name: "handle epoch ties",
+			peers: []*peerConfig{
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 7, headSlot: 7 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			ourFinalizedEpoch:  5,
+			limitPeers:         15,
+			targetEpoch:        8,
+			targetEpochSupport: 3,
+		},
 	}
 
 	for _, tt := range tests {
