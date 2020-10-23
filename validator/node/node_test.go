@@ -86,7 +86,7 @@ func Test_moveSlashingProtectionDatabase_doesntPromptWithFlag(t *testing.T) {
 	set.Bool("allow-new-protection-db", true, "dont prompt")
 	context := cli.NewContext(&app, set, nil)
 	// dont prompt when non interactive flag is on.
-	moveSlashingProtectionDatabase(context, flags.WalletDirFlag)
+	moveSlashingProtectionDatabase(context, context.String(flags.WalletDirFlag.Name))
 	require.LogsDoNotContain(t, hook, "protection db is empty.")
 	require.LogsDoNotContain(t, hook, "Moving validator protection db")
 }
@@ -114,7 +114,7 @@ func Test_moveSlashingProtectionDatabaseDefaultValue(t *testing.T) {
 
 	// prompt when flag is not present and db is new.
 	context := cli.NewContext(&app, set, nil)
-	moveSlashingProtectionDatabase(context, flags.WalletDirFlag)
+	moveSlashingProtectionDatabase(context, context.String(flags.WalletDirFlag.Name))
 	require.LogsDoNotContain(t, hook, "Moving validator protection db")
 }
 
@@ -150,6 +150,6 @@ func Test_moveSlashingProtectionDatabaseToNewLocation(t *testing.T) {
 
 	// prompt when flag is not present and db is new.
 	context := cli.NewContext(&app, set, nil)
-	moveSlashingProtectionDatabase(context, flags.WalletDirFlag)
+	moveSlashingProtectionDatabase(context, context.String(flags.WalletDirFlag.Name))
 	require.LogsContain(t, hook, "Moving validator protection db")
 }

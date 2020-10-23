@@ -63,14 +63,13 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 }
 
 // InputDir from the cli without exception.
-func InputDir(cliCtx *cli.Context, promptText string, dirFlag *cli.StringFlag) (string, error) {
-	directory := cliCtx.String(dirFlag.Name)
-	inputtedDir, err := promptutil.DefaultPrompt(au.Bold(promptText).String(), directory)
+func InputDir(cliCtx *cli.Context, promptText string, defaultDir string) (string, error) {
+	inputtedDir, err := promptutil.DefaultPrompt(au.Bold(promptText).String(), defaultDir)
 	if err != nil {
 		return "", err
 	}
-	if inputtedDir == directory {
-		return directory, nil
+	if inputtedDir == defaultDir {
+		return defaultDir, nil
 	}
 	return fileutil.ExpandPath(inputtedDir)
 }

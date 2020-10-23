@@ -41,16 +41,14 @@ import (
 
 var log = logrus.WithField("prefix", "node")
 var au = aurora.NewAurora(true)
-var calmFirstTimeUsers = "If this is the first time you are using these keys " +
-	"disregard this warning and hit the Enter key.\n"
-var warning = "Warning!!! protection db is the main method to prevent slashing. " +
-	"If it is not the first time you are running the validator with the current " +
-	"keys please locate the db file!!!\n"
-var defaultWarning = "hitting return will start an empty db file"
+var calmFirstTimeUsers = "If this is the first time this validator keypair has been used, " +
+	"disregard this warning by hitting the Enter key."
+var warning = "Warning! The protection DB is essential to prevent slashing. If the current " +
+	"validator keys have been used before, \nplease specify the location of the DB file."
+var defaultWarning = "By default, the DB file is named validator.db Locate this file from your previous validator setup, and paste its path below:"
 var specifyProtectionDBPath = fmt.Sprintf(
-	"\n\n%s%sdb file name is %s please locate the latest version of it "+
-		"and paste the path here (%s)", au.BrightCyan(calmFirstTimeUsers), au.BrightMagenta(warning),
-	au.BrightMagenta(kv.ProtectionDbFileName), au.Red(defaultWarning))
+	"\n\n%s\n\n%s\n\n%s\n\n", au.Blue(calmFirstTimeUsers),
+	au.Red(warning), defaultWarning)
 
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
@@ -202,13 +200,14 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-
-	dataFlag := flags.WalletDirFlag
-	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
-		dataFlag = cmd.DataDirFlag
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if s.wallet != nil {
+		dataDir = s.wallet.AccountsDir()
 	}
-	dataDir := cliCtx.String(dataFlag.Name)
-	moveSlashingProtectionDatabase(cliCtx, dataFlag)
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+	}
+	moveSlashingProtectionDatabase(cliCtx, dataDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
@@ -257,9 +256,8 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveSlashingProtectionDatabase(cliCtx *cli.Context, defaultDir *cli.StringFlag) {
-	dataDir := cliCtx.String(defaultDir.Name)
-	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+func moveSlashingProtectionDatabase(cliCtx *cli.Context, defaultDir string) {
+	dataFile := filepath.Join(defaultDir, kv.ProtectionDbFileName)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag || cliCtx.Bool(flags.AllowEmptyProtectionDB.Name) {
@@ -271,7 +269,7 @@ func moveSlashingProtectionDatabase(cliCtx *cli.Context, defaultDir *cli.StringF
 		if err != nil {
 			log.WithError(err).Fatal("could not parse protection db directory")
 		}
-		if protectionDbPath == dataDir {
+		if protectionDbPath == defaultDir {
 			return
 		}
 		oldDataFile := filepath.Join(protectionDbPath, kv.ProtectionDbFileName)
@@ -312,12 +310,14 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-	dataFlag := flags.WalletDirFlag
-	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
-		dataFlag = cmd.DataDirFlag
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if s.wallet != nil {
+		dataDir = s.wallet.AccountsDir()
 	}
-	dataDir := cliCtx.String(dataFlag.Name)
-	moveSlashingProtectionDatabase(cliCtx, dataFlag)
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+	}
+	moveSlashingProtectionDatabase(cliCtx, dataDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 
