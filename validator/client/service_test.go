@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,22 +26,6 @@ func TestMain(m *testing.M) {
 	// os.Exit will prevent defer from being called
 	cleanup()
 	os.Exit(code)
-}
-
-func TestStop_CancelsContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	vs := &ValidatorService{
-		ctx:    ctx,
-		cancel: cancel,
-	}
-
-	assert.NoError(t, vs.Stop(ctx))
-
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Context not canceled within 1s")
-	case <-vs.ctx.Done():
-	}
 }
 
 func TestLifecycle(t *testing.T) {

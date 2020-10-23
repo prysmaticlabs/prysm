@@ -41,6 +41,7 @@ func (s *secondMockService) Status() error {
 
 func TestRegisterService_Twice(t *testing.T) {
 	registry := &ServiceRegistry{
+		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 
@@ -54,6 +55,7 @@ func TestRegisterService_Twice(t *testing.T) {
 
 func TestRegisterService_Different(t *testing.T) {
 	registry := &ServiceRegistry{
+		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 
@@ -73,6 +75,7 @@ func TestRegisterService_Different(t *testing.T) {
 
 func TestFetchService_OK(t *testing.T) {
 	registry := &ServiceRegistry{
+		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 
@@ -91,6 +94,7 @@ func TestFetchService_OK(t *testing.T) {
 
 func TestServiceStatus_OK(t *testing.T) {
 	registry := &ServiceRegistry{
+		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 

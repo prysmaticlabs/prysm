@@ -105,7 +105,7 @@ func (p *FakeP2P) SetStreamHandler(_ string, _ network.StreamHandler) {
 }
 
 // SubscribeToTopic -- fake.
-func (p *FakeP2P) SubscribeToTopic(_ string, _ ...pubsub.SubOpt) (*pubsub.Subscription, error) {
+func (p *FakeP2P) SubscribeToTopic(_ context.Context, _ string, _ ...pubsub.SubOpt) (*pubsub.Subscription, error) {
 	return nil, nil
 }
 
