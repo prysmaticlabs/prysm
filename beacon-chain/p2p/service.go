@@ -66,7 +66,6 @@ type Service struct {
 	isPreGenesis          bool
 	currentForkDigest     [4]byte
 	pingMethod            func(ctx context.Context, id peer.ID) error
-	cancel                context.CancelFunc
 	cfg                   *Config
 	peers                 *peers.Status
 	addrFilter            *filter.Filters
@@ -83,7 +82,6 @@ type Service struct {
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
-	ctx                   context.Context
 	host                  host.Host
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
@@ -91,9 +89,9 @@ type Service struct {
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(cfg *Config) (*Service, error) {
 	var err error
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cacheNumCounters,
@@ -105,9 +103,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 
 	s := &Service{
-		ctx:           ctx,
 		stateNotifier: cfg.StateNotifier,
-		cancel:        cancel,
 		cfg:           cfg,
 		exclusionList: cache,
 		isPreGenesis:  true,
@@ -138,7 +134,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
 
 	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(s.ctx, opts...)
+	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
 		return nil, err
@@ -159,7 +155,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
 
-	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
+	gs, err := pubsub.NewGossipSub(ctx, s.host, psOpts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to start pubsub")
 		return nil, err
@@ -189,7 +185,7 @@ func (s *Service) Start(ctx context.Context) {
 
 	// Waits until the state is initialized via an event feed.
 	// Used for fork-related data when connecting peers.
-	s.awaitStateInitialized()
+	s.awaitStateInitialized(ctx)
 	s.isPreGenesis = false
 
 	var peersToWatch []string
@@ -211,14 +207,14 @@ func (s *Service) Start(ctx context.Context) {
 			s.startupErr = err
 			return
 		}
-		err = s.connectToBootnodes()
+		err = s.connectToBootnodes(ctx)
 		if err != nil {
 			log.WithError(err).Error("Could not add bootnode to the exclusion list")
 			s.startupErr = err
 			return
 		}
 		s.dv5Listener = listener
-		go s.listenForNewNodes()
+		go s.listenForNewNodes(ctx)
 	}
 
 	s.started = true
@@ -228,7 +224,7 @@ func (s *Service) Start(ctx context.Context) {
 		if err != nil {
 			log.Errorf("Could not connect to static peer: %v", err)
 		}
-		s.connectWithAllPeers(addrs)
+		s.connectWithAllPeers(ctx, addrs)
 	}
 
 	// Periodic functions.
@@ -238,7 +234,7 @@ func (s *Service) Start(ctx context.Context) {
 	runutil.RunEvery(ctx, 30*time.Minute, s.Peers().Prune)
 	runutil.RunEvery(ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
 	runutil.RunEvery(ctx, refreshRate, func() {
-		s.RefreshENR()
+		s.RefreshENR(ctx)
 	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
@@ -321,8 +317,8 @@ func (s *Service) Disconnect(pid peer.ID) error {
 }
 
 // Connect to a specific peer.
-func (s *Service) Connect(pi peer.AddrInfo) error {
-	return s.host.Connect(s.ctx, pi)
+func (s *Service) Connect(ctx context.Context, pi peer.AddrInfo) error {
+	return s.host.Connect(ctx, pi)
 }
 
 // Peers returns the peer status interface.
@@ -354,13 +350,13 @@ func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) er
 	s.pingMethod = reqFunc
 }
 
-func (s *Service) pingPeers() {
+func (s *Service) pingPeers(ctx context.Context) {
 	if s.pingMethod == nil {
 		return
 	}
 	for _, pid := range s.peers.Connected() {
 		go func(id peer.ID) {
-			if err := s.pingMethod(s.ctx, id); err != nil {
+			if err := s.pingMethod(ctx, id); err != nil {
 				log.WithField("peer", id).WithError(err).Debug("Failed to ping peer")
 			}
 		}(pid)
@@ -370,7 +366,7 @@ func (s *Service) pingPeers() {
 // Waits for the beacon state to be initialized, important
 // for initializing the p2p service as p2p needs to be aware
 // of genesis information for peering.
-func (s *Service) awaitStateInitialized() {
+func (s *Service) awaitStateInitialized(ctx context.Context) {
 	s.initializationLock.Lock()
 	defer s.initializationLock.Unlock()
 
@@ -401,14 +397,14 @@ func (s *Service) awaitStateInitialized() {
 
 				return
 			}
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			return
 		}
 	}
 }
 
-func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
+func (s *Service) connectWithAllPeers(ctx context.Context, multiAddrs []ma.Multiaddr) {
 	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
 	if err != nil {
 		log.Errorf("Could not convert to peer address info's from multiaddresses: %v", err)
@@ -417,7 +413,7 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	for _, info := range addrInfos {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
-			if err := s.connectWithPeer(s.ctx, info); err != nil {
+			if err := s.connectWithPeer(ctx, info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(info)
@@ -443,7 +439,7 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 	return nil
 }
 
-func (s *Service) connectToBootnodes() error {
+func (s *Service) connectToBootnodes(ctx context.Context) error {
 	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddr))
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
@@ -460,7 +456,7 @@ func (s *Service) connectToBootnodes() error {
 		nodes = append(nodes, bootNode)
 	}
 	multiAddresses := convertToMultiAddr(nodes)
-	s.connectWithAllPeers(multiAddresses)
+	s.connectWithAllPeers(ctx, multiAddresses)
 	return nil
 }
 

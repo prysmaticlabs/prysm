@@ -46,7 +46,7 @@ type PubSubTopicUser interface {
 	JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error)
 	LeaveTopic(topic string) error
 	PublishToTopic(ctx context.Context, topic string, data []byte, opts ...pubsub.PubOpt) error
-	SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error)
+	SubscribeToTopic(ctx context.Context, topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error)
 }
 
 // ConnectionHandler configures p2p to handle connections with a peer.
@@ -72,7 +72,7 @@ type PeerManager interface {
 	PeerID() peer.ID
 	Host() host.Host
 	ENR() *enr.Record
-	RefreshENR()
+	RefreshENR(ctx context.Context)
 	FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error)
 	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
 }

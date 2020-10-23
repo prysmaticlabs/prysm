@@ -62,7 +62,7 @@ func (p *FakeP2P) FindPeersWithSubnet(_ context.Context, _ uint64) (bool, error)
 }
 
 // RefreshENR mocks the p2p func.
-func (p *FakeP2P) RefreshENR() {}
+func (p *FakeP2P) RefreshENR(ctx context.Context) {}
 
 // LeaveTopic -- fake.
 func (p *FakeP2P) LeaveTopic(_ string) error {

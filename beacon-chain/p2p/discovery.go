@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"net"
 	"time"
@@ -34,7 +35,7 @@ type Listener interface {
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee ids for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee ids.
-func (s *Service) RefreshENR() {
+func (s *Service) RefreshENR(ctx context.Context) {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {
 		return
@@ -55,17 +56,17 @@ func (s *Service) RefreshENR() {
 	}
 	s.updateSubnetRecordWithMetadata(bitV)
 	// ping all peers to inform them of new metadata
-	s.pingPeers()
+	s.pingPeers(ctx)
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
-func (s *Service) listenForNewNodes() {
+func (s *Service) listenForNewNodes(ctx context.Context) {
 	iterator := s.dv5Listener.RandomNodes()
 	iterator = enode.Filter(iterator, s.filterPeer)
 	defer iterator.Close()
 	for {
 		// Exit if service's context is canceled
-		if s.ctx.Err() != nil {
+		if ctx.Err() != nil {
 			break
 		}
 		if s.isPeerAtLimit() {
@@ -86,7 +87,7 @@ func (s *Service) listenForNewNodes() {
 			continue
 		}
 		go func(info *peer.AddrInfo) {
-			if err := s.connectWithPeer(s.ctx, *info); err != nil {
+			if err := s.connectWithPeer(ctx, *info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(peerInfo)

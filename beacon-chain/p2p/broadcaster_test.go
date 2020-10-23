@@ -370,7 +370,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 
 	// External peer subscribes to the topic.
 	topic += p.Encoding().ProtocolSuffix()
-	sub, err := p2.SubscribeToTopic(topic)
+	sub, err := p2.SubscribeToTopic(context.Background(), topic)
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...

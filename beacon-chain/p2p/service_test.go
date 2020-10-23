@@ -76,18 +76,18 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(&Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	s.started = true
 	s.dv5Listener = &mockListener{}
-	assert.NoError(t, s.Stop())
+	assert.NoError(t, s.Stop(context.Background()))
 	assert.Equal(t, false, s.started)
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(&Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
-	assert.NoError(t, s.Stop())
+	assert.NoError(t, s.Stop(context.Background()))
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
@@ -99,7 +99,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		UDPPort:       2000,
 		StateNotifier: &mock.MockStateNotifier{},
 	}
-	s, err := NewService(context.Background(), cfg)
+	s, err := NewService(cfg)
 	require.NoError(t, err)
 	s.stateNotifier = &mock.MockStateNotifier{}
 	s.dv5Listener = &mockListener{}
@@ -122,7 +122,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	assert.Equal(t, true, s.started, "Expected service to be started")
 	s.Start(ctx)
 	require.LogsContain(t, hook, "Attempted to start p2p service when it was already started")
-	require.NoError(t, s.Stop())
+	require.NoError(t, s.Stop(ctx))
 	exitRoutine <- true
 }
 
@@ -202,7 +202,7 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 
-	s, err = NewService(context.Background(), cfg)
+	s, err = NewService(cfg)
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -223,7 +223,7 @@ func TestListenForNewNodes(t *testing.T) {
 	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
-	require.NoError(t, s.Stop())
+	require.NoError(t, s.Stop(context.Background()))
 	exitRoutine <- true
 }
 
@@ -260,10 +260,10 @@ func TestPeer_Disconnect(t *testing.T) {
 func TestService_JoinLeaveTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(&Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 
-	go s.awaitStateInitialized()
+	go s.awaitStateInitialized(ctx)
 	fd := initializeStateWithForkDigest(ctx, t, s.stateNotifier.StateFeed())
 
 	assert.Equal(t, 0, len(s.joinedTopics))
