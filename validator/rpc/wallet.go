@@ -23,7 +23,6 @@ import (
 const (
 	checkExistsErrMsg   = "Could not check if wallet exists"
 	checkValidityErrMsg = "Could not check if wallet is valid"
-	noWalletMsg         = "No wallet found at path"
 	invalidWalletMsg    = "Directory does not contain a valid wallet"
 )
 

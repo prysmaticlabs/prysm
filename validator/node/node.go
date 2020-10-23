@@ -12,6 +12,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -38,6 +40,17 @@ import (
 )
 
 var log = logrus.WithField("prefix", "node")
+var au = aurora.NewAurora(true)
+var calmFirstTimeUsers = "If this is the first time you are using these keys " +
+	"disregard this warning and hit the Enter key.\n"
+var warning = "Warning!!! protection db is the main method to prevent slashing. " +
+	"If it is not the first time you are running the validator with the current " +
+	"keys please locate the db file!!!\n"
+var defaultWarning = "hitting return will start an empty db file"
+var specifyProtectionDBPath = fmt.Sprintf(
+	"\n\n%s%sdb file name is %s please locate the latest version of it "+
+		"and paste the path here (%s)", au.BrightCyan(calmFirstTimeUsers), au.BrightMagenta(warning),
+	au.BrightMagenta(kv.ProtectionDbFileName), au.Red(defaultWarning))
 
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
@@ -159,7 +172,6 @@ func (s *ValidatorClient) Close() {
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
-	var accountsDir string
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
@@ -170,7 +182,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	} else {
 		// Read the wallet from the specified path.
 		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-			return nil, errors.New("no wallet found, create a new one with validator wallet create")
+			return nil, wallet.ErrNoWalletFound
 		})
 		if err != nil {
 			return errors.Wrap(err, "could not open wallet")
@@ -189,15 +201,19 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
-		accountsDir = s.wallet.AccountsDir()
 	}
 
-	dataDir := moveDb(cliCtx, accountsDir)
+	dataFlag := flags.WalletDirFlag
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataFlag = cmd.DataDirFlag
+	}
+	dataDir := cliCtx.String(dataFlag.Name)
+	moveSlashingProtectionDatabase(cliCtx, dataFlag)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
-		if dataDir == "" {
-			dataDir = cmd.DefaultDataDir()
+		if dataDir == "" && s.wallet != nil {
+			dataDir = s.wallet.AccountsDir()
 			if dataDir == "" {
 				log.Fatal(
 					"Could not determine your system's HOME path, please specify a --datadir you wish " +
@@ -241,24 +257,33 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context, accountsDir string) string {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	if accountsDir != "" {
-		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
-		if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
-			log.WithFields(logrus.Fields{
-				"oldDbPath": dataDir,
-				"walletDir": accountsDir,
-			}).Info("Moving validator protection db to wallet dir")
-			err := fileutil.CopyFile(dataFile, newDataFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		dataDir = accountsDir
+func moveSlashingProtectionDatabase(cliCtx *cli.Context, defaultDir *cli.StringFlag) {
+	dataDir := cliCtx.String(defaultDir.Name)
+	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
+	if clearFlag || forceClearFlag || cliCtx.Bool(flags.AllowEmptyProtectionDB.Name) {
+		return
 	}
-	return dataDir
+	if !fileutil.FileExists(dataFile) {
+		// Input the directory where the old protection db resides.
+		protectionDbPath, err := prompt.InputDir(cliCtx, specifyProtectionDBPath, defaultDir)
+		if err != nil {
+			log.WithError(err).Fatal("could not parse protection db directory")
+		}
+		if protectionDbPath == dataDir {
+			return
+		}
+		oldDataFile := filepath.Join(protectionDbPath, kv.ProtectionDbFileName)
+		log.WithFields(logrus.Fields{
+			"oldDbPath":      oldDataFile,
+			"validatorDbDir": dataFile,
+		}).Info("Moving validator protection db")
+		err = fileutil.CopyFile(oldDataFile, dataFile)
+		if err != nil {
+			log.WithError(err).Fatal("could not copy old db file")
+		}
+	}
 }
 
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
@@ -287,10 +312,15 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-
+	dataFlag := flags.WalletDirFlag
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataFlag = cmd.DataDirFlag
+	}
+	dataDir := cliCtx.String(dataFlag.Name)
+	moveSlashingProtectionDatabase(cliCtx, dataFlag)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()

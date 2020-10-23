@@ -28,8 +28,6 @@ func TestLifecycle_OK(t *testing.T) {
 	}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7348",
-		CertFlag:            "alice.crt",
-		KeyFlag:             "alice.key",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
 		AttestationReceiver: chainService,

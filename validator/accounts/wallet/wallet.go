@@ -49,7 +49,9 @@ const (
 var (
 	// ErrNoWalletFound signifies there was no wallet directory found on-disk.
 	ErrNoWalletFound = errors.New(
-		"no wallet found at path, please create a new wallet using `./prysm.sh validator wallet create`",
+		"no wallet found. You can create a new wallet with validator wallet create." +
+			"If you already did, perhaps you created a wallet in a custom directory, which you can specify using " +
+			"--wallet-dir=/path/to/my/wallet",
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
