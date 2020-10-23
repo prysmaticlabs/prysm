@@ -237,7 +237,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			expectedNumBlocks: 2,
 		},
 		{
-			filter:            filters.NewFilter().SetStartSlot(5),
+			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(9),
 			expectedNumBlocks: 4,
 		},
 		{
