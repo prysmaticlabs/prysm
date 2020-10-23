@@ -45,7 +45,8 @@ var calmFirstTimeUsers = "If this is the first time this validator keypair has b
 	"disregard this warning by hitting the Enter key."
 var warning = "Warning! The protection DB is essential to prevent slashing. If the current " +
 	"validator keys have been used before, \nplease specify the location of the DB file."
-var defaultWarning = "By default, the DB file is named validator.db Locate this file from your previous validator setup, and paste its path below:"
+var defaultWarning = "By default, the DB file is named validator.db . Locate this file from " +
+	"your previous validator setup, and paste its \npath below. It will be copied to the existing configurations directory."
 var specifyProtectionDBPath = fmt.Sprintf(
 	"\n\n%s\n\n%s\n\n%s\n\n", au.Blue(calmFirstTimeUsers),
 	au.Red(warning), defaultWarning)
