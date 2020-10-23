@@ -45,7 +45,7 @@ func init() {
 	if err := p.Connect(context.Background(), info); err != nil {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
-	regularsync.NewService(context.Background(), &regularsync.Config{
+	regularsync.NewService(&regularsync.Config{
 		P2P:          p,
 		DB:           nil,
 		AttPool:      nil,

@@ -75,7 +75,6 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cancel                    context.CancelFunc
 	p2p                       p2p.P2P
 	db                        db.NoHeadAccessDatabase
 	attPool                   attestations.Pool
@@ -111,7 +110,9 @@ type Service struct {
 }
 
 // NewService initializes new regular sync service.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func NewService(cfg *Config) *Service {
+	ctx := context.Background()
+
 	rLimiter := newRateLimiter(cfg.P2P)
 	r := &Service{
 		db:                   cfg.DB,
