@@ -109,6 +109,9 @@ func (s *Service) Start() {
 	}
 	s.waitForMinimumPeers()
 	if err := s.roundRobinSync(genesis); err != nil {
+		if errors.Is(s.ctx.Err(), context.Canceled) {
+			return
+		}
 		panic(err)
 	}
 	log.Infof("Synced up to slot %d", s.chain.HeadSlot())

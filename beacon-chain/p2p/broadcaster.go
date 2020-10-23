@@ -10,7 +10,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -22,7 +21,7 @@ import (
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
 // Max number of attempts to search the network for a specific subnet.
-const maxSubnetDiscoveryAttempts = 1
+const maxSubnetDiscoveryAttempts = 3
 
 // Broadcast a message to the p2p network.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
@@ -59,12 +58,8 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 		return err
 	}
 
-	if featureconfig.Get().EnableAttBroadcastDiscoveryAttempts {
-		// Non-blocking broadcast.
-		go s.broadcastAttestation(ctx, subnet, att, forkDigest)
-	} else {
-		return s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest))
-	}
+	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
+	go s.broadcastAttestation(ctx, subnet, att, forkDigest)
 
 	return nil
 }
@@ -89,9 +84,8 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 		trace.Int64Attribute("subnet", int64(subnet)),
 	)
 
-	attestationBroadcastAttempts.Inc()
-
 	if !hasPeer {
+		attestationBroadcastAttempts.Inc()
 		if err := func() error {
 			s.subnetLocker(subnet).Lock()
 			defer s.subnetLocker(subnet).Unlock()
@@ -105,10 +99,10 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 				}
 				if ok {
 					savedAttestationBroadcasts.Inc()
-					break
+					return nil
 				}
 			}
-			return nil
+			return errors.New("failed to find peers for subnet")
 		}(); err != nil {
 			log.WithError(err).Error("Failed to find peers")
 			traceutil.AnnotateError(span, err)
