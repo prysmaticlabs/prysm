@@ -150,7 +150,7 @@ func TestService_InitStartStop(t *testing.T) {
 			}
 			// Initialize feed
 			notifier := &mock.MockStateNotifier{}
-			s := NewService(ctx, &Config{
+			s := NewService(&Config{
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: notifier,
@@ -164,7 +164,7 @@ func TestService_InitStartStop(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
-				s.Start()
+				s.Start(ctx)
 				wg.Done()
 			}()
 
@@ -185,8 +185,8 @@ func TestService_InitStartStop(t *testing.T) {
 
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
-	newService := func(ctx context.Context, mc *mock.ChainService) *Service {
-		s := NewService(ctx, &Config{
+	newService := func(mc *mock.ChainService) *Service {
+		s := NewService(&Config{
 			Chain:         mc,
 			StateNotifier: mc.StateNotifier(),
 		})
@@ -199,11 +199,11 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		s := newService(ctx, &mock.ChainService{})
+		s := newService(&mock.ChainService{})
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			go s.waitForStateInitialization()
+			go s.waitForStateInitialization(ctx)
 			currTime := <-s.genesisChan
 			assert.Equal(t, true, currTime.IsZero())
 			wg.Done()
@@ -226,14 +226,14 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		defer hook.Reset()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		s := newService(ctx, &mock.ChainService{})
+		s := newService(&mock.ChainService{})
 
 		expectedGenesisTime := time.Unix(358544700, 0)
 		var receivedGenesisTime time.Time
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			go s.waitForStateInitialization()
+			go s.waitForStateInitialization(ctx)
 			receivedGenesisTime = <-s.genesisChan
 			assert.Equal(t, false, receivedGenesisTime.IsZero())
 			wg.Done()
@@ -270,7 +270,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		defer hook.Reset()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		s := newService(ctx, &mock.ChainService{})
+		s := newService(&mock.ChainService{})
 		// Initialize mock feed
 		_ = s.stateNotifier.StateFeed()
 
@@ -278,7 +278,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			s.waitForStateInitialization()
+			s.waitForStateInitialization(ctx)
 			wg.Done()
 		}()
 
@@ -294,7 +294,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 					},
 				})
 			})
-			s.Start()
+			s.Start(ctx)
 			wg.Done()
 		}()
 
@@ -309,9 +309,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 
 func TestService_markSynced(t *testing.T) {
 	mc := &mock.ChainService{}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	s := NewService(ctx, &Config{
+	s := NewService(&Config{
 		Chain:         mc,
 		StateNotifier: mc.StateNotifier(),
 	})
@@ -340,7 +338,6 @@ func TestService_markSynced(t *testing.T) {
 				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
 				receivedGenesisTime = data.StartTime
 			}
-		case <-s.ctx.Done():
 		}
 		wg.Done()
 	}()
@@ -408,7 +405,7 @@ func TestService_Resync(t *testing.T) {
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
-			s := NewService(ctx, &Config{
+			s := NewService(&Config{
 				DB:            beaconDB,
 				P2P:           p,
 				Chain:         mc,
@@ -416,7 +413,7 @@ func TestService_Resync(t *testing.T) {
 			})
 			assert.NotNil(t, s)
 			assert.Equal(t, uint64(0), s.chain.HeadSlot())
-			err := s.Resync()
+			err := s.Resync(ctx)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

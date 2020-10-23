@@ -46,7 +46,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+	r.subscribe(context.Background(), topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		m, ok := msg.(*pb.SignedVoluntaryExit)
 		assert.Equal(t, true, ok, "Object is not of type *pb.SignedVoluntaryExit")
 		if m.Exit == nil || m.Exit.Epoch != 55 {
@@ -88,7 +88,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
+	r.subscribe(ctx, topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.attesterSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
@@ -139,7 +139,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
+	r.subscribe(ctx, topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.proposerSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
@@ -182,7 +182,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+	r.subscribe(context.Background(), topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		defer wg.Done()
 		panic("bad")
 	})
@@ -195,6 +195,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 }
 
 func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
+	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
 	hook := logTest.NewGlobal()
 	r := Service{
@@ -213,14 +214,14 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	// committee index 1
 	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.p2p.Encoding().ProtocolSuffix()
 	require.NoError(t, r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator))
-	subscriptions[1], err = r.p2p.SubscribeToTopic(fullTopic)
+	subscriptions[1], err = r.p2p.SubscribeToTopic(ctx, fullTopic)
 	require.NoError(t, err)
 
 	// committee index 2
 	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.p2p.Encoding().ProtocolSuffix()
 	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
 	require.NoError(t, err)
-	subscriptions[2], err = r.p2p.SubscribeToTopic(fullTopic)
+	subscriptions[2], err = r.p2p.SubscribeToTopic(ctx, fullTopic)
 	require.NoError(t, err)
 
 	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
@@ -239,7 +240,7 @@ func TestStaticSubnets(t *testing.T) {
 		p2p: p,
 	}
 	defaultTopic := "/eth2/%x/beacon_attestation_%d"
-	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+	r.subscribeStaticWithSubnets(ctx, defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		// no-op
 		return nil
 	})

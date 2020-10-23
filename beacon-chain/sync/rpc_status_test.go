@@ -292,7 +292,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.Digest, err = r.forkDigest()
 	require.NoError(t, err)
 
-	r.Start()
+	r.Start(context.Background())
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
@@ -738,7 +738,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		rateLimiter: newRateLimiter(p1),
 	}
 
-	r.Start()
+	r.Start(context.Background())
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")

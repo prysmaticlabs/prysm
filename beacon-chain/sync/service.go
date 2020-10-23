@@ -136,7 +136,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		rateLimiter:          rLimiter,
 	}
 
-	go r.registerHandlers()
+	go r.registerHandlers(ctx)
 
 	return r
 }
@@ -157,7 +157,7 @@ func (s *Service) Start(ctx context.Context) {
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
 	if !flags.Get().DisableSync {
-		s.resyncIfBehind()
+		s.resyncIfBehind(ctx)
 	}
 
 	// Update sync metrics.
@@ -229,7 +229,7 @@ func (s *Service) initCaches() error {
 	return nil
 }
 
-func (s *Service) registerHandlers() {
+func (s *Service) registerHandlers(ctx context.Context) {
 	// Wait until chain start.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -264,7 +264,7 @@ func (s *Service) registerHandlers() {
 					return
 				}
 				// Register respective pubsub handlers at state synced event.
-				s.registerSubscribers()
+				s.registerSubscribers(ctx)
 				return
 			}
 		case <-s.ctx.Done():
@@ -287,5 +287,5 @@ func (s *Service) markForChainStart() {
 type Checker interface {
 	Syncing() bool
 	Status() error
-	Resync() error
+	Resync(ctx context.Context) error
 }

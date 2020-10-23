@@ -37,8 +37,8 @@ type batchBlockReceiverFn func(ctx context.Context, blks []*eth.SignedBeaconBloc
 // Step 2 - Sync to head from finalized epoch.
 // Using enough peers (at least, MinimumSyncPeers*2, for example) obtain best non-finalized epoch,
 // known to majority of the peers, and keep fetching blocks, up until that epoch is reached.
-func (s *Service) roundRobinSync(genesis time.Time) error {
-	ctx, cancel := context.WithCancel(s.ctx)
+func (s *Service) roundRobinSync(ctx context.Context, genesis time.Time) error {
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	defer s.chain.ClearCachedStates()
 	state.SkipSlotCache.Disable()

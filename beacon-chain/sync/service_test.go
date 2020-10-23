@@ -51,7 +51,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	}
 
 	topic := "/eth2/%x/beacon_block"
-	go r.registerHandlers()
+	go r.registerHandlers(context.Background())
 	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
@@ -90,7 +90,7 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
-	go r.registerHandlers()
+	go r.registerHandlers(context.Background())
 	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
@@ -123,7 +123,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	}
 
 	topic := "/eth2/%x/beacon_block"
-	go r.registerHandlers()
+	go r.registerHandlers(context.Background())
 	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,

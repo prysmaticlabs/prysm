@@ -44,8 +44,6 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
 	chain             blockchainService
 	p2p               p2p.P2P
 	db                db.ReadOnlyDatabase
@@ -59,11 +57,9 @@ type Service struct {
 
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewService(ctx context.Context, cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(ctx)
+func NewService(cfg *Config) *Service {
+	ctx := context.Background()
 	s := &Service{
-		ctx:           ctx,
-		cancel:        cancel,
 		chain:         cfg.Chain,
 		p2p:           cfg.P2P,
 		db:            cfg.DB,
@@ -71,7 +67,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		counter:       ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:   make(chan time.Time),
 	}
-	go s.waitForStateInitialization()
+	go s.waitForStateInitialization(ctx)
 	return s
 }
 
@@ -108,7 +104,7 @@ func (s *Service) Start(ctx context.Context) {
 		return
 	}
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err != nil {
+	if err := s.roundRobinSync(ctx, genesis); err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
 			return
 		}
@@ -138,8 +134,8 @@ func (s *Service) Syncing() bool {
 
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
-func (s *Service) Resync() error {
-	headState, err := s.chain.HeadState(s.ctx)
+func (s *Service) Resync(ctx context.Context) error {
+	headState, err := s.chain.HeadState(ctx)
 	if err != nil || headState == nil {
 		return errors.Errorf("could not retrieve head state: %v", err)
 	}
@@ -150,7 +146,7 @@ func (s *Service) Resync() error {
 	genesis := time.Unix(int64(headState.GenesisTime()), 0)
 
 	s.waitForMinimumPeers()
-	if err = s.roundRobinSync(genesis); err != nil {
+	if err = s.roundRobinSync(ctx, genesis); err != nil {
 		log = log.WithError(err)
 	}
 	log.WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
@@ -177,7 +173,7 @@ func (s *Service) waitForMinimumPeers() {
 
 // waitForStateInitialization makes sure that beacon node is ready to be accessed: it is either
 // already properly configured or system waits up until state initialized event is triggered.
-func (s *Service) waitForStateInitialization() {
+func (s *Service) waitForStateInitialization(ctx context.Context) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -196,7 +192,7 @@ func (s *Service) waitForStateInitialization() {
 				s.genesisChan <- data.StartTime
 				return
 			}
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			// Send a zero time in the event we are exiting.
 			s.genesisChan <- time.Time{}

@@ -66,7 +66,7 @@ func (s *Service) maintainPeerStatuses() {
 
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
 // in which case we attempt a resync using the initial sync method to catch up.
-func (s *Service) resyncIfBehind() {
+func (s *Service) resyncIfBehind(ctx context.Context) {
 	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
 	// Run sixteen times per epoch.
 	interval := time.Duration(int64(millisecondsPerEpoch)/16) * time.Millisecond
@@ -86,7 +86,7 @@ func (s *Service) resyncIfBehind() {
 				}).Info("Fallen behind peers; reverting to initial sync to catch up")
 				numberOfTimesResyncedCounter.Inc()
 				s.clearPendingSlots()
-				if err := s.initialSync.Resync(); err != nil {
+				if err := s.initialSync.Resync(ctx); err != nil {
 					log.Errorf("Could not resync chain: %v", err)
 				}
 			}

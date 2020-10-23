@@ -182,7 +182,7 @@ func (p *TestP2P) PublishToTopic(ctx context.Context, topic string, data []byte,
 }
 
 // SubscribeToTopic joins (if necessary) and subscribes to PubSub topic.
-func (p *TestP2P) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error) {
+func (p *TestP2P) SubscribeToTopic(ctx context.Context, topic string, opts ...pubsub.SubOpt) (*pubsub.Subscription, error) {
 	joinedTopic, err := p.JoinTopic(topic)
 	if err != nil {
 		return nil, err
