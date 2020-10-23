@@ -16,8 +16,6 @@ var log = logrus.WithField("prefix", "gateway")
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
 	gatewayAddr    string
 	remoteAddr     string
 	server         *http.Server
@@ -29,7 +27,6 @@ type Gateway struct {
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
 func New(
-	ctx context.Context,
 	remoteAddress,
 	gatewayAddress string,
 	allowedOrigins []string,
@@ -37,7 +34,6 @@ func New(
 	return &Gateway{
 		remoteAddr:     remoteAddress,
 		gatewayAddr:    gatewayAddress,
-		ctx:            ctx,
 		mux:            http.NewServeMux(),
 		allowedOrigins: allowedOrigins,
 	}
@@ -45,9 +41,6 @@ func New(
 
 // Start the gateway service. This serves the HTTP JSON traffic.
 func (g *Gateway) Start(ctx context.Context) {
-	ctx, cancel := context.WithCancel(ctx)
-	g.cancel = cancel
-
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(
 			gwruntime.MIMEWildcard,
