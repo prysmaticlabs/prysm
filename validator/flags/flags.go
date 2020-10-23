@@ -251,17 +251,10 @@ var (
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
 	}
-	// WebHostFlag specifies the host name to bind the Prysm web UI server.
-	WebHostFlag = &cli.StringFlag{
-		Name:  "web-host",
-		Usage: "The host address which to serve the Prysm web UI",
-		Value: "127.0.0.1",
-	}
-	// WebPortFlag specifies the port number to bind the Prysm web UI server.
-	WebPortFlag = &cli.Uint64Flag{
-		Name:  "web-port",
-		Usage: "The host port which to serve the Prysm web UI",
-		Value: 4242,
+	// AllowEmptyProtectionDB allow new protection db to be created without prompting the user.
+	AllowEmptyProtectionDB = &cli.BoolFlag{
+		Name:  "allow-new-protection-db",
+		Usage: "Use this flag allow new protection db to be created non-interactively",
 	}
 )
 
