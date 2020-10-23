@@ -24,8 +24,6 @@ import (
 // Service represents a service to manage the validator
 // ￿slashing protection.
 type Service struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
 	conn               *grpc.ClientConn
 	endpoint           string
 	withCert           string
@@ -48,11 +46,8 @@ type Config struct {
 
 // NewService creates a new validator service for the service
 // registry.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
-	ctx, cancel := context.WithCancel(ctx)
+func NewService(cfg *Config) (*Service, error) {
 	return &Service{
-		ctx:                ctx,
-		cancel:             cancel,
 		endpoint:           cfg.Endpoint,
 		withCert:           cfg.CertFlag,
 		maxCallRecvMsgSize: cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -65,11 +60,11 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 // Start the slasher protection service and grpc client.
 func (s *Service) Start(ctx context.Context) {
 	if s.endpoint != "" {
-		s.slasherClient = s.startSlasherClient()
+		s.slasherClient = s.startSlasherClient(ctx)
 	}
 }
 
-func (s *Service) startSlasherClient() ethsl.SlasherClient {
+func (s *Service) startSlasherClient(ctx context.Context) ethsl.SlasherClient {
 	var dialOpt grpc.DialOption
 
 	if s.withCert != "" {
@@ -116,7 +111,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 			grpcutils.LogGRPCRequests,
 		)),
 	}
-	conn, err := grpc.DialContext(s.ctx, s.endpoint, opts...)
+	conn, err := grpc.DialContext(ctx, s.endpoint, opts...)
 	if err != nil {
 		log.Errorf("Could not dial slasher endpoint: %s, %v", s.endpoint, err)
 		return nil
