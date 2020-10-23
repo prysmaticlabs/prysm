@@ -14,13 +14,17 @@ import (
 
 func TestNewAttestationHistoryArray(t *testing.T) {
 	ba := NewAttestationHistoryArray(0)
-	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
+	b := *ba
+	assert.Equal(t, latestEpochWrittenSize+historySize, len(b))
 	ba = NewAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod - 1)
-	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, uint64(len(ba)))
+	b = *ba
+	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, uint64(len(b)))
 	ba = NewAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod)
-	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
+	b = *ba
+	assert.Equal(t, latestEpochWrittenSize+historySize, len(b))
 	ba = NewAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod + 1)
-	assert.Equal(t, latestEpochWrittenSize+historySize+historySize, len(ba))
+	b = *ba
+	assert.Equal(t, latestEpochWrittenSize+historySize+historySize, len(b))
 
 }
 
@@ -38,7 +42,8 @@ func TestSizeChecks(t *testing.T) {
 func TestGetLatestEpochWritten(t *testing.T) {
 	ctx := context.Background()
 	ha := NewAttestationHistoryArray(0)
-	ha[0] = 28
+	h := *ha
+	h[0] = 28
 	lew, err := ha.GetLatestEpochWritten(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(28), lew)
@@ -49,7 +54,9 @@ func TestSetLatestEpochWritten(t *testing.T) {
 	ha := NewAttestationHistoryArray(0)
 	lew, err := ha.SetLatestEpochWritten(ctx, 2828282828)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(2828282828), bytesutil.FromBytes8(lew[:latestEpochWrittenSize]))
+	le := *lew
+	bytes := le[:latestEpochWrittenSize]
+	assert.Equal(t, uint64(2828282828), bytesutil.FromBytes8(bytes))
 }
 
 func TestGetTargetData(t *testing.T) {
@@ -71,7 +78,7 @@ func TestSetTargetData(t *testing.T) {
 	ctx := context.Background()
 	type testStruct struct {
 		name        string
-		enc         EncHistoryData
+		enc         *EncHistoryData
 		target      uint64
 		source      uint64
 		signingRoot []byte
@@ -81,7 +88,7 @@ func TestSetTargetData(t *testing.T) {
 	tests := []testStruct{
 		{
 			name:        "empty enc",
-			enc:         []byte{},
+			enc:         &EncHistoryData{},
 			target:      0,
 			source:      100,
 			signingRoot: []byte{1, 2, 3},
@@ -138,7 +145,7 @@ func TestAttestationHistoryForPubKeysNew_EmptyVals(t *testing.T) {
 	historyForPubKeys, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
-	cleanAttHistoryForPubKeys := make(map[[48]byte]EncHistoryData)
+	cleanAttHistoryForPubKeys := make(map[[48]byte]*EncHistoryData)
 	clean := NewAttestationHistoryArray(0)
 	for _, pubKey := range pubkeys {
 		cleanAttHistoryForPubKeys[pubKey] = clean
@@ -155,7 +162,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	_, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
-	setAttHistoryForPubKeys := make(map[[48]byte]EncHistoryData)
+	setAttHistoryForPubKeys := make(map[[48]byte]*EncHistoryData)
 	clean := NewAttestationHistoryArray(0)
 	for i, pubKey := range pubkeys {
 		enc, err := clean.SetTargetData(ctx,

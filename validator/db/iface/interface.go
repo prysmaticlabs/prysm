@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
 // ValidatorDB defines the necessary methods for a Prysm validator DB.
@@ -25,4 +26,8 @@ type ValidatorDB interface {
 	// Attester protection related methods.
 	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
 	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
+
+	//new attestation store methods
+	AttestationHistoryNewForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*kv.EncHistoryData, error)
+	SaveAttestationHistoryNewForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*kv.EncHistoryData) error
 }

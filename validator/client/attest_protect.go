@@ -22,7 +22,12 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	v.attesterHistoryByPubKeyLock.RUnlock()
-	if ok && v.isNewAttSlashable(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, indexedAtt) {
+	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
+	if err != nil {
+		log.WithError(err).Error("Could not get domain and signing root from attestation")
+		return err
+	}
+	if ok && isNewAttSlashable(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, sr) {
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -47,7 +52,12 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	v.attesterHistoryByPubKeyLock.Lock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if ok {
-		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
+		_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
+		if err != nil {
+			log.WithError(err).Error("Could not get domain and signing root from attestation")
+			return err
+		}
+		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, sr)
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory
 	} else {
 		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
@@ -67,13 +77,11 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
 // and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
-func (v *validator) isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEpoch, targetEpoch uint64, indexedAtt *ethpb.IndexedAttestation) bool {
+func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) bool {
 	if history == nil {
 		return false
 	}
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
-
 	// Previously pruned, we should return false.
 	lew, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
@@ -87,10 +95,10 @@ func (v *validator) isNewAttSlashable(ctx context.Context, history *kv.EncHistor
 	// Check if there has already been a vote for this target epoch.
 	hd, err := history.GetTargetData(ctx, targetEpoch)
 	if err != nil {
-		log.WithError(err).Error("Could not get target data for target epoch: %d", targetEpoch)
+		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
 		return false
 	}
-	if hd != (*kv.HistoryData)(nil) && !bytes.Equal(sr[:], hd.SigningRoot) {
+	if hd != (*kv.HistoryData)(nil) && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
 		return true
 	}
 
@@ -119,7 +127,7 @@ func (v *validator) isNewAttSlashable(ctx context.Context, history *kv.EncHistor
 
 // markAttestationForTargetEpoch returns the modified attestation history with the passed-in epochs marked
 // as attested for. This is done to prevent the validator client from signing any slashable attestations.
-func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryData, sourceEpoch, targetEpoch uint64) *kv.EncHistoryData {
+func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) *kv.EncHistoryData {
 	if history == nil {
 		return nil
 	}
@@ -134,7 +142,7 @@ func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryDa
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
 		maxToWrite := lew + wsPeriod
 		for i := lew + 1; i < targetEpoch && i <= maxToWrite; i++ {
-			history, err = history.SetTargetData(ctx, i%wsPeriod, (*kv.HistoryData)(nil))
+			history, err = history.SetTargetData(ctx, i%wsPeriod, &kv.HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
 			if err != nil {
 				log.WithError(err).Error("Could not set target to the encapsulated data")
 				return nil
@@ -168,7 +176,7 @@ func safeTargetToSource(ctx context.Context, history *kv.EncHistoryData, targetE
 	}
 	hd, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
 	if err != nil {
-		log.WithError(err).Error("Could not get target data for target epoch: %d", targetEpoch)
+		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
 		return nil
 	}
 	return hd

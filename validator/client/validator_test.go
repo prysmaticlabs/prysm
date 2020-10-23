@@ -742,8 +742,9 @@ func TestSaveProtections_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	ctx := context.Background()
 
-	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
+	cleanHistories, err := db.AttestationHistoryNewForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
 	require.NoError(t, err)
 	v := validator{
 		db:                      db,
@@ -752,9 +753,9 @@ func TestSaveProtections_OK(t *testing.T) {
 	}
 
 	history1 := cleanHistories[pubKey1]
-	history1 = markAttestationForTargetEpoch(history1, 0, 1)
+	history1 = markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
 
-	history2 := markAttestationForTargetEpoch(history1, 2, 3)
+	history2 := markAttestationForTargetEpoch(ctx, history1, 2, 3, [32]byte{2})
 
 	cleanHistories[pubKey1] = history1
 	cleanHistories[pubKey2] = history2
