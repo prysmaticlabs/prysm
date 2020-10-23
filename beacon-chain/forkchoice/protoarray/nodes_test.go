@@ -53,6 +53,18 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 	assert.Equal(t, best, h)
 }
 
+func TestStore_Head_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	r := [32]byte{'A'}
+	best := [32]byte{'B'}
+	indices := make(map[[32]byte]uint64)
+	indices[r] = 0
+	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1}, {root: best}}, canonicalNodes: make(map[[32]byte]bool)}
+	cancel()
+	_, err := s.head(ctx, r)
+	require.ErrorContains(t, "context canceled", err)
+}
+
 func TestStore_Insert_UnknownParent(t *testing.T) {
 	// The new node does not have a parent.
 	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
@@ -449,10 +461,11 @@ func TestStore_UpdateCanonicalNodes_WholeList(t *testing.T) {
 	f.store.nodesIndices[[32]byte{'c'}] = 2
 	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
 	require.Equal(t, len(f.store.nodes), len(f.store.canonicalNodes))
-
 	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
 	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
 	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
+	require.DeepEqual(t, f.Node([32]byte{'c'}), f.store.nodes[2])
+	require.Equal(t, f.Node([32]byte{'d'}), (*Node)(nil))
 }
 
 func TestStore_UpdateCanonicalNodes_ParentAlreadyIn(t *testing.T) {
@@ -472,4 +485,19 @@ func TestStore_UpdateCanonicalNodes_ParentAlreadyIn(t *testing.T) {
 
 	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
 	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
+}
+
+func TestStore_UpdateCanonicalNodes_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	f := &ForkChoice{store: &Store{}}
+	f.store.canonicalNodes = map[[32]byte]bool{}
+	f.store.nodesIndices = map[[32]byte]uint64{}
+	f.store.nodes = []*Node{
+		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
+		{slot: 2, root: [32]byte{'b'}, parent: 0},
+		{slot: 3, root: [32]byte{'c'}, parent: 1},
+	}
+	f.store.nodesIndices[[32]byte{'c'}] = 2
+	cancel()
+	require.ErrorContains(t, "context canceled", f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
 }
