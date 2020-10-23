@@ -59,7 +59,6 @@ func BenchmarkMerkleize_Buffered(b *testing.B) {
 
 	b.ResetTimer()
 	b.ReportAllocs()
-	b.N = 1000
 	for i := 0; i < b.N; i++ {
 		_, err := newMerkleize(roots, 8192, 8192)
 		require.NoError(b, err)
