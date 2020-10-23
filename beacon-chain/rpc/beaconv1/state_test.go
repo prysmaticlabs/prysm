@@ -320,11 +320,6 @@ func TestServer_GetStateFork(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "non-existent root",
-			stateId: params.BeaconConfig().ZeroHash[:],
-			wantErr: true,
-		},
-		{
 			name:    "future slot",
 			stateId: []byte("200"),
 			wantErr: true,
@@ -426,11 +421,6 @@ func TestServer_GetFinalityCheckpoints(t *testing.T) {
 		{
 			name:    "no state",
 			stateId: stateContainers[20].stateRoot,
-			wantErr: true,
-		},
-		{
-			name:    "non-existent root",
-			stateId: params.BeaconConfig().ZeroHash[:],
 			wantErr: true,
 		},
 	}
