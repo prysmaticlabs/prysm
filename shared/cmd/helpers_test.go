@@ -84,8 +84,12 @@ func TestExpandWeb3EndpointIfFile(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	HTTPWeb3ProviderFlag := &cli.StringFlag{Name: "http-web3provider", Value: ""}
-	set.String(HTTPWeb3ProviderFlag.Name, "http://localhost:8545", "")
+	set.String(HTTPWeb3ProviderFlag.Name, "", "")
 	context := cli.NewContext(&app, set, nil)
+
+	// with nothing set
+	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
+	require.Equal(t, "", context.String(HTTPWeb3ProviderFlag.Name))
 
 	// with url scheme
 	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "http://localhost:8545"))
