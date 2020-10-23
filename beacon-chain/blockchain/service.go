@@ -431,6 +431,12 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not hash head block")
 		}
+		finalizedState, err := s.stateGen.Resume(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized state from db")
+		}
+		log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
+			"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block.Slot)
 		headState, err := s.stateGen.StateByRoot(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state")
