@@ -42,8 +42,6 @@ type ChainFetcher interface {
 
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
-	ctx                         context.Context
-	cancel                      context.CancelFunc
 	cert                        string
 	conn                        *grpc.ClientConn
 	provider                    string
@@ -76,9 +74,7 @@ type Config struct {
 }
 
 // NewService instantiation.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
+func NewService(cfg *Config) (*Service, error) {
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new cache")
@@ -86,8 +82,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	return &Service{
 		cert:                        cfg.BeaconCert,
-		ctx:                         ctx,
-		cancel:                      cancel,
 		provider:                    cfg.BeaconProvider,
 		blockFeed:                   new(event.Feed),
 		clientFeed:                  new(event.Feed),

@@ -217,7 +217,7 @@ func (s *SlasherNode) registerBeaconClientService() error {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 
-	bs, err := beaconclient.NewService(s.ctx, &beaconclient.Config{
+	bs, err := beaconclient.NewService(&beaconclient.Config{
 		BeaconCert:            beaconCert,
 		SlasherDB:             s.db,
 		BeaconProvider:        beaconProvider,
