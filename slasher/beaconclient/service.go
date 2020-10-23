@@ -8,6 +8,8 @@ package beaconclient
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -74,10 +76,11 @@ type Config struct {
 }
 
 // NewService instantiation.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext, error) {
+	ctx, cancel := context.WithCancel(context.Background())
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create new cache")
+		return nil, nil, errors.Wrap(err, "could not create new cache")
 	}
 
 	return &Service{
@@ -96,7 +99,7 @@ func NewService(cfg *Config) (*Service, error) {
 		publicKeyCache:              publicKeyCache,
 		beaconClient:                cfg.BeaconClient,
 		nodeClient:                  cfg.NodeClient,
-	}, nil
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}, nil
 }
 
 // BlockFeed returns a feed other services in slasher can subscribe to

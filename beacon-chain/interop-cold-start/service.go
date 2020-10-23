@@ -49,8 +49,8 @@ type Config struct {
 // NewService is an interoperability testing service to inject a deterministically generated genesis state
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
-func NewService(cfg *Config) *Service {
-	ctx := context.Background()
+func NewService(cfg *Config) (*Service, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
 
 	log.Warn("Saving generated genesis state in database for interop testing")
 
@@ -78,7 +78,7 @@ func NewService(cfg *Config) *Service {
 		if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 			log.Fatalf("Could not save interop genesis state %v", err)
 		}
-		return s
+		return s, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 	}
 
 	// Save genesis state in db
@@ -100,7 +100,7 @@ func NewService(cfg *Config) *Service {
 		log.Fatalf("Could not save interop genesis state %v", err)
 	}
 
-	return s
+	return s, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Start initializes the genesis state from configured flags.

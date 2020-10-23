@@ -3,7 +3,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -38,7 +37,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	gw := gateway.New(
+	gw, serviceCtx := gateway.New(
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
 		mux,
@@ -48,7 +47,7 @@ func main() {
 	)
 	mux.HandleFunc("/swagger/", gateway.SwaggerServer())
 	mux.HandleFunc("/healthz", healthzServer(gw))
-	gw.Start(context.Background())
+	gw.Start(serviceCtx.Ctx)
 
 	select {}
 }

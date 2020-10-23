@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -69,7 +71,7 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 
 var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
-func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummaryCache) *Service {
+func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummaryCache) (*Service, *shared.ServiceContext) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Service
@@ -91,14 +93,14 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		DepositContainers: []*protodb.DepositContainer{},
 	})
 	require.NoError(t, err)
-	web3Service, err = powchain.NewService(&powchain.Web3ServiceConfig{
+	web3Service, _, err = powchain.NewService(&powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
 		HTTPEndPoint:    endpoint,
 		DepositContract: common.Address{},
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
 
-	opsService, err := attestations.NewService(&attestations.Config{Pool: attestations.NewPool()})
+	opsService, _, err := attestations.NewService(&attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
 	depositCache, err := depositcache.New()
@@ -120,19 +122,17 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
-	chainService, err := NewService(cfg)
+	chainService, serviceCtx, err := NewService(cfg)
 	require.NoError(t, err, "Unable to setup chain service")
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
-	return chainService
+	return chainService, serviceCtx
 }
 
 func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
-
-	chainService := setupBeaconChain(t, db, sc)
 
 	genesisBlk := testutil.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
@@ -146,10 +146,11 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 
+	chainService, serviceCtx := setupBeaconChain(t, db, sc)
 	// Test the start function.
-	chainService.Start(ctx)
+	chainService.Start(serviceCtx.Ctx)
 
-	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(serviceCtx.Ctx), "Unable to stop chain service")
 	require.LogsContain(t, hook, "data already exists")
 }
 
@@ -157,8 +158,6 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
-
-	chainService := setupBeaconChain(t, db, sc)
 
 	genesisBlk := testutil.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
@@ -169,10 +168,11 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}))
 
+	chainService, serviceCtx := setupBeaconChain(t, db, sc)
 	// Test the start function.
-	chainService.Start(ctx)
+	chainService.Start(serviceCtx.Ctx)
 
-	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(serviceCtx.Ctx), "Unable to stop chain service")
 
 	// The context should have been canceled.
 	require.LogsContain(t, hook, "data already exists")
@@ -183,7 +183,6 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	bc := setupBeaconChain(t, db, sc)
 	var err error
 
 	// Set up 10 deposits pre chain start for validators to register
@@ -204,17 +203,18 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	genState, err = b.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)
 
+	bc, serviceCtx := setupBeaconChain(t, db, sc)
 	_, err = bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{DepositRoot: hashTreeRoot[:], BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
-	_, err = bc.HeadState(ctx)
+	_, err = bc.HeadState(serviceCtx.Ctx)
 	assert.NoError(t, err)
-	headBlk, err := bc.HeadBlock(ctx)
+	headBlk, err := bc.HeadBlock(serviceCtx.Ctx)
 	require.NoError(t, err)
 	if headBlk == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
-	r, err := bc.HeadRoot(ctx)
+	r, err := bc.HeadRoot(serviceCtx.Ctx)
 	require.NoError(t, err)
 	if bytesutil.ToBytes32(r) == params.BeaconConfig().ZeroHash {
 		t.Error("Canonical root for slot 0 can't be zeros after initialize beacon chain")
@@ -224,8 +224,6 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
-
-	chainService := setupBeaconChain(t, db, sc)
 
 	genesisBlk := testutil.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
@@ -238,13 +236,14 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 
+	chainService, serviceCtx := setupBeaconChain(t, db, sc)
 	// Test the start function.
-	chainService.Start(ctx)
+	chainService.Start(serviceCtx.Ctx)
 
 	require.DeepEqual(t, blkRoot[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.justifiedCheckpt.Root, "Justified Checkpoint root is incorrect")
 
-	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(serviceCtx.Ctx), "Unable to stop chain service")
 
 }
 

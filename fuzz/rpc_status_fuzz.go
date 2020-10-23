@@ -26,14 +26,14 @@ func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 
 	var err error
-	p, err = p2p.NewService(&p2p.Config{
+	p, serviceCtx, err := p2p.NewService(&p2p.Config{
 		NoDiscovery: true,
 	})
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new p2p service"))
 	}
 
-	h, err = libp2p.New(context.Background())
+	h, err = libp2p.New(serviceCtx.Ctx)
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new libp2p host"))
 	}
@@ -42,7 +42,7 @@ func init() {
 		ID:    h.ID(),
 		Addrs: h.Addrs(),
 	}
-	if err := p.Connect(context.Background(), info); err != nil {
+	if err := p.Connect(serviceCtx.Ctx, info); err != nil {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
 	regularsync.NewService(&regularsync.Config{

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -141,8 +143,6 @@ func TestService_InitStartStop(t *testing.T) {
 		}
 		t.Run(tt.name, func(t *testing.T) {
 			defer hook.Reset()
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			mc := &mock.ChainService{}
 			// Allow overriding with customized chain service.
 			if tt.chainService != nil {
@@ -150,11 +150,12 @@ func TestService_InitStartStop(t *testing.T) {
 			}
 			// Initialize feed
 			notifier := &mock.MockStateNotifier{}
-			s := NewService(&Config{
+			s, serviceCtx := NewService(&Config{
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: notifier,
 			})
+			defer serviceCtx.Cancel()
 			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
 			if tt.methodRuns != nil {
@@ -164,7 +165,7 @@ func TestService_InitStartStop(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
-				s.Start(ctx)
+				s.Start(serviceCtx.Ctx)
 				wg.Done()
 			}()
 
@@ -172,7 +173,7 @@ func TestService_InitStartStop(t *testing.T) {
 				// Allow to exit from test (on no head loop waiting for head is started).
 				// In most tests, this is redundant, as Start() already exited.
 				time.AfterFunc(3*time.Second, func() {
-					cancel()
+					serviceCtx.Cancel()
 				})
 			}()
 			if testutil.WaitTimeout(wg, time.Second*4) {
@@ -185,32 +186,32 @@ func TestService_InitStartStop(t *testing.T) {
 
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
-	newService := func(mc *mock.ChainService) *Service {
-		s := NewService(&Config{
+	newService := func(mc *mock.ChainService) (*Service, *shared.ServiceContext) {
+		s, serviceCtx := NewService(&Config{
 			Chain:         mc,
 			StateNotifier: mc.StateNotifier(),
 		})
 		require.NotNil(t, s)
-		return s
+		return s, serviceCtx
 	}
 
 	t.Run("no state and context close", func(t *testing.T) {
 		defer hook.Reset()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
 
-		s := newService(&mock.ChainService{})
+		s, serviceCtx := newService(&mock.ChainService{})
+		defer serviceCtx.Cancel()
+
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			go s.waitForStateInitialization(ctx)
+			go s.waitForStateInitialization(serviceCtx.Ctx)
 			currTime := <-s.genesisChan
 			assert.Equal(t, true, currTime.IsZero())
 			wg.Done()
 		}()
 		go func() {
 			time.AfterFunc(500*time.Millisecond, func() {
-				cancel()
+				serviceCtx.Cancel()
 			})
 		}()
 
@@ -224,16 +225,15 @@ func TestService_waitForStateInitialization(t *testing.T) {
 
 	t.Run("no state and state init event received", func(t *testing.T) {
 		defer hook.Reset()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		s := newService(&mock.ChainService{})
+		s, serviceCtx := newService(&mock.ChainService{})
+		defer serviceCtx.Cancel()
 
 		expectedGenesisTime := time.Unix(358544700, 0)
 		var receivedGenesisTime time.Time
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			go s.waitForStateInitialization(ctx)
+			go s.waitForStateInitialization(serviceCtx.Ctx)
 			receivedGenesisTime = <-s.genesisChan
 			assert.Equal(t, false, receivedGenesisTime.IsZero())
 			wg.Done()
@@ -268,9 +268,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 
 	t.Run("no state and state init event received and service start", func(t *testing.T) {
 		defer hook.Reset()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		s := newService(&mock.ChainService{})
+		s, serviceCtx := newService(&mock.ChainService{})
+		defer serviceCtx.Cancel()
 		// Initialize mock feed
 		_ = s.stateNotifier.StateFeed()
 
@@ -278,7 +277,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			s.waitForStateInitialization(ctx)
+			s.waitForStateInitialization(serviceCtx.Ctx)
 			wg.Done()
 		}()
 
@@ -294,7 +293,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 					},
 				})
 			})
-			s.Start(ctx)
+			s.Start(serviceCtx.Ctx)
 			wg.Done()
 		}()
 
@@ -309,7 +308,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 
 func TestService_markSynced(t *testing.T) {
 	mc := &mock.ChainService{}
-	s := NewService(&Config{
+	s, _ := NewService(&Config{
 		Chain:         mc,
 		StateNotifier: mc.StateNotifier(),
 	})
@@ -398,22 +397,21 @@ func TestService_Resync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer hook.Reset()
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 			mc := &mock.ChainService{}
 			// Allow overriding with customized chain service.
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
-			s := NewService(&Config{
+			s, serviceCtx := NewService(&Config{
 				DB:            beaconDB,
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: mc.StateNotifier(),
 			})
+			defer serviceCtx.Cancel()
 			assert.NotNil(t, s)
 			assert.Equal(t, uint64(0), s.chain.HeadSlot())
-			err := s.Resync(ctx)
+			err := s.Resync(serviceCtx.Ctx)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

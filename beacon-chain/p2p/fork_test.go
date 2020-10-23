@@ -93,7 +93,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err = NewService(cfg)
+	s, _, err = NewService(cfg)
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
@@ -184,7 +184,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
 	cfg.StateNotifier = &mock.MockStateNotifier{}
-	s, err = NewService(cfg)
+	s, _, err = NewService(cfg)
 	require.NoError(t, err)
 
 	s.genesisTime = genesisTime

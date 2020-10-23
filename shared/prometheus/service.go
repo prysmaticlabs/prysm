@@ -36,7 +36,9 @@ type Handler struct {
 
 // NewService sets up a new instance for a given address host:port.
 // An empty host will match with any IP so an address like ":2121" is perfectly acceptable.
-func NewService(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) *Service {
+func NewService(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) (*Service, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	s := &Service{svcRegistry: svcRegistry}
 
 	mux := http.NewServeMux()
@@ -52,7 +54,7 @@ func NewService(addr string, svcRegistry *shared.ServiceRegistry, additionalHand
 
 	s.server = &http.Server{Addr: addr, Handler: mux}
 
-	return s
+	return s, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +123,7 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+// TODO: Co z kontekstami, które nie są wykorzystane?
 // Start the prometheus service.
 func (s *Service) Start(ctx context.Context) {
 	go func() {

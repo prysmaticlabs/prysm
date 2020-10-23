@@ -89,17 +89,17 @@ type Service struct {
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext, error) {
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
+
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cacheNumCounters,
 		MaxCost:     cacheMaxCost,
 		BufferItems: cacheBufferItems,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	s := &Service{
@@ -119,17 +119,17 @@ func NewService(cfg *Config) (*Service, error) {
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
-		return nil, err
+		return nil, nil, err
 	}
 	s.metaData, err = metaDataFromConfig(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to create peer metadata")
-		return nil, err
+		return nil, nil, err
 	}
 	s.addrFilter, err = configureFilter(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to create address filter")
-		return nil, err
+		return nil, nil, err
 	}
 	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
 
@@ -137,7 +137,7 @@ func NewService(cfg *Config) (*Service, error) {
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
-		return nil, err
+		return nil, nil, err
 	}
 
 	s.host = h
@@ -158,7 +158,7 @@ func NewService(cfg *Config) (*Service, error) {
 	gs, err := pubsub.NewGossipSub(ctx, s.host, psOpts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to start pubsub")
-		return nil, err
+		return nil, nil, err
 	}
 	s.pubsub = gs
 
@@ -173,7 +173,7 @@ func NewService(cfg *Config) (*Service, error) {
 		},
 	})
 
-	return s, nil
+	return s, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}, nil
 }
 
 // Start the p2p service.

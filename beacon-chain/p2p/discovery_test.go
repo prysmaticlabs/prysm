@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"math/rand"
@@ -155,8 +154,6 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-	ctx := context.Background()
-
 	cfg := &Config{
 		MaxPeers: 30,
 	}
@@ -183,12 +180,12 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.StaticPeers = staticPeers
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	cfg.NoDiscovery = true
-	s, err := NewService(cfg)
+	s, serviceCtx, err := NewService(cfg)
 	require.NoError(t, err)
 
 	exitRoutine := make(chan bool)
 	go func() {
-		s.Start(ctx)
+		s.Start(serviceCtx.Ctx)
 		<-exitRoutine
 	}()
 	time.Sleep(50 * time.Millisecond)
@@ -205,7 +202,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
-	require.NoError(t, s.Stop(ctx))
+	require.NoError(t, s.Stop(serviceCtx.Ctx))
 	exitRoutine <- true
 }
 

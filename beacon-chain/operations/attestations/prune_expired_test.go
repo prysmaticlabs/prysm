@@ -15,14 +15,13 @@ import (
 )
 
 func TestPruneExpired_Ticker(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	s, err := NewService(&Config{
+	s, serviceCtx, err := NewService(&Config{
 		Pool:          NewPool(),
 		pruneInterval: 250 * time.Millisecond,
 	})
 	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(serviceCtx.Ctx, 3*time.Second)
+	defer cancel()
 
 	ad1 := &ethpb.AttestationData{
 		Slot:            0,
@@ -104,7 +103,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 }
 
 func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
-	s, err := NewService(&Config{Pool: NewPool()})
+	s, _, err := NewService(&Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	ad1 := &ethpb.AttestationData{
@@ -161,7 +160,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 }
 
 func TestPruneExpired_Expired(t *testing.T) {
-	s, err := NewService(&Config{Pool: NewPool()})
+	s, _, err := NewService(&Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	// Rewind back one epoch worth of time.

@@ -24,13 +24,13 @@ var _ ForkFetcher = (*Service)(nil)
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], c.FinalizedCheckpt().Root, "Incorrect pre chain start value")
 }
 
 func TestHeadRoot_Nil(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	headRoot, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], headRoot, "Incorrect pre chain start value")
@@ -40,7 +40,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	c.finalizedCheckpt = cp
 
 	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
@@ -51,7 +51,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	c.finalizedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.FinalizedCheckpt().Root)
@@ -61,7 +61,7 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	c.justifiedCheckpt = cp
 
 	assert.Equal(t, cp.Epoch, c.CurrentJustifiedCheckpt().Epoch, "Unexpected justified epoch")
@@ -72,7 +72,7 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	c.justifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.CurrentJustifiedCheckpt().Root)
@@ -82,7 +82,7 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	c.prevJustifiedCheckpt = cp
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
@@ -92,7 +92,7 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 	genesisRoot := [32]byte{'C'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	c.prevJustifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.PreviousJustifiedCheckpt().Root)
@@ -167,7 +167,7 @@ func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadETH1Data_Nil(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	c, _ := setupBeaconChain(t, db, sc)
 	assert.DeepEqual(t, &ethpb.Eth1Data{}, c.HeadETH1Data(), "Incorrect pre chain start value")
 }
 
@@ -185,7 +185,7 @@ func TestHeadETH1Data_CanRetrieve(t *testing.T) {
 func TestIsCanonical_Ok(t *testing.T) {
 	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	c, serviceCtx := setupBeaconChain(t, db, sc)
 
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 0
@@ -193,11 +193,11 @@ func TestIsCanonical_Ok(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-	can, err := c.IsCanonical(ctx, root)
+	can, err := c.IsCanonical(serviceCtx.Ctx, root)
 	require.NoError(t, err)
 	assert.Equal(t, true, can)
 
-	can, err = c.IsCanonical(ctx, [32]byte{'a'})
+	can, err = c.IsCanonical(serviceCtx.Ctx, [32]byte{'a'})
 	require.NoError(t, err)
 	assert.Equal(t, false, can)
 }

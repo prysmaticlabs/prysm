@@ -322,13 +322,13 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 }
 
 func TestService_MonitorsStateForkUpdates(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
 	notifier := &mock.MockStateNotifier{}
-	s, err := NewService(&Config{
+	s, serviceCtx, err := NewService(&Config{
 		StateNotifier: notifier,
 	})
 	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(serviceCtx.Ctx, 3*time.Second)
+	defer cancel()
 
 	require.False(t, s.isInitialized())
 

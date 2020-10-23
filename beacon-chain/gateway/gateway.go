@@ -109,7 +109,7 @@ func (g *Gateway) Stop(ctx context.Context) error {
 }
 
 // New returns a new gateway server which translates HTTP into gRPC.
-// Accepts a context and optional http.ServeMux.
+// Accepts an optional http.ServeMux.
 func New(
 	remoteAddress,
 	gatewayAddress string,
@@ -117,7 +117,9 @@ func New(
 	allowedOrigins []string,
 	enableDebugRPCEndpoints bool,
 	maxCallRecvMsgSize uint64,
-) *Gateway {
+) (*Gateway, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	if mux == nil {
 		mux = http.NewServeMux()
 	}
@@ -129,7 +131,7 @@ func New(
 		allowedOrigins:          allowedOrigins,
 		enableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		maxCallRecvMsgSize:      maxCallRecvMsgSize,
-	}
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // dial the gRPC server.

@@ -320,7 +320,7 @@ func TestService_processBlock(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewService(&Config{
+	s, serviceCtx := NewService(&Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -333,7 +333,6 @@ func TestService_processBlock(t *testing.T) {
 		},
 		StateNotifier: &mock.MockStateNotifier{},
 	})
-	ctx := context.Background()
 	genesis := makeGenesisTime(32)
 
 	t.Run("process duplicate block", func(t *testing.T) {
@@ -347,7 +346,7 @@ func TestService_processBlock(t *testing.T) {
 		blk2.Block.ParentRoot = blk1Root[:]
 
 		// Process block normally.
-		err = s.processBlock(ctx, genesis, blk1, func(
+		err = s.processBlock(serviceCtx.Ctx, genesis, blk1, func(
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
@@ -355,14 +354,14 @@ func TestService_processBlock(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
-		err = s.processBlock(ctx, genesis, blk1, func(
+		err = s.processBlock(serviceCtx.Ctx, genesis, blk1, func(
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
-		err = s.processBlock(ctx, genesis, blk2, func(
+		err = s.processBlock(serviceCtx.Ctx, genesis, blk2, func(
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
@@ -380,7 +379,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewService(&Config{
+	s, serviceCtx := NewService(&Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -393,7 +392,6 @@ func TestService_processBlockBatch(t *testing.T) {
 		},
 		StateNotifier: &mock.MockStateNotifier{},
 	})
-	ctx := context.Background()
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
@@ -427,7 +425,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		}
 
 		// Process block normally.
-		err = s.processBatchedBlocks(ctx, genesis, batch, func(
+		err = s.processBatchedBlocks(serviceCtx.Ctx, genesis, batch, func(
 			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
@@ -435,7 +433,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
-		err = s.processBatchedBlocks(ctx, genesis, batch, func(
+		err = s.processBatchedBlocks(serviceCtx.Ctx, genesis, batch, func(
 			ctx context.Context, blocks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
@@ -451,7 +449,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		}
 
 		// Bad batch should fail because it is non linear
-		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
+		err = s.processBatchedBlocks(serviceCtx.Ctx, genesis, badBatch2, func(
 			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
@@ -459,7 +457,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		assert.ErrorContains(t, expectedSubErr, err)
 
 		// Continue normal processing, should proceed w/o errors.
-		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
+		err = s.processBatchedBlocks(serviceCtx.Ctx, genesis, batch2, func(
 			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil

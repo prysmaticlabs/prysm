@@ -34,9 +34,8 @@ func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, err
 }
 
 func TestServer_GetBeaconNodeConnection(t *testing.T) {
-	ctx := context.Background()
 	endpoint := "localhost:90210"
-	vs, err := client.NewValidatorService(&client.Config{})
+	vs, serviceCtx, err := client.NewValidatorService(&client.Config{})
 	require.NoError(t, err)
 	s := &Server{
 		walletInitialized:   true,
@@ -45,7 +44,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 		genesisFetcher:      &mockGenesisFetcher{},
 		nodeGatewayEndpoint: endpoint,
 	}
-	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
+	got, err := s.GetBeaconNodeConnection(serviceCtx.Ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,

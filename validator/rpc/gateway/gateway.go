@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
 	"github.com/prysmaticlabs/prysm/validator/web"
@@ -32,13 +34,15 @@ func New(
 	remoteAddress,
 	gatewayAddress string,
 	allowedOrigins []string,
-) *Gateway {
+) (*Gateway, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Gateway{
 		remoteAddr:     remoteAddress,
 		gatewayAddr:    gatewayAddress,
 		mux:            http.NewServeMux(),
 		allowedOrigins: allowedOrigins,
-	}
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Start the gateway service. This serves the HTTP JSON traffic.

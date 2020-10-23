@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,7 +18,6 @@ func TestService_TreeHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/tree", nil)
 	require.NoError(t, err)
 
-	ctx := context.Background()
 	db, sCache := testDB.SetupDB(t)
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetBalances([]uint64{params.BeaconConfig().GweiPerEth}))
@@ -32,10 +30,10 @@ func TestService_TreeHandler(t *testing.T) {
 		),
 		StateGen: stategen.New(db, sCache),
 	}
-	s, err := NewService(cfg)
+	s, serviceCtx, err := NewService(cfg)
 	require.NoError(t, err)
-	require.NoError(t, s.forkChoiceStore.ProcessBlock(ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0))
-	require.NoError(t, s.forkChoiceStore.ProcessBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0))
+	require.NoError(t, s.forkChoiceStore.ProcessBlock(serviceCtx.Ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0))
+	require.NoError(t, s.forkChoiceStore.ProcessBlock(serviceCtx.Ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0))
 	s.setHead([32]byte{'a'}, testutil.NewBeaconBlock(), headState)
 
 	rr := httptest.NewRecorder()

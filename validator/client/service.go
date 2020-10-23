@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	"github.com/dgraph-io/ristretto"
 	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -91,7 +93,9 @@ type Config struct {
 
 // NewValidatorService creates a new validator service for the service
 // registry.
-func NewValidatorService(cfg *Config) (*ValidatorService, error) {
+func NewValidatorService(cfg *Config) (*ValidatorService, *shared.ServiceContext, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &ValidatorService{
 		endpoint:              cfg.Endpoint,
 		withCert:              cfg.CertFlag,
@@ -109,7 +113,7 @@ func NewValidatorService(cfg *Config) (*ValidatorService, error) {
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		useWeb:                cfg.UseWeb,
-	}, nil
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}, nil
 }
 
 // Start the validator service. Launches the main go routine for the validator

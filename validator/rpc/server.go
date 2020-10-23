@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -71,7 +73,9 @@ type Server struct {
 }
 
 // NewServer instantiates a new gRPC server.
-func NewServer(cfg *Config) *Server {
+func NewServer(cfg *Config) (*Server, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Server{
 		host:                  cfg.Host,
 		port:                  cfg.Port,
@@ -87,7 +91,7 @@ func NewServer(cfg *Config) *Server {
 		wallet:                cfg.Wallet,
 		keymanager:            cfg.Keymanager,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
-	}
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Start the gRPC server.

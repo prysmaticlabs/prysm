@@ -384,7 +384,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		}
 	}
 
-	svc, err := p2p.NewService(&p2p.Config{
+	svc, serviceCtx, err := p2p.NewService(&p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeAddrs,
@@ -407,7 +407,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return b.services.RegisterService(svc)
+	return b.services.RegisterService(svc, serviceCtx)
 }
 
 func (b *BeaconNode) fetchP2P() p2p.P2P {
@@ -419,13 +419,13 @@ func (b *BeaconNode) fetchP2P() p2p.P2P {
 }
 
 func (b *BeaconNode) registerAttestationPool() error {
-	s, err := attestations.NewService(&attestations.Config{
+	s, serviceCtx, err := attestations.NewService(&attestations.Config{
 		Pool: b.attestationPool,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register atts pool service")
 	}
-	return b.services.RegisterService(s)
+	return b.services.RegisterService(s, serviceCtx)
 }
 
 func (b *BeaconNode) registerBlockchainService() error {
@@ -446,7 +446,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	}
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
-	blockchainService, err := blockchain.NewService(&blockchain.Config{
+	blockchainService, serviceCtx, err := blockchain.NewService(&blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,
 		ChainStartFetcher: web3Service,
@@ -465,12 +465,13 @@ func (b *BeaconNode) registerBlockchainService() error {
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}
-	return b.services.RegisterService(blockchainService)
+	return b.services.RegisterService(blockchainService, serviceCtx)
 }
 
 func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
-		return b.services.RegisterService(&powchain.Service{})
+		ctx, cancel := context.WithCancel(context.Background())
+		return b.services.RegisterService(&powchain.Service{}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel})
 	}
 	depAddress := params.BeaconNetworkConfig().DepositContractAddress
 	if depAddress == "" {
@@ -493,7 +494,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		DepositCache:    b.depositCache,
 		StateNotifier:   b,
 	}
-	web3Service, err := powchain.NewService(cfg)
+	web3Service, serviceCtx, err := powchain.NewService(cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
@@ -511,7 +512,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
-	return b.services.RegisterService(web3Service)
+	return b.services.RegisterService(web3Service, serviceCtx)
 }
 
 func (b *BeaconNode) registerSyncService() error {
@@ -530,7 +531,7 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	rs := regularsync.NewService(&regularsync.Config{
+	rs, serviceCtx := regularsync.NewService(&regularsync.Config{
 		DB:                  b.db,
 		P2P:                 b.fetchP2P(),
 		Chain:               chainService,
@@ -545,7 +546,7 @@ func (b *BeaconNode) registerSyncService() error {
 		StateGen:            b.stateGen,
 	})
 
-	return b.services.RegisterService(rs)
+	return b.services.RegisterService(rs, serviceCtx)
 }
 
 func (b *BeaconNode) registerInitialSyncService() error {
@@ -554,14 +555,14 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
-	is := initialsync.NewService(&initialsync.Config{
+	is, serviceCtx := initialsync.NewService(&initialsync.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(),
 		StateNotifier: b,
 		BlockNotifier: b,
 	})
-	return b.services.RegisterService(is)
+	return b.services.RegisterService(is, serviceCtx)
 }
 
 func (b *BeaconNode) registerRPCService() error {
@@ -603,7 +604,7 @@ func (b *BeaconNode) registerRPCService() error {
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	p2pService := b.fetchP2P()
-	rpcService := rpc.NewService(&rpc.Config{
+	rpcService, serviceCtx := rpc.NewService(&rpc.Config{
 		Host:                    host,
 		Port:                    port,
 		CertFlag:                cert,
@@ -636,7 +637,7 @@ func (b *BeaconNode) registerRPCService() error {
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 	})
 
-	return b.services.RegisterService(rpcService)
+	return b.services.RegisterService(rpcService, serviceCtx)
 }
 
 func (b *BeaconNode) registerPrometheusService() error {
@@ -658,14 +659,14 @@ func (b *BeaconNode) registerPrometheusService() error {
 
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
-	service := prometheus.NewService(
+	service, serviceCtx := prometheus.NewService(
 		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
 	)
 	hook := prometheus.NewLogrusCollector()
 	logrus.AddHook(hook)
-	return b.services.RegisterService(service)
+	return b.services.RegisterService(service, serviceCtx)
 }
 
 func (b *BeaconNode) registerGRPCGateway() error {
@@ -679,16 +680,17 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
-	return b.services.RegisterService(
-		gateway.New(
-			selfAddress,
-			gatewayAddress,
-			nil, /*optional mux*/
-			allowedOrigins,
-			enableDebugRPCEndpoints,
-			b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
-		),
+
+	gateway, serviceCtx := gateway.New(
+		selfAddress,
+		gatewayAddress,
+		nil, /*optional mux*/
+		allowedOrigins,
+		enableDebugRPCEndpoints,
+		b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 	)
+
+	return b.services.RegisterService(gateway, serviceCtx)
 }
 
 func (b *BeaconNode) registerInteropServices() error {
@@ -697,7 +699,7 @@ func (b *BeaconNode) registerInteropServices() error {
 	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 
 	if genesisValidators > 0 || genesisStatePath != "" {
-		svc := interopcoldstart.NewService(&interopcoldstart.Config{
+		svc, serviceCtx := interopcoldstart.NewService(&interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,
@@ -705,7 +707,7 @@ func (b *BeaconNode) registerInteropServices() error {
 			GenesisPath:   genesisStatePath,
 		})
 
-		return b.services.RegisterService(svc)
+		return b.services.RegisterService(svc, serviceCtx)
 	}
 	return nil
 }

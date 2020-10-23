@@ -110,8 +110,8 @@ type Service struct {
 }
 
 // NewService initializes new regular sync service.
-func NewService(cfg *Config) *Service {
-	ctx := context.Background()
+func NewService(cfg *Config) (*Service, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
 
 	rLimiter := newRateLimiter(cfg.P2P)
 	r := &Service{
@@ -135,7 +135,7 @@ func NewService(cfg *Config) *Service {
 
 	go r.registerHandlers(ctx)
 
-	return r
+	return r, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Start the regular sync service.

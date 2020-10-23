@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -157,17 +159,16 @@ type Web3ServiceConfig struct {
 
 // NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func NewService(config *Web3ServiceConfig) (*Service, error) {
+func NewService(config *Web3ServiceConfig) (*Service, *shared.ServiceContext, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
+
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
-		cancel()
-		return nil, errors.Wrap(err, "could not setup deposit trie")
+		return nil, nil, errors.Wrap(err, "could not setup deposit trie")
 	}
 	genState, err := state.EmptyGenesisState()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not setup genesis state")
+		return nil, nil, errors.Wrap(err, "could not setup genesis state")
 	}
 
 	s := &Service{
@@ -196,7 +197,7 @@ func NewService(config *Web3ServiceConfig) (*Service, error) {
 
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+		return nil, nil, errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data != nil {
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
@@ -204,16 +205,16 @@ func NewService(config *Web3ServiceConfig) (*Service, error) {
 		if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
 			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
 			if err != nil {
-				return nil, errors.Wrap(err, "Could not initialize state trie")
+				return nil, nil, errors.Wrap(err, "Could not initialize state trie")
 			}
 		}
 		s.latestEth1Data = eth1Data.CurrentEth1Data
 		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
 		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
-			return nil, errors.Wrap(err, "could not initialize caches")
+			return nil, nil, errors.Wrap(err, "could not initialize caches")
 		}
 	}
-	return s, nil
+	return s, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}, nil
 }
 
 // Start a web3 service's main event loop.

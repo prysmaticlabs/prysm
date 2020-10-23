@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -54,7 +56,9 @@ var log = logrus.WithField("prefix", "rpc")
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) *Service {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Service{
 		host:         cfg.Host,
 		port:         cfg.Port,
@@ -63,7 +67,7 @@ func NewService(cfg *Config) *Service {
 		withCert:     cfg.CertFlag,
 		withKey:      cfg.KeyFlag,
 		beaconclient: cfg.BeaconClient,
-	}
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Start the gRPC service.

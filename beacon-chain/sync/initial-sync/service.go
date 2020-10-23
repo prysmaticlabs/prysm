@@ -57,8 +57,8 @@ type Service struct {
 
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewService(cfg *Config) *Service {
-	ctx := context.Background()
+func NewService(cfg *Config) (*Service, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		chain:         cfg.Chain,
 		p2p:           cfg.P2P,
@@ -68,7 +68,7 @@ func NewService(cfg *Config) *Service {
 		genesisChan:   make(chan time.Time),
 	}
 	go s.waitForStateInitialization(ctx)
-	return s
+	return s, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Start the initial sync service.
@@ -104,6 +104,7 @@ func (s *Service) Start(ctx context.Context) {
 		return
 	}
 	s.waitForMinimumPeers()
+	// TODO: Ten kontekst wypadałoby anulować w Stop
 	if err := s.roundRobinSync(ctx, genesis); err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
 			return

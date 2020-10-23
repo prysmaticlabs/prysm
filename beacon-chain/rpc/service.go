@@ -8,6 +8,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -132,7 +134,9 @@ type Config struct {
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) *Service {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Service{
 		beaconDB:                cfg.BeaconDB,
 		chainInfoFetcher:        cfg.ChainInfoFetcher,
@@ -167,7 +171,7 @@ func NewService(cfg *Config) *Service {
 		stateGen:                cfg.StateGen,
 		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
 		connectedRPCClients:     make(map[net.Addr]bool),
-	}
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Start the gRPC server.

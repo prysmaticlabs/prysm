@@ -1,7 +1,6 @@
 package attestations
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -10,10 +9,9 @@ import (
 )
 
 func TestStop_OK(t *testing.T) {
-	ctx := context.Background()
-	s, err := NewService(&Config{})
+	s, serviceCtx, err := NewService(&Config{})
 	require.NoError(t, err)
-	require.NoError(t, s.Stop(ctx), "Unable to stop attestation pool service")
+	require.NoError(t, s.Stop(serviceCtx.Ctx), "Unable to stop attestation pool service")
 }
 
 func TestStatus_Error(t *testing.T) {

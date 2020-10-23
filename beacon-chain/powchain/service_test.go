@@ -121,7 +121,7 @@ func TestStart_OK(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -133,7 +133,7 @@ func TestStart_OK(t *testing.T) {
 	require.NoError(t, err)
 	testAcc.Backend.Commit()
 
-	web3Service.Start(context.Background())
+	web3Service.Start(serviceCtx.Ctx)
 	if len(hook.Entries) > 0 {
 		msg := hook.LastEntry().Message
 		want := "Could not connect to ETH1.0 chain RPC client"
@@ -149,7 +149,7 @@ func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	s, err := NewService(&Web3ServiceConfig{
+	s, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    "", // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -172,7 +172,7 @@ func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 				wg.Done()
 			}
 		}()
-		s.Start(context.Background())
+		s.Start(serviceCtx.Ctx)
 	}()
 	testutil.WaitTimeout(wg, time.Second)
 	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
@@ -190,7 +190,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(context.Background(), genRoot))
-	s, err := NewService(&Web3ServiceConfig{
+	s, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    "", // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -201,7 +201,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	wg.Add(1)
 
 	go func() {
-		s.Start(context.Background())
+		s.Start(serviceCtx.Ctx)
 		wg.Done()
 	}()
 	testutil.WaitTimeout(wg, time.Second)
@@ -219,14 +219,14 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
 		Trie:           &protodb.SparseMerkleTrie{},
 	}))
-	s, err := NewService(&Web3ServiceConfig{
+	s, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    "", // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
 	require.NoError(t, err)
 
-	s.Start(context.Background())
+	s.Start(serviceCtx.Ctx)
 	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -236,7 +236,7 @@ func TestStop_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -248,7 +248,7 @@ func TestStop_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	err = web3Service.Stop(context.Background())
+	err = web3Service.Stop(serviceCtx.Ctx)
 	require.NoError(t, err, "Unable to stop web3 ETH1.0 chain service")
 
 	hook.Reset()
@@ -258,7 +258,7 @@ func TestService_Eth1Synced(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -270,7 +270,7 @@ func TestService_Eth1Synced(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	synced, err := web3Service.isEth1NodeSynced(context.Background())
+	synced, err := web3Service.isEth1NodeSynced(serviceCtx.Ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, synced, "Expected eth1 nodes to be synced")
 }
@@ -279,7 +279,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -306,7 +306,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 
-	h, err := web3Service.followBlockHeight(context.Background())
+	h, err := web3Service.followBlockHeight(serviceCtx.Ctx)
 	require.NoError(t, err)
 	assert.Equal(t, baseHeight, h, "Unexpected block height")
 	numToForward := uint64(2)
@@ -319,7 +319,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 
-	h, err = web3Service.followBlockHeight(context.Background())
+	h, err = web3Service.followBlockHeight(serviceCtx.Ctx)
 	require.NoError(t, err)
 	assert.Equal(t, expectedHeight, h, "Unexpected block height")
 }
@@ -354,7 +354,7 @@ func TestStatus(t *testing.T) {
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, _, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -393,7 +393,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -409,7 +409,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	}
 	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: 0}
 	// Spin off to a separate routine
-	go web3Service.run(context.Background())
+	go web3Service.run(serviceCtx.Ctx)
 	// Wait for 2 seconds so that the
 	// info is logged.
 	time.Sleep(2 * time.Second)

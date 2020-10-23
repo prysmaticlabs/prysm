@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -46,7 +48,9 @@ type Config struct {
 
 // NewService creates a new validator service for the service
 // registry.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Service{
 		endpoint:           cfg.Endpoint,
 		withCert:           cfg.CertFlag,
@@ -54,7 +58,7 @@ func NewService(cfg *Config) (*Service, error) {
 		grpcRetries:        cfg.GrpcRetriesFlag,
 		grpcRetryDelay:     cfg.GrpcRetryDelay,
 		grpcHeaders:        strings.Split(cfg.GrpcHeadersFlag, ","),
-	}, nil
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}, nil
 }
 
 // Start the slasher protection service and grpc client.

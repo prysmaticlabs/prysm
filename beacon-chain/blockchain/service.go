@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -97,7 +99,9 @@ type Config struct {
 
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Service{
 		beaconDB:          cfg.BeaconDB,
 		depositCache:      cfg.DepositCache,
@@ -119,7 +123,7 @@ func NewService(cfg *Config) (*Service, error) {
 		checkPtInfoCache:  newCheckPointInfoCache(),
 		wsEpoch:           cfg.WspEpoch,
 		wsRoot:            cfg.WspBlockRoot,
-	}, nil
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}, nil
 }
 
 // Start a blockchain service's main event loop.

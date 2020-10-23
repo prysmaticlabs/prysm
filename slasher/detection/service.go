@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
@@ -75,7 +77,9 @@ type Config struct {
 }
 
 // NewService instantiation.
-func NewService(cfg *Config) *Service {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Service{
 		notifier:              cfg.Notifier,
 		chainFetcher:          cfg.ChainFetcher,
@@ -89,7 +93,7 @@ func NewService(cfg *Config) *Service {
 		proposalsDetector:     proposals.NewProposeDetector(cfg.SlasherDB),
 		historicalDetection:   cfg.HistoricalDetection,
 		status:                None,
-	}
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // Stop the notifier service.

@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -18,8 +17,6 @@ import (
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
-	ctx := context.Background()
-
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
@@ -81,11 +78,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 	cfg.StateNotifier = &mock.MockStateNotifier{}
-	s, err = NewService(cfg)
+	s, serviceCtx, err := NewService(cfg)
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
-		s.Start(ctx)
+		s.Start(serviceCtx.Ctx)
 		<-exitRoutine
 	}()
 	time.Sleep(50 * time.Millisecond)
@@ -104,11 +101,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	time.Sleep(6 * discoveryWaitTime)
 
 	// look up 3 different subnets
-	exists, err := s.FindPeersWithSubnet(ctx, 1)
+	exists, err := s.FindPeersWithSubnet(serviceCtx.Ctx, 1)
 	require.NoError(t, err)
-	exists2, err := s.FindPeersWithSubnet(ctx, 2)
+	exists2, err := s.FindPeersWithSubnet(serviceCtx.Ctx, 2)
 	require.NoError(t, err)
-	exists3, err := s.FindPeersWithSubnet(ctx, 3)
+	exists3, err := s.FindPeersWithSubnet(serviceCtx.Ctx, 3)
 	require.NoError(t, err)
 	if !exists || !exists2 || !exists3 {
 		t.Fatal("Peer with subnet doesn't exist")
@@ -122,13 +119,13 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		},
 	}
 	cache.SubnetIDs.AddAttesterSubnetID(0, 10)
-	testService.RefreshENR(ctx)
+	testService.RefreshENR(serviceCtx.Ctx)
 	time.Sleep(2 * time.Second)
 
-	exists, err = s.FindPeersWithSubnet(ctx, 2)
+	exists, err = s.FindPeersWithSubnet(serviceCtx.Ctx, 2)
 	require.NoError(t, err)
 
 	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")
-	assert.NoError(t, s.Stop(ctx))
+	assert.NoError(t, s.Stop(serviceCtx.Ctx))
 	exitRoutine <- true
 }

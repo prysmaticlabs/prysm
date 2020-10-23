@@ -22,10 +22,8 @@ func init() {
 }
 
 func TestLifecycle(t *testing.T) {
-	ctx := context.Background()
-
-	prometheusService := NewService(":2112", nil)
-	prometheusService.Start(ctx)
+	prometheusService, serviceCtx := NewService(":2112", nil)
+	prometheusService.Start(serviceCtx.Ctx)
 	// Give service time to start.
 	time.Sleep(time.Second)
 
@@ -34,7 +32,7 @@ func TestLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, uint64(0), resp.ContentLength, "Unexpected content length 0")
 
-	err = prometheusService.Stop(ctx)
+	err = prometheusService.Stop(serviceCtx.Ctx)
 	require.NoError(t, err)
 	// Give service time to stop.
 	time.Sleep(time.Second)
@@ -60,10 +58,11 @@ func (m *mockService) Status() error {
 }
 
 func TestHealthz(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
 	registry := shared.NewServiceRegistry()
 	m := &mockService{}
-	require.NoError(t, registry.RegisterService(m), "Failed to register service")
-	s := NewService("" /*addr*/, registry)
+	require.NoError(t, registry.RegisterService(m, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}), "Failed to register service")
+	s, _ := NewService("" /*addr*/, registry)
 
 	req, err := http.NewRequest("GET", "/healthz", nil /*reader*/)
 	require.NoError(t, err)
@@ -112,10 +111,11 @@ func TestStatus(t *testing.T) {
 
 func TestContentNegotiation(t *testing.T) {
 	t.Run("/healthz all services are ok", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
 		registry := shared.NewServiceRegistry()
 		m := &mockService{}
-		require.NoError(t, registry.RegisterService(m), "Failed to register service")
-		s := NewService("", registry)
+		require.NoError(t, registry.RegisterService(m, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}), "Failed to register service")
+		s, _ := NewService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
 		require.NoError(t, err)
@@ -142,11 +142,12 @@ func TestContentNegotiation(t *testing.T) {
 	})
 
 	t.Run("/healthz failed service", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
 		registry := shared.NewServiceRegistry()
 		m := &mockService{}
 		m.status = errors.New("something is wrong")
-		require.NoError(t, registry.RegisterService(m), "Failed to register service")
-		s := NewService("", registry)
+		require.NoError(t, registry.RegisterService(m, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}), "Failed to register service")
+		s, _ := NewService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
 		require.NoError(t, err)

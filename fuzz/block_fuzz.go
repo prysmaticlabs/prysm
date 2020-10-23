@@ -124,12 +124,12 @@ func BeaconFuzzBlock(b []byte) {
 	ap := attestations.NewPool()
 	ep := voluntaryexits.NewPool()
 	sp := slashings.NewPool()
-	ops, err := attestations.NewService(&attestations.Config{Pool: ap})
+	ops, _, err := attestations.NewService(&attestations.Config{Pool: ap})
 	if err != nil {
 		panic(err)
 	}
 
-	chain, err := blockchain.NewService(&blockchain.Config{
+	chain, serviceCtx, err := blockchain.NewService(&blockchain.Config{
 		ChainStartFetcher: nil,
 		BeaconDB:          db1,
 		DepositCache:      nil,
@@ -145,7 +145,7 @@ func BeaconFuzzBlock(b []byte) {
 	if err != nil {
 		panic(err)
 	}
-	chain.Start(context.Background())
+	chain.Start(serviceCtx.Ctx)
 
 	s := sync.NewRegularSyncFuzz(&sync.Config{
 		DB:                  db1,

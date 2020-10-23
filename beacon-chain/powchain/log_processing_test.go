@@ -39,7 +39,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -79,7 +79,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
-	err = web3Service.ProcessLog(context.Background(), logs[0])
+	err = web3Service.ProcessLog(serviceCtx.Ctx, logs[0])
 	require.NoError(t, err)
 
 	require.LogsDoNotContain(t, hook, "Could not unpack log")
@@ -103,7 +103,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -145,12 +145,12 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	web3Service.chainStartData.Chainstarted = true
 
-	err = web3Service.ProcessDepositLog(context.Background(), logs[0])
+	err = web3Service.ProcessDepositLog(serviceCtx.Ctx, logs[0])
 	require.NoError(t, err)
-	err = web3Service.ProcessDepositLog(context.Background(), logs[1])
+	err = web3Service.ProcessDepositLog(serviceCtx.Ctx, logs[1])
 	require.NoError(t, err)
 
-	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
+	pendingDeposits := web3Service.depositCache.PendingDeposits(serviceCtx.Ctx, nil /*blockNum*/)
 	require.Equal(t, 2, len(pendingDeposits), "Unexpected number of deposits")
 
 	hook.Reset()
@@ -160,7 +160,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, _, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		BeaconDB:        beaconDB,
 		DepositContract: testAcc.ContractAddr,
@@ -211,7 +211,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -261,7 +261,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	for _, log := range logs {
-		err = web3Service.ProcessLog(context.Background(), log)
+		err = web3Service.ProcessLog(serviceCtx.Ctx, log)
 		require.NoError(t, err)
 	}
 	assert.Equal(t, false, web3Service.chainStartData.Chainstarted, "Genesis has been triggered despite being 8 duplicate keys")
@@ -282,7 +282,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -335,11 +335,11 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	defer stateSub.Unsubscribe()
 
 	for _, log := range logs {
-		err = web3Service.ProcessLog(context.Background(), log)
+		err = web3Service.ProcessLog(serviceCtx.Ctx, log)
 		require.NoError(t, err)
 	}
 
-	err = web3Service.ProcessETH1Block(context.Background(), big.NewInt(int64(logs[len(logs)-1].BlockNumber)))
+	err = web3Service.ProcessETH1Block(serviceCtx.Ctx, big.NewInt(int64(logs[len(logs)-1].BlockNumber)))
 	require.NoError(t, err)
 
 	cachedDeposits := web3Service.ChainStartDeposits()
@@ -369,7 +369,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
@@ -431,7 +431,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
-	err = web3Service.processPastLogs(context.Background())
+	err = web3Service.processPastLogs(serviceCtx.Ctx)
 	require.NoError(t, err)
 
 	cachedDeposits := web3Service.ChainStartDeposits()
@@ -462,7 +462,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -510,7 +510,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	logsToBeProcessed := append(logs[:depositsWanted-3], logs[depositsWanted-2:]...)
 	// we purposely miss processing the middle two logs so that the service, re-requests them
 	for _, log := range logsToBeProcessed {
-		err = web3Service.ProcessLog(context.Background(), log)
+		err = web3Service.ProcessLog(serviceCtx.Ctx, log)
 		require.NoError(t, err)
 		web3Service.latestEth1Data.LastRequestedBlock = log.BlockNumber
 	}
@@ -530,7 +530,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
 	// We purposely miss processing the middle 7 logs so that the service, re-requests them.
 	for _, log := range logsToBeProcessed {
-		err = web3Service.ProcessLog(context.Background(), log)
+		err = web3Service.ProcessLog(serviceCtx.Ctx, log)
 		require.NoError(t, err)
 		web3Service.latestEth1Data.LastRequestedBlock = log.BlockNumber
 	}
@@ -614,7 +614,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, _, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: eth1Backend.ContractAddr,
 		BeaconDB:        beaconDB,

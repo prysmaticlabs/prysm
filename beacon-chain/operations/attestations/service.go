@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -30,10 +32,12 @@ type Config struct {
 
 // NewService instantiates a new attestation pool service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(cfg *Config) (*Service, *shared.ServiceContext, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	cache, err := lru.New(forkChoiceProcessedRootsSize)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	pruneInterval := cfg.pruneInterval
@@ -46,7 +50,7 @@ func NewService(cfg *Config) (*Service, error) {
 		pool:                     cfg.Pool,
 		forkChoiceProcessedRoots: cache,
 		pruneInterval:            pruneInterval,
-	}, nil
+	}, &shared.ServiceContext{Ctx: ctx, Cancel: cancel}, nil
 }
 
 // Start an attestation pool service's main event loop.
@@ -55,6 +59,7 @@ func (s *Service) Start(ctx context.Context) {
 	go s.pruneAttsPool(ctx)
 }
 
+// TODO: Poprawić komentarze do Stopów
 // Stop the beacon block attestation pool service's main event loop
 // and associated goroutines.
 func (s *Service) Stop(ctx context.Context) error {

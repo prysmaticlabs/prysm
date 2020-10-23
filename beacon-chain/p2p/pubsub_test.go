@@ -17,11 +17,11 @@ import (
 )
 
 func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
-	s, err := NewService(&Config{
+	s, serviceCtx, err := NewService(&Config{
 		StateNotifier: &mock.MockStateNotifier{},
 	})
 	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(serviceCtx.Ctx, 3*time.Second)
 	defer cancel()
 
 	go s.awaitStateInitialized(ctx)

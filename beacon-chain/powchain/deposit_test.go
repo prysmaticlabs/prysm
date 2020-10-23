@@ -1,7 +1,6 @@
 package powchain
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -22,7 +21,7 @@ const pubKeyErr = "could not convert bytes to public key"
 
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -36,7 +35,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 
-	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
+	err = web3Service.processDeposit(serviceCtx.Ctx, eth1Data, deposits[0])
 	require.NoError(t, err, "could not process deposit")
 
 	valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
@@ -46,7 +45,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -61,7 +60,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 
 	deposits[0].Proof = [][]byte{{'f', 'a', 'k', 'e'}}
 
-	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
+	err = web3Service.processDeposit(serviceCtx.Ctx, eth1Data, deposits[0])
 	require.NotNil(t, err, "No errors, when an error was expected")
 
 	want := "deposit merkle branch of deposit root did not verify for root"
@@ -72,7 +71,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -99,7 +98,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		DepositRoot:  root[:],
 	}
 
-	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
+	err = web3Service.processDeposit(serviceCtx.Ctx, eth1Data, deposits[0])
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, pubKeyErr)
@@ -108,7 +107,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -134,7 +133,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		DepositRoot:  root[:],
 	}
 
-	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
+	err = web3Service.processDeposit(serviceCtx.Ctx, eth1Data, deposits[0])
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, pubKeyErr)
@@ -143,7 +142,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -166,7 +165,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	proof, err := trie.MerkleProof(0)
 	require.NoError(t, err)
 	deposits[0].Proof = proof
-	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
+	err = web3Service.processDeposit(serviceCtx.Ctx, eth1Data, deposits[0])
 	require.NoError(t, err)
 	want := "signature did not verify"
 
@@ -176,7 +175,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -225,7 +224,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 		deposit.Proof, err = trie.MerkleProof(i)
 		require.NoError(t, err)
-		err = web3Service.processDeposit(context.Background(), eth1Data, deposit)
+		err = web3Service.processDeposit(serviceCtx.Ctx, eth1Data, deposit)
 		require.NoError(t, err, fmt.Sprintf("Could not process deposit at %d", i))
 
 		valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
@@ -236,7 +235,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, serviceCtx, err := NewService(&Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -251,7 +250,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 
 	for i := range keys {
 		eth1Data.DepositCount = uint64(i + 1)
-		err = web3Service.processDeposit(context.Background(), eth1Data, deposits[i])
+		err = web3Service.processDeposit(serviceCtx.Ctx, eth1Data, deposits[i])
 		require.NoError(t, err, fmt.Sprintf("Could not process deposit at %d", i))
 
 		valCount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)

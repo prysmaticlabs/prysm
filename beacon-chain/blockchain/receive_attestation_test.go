@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -17,7 +16,7 @@ func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 	helpers.ClearCache()
 	db, sc := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db, sc)
+	chainService, _ := setupBeaconChain(t, db, sc)
 	chainService.genesisTime = time.Now()
 
 	assert.Equal(t, true, chainService.verifyCheckpointEpoch(&ethpb.Checkpoint{Root: make([]byte, 32)}))
@@ -28,11 +27,11 @@ func TestAttestationPreState_FarFutureSlot(t *testing.T) {
 	helpers.ClearCache()
 	db, sc := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db, sc)
+	chainService, serviceCtx := setupBeaconChain(t, db, sc)
 	chainService.genesisTime = time.Now()
 
 	e := helpers.MaxSlotBuffer/params.BeaconConfig().SlotsPerEpoch + 1
-	_, err := chainService.AttestationCheckPtInfo(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
+	_, err := chainService.AttestationCheckPtInfo(serviceCtx.Ctx, &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
 
@@ -40,10 +39,10 @@ func TestAttestationCheckPtInfo_FarFutureSlot(t *testing.T) {
 	helpers.ClearCache()
 	db, sc := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db, sc)
+	chainService, serviceCtx := setupBeaconChain(t, db, sc)
 	chainService.genesisTime = time.Now()
 
 	e := helpers.MaxSlotBuffer/params.BeaconConfig().SlotsPerEpoch + 1
-	_, err := chainService.AttestationPreState(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
+	_, err := chainService.AttestationPreState(serviceCtx.Ctx, &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
