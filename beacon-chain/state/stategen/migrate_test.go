@@ -96,3 +96,27 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 
 	require.LogsContain(t, hook, "Saved state in DB")
 }
+
+func TestMigrateToCold_StateExistsInDB(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+
+	service := New(db, cache.NewStateSummaryCache())
+	service.slotsPerArchivedPoint = 1
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	stateSlot := uint64(1)
+	require.NoError(t, beaconState.SetSlot(stateSlot))
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 2
+	fRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
+	require.NoError(t, service.epochBoundaryStateCache.put(fRoot, beaconState))
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, fRoot))
+
+	service.saveHotStateDB.savedStateRoots = [][32]byte{{1}, {2}, {3}, {4}, fRoot}
+	require.NoError(t, service.MigrateToCold(ctx, fRoot))
+	assert.DeepEqual(t, [][32]byte{{1}, {2}, {3}, {4}}, service.saveHotStateDB.savedStateRoots)
+	assert.LogsDoNotContain(t, hook, "Saved state in DB")
+}

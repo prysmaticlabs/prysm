@@ -10,6 +10,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -30,11 +31,23 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 		t.Fatal("service was not initialized")
 	}
 
+	// Set up two connected test hosts.
+	p0 := testp2p.NewTestP2P(t)
+	p1 := testp2p.NewTestP2P(t)
+	p0.Connect(p1)
+	s.host = p0.BHost
+	s.pubsub = p0.PubSub()
+
+	topic := fmt.Sprintf(BlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
+
+	// Establish the remote peer to be subscribed to the outgoing topic.
+	_, err = p1.SubscribeToTopic(topic)
+	require.NoError(t, err)
+
 	wg := sync.WaitGroup{}
 	wg.Add(10)
 	for i := 0; i < 10; i++ {
 		go func(i int) {
-			topic := fmt.Sprintf(AttestationSubnetTopicFormat, fd, i) + "/" + encoder.ProtocolSuffixSSZSnappy
 			assert.NoError(t, s.PublishToTopic(ctx, topic, []byte{}))
 			wg.Done()
 		}(i)
