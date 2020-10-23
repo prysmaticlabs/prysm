@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -77,6 +78,12 @@ func fillDBTestState(ctx context.Context, t *testing.T, db db.Database) ([]*stat
 
 		blks[i] = b
 		stateContainers[i] = &stateContainer{state: beaconState.Copy(), blockRoot: root[:], stateRoot: stateRoot[:]}
+		if i == 30 {
+			duplicateBlock, ok := proto.Clone(b).(*ethpb_alpha.SignedBeaconBlock)
+			require.Equal(t, ok, true)
+			duplicateBlock.Block.Body.Graffiti = bytesutil.PadTo([]byte("duplicate"), 32)
+			require.NoError(t, db.SaveBlock(ctx, duplicateBlock))
+		}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
@@ -183,6 +190,11 @@ func TestServer_GetStateRoot(t *testing.T) {
 			want:    stateContainers[30].stateRoot,
 		},
 		{
+			name:    "invalid string",
+			stateId: []byte("lorem ipsum"),
+			wantErr: true,
+		},
+		{
 			name:    "root",
 			stateId: stateContainers[20].blockRoot,
 			want:    stateContainers[20].stateRoot,
@@ -285,6 +297,11 @@ func TestServer_GetStateFork(t *testing.T) {
 			want:    stateContainers[30].state,
 		},
 		{
+			name:    "invalid string",
+			stateId: []byte("lorem ipsum"),
+			wantErr: true,
+		},
+		{
 			name:    "root",
 			stateId: stateContainers[20].blockRoot,
 			want:    stateContainers[20].state,
@@ -330,12 +347,7 @@ func TestServer_GetStateFork(t *testing.T) {
 			forkResp, err := bs.GetStateFork(ctx, &ethpb.StateRequest{
 				StateId: tt.stateId,
 			})
-			if !tt.wantErr {
-				require.NoError(t, err)
-			} else {
-				require.NotEqual(t, err, nil)
-				return
-			}
+			require.NoError(t, err)
 
 			compareBytes(t, "previous version", tt.want.Fork().PreviousVersion, forkResp.Fork.PreviousVersion)
 			compareBytes(t, "current version", tt.want.Fork().CurrentVersion, forkResp.Fork.CurrentVersion)
@@ -387,6 +399,11 @@ func TestServer_GetFinalityCheckpoints(t *testing.T) {
 			name:    "slot",
 			stateId: []byte("30"),
 			want:    stateContainers[30].state,
+		},
+		{
+			name:    "invalid string",
+			stateId: []byte("lorem ipsum"),
+			wantErr: true,
 		},
 		{
 			name:    "root",

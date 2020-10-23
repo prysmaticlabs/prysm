@@ -6,13 +6,11 @@ import (
 	"strconv"
 	"time"
 
-	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
