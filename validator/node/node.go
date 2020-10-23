@@ -362,7 +362,7 @@ func (s *ValidatorClient) registerClientService(
 	if err := s.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
-	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
+	v, err := client.NewValidatorService(&client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
