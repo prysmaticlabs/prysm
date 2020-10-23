@@ -31,7 +31,6 @@ import (
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	r := Service{
-		ctx:         context.Background(),
 		p2p:         p2p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mockChain.ChainService{
@@ -75,7 +74,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := Service{
-		ctx:                       ctx,
 		p2p:                       p2p,
 		initialSync:               &mockSync.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
@@ -126,7 +124,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := Service{
-		ctx:                       ctx,
 		p2p:                       p2p,
 		initialSync:               &mockSync.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
@@ -167,7 +164,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 func TestSubscribe_HandlesPanic(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	r := Service{
-		ctx: context.Background(),
 		chain: &mockChain.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
@@ -199,7 +195,6 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	hook := logTest.NewGlobal()
 	r := Service{
-		ctx: context.Background(),
 		chain: &mockChain.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
@@ -232,7 +227,6 @@ func TestStaticSubnets(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := Service{
-		ctx: ctx,
 		chain: &mockChain.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},

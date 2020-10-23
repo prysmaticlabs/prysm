@@ -49,7 +49,6 @@ func expectResetStream(t *testing.T, stream network.Stream) {
 func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	r := &Service{
-		ctx: context.Background(),
 		p2p: p2p,
 	}
 
@@ -73,7 +72,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	defer func() {
 		delete(prysmP2P.RPCTopicMappings, topic)
 	}()
-	r.registerRPC(topic, handler)
+	r.registerRPC(context.Background(), topic, handler)
 
 	p2p.ReceiveRPC(topic, &p2ppb.Fork{CurrentVersion: []byte("fooo"), PreviousVersion: []byte("barr")})
 

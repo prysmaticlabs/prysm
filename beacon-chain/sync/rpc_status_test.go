@@ -276,7 +276,6 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			Root:           make([]byte, 32),
 		},
 		db:          db,
-		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
 	}
 	p1.Digest, err = r.forkDigest()
@@ -405,7 +404,6 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -485,7 +483,6 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 			Genesis:        time.Unix(genTime, 0),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -503,7 +500,6 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 			ValidatorsRoot: [32]byte{'A'},
 		},
 		db:          db,
-		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -652,7 +648,6 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 				Genesis:        time.Unix(genTime, 0),
 				ValidatorsRoot: [32]byte{'A'},
 			},
-			ctx:         context.Background(),
 			rateLimiter: newRateLimiter(p1),
 		}
 
@@ -670,7 +665,6 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 				ValidatorsRoot: [32]byte{'A'},
 			},
 			db:          db,
-			ctx:         context.Background(),
 			rateLimiter: newRateLimiter(p1),
 		}
 
@@ -734,7 +728,6 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -811,13 +804,12 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		ctx: context.Background(),
 	}
 	digest, err := r.forkDigest()
 	require.NoError(t, err)
 	// There should be no error for a status message
 	// with a genesis checkpoint.
-	err = r.validateStatusMessage(r.ctx, &pb.Status{
+	err = r.validateStatusMessage(context.Background(), &pb.Status{
 		ForkDigest:     digest[:],
 		FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
 		FinalizedEpoch: 0,
@@ -885,7 +877,6 @@ func TestShouldResync(t *testing.T) {
 				State:   headState,
 				Genesis: tt.args.genesis,
 			},
-			ctx:         context.Background(),
 			initialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
 		}
 		t.Run(tt.name, func(t *testing.T) {

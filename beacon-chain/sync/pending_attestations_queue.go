@@ -22,12 +22,12 @@ import (
 var processPendingAttsPeriod = slotutil.DivideSlotBy(2 /* twice per slot */)
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
-func (s *Service) processPendingAttsQueue() {
+func (s *Service) processPendingAttsQueue(ctx context.Context) {
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
-	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
+	runutil.RunEvery(ctx, processPendingAttsPeriod, func() {
 		mutex.Lock()
-		if err := s.processPendingAtts(s.ctx); err != nil {
+		if err := s.processPendingAtts(ctx); err != nil {
 			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
 		}
 		mutex.Unlock()

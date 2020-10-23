@@ -43,7 +43,6 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
@@ -83,7 +82,6 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
@@ -115,7 +113,6 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),

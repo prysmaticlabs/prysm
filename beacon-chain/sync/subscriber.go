@@ -103,7 +103,7 @@ func (s *Service) subscribeWithBase(ctx context.Context, base proto.Message, top
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipeline := func(msg *pubsub.Message) {
-		ctx, cancel := context.WithTimeout(s.ctx, pubsubMessageTimeout)
+		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
 		defer span.End()
@@ -135,7 +135,7 @@ func (s *Service) subscribeWithBase(ctx context.Context, base proto.Message, top
 	// The main message loop for receiving incoming messages from this subscription.
 	messageLoop := func() {
 		for {
-			msg, err := sub.Next(s.ctx)
+			msg, err := sub.Next(ctx)
 			if err != nil {
 				// This should only happen when the context is cancelled or subscription is cancelled.
 				if err != pubsub.ErrSubscriptionCancelled { // Only log a warning on unexpected errors.
@@ -198,7 +198,7 @@ func (s *Service) subscribeStaticWithSubnets(ctx context.Context, topic string, 
 	go func() {
 		for {
 			select {
-			case <-s.ctx.Done():
+			case <-ctx.Done():
 				ticker.Done()
 				return
 			case <-ticker.C():
@@ -211,7 +211,7 @@ func (s *Service) subscribeStaticWithSubnets(ctx context.Context, topic string, 
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
 						go func(idx uint64) {
-							_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
+							_, err := s.p2p.FindPeersWithSubnet(ctx, idx)
 							if err != nil {
 								log.Debugf("Could not search for peers: %v", err)
 								return
@@ -249,7 +249,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	go func() {
 		for {
 			select {
-			case <-s.ctx.Done():
+			case <-ctx.Done():
 				ticker.Done()
 				return
 			case currentSlot := <-ticker.C():
@@ -274,7 +274,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 				// find desired subs for attesters
 				attesterSubs := s.attesterSubnetIndices(currentSlot)
 				for _, idx := range attesterSubs {
-					s.lookupAttesterSubnets(digest, idx)
+					s.lookupAttesterSubnets(ctx, digest, idx)
 				}
 			}
 		}
@@ -318,7 +318,7 @@ func (s *Service) subscribeAggregatorSubnet(ctx context.Context, subscriptions m
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		go func(idx uint64) {
-			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
+			_, err := s.p2p.FindPeersWithSubnet(ctx, idx)
 			if err != nil {
 				log.Debugf("Could not search for peers: %v", err)
 				return
@@ -329,7 +329,7 @@ func (s *Service) subscribeAggregatorSubnet(ctx context.Context, subscriptions m
 }
 
 // lookup peers for attester specific subnets.
-func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
+func (s *Service) lookupAttesterSubnets(ctx context.Context, digest [4]byte, idx uint64) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
 	if !s.validPeersExist(subnetTopic, idx) {
@@ -337,7 +337,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		go func(idx uint64) {
 			// perform a search for peers with the desired committee index.
-			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
+			_, err := s.p2p.FindPeersWithSubnet(ctx, idx)
 			if err != nil {
 				log.Debugf("Could not search for peers: %v", err)
 				return

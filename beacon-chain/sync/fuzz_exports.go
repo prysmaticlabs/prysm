@@ -16,8 +16,6 @@ func NewRegularSyncFuzz(cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
-		ctx:                  ctx,
-		cancel:               cancel,
 		db:                   cfg.DB,
 		p2p:                  cfg.P2P,
 		attPool:              cfg.AttPool,

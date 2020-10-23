@@ -25,10 +25,10 @@ import (
 )
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
-func (s *Service) maintainPeerStatuses() {
+func (s *Service) maintainPeerStatuses(ctx context.Context) {
 	// Run twice per epoch.
 	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
-	runutil.RunEvery(s.ctx, interval, func() {
+	runutil.RunEvery(ctx, interval, func() {
 		for _, pid := range s.p2p.Peers().Connected() {
 			go func(id peer.ID) {
 				// If our peer status has not been updated correctly we disconnect over here
@@ -42,7 +42,7 @@ func (s *Service) maintainPeerStatuses() {
 					return
 				}
 				if s.p2p.Peers().IsBad(id) {
-					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
+					if err := s.sendGoodByeAndDisconnect(ctx, codeGenericError, id); err != nil {
 						log.Debugf("Error when disconnecting with bad peer: %v", err)
 					}
 					return
@@ -54,7 +54,7 @@ func (s *Service) maintainPeerStatuses() {
 					return
 				}
 				if timeutils.Now().After(lastUpdated.Add(interval)) {
-					if err := s.reValidatePeer(s.ctx, id); err != nil {
+					if err := s.reValidatePeer(ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Debug("Failed to revalidate peer")
 						s.p2p.Peers().Scorers().BadResponsesScorer().Increment(id)
 					}
@@ -70,7 +70,7 @@ func (s *Service) resyncIfBehind(ctx context.Context) {
 	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
 	// Run sixteen times per epoch.
 	interval := time.Duration(int64(millisecondsPerEpoch)/16) * time.Millisecond
-	runutil.RunEvery(s.ctx, interval, func() {
+	runutil.RunEvery(ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
 			// Factor number of expected minimum sync peers, to make sure that enough peers are

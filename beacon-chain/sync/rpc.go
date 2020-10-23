@@ -30,39 +30,39 @@ var respTimeout = params.BeaconNetworkConfig().RespTimeout
 type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
-func (s *Service) registerRPCHandlers() {
-	s.registerRPC(
+func (s *Service) registerRPCHandlers(ctx context.Context) {
+	s.registerRPC(ctx,
 		p2p.RPCStatusTopic,
 		s.statusRPCHandler,
 	)
-	s.registerRPC(
+	s.registerRPC(ctx,
 		p2p.RPCGoodByeTopic,
 		s.goodbyeRPCHandler,
 	)
-	s.registerRPC(
+	s.registerRPC(ctx,
 		p2p.RPCBlocksByRangeTopic,
 		s.beaconBlocksByRangeRPCHandler,
 	)
-	s.registerRPC(
+	s.registerRPC(ctx,
 		p2p.RPCBlocksByRootTopic,
 		s.beaconBlocksRootRPCHandler,
 	)
-	s.registerRPC(
+	s.registerRPC(ctx,
 		p2p.RPCPingTopic,
 		s.pingHandler,
 	)
-	s.registerRPC(
+	s.registerRPC(ctx,
 		p2p.RPCMetaDataTopic,
 		s.metaDataHandler,
 	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
+func (s *Service) registerRPC(ctx context.Context, baseTopic string, handle rpcHandler) {
 	topic := baseTopic + s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	s.p2p.SetStreamHandler(topic, func(stream network.Stream) {
-		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
+		ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 		defer cancel()
 		defer func() {
 			if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {

@@ -75,7 +75,6 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	ctx                       context.Context
 	cancel                    context.CancelFunc
 	p2p                       p2p.P2P
 	db                        db.NoHeadAccessDatabase
@@ -114,10 +113,7 @@ type Service struct {
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
-	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
-		ctx:                  ctx,
-		cancel:               cancel,
 		db:                   cfg.DB,
 		p2p:                  cfg.P2P,
 		attPool:              cfg.AttPool,
@@ -153,9 +149,9 @@ func (s *Service) Start(ctx context.Context) {
 		return nil
 	})
 	s.p2p.AddPingMethod(s.sendPingRequest)
-	s.processPendingBlocksQueue()
-	s.processPendingAttsQueue()
-	s.maintainPeerStatuses()
+	s.processPendingBlocksQueue(ctx)
+	s.processPendingAttsQueue(ctx)
+	s.maintainPeerStatuses(ctx)
 	if !flags.Get().DisableSync {
 		s.resyncIfBehind(ctx)
 	}
@@ -248,7 +244,7 @@ func (s *Service) registerHandlers(ctx context.Context) {
 				log.WithField("starttime", startTime).Debug("Received state initialized event")
 
 				// Register respective rpc handlers at state initialized event.
-				s.registerRPCHandlers()
+				s.registerRPCHandlers(ctx)
 				// Wait for chainstart in separate routine.
 				go func() {
 					if startTime.After(timeutils.Now()) {
@@ -267,7 +263,7 @@ func (s *Service) registerHandlers(ctx context.Context) {
 				s.registerSubscribers(ctx)
 				return
 			}
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():
