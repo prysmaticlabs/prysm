@@ -12,14 +12,14 @@ func TestStoringAndFetching(t *testing.T) {
 	cache, err := NewHighestAttestationCache(10, nil)
 	require.NoError(t, err)
 
-	// cache
+	// Cache a test attestation.
 	cache.Set(1, &ethereum_slashing.HighestAttestation{
 		ValidatorId:        1,
 		HighestSourceEpoch: 2,
 		HighestTargetEpoch: 3,
 	})
 
-	// has
+	// Require it to exist.
 	require.Equal(t, true, cache.Has(1))
 
 	// fetch
@@ -29,9 +29,9 @@ func TestStoringAndFetching(t *testing.T) {
 	require.Equal(t, uint64(2), res[1].HighestSourceEpoch)
 	require.Equal(t, uint64(3), res[1].HighestTargetEpoch)
 
-	// delete
+	// Delete it.
 	require.Equal(t, true, cache.Delete(1))
-	// confirm
+	// Confirm deletion.
 	res2, b2 := cache.Get(1)
 	require.Equal(t, false, b2)
 	require.Equal(t, true, res2 == nil)
@@ -45,7 +45,7 @@ func TestPurge(t *testing.T) {
 	cache, err := NewHighestAttestationCache(10, onEvicted)
 	require.NoError(t, err)
 
-	// cache
+	// Cache several test attestation.
 	cache.Set(1, &ethereum_slashing.HighestAttestation{
 		ValidatorId:        1,
 		HighestSourceEpoch: 2,
@@ -62,13 +62,14 @@ func TestPurge(t *testing.T) {
 		HighestTargetEpoch: 9,
 	})
 
-	// purge
 	cache.Purge()
 
+	// Require all attestations to be deleted
 	require.Equal(t, false, cache.Has(1))
 	require.Equal(t, false, cache.Has(2))
 	require.Equal(t, false, cache.Has(3))
 
+	// Require the eviction function to be called.
 	require.Equal(t, true, wasEvicted)
 }
 
@@ -80,7 +81,7 @@ func TestClear(t *testing.T) {
 	cache, err := NewHighestAttestationCache(10, onEvicted)
 	require.NoError(t, err)
 
-	// cache
+	// Cache several test attestation.
 	cache.Set(1, &ethereum_slashing.HighestAttestation{
 		ValidatorId:        1,
 		HighestSourceEpoch: 2,
@@ -97,12 +98,13 @@ func TestClear(t *testing.T) {
 		HighestTargetEpoch: 9,
 	})
 
-	// purge
 	cache.Clear()
 
+	// Require all attestations to be deleted
 	require.Equal(t, false, cache.Has(1))
 	require.Equal(t, false, cache.Has(2))
 	require.Equal(t, false, cache.Has(3))
 
+	// Require the eviction function to be called.
 	require.Equal(t, true, wasEvicted)
 }
