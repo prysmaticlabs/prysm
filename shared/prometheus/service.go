@@ -123,7 +123,6 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// TODO: Co z kontekstami, które nie są wykorzystane?
 // Start the prometheus service.
 func (s *Service) Start(ctx context.Context) {
 	go func() {

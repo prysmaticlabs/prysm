@@ -80,7 +80,6 @@ type BeaconNode struct {
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-// TODO: Flagi ogarnąć na zewnątrz i wysłać sam ctx
 func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name

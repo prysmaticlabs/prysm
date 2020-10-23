@@ -59,7 +59,6 @@ func (s *Service) Start(ctx context.Context) {
 	go s.pruneAttsPool(ctx)
 }
 
-// TODO: Poprawić komentarze do Stopów
 // Stop the beacon block attestation pool service's main event loop
 // and associated goroutines.
 func (s *Service) Stop(ctx context.Context) error {
