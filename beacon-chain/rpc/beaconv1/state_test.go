@@ -8,23 +8,20 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -54,7 +51,7 @@ func fillDBTestState(ctx context.Context, t *testing.T, db db.Database) ([]*stat
 	blks[0] = genesisBlk
 	stateContainers[0] = &stateContainer{
 		state:     beaconState.Copy(),
-		blockRoot: params.BeaconConfig().ZeroHash[:],
+		blockRoot: genesisBlkRoot[:],
 		stateRoot: stateRoot[:],
 	}
 	blockConf := &testutil.BlockGenConfig{
@@ -154,8 +151,9 @@ func TestServer_GetStateRoot(t *testing.T) {
 			Genesis: time.Unix(0, 0),
 		},
 		ChainInfoFetcher: &mock.ChainService{
-			DB:   db,
-			Root: headState.blockRoot,
+			DB:    db,
+			Root:  headState.blockRoot,
+			Block: &ethpb_alpha.SignedBeaconBlock{Block: &ethpb_alpha.BeaconBlock{StateRoot: headState.stateRoot}},
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{
 				Root:  headState.state.FinalizedCheckpoint().Root,
 				Epoch: headState.state.FinalizedCheckpointEpoch(),
@@ -196,7 +194,7 @@ func TestServer_GetStateRoot(t *testing.T) {
 		},
 		{
 			name:    "genesis root",
-			stateId: params.BeaconConfig().ZeroHash[:],
+			stateId: stateContainers[0].blockRoot,
 			want:    stateContainers[0].stateRoot,
 		},
 		{
@@ -217,6 +215,11 @@ func TestServer_GetStateRoot(t *testing.T) {
 		{
 			name:    "no state",
 			stateId: stateContainers[32].stateRoot,
+			wantErr: true,
+		},
+		{
+			name:    "future slot",
+			stateId: []byte("200"),
 			wantErr: true,
 		},
 	}
@@ -316,6 +319,16 @@ func TestServer_GetStateFork(t *testing.T) {
 			stateId: stateContainers[20].stateRoot,
 			wantErr: true,
 		},
+		{
+			name:    "non-existent root",
+			stateId: params.BeaconConfig().ZeroHash[:],
+			wantErr: true,
+		},
+		{
+			name:    "future slot",
+			stateId: []byte("200"),
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -413,6 +426,11 @@ func TestServer_GetFinalityCheckpoints(t *testing.T) {
 		{
 			name:    "no state",
 			stateId: stateContainers[20].stateRoot,
+			wantErr: true,
+		},
+		{
+			name:    "non-existent root",
+			stateId: params.BeaconConfig().ZeroHash[:],
 			wantErr: true,
 		},
 	}
