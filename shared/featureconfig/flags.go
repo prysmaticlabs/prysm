@@ -42,6 +42,11 @@ var (
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
 	}
+	enableBackupWebhookFlag = &cli.BoolFlag{
+		Name:  "enable-db-backup-webhook",
+		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
+	}
+
 	kafkaBootstrapServersFlag = &cli.StringFlag{
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
