@@ -153,6 +153,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			assignment.Status = assignmentStatus(s, idx)
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
 
+			// The next epoch has no lookup for proposer indexes.
 			nextAssignment.ValidatorIndex = idx
 			nextAssignment.Status = assignmentStatus(s, idx)
 
