@@ -62,7 +62,6 @@ type Service struct {
 	finalizedCheckpt      *ethpb.Checkpoint
 	prevFinalizedCheckpt  *ethpb.Checkpoint
 	nextEpochBoundarySlot uint64
-	initSyncState         map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots         [][32]byte
 	checkpointState       *cache.CheckpointStateCache
 	checkpointStateLock   sync.Mutex
