@@ -2,6 +2,7 @@ package protoarray
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -44,7 +45,9 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedR
 	newBalances := justifiedStateBalances
 
 	f.votesLock.Lock()
+	f.store.nodeIndicesLock.RLock()
 	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances)
+	f.store.nodeIndicesLock.RUnlock()
 	if err != nil {
 		f.votesLock.Unlock()
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
@@ -222,9 +225,14 @@ func (s *Store) Nodes() []*Node {
 	return s.nodes
 }
 
-// NodesIndices of fork choice store.
-func (s *Store) NodesIndices() map[[32]byte]uint64 {
+// NodesIndices of fork choice store, representing the map key as the hex encoded string of the 32
+// byte root. Note: hex strings are prefixed with `0x`.
+func (s *Store) NodesIndices() map[string]uint64 {
 	s.nodesLock.RLock()
 	defer s.nodesLock.RUnlock()
-	return s.nodesIndices
+	indices := make(map[string]uint64, len(s.nodesIndices))
+	for k, v := range s.nodesIndices {
+		indices["0x"+hex.EncodeToString(k[:])] = v
+	}
+	return indices
 }

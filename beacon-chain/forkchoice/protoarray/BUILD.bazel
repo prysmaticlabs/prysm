@@ -35,6 +35,7 @@ go_test(
         "helpers_test.go",
         "no_vote_test.go",
         "nodes_test.go",
+        "store_test.go",
         "vote_test.go",
     ],
     embed = [":go_default_library"],
