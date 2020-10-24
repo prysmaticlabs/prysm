@@ -62,19 +62,6 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 	return fileutil.ExpandPath(inputtedDir)
 }
 
-// InputDir from the cli without exception.
-func InputDir(cliCtx *cli.Context, promptText string, dirFlag *cli.StringFlag) (string, error) {
-	directory := cliCtx.String(dirFlag.Name)
-	inputtedDir, err := promptutil.DefaultPrompt(au.Bold(promptText).String(), directory)
-	if err != nil {
-		return "", err
-	}
-	if inputtedDir == directory {
-		return directory, nil
-	}
-	return fileutil.ExpandPath(inputtedDir)
-}
-
 // InputRemoteKeymanagerConfig via the cli.
 func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
 	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
