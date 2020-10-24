@@ -347,7 +347,12 @@ func TestServer_GetStateFork(t *testing.T) {
 			forkResp, err := bs.GetStateFork(ctx, &ethpb.StateRequest{
 				StateId: tt.stateId,
 			})
-			require.NoError(t, err)
+			if !tt.wantErr {
+				require.NoError(t, err)
+			} else {
+				require.NotEqual(t, err, nil)
+				return
+			}
 
 			compareBytes(t, "previous version", tt.want.Fork().PreviousVersion, forkResp.Fork.PreviousVersion)
 			compareBytes(t, "current version", tt.want.Fork().CurrentVersion, forkResp.Fork.CurrentVersion)

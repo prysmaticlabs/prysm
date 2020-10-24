@@ -92,10 +92,10 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 			}
 			blks, roots, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(requestedSlot).SetEndSlot(requestedSlot))
 			if err != nil {
-				return nil, errors.Wrap(err, "could not get blocks for slot")
+				return nil, status.Errorf(codes.Internal, "Could not get blocks for slot: %v", err)
 			}
 			if len(blks) == 0 {
-				return nil, nil
+				return nil, status.Errorf(codes.NotFound, "Could not find blocks with given state root")
 			} else if len(blks) > 1 {
 				for i, block := range blks {
 					canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, roots[i])
