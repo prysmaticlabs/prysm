@@ -12,14 +12,16 @@ type ForkChoice struct {
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
-	pruneThreshold uint64              // do not prune tree unless threshold is reached.
-	justifiedEpoch uint64              // latest justified epoch in store.
-	finalizedEpoch uint64              // latest finalized epoch in store.
-	finalizedRoot  [32]byte            // latest finalized root in store.
-	nodes          []*Node             // list of block nodes, each node is a representation of one block.
-	nodesIndices   map[[32]byte]uint64 // the root of block node and the nodes index in the list.
-	canonicalNodes map[[32]byte]bool   // the canonical block nodes.
-	nodesLock      sync.RWMutex
+	pruneThreshold     uint64              // do not prune tree unless threshold is reached.
+	justifiedEpoch     uint64              // latest justified epoch in store.
+	finalizedEpoch     uint64              // latest finalized epoch in store.
+	finalizedRoot      [32]byte            // latest finalized root in store.
+	nodes              []*Node             // list of block nodes, each node is a representation of one block.
+	nodesIndices       map[[32]byte]uint64 // the root of block node and the nodes index in the list.
+	canonicalNodes     map[[32]byte]bool   // the canonical block nodes.
+	nodesLock          sync.RWMutex
+	nodeIndicesLock    sync.RWMutex
+	canonicalNodesLock sync.RWMutex
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

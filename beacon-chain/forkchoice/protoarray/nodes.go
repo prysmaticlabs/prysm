@@ -17,6 +17,9 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
 	defer span.End()
 
+	s.nodesLock.RLock()
+	defer s.nodesLock.RUnlock()
+
 	// Justified index has to be valid in node indices map, and can not be out of bound.
 	justifiedIndex, ok := s.nodesIndices[justifiedRoot]
 	if !ok {
@@ -63,6 +66,15 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateCanonicalNodes")
 	defer span.End()
+
+	// Grab multiple locks, prefer grabbing write lock first since it is the most likely lock to
+	// block.
+	s.canonicalNodesLock.Lock()
+	defer s.canonicalNodesLock.Unlock()
+	s.nodesLock.RLock()
+	defer s.nodesLock.RUnlock()
+	s.nodeIndicesLock.RLock()
+	defer s.nodeIndicesLock.RUnlock()
 
 	// Set the input node to canonical.
 	s.canonicalNodes[root] = true
@@ -153,6 +165,9 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
+
 	// The length of the nodes can not be different than length of the delta.
 	if len(s.nodes) != len(delta) {
 		return errInvalidDeltaLength
@@ -216,8 +231,9 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 // 2.)  The child is already the best child and the parent is updated with the new best descendant.
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become best child.
+//
+// Note: Caller must hold s.nodesLock.Lock()!
 func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
-
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
 		return errInvalidNodeIndex
@@ -387,6 +403,8 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 // leadsToViableHead returns true if the node or the best descendent of the node is viable for head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
+//
+// Note: caller should have a read or write lock on s.nodesLock.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 	var bestDescendentViable bool
 	bestDescendentIndex := node.bestDescendant

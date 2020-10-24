@@ -38,21 +38,19 @@ func New(justifiedEpoch, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkCho
 func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
-	f.votesLock.Lock()
-	defer f.votesLock.Unlock()
 
 	calledHeadCount.Inc()
 
 	newBalances := justifiedStateBalances
 
-	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
+	f.votesLock.Lock()
 	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances)
 	if err != nil {
+		f.votesLock.Unlock()
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
 	f.votes = newVotes
+	f.votesLock.Unlock()
 
 	if err := f.store.applyWeightChanges(ctx, justifiedEpoch, finalizedEpoch, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
@@ -106,18 +104,14 @@ func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 
 // Nodes returns the copied list of block nodes in the fork choice store.
 func (f *ForkChoice) Nodes() []*Node {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
-	cpy := make([]*Node, len(f.store.nodes))
-	copy(cpy, f.store.nodes)
+	nodes := f.store.Nodes()
+	cpy := make([]*Node, len(nodes))
+	copy(cpy, nodes)
 	return cpy
 }
 
 // Store returns the fork choice store object which contains all the information regarding proto array fork choice.
 func (f *ForkChoice) Store() *Store {
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
 	return f.store
 }
 
@@ -125,6 +119,8 @@ func (f *ForkChoice) Store() *Store {
 func (f *ForkChoice) Node(root [32]byte) *Node {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+	f.store.nodeIndicesLock.RLock()
+	defer f.store.nodeIndicesLock.RUnlock()
 
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
@@ -137,8 +133,8 @@ func (f *ForkChoice) Node(root [32]byte) *Node {
 // HasNode returns true if the node exists in fork choice store,
 // false else wise.
 func (f *ForkChoice) HasNode(root [32]byte) bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
+	f.store.nodeIndicesLock.RLock()
+	defer f.store.nodeIndicesLock.RUnlock()
 
 	_, ok := f.store.nodesIndices[root]
 	return ok
@@ -147,21 +143,24 @@ func (f *ForkChoice) HasNode(root [32]byte) bool {
 // HasParent returns true if the node parent exists in fork choice store,
 // false else wise.
 func (f *ForkChoice) HasParent(root [32]byte) bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
+	f.store.nodeIndicesLock.RLock()
+	defer f.store.nodeIndicesLock.RUnlock()
 
 	i, ok := f.store.nodesIndices[root]
 	if !ok || i >= uint64(len(f.store.nodes)) {
 		return false
 	}
 
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
 	return f.store.nodes[i].parent != NonExistentNode
 }
 
 // IsCanonical returns true if the given root is part of the canonical chain.
 func (f *ForkChoice) IsCanonical(root [32]byte) bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
+	f.store.canonicalNodesLock.RLock()
+	defer f.store.canonicalNodesLock.RUnlock()
 
 	return f.store.canonicalNodes[root]
 }
@@ -171,13 +170,17 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint6
 	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
 	defer span.End()
 
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
+	f.store.nodeIndicesLock.RLock()
+	defer f.store.nodeIndicesLock.RUnlock()
 
 	i, ok := f.store.nodesIndices[root]
 	if !ok {
 		return nil, errors.New("node does not exist")
 	}
+
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
 	if i >= uint64(len(f.store.nodes)) {
 		return nil, errors.New("node index out of range")
 	}
