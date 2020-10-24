@@ -48,10 +48,10 @@ type mockService struct {
 	status error
 }
 
-func (m *mockService) Start(ctx context.Context) {
+func (m *mockService) Start(_ context.Context) {
 }
 
-func (m *mockService) Stop(ctx context.Context) error {
+func (m *mockService) Stop(_ context.Context) error {
 	return nil
 }
 

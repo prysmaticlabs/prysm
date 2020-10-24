@@ -122,7 +122,7 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 // Start the prometheus service.
-func (s *Service) Start(ctx context.Context) {
+func (s *Service) Start(_ context.Context) {
 	go func() {
 		// See if the port is already used.
 		conn, err := net.DialTimeout("tcp", s.server.Addr, time.Second)
