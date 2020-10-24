@@ -20,7 +20,7 @@ func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 	defer p.blockAttLock.Unlock()
 	atts, ok := p.blockAtt[r]
 	if !ok {
-		atts = make([]*ethpb.Attestation, 0)
+		atts = make([]*ethpb.Attestation, 0, 1)
 	}
 
 	// Ensure that this attestation is not already fully contained in an existing attestation.
