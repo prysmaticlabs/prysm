@@ -54,7 +54,6 @@ type DepositCache struct {
 	deposits           []*dbpb.DepositContainer
 	finalizedDeposits  *FinalizedDeposits
 	depositsLock       sync.RWMutex
-	chainStartDeposits []*ethpb.Deposit
 	chainStartPubkeys  map[string]bool
 }
 
@@ -72,7 +71,6 @@ func New() (*DepositCache, error) {
 		deposits:           []*dbpb.DepositContainer{},
 		finalizedDeposits:  &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 		chainStartPubkeys:  make(map[string]bool),
-		chainStartDeposits: make([]*ethpb.Deposit, 0),
 	}, nil
 }
 
