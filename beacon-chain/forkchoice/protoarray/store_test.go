@@ -9,7 +9,7 @@ import (
 
 func TestStore_NodesIndices(t *testing.T) {
 	type fields struct {
-		nodesIndices       map[[32]byte]uint64
+		nodesIndices map[[32]byte]uint64
 	}
 	tests := []struct {
 		name   string
@@ -33,7 +33,7 @@ func TestStore_NodesIndices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Store{
-				nodesIndices:       tt.fields.nodesIndices,
+				nodesIndices: tt.fields.nodesIndices,
 			}
 			if got := s.NodesIndices(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NodesIndices() = %v, want %v", got, tt.want)
