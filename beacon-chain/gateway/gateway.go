@@ -111,6 +111,7 @@ func (g *Gateway) Stop(ctx context.Context) error {
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
 func New(
+	_ context.Context,
 	remoteAddress,
 	gatewayAddress string,
 	mux *http.ServeMux,

@@ -132,7 +132,7 @@ type Config struct {
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) *Service {
+func NewService(_ context.Context, cfg *Config) *Service {
 	return &Service{
 		beaconDB:                cfg.BeaconDB,
 		chainInfoFetcher:        cfg.ChainInfoFetcher,

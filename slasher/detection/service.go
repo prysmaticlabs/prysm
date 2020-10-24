@@ -75,7 +75,7 @@ type Config struct {
 }
 
 // NewService instantiation.
-func NewService(cfg *Config) *Service {
+func NewService(_ context.Context, cfg *Config) *Service {
 	return &Service{
 		notifier:              cfg.Notifier,
 		chainFetcher:          cfg.ChainFetcher,

@@ -26,7 +26,7 @@ func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 
 	var err error
-	p, err = p2p.NewService(&p2p.Config{
+	p, err = p2p.NewService(context.Background(), &p2p.Config{
 		NoDiscovery: true,
 	})
 	if err != nil {
@@ -45,7 +45,7 @@ func init() {
 	if err := p.Connect(context.Background(), info); err != nil {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
-	regularsync.NewService(&regularsync.Config{
+	regularsync.NewService(context.Background(), &regularsync.Config{
 		P2P:          p,
 		DB:           nil,
 		AttPool:      nil,

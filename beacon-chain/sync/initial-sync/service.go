@@ -57,8 +57,7 @@ type Service struct {
 
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewService(cfg *Config) *Service {
-	ctx := context.Background()
+func NewService(ctx context.Context, cfg *Config) *Service {
 	s := &Service{
 		chain:         cfg.Chain,
 		p2p:           cfg.P2P,

@@ -71,7 +71,7 @@ type Server struct {
 }
 
 // NewServer instantiates a new gRPC server.
-func NewServer(cfg *Config) *Server {
+func NewServer(_ context.Context, cfg *Config) *Server {
 	return &Server{
 		host:                  cfg.Host,
 		port:                  cfg.Port,

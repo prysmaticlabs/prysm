@@ -372,12 +372,14 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerPrometheusService() error {
+	serviceCtx := s.services.NewServiceContext()
 	service := prometheus.NewService(
+		serviceCtx.Ctx,
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
-	return s.services.RegisterService(service)
+	return s.services.RegisterService(service, serviceCtx)
 }
 
 func (s *ValidatorClient) registerClientService(
@@ -397,7 +399,8 @@ func (s *ValidatorClient) registerClientService(
 	if err := s.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
-	v, err := client.NewValidatorService(&client.Config{
+	serviceCtx := s.services.NewServiceContext()
+	v, err := client.NewValidatorService(serviceCtx.Ctx, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
@@ -418,7 +421,7 @@ func (s *ValidatorClient) registerClientService(
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
 	}
-	return s.services.RegisterService(v)
+	return s.services.RegisterService(v, serviceCtx)
 }
 func (s *ValidatorClient) registerSlasherClientService() error {
 	endpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
@@ -430,7 +433,8 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewService(&slashing_protection.Config{
+	serviceCtx := s.services.NewServiceContext()
+	sp, err := slashing_protection.NewService(serviceCtx.Ctx, &slashing_protection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
@@ -441,7 +445,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
 	}
-	return s.services.RegisterService(sp)
+	return s.services.RegisterService(sp, serviceCtx)
 }
 
 func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
@@ -453,7 +457,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	server := rpc.NewServer(&rpc.Config{
+	serviceCtx := s.services.NewServiceContext()
+	server := rpc.NewServer(serviceCtx.Ctx, &rpc.Config{
 		ValDB:                 s.db,
 		Host:                  rpcHost,
 		Port:                  fmt.Sprintf("%d", rpcPort),
@@ -466,7 +471,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		Wallet:                s.wallet,
 		Keymanager:            km,
 	})
-	return s.services.RegisterService(server)
+	return s.services.RegisterService(server, serviceCtx)
 }
 
 func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
@@ -477,12 +482,14 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	serviceCtx := s.services.NewServiceContext()
 	gatewaySrv := gateway.New(
+		serviceCtx.Ctx,
 		rpcAddr,
 		gatewayAddress,
 		allowedOrigins,
 	)
-	return s.services.RegisterService(gatewaySrv)
+	return s.services.RegisterService(gatewaySrv, serviceCtx)
 }
 
 func clearDB(dataDir string, force bool) error {

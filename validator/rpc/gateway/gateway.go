@@ -29,6 +29,7 @@ type Gateway struct {
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
 func New(
+	_ context.Context,
 	remoteAddress,
 	gatewayAddress string,
 	allowedOrigins []string,

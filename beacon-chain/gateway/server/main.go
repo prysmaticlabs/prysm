@@ -39,6 +39,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	gw := gateway.New(
+		context.Background(),
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
 		mux,

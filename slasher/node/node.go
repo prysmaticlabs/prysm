@@ -162,12 +162,14 @@ func (s *SlasherNode) Close() {
 }
 
 func (s *SlasherNode) registerPrometheusService() error {
+	serviceCtx := s.services.NewServiceContext()
 	service := prometheus.NewService(
+		serviceCtx.Ctx,
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
-	return s.services.RegisterService(service)
+	return s.services.RegisterService(service, serviceCtx)
 }
 
 func (s *SlasherNode) startDB() error {
@@ -217,7 +219,8 @@ func (s *SlasherNode) registerBeaconClientService() error {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 
-	bs, err := beaconclient.NewService(&beaconclient.Config{
+	serviceCtx := s.services.NewServiceContext()
+	bs, err := beaconclient.NewService(serviceCtx.Ctx, &beaconclient.Config{
 		BeaconCert:            beaconCert,
 		SlasherDB:             s.db,
 		BeaconProvider:        beaconProvider,
@@ -227,7 +230,7 @@ func (s *SlasherNode) registerBeaconClientService() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize beacon client")
 	}
-	return s.services.RegisterService(bs)
+	return s.services.RegisterService(bs, serviceCtx)
 }
 
 func (s *SlasherNode) registerDetectionService() error {
@@ -235,7 +238,8 @@ func (s *SlasherNode) registerDetectionService() error {
 	if err := s.services.FetchService(&bs); err != nil {
 		panic(err)
 	}
-	ds := detection.NewService(&detection.Config{
+	serviceCtx := s.services.NewServiceContext()
+	ds := detection.NewService(serviceCtx.Ctx, &detection.Config{
 		Notifier:              bs,
 		SlasherDB:             s.db,
 		BeaconClient:          bs,
@@ -244,7 +248,7 @@ func (s *SlasherNode) registerDetectionService() error {
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 		HistoricalDetection:   s.cliCtx.Bool(flags.EnableHistoricalDetectionFlag.Name),
 	})
-	return s.services.RegisterService(ds)
+	return s.services.RegisterService(ds, serviceCtx)
 }
 
 func (s *SlasherNode) registerRPCService() error {
@@ -260,7 +264,8 @@ func (s *SlasherNode) registerRPCService() error {
 	port := s.cliCtx.String(flags.RPCPort.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
 	key := s.cliCtx.String(flags.KeyFlag.Name)
-	rpcService := rpc.NewService(&rpc.Config{
+	serviceCtx := s.services.NewServiceContext()
+	rpcService := rpc.NewService(serviceCtx.Ctx, &rpc.Config{
 		Host:         host,
 		Port:         port,
 		CertFlag:     cert,
@@ -270,5 +275,5 @@ func (s *SlasherNode) registerRPCService() error {
 		BeaconClient: bs,
 	})
 
-	return s.services.RegisterService(rpcService)
+	return s.services.RegisterService(rpcService, serviceCtx)
 }

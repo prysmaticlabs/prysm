@@ -97,7 +97,7 @@ type Config struct {
 
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(_ context.Context, cfg *Config) (*Service, error) {
 	return &Service{
 		beaconDB:          cfg.BeaconDB,
 		depositCache:      cfg.DepositCache,

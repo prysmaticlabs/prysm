@@ -74,7 +74,7 @@ type Config struct {
 }
 
 // NewService instantiation.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(_ context.Context, cfg *Config) (*Service, error) {
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new cache")

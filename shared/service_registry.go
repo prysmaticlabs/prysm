@@ -20,30 +20,38 @@ type Service interface {
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
 	Stop(ctx context.Context) error
-	// Returns error if the service is not considered healthy.
+	// Status returns error if the service is not considered healthy.
 	Status() error
 }
 
-type cancellableContext struct {
-	context context.Context
-	cancel  context.CancelFunc
+// ServiceContext represents a cancellable context that should be used when interacting with the service.
+// It helps manage the service's lifetime by providing a cancellation mechanism.
+type ServiceContext struct {
+	Ctx    context.Context
+	Cancel context.CancelFunc
 }
 
 // ServiceRegistry provides a useful pattern for managing services.
 // It allows for ease of dependency management and ensures services
 // dependent on others use the same references in memory.
 type ServiceRegistry struct {
-	contexts     map[reflect.Type]cancellableContext // map of types to contexts that can be cancelled.
-	services     map[reflect.Type]Service            // map of types to services.
-	serviceTypes []reflect.Type                      // keep an ordered slice of registered service types.
+	contexts     map[reflect.Type]*ServiceContext // map of types to contexts that can be cancelled.
+	services     map[reflect.Type]Service         // map of types to services.
+	serviceTypes []reflect.Type                   // keep an ordered slice of registered service types.
 }
 
 // NewServiceRegistry starts a registry instance for convenience
 func NewServiceRegistry() *ServiceRegistry {
 	return &ServiceRegistry{
-		contexts: make(map[reflect.Type]cancellableContext),
+		contexts: make(map[reflect.Type]*ServiceContext),
 		services: make(map[reflect.Type]Service),
 	}
+}
+
+// NewServiceContext returns a fresh service context
+func (s *ServiceRegistry) NewServiceContext() *ServiceContext {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &ServiceContext{Ctx: ctx, Cancel: cancel}
 }
 
 // StartAll initialized each service in order of registration.
@@ -51,7 +59,7 @@ func (s *ServiceRegistry) StartAll() {
 	log.Debugf("Starting %d services: %v", len(s.serviceTypes), s.serviceTypes)
 	for _, kind := range s.serviceTypes {
 		log.Debugf("Starting service type %v", kind)
-		go s.services[kind].Start(s.contexts[kind].context)
+		go s.services[kind].Start(s.contexts[kind].Ctx)
 	}
 }
 
@@ -62,10 +70,10 @@ func (s *ServiceRegistry) StopAll() {
 		kind := s.serviceTypes[i]
 		ctx := s.contexts[kind]
 		service := s.services[kind]
-		if err := service.Stop(ctx.context); err != nil {
+		if err := service.Stop(ctx.Ctx); err != nil {
 			log.WithError(err).Errorf("Could not stop the following service: %v, %v", kind, err)
 		}
-		ctx.cancel()
+		ctx.Cancel()
 	}
 }
 
@@ -81,13 +89,12 @@ func (s *ServiceRegistry) Statuses() map[reflect.Type]error {
 
 // RegisterService appends a service constructor function to the service
 // registry.
-func (s *ServiceRegistry) RegisterService(service Service) error {
+func (s *ServiceRegistry) RegisterService(service Service, serviceCtx *ServiceContext) error {
 	kind := reflect.TypeOf(service)
 	if _, exists := s.services[kind]; exists {
 		return fmt.Errorf("service already exists: %v", kind)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	s.contexts[kind] = cancellableContext{ctx, cancel}
+	s.contexts[kind] = serviceCtx
 	s.services[kind] = service
 	s.serviceTypes = append(s.serviceTypes, kind)
 	return nil

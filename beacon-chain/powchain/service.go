@@ -157,12 +157,9 @@ type Web3ServiceConfig struct {
 
 // NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func NewService(config *Web3ServiceConfig) (*Service, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
+func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
-		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
 	genState, err := state.EmptyGenesisState()

@@ -30,7 +30,7 @@ type Config struct {
 
 // NewService instantiates a new attestation pool service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(_ context.Context, cfg *Config) (*Service, error) {
 	cache, err := lru.New(forkChoiceProcessedRootsSize)
 	if err != nil {
 		return nil, err

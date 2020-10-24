@@ -54,7 +54,7 @@ var log = logrus.WithField("prefix", "rpc")
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(cfg *Config) *Service {
+func NewService(_ context.Context, cfg *Config) *Service {
 	return &Service{
 		host:         cfg.Host,
 		port:         cfg.Port,

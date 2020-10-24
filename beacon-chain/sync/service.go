@@ -110,9 +110,7 @@ type Service struct {
 }
 
 // NewService initializes new regular sync service.
-func NewService(cfg *Config) *Service {
-	ctx := context.Background()
-
+func NewService(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
 	r := &Service{
 		db:                   cfg.DB,

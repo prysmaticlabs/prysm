@@ -46,7 +46,7 @@ type Config struct {
 
 // NewService creates a new validator service for the service
 // registry.
-func NewService(cfg *Config) (*Service, error) {
+func NewService(_ context.Context, cfg *Config) (*Service, error) {
 	return &Service{
 		endpoint:           cfg.Endpoint,
 		withCert:           cfg.CertFlag,
