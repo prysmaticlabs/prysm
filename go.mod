@@ -98,6 +98,7 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/supranational/blst v0.1.2-alpha.1.0.20200917144033-cd0847a7580b
+	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/go-bytesutil v1.1.1

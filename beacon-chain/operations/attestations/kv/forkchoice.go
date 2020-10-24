@@ -17,7 +17,7 @@ func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 	}
 
 	att = stateTrie.CopyAttestation(att)
-    p.forkchoiceAttLock.Lock()
+	p.forkchoiceAttLock.Lock()
 	defer p.forkchoiceAttLock.Unlock()
 	p.forkchoiceAtt[r] = att
 

@@ -3654,3 +3654,9 @@ def prysm_deps():
         sum = "h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=",
         version = "v1.5.1",
     )
+    go_repository(
+        name = "com_github_trailofbits_go_mutexasserts",
+        importpath = "github.com/trailofbits/go-mutexasserts",
+        sum = "h1:8LRP+2JK8piIUU16ZDgWDXwjJcuJNTtCzadjTZj8Jf0=",
+        version = "v0.0.0-20200708152505-19999e7d3cef",
+    )
