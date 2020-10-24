@@ -16,6 +16,7 @@ go_library(
     visibility = ["//slasher:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//shared:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/event:go_default_library",
         "//shared/grpcutils:go_default_library",
