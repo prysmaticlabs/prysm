@@ -8,6 +8,7 @@ import (
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
 )
 
@@ -234,6 +235,10 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 //
 // Note: Caller must hold s.nodesLock.Lock()!
 func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
+	if !mutexasserts.RWMutexLocked(&s.nodesLock) {
+		return errors.New("store.updateBestChildAndDescendant: caller must hold nodesLock write lock")
+	}
+
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
 		return errInvalidNodeIndex
@@ -406,6 +411,10 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 //
 // Note: caller should have a read or write lock on s.nodesLock.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
+	if !mutexasserts.RWMutexRLocked(&s.nodesLock) && !mutexasserts.RWMutexLocked(&s.nodesLock) {
+		return false, errors.New("store.leadsToViableHead: caller must hold nodesLock read/write lock")
+	}
+
 	var bestDescendentViable bool
 	bestDescendentIndex := node.bestDescendant
 

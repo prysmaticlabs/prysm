@@ -157,6 +157,8 @@ func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
 func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
 	// Make parent's best child equal's to input child index and child is not viable.
 	s := &Store{nodes: []*Node{{bestChild: 1}, {}}, justifiedEpoch: 1, finalizedEpoch: 1}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 1))
 
 	// Verify parent's best child and best descendant are `none`.
@@ -167,6 +169,8 @@ func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
 func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 	// Make parent's best child equal to child index and child is viable.
 	s := &Store{nodes: []*Node{{bestChild: 1}, {bestDescendant: NonExistentNode}}}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 1))
 
 	// Verify parent's best child is the same and best descendant is not set to child index.
@@ -183,6 +187,8 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T)
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
 
 	// Verify parent's best child and best descendant are set to child index.
@@ -199,6 +205,8 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByWeight(t *testing.T) {
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, weight: 1}}}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
 
 	// Verify parent's best child and best descendant are set to child index.
@@ -214,6 +222,8 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildAtLeaf(t *testing.T) {
 		nodes: []*Node{{bestChild: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
 
 	// Verify parent's best child and best descendant are set to child index.
@@ -230,6 +240,8 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByViability(t *testing.T) {
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode}}}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
 
 	// Verify parent's best child and best descendant are not changed.
@@ -246,6 +258,8 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByWeight(t *testing.T) {
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, weight: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
 
 	// Verify parent's best child and best descendant are not changed.
@@ -261,6 +275,8 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
 		nodes: []*Node{{bestChild: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode}}}
+	s.nodesLock.Lock() // updateBestChildAndDescendant requires lock to be in use.
+	defer s.nodesLock.Unlock()
 	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
 
 	// Verify parent's best child and best descendant are not changed.
@@ -349,9 +365,11 @@ func TestStore_LeadsToViableHead(t *testing.T) {
 			finalizedEpoch: tc.finalizedEpoch,
 			nodes:          []*Node{tc.n},
 		}
+		s.nodesLock.RLock() // leadsToViableHead requires a lock to be in use.
 		got, err := s.leadsToViableHead(tc.n)
 		require.NoError(t, err)
 		assert.Equal(t, tc.want, got)
+		s.nodesLock.RUnlock()
 	}
 }
 
@@ -500,4 +518,15 @@ func TestStore_UpdateCanonicalNodes_ContextCancelled(t *testing.T) {
 	f.store.nodesIndices[[32]byte{'c'}] = 2
 	cancel()
 	require.ErrorContains(t, "context canceled", f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
+}
+
+func TestStore_leadsToViableHead_requiresLock(t *testing.T) {
+	s := &Store{}
+	_, err := s.leadsToViableHead(nil)
+	require.ErrorContains(t, "caller must hold nodesLock read/write lock", err)
+}
+
+func TestStore_updateBestChildAndDescendant_requiresLock(t *testing.T) {
+	s := &Store{}
+	require.ErrorContains(t, "caller must hold nodesLock write lock", s.updateBestChildAndDescendant(0, 0))
 }
