@@ -78,13 +78,13 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 //
 // ETH2 spec defines the message ID as:
 //    The `message-id` of a gossipsub message MUST be the following 20 byte value computed from the message data:
-//  If `message.data` has a valid snappy decompression, set `message-id` to the first 20 bytes of the `SHA256` hash of
-//  the concatenation of `MESSAGE_DOMAIN_VALID_SNAPPY` with the snappy decompressed message data,
-//  i.e. `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]`.
+//    If `message.data` has a valid snappy decompression, set `message-id` to the first 20 bytes of the `SHA256` hash of
+//    the concatenation of `MESSAGE_DOMAIN_VALID_SNAPPY` with the snappy decompressed message data,
+//    i.e. `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]`.
 //
-//  Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of
-//  the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
-//  i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
+//    Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of
+//    the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
+//    i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
 	decodedData, err := snappy.Decode(nil /*dst*/, pmsg.Data)
 	if err != nil {
