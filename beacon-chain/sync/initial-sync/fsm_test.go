@@ -224,8 +224,8 @@ func TestStateMachineManager_QueueLoop(t *testing.T) {
 	smm.addStateMachine(64)
 	smm.addStateMachine(512)
 
-	assertState := func(startBlock uint64, state stateID) {
-		fsm, ok := smm.findStateMachine(startBlock)
+	assertState := func(startSlot uint64, state stateID) {
+		fsm, ok := smm.findStateMachine(startSlot)
 		require.Equal(t, true, ok, "State machine not found")
 		assert.Equal(t, state, fsm.state, "Unexpected state machine state")
 	}
@@ -299,16 +299,16 @@ func TestStateMachineManager_findStateMachine(t *testing.T) {
 	smm.addStateMachine(256)
 	smm.addStateMachine(128)
 	if fsm, ok := smm.findStateMachine(128); !ok || fsm.start != 128 {
-		t.Errorf("unexpected start block: %v, want: %v", fsm.start, 122)
+		t.Errorf("unexpected start slot: %v, want: %v", fsm.start, 122)
 	}
 	if fsm, ok := smm.findStateMachine(512); !ok || fsm.start != 512 {
-		t.Errorf("unexpected start block: %v, want: %v", fsm.start, 512)
+		t.Errorf("unexpected start slot: %v, want: %v", fsm.start, 512)
 	}
 	keys := []uint64{64, 128, 196, 256, 512}
 	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 }
 
-func TestStateMachineManager_highestStartBlock(t *testing.T) {
+func TestStateMachineManager_highestStartSlot(t *testing.T) {
 	smm := newStateMachineManager()
 	_, err := smm.highestStartSlot()
 	assert.ErrorContains(t, "no state machine exist", err)
@@ -317,11 +317,11 @@ func TestStateMachineManager_highestStartBlock(t *testing.T) {
 	smm.addStateMachine(196)
 	start, err := smm.highestStartSlot()
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(196), start, "Incorrect highest start block")
+	assert.Equal(t, uint64(196), start, "Incorrect highest start slot")
 	assert.NoError(t, smm.removeStateMachine(196))
 	start, err = smm.highestStartSlot()
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(128), start, "Incorrect highest start block")
+	assert.Equal(t, uint64(128), start, "Incorrect highest start slot")
 }
 
 func TestStateMachineManager_allMachinesInState(t *testing.T) {
@@ -433,7 +433,7 @@ func TestStateMachine_isFirstLast(t *testing.T) {
 	checkFirst(m3, false)
 	checkLast(m3, true)
 
-	// Add machine with lower start block - shouldn't be marked as last.
+	// Add machine with lower start slot - shouldn't be marked as last.
 	m4 := smm.addStateMachine(196)
 	checkFirst(m1, true)
 	checkLast(m1, false)
@@ -444,7 +444,7 @@ func TestStateMachine_isFirstLast(t *testing.T) {
 	checkFirst(m4, false)
 	checkLast(m4, false)
 
-	// Add machine with lowest start block - should be marked as first.
+	// Add machine with lowest start slot - should be marked as first.
 	m5 := smm.addStateMachine(32)
 	checkFirst(m1, false)
 	checkLast(m1, false)

@@ -72,25 +72,25 @@ func (smm *stateMachineManager) addEventHandler(event eventID, state stateID, fn
 }
 
 // addStateMachine allocates memory for new FSM.
-func (smm *stateMachineManager) addStateMachine(start uint64) *stateMachine {
-	smm.machines[start] = &stateMachine{
+func (smm *stateMachineManager) addStateMachine(startSlot uint64) *stateMachine {
+	smm.machines[startSlot] = &stateMachine{
 		smm:     smm,
-		start:   start,
+		start:   startSlot,
 		state:   stateNew,
 		blocks:  []*eth.SignedBeaconBlock{},
 		updated: timeutils.Now(),
 	}
 	smm.recalculateMachineAttribs()
-	return smm.machines[start]
+	return smm.machines[startSlot]
 }
 
 // removeStateMachine frees memory of a processed/finished FSM.
-func (smm *stateMachineManager) removeStateMachine(start uint64) error {
-	if _, ok := smm.machines[start]; !ok {
-		return fmt.Errorf("state for machine %v is not found", start)
+func (smm *stateMachineManager) removeStateMachine(startSlot uint64) error {
+	if _, ok := smm.machines[startSlot]; !ok {
+		return fmt.Errorf("state for machine %v is not found", startSlot)
 	}
-	smm.machines[start].blocks = nil
-	delete(smm.machines, start)
+	smm.machines[startSlot].blocks = nil
+	delete(smm.machines, startSlot)
 	smm.recalculateMachineAttribs()
 	return nil
 }
