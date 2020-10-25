@@ -49,6 +49,7 @@ go_test(
     srcs = [
         "field_trie_test.go",
         "getters_test.go",
+        "helpers_test.go",
         "references_test.go",
         "state_trie_test.go",
         "types_test.go",

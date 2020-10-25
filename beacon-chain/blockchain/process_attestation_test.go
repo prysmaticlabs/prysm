@@ -545,6 +545,36 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	b32 := testutil.NewBeaconBlock()
+	b32.Block.Slot = 32
+	r32, err := b32.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
+
+	b33 := testutil.NewBeaconBlock()
+	b33.Block.Slot = 33
+	b33.Block.ParentRoot = r32[:]
+	r33, err := b33.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, b32.Block.Slot, r32, [32]byte{}, [32]byte{}, 0, 0))
+	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, b33.Block.Slot, r33, r32, [32]byte{}, 0, 0))
+
+	_, err = service.forkChoiceStore.Head(ctx, 0, r32, []uint64{}, 0)
+	require.NoError(t, err)
+	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	require.NoError(t, err)
+}
+
 func TestGetAttCheckptInfo(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)

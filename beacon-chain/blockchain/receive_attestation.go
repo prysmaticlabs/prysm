@@ -102,6 +102,12 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 // When the input root is not be consistent with finalized store then we know it is not
 // on the finalized check point that leads to current canonical chain and should be rejected accordingly.
 func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
+	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
+	// In this case, we could exit early to save on additional computation.
+	if s.forkChoiceStore.IsCanonical(bytesutil.ToBytes32(root)) {
+		return nil
+	}
+
 	f := s.FinalizedCheckpt()
 	ss, err := helpers.StartSlot(f.Epoch)
 	if err != nil {
