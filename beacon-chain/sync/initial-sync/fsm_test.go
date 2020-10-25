@@ -45,11 +45,13 @@ func TestStateMachineManager_String(t *testing.T) {
 func TestStateMachine_StateIDString(t *testing.T) {
 	stateIDs := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped, stateSent}
 	assert.Equal(t, "[new scheduled dataParsed skipped sent]", fmt.Sprintf("%v", stateIDs))
+	assert.Equal(t, "stateUnknown", stateID(15).String())
 }
 
 func TestStateMachine_EventIDString(t *testing.T) {
 	eventIDs := []eventID{eventTick, eventDataReceived}
 	assert.Equal(t, "[tick dataReceived]", fmt.Sprintf("%v", eventIDs))
+	assert.Equal(t, "eventUnknown", eventID(15).String())
 }
 
 func TestStateMachineManager_addEventHandler(t *testing.T) {
@@ -308,16 +310,16 @@ func TestStateMachineManager_findStateMachine(t *testing.T) {
 
 func TestStateMachineManager_highestStartBlock(t *testing.T) {
 	smm := newStateMachineManager()
-	_, err := smm.highestStartBlock()
+	_, err := smm.highestStartSlot()
 	assert.ErrorContains(t, "no state machine exist", err)
 	smm.addStateMachine(64)
 	smm.addStateMachine(128)
 	smm.addStateMachine(196)
-	start, err := smm.highestStartBlock()
+	start, err := smm.highestStartSlot()
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(196), start, "Incorrect highest start block")
 	assert.NoError(t, smm.removeStateMachine(196))
-	start, err = smm.highestStartBlock()
+	start, err = smm.highestStartSlot()
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(128), start, "Incorrect highest start block")
 }
