@@ -519,4 +519,3 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 		})
 	}
 }
-
