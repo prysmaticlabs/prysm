@@ -118,7 +118,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	}
 
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
-	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
+	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), [32]byte{}, bState))
 
 	chainService, err := NewService(ctx, cfg)
 	require.NoError(t, err, "Unable to setup chain service")
@@ -335,7 +335,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	r, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	newState := testutil.NewBeaconState()
-	require.NoError(t, s.stateGen.SaveState(ctx, r, newState))
+	require.NoError(t, s.stateGen.SaveState(ctx, r, [32]byte{}, newState))
 	require.NoError(t, s.saveHeadNoDB(ctx, b, r, newState))
 
 	newB, err := s.beaconDB.HeadBlock(ctx)

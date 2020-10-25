@@ -8,6 +8,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -26,7 +27,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(db, sc)
-	require.NoError(t, gen.SaveState(ctx, gRoot, st))
+	require.NoError(t, gen.SaveState(ctx, gRoot, bytesutil.ToBytes32(b.Block.StateRoot), st))
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
 	bs := &Server{
 		StateGen:           gen,

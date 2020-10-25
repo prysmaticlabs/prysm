@@ -24,7 +24,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	r := [32]byte{'a'}
-	require.NoError(t, service.SaveState(ctx, r, beaconState))
+	require.NoError(t, service.SaveState(ctx, r, [32]byte{}, beaconState))
 
 	// Should save both state and state summary.
 	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
@@ -46,7 +46,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	// Cache the state prior.
 	r := [32]byte{'a'}
 	service.hotStateCache.Put(r, beaconState)
-	require.NoError(t, service.SaveState(ctx, r, beaconState))
+	require.NoError(t, service.SaveState(ctx, r, [32]byte{}, beaconState))
 
 	// Should not save the state and state summary.
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
@@ -85,7 +85,7 @@ func TestSaveState_AlreadyHas(t *testing.T) {
 
 	// Pre cache the hot state.
 	service.hotStateCache.Put(r, beaconState)
-	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))
+	require.NoError(t, service.SaveState(ctx, r, [32]byte{}, beaconState))
 
 	// Should not save the state and state summary.
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
@@ -102,7 +102,7 @@ func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	r := [32]byte{'A'}
 
-	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))
+	require.NoError(t, service.SaveState(ctx, r, [32]byte{}, beaconState))
 
 	// Should save both state and state summary.
 	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
@@ -127,7 +127,7 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, service.SaveState(ctx, r, beaconState))
+	require.NoError(t, service.SaveState(ctx, r, [32]byte{}, beaconState))
 
 	// Should only save state summary.
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
@@ -147,7 +147,7 @@ func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(defaultHotStateDBInterval))
 
 	r := [32]byte{'A'}
-	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))
+	require.NoError(t, service.SaveState(ctx, r, [32]byte{}, beaconState))
 
 	require.LogsContain(t, hook, "Saving hot state to DB")
 	// Should have saved in DB.

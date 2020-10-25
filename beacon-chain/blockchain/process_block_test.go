@@ -166,7 +166,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	blks[0].Block.ParentRoot = gRoot[:]
 	require.NoError(t, db.SaveBlock(context.Background(), blks[0]))
-	require.NoError(t, service.stateGen.SaveState(ctx, blkRoots[0], firstState))
+	require.NoError(t, service.stateGen.SaveState(ctx, blkRoots[0], bytesutil.ToBytes32(blks[0].Block.StateRoot), firstState))
 	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
 }
@@ -263,7 +263,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	b.Block.Slot = 1
 	b.Block.ParentRoot = gRoot[:]
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: gRoot[:]}))
-	require.NoError(t, service.stateGen.SaveState(ctx, gRoot, s))
+	require.NoError(t, service.stateGen.SaveState(ctx, gRoot, bytesutil.ToBytes32(b.Block.StateRoot), s))
 	require.NoError(t, service.verifyBlkPreState(ctx, b.Block))
 }
 
@@ -300,7 +300,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: gRoot[:]}))
-	require.NoError(t, service.stateGen.SaveState(ctx, gRoot, s))
+	require.NoError(t, service.stateGen.SaveState(ctx, gRoot, bytesutil.ToBytes32(b.Block.StateRoot), s))
 	require.NoError(t, service.verifyBlkPreState(ctx, b.Block))
 }
 

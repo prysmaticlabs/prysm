@@ -245,7 +245,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		Messages:   [][32]byte{},
 	}
 	var set *bls.SignatureSet
-	boundaries := make(map[[32]byte]*stateTrie.BeaconState)
+	boundaryStates := make(map[[32]byte]*stateTrie.BeaconState)
+	boundaryStateRoots := make(map[[32]byte][32]byte)
 	for i, b := range blks {
 		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
@@ -253,7 +254,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		}
 		// Save potential boundary states.
 		if helpers.IsEpochStart(preState.Slot()) {
-			boundaries[blockRoots[i]] = preState.Copy()
+			boundaryStates[blockRoots[i]] = preState.Copy()
+			boundaryStateRoots[blockRoots[i]] = bytesutil.ToBytes32(b.Block.StateRoot)
 			if err := s.handleEpochBoundary(ctx, preState); err != nil {
 				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
 			}
@@ -269,15 +271,16 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	if !verify {
 		return nil, nil, errors.New("batch block signature verification failed")
 	}
-	for r, st := range boundaries {
-		if err := s.stateGen.SaveState(ctx, r, st); err != nil {
+	for r, st := range boundaryStates {
+		if err := s.stateGen.SaveState(ctx, r, boundaryStateRoots[r], st); err != nil {
 			return nil, nil, err
 		}
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
+	lastSR := bytesutil.ToBytes32(lastB.Block.StateRoot)
 	lastBR := blockRoots[len(blockRoots)-1]
-	if err := s.stateGen.SaveState(ctx, lastBR, preState); err != nil {
+	if err := s.stateGen.SaveState(ctx, lastBR, lastSR, preState); err != nil {
 		return nil, nil, err
 	}
 	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
@@ -389,7 +392,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.Si
 	} else if err := s.beaconDB.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Block.Slot)
 	}
-	if err := s.stateGen.SaveState(ctx, r, state); err != nil {
+	if err := s.stateGen.SaveState(ctx, r, bytesutil.ToBytes32(b.Block.StateRoot), state); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block, r, state); err != nil {

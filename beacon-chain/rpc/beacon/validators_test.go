@@ -1810,7 +1810,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(db, sc)
-	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
+	require.NoError(t, gen.SaveState(ctx, gRoot, bytesutil.ToBytes32(b.Block.StateRoot), beaconState))
 	require.NoError(t, db.SaveState(ctx, beaconState, gRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{
@@ -1905,7 +1905,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(db, sc)
-	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
+	require.NoError(t, gen.SaveState(ctx, gRoot, bytesutil.ToBytes32(b.Block.StateRoot), beaconState))
 	require.NoError(t, db.SaveState(ctx, beaconState, gRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{

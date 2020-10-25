@@ -14,14 +14,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SaveState saves the state in the cache and/or DB.
-func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
-	defer span.End()
-
-	return s.saveStateByRoot(ctx, root, state)
-}
-
 // ForceCheckpoint initiates a cold state save of the given state. This method does not update the
 // "last archived state" but simply saves the specified state from the root argument into the DB.
 func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
@@ -53,10 +45,10 @@ func (s *State) SaveStateSummary(_ context.Context, blk *ethpb.SignedBeaconBlock
 	})
 }
 
-// This saves a post beacon state. On the epoch boundary,
+// SaveState saves a post beacon state. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
-func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, stateRoot [32]byte, state *state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
@@ -92,7 +84,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	// On an intermediate slots, save the hot state summary.
 	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
 		Slot: state.Slot(),
-		Root: state.StateRoots(),
+		Root: stateRoot[:],
 	})
 
 	// Store the copied state in the hot state cache.
