@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -47,7 +46,6 @@ type Service struct {
 	slashingPool          *slashings.Pool
 	exitPool              *voluntaryexits.Pool
 	genesisTime           time.Time
-	p2p                   p2p.Broadcaster
 	maxRoutines           int
 	head                  *head
 	headLock              sync.RWMutex
@@ -85,7 +83,6 @@ type Config struct {
 	AttPool           attestations.Pool
 	ExitPool          *voluntaryexits.Pool
 	SlashingPool      *slashings.Pool
-	P2p               p2p.Broadcaster
 	MaxRoutines       int
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
@@ -105,7 +102,6 @@ func NewService(_ context.Context, cfg *Config) (*Service, error) {
 		attPool:           cfg.AttPool,
 		exitPool:          cfg.ExitPool,
 		slashingPool:      cfg.SlashingPool,
-		p2p:               cfg.P2p,
 		maxRoutines:       cfg.MaxRoutines,
 		stateNotifier:     cfg.StateNotifier,
 		forkChoiceStore:   cfg.ForkChoiceStore,

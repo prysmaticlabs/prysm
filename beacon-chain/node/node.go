@@ -455,7 +455,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		AttPool:           b.attestationPool,
 		ExitPool:          b.exitPool,
 		SlashingPool:      b.slashingsPool,
-		P2p:               b.fetchP2P(),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
@@ -518,11 +517,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 }
 
 func (b *BeaconNode) registerSyncService() error {
-	var web3Service *powchain.Service
-	if err := b.services.FetchService(&web3Service); err != nil {
-		return err
-	}
-
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err

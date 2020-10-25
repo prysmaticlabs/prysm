@@ -109,7 +109,6 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		BeaconDB:          beaconDB,
 		DepositCache:      depositCache,
 		ChainStartFetcher: web3Service,
-		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
 		StateGen:          stategen.New(beaconDB, sc),
