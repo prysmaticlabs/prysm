@@ -75,7 +75,7 @@ message HistoricalBatch {
 message StateSummary {
   // The slot of the state.
   uint64 slot = 1;
-  // The block root of the state.
+  // The state root of the post state after processing the block of the given slot.
   bytes root = 2;
 }
 

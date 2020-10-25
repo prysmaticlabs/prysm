@@ -45,11 +45,11 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 
 // SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
 // state summary cache.
-func (s *State) SaveStateSummary(_ context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
+func (s *State) SaveStateSummary(_ context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte, stateRoot [32]byte) {
 	// Save State summary
 	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
 		Slot: blk.Block.Slot,
-		Root: blockRoot[:],
+		Root: stateRoot[:],
 	})
 }
 
@@ -92,7 +92,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	// On an intermediate slots, save the hot state summary.
 	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
 		Slot: state.Slot(),
-		Root: blockRoot[:],
+		Root: state.StateRoots(),
 	})
 
 	// Store the copied state in the hot state cache.
