@@ -20,7 +20,7 @@ func TestPreSignatureValidation(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -29,19 +29,23 @@ func TestPreSignatureValidation(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            5,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: []byte("great block"),
+			BeaconBlockRoot: bytesutil.PadTo([]byte("great block"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 4,
-				Root:  []byte("good source"),
+				Root:  bytesutil.PadTo([]byte("good source"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 10,
-				Root:  []byte("good target"),
+				Root:  bytesutil.PadTo([]byte("good target"), 32),
 			},
 		},
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	err := validator.preAttSignValidations(context.Background(), att, pubKey)
 	require.ErrorContains(t, failedPreAttSignExternalErr, err)
 	mockProtector.AllowAttestation = true
@@ -55,25 +59,29 @@ func TestPreSignatureValidation_NilLocal(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, _, finish := setup(t)
+	validator, m, _, finish := setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
 			Slot:            5,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: []byte("great block"),
+			BeaconBlockRoot: bytesutil.PadTo([]byte("great block"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 4,
-				Root:  []byte("good source"),
+				Root:  bytesutil.PadTo([]byte("good source"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 10,
-				Root:  []byte("good target"),
+				Root:  bytesutil.PadTo([]byte("good target"), 32),
 			},
 		},
 	}
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	err := validator.preAttSignValidations(context.Background(), att, fakePubkey)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
@@ -116,10 +124,6 @@ func TestPostSignatureUpdate(t *testing.T) {
 	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
 	require.ErrorContains(t, failedPostAttSignExternalErr, err, "Expected error on post signature update is detected as slashable")
 	mockProtector.AllowAttestation = true
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch2
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
@@ -149,10 +153,9 @@ func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 			},
 		},
 	}
-	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
-	require.NoError(t, err)
+	sr := [32]byte{1}
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
-	err = validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
+	err := validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
