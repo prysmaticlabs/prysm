@@ -62,6 +62,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 
 	validBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
+	chain.FinalizedCheckPoint = &ethpb.Checkpoint{
+		Root:  validBlockRoot[:],
+		Epoch: 0,
+	}
 
 	validators := uint64(64)
 	savedState, keys := testutil.DeterministicGenesisState(t, validators)

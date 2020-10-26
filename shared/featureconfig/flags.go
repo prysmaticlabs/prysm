@@ -80,10 +80,6 @@ var (
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
-	enableAttBroadcastDiscoveryAttempts = &cli.BoolFlag{
-		Name:  "enable-att-broadcast-discovery-attempts",
-		Usage: "Enable experimental attestation subnet discovery before broadcasting.",
-	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
@@ -92,18 +88,17 @@ var (
 		Name:  "use-check-point-cache",
 		Usage: "Enables check point info caching",
 	}
-	enablePruningDepositProofs = &cli.BoolFlag{
-		Name:  "enable-pruning-deposit-proofs",
-		Usage: "Enables pruning deposit proofs when they are no longer needed. This significantly reduces deposit size.",
+	disablePruningDepositProofs = &cli.BoolFlag{
+		Name: "disable-pruning-deposit-proofs",
+		Usage: "Disables pruning deposit proofs when they are no longer needed." +
+			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableEth1DataMajorityVote,
-	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
-	enablePruningDepositProofs,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -150,10 +145,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	ZinkenTestnet,
 	enableBlst,
 	enableEth1DataMajorityVote,
-	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 	checkPtInfoCache,
-	enablePruningDepositProofs,
+	disablePruningDepositProofs,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -162,5 +156,4 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
-	"--enable-pruning-deposit-proofs",
 }

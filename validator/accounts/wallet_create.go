@@ -49,11 +49,7 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, createWalletConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create wallet with keymanager")
-	}
-	// We store the hashed password to disk.
-	if err := w.SaveHashedPassword(cliCtx.Context); err != nil {
-		return nil, errors.Wrap(err, "could not save hashed password to database")
+		return nil, errors.Wrap(err, "could not create wallet")
 	}
 	return w, nil
 }

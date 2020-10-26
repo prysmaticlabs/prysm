@@ -7,10 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/snappy"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -30,11 +33,23 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 		t.Fatal("service was not initialized")
 	}
 
+	// Set up two connected test hosts.
+	p0 := testp2p.NewTestP2P(t)
+	p1 := testp2p.NewTestP2P(t)
+	p0.Connect(p1)
+	s.host = p0.BHost
+	s.pubsub = p0.PubSub()
+
+	topic := fmt.Sprintf(BlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
+
+	// Establish the remote peer to be subscribed to the outgoing topic.
+	_, err = p1.SubscribeToTopic(topic)
+	require.NoError(t, err)
+
 	wg := sync.WaitGroup{}
 	wg.Add(10)
 	for i := 0; i < 10; i++ {
 		go func(i int) {
-			topic := fmt.Sprintf(AttestationSubnetTopicFormat, fd, i) + "/" + encoder.ProtocolSuffixSSZSnappy
 			assert.NoError(t, s.PublishToTopic(ctx, topic, []byte{}))
 			wg.Done()
 		}(i)
@@ -43,9 +58,16 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 }
 
 func TestMessageIDFunction_HashesCorrectly(t *testing.T) {
-	msg := [32]byte{'J', 'U', 'N', 'K'}
-	pMsg := &pubsubpb.Message{Data: msg[:]}
-	hashedData := hashutil.Hash(pMsg.Data)
-	msgID := string(hashedData[:])
+	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
+	pMsg := &pubsubpb.Message{Data: invalidSnappy[:]}
+	hashedData := hashutil.Hash(append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pMsg.Data...))
+	msgID := string(hashedData[:20])
 	assert.Equal(t, msgID, msgIDFunction(pMsg), "Got incorrect msg id")
+
+	validObj := [32]byte{'v', 'a', 'l', 'i', 'd'}
+	enc := snappy.Encode(nil, validObj[:])
+	nMsg := &pubsubpb.Message{Data: enc}
+	hashedData = hashutil.Hash(append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], validObj[:]...))
+	msgID = string(hashedData[:20])
+	assert.Equal(t, msgID, msgIDFunction(nMsg), "Got incorrect msg id")
 }

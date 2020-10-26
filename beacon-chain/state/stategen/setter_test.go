@@ -109,6 +109,8 @@ func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, ok, "Did not save epoch boundary state")
 	assert.Equal(t, true, service.stateSummaryCache.Has(r), "Should have saved the state summary")
+	// Should have not been saved in DB.
+	require.Equal(t, false, db.HasState(ctx, r))
 }
 
 func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
@@ -131,4 +133,68 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	assert.Equal(t, false, service.beaconDB.HasState(ctx, r), "Should not have saved the state")
 	assert.Equal(t, true, service.stateSummaryCache.Has(r), "Should have saved the state summary")
 	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+	// Should have not been saved in DB.
+	require.Equal(t, false, db.HasState(ctx, r))
+}
+
+func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	service.EnableSaveHotStateToDB(ctx)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	require.NoError(t, beaconState.SetSlot(defaultHotStateDBInterval))
+
+	r := [32]byte{'A'}
+	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))
+
+	require.LogsContain(t, hook, "Saving hot state to DB")
+	// Should have saved in DB.
+	require.Equal(t, true, db.HasState(ctx, r))
+}
+
+func TestEnableSaveHotStateToDB_Enabled(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	service.EnableSaveHotStateToDB(ctx)
+	require.LogsContain(t, hook, "Entering mode to save hot states in DB")
+	require.Equal(t, true, service.saveHotStateDB.enabled)
+}
+
+func TestEnableSaveHotStateToDB_AlreadyEnabled(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	service.saveHotStateDB.enabled = true
+	service.EnableSaveHotStateToDB(ctx)
+	require.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
+	require.Equal(t, true, service.saveHotStateDB.enabled)
+}
+
+func TestEnableSaveHotStateToDB_Disabled(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	service.saveHotStateDB.enabled = true
+	service.saveHotStateDB.savedStateRoots = [][32]byte{{'a'}}
+	require.NoError(t, service.DisableSaveHotStateToDB(ctx))
+	require.LogsContain(t, hook, "Exiting mode to save hot states in DB")
+	require.Equal(t, false, service.saveHotStateDB.enabled)
+	require.Equal(t, 0, len(service.saveHotStateDB.savedStateRoots))
+}
+
+func TestEnableSaveHotStateToDB_AlreadyDisabled(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	require.NoError(t, service.DisableSaveHotStateToDB(ctx))
+	require.LogsDoNotContain(t, hook, "Exiting mode to save hot states in DB")
+	require.Equal(t, false, service.saveHotStateDB.enabled)
 }

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dgrijalva/jwt-go"
+	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -49,7 +51,7 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	_, err := ss.Signup(ctx, &pb.AuthRequest{
 		Password: weakPass,
 	})
-	require.ErrorContains(t, "Could not validate wallet password input", err)
+	require.ErrorContains(t, "Could not validate RPC password input", err)
 
 	// We assert we are able to signup with a strong password.
 	_, err = ss.Signup(ctx, &pb.AuthRequest{
@@ -58,7 +60,7 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert we stored the hashed password.
-	passwordHashExists := fileutil.FileExists(filepath.Join(defaultWalletPath, wallet.HashedPasswordFileName))
+	passwordHashExists := fileutil.FileExists(filepath.Join(defaultWalletPath, HashedRPCPassword))
 	assert.Equal(t, true, passwordHashExists)
 
 	// We attempt to create the wallet.
@@ -75,6 +77,72 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	// We assert we are able to login.
 	_, err = ss.Login(ctx, &pb.AuthRequest{
 		Password: strongPass,
+	})
+	require.NoError(t, err)
+}
+
+func TestServer_Logout(t *testing.T) {
+	key, err := createRandomJWTKey()
+	require.NoError(t, err)
+	ss := &Server{
+		jwtKey: key,
+	}
+	tokenString, _, err := ss.createTokenString()
+	require.NoError(t, err)
+	checkParsedKey := func(*jwt.Token) (interface{}, error) {
+		return ss.jwtKey, nil
+	}
+	_, err = jwt.Parse(tokenString, checkParsedKey)
+	assert.NoError(t, err)
+
+	_, err = ss.Logout(context.Background(), &ptypes.Empty{})
+	require.NoError(t, err)
+
+	// Attempting to validate the same token string after logout should fail.
+	_, err = jwt.Parse(tokenString, checkParsedKey)
+	assert.ErrorContains(t, "signature is invalid", err)
+}
+
+func TestServer_ChangePassword_Preconditions(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
+	require.NoError(t, ss.SaveHashedPassword(strongPass))
+	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		CurrentPassword: strongPass,
+		Password:        "",
+	})
+	assert.ErrorContains(t, "Could not validate password input", err)
+	_, err = ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		CurrentPassword:      strongPass,
+		Password:             "abc",
+		PasswordConfirmation: "def",
+	})
+	assert.ErrorContains(t, "does not match", err)
+}
+
+func TestServer_ChangePassword_OK(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ss := &Server{
+		walletDir: defaultWalletPath,
+	}
+	password := "Passw0rdz%%%%pass"
+	newPassword := "NewPassw0rdz%%%%pass"
+	ctx := context.Background()
+	require.NoError(t, ss.SaveHashedPassword(password))
+	_, err := ss.ChangePassword(ctx, &pb.ChangePasswordRequest{
+		CurrentPassword:      password,
+		Password:             newPassword,
+		PasswordConfirmation: newPassword,
+	})
+	require.NoError(t, err)
+	_, err = ss.Login(ctx, &pb.AuthRequest{
+		Password: newPassword,
 	})
 	require.NoError(t, err)
 }

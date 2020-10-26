@@ -83,6 +83,7 @@ go_test(
         "checkpoint_info_cache_test.go",
         "head_test.go",
         "info_test.go",
+        "metrics_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
         "receive_attestation_test.go",

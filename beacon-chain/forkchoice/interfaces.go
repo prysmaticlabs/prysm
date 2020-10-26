@@ -43,4 +43,5 @@ type Getter interface {
 	Store() *protoarray.Store
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error)
+	IsCanonical(root [32]byte) bool
 }
