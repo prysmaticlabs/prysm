@@ -108,7 +108,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not make keymanager for given phrase")
 	}
-	if err := km.WriteEncryptedSeedToWallet(ctx, cfg.Mnemonic); err != nil {
+	if err := km.WriteEncryptedSeedToWallet(ctx, cfg.Mnemonic, ""); err != nil {
 		return nil, nil, err
 	}
 	depositDataList := make([]*ethpb.Deposit_Data, cfg.NumAccounts)

@@ -21,5 +21,10 @@ type Wallet interface {
 	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
 	WriteEncryptedSeedToDisk(ctx context.Context, encoded []byte) error
 	// Method for initializing a new keymanager.
-	InitializeKeymanager(ctx context.Context, skipMnemonicConfirm bool) (keymanager.IKeymanager, error)
+	InitializeKeymanager(ctx context.Context, cfg *InitializeKeymanagerConfig) (keymanager.IKeymanager, error)
+}
+
+type InitializeKeymanagerConfig struct {
+	SkipMnemonicConfirm bool
+	Mnemonic25thWord    string
 }

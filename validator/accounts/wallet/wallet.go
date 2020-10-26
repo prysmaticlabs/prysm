@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -260,7 +261,7 @@ func (w *Wallet) Password() string {
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) InitializeKeymanager(
 	ctx context.Context,
-	skipMnemonicConfirm bool,
+	cfg *iface.InitializeKeymanagerConfig,
 ) (keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
@@ -288,7 +289,8 @@ func (w *Wallet) InitializeKeymanager(
 		km, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
 			Opts:                opts,
 			Wallet:              w,
-			SkipMnemonicConfirm: skipMnemonicConfirm,
+			SkipMnemonicConfirm: cfg.SkipMnemonicConfirm,
+			Mnemonic25thWord:    cfg.Mnemonic25thWord,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
