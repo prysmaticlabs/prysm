@@ -64,10 +64,7 @@ func TestGetTargetData(t *testing.T) {
 	ha := NewAttestationHistoryArray(0)
 	td, err := ha.GetTargetData(ctx, 0)
 	require.NoError(t, err)
-	assert.DeepEqual(t, &HistoryData{
-		Source:      0,
-		SigningRoot: bytesutil.PadTo([]byte{}, 32),
-	}, td)
+	assert.DeepEqual(t, emptyHistoryData(), td)
 	td, err = ha.GetTargetData(ctx, 1)
 	require.NoError(t, err)
 	var nilHist *HistoryData

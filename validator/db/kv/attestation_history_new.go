@@ -1,13 +1,13 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -54,17 +54,31 @@ func (h *HistoryData) IsEmpty() bool {
 	if h == (*HistoryData)(nil) {
 		return true
 	}
-	if h.Source == 0 && bytes.Equal(h.SigningRoot, params.BeaconConfig().ZeroHash[:]) {
+	if h.Source == params.BeaconConfig().FarFutureEpoch {
 		return true
 	}
 	return false
 }
 
+func emptyHistoryData() *HistoryData {
+	h := &HistoryData{Source: params.BeaconConfig().FarFutureEpoch, SigningRoot: bytesutil.PadTo([]byte{}, 32)}
+	return h
+}
+
 // NewAttestationHistoryArray creates a new encapsulated attestation history byte array
 // sized by the latest epoch written.
 func NewAttestationHistoryArray(target uint64) *EncHistoryData {
-	enc := make(EncHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
-	return &enc
+	en := make(EncHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
+	enc := &en
+	ctx := context.Background()
+	var err error
+	for i := uint64(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
+		enc, err = enc.SetTargetData(ctx, i, emptyHistoryData())
+		if err != nil {
+			log.WithError(err).Error("Failed to set empty target data")
+		}
+	}
+	return enc
 }
 
 func (hd EncHistoryData) GetLatestEpochWritten(ctx context.Context) (uint64, error) {

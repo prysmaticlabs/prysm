@@ -141,7 +141,7 @@ func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryDa
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
 		maxToWrite := lew + wsPeriod
 		for i := lew + 1; i < targetEpoch && i <= maxToWrite; i++ {
-			history, err = history.SetTargetData(ctx, i%wsPeriod, &kv.HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
+			history, err = history.SetTargetData(ctx, i%wsPeriod, &kv.HistoryData{Source: params.BeaconConfig().FarFutureEpoch})
 			if err != nil {
 				log.WithError(err).Error("Could not set target to the encapsulated data")
 				return nil
