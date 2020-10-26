@@ -426,11 +426,12 @@ func (p *Status) Prune() {
 	}
 }
 
-// BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed upon by the majority of peers.
-// This method may not return the absolute highest finalized, but the finalized epoch in which most peers can serve blocks.
-// Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their own latency, or because of
-// their finalized epoch at the time we queried them.
-// Returns the best finalized root, epoch number, and list of peers that are at or beyond that epoch.
+// BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed
+// upon by the majority of peers. This method may not return the absolute highest finalized, but
+// the finalized epoch in which most peers can serve blocks (plurality voting).
+// Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their
+// own latency, or because of their finalized epoch at the time we queried them.
+// Returns epoch number and list of peers that are at or beyond that epoch.
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
@@ -451,7 +452,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	var targetEpoch uint64
 	var mostVotes uint64
 	for epoch, count := range finalizedEpochVotes {
-		if count > mostVotes {
+		if count > mostVotes || (count == mostVotes && epoch > targetEpoch) {
 			mostVotes = count
 			targetEpoch = epoch
 		}
@@ -459,8 +460,10 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 
 	// Sort PIDs by finalized epoch, in decreasing order.
 	sort.Slice(potentialPIDs, func(i, j int) bool {
-		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]] &&
-			pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
+		if pidEpoch[potentialPIDs[i]] == pidEpoch[potentialPIDs[j]] {
+			return pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
+		}
+		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]]
 	})
 
 	// Trim potential peers to those on or after target epoch.

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -212,4 +213,39 @@ func isDoubleVote(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
 func isSurrounding(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
 	return incomingAtt.Data.Source.Epoch < prevAtt.Data.Source.Epoch &&
 		incomingAtt.Data.Target.Epoch > prevAtt.Data.Target.Epoch
+}
+
+// UpdateHighestAttestation updates to the db the highest source and target attestations for a each validator.
+func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
+	for _, idx := range att.AttestingIndices {
+		h, err := ds.slasherDB.HighestAttestation(ctx, idx)
+		if err != nil {
+			return err
+		}
+		// Creates a default instance.
+		if h == nil {
+			h = &slashpb.HighestAttestation{
+				HighestSourceEpoch: 0,
+				HighestTargetEpoch: 0,
+				ValidatorId:        idx,
+			}
+		}
+		update := false
+		if h.HighestSourceEpoch < att.Data.Source.Epoch {
+			h.HighestSourceEpoch = att.Data.Source.Epoch
+			update = true
+		}
+		if h.HighestTargetEpoch < att.Data.Target.Epoch {
+			h.HighestTargetEpoch = att.Data.Target.Epoch
+			update = true
+		}
+
+		// If it's not a new instance of HighestAttestation, changing it will also change the cached instance.
+		if update {
+			if err := ds.slasherDB.SaveHighestAttestation(ctx, h); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
