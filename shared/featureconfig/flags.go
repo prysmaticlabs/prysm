@@ -72,9 +72,9 @@ var (
 		Name:  "blst",
 		Usage: "Enable new BLS library, blst, from Supranational",
 	}
-	enableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:  "enable-eth1-data-majority-vote",
-		Usage: "When enabled, voting on eth1 data will use the Voting With The Majority algorithm.",
+	disableEth1DataMajorityVote = &cli.BoolFlag{
+		Name:  "disable-eth1-data-majority-vote",
+		Usage: "Disables the Voting With The Majority algorithm when voting for eth1data.",
 	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
@@ -97,7 +97,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableEth1DataMajorityVote,
 	enablePeerScorer,
 }
 
@@ -144,7 +143,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SpadinaTestnet,
 	ZinkenTestnet,
 	enableBlst,
-	enableEth1DataMajorityVote,
+	disableEth1DataMajorityVote,
 	enablePeerScorer,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
@@ -154,6 +153,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
-	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
 }
