@@ -59,11 +59,15 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 		Mnemonic25thWord:    "mnemonicpass",
 	})
 	require.NoError(t, err)
+	for i := 0; i < numAccounts; i++ {
+		_, _, err = km.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
 	with25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	for i, k := range with25thWord {
 		without := without25thWord[i]
-		assert.DeepEqual(t, k, without)
+		assert.DeepNotEqual(t, k, without)
 	}
 }
 
