@@ -161,7 +161,7 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
 }
 
-// Given validator's public key, this returns the signature of an attestation data.
+// Given validator's public key, this function returns the signature of an attestation data and its signing root.
 func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, [32]byte, error) {
 	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
 	if err != nil {
