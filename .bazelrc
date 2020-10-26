@@ -5,6 +5,9 @@ test --test_verbose_timeout_warnings
 test --build_tests_only
 test --test_output=errors
 
+# E2E run with debug gotag
+test:e2e --define gotags=debug
+
 # Clearly indicate that coverage is enabled to disable certain nogo checks.
 coverage --define=coverage_enabled=1
 

@@ -62,7 +62,6 @@ type Service struct {
 	finalizedCheckpt      *ethpb.Checkpoint
 	prevFinalizedCheckpt  *ethpb.Checkpoint
 	nextEpochBoundarySlot uint64
-	initSyncState         map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots         [][32]byte
 	checkpointState       *cache.CheckpointStateCache
 	checkpointStateLock   sync.Mutex
@@ -113,7 +112,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		maxRoutines:       cfg.MaxRoutines,
 		stateNotifier:     cfg.StateNotifier,
 		forkChoiceStore:   cfg.ForkChoiceStore,
-		initSyncState:     make(map[[32]byte]*stateTrie.BeaconState),
 		boundaryRoots:     [][32]byte{},
 		checkpointState:   cache.NewCheckpointStateCache(),
 		opsService:        cfg.OpsService,
@@ -335,12 +333,6 @@ func (s *Service) Status() error {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
 	return nil
-}
-
-// ClearCachedStates removes all stored caches states. This is done after the node
-// is synced.
-func (s *Service) ClearCachedStates() {
-	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.

@@ -319,7 +319,6 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	st := testutil.NewBeaconState()
-	service.initSyncState[r] = st.Copy()
 	require.NoError(t, db.SaveState(ctx, st.Copy(), r))
 
 	// Could update

@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/sirupsen/logrus"
+	"github.com/trailofbits/go-mutexasserts"
 )
 
 const defaultBurstLimit = 5
@@ -137,6 +138,9 @@ func (l *limiter) free() {
 // not to be used outside the rate limiter file as it is unsafe for concurrent usage
 // and is protected by a lock on all of its usages here.
 func (l *limiter) retrieveCollector(topic string) (*leakybucket.Collector, error) {
+	if !mutexasserts.RWMutexLocked(&l.RWMutex) && !mutexasserts.RWMutexRLocked(&l.RWMutex) {
+		return nil, errors.New("limiter.retrieveCollector: caller must hold read/write lock")
+	}
 	collector, ok := l.limiterMap[topic]
 	if !ok {
 		return nil, errors.Errorf("collector does not exist for topic %s", topic)

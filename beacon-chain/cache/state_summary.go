@@ -50,11 +50,11 @@ func (s *StateSummaryCache) GetAll() []*pb.StateSummary {
 	s.initSyncStateSummariesLock.RLock()
 	defer s.initSyncStateSummariesLock.RUnlock()
 
-	blks := make([]*pb.StateSummary, 0, len(s.initSyncStateSummaries))
+	summaries := make([]*pb.StateSummary, 0, len(s.initSyncStateSummaries))
 	for _, b := range s.initSyncStateSummaries {
-		blks = append(blks, b)
+		summaries = append(summaries, b)
 	}
-	return blks
+	return summaries
 }
 
 // Clear clears out the initial sync state summaries cache.

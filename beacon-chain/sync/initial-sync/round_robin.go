@@ -40,7 +40,6 @@ type batchBlockReceiverFn func(ctx context.Context, blks []*eth.SignedBeaconBloc
 func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	defer s.chain.ClearCachedStates()
 	state.SkipSlotCache.Disable()
 	defer state.SkipSlotCache.Enable()
 

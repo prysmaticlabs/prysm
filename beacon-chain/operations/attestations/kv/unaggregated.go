@@ -28,9 +28,10 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
+	att = stateTrie.CopyAttestation(att) // Copied.
 	p.unAggregateAttLock.Lock()
 	defer p.unAggregateAttLock.Unlock()
-	p.unAggregatedAtt[r] = stateTrie.CopyAttestation(att) // Copied.
+	p.unAggregatedAtt[r] = att
 
 	return nil
 }
