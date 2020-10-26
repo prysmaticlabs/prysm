@@ -106,5 +106,5 @@ type Database interface {
 	ClearDB() error
 
 	// Backup and restore methods
-	Backup(ctx context.Context) error
+	Backup(ctx context.Context, outputDir string) error
 }
