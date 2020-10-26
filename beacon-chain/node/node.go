@@ -213,7 +213,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := beacon.registerPrometheusService(); err != nil {
+		if err := beacon.registerPrometheusService(cliCtx); err != nil {
 			return nil, err
 		}
 	}
@@ -638,7 +638,7 @@ func (b *BeaconNode) registerRPCService() error {
 	return b.services.RegisterService(rpcService)
 }
 
-func (b *BeaconNode) registerPrometheusService() error {
+func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	var p *p2p.Service
 	if err := b.services.FetchService(&p); err != nil {
@@ -651,8 +651,14 @@ func (b *BeaconNode) registerPrometheusService() error {
 		panic(err)
 	}
 
-	if featureconfig.Get().EnableBackupWebhook {
-		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/db/backup", Handler: db.BackupHandler(b.db)})
+	if cliCtx.IsSet(flags.EnableBackupWebhookFlag.Name) {
+		additionalHandlers = append(
+			additionalHandlers,
+			prometheus.Handler{
+				Path:    "/db/backup",
+				Handler: db.BackupHandler(b.db, cliCtx.String(flags.BackupWebhookOutputDir.Name)),
+			},
+		)
 	}
 
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})

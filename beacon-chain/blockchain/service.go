@@ -71,7 +71,6 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	checkPtInfoCache      *checkPtInfoCache
 	wsEpoch               uint64
 	wsRoot                []byte
 	wsVerified            bool
@@ -119,7 +118,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		stateGen:          cfg.StateGen,
 		initSyncBlocks:    make(map[[32]byte]*ethpb.SignedBeaconBlock),
 		justifiedBalances: make([]uint64, 0),
-		checkPtInfoCache:  newCheckPointInfoCache(),
 		wsEpoch:           cfg.WspEpoch,
 		wsRoot:            cfg.WspBlockRoot,
 	}, nil
