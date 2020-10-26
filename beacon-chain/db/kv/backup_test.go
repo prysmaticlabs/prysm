@@ -24,7 +24,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
-	require.NoError(t, db.Backup(ctx))
+	require.NoError(t, db.Backup(ctx, ""))
 
 	files, err := ioutil.ReadDir(path.Join(db.databasePath, backupsDirectoryName))
 	require.NoError(t, err)
