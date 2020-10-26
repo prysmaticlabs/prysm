@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -251,15 +250,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 		return response
 	}
 
-	var targetEpoch uint64
-	var peers []peer.ID
-	if f.mode == modeStopOnFinalizedEpoch {
-		headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
-		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	} else {
-		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-		targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
-	}
+	_, targetEpoch, peers := f.calculateHeadAndTargetEpochs()
 	if len(peers) == 0 {
 		response.err = errNoPeersAvailable
 		return response
@@ -289,12 +280,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	defer span.End()
 
 	var blocks []*eth.SignedBeaconBlock
-	var err error
-	if featureconfig.Get().EnablePeerScorer {
-		peers, err = f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
-	} else {
-		peers, err = f.filterPeers(peers, peersPercentagePerRequest)
-	}
+	peers, err := f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	if err != nil {
 		return blocks, "", err
 	}

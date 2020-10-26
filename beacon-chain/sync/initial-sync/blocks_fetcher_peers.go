@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -90,11 +91,16 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 	}
 }
 
-// filterPeers returns transformed list of peers,
-// weight ordered or randomized, constrained if necessary (only percentage of peers returned).
-func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+// filterPeers returns transformed list of peers, weight ordered or randomized, constrained
+// if necessary (when only percentage of peers returned).
+// When peer scorer is enabled, fallbacks filterScoredPeers.
+func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
 	if len(peers) == 0 {
 		return peers, nil
+	}
+
+	if featureconfig.Get().EnablePeerScorer {
+		return f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
 	}
 
 	// Shuffle peers to prevent a bad peer from
@@ -120,9 +126,8 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([
 	return peers, nil
 }
 
-// filterScoredPeers returns transformed list of peers,
-// weight sorted by scores and capacity remaining. List can be constrained using peersPercentage,
-// where only percentage of peers are returned.
+// filterScoredPeers returns transformed list of peers, weight sorted by scores and capacity remaining.
+// List can be further constrained using peersPercentage, where only percentage of peers are returned.
 func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.filterScoredPeers")
 	defer span.End()
