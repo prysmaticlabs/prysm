@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -393,96 +392,6 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  att.Data.BeaconBlockRoot,
-			}},
-		attPool:              attestations.NewPool(),
-		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
-	}
-	err = r.initCaches()
-	require.NoError(t, err)
-
-	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
-	require.NoError(t, err)
-
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
-	msg := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		},
-	}
-
-	assert.Equal(t, pubsub.ValidationAccept, r.validateAggregateAndProof(context.Background(), "", msg), "Validated status is false")
-	assert.NotNil(t, msg.ValidatorData, "Did not set validator data")
-}
-
-func TestValidateAggregateAndProofUseCheckptCache_CanValidate(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{UseCheckPointInfoCache: true})
-	defer resetCfg()
-
-	db, _ := dbtest.SetupDB(t)
-	p := p2ptest.NewTestP2P(t)
-
-	validators := uint64(256)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
-
-	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), b))
-	root, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	s := testutil.NewBeaconState()
-	require.NoError(t, db.SaveState(context.Background(), s, root))
-
-	aggBits := bitfield.NewBitlist(3)
-	aggBits.SetBitAt(0, true)
-	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
-		},
-		AggregationBits: aggBits,
-	}
-
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
-	assert.NoError(t, err)
-	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	assert.NoError(t, err)
-	attesterDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	assert.NoError(t, err)
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, attesterDomain)
-	assert.NoError(t, err)
-	sigs := make([]bls.Signature, len(attestingIndices))
-	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:])
-		sigs[i] = sig
-	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()
-	ai := committee[0]
-	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
-	require.NoError(t, err)
-	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  sig,
-		Aggregate:       att,
-		AggregatorIndex: ai,
-	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
-	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
-	require.NoError(t, err)
-
-	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c, err := lru.New(10)
-	require.NoError(t, err)
-	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
-			State:            beaconState,
-			ValidAttestation: true,
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 0,
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
