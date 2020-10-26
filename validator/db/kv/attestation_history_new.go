@@ -22,13 +22,6 @@ const (
 	minimalSize            = latestEpochWrittenSize
 )
 
-// AttestationHistoryNew stores the historical attestation data needed
-// for protection of validators.
-type AttestationHistoryNew struct {
-	TargetToSource     map[uint64]*HistoryData
-	LatestEpochWritten uint64
-}
-
 // HistoryData stores the needed data to confirm if an attestation is slashable
 // or repeated.
 type HistoryData struct {

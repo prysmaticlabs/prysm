@@ -110,5 +110,7 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 
 // HasBeenIncluded returns true if the pool has recorded that a validator index has been recorded.
 func (p *Pool) HasBeenIncluded(bIdx uint64) bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 	return p.included[bIdx]
 }

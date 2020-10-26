@@ -347,9 +347,6 @@ func (ms *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error)
 	return true, nil
 }
 
-// ClearCachedStates does nothing.
-func (ms *ChainService) ClearCachedStates() {}
-
 // HasInitSyncBlock mocks the same method in the chain service.
 func (ms *ChainService) HasInitSyncBlock(_ [32]byte) bool {
 	return false
