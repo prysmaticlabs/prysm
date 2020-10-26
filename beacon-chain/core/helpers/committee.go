@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -147,25 +146,6 @@ func ComputeCommittee(
 	shuffledList, err := UnshuffleList(shuffledIndices, seed)
 	if err != nil {
 		return nil, err
-	}
-
-	// This updates the cache on a miss.
-	if featureconfig.Get().UseCheckPointInfoCache {
-		sortedIndices := make([]uint64, len(indices))
-		copy(sortedIndices, indices)
-		sort.Slice(sortedIndices, func(i, j int) bool {
-			return sortedIndices[i] < sortedIndices[j]
-		})
-
-		count = SlotCommitteeCount(uint64(len(shuffledIndices)))
-		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
-			ShuffledIndices: shuffledList,
-			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
-			Seed:            seed,
-			SortedIndices:   sortedIndices,
-		}); err != nil {
-			return nil, err
-		}
 	}
 
 	return shuffledList[start:end], nil

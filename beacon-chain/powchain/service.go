@@ -724,8 +724,8 @@ func (s *Service) logTillChainStart() {
 	}
 
 	log.WithFields(logrus.Fields{
-		"Extra validators needed":   valNeeded,
-		"Time till minimum genesis": time.Duration(secondsLeft) * time.Second,
+		"Extra validators needed":      valNeeded,
+		"Generating genesis state in ": time.Duration(secondsLeft) * time.Second,
 	}).Infof("Currently waiting for chainstart")
 }
 

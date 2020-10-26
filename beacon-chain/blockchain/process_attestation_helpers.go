@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -62,67 +61,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	}
 	return baseState, nil
 
-}
-
-// getAttCheckPtInfo retrieves the check point info given a check point. Check point info enables the node
-// to efficiently verify attestation signature without using beacon state. This function utilizes
-// the checkpoint info cache and will update the check point info cache on miss.
-func (s *Service) getAttCheckPtInfo(ctx context.Context, c *ethpb.Checkpoint, e uint64) (*pb.CheckPtInfo, error) {
-	// Return checkpoint info if exists in cache.
-	info, err := s.checkPtInfoCache.get(c)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get cached checkpoint state")
-	}
-	if info != nil {
-		return info, nil
-	}
-
-	// Retrieve checkpoint state to compute checkpoint info.
-	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
-	}
-	epochStartSlot, err := helpers.StartSlot(c.Epoch)
-	if err != nil {
-		return nil, err
-	}
-	if epochStartSlot > baseState.Slot() {
-		baseState = baseState.Copy()
-		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
-		}
-	}
-	f := baseState.Fork()
-	g := bytesutil.ToBytes32(baseState.GenesisValidatorRoot())
-	seed, err := helpers.Seed(baseState, e, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, err
-	}
-	indices, err := helpers.ActiveValidatorIndices(baseState, e)
-	if err != nil {
-		return nil, err
-	}
-	validators := baseState.ValidatorsReadOnly()
-	pks := make([][]byte, len(validators))
-	for i := 0; i < len(pks); i++ {
-		pk := validators[i].PublicKey()
-		pks[i] = pk[:]
-	}
-
-	// Cache and return the checkpoint info.
-	info = &pb.CheckPtInfo{
-		Fork:          f,
-		GenesisRoot:   g[:],
-		Seed:          seed[:],
-		ActiveIndices: indices,
-		PubKeys:       pks,
-	}
-	if err := s.checkPtInfoCache.put(c, info); err != nil {
-		return nil, err
-	}
-
-	return info, nil
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.

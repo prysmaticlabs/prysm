@@ -27,6 +27,20 @@ service Slasher {
     rpc IsSlashableBlockNoUpdate(ethereum.eth.v1alpha1.BeaconBlockHeader) returns (Slashable);
 }
 
+message HighestAttestationRequest {
+    repeated uint64 validator_ids = 1;
+}
+
+message HighestAttestationResponse {
+    repeated HighestAttestation attestations = 1;
+}
+
+message HighestAttestation {
+    uint64 validator_id = 1;
+    uint64 highest_source_epoch = 2;
+    uint64 highest_target_epoch = 3;
+}
+
 message ProposerSlashingResponse {
     repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
 }

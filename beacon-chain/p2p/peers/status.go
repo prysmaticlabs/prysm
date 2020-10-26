@@ -452,7 +452,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	var targetEpoch uint64
 	var mostVotes uint64
 	for epoch, count := range finalizedEpochVotes {
-		if count > mostVotes {
+		if count > mostVotes || (count == mostVotes && epoch > targetEpoch) {
 			mostVotes = count
 			targetEpoch = epoch
 		}

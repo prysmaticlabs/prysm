@@ -82,6 +82,71 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	}
 }
 
+func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	d, _ := db.SetupDB(t)
+
+	req := &pb.BeaconBlocksByRangeRequest{
+		StartSlot: 0,
+		Step:      1,
+		Count:     200,
+	}
+
+	genRoot := [32]byte{}
+	// Populate the database with blocks that would match the request.
+	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
+		blk := testutil.NewBeaconBlock()
+		blk.Block.Slot = i
+		if i == 0 {
+			rt, err := blk.Block.HashTreeRoot()
+			require.NoError(t, err)
+			genRoot = rt
+		}
+		require.NoError(t, d.SaveBlock(context.Background(), blk))
+	}
+	require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), genRoot))
+
+	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
+	r := &Service{p2p: p1, db: d, chain: &chainMock.ChainService{}, rateLimiter: newRateLimiter(p1)}
+	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), false)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Use a new request to test this out
+	newReq := &pb.BeaconBlocksByRangeRequest{StartSlot: 0, Step: 1, Count: 1}
+
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		for i := newReq.StartSlot; i < newReq.StartSlot+newReq.Count*newReq.Step; i += newReq.Step {
+			expectSuccess(t, stream)
+			res := testutil.NewBeaconBlock()
+			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
+			if (res.Block.Slot-newReq.StartSlot)%newReq.Step != 0 {
+				t.Errorf("Received unexpected block slot %d", res.Block.Slot)
+			}
+			// Expect EOF
+			b := make([]byte, 1)
+			_, err := stream.Read(b)
+			require.ErrorContains(t, io.EOF.Error(), err)
+		}
+	})
+
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
+	require.NoError(t, err)
+
+	err = r.beaconBlocksByRangeRPCHandler(context.Background(), newReq, stream1)
+	require.NoError(t, err)
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+}
+
 func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
