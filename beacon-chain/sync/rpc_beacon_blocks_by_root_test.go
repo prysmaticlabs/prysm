@@ -168,6 +168,8 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
+	r.rateLimiter.RLock() // retrieveCollector requires a lock to be held.
+	defer r.rateLimiter.RUnlock()
 	lter, err := r.rateLimiter.retrieveCollector(topic)
 	require.NoError(t, err)
 	assert.Equal(t, 1, int(lter.Count(stream1.Conn().RemotePeer().String())))
