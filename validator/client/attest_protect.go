@@ -153,7 +153,7 @@ func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryDa
 			return nil
 		}
 	}
-	history, err = history.SetTargetData(ctx, targetEpoch%wsPeriod, &kv.HistoryData{Source: sourceEpoch})
+	history, err = history.SetTargetData(ctx, targetEpoch%wsPeriod, &kv.HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
 	if err != nil {
 		log.WithError(err).Error("Could not set target to the encapsulated data")
 		return nil

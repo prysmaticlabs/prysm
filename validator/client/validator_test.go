@@ -11,7 +11,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -674,36 +674,30 @@ func TestUpdateDuties_OK(t *testing.T) {
 }
 
 func TestUpdateProtections_OK(t *testing.T) {
+	ctx := context.Background()
 	pubKey1 := [48]byte{1}
 	pubKey2 := [48]byte{2}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	history := kv.NewAttestationHistoryArray(2)
+	history, err := history.SetTargetData(ctx, 1, &kv.HistoryData{Source: 0, SigningRoot: []byte{1}})
+	require.NoError(t, err)
+	history, err = history.SetTargetData(ctx, 2, &kv.HistoryData{Source: 1, SigningRoot: []byte{2}})
+	require.NoError(t, err)
+	history, err = history.SetLatestEpochWritten(ctx, 2)
+	require.NoError(t, err)
+	history2 := kv.NewAttestationHistoryArray(3)
+	history2, err = history2.SetTargetData(ctx, 3, &kv.HistoryData{Source: 2, SigningRoot: []byte{1}})
+	require.NoError(t, err)
+	history2, err = history2.SetLatestEpochWritten(ctx, 3)
+	require.NoError(t, err)
 
-	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch
-	newMap[1] = 0
-	newMap[2] = 1
-	history := &slashpb.AttestationHistory{
-		TargetToSource:     newMap,
-		LatestEpochWritten: 2,
-	}
-
-	newMap2 := make(map[uint64]uint64)
-	newMap2[0] = params.BeaconConfig().FarFutureEpoch
-	newMap2[1] = params.BeaconConfig().FarFutureEpoch
-	newMap2[2] = params.BeaconConfig().FarFutureEpoch
-	newMap2[3] = 2
-	history2 := &slashpb.AttestationHistory{
-		TargetToSource:     newMap,
-		LatestEpochWritten: 3,
-	}
-
-	histories := make(map[[48]byte]*slashpb.AttestationHistory)
+	histories := make(map[[48]byte]*kv.EncHistoryData)
 	histories[pubKey1] = history
 	histories[pubKey2] = history2
-	require.NoError(t, db.SaveAttestationHistoryForPubKeys(context.Background(), histories))
+	require.NoError(t, db.SaveAttestationHistoryNewForPubKeys(context.Background(), histories))
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	duties := &ethpb.DutiesResponse{
