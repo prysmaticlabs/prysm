@@ -71,7 +71,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	sig, err := v.signAtt(ctx, pubKey, data)
+	sig, signingRoot, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
@@ -106,7 +106,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 
 	indexedAtt.Signature = sig
-	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey); err != nil {
+	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey, signingRoot); err != nil {
 		log.WithFields(logrus.Fields{
 			"sourceEpoch": indexedAtt.Data.Source.Epoch,
 			"targetEpoch": indexedAtt.Data.Target.Epoch,
@@ -162,10 +162,10 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 }
 
 // Given validator's public key, this returns the signature of an attestation data.
-func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, error) {
+func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, [32]byte, error) {
 	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
 	if err != nil {
-		return nil, err
+		return nil, [32]byte{}, err
 	}
 
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
@@ -175,10 +175,10 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		Object:          &validatorpb.SignRequest_AttestationData{AttestationData: data},
 	})
 	if err != nil {
-		return nil, err
+		return nil, [32]byte{}, err
 	}
 
-	return sig.Marshal(), nil
+	return sig.Marshal(), root, nil
 }
 
 func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {

@@ -47,17 +47,12 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	return nil
 }
 
-func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
+func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	v.attesterHistoryByPubKeyLock.Lock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if ok {
-		_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
-		if err != nil {
-			log.WithError(err).Error("Could not get domain and signing root from attestation")
-			return err
-		}
-		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, sr)
+		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, signingRoot)
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory
 	} else {
 		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
