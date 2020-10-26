@@ -42,7 +42,6 @@ type Flags struct {
 	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
 	SkipBLSVerify              bool // Skips BLS verification across the runtime.
 	EnableBlst                 bool // Enables new BLS library from supranational.
-	EnableBackupWebhook        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression  bool // EnableSnappyDBCompression in the database.
 	SlasherProtection          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
@@ -158,10 +157,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 
 	cfg.EnableSSZCache = true
 
-	if ctx.Bool(enableBackupWebhookFlag.Name) {
-		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
-		cfg.EnableBackupWebhook = true
-	}
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)

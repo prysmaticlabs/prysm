@@ -110,6 +110,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ChainID,
 			flags.NetworkID,
 			flags.WeakSubjectivityCheckpt,
+			flags.EnableBackupWebhookFlag,
+			flags.BackupWebhookOutputDir,
 		},
 	},
 	{
