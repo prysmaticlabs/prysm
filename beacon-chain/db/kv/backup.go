@@ -22,13 +22,15 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Backup")
 	defer span.End()
 
-	backupsDir := path.Join(s.databasePath, backupsDirectoryName)
+	var backupsDir string
 	var err error
 	if outputDir != "" {
 		backupsDir, err = fileutil.ExpandPath(outputDir)
 		if err != nil {
 			return err
 		}
+	} else {
+		backupsDir = path.Join(s.databasePath, backupsDirectoryName)
 	}
 	head, err := s.HeadBlock(ctx)
 	if err != nil {
