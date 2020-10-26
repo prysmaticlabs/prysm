@@ -90,6 +90,6 @@ func (m *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) err
 }
 
 // InitializeKeymanager --
-func (m *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitializeKeymanagerConfig) (keymanager.IKeymanager, error) {
+func (m *Wallet) InitializeKeymanager(_ context.Context, _ *iface.InitializeKeymanagerConfig) (keymanager.IKeymanager, error) {
 	return nil, nil
 }
