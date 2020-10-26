@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -109,47 +108,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		log.WithError(err).Error("Failed to compute fork digest")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
-	}
-
-	if featureconfig.Get().UseCheckPointInfoCache {
-		// Use check point info to validate unaggregated attestation.
-		c, err := s.chain.AttestationCheckPtInfo(ctx, att)
-		if err != nil {
-			return pubsub.ValidationIgnore
-		}
-		// Is the attestation committee ID within the expected range.
-		indices := c.ActiveIndices
-		count := helpers.SlotCommitteeCount(uint64(len(indices)))
-		if att.Data.CommitteeIndex > count {
-			return pubsub.ValidationReject
-		}
-		// Is the attestation subnet correct.
-		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
-		if !strings.HasPrefix(*originalTopic, fmt.Sprintf(format, digest, subnet)) {
-			return pubsub.ValidationReject
-		}
-		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			return pubsub.ValidationIgnore
-		}
-
-		// Verify number of aggregation bits matches the committee size.
-		if err := helpers.VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
-			return pubsub.ValidationReject
-		}
-
-		// Is the attestation bitfield correct.
-		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
-			return pubsub.ValidationReject
-		}
-		// Is the attestation signature correct.
-		if err := blocks.VerifyAttSigUseCheckPt(ctx, c, att); err != nil {
-			return pubsub.ValidationReject
-		}
-
-		s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
-		msg.ValidatorData = att
-		return pubsub.ValidationAccept
 	}
 
 	preState, err := s.chain.AttestationPreState(ctx, att)

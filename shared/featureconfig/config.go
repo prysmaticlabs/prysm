@@ -183,8 +183,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.EnablePeerScorer = true
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
-		log.Warn("Using advance check point info cache")
-		cfg.UseCheckPointInfoCache = true
+		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
 	}
 	if ctx.Bool(enableBlst.Name) {
 		log.Warn("Enabling new BLS library blst")
