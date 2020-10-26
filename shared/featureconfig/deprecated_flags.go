@@ -17,9 +17,15 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableEth1DataMajorityVote = &cli.BoolFlag{
+		Name:   "enable-eth1-data-majority-vote",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedEnablePruningDepositProofs,
+	deprecatedEnableEth1DataMajorityVote,
 }

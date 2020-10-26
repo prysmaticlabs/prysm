@@ -168,9 +168,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
 
-	if ctx.Bool(enableEth1DataMajorityVote.Name) {
-		log.Warn("Enabling eth1data majority vote")
-		cfg.EnableEth1DataMajorityVote = true
+	cfg.EnableEth1DataMajorityVote = true
+	if ctx.Bool(disableEth1DataMajorityVote.Name) {
+		log.Warn("Disabling eth1data majority vote")
+		cfg.EnableEth1DataMajorityVote = false
 	}
 	if ctx.Bool(enablePeerScorer.Name) {
 		log.Warn("Enabling peer scoring in P2P")
