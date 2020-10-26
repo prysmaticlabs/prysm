@@ -10,6 +10,7 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -69,9 +70,21 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	var privKeyBytes []byte
 	var err error
 	privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
-	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-		return nil, nil, "", fmt.Errorf("wrong password for keystore with pubkey %s", keystore.Pubkey)
-	} else if err != nil {
+	doesNotDecrypt := err != nil && strings.Contains(err.Error(), "invalid checksum")
+	for doesNotDecrypt {
+		password, err = promptutil.PasswordPrompt(
+			"Password incorrect for keystore, input correct password", promptutil.NotEmpty,
+		)
+		if err != nil {
+			return nil, nil, "", fmt.Errorf("could not read keystore password: %w", err)
+		}
+		privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
+		doesNotDecrypt = err != nil && strings.Contains(err.Error(), "invalid checksum")
+		if err != nil && !strings.Contains(err.Error(), "invalid checksum") {
+			return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
+		}
+	}
+	if err != nil && !strings.Contains(err.Error(), "invalid checksum") {
 		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 	}
 	var pubKeyBytes []byte
