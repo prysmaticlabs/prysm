@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -47,6 +48,16 @@ func (hd EncHistoryData) assertSize() error {
 		return fmt.Errorf("encapsulated data size: %d is not a multiple of entry size: %d", len(hd), historySize)
 	}
 	return nil
+}
+
+func (h *HistoryData) IsEmpty() bool {
+	if h == (*HistoryData)(nil) {
+		return true
+	}
+	if h.Source == 0 && bytes.Equal(h.SigningRoot, params.BeaconConfig().ZeroHash[:]) {
+		return true
+	}
+	return false
 }
 
 // NewAttestationHistoryArray creates a new encapsulated attestation history byte array

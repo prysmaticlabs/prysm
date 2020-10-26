@@ -93,7 +93,7 @@ func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEp
 		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
 		return false
 	}
-	if hd != (*kv.HistoryData)(nil) && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
+	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
 		return true
 	}
 
@@ -112,6 +112,10 @@ func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEp
 
 	// Check if the new attestation is being surrounded.
 	for i := targetEpoch; i <= lew; i++ {
+		h := safeTargetToSource(ctx, history, i)
+		if h.IsEmpty() {
+			continue
+		}
 		if safeTargetToSource(ctx, history, i).Source < sourceEpoch {
 			return true
 		}
@@ -172,6 +176,9 @@ func safeTargetToSource(ctx context.Context, history *kv.EncHistoryData, targetE
 	hd, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
 	if err != nil {
 		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
+		return nil
+	}
+	if hd.IsEmpty() {
 		return nil
 	}
 	return hd
