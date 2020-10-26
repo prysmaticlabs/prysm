@@ -30,6 +30,10 @@ func testVerifyMessageYaml(t *testing.T) {
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			// TODO(7469): Unskip with new test vectors.
+			if folder.Name() == "verify_infinity_pubkey_and_infinity_signature" {
+				t.Skip("Skip infinity key check for BLSv4 until v1.0.0 PR 7469")
+			}
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &VerifyMsgTest{}
