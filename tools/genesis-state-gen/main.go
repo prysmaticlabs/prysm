@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,17 +11,11 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	//"github.com/ghodss/yaml"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-
-	//"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
-	//"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // GenesisValidator struct representing JSON input we can accept to generate
@@ -33,7 +26,7 @@ type GenesisValidator struct {
 
 var (
 	validatorJSONInput = flag.String(
-		"validators-json-file",
+		"validator-json-file",
 		"",
 		"Path to JSON file formatted as a list of hex public keys and their corresponding deposit data as hex"+
 			" such as [ { public_key: '0x1', deposit_data: '0x2' }, ... ]"+
@@ -58,15 +51,10 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-
-	if err := createJSONOutput(); err != nil {
-		log.Fatal(err)
-	}
 	var genesisState *pb.BeaconState
 	var err error
 	if *validatorJSONInput != "" {
 		inputFile := *validatorJSONInput
-		log.Printf("Creating genesis state from list of validators specified in %s", inputFile)
 		expanded, err := fileutil.ExpandPath(inputFile)
 		if err != nil {
 			log.Fatalf("Could not expand file path %s: %v", inputFile, err)
@@ -80,6 +68,7 @@ func main() {
 				log.Printf("Could not close file %s: %v", inputFile, err)
 			}
 		}()
+		log.Printf("Generating genesis state from input JSON deposit data %s", inputFile)
 		genesisState, err = genesisStateFromJSONValidators(inputJSON, *genesisTime)
 		if err != nil {
 			log.Fatalf("Could not generate genesis beacon state: %v", err)
@@ -127,41 +116,6 @@ func main() {
 	}
 }
 
-func createJSONOutput() error {
-	numKeys := 5
-	pubKeys := make([]bls.PublicKey, numKeys)
-	privKeys := make([]bls.SecretKey, numKeys)
-	for i := 0; i < numKeys; i++ {
-		randKey := bls.RandKey()
-		privKeys[i] = randKey
-		pubKeys[i] = randKey.PublicKey()
-	}
-	dataList, _, err := interop.DepositDataFromKeys(privKeys, pubKeys)
-	if err != nil {
-		return err
-	}
-	jsonData := make([]*GenesisValidator, numKeys)
-	for i := 0; i < numKeys; i++ {
-		data := dataList[i]
-		log.Printf("Pubkey: %#x", data.PublicKey)
-		log.Printf("Amount: %d", data.Amount)
-		log.Printf("Withdrawal: %#x", data.WithdrawalCredentials)
-		log.Printf("Sig: %#x", data.Signature)
-		enc, err := data.MarshalSSZ()
-		if err != nil {
-			return err
-		}
-		jsonData[i] = &GenesisValidator{
-			DepositData: fmt.Sprintf("%#x", enc),
-		}
-	}
-	enc, err := json.Marshal(jsonData)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile("/tmp/some.json", enc, os.ModePerm)
-}
-
 func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.BeaconState, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -187,10 +141,6 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 			return nil, err
 		}
 		depositDataList[i] = data
-		log.Printf("Pubkey: %#x", data.PublicKey)
-		log.Printf("Amount: %d", data.Amount)
-		log.Printf("Withdrawal: %#x", data.WithdrawalCredentials)
-		log.Printf("Sig: %#x", data.Signature)
 		root, err := data.HashTreeRoot()
 		if err != nil {
 			return nil, err
