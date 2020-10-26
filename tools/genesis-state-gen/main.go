@@ -1,18 +1,45 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/prysm/shared/interop"
+	//"github.com/ghodss/yaml"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+
+	//"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/interop"
+	//"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// GenesisValidator struct representing JSON input we can accept to generate
+// a genesis state from, containing a validator's full deposit data as a hex string.
+type GenesisValidator struct {
+	DepositData string `json:"deposit_data"`
+}
+
 var (
-	numValidators    = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
+	validatorJSONInput = flag.String(
+		"validators-json-file",
+		"",
+		"Path to JSON file formatted as a list of hex public keys and their corresponding deposit data as hex"+
+			" such as [ { public_key: '0x1', deposit_data: '0x2' }, ... ]"+
+			" this file will be used for generating a genesis state from a list of specified validator public keys",
+	)
+	numValidators    = flag.Int("num-validators", 0, "Number of validators to deterministically generate in the generated genesis state")
 	useMainnetConfig = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")
 	genesisTime      = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state (defaults to now)")
 	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
@@ -22,9 +49,6 @@ var (
 
 func main() {
 	flag.Parse()
-	if *numValidators == 0 {
-		log.Fatal("Expected --num-validators to have been provided, received 0")
-	}
 	if *genesisTime == 0 {
 		log.Print("No --genesis-time specified, defaulting to now")
 	}
@@ -35,10 +59,42 @@ func main() {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
 
-	genesisState, _, err := interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
-	if err != nil {
-		log.Fatalf("Could not generate genesis beacon state: %v", err)
+	if err := createJSONOutput(); err != nil {
+		log.Fatal(err)
 	}
+	var genesisState *pb.BeaconState
+	var err error
+	if *validatorJSONInput != "" {
+		inputFile := *validatorJSONInput
+		log.Printf("Creating genesis state from list of validators specified in %s", inputFile)
+		expanded, err := fileutil.ExpandPath(inputFile)
+		if err != nil {
+			log.Fatalf("Could not expand file path %s: %v", inputFile, err)
+		}
+		inputJSON, err := os.Open(expanded)
+		if err != nil {
+			log.Fatalf("Could not open JSON file for reading: %v", err)
+		}
+		defer func() {
+			if err := inputJSON.Close(); err != nil {
+				log.Printf("Could not close file %s: %v", inputFile, err)
+			}
+		}()
+		genesisState, err = genesisStateFromJSONValidators(inputJSON, *genesisTime)
+		if err != nil {
+			log.Fatalf("Could not generate genesis beacon state: %v", err)
+		}
+	} else {
+		if *numValidators == 0 {
+			log.Fatal("Expected --num-validators to have been provided, received 0")
+		}
+		// If no JSON input is specified, we create the state deterministically from interop keys.
+		genesisState, _, err = interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
+		if err != nil {
+			log.Fatalf("Could not generate genesis beacon state: %v", err)
+		}
+	}
+
 	if *sszOutputFile != "" {
 		encodedState, err := genesisState.MarshalSSZ()
 		if err != nil {
@@ -69,4 +125,81 @@ func main() {
 		}
 		log.Printf("Done writing to %s", *jsonOutputFile)
 	}
+}
+
+func createJSONOutput() error {
+	numKeys := 5
+	pubKeys := make([]bls.PublicKey, numKeys)
+	privKeys := make([]bls.SecretKey, numKeys)
+	for i := 0; i < numKeys; i++ {
+		randKey := bls.RandKey()
+		privKeys[i] = randKey
+		pubKeys[i] = randKey.PublicKey()
+	}
+	dataList, _, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+	if err != nil {
+		return err
+	}
+	jsonData := make([]*GenesisValidator, numKeys)
+	for i := 0; i < numKeys; i++ {
+		data := dataList[i]
+		log.Printf("Pubkey: %#x", data.PublicKey)
+		log.Printf("Amount: %d", data.Amount)
+		log.Printf("Withdrawal: %#x", data.WithdrawalCredentials)
+		log.Printf("Sig: %#x", data.Signature)
+		enc, err := data.MarshalSSZ()
+		if err != nil {
+			return err
+		}
+		jsonData[i] = &GenesisValidator{
+			DepositData: fmt.Sprintf("%#x", enc),
+		}
+	}
+	enc, err := json.Marshal(jsonData)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile("/tmp/some.json", enc, os.ModePerm)
+}
+
+func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.BeaconState, error) {
+	enc, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	var validatorsJSON []*GenesisValidator
+	if err := json.Unmarshal(enc, &validatorsJSON); err != nil {
+		return nil, err
+	}
+	depositDataList := make([]*ethpb.Deposit_Data, len(validatorsJSON))
+	depositDataRoots := make([][]byte, len(validatorsJSON))
+	for i, val := range validatorsJSON {
+		depositDataString := val.DepositData
+		if strings.HasPrefix(depositDataString, "0x") {
+			depositDataString = depositDataString[2:]
+		}
+		depositDataHex, err := hex.DecodeString(depositDataString)
+		if err != nil {
+			return nil, err
+		}
+		data := &ethpb.Deposit_Data{}
+		if err := data.UnmarshalSSZ(depositDataHex); err != nil {
+			return nil, err
+		}
+		depositDataList[i] = data
+		log.Printf("Pubkey: %#x", data.PublicKey)
+		log.Printf("Amount: %d", data.Amount)
+		log.Printf("Withdrawal: %#x", data.WithdrawalCredentials)
+		log.Printf("Sig: %#x", data.Signature)
+		root, err := data.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		depositDataRoots[i] = root[:]
+	}
+	beaconState, _, err := interop.GenerateGenesisStateFromDepositData(genesisTime, depositDataList, depositDataRoots)
+	if err != nil {
+		return nil, err
+	}
+	return beaconState, nil
 }
