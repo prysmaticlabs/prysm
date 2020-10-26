@@ -275,6 +275,39 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 }
 
+func TestBeaconProposerIndex_BadState(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ClearCache()
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+		roots[i] = make([]byte, 32)
+	}
+
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		Slot:        0,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:  roots,
+		StateRoots:  roots,
+	})
+	require.NoError(t, err)
+	// Set a very high slot, so that retrieved block root will be
+	// non existent for the proposer cache.
+	require.NoError(t, state.SetSlot(100))
+	_, err = BeaconProposerIndex(state)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(proposerIndicesCache.ProposerIndicesCache.ListKeys()))
+}
+
 func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
