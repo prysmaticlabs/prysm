@@ -139,6 +139,11 @@ var (
 		Name:  "wallet-password-file",
 		Usage: "Path to a plain-text, .txt file containing your wallet password",
 	}
+	// Mnemonic25thWordFileFlag defines a path to a file containing a "25th" word mnemonic passphrase for advanced users.
+	Mnemonic25thWordFileFlag = &cli.StringFlag{
+		Name:  "mnemonic-25th-word-file",
+		Usage: "(Advanced) Path to a plain-text, .txt file containing your 25th word passphrase for your mnemonic",
+	}
 	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
 	ImportPrivateKeyFileFlag = &cli.StringFlag{
 		Name:  "import-private-key-file",

@@ -3,6 +3,8 @@ package accounts
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -123,18 +125,31 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		SkipMnemonicConfirm: cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name),
 	}
 	if keymanagerKind == keymanager.Derived {
-		mnemonicPassphrase, err := promptutil.InputPassword(
-			cliCtx,
-			flags.WalletPasswordFileFlag,
-			"(advanced) setup a passphrase (25th word) for your mnemonic",
-			"confirm 25th word for your mnemonic",
-			true, /* Should confirm password */
-			promptutil.ValidatePasswordInput,
+		resp, err := promptutil.ValidatePrompt(
+			os.Stdin, newMnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not validate choice")
 		}
-		createWalletConfig.Mnemonic25thWord = mnemonicPassphrase
+		if strings.ToLower(resp) == "y" {
+			mnemonicPassphrase, err := promptutil.InputPassword(
+				cliCtx,
+				flags.Mnemonic25thWordFileFlag,
+				newMnemonicPassphrasePromptText,
+				"Confirm mnemonic passphrase",
+				true, /* Should confirm password */
+				func(input string) error {
+					if strings.TrimSpace(input) == "" {
+						return errors.New("input cannot be empty")
+					}
+					return nil
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
+			createWalletConfig.Mnemonic25thWord = mnemonicPassphrase
+		}
 	}
 	if keymanagerKind == keymanager.Remote {
 		opts, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
