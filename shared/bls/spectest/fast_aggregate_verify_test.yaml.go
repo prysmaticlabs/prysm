@@ -7,6 +7,7 @@ type FastAggregateVerifyTest struct {
 	Input struct {
 		Pubkeys   []string `json:"pubkeys"`
 		Message   string   `json:"message"`
+		Messages  string   `json:"messages"`
 		Signature string   `json:"signature"`
 	} `json:"input"`
 	Output bool `json:"output"`

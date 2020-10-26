@@ -44,6 +44,10 @@ func (s *Signature) Verify(pubKey iface.PublicKey, msg []byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
+	// Reject infinite public keys.
+	if pubKey.(*PublicKey).p.IsZero() {
+		return false
+	}
 	return s.s.VerifyByte(pubKey.(*PublicKey).p, msg)
 }
 

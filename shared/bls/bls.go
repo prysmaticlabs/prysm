@@ -79,9 +79,9 @@ func NewAggregateSignature() iface.Signature {
 // RandKey creates a new private key using a random input.
 func RandKey() (iface.SecretKey, error) {
 	if featureconfig.Get().EnableBlst {
-		return blst.RandKey(), nil
+		return blst.RandKey()
 	}
-	return herumi.RandKey(), nil
+	return herumi.RandKey()
 }
 
 // VerifyCompressed signature.

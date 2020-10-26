@@ -4,6 +4,7 @@
 package blst
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -20,14 +21,21 @@ type bls12SecretKey struct {
 }
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
-func RandKey() iface.SecretKey {
+func RandKey() (iface.SecretKey, error) {
 	// Generate 32 bytes of randomness
 	var ikm [32]byte
 	_, err := rand.NewGenerator().Read(ikm[:])
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &bls12SecretKey{blst.KeyGen(ikm[:])}
+	// Defensive check, that we have not generated a secret key,
+	secKey := &bls12SecretKey{blst.KeyGen(ikm[:])}
+	rawKey := secKey.Marshal()
+	zeroKey := [32]byte{}
+	if bytes.Equal(rawKey, zeroKey[:]) {
+		return nil, errors.New("generated a zero secret key")
+	}
+	return secKey, nil
 }
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
@@ -40,8 +48,13 @@ func SecretKeyFromBytes(privKey []byte) (iface.SecretKey, error) {
 	if secKey == nil {
 		return nil, errors.New("could not unmarshal bytes into secret key")
 	}
+	keyWrapper := &bls12SecretKey{p: secKey}
+	zeroKey := make([]byte, params.BeaconConfig().BLSSecretKeyLength)
 
-	return &bls12SecretKey{p: secKey}, nil
+	if bytes.Equal(keyWrapper.Marshal(), zeroKey) {
+		return nil, errors.New("unmarshalled a zero secret key")
+	}
+	return keyWrapper, nil
 }
 
 // PublicKey obtains the public key corresponding to the BLS secret key.

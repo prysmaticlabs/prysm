@@ -16,10 +16,13 @@ type bls12SecretKey struct {
 }
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
-func RandKey() iface.SecretKey {
+func RandKey() (iface.SecretKey, error) {
 	secKey := &bls12.SecretKey{}
 	secKey.SetByCSPRNG()
-	return &bls12SecretKey{secKey}
+	if secKey.IsZero() {
+		return nil, errors.New("generated a zero secret key")
+	}
+	return &bls12SecretKey{secKey}, nil
 }
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
@@ -31,6 +34,9 @@ func SecretKeyFromBytes(privKey []byte) (iface.SecretKey, error) {
 	err := secKey.Deserialize(privKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into secret key")
+	}
+	if secKey.IsZero() {
+		return nil, errors.New("deserialized key is a zero secret key")
 	}
 	return &bls12SecretKey{p: secKey}, err
 }

@@ -46,7 +46,11 @@ func testFastAggregateVerifyYaml(t *testing.T) {
 				pubkeys[j] = pk
 			}
 
-			msgBytes, err := hex.DecodeString(test.Input.Message[2:])
+			msg := test.Input.Message
+			if msg == "" {
+				msg = test.Input.Messages
+			}
+			msgBytes, err := hex.DecodeString(msg[2:])
 			require.NoError(t, err)
 			sigBytes, err := hex.DecodeString(test.Input.Signature[2:])
 			require.NoError(t, err)
