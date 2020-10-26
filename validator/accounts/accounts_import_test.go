@@ -279,7 +279,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	privKeyFileName := filepath.Join(privKeyDir, "privatekey.txt")
 
 	// We create a new private key and save it to a file on disk.
-	privKey := bls.RandKey()
+	privKey, _ := bls.RandKey()
 	privKeyHex := fmt.Sprintf("%x", privKey.Marshal())
 	require.NoError(
 		t,
@@ -329,7 +329,8 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 
 // Returns the fullPath to the newly created keystore file.
 func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
@@ -353,7 +354,8 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 
 // Returns the fullPath to the newly created keystore file.
 func createRandomNameKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)

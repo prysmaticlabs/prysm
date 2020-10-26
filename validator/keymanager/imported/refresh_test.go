@@ -28,7 +28,8 @@ func TestImportedKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	privKeys := make([][]byte, numAccounts)
 	pubKeys := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		privKeys[i] = privKey.Marshal()
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}

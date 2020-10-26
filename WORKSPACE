@@ -220,7 +220,7 @@ filegroup(
 )
     """,
     sha256 = "7e5f838e0f9110471ef8be9401ea687a8ed4d499664dc0eac34ecfdfd03c2ac3",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.3/general.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0-rc.0/general.tar.gz",
 )
 
 http_archive(

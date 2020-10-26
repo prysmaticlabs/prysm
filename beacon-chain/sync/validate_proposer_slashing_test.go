@@ -61,7 +61,8 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 	})
 	require.NoError(t, err)
 
-	privKey := bls.RandKey()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
 	someRoot := [32]byte{1, 2, 3}
 	someRoot2 := [32]byte{4, 5, 6}
 	header1 := &ethpb.SignedBeaconBlockHeader{

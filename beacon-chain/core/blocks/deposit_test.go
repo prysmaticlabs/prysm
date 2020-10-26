@@ -132,7 +132,8 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 }
 
 func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
-	sk := bls.RandKey()
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
 			PublicKey:             sk.PublicKey().Marshal(),

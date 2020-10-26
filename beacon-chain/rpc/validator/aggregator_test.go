@@ -59,7 +59,8 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 		BeaconDB:    db,
 	}
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := priv.Sign([]byte{'A'})
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
@@ -87,7 +88,8 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 		AttPool:     attestations.NewPool(),
 	}
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := priv.Sign([]byte{'A'})
 	v, err := s.ValidatorAtIndex(1)
 	require.NoError(t, err)
@@ -121,7 +123,8 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
@@ -159,7 +162,8 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
@@ -199,7 +203,8 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
@@ -332,7 +337,8 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
@@ -383,7 +389,8 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := priv.Sign([]byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)

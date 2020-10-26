@@ -48,7 +48,8 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	pID, err := helpers.BeaconProposerIndex(state)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
@@ -126,7 +127,8 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(state)
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -164,7 +166,8 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	bh.Slot = 9
 	require.NoError(t, state.SetLatestBlockHeader(bh))
 	currentEpoch := helpers.CurrentEpoch(state)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -202,7 +205,8 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	parentRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(state)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 
@@ -247,7 +251,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	pID, err := helpers.BeaconProposerIndex(state)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
@@ -307,7 +312,8 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	pID, err := helpers.BeaconProposerIndex(state)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()

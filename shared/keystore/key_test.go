@@ -13,7 +13,8 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	testID := uuid.NewRandom()
-	blsKey := bls.RandKey()
+	blsKey, err := bls.RandKey()
+	require.NoError(t, err)
 
 	key := &Key{
 		ID:        testID,

@@ -63,7 +63,8 @@ func TestProposeAttestation_OK(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, state, root))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
-	sk := bls.RandKey()
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
 	sig := sk.Sign([]byte("dummy_test_data"))
 	req := &ethpb.Attestation{
 		Signature: sig.Marshal(),

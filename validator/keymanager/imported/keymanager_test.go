@@ -84,7 +84,8 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	numAccounts := 10
 	wantedPubKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
 		wantedPubKeys[i] = pubKey
 		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pubKey[:])
@@ -116,7 +117,8 @@ func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	numAccounts := 10
 	wantedPrivateKeys := make([][32]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		privKeyData := privKey.Marshal()
 		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
 		wantedPrivateKeys[i] = bytesutil.ToBytes32(privKeyData)

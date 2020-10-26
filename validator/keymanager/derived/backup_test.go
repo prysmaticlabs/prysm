@@ -17,7 +17,8 @@ func TestDerivedKeymanager_ExtractKeystores(t *testing.T) {
 	validatingKeys := make([]bls.SecretKey, 10)
 	lock.Lock()
 	for i := 0; i < len(validatingKeys); i++ {
-		secretKey := bls.RandKey()
+		secretKey, err := bls.RandKey()
+		require.NoError(t, err)
 		validatingKeys[i] = secretKey
 		secretKeysCache[bytesutil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
 	}

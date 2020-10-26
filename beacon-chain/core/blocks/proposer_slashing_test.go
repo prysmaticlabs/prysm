@@ -194,6 +194,13 @@ func TestVerifyProposerSlashing(t *testing.T) {
 	beaconState, sks := testutil.DeterministicGenesisState(t, 2)
 	currentSlot := uint64(0)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
+	rand1, err := bls.RandKey()
+	require.NoError(t, err)
+	sig1 := rand1.Sign([]byte("foo")).Marshal()
+
+	rand2, err := bls.RandKey()
+	require.NoError(t, err)
+	sig2 := rand2.Sign([]byte("bar")).Marshal()
 
 	tests := []struct {
 		name    string
@@ -239,7 +246,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
 							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
-						Signature: bls.RandKey().Sign([]byte("foo")).Marshal(),
+						Signature: sig1,
 					},
 					Header_2: &ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
@@ -249,7 +256,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
 							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
-						Signature: bls.RandKey().Sign([]byte("bar")).Marshal(),
+						Signature: sig2,
 					},
 				},
 				beaconState: beaconState,

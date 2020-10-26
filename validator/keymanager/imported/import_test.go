@@ -20,7 +20,8 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	pubKey := validatingKey.PublicKey().Marshal()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
@@ -38,7 +39,8 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 	pubKeys := make([][]byte, numKeys)
 	privKeys := make([][]byte, numKeys)
 	for i := 0; i < numKeys; i++ {
-		priv := bls.RandKey()
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
 		privKeys[i] = priv.Marshal()
 		pubKeys[i] = priv.PublicKey().Marshal()
 	}
@@ -76,7 +78,8 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 
 	// Now, we run the function again but with a new priv and pubkey and this
 	// time, we do expect a change.
-	privKey := bls.RandKey()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
 	privKeys = append(privKeys, privKey.Marshal())
 	pubKeys = append(pubKeys, privKey.PublicKey().Marshal())
 

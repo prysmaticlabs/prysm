@@ -191,14 +191,15 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		},
 	}
 
-	sk := bls.RandKey()
-	deposit.Data.PublicKey = sk.PublicKey().Marshal()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+	deposit.Data.PublicKey = priv.PublicKey().Marshal()
 	d, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)
 	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, d)
 	require.NoError(t, err)
 
-	sig := sk.Sign(signedRoot[:])
+	sig := priv.Sign(signedRoot[:])
 	deposit.Data.Signature = sig.Marshal()
 
 	trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)

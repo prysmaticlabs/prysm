@@ -15,7 +15,8 @@ import (
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	sig1 := priv.Sign([]byte{'a'})
 	sig2 := priv.Sign([]byte{'b'})
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig1.Marshal()}
@@ -46,7 +47,8 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T
 		}
 	}
 	genSign := func() []byte {
-		priv := bls.RandKey()
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
 		return priv.Sign([]byte{'a'}).Marshal()
 	}
 
