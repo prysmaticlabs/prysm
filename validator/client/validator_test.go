@@ -762,7 +762,7 @@ func TestSaveProtections_OK(t *testing.T) {
 
 	v.attesterHistoryByPubKey = cleanHistories
 	require.NoError(t, v.SaveProtections(context.Background()), "Could not update assignments")
-	savedHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
+	savedHistories, err := db.AttestationHistoryNewForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
 	require.NoError(t, err)
 
 	require.DeepEqual(t, history1, savedHistories[pubKey1], "Unexpected retrieved history")
