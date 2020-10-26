@@ -8,6 +8,7 @@ import (
 	"io"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	detectionTypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
@@ -29,6 +30,9 @@ type ReadOnlyDatabase interface {
 	IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
 	IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error)
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
+
+	// Highest Attestation related methods.
+	HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error)
 
 	// MinMaxSpan related methods.
 	EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (*detectionTypes.EpochStore, error)
@@ -64,6 +68,9 @@ type WriteAccessDatabase interface {
 	SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
+
+	// Highest Attestation related methods.
+	SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error
 
 	// MinMaxSpan related methods.
 	SaveEpochSpans(ctx context.Context, epoch uint64, spans *detectionTypes.EpochStore, toCache bool) error
