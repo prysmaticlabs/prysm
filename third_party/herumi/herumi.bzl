@@ -15,7 +15,7 @@ def bls_dependencies():
         urls = [
             "https://github.com/herumi/bls-eth-go-binary/archive/4b463a10c225efa46f6d7525ef44822e4b5b7b05.tar.gz",
         ],
-        #  sha256 = "25700f60b68dbd10ef7d29f91b91a3fa2b055231d46399a5d760989cb5d60eca",
+        sha256 = "23de2840e53818f650bc656bbd9e9a128806f686bcfec56918605868f05b5ac3",
         build_file = "@prysm//third_party/herumi:bls_eth_go_binary.BUILD",
     )
     _maybe(

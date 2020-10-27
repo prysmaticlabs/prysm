@@ -692,8 +692,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:KUHKqKMt9r78Ko07pTvlvEW6vPq24+efv1YXWk9Ba1U=",
-        version = "v0.0.0-20201008062400-71567a52ad65",
+        sum = "h1:S7pKW74AvYc89WawL6IxGSnJRxF4TkE1GITYqKFyYy4=",
+        version = "v0.0.0-20201019012252-4b463a10c225",
     )
     go_repository(
         name = "com_github_hpcloud_tail",
