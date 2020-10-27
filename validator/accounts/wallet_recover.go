@@ -50,30 +50,33 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	config := &RecoverWalletConfig{
 		Mnemonic: mnemonic,
 	}
-	resp, err := promptutil.ValidatePrompt(
-		os.Stdin, mnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
-	)
-	if err != nil {
-		return errors.Wrap(err, "could not validate choice")
-	}
-	if strings.ToLower(resp) == "y" {
-		mnemonicPassphrase, err := promptutil.InputPassword(
-			cliCtx,
-			flags.Mnemonic25thWordFileFlag,
-			mnemonicPassphrasePromptText,
-			"Confirm mnemonic passphrase",
-			false, /* Should confirm password */
-			func(input string) error {
-				if strings.TrimSpace(input) == "" {
-					return errors.New("input cannot be empty")
-				}
-				return nil
-			},
+	skipMnemonic25thWord := cliCtx.IsSet(flags.SkipMnemonic25thWordCheckFlag.Name)
+	if !skipMnemonic25thWord {
+		resp, err := promptutil.ValidatePrompt(
+			os.Stdin, mnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
 		)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not validate choice")
 		}
-		config.Mnemonic25thWord = mnemonicPassphrase
+		if strings.ToLower(resp) == "y" {
+			mnemonicPassphrase, err := promptutil.InputPassword(
+				cliCtx,
+				flags.Mnemonic25thWordFileFlag,
+				mnemonicPassphrasePromptText,
+				"Confirm mnemonic passphrase",
+				false, /* Should confirm password */
+				func(input string) error {
+					if strings.TrimSpace(input) == "" {
+						return errors.New("input cannot be empty")
+					}
+					return nil
+				},
+			)
+			if err != nil {
+				return err
+			}
+			config.Mnemonic25thWord = mnemonicPassphrase
+		}
 	}
 	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {

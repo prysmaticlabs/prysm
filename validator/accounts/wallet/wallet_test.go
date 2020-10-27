@@ -160,7 +160,7 @@ func Test_LockUnlockFile(t *testing.T) {
 		passwordsDir:        passwordsDir,
 		walletPasswordFile:  passwordFile,
 		accountPasswordFile: passwordFile,
-		keymanagerKind:      keymanager.Derived,
+		keymanagerKind:      keymanager.Imported,
 		numAccounts:         numAccounts,
 	})
 
