@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -420,4 +422,32 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	web3Service.cancel()
 	assert.LogsContain(t, hook, "Currently waiting for chainstart")
+}
+
+func TestInitDepositCache_OK(t *testing.T) {
+	ctrs := []*protodb.DepositContainer{
+		{Index: 0, Eth1BlockHeight: 2, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}},
+		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
+		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
+	}
+	beaconDB, _ := dbutil.SetupDB(t)
+	s := &Service{
+		chainStartData: &protodb.ChainStartData{Chainstarted: false},
+		beaconDB:       beaconDB,
+	}
+	var err error
+	s.depositCache, err = depositcache.New()
+	require.NoError(t, err)
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+
+	require.Equal(t, 0, len(s.depositCache.PendingContainers(context.Background(), nil)))
+
+	blockRootA := [32]byte{'a'}
+
+	emptyState := testutil.NewBeaconState()
+	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
+	require.NoError(t, s.beaconDB.SaveState(context.Background(), emptyState, blockRootA))
+	s.chainStartData.Chainstarted = true
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+	require.Equal(t, 3, len(s.depositCache.PendingContainers(context.Background(), nil)))
 }
