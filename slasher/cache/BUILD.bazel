@@ -30,5 +30,6 @@ go_test(
     deps = [
         "//proto/slashing:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_farazdagi_prysm_shared_types//:go_default_library",
     ],
 )

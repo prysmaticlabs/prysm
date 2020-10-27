@@ -3,6 +3,7 @@ package cache
 import (
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -26,8 +27,8 @@ func TestStoringAndFetching(t *testing.T) {
 	res, b := cache.Get(1)
 	require.Equal(t, true, b)
 	require.Equal(t, uint64(1), res[1].ValidatorId)
-	require.Equal(t, uint64(2), res[1].HighestSourceEpoch)
-	require.Equal(t, uint64(3), res[1].HighestTargetEpoch)
+	require.Equal(t, types.Epoch(2), res[1].HighestSourceEpoch)
+	require.Equal(t, types.Epoch(3), res[1].HighestTargetEpoch)
 
 	// Delete it.
 	require.Equal(t, true, cache.Delete(1))

@@ -681,7 +681,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	type testStruct struct {
 		name string
 		att  *ethpb.IndexedAttestation
-		want []map[basetypes.Epoch]types.Span
+		want []map[uint64]types.Span
 	}
 	tests := []testStruct{
 		{
@@ -699,7 +699,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 				},
 				Signature: []byte{1, 2},
 			},
-			want: []map[basetypes.Epoch]types.Span{
+			want: []map[uint64]types.Span{
 				// Epoch 0.
 				{
 					0: {MinSpan: 4, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
@@ -746,7 +746,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 				},
 				Signature: []byte{1, 2},
 			},
-			want: []map[basetypes.Epoch]types.Span{
+			want: []map[uint64]types.Span{
 				// Epoch 0.
 				{},
 				// Epoch 1.
