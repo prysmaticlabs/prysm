@@ -6,6 +6,7 @@ package state
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -18,6 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -282,7 +285,13 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	}
 
 	highestSlot := state.Slot()
-	key := state.Slot()
+	r, err := helpers.StateRootAtSlot(state, state.Slot())
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(1, hex.EncodeToString(r))
+	key := hashutil.Hash(append(bytesutil.Bytes32(state.Slot()), r...))
+	fmt.Println(2, hex.EncodeToString(key[:]))
 
 	// Restart from cached value, if one exists.
 	cachedState, err := SkipSlotCache.Get(ctx, key)
