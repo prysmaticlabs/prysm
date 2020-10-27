@@ -54,7 +54,6 @@ go_image(
     deps = [
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/node:go_default_library",
-        "//shared/tos:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",

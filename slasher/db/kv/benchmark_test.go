@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
@@ -28,7 +29,7 @@ func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := db.SaveEpochSpans(ctx, uint64(i%54000), es, false)
+		err := db.SaveEpochSpans(ctx, basetypes.Epoch(uint64(i%54000)), es, false)
 		require.NoError(b, err, "Save validator span map failed")
 	}
 }
@@ -46,14 +47,14 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 	}
 	b.Log(len(es.Bytes()))
 	for i := 0; i < 200; i++ {
-		err := db.SaveEpochSpans(ctx, uint64(i), es, false)
+		err := db.SaveEpochSpans(ctx, basetypes.Epoch(uint64(i)), es, false)
 		require.NoError(b, err, "Save validator span map failed")
 	}
 	b.Log(db.db.Info())
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := db.EpochSpans(ctx, uint64(i%200), false)
+		_, err := db.EpochSpans(ctx, basetypes.Epoch(uint64(i%200)), false)
 		require.NoError(b, err, "Read validator span map failed")
 	}
 }

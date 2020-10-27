@@ -732,8 +732,8 @@ func (s *Service) logTillChainStart() {
 // cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
 // instead of making multiple RPC requests to the ETH1 endpoint.
 func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
-	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
-		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
+	slots := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	blocksPerVotingPeriod := slots.Uint64() * params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
 
 	end, err := s.followBlockHeight(ctx)
 	if err != nil {

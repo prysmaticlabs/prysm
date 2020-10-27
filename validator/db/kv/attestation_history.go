@@ -40,7 +40,7 @@ func (store *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys
 			var attestationHistory *slashpb.AttestationHistory
 			if len(enc) == 0 {
 				newMap := make(map[uint64]uint64)
-				newMap[0] = params.BeaconConfig().FarFutureEpoch
+				newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
 				attestationHistory = &slashpb.AttestationHistory{
 					TargetToSource: newMap,
 				}

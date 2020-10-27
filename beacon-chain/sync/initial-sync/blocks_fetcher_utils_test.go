@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -31,7 +32,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		peers: peersGen(5),
 	}
 
-	mc, p2p, _ := initializeTestServices(t, []uint64{}, chainConfig.peers)
+	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -44,7 +45,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		},
 	)
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
-	seekSlots := map[uint64]uint64{
+	seekSlots := map[types.Slot]types.Slot{
 		0:     1,
 		10:    11,
 		31:    32,
@@ -69,8 +70,8 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	}
 
 	t.Run("test isolated non-skipped slot", func(t *testing.T) {
-		seekSlot := uint64(51264)
-		expectedSlot := uint64(55000)
+		seekSlot := types.Slot(51264)
+		expectedSlot := types.Slot(55000)
 		found := false
 		var i int
 		for i = 0; i < 100; i++ {

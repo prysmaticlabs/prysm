@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -19,11 +20,11 @@ import (
 // non-skipped slot. This shouldn't be a problem, as in case of adversary peer, we might get incorrect
 // data anyway, so code that relies on this function must be robust enough to re-request, if no progress
 // is possible with a returned value.
-func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
+func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot types.Slot) (types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.nonSkippedSlotAfter")
 	defer span.End()
 
-	var targetEpoch, headEpoch uint64
+	var targetEpoch, headEpoch types.Epoch
 	var peers []peer.ID
 	if f.mode == modeStopOnFinalizedEpoch {
 		headEpoch = f.finalizationFetcher.FinalizedCheckpt().Epoch
@@ -57,7 +58,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	pidInd := 0
 
-	fetch := func(pid peer.ID, start, count, step uint64) (uint64, error) {
+	fetch := func(pid peer.ID, start types.Slot, count, step uint64) (types.Slot, error) {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			StartSlot: start,
 			Count:     count,
@@ -81,7 +82,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	start := slot + 1
 	end := start + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
 	for ind := start; ind < end; ind += slotsPerEpoch {
-		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, slotsPerEpoch, 1)
+		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, slotsPerEpoch.Uint64(), 1)
 		if err != nil {
 			return 0, err
 		}
@@ -99,8 +100,8 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		return 0, err
 	}
 	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind + uint64(f.rand.Intn(int(slotsPerEpoch)))
-		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch/2, slotsPerEpoch)
+		start := ind.Add(uint64(f.rand.Intn(int(slotsPerEpoch.Uint64()))))
+		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch.Uint64()/2, slotsPerEpoch.Uint64())
 		if err != nil {
 			return 0, err
 		}
@@ -119,7 +120,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	if err != nil {
 		return 0, err
 	}
-	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch*2, 1)
+	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch.Uint64()*2, 1)
 	if err != nil {
 		return 0, err
 	}
@@ -134,14 +135,14 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 }
 
 // bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
-func (f *blocksFetcher) bestFinalizedSlot() uint64 {
+func (f *blocksFetcher) bestFinalizedSlot() types.Slot {
 	finalizedEpoch, _ := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, f.finalizationFetcher.FinalizedCheckpt().Epoch)
-	return finalizedEpoch * params.BeaconConfig().SlotsPerEpoch
+	return params.BeaconConfig().SlotsPerEpoch.MulEpoch(finalizedEpoch)
 }
 
 // bestNonFinalizedSlot returns the highest non-finalized slot of enough number of connected peers.
-func (f *blocksFetcher) bestNonFinalizedSlot() uint64 {
+func (f *blocksFetcher) bestNonFinalizedSlot() types.Slot {
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	targetEpoch, _ := f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers*2, headEpoch)
-	return targetEpoch * params.BeaconConfig().SlotsPerEpoch
+	return params.BeaconConfig().SlotsPerEpoch.MulEpoch(targetEpoch)
 }

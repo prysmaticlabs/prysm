@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -20,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -37,17 +38,17 @@ import (
 
 type testCache struct {
 	sync.RWMutex
-	rootCache       map[uint64][32]byte
-	parentSlotCache map[uint64]uint64
+	rootCache       map[types.Slot][32]byte
+	parentSlotCache map[types.Slot]types.Slot
 }
 
 var cache = &testCache{}
 
 type peerData struct {
-	blocks         []uint64 // slots that peer has blocks
-	finalizedEpoch uint64
-	headSlot       uint64
-	failureSlots   []uint64 // slots at which the peer will return an error
+	blocks         []types.Slot // slots that peer has blocks
+	finalizedEpoch types.Epoch
+	headSlot       types.Slot
+	failureSlots   []types.Slot // slots at which the peer will return an error
 	forkedPeer     bool
 }
 
@@ -75,8 +76,8 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
-	cache.initializeRootCache(blocks, t)
+func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
+	cache.initializeRootCache(slots, t)
 	beaconDB, _ := dbtest.SetupDB(t)
 
 	p := p2pt.NewTestP2P(t)
@@ -101,36 +102,36 @@ func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*
 }
 
 // makeGenesisTime where now is the current slot.
-func makeGenesisTime(currentSlot uint64) time.Time {
+func makeGenesisTime(currentSlot types.Slot) time.Time {
 	return timeutils.Now().Add(-1 * time.Second * time.Duration(currentSlot) * time.Duration(params.BeaconConfig().SecondsPerSlot))
 }
 
 // sanity test on helper function
 func TestMakeGenesisTime(t *testing.T) {
-	currentSlot := uint64(64)
+	currentSlot := types.Slot(64)
 	gt := makeGenesisTime(currentSlot)
 	require.Equal(t, currentSlot, helpers.SlotsSince(gt))
 }
 
 // helper function for sequences of block slots
-func makeSequence(start, end uint64) []uint64 {
+func makeSequence(start, end types.Slot) []types.Slot {
 	if end < start {
 		panic("cannot make sequence where end is before start")
 	}
-	seq := make([]uint64, 0, end-start+1)
+	seq := make([]types.Slot, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		seq = append(seq, i)
 	}
 	return seq
 }
 
-func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
+func (c *testCache) initializeRootCache(reqSlots []types.Slot, t *testing.T) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.rootCache = make(map[uint64][32]byte)
-	c.parentSlotCache = make(map[uint64]uint64)
-	parentSlot := uint64(0)
+	c.rootCache = make(map[types.Slot][32]byte)
+	c.parentSlotCache = make(map[types.Slot]types.Slot)
+	parentSlot := types.Slot(0)
 
 	genesisBlock := testutil.NewBeaconBlock().Block
 	genesisRoot, err := genesisBlock.HashTreeRoot()
@@ -152,7 +153,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 // sanity test on helper function
 func TestMakeSequence(t *testing.T) {
 	got := makeSequence(3, 5)
-	want := []uint64{3, 4, 5}
+	want := []types.Slot{3, 4, 5}
 	require.DeepEqual(t, want, got)
 }
 
@@ -176,24 +177,24 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
-		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+((req.Count-1)*req.Step))
+		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot.Add((req.Count-1)*req.Step))
 
 		// Expected failure range
-		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
+		if len(sliceutil.IntersectionSlot(datum.failureSlots, requestedBlocks)) > 0 {
 			_, err := stream.Write([]byte{0x01})
 			assert.NoError(t, err)
-			msg := types.ErrorMessage("bad")
+			msg := p2ptypes.ErrorMessage("bad")
 			_, err = p.Encoding().EncodeWithMaxLength(stream, &msg)
 			assert.NoError(t, err)
 			return
 		}
 
 		// Determine the correct subset of blocks to return as dictated by the test scenario.
-		blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
+		slots := sliceutil.IntersectionSlot(datum.blocks, requestedBlocks)
 
 		ret := make([]*eth.SignedBeaconBlock, 0)
-		for _, slot := range blocks {
-			if (slot-req.StartSlot)%req.Step != 0 {
+		for _, slot := range slots {
+			if (slot-req.StartSlot).Uint64()%req.Step != 0 {
 				continue
 			}
 			cache.RLock()

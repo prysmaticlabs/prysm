@@ -5,7 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/types"
+	types "github.com/farazdagi/prysm-shared-types"
+	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -29,7 +30,7 @@ const signExitErr = "could not sign voluntary exit proposal"
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -42,7 +43,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	// Sign randao reveal, it's used to request block from beacon node
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	epoch := types.ToEpoch(slot.Div(params.BeaconConfig().SlotsPerEpoch.Uint64()).Uint64())
 	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
@@ -136,12 +137,12 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get validator index failed")
 	}
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &types.Empty{})
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &pbtypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
 	totalSecondsPassed := timeutils.Now().Unix() - genesisResponse.GenesisTime.Seconds
-	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+	currentEpoch := types.ToEpoch(uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch.Uint64()))
 
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
 	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
@@ -163,7 +164,7 @@ func ProposeExit(
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch types.Epoch) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
@@ -190,7 +191,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b *ethpb.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, domainDataErr)

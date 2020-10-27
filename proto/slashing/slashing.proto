@@ -59,7 +59,7 @@ message AttesterSlashingResponse {
 // a block for while pruning the older data.
 message ProposalHistory {
     bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    uint64 latest_epoch_written = 2;
+    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/farazdagi/prysm-shared-types.Epoch"];
 }
 
 // AttestationHistory defines the structure for recording a validator's historical attestation.
@@ -69,5 +69,5 @@ message ProposalHistory {
 // the history is updated.
 message AttestationHistory {
     map<uint64, uint64> target_to_source = 1;
-    uint64 latest_epoch_written = 2;
+    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/farazdagi/prysm-shared-types.Epoch"];
 }

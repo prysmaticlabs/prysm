@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -143,21 +144,21 @@ func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 
 func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
 	}
 
 	// Mark an attestation spanning epochs 0 to 3.
-	newAttSource := uint64(0)
-	newAttTarget := uint64(3)
+	newAttSource := types.Epoch(0)
+	newAttTarget := types.Epoch(3)
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	require.Equal(t, newAttTarget, attestations.LatestEpochWritten, "Unexpected latest epoch written")
 
 	// Try an attestation that should be slashable (double att) spanning epochs 1 to 3.
-	newAttSource = uint64(1)
-	newAttTarget = uint64(3)
+	newAttSource = types.Epoch(1)
+	newAttTarget = types.Epoch(3)
 	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
@@ -166,7 +167,7 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 func TestAttestationHistory_Prunes(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
@@ -176,8 +177,8 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	require.Equal(t, false, isNewAttSlashable(attestations, 0, wsPeriod+5), "Should not be slashable")
 
 	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
-	prunedNewAttSource := uint64(0)
-	prunedNewAttTarget := uint64(3)
+	prunedNewAttSource := types.Epoch(0)
+	prunedNewAttTarget := types.Epoch(3)
 	attestations = markAttestationForTargetEpoch(attestations, prunedNewAttSource, prunedNewAttTarget)
 	newAttSource := prunedNewAttSource + 6
 	newAttTarget := prunedNewAttTarget + 6
@@ -210,41 +211,41 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 
 func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
 	}
 
 	// Mark an attestation spanning epochs 0 to 3.
-	newAttSource := uint64(0)
-	newAttTarget := uint64(3)
+	newAttSource := types.Epoch(0)
+	newAttTarget := types.Epoch(3)
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	require.Equal(t, newAttTarget, attestations.LatestEpochWritten)
 
 	// Try an attestation that should be slashable (being surrounded) spanning epochs 1 to 2.
-	newAttSource = uint64(1)
-	newAttTarget = uint64(2)
+	newAttSource = types.Epoch(1)
+	newAttTarget = types.Epoch(2)
 	require.Equal(t, true, isNewAttSlashable(attestations, newAttSource, newAttTarget), "Expected slashable attestation")
 }
 
 func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
 	}
 
 	// Mark an attestation spanning epochs 1 to 2.
-	newAttSource := uint64(1)
-	newAttTarget := uint64(2)
+	newAttSource := types.Epoch(1)
+	newAttTarget := types.Epoch(2)
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	require.Equal(t, newAttTarget, attestations.LatestEpochWritten)
-	require.Equal(t, newAttSource, attestations.TargetToSource[newAttTarget])
+	require.Equal(t, newAttSource.Uint64(), attestations.TargetToSource[newAttTarget.Uint64()])
 
 	// Try an attestation that should be slashable (surrounding) spanning epochs 0 to 3.
-	newAttSource = uint64(0)
-	newAttTarget = uint64(3)
+	newAttSource = types.Epoch(0)
+	newAttTarget = types.Epoch(3)
 	require.Equal(t, true, isNewAttSlashable(attestations, newAttSource, newAttTarget))
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,7 +16,7 @@ import (
 
 // ProposalHistoryForEpoch accepts a validator public key and returns the corresponding proposal history.
 // Returns nil if there is no proposal history for the validator.
-func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error) {
+func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch types.Epoch) (bitfield.Bitlist, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForEpoch")
 	defer span.End()
 
@@ -28,9 +29,9 @@ func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byt
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key %#x", publicKey)
 		}
-		slotBits := valBucket.Get(bytesutil.Bytes8(epoch))
+		slotBits := valBucket.Get(bytesutil.Bytes8(epoch.Uint64()))
 		if len(slotBits) == 0 {
-			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
+			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch.Uint64())
 			return nil
 		}
 		copy(slotBitlist, slotBits)
@@ -40,7 +41,7 @@ func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byt
 }
 
 // SaveProposalHistoryForEpoch saves the proposal history for the requested validator public key.
-func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte, epoch uint64, slotBits bitfield.Bitlist) error {
+func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte, epoch types.Epoch, slotBits bitfield.Bitlist) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
@@ -50,7 +51,7 @@ func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []by
 		if valBucket == nil {
 			return fmt.Errorf("validator history is empty for validator %#x", pubKey)
 		}
-		if err := valBucket.Put(bytesutil.Bytes8(epoch), slotBits); err != nil {
+		if err := valBucket.Put(bytesutil.Bytes8(epoch.Uint64()), slotBits); err != nil {
 			return err
 		}
 		return pruneProposalHistory(valBucket, epoch)
@@ -71,10 +72,10 @@ func (store *Store) OldUpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	})
 }
 
-func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
+func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch types.Epoch) error {
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
-		epoch := binary.LittleEndian.Uint64(k)
+		epoch := types.ToEpoch(binary.LittleEndian.Uint64(k))
 		// Only delete epochs that are older than the weak subjectivity period.
 		if epoch+params.BeaconConfig().WeakSubjectivityPeriod <= newestEpoch {
 			if err := c.Delete(); err != nil {

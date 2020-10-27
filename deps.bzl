@@ -46,8 +46,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:8DS7uDmUkGF6UKNU1HivEsjrTusxLPb05KUr/D8ONWQ=",
-        version = "v0.0.0-20200826142241-3a913c5a1313",
+        sum = "h1:FnpkCo1TAj/eq0ETLPhAplYYB4KlFQy3kVb8cLludAc=",
+        version = "v0.0.0-20201020132831-68dc48984fd3",
     )
     go_repository(
         name = "com_github_prysmaticlabs_bazel_go_ethereum",
@@ -2552,8 +2552,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:dGeuKeaXxCepTbwsz7kYSfP1yazw1uRMn58CqNCcPP4=",
-        version = "v0.0.0-20201003171600-a72e5f77d233",
+        sum = "h1:yh2YRQT3I6KUwQwDzSDIyy/DZvWaapKuUfr+nYyuiqs=",
+        version = "v0.0.0-20201027004641-be5d2393c80b",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -3659,4 +3659,10 @@ def prysm_deps():
         importpath = "github.com/trailofbits/go-mutexasserts",
         sum = "h1:8LRP+2JK8piIUU16ZDgWDXwjJcuJNTtCzadjTZj8Jf0=",
         version = "v0.0.0-20200708152505-19999e7d3cef",
+    )
+    go_repository(
+        name = "com_github_farazdagi_prysm_shared_types",
+        importpath = "github.com/farazdagi/prysm-shared-types",
+        sum = "h1:gwfph1ePiOaFIfZFxcARvFVkNXiGAPeOXAMgRU4k64g=",
+        version = "v0.0.0-20201027061121-b16aa862e321",
     )

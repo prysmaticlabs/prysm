@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -28,7 +29,7 @@ func unmarshalBlockHeader(ctx context.Context, enc []byte) (*ethpb.SignedBeaconB
 
 // BlockHeaders accepts an slot and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
-func (db *Store) BlockHeaders(ctx context.Context, slot, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
+func (db *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.BlockHeaders")
 	defer span.End()
 	var blockHeaders []*ethpb.SignedBeaconBlockHeader
@@ -48,7 +49,7 @@ func (db *Store) BlockHeaders(ctx context.Context, slot, validatorID uint64) ([]
 }
 
 // HasBlockHeader accepts a slot and validator id and returns true if the block header exists.
-func (db *Store) HasBlockHeader(ctx context.Context, slot, validatorID uint64) bool {
+func (db *Store) HasBlockHeader(ctx context.Context, slot types.Slot, validatorID uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.HasBlockHeader")
 	defer span.End()
 	prefix := encodeSlotValidatorID(slot, validatorID)
@@ -113,14 +114,14 @@ func (db *Store) DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.Signe
 }
 
 // PruneBlockHistory leaves only records younger then history size.
-func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpochAge uint64) error {
+func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch types.Epoch, pruningEpochAge types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneBlockHistory")
 	defer span.End()
 	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)
 	if pruneTill <= 0 {
 		return nil
 	}
-	pruneTillSlot := uint64(pruneTill) * params.BeaconConfig().SlotsPerEpoch
+	pruneTillSlot := uint64(pruneTill) * params.BeaconConfig().SlotsPerEpoch.Uint64()
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()

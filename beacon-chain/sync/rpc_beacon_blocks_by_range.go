@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -52,10 +53,10 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	// initial batch start and end slots to be returned to remote peer.
 	startSlot := m.StartSlot
-	endSlot := startSlot + (m.Step * (count - 1))
+	endSlot := startSlot.Add(m.Step * (count - 1))
 
 	// The final requested slot from remote peer.
-	endReqSlot := startSlot + (m.Step * (m.Count - 1))
+	endReqSlot := startSlot.Add(m.Step * (m.Count - 1))
 
 	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
 	if err != nil {
@@ -93,7 +94,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		// Reduce capacity of peer in the rate limiter first.
 		// Decrease allowed blocks capacity by the number of streamed blocks.
 		if startSlot <= endSlot {
-			s.rateLimiter.add(stream, int64(1+(endSlot-startSlot)/m.Step))
+			s.rateLimiter.add(stream, int64(1+(endSlot-startSlot).Uint64()/m.Step))
 		}
 		// Exit in the event we have a disjoint chain to
 		// return.
@@ -102,8 +103,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 
 		// Recalculate start and end slots for the next batch to be returned to the remote peer.
-		startSlot = endSlot + m.Step
-		endSlot = startSlot + (m.Step * (allowedBlocksPerSecond - 1))
+		startSlot = endSlot.Add(m.Step)
+		endSlot = startSlot.Add(m.Step * (allowedBlocksPerSecond - 1))
 		if endSlot > endReqSlot {
 			endSlot = endReqSlot
 		}
@@ -119,7 +120,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	return nil
 }
 
-func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlot, step uint64,
+func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlot types.Slot, step uint64,
 	prevRoot *[32]byte, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.WriteBlockRangeToStream")
 	defer span.End()
@@ -185,7 +186,7 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 	// Add a buffer for possible large range requests from nodes syncing close to the
 	// head of the chain.
 	buffer := rangeLimit * 2
-	highestExpectedSlot := s.chain.CurrentSlot() + uint64(buffer)
+	highestExpectedSlot := s.chain.CurrentSlot().Add(uint64(buffer))
 
 	// Ensure all request params are within appropriate bounds
 	if count == 0 || count > maxRequestBlocks {
@@ -200,7 +201,7 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 		return errors.New(reqError)
 	}
 
-	endSlot := startSlot + (step * (count - 1))
+	endSlot := startSlot.Add(step * (count - 1))
 	if endSlot-startSlot > rangeLimit {
 		return errors.New(reqError)
 	}
@@ -210,14 +211,14 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 // filters all the provided blocks to ensure they are canonical
 // and are strictly linear.
 func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
-	step, startSlot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+	step uint64, startSlot types.Slot) ([]*ethpb.SignedBeaconBlock, error) {
 	if len(blks) != len(roots) {
 		return nil, errors.New("input blks and roots are diff lengths")
 	}
 
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
-		isRequestedSlotStep := (b.Block.Slot-startSlot)%step == 0
+		isRequestedSlotStep := b.Block.Slot.SubSlot(startSlot).Mod(step) == 0
 		isCanonical, err := s.chain.IsCanonical(ctx, roots[i])
 		if err != nil {
 			return nil, err

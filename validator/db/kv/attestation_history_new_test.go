@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,7 +17,7 @@ func TestNewAttestationHistoryArray(t *testing.T) {
 	ba := newAttestationHistoryArray(0)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
 	ba = newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod - 1)
-	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, uint64(len(ba)))
+	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, types.Epoch(len(ba)))
 	ba = newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
 	ba = newAttestationHistoryArray(params.BeaconConfig().WeakSubjectivityPeriod + 1)
@@ -70,8 +71,8 @@ func TestSetTargetData(t *testing.T) {
 	type testStruct struct {
 		name        string
 		enc         EncHistoryData
-		target      uint64
-		source      uint64
+		target      types.Epoch
+		source      types.Epoch
 		signingRoot []byte
 		expected    EncHistoryData
 		error       string
@@ -159,7 +160,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 		enc, err := clean.setTargetData(ctx,
 			10,
 			&HistoryData{
-				Source:      uint64(i),
+				Source:      types.ToEpoch(uint64(i)),
 				SigningRoot: []byte{1, 2, 3},
 			})
 		require.NoError(t, err)
@@ -197,8 +198,8 @@ func TestStore_ImportOldAttestationFormat(t *testing.T) {
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	newMap := make(map[uint64]uint64)
 	// The validator attested at target epoch 2 but had no attestations for target epochs 0 and 1.
-	newMap[0] = farFuture
-	newMap[1] = farFuture
+	newMap[0] = farFuture.Uint64()
+	newMap[1] = farFuture.Uint64()
 	newMap[2] = 1
 	history := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
@@ -207,9 +208,9 @@ func TestStore_ImportOldAttestationFormat(t *testing.T) {
 
 	newMap2 := make(map[uint64]uint64)
 	// The validator attested at target epoch 1 and 3 but had no attestations for target epochs 0 and 2.
-	newMap2[0] = farFuture
+	newMap2[0] = farFuture.Uint64()
 	newMap2[1] = 0
-	newMap2[2] = farFuture
+	newMap2[2] = farFuture.Uint64()
 	newMap2[3] = 2
 	history2 := &slashpb.AttestationHistory{
 		TargetToSource:     newMap2,
@@ -230,11 +231,11 @@ func TestStore_ImportOldAttestationFormat(t *testing.T) {
 		require.Equal(t, true, ok, "Missing public key in the original data")
 		lew, err := encHis.getLatestEpochWritten(ctx)
 		require.NoError(t, err, "Failed to get latest epoch written")
-		require.Equal(t, his.LatestEpochWritten, lew, "LatestEpochWritten is not equal to the source data value")
+		require.Equal(t, his.LatestEpochWritten.Uint64(), lew, "LatestEpochWritten is not equal to the source data value")
 		for target, source := range his.TargetToSource {
-			hd, err := encHis.getTargetData(ctx, target)
+			hd, err := encHis.getTargetData(ctx, types.ToEpoch(target))
 			require.NoError(t, err, "Failed to get target data for epoch: %d", target)
-			require.Equal(t, source, hd.Source, "Source epoch is different")
+			require.Equal(t, types.Epoch(source), hd.Source, "Source epoch is different")
 			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), hd.SigningRoot, "Signing root differs in imported data")
 		}
 	}

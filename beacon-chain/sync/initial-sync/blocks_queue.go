@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -51,8 +52,8 @@ type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	finalizationFetcher blockchain.FinalizationFetcher
-	startSlot           uint64
-	highestExpectedSlot uint64
+	startSlot           types.Slot
+	highestExpectedSlot types.Slot
 	p2p                 p2p.P2P
 	mode                syncMode
 }
@@ -65,7 +66,7 @@ type blocksQueue struct {
 	smm                 *stateMachineManager
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
-	highestExpectedSlot uint64
+	highestExpectedSlot types.Slot
 	mode                syncMode
 	exitConditions      struct {
 		noRequiredPeersErrRetries int
@@ -164,7 +165,7 @@ func (q *blocksQueue) loop() {
 	// Define initial state machines.
 	startSlot := q.headFetcher.HeadSlot()
 	blocksPerRequest := q.blocksFetcher.blocksPerSecond
-	for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+	for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 		q.smm.addStateMachine(i)
 	}
 
@@ -222,7 +223,7 @@ func (q *blocksQueue) loop() {
 					}
 				}
 				// Do garbage collection, and advance sliding window forward.
-				if q.headFetcher.HeadSlot() >= fsm.start+blocksPerRequest-1 {
+				if q.headFetcher.HeadSlot() >= fsm.start.Add(blocksPerRequest-1) {
 					highestStartSlot, err := q.smm.highestStartSlot()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
@@ -232,7 +233,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove state machine")
 					}
 					if len(q.smm.machines) < lookaheadSteps {
-						q.smm.addStateMachine(highestStartSlot + blocksPerRequest)
+						q.smm.addStateMachine(highestStartSlot.Add(blocksPerRequest))
 					}
 				}
 			}
@@ -405,12 +406,12 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		if err := q.smm.removeAllStateMachines(); err != nil {
 			return stateSkipped, err
 		}
-		for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
+		for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += types.Slot(blocksPerRequest) {
 			q.smm.addStateMachine(i)
 		}
 
 		// Replace the last (currently activated) state machine.
-		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot+blocksPerRequest*(lookaheadSteps-1)-1)
+		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot.Add(blocksPerRequest*(lookaheadSteps-1)-1))
 		if err != nil {
 			return stateSkipped, err
 		}
@@ -424,7 +425,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 			}
 		}
 		if nonSkippedSlot > q.highestExpectedSlot {
-			nonSkippedSlot = startSlot + blocksPerRequest*(lookaheadSteps-1)
+			nonSkippedSlot = startSlot.Add(blocksPerRequest * (lookaheadSteps - 1))
 		}
 		q.smm.addStateMachine(nonSkippedSlot)
 		return stateSkipped, nil

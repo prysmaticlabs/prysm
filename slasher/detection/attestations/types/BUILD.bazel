@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/bytesutil:go_default_library",
+        "@com_github_farazdagi_prysm_shared_types//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )

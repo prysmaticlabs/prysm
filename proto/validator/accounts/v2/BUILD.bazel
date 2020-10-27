@@ -37,6 +37,7 @@ go_proto_library(
     proto = ":ethereum_validator_accounts_v2_proto",
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_farazdagi_prysm_shared_types//:go_default_library",
         "@com_github_golang_protobuf//descriptor:go_default_library",
         "@com_github_golang_protobuf//ptypes/empty:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -54,6 +55,7 @@ go_proto_library(
     proto = ":ethereum_validator_accounts_v2_proto",
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_farazdagi_prysm_shared_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
     ],

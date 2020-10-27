@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +26,7 @@ const (
 // HistoryData stores the needed data to confirm if an attestation is slashable
 // or repeated.
 type HistoryData struct {
-	Source      uint64
+	Source      types.Epoch
 	SigningRoot []byte
 }
 
@@ -42,7 +43,7 @@ func (hd EncHistoryData) assertSize() error {
 	return nil
 }
 
-func newAttestationHistoryArray(target uint64) EncHistoryData {
+func newAttestationHistoryArray(target types.Epoch) EncHistoryData {
 	enc := make(EncHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
 	return enc
 }
@@ -54,45 +55,45 @@ func (hd EncHistoryData) getLatestEpochWritten(ctx context.Context) (uint64, err
 	return bytesutil.FromBytes8(hd[:latestEpochWrittenSize]), nil
 }
 
-func (hd EncHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (EncHistoryData, error) {
+func (hd EncHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochWritten types.Epoch) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
-	copy(hd[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten))
+	copy(hd[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten.Uint64()))
 	return hd, nil
 }
 
-func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
+func (hd EncHistoryData) getTargetData(ctx context.Context, target types.Epoch) (*HistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
 	// Cursor for the location to read target epoch from.
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
-	if uint64(len(hd)) < cursor+historySize {
+	if uint64(len(hd)) < cursor.Uint64()+historySize {
 		return nil, fmt.Errorf("encapsulated data size: %d is smaller then the requested target location: %d", len(hd), cursor+historySize)
 	}
 	history := &HistoryData{}
 
-	history.Source = bytesutil.FromBytes8(hd[cursor : cursor+sourceSize])
+	history.Source = types.ToEpoch(bytesutil.FromBytes8(hd[cursor : cursor+sourceSize]))
 	sr := make([]byte, 32)
 	copy(sr, hd[cursor+sourceSize:cursor+historySize])
 	history.SigningRoot = sr
 	return history, nil
 }
 
-func (hd EncHistoryData) setTargetData(ctx context.Context, target uint64, historyData *HistoryData) (EncHistoryData, error) {
+func (hd EncHistoryData) setTargetData(ctx context.Context, target types.Epoch, historyData *HistoryData) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
 	// Cursor for the location to write target epoch to.
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
-	if uint64(len(hd)) < cursor+historySize {
-		ext := make([]byte, cursor+historySize-uint64(len(hd)))
+	if uint64(len(hd)) < cursor.Uint64()+historySize {
+		ext := make([]byte, cursor.Uint64()+historySize-uint64(len(hd)))
 		hd = append(hd, ext...)
 	}
-	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
+	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source.Uint64()))
 	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
 	return hd, nil
 }
@@ -179,8 +180,8 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 			return errors.Wrapf(err, "failed to set latest epoch while migrating attestations to v2")
 		}
 		for target, source := range atts.TargetToSource {
-			dataMap[key], err = dataMap[key].setTargetData(ctx, target, &HistoryData{
-				Source:      source,
+			dataMap[key], err = dataMap[key].setTargetData(ctx, types.ToEpoch(target), &HistoryData{
+				Source:      types.ToEpoch(source),
 				SigningRoot: []byte{1},
 			})
 			if err != nil {

@@ -9,6 +9,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/sliceutil",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_farazdagi_prysm_shared_types//:go_default_library"],
 )
 
 go_test(

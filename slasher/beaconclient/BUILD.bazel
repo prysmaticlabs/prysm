@@ -24,6 +24,7 @@ go_library(
         "//shared/slotutil:go_default_library",
         "//slasher/cache:go_default_library",
         "//slasher/db:go_default_library",
+        "@com_github_farazdagi_prysm_shared_types//:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",

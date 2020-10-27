@@ -9,10 +9,10 @@ import (
 )
 
 var st, _ = stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{
-	BlockRoots:                 filledByteSlice2D(params.BeaconConfig().SlotsPerHistoricalRoot, 32),
-	StateRoots:                 filledByteSlice2D(params.BeaconConfig().SlotsPerHistoricalRoot, 32),
+	BlockRoots:                 filledByteSlice2D(params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), 32),
+	StateRoots:                 filledByteSlice2D(params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), 32),
 	Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-	RandaoMixes:                filledByteSlice2D(params.BeaconConfig().EpochsPerHistoricalVector, 32),
+	RandaoMixes:                filledByteSlice2D(params.BeaconConfig().EpochsPerHistoricalVector.Uint64(), 32),
 	Validators:                 make([]*ethpb.Validator, 0),
 	CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	Eth1Data: &ethpb.Eth1Data{

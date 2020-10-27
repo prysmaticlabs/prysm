@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -16,7 +17,7 @@ import (
 
 // ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error) {
+func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
 	defer span.End()
 
@@ -28,7 +29,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
-		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
+		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot.Uint64()))
 		if len(sr) == 0 {
 			return nil
 		}
@@ -39,7 +40,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 }
 
 // SaveProposalHistoryForSlot saves the proposal history for the requested validator public key.
-func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error {
+func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot types.Slot, signingRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
@@ -49,7 +50,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 		}
-		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot), signingRoot); err != nil {
+		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot.Uint64()), signingRoot); err != nil {
 			return err
 		}
 		return pruneProposalHistoryBySlot(valBucket, slot)
@@ -110,13 +111,13 @@ func (store *Store) MigrateV2ProposalFormat(ctx context.Context) error {
 					continue
 				}
 				copy(slotBitlist, slotBits)
-				for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-					if slotBitlist.BitAt(i) {
-						ss, err := helpers.StartSlot(bytesutil.FromBytes8(epochProposals.Epoch))
+				for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+					if slotBitlist.BitAt(i.Uint64()) {
+						ss, err := helpers.StartSlot(types.ToEpoch(bytesutil.FromBytes8(epochProposals.Epoch)))
 						if err != nil {
 							return errors.Wrapf(err, "failed to get start slot of epoch: %d", epochProposals.Epoch)
 						}
-						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(ss+i), []byte{1}); err != nil {
+						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian((ss+i).Uint64()), []byte{1}); err != nil {
 							return err
 						}
 					}
@@ -142,10 +143,10 @@ func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	})
 }
 
-func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot uint64) error {
+func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot types.Slot) error {
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
-		slot := bytesutil.BytesToUint64BigEndian(k)
+		slot := types.ToSlot(bytesutil.BytesToUint64BigEndian(k))
 		epoch := helpers.SlotToEpoch(slot)
 		newestEpoch := helpers.SlotToEpoch(newestSlot)
 		// Only delete epochs that are older than the weak subjectivity period.

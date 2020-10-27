@@ -3,6 +3,7 @@ package beaconclient
 import (
 	"context"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"go.opencensus.io/trace"
@@ -12,7 +13,7 @@ import (
 // given epoch from a beacon node via gRPC.
 func (bs *Service) RequestHistoricalAttestations(
 	ctx context.Context,
-	epoch uint64,
+	epoch types.Epoch,
 ) ([]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.RequestHistoricalAttestations")
 	defer span.End()

@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -17,7 +18,7 @@ import (
 // Tracks the highest and lowest observed epochs from the validator span maps
 // used for attester slashing detection. This value is purely used
 // as a cache key and only needs to be maintained in memory.
-var highestObservedEpoch uint64
+var highestObservedEpoch basetypes.Epoch
 var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
 
 var (
@@ -69,7 +70,7 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 // for slashing detection.
 // Returns span byte array, and error in case of db error.
 // returns empty byte array if no entry for this epoch exists in db.
-func (db *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*types.EpochStore, error) {
+func (db *Store) EpochSpans(_ context.Context, epoch basetypes.Epoch, fromCache bool) (*types.EpochStore, error) {
 	// Get from the cache if it exists or is requested, if not, go to DB.
 	if fromCache && db.flatSpanCache.Has(epoch) || db.flatSpanCache.Has(epoch) {
 		spans, _ := db.flatSpanCache.Get(epoch)
@@ -82,7 +83,7 @@ func (db *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*t
 		if b == nil {
 			return nil
 		}
-		spans := b.Get(bytesutil.Bytes8(epoch))
+		spans := b.Get(bytesutil.Bytes8(epoch.Uint64()))
 		copiedSpans = make([]byte, len(spans))
 		copy(copiedSpans, spans)
 		return nil
@@ -97,7 +98,7 @@ func (db *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*t
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
-func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
+func (db *Store) SaveEpochSpans(ctx context.Context, epoch basetypes.Epoch, es *types.EpochStore, toCache bool) error {
 	if len(es.Bytes())%int(types.SpannerEncodedLength) != 0 {
 		return types.ErrWrongSize
 	}
@@ -118,7 +119,7 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 		if err != nil {
 			return err
 		}
-		return b.Put(bytesutil.Bytes8(epoch), es.Bytes())
+		return b.Put(bytesutil.Bytes8(epoch.Uint64()), es.Bytes())
 	})
 }
 
@@ -136,7 +137,7 @@ func (db *Store) EnableSpanCache(enable bool) {
 	db.spanCacheEnabled = enable
 }
 
-func (db *Store) setObservedEpochs(ctx context.Context, epoch uint64) error {
+func (db *Store) setObservedEpochs(ctx context.Context, epoch basetypes.Epoch) error {
 	var err error
 	if epoch > highestObservedEpoch {
 		slasherHighestObservedEpoch.Set(float64(epoch))

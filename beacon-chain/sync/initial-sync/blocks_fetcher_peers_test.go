@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -316,7 +317,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
+			mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 			fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
 				finalizationFetcher:      mc,
 				headFetcher:              mc,

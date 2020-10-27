@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/kevinms/leakybucket-go"
 	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/mux"
@@ -92,17 +93,18 @@ type peerLock struct {
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
 type fetchRequestParams struct {
 	ctx   context.Context // if provided, it is used instead of global fetcher's context
-	start uint64          // starting slot
+	start types.Slot      // starting slot
 	count uint64          // how many slots to receive (fetcher may return fewer slots)
 }
 
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
-	pid          peer.ID
-	start, count uint64
-	blocks       []*eth.SignedBeaconBlock
-	err          error
+	pid    peer.ID
+	start  types.Slot
+	count  uint64
+	blocks []*eth.SignedBeaconBlock
+	err    error
 }
 
 // newBlocksFetcher creates ready to use fetcher.
@@ -216,7 +218,7 @@ func (f *blocksFetcher) loop() {
 }
 
 // scheduleRequest adds request to incoming queue.
-func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64) error {
+func (f *blocksFetcher) scheduleRequest(ctx context.Context, start types.Slot, count uint64) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -235,7 +237,7 @@ func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64
 }
 
 // handleRequest parses fetch request and forwards it to response builder.
-func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) *fetchRequestResponse {
+func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, count uint64) *fetchRequestResponse {
 	ctx, span := trace.StartSpan(ctx, "initialsync.handleRequest")
 	defer span.End()
 
@@ -251,7 +253,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 		return response
 	}
 
-	var targetEpoch uint64
+	var targetEpoch types.Epoch
 	var peers []peer.ID
 	if f.mode == modeStopOnFinalizedEpoch {
 		headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
@@ -267,7 +269,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	if f.mode == modeStopOnFinalizedEpoch {
-		highestFinalizedSlot := (targetEpoch + 1) * params.BeaconConfig().SlotsPerEpoch
+		highestFinalizedSlot := params.BeaconConfig().SlotsPerEpoch.MulEpoch(targetEpoch + 1)
 		if start > highestFinalizedSlot {
 			response.err = fmt.Errorf("%v, slot: %d, highest finalized slot: %d",
 				errSlotIsTooHigh, start, highestFinalizedSlot)
@@ -282,7 +284,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 // fetchBlocksFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
-	start, count uint64,
+	start types.Slot, count uint64,
 	peers []peer.ID,
 ) ([]*eth.SignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
@@ -360,7 +362,7 @@ func (f *blocksFetcher) requestBlocks(
 	}()
 
 	blocks := make([]*eth.SignedBeaconBlock, 0, req.Count)
-	var prevSlot uint64
+	var prevSlot types.Slot
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
 		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
@@ -376,12 +378,12 @@ func (f *blocksFetcher) requestBlocks(
 			return nil, errInvalidFetchedData
 		}
 		// Returned blocks MUST be in the slot range [start_slot, start_slot + count * step).
-		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
+		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot.Add(req.Count*req.Step) {
 			return nil, errInvalidFetchedData
 		}
 		// Returned blocks, where they exist, MUST be sent in a consecutive order.
 		// Consecutive blocks MUST have values in `step` increments (slots may be skipped in between).
-		if !isFirstChunk && (prevSlot >= blk.Block.Slot || (blk.Block.Slot-prevSlot)%req.Step != 0) {
+		if !isFirstChunk && (prevSlot >= blk.Block.Slot || (blk.Block.Slot-prevSlot).Uint64()%req.Step != 0) {
 			return nil, errInvalidFetchedData
 		}
 		prevSlot = blk.Block.Slot

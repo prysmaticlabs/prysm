@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -129,8 +130,8 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
 	currentTime := timeutils.Now()
-	numOfSlots := uint64(4)
-	validator.genesisTime = uint64(currentTime.Unix()) - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
+	numOfSlots := types.Slot(4)
+	validator.genesisTime = uint64(currentTime.Unix()) - numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot).Uint64()
 	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
 	timeToSleep := oneThird + oneThird
 

@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -110,7 +111,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.OverrideBeaconConfig(c)
 		cmdConfig := cmd.Get()
 		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
-		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))
 		cmd.Init(cmdConfig)
 		log.Warnf(
 			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
@@ -121,7 +122,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig()
-		c.SlotsPerArchivedPoint = uint64(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
+		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
 		params.OverrideBeaconConfig(c)
 	}
 

@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,20 +17,20 @@ import (
 //    """
 //    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
 //    return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
-func BlockRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) {
+func BlockRootAtSlot(state *stateTrie.BeaconState, slot types.Slot) ([]byte, error) {
 	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
 	}
-	return state.BlockRootAtIndex(slot % params.BeaconConfig().SlotsPerHistoricalRoot)
+	return state.BlockRootAtIndex(slot.Uint64() % params.BeaconConfig().SlotsPerHistoricalRoot.Uint64())
 }
 
 // StateRootAtSlot returns the cached state root at that particular slot. If no state
 // root has been cached it will return a zero-hash.
-func StateRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) {
+func StateRootAtSlot(state *stateTrie.BeaconState, slot types.Slot) ([]byte, error) {
 	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
 	}
-	return state.StateRootAtIndex(slot % params.BeaconConfig().SlotsPerHistoricalRoot)
+	return state.StateRootAtIndex(slot.Uint64() % params.BeaconConfig().SlotsPerHistoricalRoot.Uint64())
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.
@@ -40,7 +41,7 @@ func StateRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) 
 //    Return the block root at the start of a recent ``epoch``.
 //    """
 //    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
-func BlockRoot(state *stateTrie.BeaconState, epoch uint64) ([]byte, error) {
+func BlockRoot(state *stateTrie.BeaconState, epoch types.Epoch) ([]byte, error) {
 	s, err := StartSlot(epoch)
 	if err != nil {
 		return nil, err

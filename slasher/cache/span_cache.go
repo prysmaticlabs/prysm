@@ -1,6 +1,7 @@
 package cache
 
 import (
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -40,25 +41,25 @@ func NewEpochSpansCache(size int, onEvicted func(key interface{}, value interfac
 }
 
 // Get returns an ok bool and the cached value for the requested epoch key, if any.
-func (c *EpochSpansCache) Get(epoch uint64) (map[uint64]types.Span, bool) {
+func (c *EpochSpansCache) Get(epoch basetypes.Epoch) (map[basetypes.Epoch]types.Span, bool) {
 	item, exists := c.cache.Get(epoch)
 	if exists && item != nil {
 		epochSpansCacheHit.Inc()
-		return item.(map[uint64]types.Span), true
+		return item.(map[basetypes.Epoch]types.Span), true
 	}
 
 	epochSpansCacheMiss.Inc()
-	return make(map[uint64]types.Span), false
+	return make(map[basetypes.Epoch]types.Span), false
 }
 
 // Set the response in the cache.
-func (c *EpochSpansCache) Set(epoch uint64, epochSpans map[uint64]types.Span) {
+func (c *EpochSpansCache) Set(epoch basetypes.Epoch, epochSpans map[basetypes.Epoch]types.Span) {
 	_ = c.cache.Add(epoch, epochSpans)
 }
 
 // Delete removes an epoch from the cache and returns if it existed or not.
 // Performs the onEviction function before removal.
-func (c *EpochSpansCache) Delete(epoch uint64) bool {
+func (c *EpochSpansCache) Delete(epoch basetypes.Epoch) bool {
 	return c.cache.Remove(epoch)
 }
 
@@ -72,7 +73,7 @@ func (c *EpochSpansCache) PruneOldest() uint64 {
 }
 
 // Has returns true if the key exists in the cache.
-func (c *EpochSpansCache) Has(epoch uint64) bool {
+func (c *EpochSpansCache) Has(epoch basetypes.Epoch) bool {
 	return c.cache.Contains(epoch)
 }
 

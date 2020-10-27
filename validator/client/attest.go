@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -24,7 +25,7 @@ import (
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
@@ -207,7 +208,7 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 
 // waitToSlotOneThird waits until one third through the current slot period
 // such that head block for beacon node can get updated.
-func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
+func (v *validator) waitToSlotOneThird(ctx context.Context, slot types.Slot) {
 	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
 

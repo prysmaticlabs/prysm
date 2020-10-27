@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -121,7 +122,7 @@ var (
 // responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
-func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
+func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the start of the epoch, and not in the first epoch.
 		return nil
@@ -153,10 +154,10 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 	}
 
-	prevEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
-		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
-		if v.voteStats.startEpoch == ^uint64(0) { // Handles unknown first epoch.
+		prevEpoch = types.ToEpoch((slot.Uint64() / params.BeaconConfig().SlotsPerEpoch.Uint64()) - 1)
+		if v.voteStats.startEpoch.Uint64() == ^uint64(0) { // Handles unknown first epoch.
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
@@ -206,14 +207,14 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 }
 
 // UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
-func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
+func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot types.Slot) {
 	summary := &v.voteStats
 	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	var included uint64
 	var correctSource, correctTarget, correctHead int
 
 	for i := range resp.PublicKeys {
-		if resp.InclusionSlots[i] != ^uint64(0) {
+		if resp.InclusionSlots[i].Uint64() != ^uint64(0) {
 			included++
 			summary.includedAttestedCount++
 			summary.totalDistance += resp.InclusionDistances[i]
@@ -252,7 +253,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	log.WithFields(logrus.Fields{
-		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch),
+		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch.Sub(summary.startEpoch.Uint64())),
 		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
 		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount)),
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),

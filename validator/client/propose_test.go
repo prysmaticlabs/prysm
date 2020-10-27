@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/types"
+	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -65,7 +65,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
 	require.NoError(t, err)
 	cleanMap := make(map[uint64]uint64)
-	cleanMap[0] = params.BeaconConfig().FarFutureEpoch
+	cleanMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
 	clean := &slashpb.AttestationHistory{
 		TargetToSource: cleanMap,
 	}
@@ -247,7 +247,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	farFuture := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() + 9)
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
@@ -267,7 +267,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() + 9)
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(
@@ -288,7 +288,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
-	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
+	past := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() - 400)
 	blk2 := testutil.NewBeaconBlock()
 	blk2.Block.Slot = past
 	m.validatorClient.EXPECT().GetBlock(
@@ -311,7 +311,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() + 9)
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(
@@ -465,7 +465,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &pbtypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -499,7 +499,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &pbtypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -532,7 +532,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &pbtypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -569,7 +569,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &pbtypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 

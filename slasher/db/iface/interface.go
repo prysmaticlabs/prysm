@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -22,20 +23,20 @@ type ReadOnlyDatabase interface {
 	GetLatestEpochDetected(ctx context.Context) (uint64, error)
 
 	// BlockHeader related methods.
-	BlockHeaders(ctx context.Context, epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
-	HasBlockHeader(ctx context.Context, epoch uint64, validatorID uint64) bool
+	BlockHeaders(ctx context.Context, epoch basetypes.Epoch, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
+	HasBlockHeader(ctx context.Context, epoch basetypes.Epoch, validatorID uint64) bool
 
 	// IndexedAttestations related methods.
 	HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error)
-	IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
-	IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error)
+	IndexedAttestationsForTarget(ctx context.Context, targetEpoch basetypes.Epoch) ([]*ethpb.IndexedAttestation, error)
+	IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch basetypes.Epoch, sigBytes []byte) ([]*ethpb.IndexedAttestation, error)
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 
 	// Highest Attestation related methods.
 	HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error)
 
 	// MinMaxSpan related methods.
-	EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (*detectionTypes.EpochStore, error)
+	EpochSpans(ctx context.Context, epoch basetypes.Epoch, fromCache bool) (*detectionTypes.EpochStore, error)
 
 	// ProposerSlashing related methods.
 	ProposalSlashingsByStatus(ctx context.Context, status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
@@ -56,24 +57,24 @@ type WriteAccessDatabase interface {
 	// AttesterSlashing related methods.
 	SaveAttesterSlashing(ctx context.Context, status types.SlashingStatus, slashing *ethpb.AttesterSlashing) error
 	SaveAttesterSlashings(ctx context.Context, status types.SlashingStatus, slashings []*ethpb.AttesterSlashing) error
-	SetLatestEpochDetected(ctx context.Context, epoch uint64) error
+	SetLatestEpochDetected(ctx context.Context, epoch basetypes.Epoch) error
 
 	// BlockHeader related methods.
 	SaveBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error
 	DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error
-	PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
+	PruneBlockHistory(ctx context.Context, currentEpoch basetypes.Epoch, pruningEpochAge uint64) error
 
 	// IndexedAttestations related methods.
 	SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
-	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
+	PruneAttHistory(ctx context.Context, currentEpoch basetypes.Epoch, pruningEpochAge uint64) error
 
 	// Highest Attestation related methods.
 	SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error
 
 	// MinMaxSpan related methods.
-	SaveEpochSpans(ctx context.Context, epoch uint64, spans *detectionTypes.EpochStore, toCache bool) error
+	SaveEpochSpans(ctx context.Context, epoch basetypes.Epoch, spans *detectionTypes.EpochStore, toCache bool) error
 
 	// ProposerSlashing related methods.
 	DeleteProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -34,7 +35,7 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 	pubkey := [48]byte{3}
 	db := setupDB(t, [][48]byte{pubkey})
 
-	slot := uint64(2)
+	slot := types.Slot(2)
 
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
@@ -49,8 +50,8 @@ func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
 	pubkey := [48]byte{3}
 	db := setupDB(t, [][48]byte{pubkey})
 
-	slot := uint64(2)
-	emptySlot := uint64(120)
+	slot := types.Slot(2)
+	emptySlot := types.Slot(120)
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
 	signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], emptySlot)
@@ -97,28 +98,28 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	pubKey := [48]byte{0}
 	tests := []struct {
-		slots        []uint64
-		storedSlots  []uint64
-		removedSlots []uint64
+		slots        []types.Slot
+		storedSlots  []types.Slot
+		removedSlots []types.Slot
 	}{
 		{
 			// Go 2 epochs past pruning point.
-			slots:        []uint64{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, (wsPeriod+3)*slotsPerEpoch + 8},
-			storedSlots:  []uint64{slotsPerEpoch*5 + 6, (wsPeriod+3)*slotsPerEpoch + 8},
-			removedSlots: []uint64{slotsPerEpoch / 2},
+			slots:        []types.Slot{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(wsPeriod.Uint64()+3) + 8},
+			storedSlots:  []types.Slot{slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(wsPeriod.Uint64()+3) + 8},
+			removedSlots: []types.Slot{slotsPerEpoch / 2},
 		},
 		{
 			// Go 10 epochs past pruning point.
-			slots: []uint64{
+			slots: []types.Slot{
 				slotsPerEpoch + 4,
 				slotsPerEpoch * 2,
 				slotsPerEpoch * 3,
 				slotsPerEpoch * 4,
 				slotsPerEpoch * 5,
-				(wsPeriod+10)*slotsPerEpoch + 8,
+				slotsPerEpoch.Mul(wsPeriod.Uint64()+10) + 8,
 			},
-			storedSlots: []uint64{(wsPeriod+10)*slotsPerEpoch + 8},
-			removedSlots: []uint64{
+			storedSlots: []types.Slot{slotsPerEpoch.Mul(wsPeriod.Uint64()+10) + 8},
+			removedSlots: []types.Slot{
 				slotsPerEpoch + 4,
 				slotsPerEpoch * 2,
 				slotsPerEpoch * 3,
@@ -128,8 +129,8 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 		},
 		{
 			// Prune none.
-			slots:       []uint64{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
-			storedSlots: []uint64{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
+			slots:       []types.Slot{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
+			storedSlots: []types.Slot{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
 		},
 	}
 	signedRoot := bytesutil.PadTo([]byte{1}, 32)
@@ -158,7 +159,7 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 	pubkey := [48]byte{3}
 	ctx := context.Background()
 	db := setupDB(t, [][48]byte{pubkey})
-	proposedSlots := make(map[uint64]bool)
+	proposedSlots := make(map[types.Slot]bool)
 	proposedSlots[0] = true
 	proposedSlots[1] = true
 	proposedSlots[20] = true
@@ -173,14 +174,14 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 	for slot := range proposedSlots {
 		slotBitlist, err := db.ProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot))
 		require.NoError(t, err)
-		slotBitlist.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
+		slotBitlist.SetBitAt(slot.Uint64()%params.BeaconConfig().SlotsPerEpoch.Uint64(), true)
 		err = db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot), slotBitlist)
 		require.NoError(t, err)
 	}
 	err := db.MigrateV2ProposalFormat(ctx)
 	require.NoError(t, err)
 
-	for slot := uint64(0); slot <= lastIndex; slot++ {
+	for slot := types.Slot(0); slot <= lastIndex; slot++ {
 		if _, ok := proposedSlots[slot]; ok {
 			root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
 			require.NoError(t, err)

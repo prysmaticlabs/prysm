@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -52,7 +53,7 @@ type Service struct {
 	chainStarted      bool
 	stateNotifier     statefeed.Notifier
 	counter           *ratecounter.RateCounter
-	lastProcessedSlot uint64
+	lastProcessedSlot types.Slot
 	genesisChan       chan time.Time
 }
 

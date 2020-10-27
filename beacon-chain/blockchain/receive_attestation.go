@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -168,10 +169,10 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
 	now := uint64(timeutils.Now().Unix())
 	genesisTime := uint64(s.genesisTime.Unix())
-	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentSlot := types.ToSlot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
-	var prevEpoch uint64
+	var prevEpoch types.Epoch
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}

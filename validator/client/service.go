@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	types "github.com/farazdagi/prysm-shared-types"
 	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -174,7 +175,7 @@ func (v *ValidatorService) Start() {
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
-		voteStats:                      voteStats{startEpoch: ^uint64(0)},
+		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
 	}

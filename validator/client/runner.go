@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -23,19 +24,19 @@ type Validator interface {
 	WaitForSynced(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
 	SlasherReady(ctx context.Context) error
-	CanonicalHeadSlot(ctx context.Context) (uint64, error)
-	NextSlot() <-chan uint64
-	SlotDeadline(slot uint64) time.Time
-	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
-	UpdateDuties(ctx context.Context, slot uint64) error
-	UpdateProtections(ctx context.Context, slot uint64) error
-	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
-	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
-	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
-	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
+	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
+	NextSlot() <-chan types.Slot
+	SlotDeadline(slot types.Slot) time.Time
+	LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error
+	UpdateDuties(ctx context.Context, slot types.Slot) error
+	UpdateProtections(ctx context.Context, slot types.Slot) error
+	RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
+	SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte)
+	ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte)
+	SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte)
 	LogAttestationsSubmitted()
 	SaveProtections(ctx context.Context) error
-	UpdateDomainDataCaches(ctx context.Context, slot uint64)
+	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 	WaitForWalletInitialization(ctx context.Context) error
 }
 
@@ -164,7 +165,7 @@ func run(ctx context.Context, v Validator) {
 	}
 }
 
-func handleAssignmentError(err error, slot uint64) {
+func handleAssignmentError(err error, slot types.Slot) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,

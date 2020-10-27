@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -168,8 +169,8 @@ func TestStore_LatestEpochDetected(t *testing.T) {
 
 	e, err := db.GetLatestEpochDetected(ctx)
 	require.NoError(t, err, "Get latest epoch detected failed")
-	require.Equal(t, uint64(0), e, "Latest epoch detected should have been 0 before setting got: %d", e)
-	epoch := uint64(1)
+	require.Equal(t, basetypes.Epoch(0), e, "Latest epoch detected should have been 0 before setting got: %d", e)
+	epoch := basetypes.Epoch(1)
 	err = db.SetLatestEpochDetected(ctx, epoch)
 	require.NoError(t, err, "Set latest epoch detected failed")
 	e, err = db.GetLatestEpochDetected(ctx)

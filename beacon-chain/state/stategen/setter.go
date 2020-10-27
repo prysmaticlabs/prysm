@@ -64,7 +64,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	duration := uint64(math.Max(float64(s.saveHotStateDB.duration), 1))
 
 	s.saveHotStateDB.lock.Lock()
-	if s.saveHotStateDB.enabled && state.Slot()%duration == 0 {
+	if s.saveHotStateDB.enabled && state.Slot().Mod(duration) == 0 {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 			return err
 		}

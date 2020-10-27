@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -66,7 +67,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
 // and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
-func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch, targetEpoch uint64) bool {
+func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch, targetEpoch types.Epoch) bool {
 	if history == nil {
 		return false
 	}
@@ -89,7 +90,7 @@ func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch, targetE
 		if safeTargetToSource(history, i) == farFuture {
 			continue
 		}
-		if history.TargetToSource[i%wsPeriod] > sourceEpoch {
+		if history.TargetToSource[i.Uint64()%wsPeriod.Uint64()] > sourceEpoch.Uint64() {
 			return true
 		}
 	}
@@ -106,7 +107,7 @@ func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch, targetE
 
 // markAttestationForTargetEpoch returns the modified attestation history with the passed-in epochs marked
 // as attested for. This is done to prevent the validator client from signing any slashable attestations.
-func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEpoch, targetEpoch uint64) *slashpb.AttestationHistory {
+func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEpoch, targetEpoch types.Epoch) *slashpb.AttestationHistory {
 	if history == nil {
 		return nil
 	}
@@ -117,20 +118,20 @@ func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEp
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
 		maxToWrite := history.LatestEpochWritten + wsPeriod
 		for i := history.LatestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
-			history.TargetToSource[i%wsPeriod] = params.BeaconConfig().FarFutureEpoch
+			history.TargetToSource[i.Uint64()%wsPeriod.Uint64()] = params.BeaconConfig().FarFutureEpoch.Uint64()
 		}
 		history.LatestEpochWritten = targetEpoch
 	}
-	history.TargetToSource[targetEpoch%wsPeriod] = sourceEpoch
+	history.TargetToSource[targetEpoch.Uint64()%wsPeriod.Uint64()] = sourceEpoch.Uint64()
 	return history
 }
 
 // safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at
 // returns the "default" FAR_FUTURE_EPOCH value.
-func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64) uint64 {
+func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch types.Epoch) types.Epoch {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	if targetEpoch > history.LatestEpochWritten || int(targetEpoch) < int(history.LatestEpochWritten)-int(wsPeriod) {
 		return params.BeaconConfig().FarFutureEpoch
 	}
-	return history.TargetToSource[targetEpoch%wsPeriod]
+	return types.ToEpoch(history.TargetToSource[targetEpoch.Uint64()%wsPeriod.Uint64()])
 }

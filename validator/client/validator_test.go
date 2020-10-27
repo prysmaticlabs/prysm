@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -425,7 +426,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), headSlot, "Mismatch slots")
+	assert.Equal(t, types.Slot(0), headSlot, "Mismatch slots")
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
@@ -564,7 +565,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
-	slot := uint64(1)
+	slot := types.Slot(1)
 	v := validator{
 		validatorClient: client,
 		duties: &ethpb.DutiesResponse{
@@ -643,7 +644,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 				CommitteeIndex: 100,
 				Committee:      []uint64{0, 1, 2, 3},
 				PublicKey:      []byte("testPubKey_1"),
-				ProposerSlots:  []uint64{params.BeaconConfig().SlotsPerEpoch + 1},
+				ProposerSlots:  []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
 		},
 	}
@@ -682,7 +683,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
 	newMap[1] = 0
 	newMap[2] = 1
 	history := &slashpb.AttestationHistory{
@@ -691,9 +692,9 @@ func TestUpdateProtections_OK(t *testing.T) {
 	}
 
 	newMap2 := make(map[uint64]uint64)
-	newMap2[0] = params.BeaconConfig().FarFutureEpoch
-	newMap2[1] = params.BeaconConfig().FarFutureEpoch
-	newMap2[2] = params.BeaconConfig().FarFutureEpoch
+	newMap2[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	newMap2[1] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	newMap2[2] = params.BeaconConfig().FarFutureEpoch.Uint64()
 	newMap2[3] = 2
 	history2 := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
@@ -802,7 +803,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
-				ProposerSlots:  []uint64{0},
+				ProposerSlots:  []types.Slot{0},
 				PublicKey:      validatorKey.PublicKey().Marshal(),
 			},
 		},

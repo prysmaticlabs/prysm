@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -13,7 +14,7 @@ import (
 
 type spansTestStruct struct {
 	name           string
-	epoch          uint64
+	epoch          basetypes.Epoch
 	spansHex       string
 	spansResultHex string
 	validator1Span types.Span
@@ -58,7 +59,7 @@ func TestValidatorSpans_NilDB(t *testing.T) {
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
-	es, err := db.EpochSpans(ctx, validatorIdx, false)
+	es, err := db.EpochSpans(ctx, basetypes.ToEpoch(validatorIdx), false)
 	require.NoError(t, err, "Nil EpochSpansMap should not return error")
 	cleanStore, err := types.NewEpochStore([]byte{})
 	require.NoError(t, err)
@@ -112,7 +113,7 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 	epochStore, err := types.EpochStoreFromMap(spansToSave)
 	require.NoError(t, err)
 
-	epoch := uint64(9)
+	epoch := basetypes.Epoch(9)
 	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseCache))
 
 	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.UseCache)
@@ -140,7 +141,7 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 	epochStore, err := types.EpochStoreFromMap(spansToSave)
 	require.NoError(t, err)
 
-	epoch := uint64(9)
+	epoch := basetypes.Epoch(9)
 	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseDB))
 
 	// Expect cache to retrieve from DB if its not in cache.

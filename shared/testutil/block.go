@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -87,7 +88,7 @@ func GenerateFullBlock(
 	bState *stateTrie.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
-	slot uint64,
+	slot types.Slot,
 ) (*ethpb.SignedBeaconBlock, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
@@ -354,7 +355,9 @@ func generateAttesterSlashings(
 // for the same data with their aggregation bits split uniformly.
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
-func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
+func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen uint64,
+	slot types.Slot, randomRoot bool,
+) ([]*ethpb.Attestation, error) {
 	currentEpoch := helpers.SlotToEpoch(slot)
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
