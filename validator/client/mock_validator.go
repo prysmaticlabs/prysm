@@ -177,3 +177,8 @@ func (fv *FakeValidator) PubkeysToIndices(_ context.Context) map[[48]byte]uint64
 func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[48]byte]ethpb.ValidatorStatus {
 	return fv.PubkeysToStatusesMap
 }
+
+// AllValidatorsAreExited for mocking
+func (fv *FakeValidator) AllValidatorsAreExited(_ context.Context) (bool, error) {
+	return false, nil
+}

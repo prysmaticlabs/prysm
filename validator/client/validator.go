@@ -587,6 +587,31 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 	}
 }
 
+// AllValidatorsAreExited informs whether all validators have already exited.
+func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
+	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "could not fetch validating keys")
+	}
+	var publicKeys [][]byte
+	for _, key := range validatingKeys {
+		publicKeys = append(publicKeys, key[:])
+	}
+	request := &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: publicKeys,
+	}
+	response, err := v.validatorClient.MultipleValidatorStatus(ctx, request)
+	if err != nil {
+		return false, err
+	}
+	for _, status := range response.Statuses {
+		if status.Status != ethpb.ValidatorStatus_EXITED {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (v *validator) domainData(ctx context.Context, epoch types.Epoch, domain []byte) (*ethpb.DomainResponse, error) {
 	v.domainDataLock.Lock()
 	defer v.domainDataLock.Unlock()

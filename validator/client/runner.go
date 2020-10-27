@@ -38,6 +38,7 @@ type Validator interface {
 	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 	WaitForWalletInitialization(ctx context.Context) error
+	AllValidatorsAreExited(ctx context.Context) (bool, error)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -85,6 +86,10 @@ func run(ctx context.Context, v Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
+
+	// We initially assume not all validators are exited
+	allExited := false
+
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
@@ -95,6 +100,19 @@ func run(ctx context.Context, v Validator) {
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+
+			if allExited {
+				log.Info("All validators are exited, no more work to perform...")
+				continue
+			}
+			allExited, err = v.AllValidatorsAreExited(ctx)
+			if err != nil {
+				log.WithError(err).Error("Could not check if validators are exited")
+			}
+			if allExited {
+				continue
+			}
+
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
 			// Report this validator client's rewards and penalties throughout its lifecycle.

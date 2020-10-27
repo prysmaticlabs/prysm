@@ -931,3 +931,45 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 		})
 	}
 }
+
+func TestAllValidatorsAreExited_AllExited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	statuses := []*ethpb.ValidatorStatusResponse{
+		{Status: ethpb.ValidatorStatus_EXITED},
+		{Status: ethpb.ValidatorStatus_EXITED},
+	}
+
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(), // ctx
+		gomock.Any(), // request
+	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
+
+	v := validator{keyManager: &mockKeymanager{}, validatorClient: client}
+	exited, err := v.AllValidatorsAreExited(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, true, exited)
+}
+
+func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	statuses := []*ethpb.ValidatorStatusResponse{
+		{Status: ethpb.ValidatorStatus_ACTIVE},
+		{Status: ethpb.ValidatorStatus_EXITED},
+	}
+
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(), // ctx
+		gomock.Any(), // request
+	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
+
+	v := validator{keyManager: &mockKeymanager{}, validatorClient: client}
+	exited, err := v.AllValidatorsAreExited(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, false, exited)
+}
