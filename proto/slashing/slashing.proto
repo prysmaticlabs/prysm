@@ -37,8 +37,8 @@ message HighestAttestationResponse {
 
 message HighestAttestation {
     uint64 validator_id = 1;
-    uint64 highest_source_epoch = 2;
-    uint64 highest_target_epoch = 3;
+    uint64 highest_source_epoch = 2 [(gogoproto.casttype) = "github.com/farazdagi/prysm-shared-types.Epoch"];
+    uint64 highest_target_epoch = 3 [(gogoproto.casttype) = "github.com/farazdagi/prysm-shared-types.Epoch"];
 }
 
 message ProposerSlashingResponse {
