@@ -51,7 +51,8 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 		Mnemonic: mnemonic,
 	}
 	skipMnemonic25thWord := cliCtx.IsSet(flags.SkipMnemonic25thWordCheckFlag.Name)
-	if !skipMnemonic25thWord {
+	has25thWordFile := cliCtx.IsSet(flags.Mnemonic25thWordFileFlag.Name)
+	if !skipMnemonic25thWord && !has25thWordFile {
 		resp, err := promptutil.ValidatePrompt(
 			os.Stdin, mnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
 		)

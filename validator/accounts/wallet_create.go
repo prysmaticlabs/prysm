@@ -125,7 +125,8 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		SkipMnemonicConfirm: cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name),
 	}
 	skipMnemonic25thWord := cliCtx.IsSet(flags.SkipMnemonic25thWordCheckFlag.Name)
-	if keymanagerKind == keymanager.Derived && !skipMnemonic25thWord {
+	has25thWordFile := cliCtx.IsSet(flags.Mnemonic25thWordFileFlag.Name)
+	if keymanagerKind == keymanager.Derived && !skipMnemonic25thWord && !has25thWordFile {
 		resp, err := promptutil.ValidatePrompt(
 			os.Stdin, newMnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
 		)
