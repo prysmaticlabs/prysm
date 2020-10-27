@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -36,7 +37,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 		votingPeriodLength uint64
 	}{
 		{
-			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
+			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch.Uint64()),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
@@ -44,7 +45,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			hasSupport:         true,
 			votingPeriodLength: 7,
 		}, {
-			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
+			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch.Uint64()),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
@@ -52,7 +53,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			hasSupport:         false,
 			votingPeriodLength: 8,
 		}, {
-			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
+			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch.Uint64()),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
@@ -66,7 +67,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			c := params.BeaconConfig()
-			c.EpochsPerEth1VotingPeriod = tt.votingPeriodLength
+			c.EpochsPerEth1VotingPeriod = types.ToEpoch(tt.votingPeriodLength)
 			params.OverrideBeaconConfig(c)
 
 			s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
@@ -174,8 +175,8 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		},
 	}
 
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
-	for i := uint64(0); i < period; i++ {
+	period := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	for i := uint64(0); i < period.Uint64(); i++ {
 		beaconState, err = blocks.ProcessEth1DataInBlock(context.Background(), beaconState, b)
 		require.NoError(t, err)
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -238,7 +239,7 @@ func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, err
 }
 
 // slotByBlockRoot retrieves the corresponding slot of the input block root.
-func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64, error) {
+func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.slotByBlockRoot")
 	defer span.End()
 
@@ -287,7 +288,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 // from the db. Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
 // results states. This returns a list of states.
-func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
+func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotStatesBelow")
 	defer span.End()
 
@@ -303,7 +304,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 			if root == nil {
 				continue
 			}
-			if key >= slot {
+			if key >= slot.Uint64() {
 				break
 			}
 			best = root
@@ -334,7 +335,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 // createBlockIndicesFromBlock takes in a beacon block and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
-func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[string][]byte {
+func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
@@ -345,7 +346,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[strin
 	}
 
 	indices := [][]byte{
-		bytesutil.Uint64ToBytesBigEndian(slot),
+		bytesutil.Uint64ToBytesBigEndian(slot.Uint64()),
 	}
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]

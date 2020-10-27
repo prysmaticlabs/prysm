@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -103,7 +104,7 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 	s, err := state.InitializeFromProto(&pb.BeaconState{})
 	require.NoError(t, err)
 	c.head = &head{slot: 100, state: s}
-	assert.Equal(t, uint64(100), c.HeadSlot())
+	assert.Equal(t, types.Slot(100), c.HeadSlot())
 }
 
 func TestHeadRoot_CanRetrieve(t *testing.T) {

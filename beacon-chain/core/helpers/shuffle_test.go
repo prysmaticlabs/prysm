@@ -51,11 +51,11 @@ func TestSplitIndices_OK(t *testing.T) {
 	for i := uint64(0); i < numValidators; i++ {
 		l = append(l, i)
 	}
-	split := SplitIndices(l, params.BeaconConfig().SlotsPerEpoch)
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, uint64(len(split)), "Split list failed due to incorrect length")
+	split := SplitIndices(l, params.BeaconConfig().SlotsPerEpoch.Uint64())
+	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch.Uint64(), uint64(len(split)), "Split list failed due to incorrect length")
 
 	for _, s := range split {
-		assert.Equal(t, numValidators/params.BeaconConfig().SlotsPerEpoch, uint64(len(s)), "Split list failed due to incorrect length")
+		assert.Equal(t, numValidators/params.BeaconConfig().SlotsPerEpoch.Uint64(), uint64(len(s)), "Split list failed due to incorrect length")
 	}
 }
 

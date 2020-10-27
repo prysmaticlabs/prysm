@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -129,7 +130,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	}
 
 	type args struct {
-		attSlot     uint64
+		attSlot     types.Slot
 		genesisTime time.Time
 	}
 	tests := []struct {

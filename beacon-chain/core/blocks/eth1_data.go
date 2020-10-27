@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,7 +61,7 @@ func AreEth1DataEqual(a, b *ethpb.Eth1Data) bool {
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Eth1Data) (bool, error) {
-	voteCount := uint64(0)
+	voteCount := types.Slot(0)
 	data = stateTrie.CopyETH1Data(data)
 
 	for _, vote := range beaconState.Eth1DataVotes() {
@@ -71,6 +72,6 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 
 	// If 50+% majority converged on the same eth1data, then it has enough support to update the
 	// state.
-	support := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	support := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 	return voteCount*2 > support, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -12,7 +13,7 @@ import (
 func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	i1 := uint64(100)
+	i1 := types.Slot(100)
 	r1 := [32]byte{'A'}
 
 	received := db.ArchivedPointRoot(ctx, i1)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	fuzz "github.com/google/gofuzz"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -431,7 +432,7 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 	ve := &eth.SignedVoluntaryExit{}
 	val := &stateTrie.ReadOnlyValidator{}
 	fork := &pb.Fork{}
-	var slot uint64
+	var slot types.Slot
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(ve)

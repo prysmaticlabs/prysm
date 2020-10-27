@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -42,14 +43,14 @@ func (s *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 
 // ArchivedPointRoot returns the block root of an archived point from the DB.
 // This is essential for cold state management and to restore a cold state.
-func (s *Store) ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte {
+func (s *Store) ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointRoot")
 	defer span.End()
 
 	var blockRoot []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSlotIndicesBucket)
-		blockRoot = bucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
+		blockRoot = bucket.Get(bytesutil.Uint64ToBytesBigEndian(slot.Uint64()))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
@@ -59,13 +60,13 @@ func (s *Store) ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte {
 }
 
 // HasArchivedPoint returns true if an archived point exists in DB.
-func (s *Store) HasArchivedPoint(ctx context.Context, slot uint64) bool {
+func (s *Store) HasArchivedPoint(ctx context.Context, slot types.Slot) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
 	defer span.End()
 	var exists bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(stateSlotIndicesBucket)
-		exists = iBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot)) != nil
+		exists = iBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot.Uint64())) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)

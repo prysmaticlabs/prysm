@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -25,7 +26,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
-	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
+	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
@@ -204,7 +205,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
-	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
+	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
@@ -225,8 +226,8 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 2 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
-				assert.Equal(t, uint64(2), s.head.state.Slot(), "Incorrect head state slot")
-				assert.Equal(t, uint64(2), s.head.block.Block.Slot, "Incorrect head block slot")
+				assert.Equal(t, types.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
+				assert.Equal(t, types.Slot(2), s.head.block.Block.Slot, "Incorrect head block slot")
 			},
 		},
 		{
@@ -285,7 +286,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
-	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
+	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
@@ -306,8 +307,8 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 2 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
-				assert.Equal(t, uint64(2), s.head.state.Slot(), "Incorrect head state slot")
-				assert.Equal(t, uint64(2), s.head.block.Block.Slot, "Incorrect head block slot")
+				assert.Equal(t, types.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
+				assert.Equal(t, types.Slot(2), s.head.block.Block.Slot, "Incorrect head block slot")
 			},
 		},
 		{
@@ -364,7 +365,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &blockchainTesting.MockStateNotifier{}})
+	s, err := NewService(context.Background(), &Config{})
 	require.NoError(t, err)
 	r := [32]byte{'a'}
 	if s.HasInitSyncBlock(r) {
@@ -381,7 +382,7 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
 	require.NoError(t, err)
-	st := params.BeaconConfig().SlotsPerEpoch * uint64(epochsSinceFinalitySaveHotStateDB)
+	st := params.BeaconConfig().SlotsPerEpoch.Uint64() * uint64(epochsSinceFinalitySaveHotStateDB)
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
 

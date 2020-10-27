@@ -42,7 +42,7 @@ func TestGossipParameters(t *testing.T) {
 	setPubSubParameters()
 	assert.Equal(t, gossipSubMcacheLen, pubsub.GossipSubHistoryLength, "gossipSubMcacheLen")
 	assert.Equal(t, gossipSubMcacheGossip, pubsub.GossipSubHistoryGossip, "gossipSubMcacheGossip")
-	val := (params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot * 1000) /
+	val := (params.BeaconConfig().SlotsPerEpoch.Uint64() * params.BeaconConfig().SecondsPerSlot * 1000) /
 		uint64(pubsub.GossipSubHeartbeatInterval.Milliseconds())
 	roundedUp := math.Round(float64(val) / 10)
 	assert.Equal(t, gossipSubSeenTTL, int(roundedUp)*10, "gossipSubSeenTtl")

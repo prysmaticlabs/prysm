@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -61,7 +62,7 @@ type Service struct {
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	finalizedCheckpt      *ethpb.Checkpoint
 	prevFinalizedCheckpt  *ethpb.Checkpoint
-	nextEpochBoundarySlot uint64
+	nextEpochBoundarySlot types.Slot
 	boundaryRoots         [][32]byte
 	checkpointState       *cache.CheckpointStateCache
 	checkpointStateLock   sync.Mutex
@@ -71,7 +72,7 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	wsEpoch               uint64
+	wsEpoch               types.Epoch
 	wsRoot                []byte
 	wsVerified            bool
 }
@@ -92,7 +93,7 @@ type Config struct {
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
 	WspBlockRoot      []byte
-	WspEpoch          uint64
+	WspEpoch          types.Epoch
 }
 
 // NewService instantiates a new block service instance that will

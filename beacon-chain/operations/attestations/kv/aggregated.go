@@ -1,6 +1,7 @@
 package kv
 
 import (
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -23,7 +24,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 // AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves
 // newly aggregated attestations in the pool. Unaggregated attestations are filtered by slot and
 // committee index.
-func (p *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) error {
+func (p *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex uint64) error {
 	unaggregatedAtts := p.UnaggregatedAttestationsBySlotIndex(slot, committeeIndex)
 	return p.aggregateUnaggregatedAttestations(unaggregatedAtts)
 }
@@ -153,7 +154,7 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
-func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) []*ethpb.Attestation {
+func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
 	p.aggregatedAttLock.RLock()

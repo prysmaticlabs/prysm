@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -84,10 +85,10 @@ func ComputeSubnetForAttestation(activeValCount uint64, att *ethpb.Attestation) 
 //    slots_since_epoch_start = attestation.data.slot % SLOTS_PER_EPOCH
 //    committees_since_epoch_start = get_committee_count_at_slot(state, attestation.data.slot) * slots_since_epoch_start
 //    return (committees_since_epoch_start + attestation.data.index) % ATTESTATION_SUBNET_COUNT
-func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) uint64 {
+func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx uint64, attSlot types.Slot) uint64 {
 	slotSinceStart := SlotsSinceEpochStarts(attSlot)
 	comCount := SlotCommitteeCount(activeValCount)
-	commsSinceStart := comCount * slotSinceStart
+	commsSinceStart := comCount * slotSinceStart.Uint64()
 	computedSubnet := (commsSinceStart + comIdx) % params.BeaconNetworkConfig().AttestationSubnetCount
 	return computedSubnet
 }
@@ -103,7 +104,7 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) u
 //   invalid_attestation_slot = 101
 //   valid_attestation_slot = 98
 // In the attestation must be within the range of 95 to 100 in the example above.
-func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
+func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time) error {
 	if err := ValidateSlotClock(attSlot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}
@@ -123,7 +124,7 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 
 	// An attestation cannot be older than the current slot - attestation propagation slot range
 	// with a minor tolerance for peer clock disparity.
-	lowerBoundsSlot := uint64(0)
+	lowerBoundsSlot := types.Slot(0)
 	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
 		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
 	}

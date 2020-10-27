@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -115,7 +116,7 @@ func ProcessAttestationNoVerifySignature(
 	}
 
 	currEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	var prevEpoch uint64
+	var prevEpoch types.Epoch
 	if currEpoch == 0 {
 		prevEpoch = 0
 	} else {
@@ -177,9 +178,9 @@ func ProcessAttestationNoVerifySignature(
 		ProposerIndex:   proposerIndex,
 	}
 
-	var ffgSourceEpoch uint64
+	var ffgSourceEpoch types.Epoch
 	var ffgSourceRoot []byte
-	var ffgTargetEpoch uint64
+	var ffgTargetEpoch types.Epoch
 	if data.Target.Epoch == currEpoch {
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint().Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint().Root
