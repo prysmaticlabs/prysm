@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/protolambda/zssz"
-	"github.com/protolambda/zssz/types"
+	zssztypes "github.com/protolambda/zssz/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -35,9 +36,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
-	for i := 1; i < 11; i++ {
+	for i := types.Slot(1); i < 11; i++ {
 		blk := testutil.NewBeaconBlock()
-		blk.Block.Slot = uint64(i)
+		blk.Block.Slot = i
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), blk))
@@ -57,7 +58,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 			expectSuccess(t, stream)
 			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
-			if res.Block.Slot != uint64(i+1) {
+			if res.Block.Slot.Uint64() != uint64(i+1) {
 				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)
 			}
 		}
@@ -90,7 +91,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, blockARoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), blockARoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  blockBRoot[:],
@@ -105,7 +106,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[types.Slot][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
 		rateLimiter:         newRateLimiter(p1),
@@ -187,7 +188,7 @@ func TestSSZCompatibility(t *testing.T) {
 	rootC := [32]byte{'C'}
 	list := testList{rootA, rootB, rootC}
 	writer := bytes.NewBuffer([]byte{})
-	sszType, err := types.SSZFactory(reflect.TypeOf(list))
+	sszType, err := zssztypes.SSZFactory(reflect.TypeOf(list))
 	assert.NoError(t, err)
 	n, err := zssz.Encode(writer, list, sszType)
 	assert.NoError(t, err)

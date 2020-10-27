@@ -32,7 +32,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	headState := setupActiveValidators(t, numValidators)
 
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot().Uint64()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -55,7 +55,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 
 	wanted := &ethpb.BeaconCommittees{
 		Epoch:                0,
-		Committees:           committees,
+		Committees:           committees.SlotToUint64(),
 		ActiveValidatorCount: uint64(numValidators),
 	}
 	res, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
@@ -93,7 +93,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 
 	m := &mock.ChainService{
 		State:   headState,
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot().Uint64()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -120,7 +120,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 			},
 			res: &ethpb.BeaconCommittees{
 				Epoch:                1,
-				Committees:           wanted,
+				Committees:           wanted.SlotToUint64(),
 				ActiveValidatorCount: uint64(numValidators),
 			},
 		},
@@ -146,7 +146,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	headState := setupActiveValidators(t, numValidators)
 
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot().Uint64()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -180,12 +180,12 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 
 	wantedRes := &ethpb.BeaconCommittees{
 		Epoch:                0,
-		Committees:           wanted,
+		Committees:           wanted.SlotToUint64(),
 		ActiveValidatorCount: uint64(numValidators),
 	}
 	receivedRes := &ethpb.BeaconCommittees{
 		Epoch:                0,
-		Committees:           committees,
+		Committees:           committees.SlotToUint64(),
 		ActiveValidatorCount: uint64(len(activeIndices)),
 	}
 	assert.DeepEqual(t, wantedRes, receivedRes)

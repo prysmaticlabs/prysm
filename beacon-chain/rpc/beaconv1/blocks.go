@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -214,7 +215,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not decode block id: %v", err)
 			}
-			roots, err := bs.BeaconDB.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
+			roots, err := bs.BeaconDB.BlockRoots(ctx, filters.NewFilter().SetStartSlot(types.Slot(slot)).SetEndSlot(types.Slot(slot)))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", slot, err)
 			}
@@ -298,7 +299,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 			if err != nil {
 				return nil, errors.Wrap(err, "could not decode block id")
 			}
-			blks, roots, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
+			blks, roots, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(types.Slot(slot)).SetEndSlot(types.Slot(slot)))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
 			}

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -131,10 +132,10 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-	count := uint64(100)
+	count := types.Slot(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		root, err := b.Block.HashTreeRoot()
@@ -157,10 +158,10 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	count := uint64(100)
+	count := types.Slot(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		root, err := b.Block.HashTreeRoot()
@@ -637,7 +638,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 	e := uint64(256)
 	require.Equal(t, e, c.Epoch)
-	wsState, err := server.StateGen.StateBySlot(ctx, e*params.BeaconConfig().SlotsPerEpoch)
+	wsState, err := server.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(e))
 	require.NoError(t, err)
 	sRoot, err := wsState.HashTreeRoot(ctx)
 	require.NoError(t, err)

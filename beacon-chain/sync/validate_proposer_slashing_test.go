@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -42,7 +43,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	currentSlot := uint64(0)
+	currentSlot := types.Slot(0)
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,

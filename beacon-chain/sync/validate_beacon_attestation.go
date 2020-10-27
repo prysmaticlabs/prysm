@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -171,20 +172,20 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 }
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
-func (s *Service) hasSeenCommitteeIndicesSlot(slot, committeeID uint64, aggregateBits []byte) bool {
+func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID uint64, aggregateBits []byte) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
+	b := append(bytesutil.Bytes32(slot.Uint64()), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
 	_, seen := s.seenAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set committee's indices and slot as seen for incoming attestations.
-func (s *Service) setSeenCommitteeIndicesSlot(slot, committeeID uint64, aggregateBits []byte) {
+func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID uint64, aggregateBits []byte) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
+	b := append(bytesutil.Bytes32(slot.Uint64()), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
 	s.seenAttestationCache.Add(string(b), true)
 }

@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -310,7 +311,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -501,7 +502,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		DepositRoot:  make([]byte, 32),
 		DepositCount: 7,
 	}
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -1094,11 +1095,11 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 }
 
 func TestProposer_Eth1Data(t *testing.T) {
-	slot := uint64(20000)
+	slot := types.Slot(20000)
 
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
-			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
+			slot.Uint64() * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
 		},
 		HashesByHeight: map[int][]byte{
 			8180: []byte("8180"),
@@ -1128,7 +1129,7 @@ func TestProposer_Eth1Data(t *testing.T) {
 }
 
 func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
-	slot := uint64(20000)
+	slot := types.Slot(20000)
 	deps := []*dbpb.DepositContainer{
 		{
 			Index:           0,
@@ -1163,7 +1164,7 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
-			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
+			slot.Uint64() * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
 			4080: []byte("4080"),
@@ -1214,11 +1215,11 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 
 	eth1Data, err := ps.eth1Data(ctx, 100)
 	require.NoError(t, err)
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, currentEpoch+wantedSlot)
+	enc = fastssz.MarshalUint64(enc, wantedSlot.AddEpoch(currentEpoch).Uint64())
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
@@ -1232,7 +1233,7 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 }
 
 func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
-	slot := uint64(64)
+	slot := types.Slot(64)
 	earliestValidTime, latestValidTime := majorityVoteBoundaryTime(slot)
 
 	dc := dbpb.DepositContainer{
@@ -2125,10 +2126,9 @@ func TestProposer_SortProfitableAtts(t *testing.T) {
 	require.DeepEqual(t, want, atts)
 }
 
-func majorityVoteBoundaryTime(slot uint64) (uint64, uint64) {
-	slotStartTime := uint64(mockPOW.GenesisTime) +
-		(slot-(slot%(params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)))*
-			params.BeaconConfig().SecondsPerSlot
+func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
+	slots := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().EpochsPerEth1VotingPeriod.Uint64())
+	slotStartTime := uint64(mockPOW.GenesisTime) + (slot.Uint64()-(slot.Uint64()%slots.Uint64()))*params.BeaconConfig().SecondsPerSlot
 	earliestValidTime := slotStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -54,7 +55,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 		BeaconDB: db,
 		StateGen: stategen.New(db, sc),
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(
-			2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
+			2*params.BeaconConfig().SlotsPerEpoch.Uint64()*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 	}
 
 	s, _ := testutil.DeterministicGenesisState(t, 2048)
@@ -82,5 +83,5 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	require.Equal(t, b.Block.Slot, res.Slot)
 	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
 	require.NoError(t, err)
-	require.Equal(t, params.BeaconConfig().FarFutureEpoch, res.Slot)
+	require.Equal(t, types.Slot(params.BeaconConfig().FarFutureEpoch), res.Slot)
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/mux"
@@ -27,7 +28,7 @@ import (
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
-	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
+	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch.Uint64()/2) * time.Second
 	runutil.RunEvery(s.ctx, interval, func() {
 		for _, pid := range s.p2p.Peers().Connected() {
 			go func(id peer.ID) {
@@ -67,7 +68,7 @@ func (s *Service) maintainPeerStatuses() {
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
 // in which case we attempt a resync using the initial sync method to catch up.
 func (s *Service) resyncIfBehind() {
-	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
+	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch.Uint64() * 1000
 	// Run sixteen times per epoch.
 	interval := time.Duration(int64(millisecondsPerEpoch)/16) * time.Millisecond
 	runutil.RunEvery(s.ctx, interval, func() {
@@ -98,7 +99,7 @@ func (s *Service) resyncIfBehind() {
 func (s *Service) shouldReSync() bool {
 	syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
 	currentEpoch := helpers.SlotToEpoch(s.chain.CurrentSlot())
-	prevEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}
@@ -284,7 +285,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
-	maxFinalizedEpoch := uint64(0)
+	maxFinalizedEpoch := types.Epoch(0)
 	if maxEpoch > 2 {
 		maxFinalizedEpoch = maxEpoch - 2
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -29,7 +30,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 	state, privKeys := testutil.DeterministicGenesisState(t, 5)
 	vals := state.Validators()
 	for _, vv := range vals {
-		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
+		vv.WithdrawableEpoch = types.ToEpoch(params.BeaconConfig().SlotsPerEpoch.Uint64())
 	}
 	require.NoError(t, state.SetValidators(vals))
 

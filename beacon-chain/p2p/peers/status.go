@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -432,11 +433,11 @@ func (p *Status) Prune() {
 // Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their
 // own latency, or because of their finalized epoch at the time we queried them.
 // Returns epoch number and list of peers that are at or beyond that epoch.
-func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
+func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch types.Epoch) (types.Epoch, []peer.ID) {
 	connected := p.Connected()
-	finalizedEpochVotes := make(map[uint64]uint64)
-	pidEpoch := make(map[peer.ID]uint64, len(connected))
-	pidHead := make(map[peer.ID]uint64, len(connected))
+	finalizedEpochVotes := make(map[types.Epoch]uint64)
+	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))
+	pidHead := make(map[peer.ID]types.Slot, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -449,7 +450,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	}
 
 	// Select the target epoch, which is the epoch most peers agree upon.
-	var targetEpoch uint64
+	var targetEpoch types.Epoch
 	var mostVotes uint64
 	for epoch, count := range finalizedEpochVotes {
 		if count > mostVotes || (count == mostVotes && epoch > targetEpoch) {
@@ -484,14 +485,14 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 
 // BestNonFinalized returns the highest known epoch, which is higher than ours, and is shared
 // by at least minPeers.
-func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
+func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch types.Epoch) (types.Epoch, []peer.ID) {
 	connected := p.Connected()
-	epochVotes := make(map[uint64]uint64)
-	pidEpoch := make(map[peer.ID]uint64, len(connected))
-	pidHead := make(map[peer.ID]uint64, len(connected))
+	epochVotes := make(map[types.Epoch]uint64)
+	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))
+	pidHead := make(map[peer.ID]types.Slot, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourFinalizedSlot := ourFinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
+	ourFinalizedSlot := params.BeaconConfig().SlotsPerEpoch.MulEpoch(ourFinalizedEpoch)
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourFinalizedSlot {
@@ -504,7 +505,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint6
 	}
 
 	// Select the target epoch, which has enough peers' votes (>= minPeers).
-	var targetEpoch uint64
+	var targetEpoch types.Epoch
 	for epoch, votes := range epochVotes {
 		if votes >= uint64(minPeers) && targetEpoch < epoch {
 			targetEpoch = epoch
@@ -528,10 +529,10 @@ func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint6
 }
 
 // HighestEpoch returns the highest epoch reported epoch amongst peers.
-func (p *Status) HighestEpoch() uint64 {
+func (p *Status) HighestEpoch() types.Epoch {
 	p.store.RLock()
 	defer p.store.RUnlock()
-	var highestSlot uint64
+	var highestSlot types.Slot
 	for _, peerData := range p.store.Peers() {
 		if peerData != nil && peerData.ChainState != nil && peerData.ChainState.HeadSlot > highestSlot {
 			highestSlot = peerData.ChainState.HeadSlot

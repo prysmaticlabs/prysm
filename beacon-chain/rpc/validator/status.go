@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -265,16 +266,16 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 	return ethpb.ValidatorStatus_EXITED
 }
 
-func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.BeaconState, eth1BlockNumBigInt *big.Int) (uint64, error) {
-	var depositBlockSlot uint64
+func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.BeaconState, eth1BlockNumBigInt *big.Int) (types.Slot, error) {
+	var depositBlockSlot types.Slot
 	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err
 	}
 	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
-	period := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().EpochsPerEth1VotingPeriod
-	votingPeriod := time.Duration(period*params.BeaconConfig().SecondsPerSlot) * time.Second
+	period := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	votingPeriod := time.Duration(period.Uint64()*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclusion := eth1UnixTime.Add(votingPeriod)
 
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime()), 0)
@@ -283,7 +284,7 @@ func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.B
 		depositBlockSlot = 0
 	} else {
 		eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
-		depositBlockSlot = uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
+		depositBlockSlot = types.ToSlot(uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot)
 	}
 
 	return depositBlockSlot, nil

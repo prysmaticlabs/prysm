@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -310,7 +311,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	pubKey := pubKey(1)
 
 	// Initiated exit because validator exit epoch and withdrawable epoch are not FAR_FUTURE_EPOCH
-	slot := uint64(10000)
+	slot := types.Slot(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
@@ -373,7 +374,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	pubKey := pubKey(1)
 
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
-	slot := uint64(10000)
+	slot := types.Slot(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
@@ -433,7 +434,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	pubKey := pubKey(1)
 
 	// Exit because only exit epoch is =< current epoch.
-	slot := uint64(10000)
+	slot := types.Slot(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
@@ -593,7 +594,7 @@ func TestActivationStatus_OK(t *testing.T) {
 		t.Errorf("Validator with pubkey %#x is not unknown and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}
-	if response[2].Index != params.BeaconConfig().FarFutureEpoch {
+	if response[2].Index != params.BeaconConfig().FarFutureEpoch.Uint64() {
 		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[2].PublicKey, params.BeaconConfig().FarFutureEpoch, response[2].Index)
 	}
 
@@ -615,7 +616,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	currentSlot := uint64(5000)
+	currentSlot := types.Slot(5000)
 	// Pending active because activation epoch is still defaulted at far future slot.
 	validators := []*ethpb.Validator{
 		{
@@ -647,14 +648,14 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       currentSlot/params.BeaconConfig().SlotsPerEpoch + 1,
+			ActivationEpoch:       types.ToEpoch(currentSlot.Div(params.BeaconConfig().SlotsPerEpoch.Uint64()).Add(1).Uint64()),
 			PublicKey:             pbKey,
 			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       currentSlot/params.BeaconConfig().SlotsPerEpoch + 4,
+			ActivationEpoch:       types.ToEpoch(currentSlot.Div(params.BeaconConfig().SlotsPerEpoch.Uint64()).Add(4).Uint64()),
 			PublicKey:             pubKey(5),
 			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
@@ -769,7 +770,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 
 	resp, err := vs.depositBlockSlot(context.Background(), state, eth1BlockNumBigInt)
 	require.NoError(t, err, "Could not get the deposit block slot")
-	assert.Equal(t, uint64(69), resp)
+	assert.Equal(t, types.Slot(69), resp)
 }
 
 func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
@@ -831,7 +832,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	eth1BlockNumBigInt := big.NewInt(1000000)
 	resp, err := vs.depositBlockSlot(context.Background(), state, eth1BlockNumBigInt)
 	require.NoError(t, err, "Could not get the deposit block slot")
-	assert.Equal(t, uint64(0), resp)
+	assert.Equal(t, types.Slot(0), resp)
 }
 
 func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
@@ -948,7 +949,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 
 func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	slot := uint64(10000)
+	slot := types.Slot(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4), pubKey(5), pubKey(6), pubKey(7)}
 	beaconState := &pbp2p.BeaconState{

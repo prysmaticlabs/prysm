@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -214,7 +215,7 @@ func (bs *Server) ListValidators(
 	var reqState *statetrie.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
-		var s uint64
+		var s types.Slot
 		s, err = helpers.StartSlot(requestedEpoch)
 		if err != nil {
 			return nil, err
@@ -386,7 +387,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 ) (*ethpb.ActiveSetChanges, error) {
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
-	var requestedEpoch uint64
+	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
 		requestedEpoch = 0
@@ -471,7 +472,7 @@ func (bs *Server) GetValidatorParticipation(
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
-	var requestedEpoch uint64
+	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorParticipationRequest_Genesis:
 		requestedEpoch = 0
@@ -547,7 +548,7 @@ func (bs *Server) GetValidatorQueue(
 	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number.
 	// Additionally, determine those validators queued to exit
 	awaitingExit := make([]uint64, 0)
-	exitEpochs := make([]uint64, 0)
+	exitEpochs := make([]types.Epoch, 0)
 	activationQ := make([]uint64, 0)
 	vals := headState.Validators()
 	for idx, validator := range vals {
@@ -578,7 +579,7 @@ func (bs *Server) GetValidatorQueue(
 		return nil, status.Errorf(codes.Internal, "Could not compute churn limit: %v", err)
 	}
 
-	exitQueueEpoch := uint64(0)
+	exitQueueEpoch := types.Epoch(0)
 	for _, i := range exitEpochs {
 		if exitQueueEpoch < i {
 			exitQueueEpoch = i
@@ -597,7 +598,7 @@ func (bs *Server) GetValidatorQueue(
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
-	minEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	minEpoch := exitQueueEpoch.Add(params.BeaconConfig().MinValidatorWithdrawabilityDelay.Uint64())
 	exitQueueIndices := make([]uint64, 0)
 	for _, valIdx := range awaitingExit {
 		val := vals[valIdx]
@@ -701,8 +702,8 @@ func (bs *Server) GetValidatorPerformance(
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
 	afterTransitionBalances := make([]uint64, 0, responseCap)
 	effectiveBalances := make([]uint64, 0, responseCap)
-	inclusionSlots := make([]uint64, 0, responseCap)
-	inclusionDistances := make([]uint64, 0, responseCap)
+	inclusionSlots := make([]types.Slot, 0, responseCap)
+	inclusionDistances := make([]types.Slot, 0, responseCap)
 	correctlyVotedSource := make([]bool, 0, responseCap)
 	correctlyVotedTarget := make([]bool, 0, responseCap)
 	correctlyVotedHead := make([]bool, 0, responseCap)
@@ -838,7 +839,7 @@ func (bs *Server) GetIndividualVotes(
 }
 
 // Determines whether a validator has already exited.
-func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
+func validatorHasExited(validator *ethpb.Validator, currentEpoch types.Epoch) bool {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	if currentEpoch < validator.ActivationEligibilityEpoch {
 		return false
@@ -858,7 +859,7 @@ func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
 	return true
 }
 
-func validatorStatus(validator *ethpb.Validator, epoch uint64) ethpb.ValidatorStatus {
+func validatorStatus(validator *ethpb.Validator, epoch types.Epoch) ethpb.ValidatorStatus {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	if validator == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
