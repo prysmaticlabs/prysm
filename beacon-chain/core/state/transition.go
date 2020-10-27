@@ -6,7 +6,6 @@ package state
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -285,13 +284,11 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	}
 
 	highestSlot := state.Slot()
-	r, err := helpers.StateRootAtSlot(state, state.Slot())
+	r, err := state.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(1, hex.EncodeToString(r))
-	key := hashutil.Hash(append(bytesutil.Bytes32(state.Slot()), r...))
-	fmt.Println(2, hex.EncodeToString(key[:]))
+	key := hashutil.Hash(append(bytesutil.Bytes32(state.Slot()), r[:]...))
 
 	// Restart from cached value, if one exists.
 	cachedState, err := SkipSlotCache.Get(ctx, key)
