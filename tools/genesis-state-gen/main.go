@@ -46,7 +46,8 @@ func main() {
 		log.Print("No --genesis-time specified, defaulting to now")
 	}
 	if *sszOutputFile == "" && *yamlOutputFile == "" && *jsonOutputFile == "" {
-		log.Fatal("Expected --output-ssz, --output-yaml, or --output-json to have been provided, received nil")
+		log.Println("Expected --output-ssz, --output-yaml, or --output-json to have been provided, received nil")
+		return
 	}
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -57,11 +58,13 @@ func main() {
 		inputFile := *validatorJSONInput
 		expanded, err := fileutil.ExpandPath(inputFile)
 		if err != nil {
-			log.Fatalf("Could not expand file path %s: %v", inputFile, err)
+			log.Printf("Could not expand file path %s: %v", inputFile, err)
+			return
 		}
 		inputJSON, err := os.Open(expanded)
 		if err != nil {
-			log.Fatalf("Could not open JSON file for reading: %v", err)
+			log.Printf("Could not open JSON file for reading: %v", err)
+			return
 		}
 		defer func() {
 			if err := inputJSON.Close(); err != nil {
@@ -71,46 +74,55 @@ func main() {
 		log.Printf("Generating genesis state from input JSON deposit data %s", inputFile)
 		genesisState, err = genesisStateFromJSONValidators(inputJSON, *genesisTime)
 		if err != nil {
-			log.Fatalf("Could not generate genesis beacon state: %v", err)
+			log.Printf("Could not generate genesis beacon state: %v", err)
+			return
 		}
 	} else {
 		if *numValidators == 0 {
-			log.Fatal("Expected --num-validators to have been provided, received 0")
+			log.Println("Expected --num-validators to have been provided, received 0")
+			return
 		}
 		// If no JSON input is specified, we create the state deterministically from interop keys.
 		genesisState, _, err = interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
 		if err != nil {
-			log.Fatalf("Could not generate genesis beacon state: %v", err)
+			log.Printf("Could not generate genesis beacon state: %v", err)
+			return
 		}
 	}
 
 	if *sszOutputFile != "" {
 		encodedState, err := genesisState.MarshalSSZ()
 		if err != nil {
-			log.Fatalf("Could not ssz marshal the genesis beacon state: %v", err)
+			log.Printf("Could not ssz marshal the genesis beacon state: %v", err)
+			return
 		}
 		if err := ioutil.WriteFile(*sszOutputFile, encodedState, 0644); err != nil {
-			log.Fatalf("Could not write encoded genesis beacon state to file: %v", err)
+			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
+			return
 		}
 		log.Printf("Done writing to %s", *sszOutputFile)
 	}
 	if *yamlOutputFile != "" {
 		encodedState, err := yaml.Marshal(genesisState)
 		if err != nil {
-			log.Fatalf("Could not yaml marshal the genesis beacon state: %v", err)
+			log.Printf("Could not yaml marshal the genesis beacon state: %v", err)
+			return
 		}
 		if err := ioutil.WriteFile(*yamlOutputFile, encodedState, 0644); err != nil {
-			log.Fatalf("Could not write encoded genesis beacon state to file: %v", err)
+			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
+			return
 		}
 		log.Printf("Done writing to %s", *yamlOutputFile)
 	}
 	if *jsonOutputFile != "" {
 		encodedState, err := json.Marshal(genesisState)
 		if err != nil {
-			log.Fatalf("Could not json marshal the genesis beacon state: %v", err)
+			log.Printf("Could not json marshal the genesis beacon state: %v", err)
+			return
 		}
 		if err := ioutil.WriteFile(*jsonOutputFile, encodedState, 0644); err != nil {
-			log.Fatalf("Could not write encoded genesis beacon state to file: %v", err)
+			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
+			return
 		}
 		log.Printf("Done writing to %s", *jsonOutputFile)
 	}
@@ -129,9 +141,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 	depositDataRoots := make([][]byte, len(validatorsJSON))
 	for i, val := range validatorsJSON {
 		depositDataString := val.DepositData
-		if strings.HasPrefix(depositDataString, "0x") {
-			depositDataString = depositDataString[2:]
-		}
+		depositDataString = strings.TrimPrefix(depositDataString, "0x")
 		depositDataHex, err := hex.DecodeString(depositDataString)
 		if err != nil {
 			return nil, err
