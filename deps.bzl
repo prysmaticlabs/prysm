@@ -3663,6 +3663,6 @@ def prysm_deps():
     go_repository(
         name = "com_github_farazdagi_prysm_shared_types",
         importpath = "github.com/farazdagi/prysm-shared-types",
-        sum = "h1:gwfph1ePiOaFIfZFxcARvFVkNXiGAPeOXAMgRU4k64g=",
-        version = "v0.0.0-20201027061121-b16aa862e321",
+        sum = "h1:y2ka9xLiy7lyYoZiSZZ9vWS60QLKG2GXJ50e3xfIEEw=",
+        version = "v0.0.0-20201027141824-01bf2b05e6af",
     )
