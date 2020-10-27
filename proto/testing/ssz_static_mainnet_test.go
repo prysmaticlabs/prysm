@@ -5,6 +5,6 @@ import (
 )
 
 func TestSZZStatic_Mainnet(t *testing.T) {
-	t.Skip("TODO #7536 - unskip")
+	t.Skip("see #7536 - unskip")
 	runSSZStaticTests(t, "mainnet")
 }
