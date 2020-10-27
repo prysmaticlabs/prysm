@@ -524,10 +524,11 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		if err != nil {
 			return errors.Wrap(err, "could not get last archived state")
 		}
-		// Set deposit index to the one in the current archived state.
-		if currentState != nil {
-			currIndex = currentState.Eth1DepositIndex()
+		if currentState == nil {
+			return errors.Errorf("archived state with root %#x does not exist in the db", rt)
 		}
+		// Set deposit index to the one in the current archived state.
+		currIndex = currentState.Eth1DepositIndex()
 	}
 	validDepositsCount.Add(float64(currIndex + 1))
 	// Only add pending deposits if the container slice length
