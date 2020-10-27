@@ -32,6 +32,27 @@ type Server struct {
 	proposeLock     sync.Mutex
 }
 
+func (ss *Server) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest) (*slashpb.HighestAttestationResponse, error) {
+	ret := make([]*slashpb.HighestAttestation, 0)
+	for _, id := range req.ValidatorIds {
+		res, err := ss.slasherDB.HighestAttestation(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if res != nil {
+			ret = append(ret, &slashpb.HighestAttestation{
+				ValidatorId:        id,
+				HighestTargetEpoch: res.HighestTargetEpoch,
+				HighestSourceEpoch: res.HighestSourceEpoch,
+			})
+		}
+	}
+
+	return &slashpb.HighestAttestationResponse{
+		Attestations: ret,
+	}, nil
+}
+
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
