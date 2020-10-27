@@ -20,11 +20,11 @@ type ReadOnlyDatabase interface {
 	AttesterSlashings(ctx context.Context, status types.SlashingStatus) ([]*ethpb.AttesterSlashing, error)
 	DeleteAttesterSlashing(ctx context.Context, attesterSlashing *ethpb.AttesterSlashing) error
 	HasAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) (bool, types.SlashingStatus, error)
-	GetLatestEpochDetected(ctx context.Context) (uint64, error)
+	GetLatestEpochDetected(ctx context.Context) (basetypes.Epoch, error)
 
 	// BlockHeader related methods.
-	BlockHeaders(ctx context.Context, epoch basetypes.Epoch, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
-	HasBlockHeader(ctx context.Context, epoch basetypes.Epoch, validatorID uint64) bool
+	BlockHeaders(ctx context.Context, slot basetypes.Slot, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
+	HasBlockHeader(ctx context.Context, slot basetypes.Slot, validatorID uint64) bool
 
 	// IndexedAttestations related methods.
 	HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error)
@@ -62,13 +62,13 @@ type WriteAccessDatabase interface {
 	// BlockHeader related methods.
 	SaveBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error
 	DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error
-	PruneBlockHistory(ctx context.Context, currentEpoch basetypes.Epoch, pruningEpochAge uint64) error
+	PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpochAge basetypes.Epoch) error
 
 	// IndexedAttestations related methods.
 	SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
-	PruneAttHistory(ctx context.Context, currentEpoch basetypes.Epoch, pruningEpochAge uint64) error
+	PruneAttHistory(ctx context.Context, currentEpoch, pruningEpochAge basetypes.Epoch) error
 
 	// Highest Attestation related methods.
 	SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error

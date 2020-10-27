@@ -93,7 +93,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		}
 		minSpan := span.MinSpan
 		if minSpan > 0 && minSpan < distance {
-			slashableEpoch := sourceEpoch + uint64(minSpan)
+			slashableEpoch := sourceEpoch.Add(uint64(minSpan))
 			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.UseCache)
 			if err != nil {
 				return nil, err
@@ -113,7 +113,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 
 		maxSpan := span.MaxSpan
 		if maxSpan > distance {
-			slashableEpoch := sourceEpoch + uint64(maxSpan)
+			slashableEpoch := sourceEpoch.Add(uint64(maxSpan))
 			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.UseCache)
 			if err != nil {
 				return nil, err

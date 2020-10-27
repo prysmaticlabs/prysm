@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -76,8 +77,8 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(100)
 	var wentThrough bool
-	for i := uint64(0); i < 100; i++ {
-		go func(j uint64) {
+	for i := types.Slot(0); i < 100; i++ {
+		go func(j types.Slot) {
 			defer wg.Done()
 			iatt := state.CopyIndexedAttestation(savedAttestation)
 			iatt.Data.Slot += j

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -15,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
-func indexedAttestation(source, target uint64, indices []uint64) *ethpb.IndexedAttestation {
+func indexedAttestation(source, target basetypes.Epoch, indices []uint64) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		AttestingIndices: indices,
 		Data: &ethpb.AttestationData{
@@ -270,11 +271,11 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 	type testStruct struct {
 		name                     string
-		sourceEpoch              uint64
-		targetEpoch              uint64
-		slashableEpoch           uint64
+		sourceEpoch              basetypes.Epoch
+		targetEpoch              basetypes.Epoch
+		slashableEpoch           basetypes.Epoch
 		shouldSlash              bool
-		spansByEpochForValidator map[uint64][3]uint16
+		spansByEpochForValidator map[basetypes.Epoch][3]uint16
 	}
 	tests := []testStruct{
 		{
@@ -285,7 +286,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			shouldSlash:    true,
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
 			// committed a slashable offense by having a max span of 4 > distance.
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				3: {0, 4},
 			},
 		},
@@ -296,7 +297,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
 			// have committed slashable offense by having a max span of 1 < distance.
 			shouldSlash: false,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				3: {0, 1},
 			},
 		},
@@ -307,7 +308,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
 			// have committed slashable offense by having a max span of 3 == distance.
 			shouldSlash: false,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				3: {0, 3},
 			},
 		},
@@ -318,7 +319,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			// Given a min span of 0 and no max span slashing, we want validator to NOT
 			// have committed a slashable offense if min span == 0.
 			shouldSlash: false,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				3: {0, 1},
 			},
 		},
@@ -330,7 +331,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			// committed a slashable offense by having a min span of 1 < distance.
 			shouldSlash:    true,
 			slashableEpoch: 4,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				3: {1, 0},
 			},
 		},
@@ -340,7 +341,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			sourceEpoch: 8,
 			targetEpoch: 18,
 			shouldSlash: false,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				0: {4, 0},
 				1: {2, 0},
 				2: {1, 0},
@@ -354,7 +355,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			targetEpoch:    12,
 			shouldSlash:    false,
 			slashableEpoch: 0,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				4:  {14, 2},
 				5:  {13, 1},
 				6:  {12, 0},
@@ -376,7 +377,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			targetEpoch:    15,
 			shouldSlash:    true,
 			slashableEpoch: 18,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				4:  {14, 2},
 				5:  {13, 7},
 				6:  {12, 6},
@@ -399,7 +400,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			sourceEpoch: 4,
 			targetEpoch: 6,
 			shouldSlash: false,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				1: {5, 0},
 				2: {4, 0},
 				3: {3, 0},
@@ -410,7 +411,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			sourceEpoch: 11,
 			targetEpoch: 15,
 			shouldSlash: false,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				1:  {5, 0},
 				2:  {4, 0},
 				3:  {3, 0},
@@ -435,7 +436,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			targetEpoch:    19,
 			shouldSlash:    true,
 			slashableEpoch: 14,
-			spansByEpochForValidator: map[uint64][3]uint16{
+			spansByEpochForValidator: map[basetypes.Epoch][3]uint16{
 				0:  {5, 0},
 				1:  {4, 0},
 				2:  {3, 0},
@@ -510,7 +511,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 	type testStruct struct {
 		name            string
 		incomingAtt     *ethpb.IndexedAttestation
-		slashableEpochs []uint64
+		slashableEpochs []basetypes.Epoch
 		shouldSlash     []bool
 		atts            []*ethpb.IndexedAttestation
 	}
@@ -531,7 +532,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				},
 				Signature: []byte{1, 2},
 			},
-			slashableEpochs: []uint64{6, 7, 5, 0},
+			slashableEpochs: []basetypes.Epoch{6, 7, 5, 0},
 			// Detections - double, surround, surrounded, none.
 			shouldSlash: []bool{true, true, true, false},
 			// Atts in map: (src, epoch) - 0: (3, 6), 1: (2, 7), 2: (4, 5), 3: (5, 7)
@@ -558,7 +559,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				},
 				Signature: []byte{1, 2},
 			},
-			slashableEpochs: []uint64{8, 9, 10, 0},
+			slashableEpochs: []basetypes.Epoch{8, 9, 10, 0},
 			// Detections - surround, surround, surround, none.
 			shouldSlash: []bool{true, true, true, false},
 			// Atts in map: (src, epoch) - 0: (1, 8), 1: (3, 9), 2: (2, 10), 3: (4, 6)
@@ -585,7 +586,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				},
 				Signature: []byte{1, 2},
 			},
-			slashableEpochs: []uint64{8, 8, 7, 0},
+			slashableEpochs: []basetypes.Epoch{8, 8, 7, 0},
 			// Detections - surround, surround, surround, none.
 			shouldSlash: []bool{true, true, true, false},
 			// Atts in map: (src, epoch) - 0: (5, 8), 1: (3, 8), 2: (4, 7), 3: (1, 5)
@@ -612,7 +613,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				},
 				Signature: []byte{1, 2},
 			},
-			slashableEpochs: []uint64{7, 7, 7, 0},
+			slashableEpochs: []basetypes.Epoch{7, 7, 7, 0},
 			// Detections - surround, surround, surround, none.
 			shouldSlash: []bool{true, true, true, false},
 			// Atts in map: (src, epoch) - 0: (2, 7), 1: (3, 7), 2: (6, 7), 3: (1, 5)
@@ -680,7 +681,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	type testStruct struct {
 		name string
 		att  *ethpb.IndexedAttestation
-		want []map[uint64]types.Span
+		want []map[basetypes.Epoch]types.Span
 	}
 	tests := []testStruct{
 		{
@@ -698,7 +699,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 				},
 				Signature: []byte{1, 2},
 			},
-			want: []map[uint64]types.Span{
+			want: []map[basetypes.Epoch]types.Span{
 				// Epoch 0.
 				{
 					0: {MinSpan: 4, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
@@ -745,7 +746,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 				},
 				Signature: []byte{1, 2},
 			},
-			want: []map[uint64]types.Span{
+			want: []map[basetypes.Epoch]types.Span{
 				// Epoch 0.
 				{},
 				// Epoch 1.
@@ -799,7 +800,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			}
 			require.NoError(t, sd.UpdateSpans(ctx, tt.att))
 			for epoch := range tt.want {
-				sm, err := sd.slasherDB.EpochSpans(ctx, uint64(epoch), dbTypes.UseDB)
+				sm, err := sd.slasherDB.EpochSpans(ctx, basetypes.Epoch(epoch), dbTypes.UseDB)
 				require.NoError(t, err, "Failed to read from slasherDB")
 				resMap, err := sm.ToMap()
 				require.NoError(t, err)
