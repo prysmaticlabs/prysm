@@ -96,7 +96,9 @@ go_test(
 go_test(
     name = "go_default_test",
     srcs = [
+        "blocks_fetcher_peers_test.go",
         "blocks_fetcher_test.go",
+        "blocks_fetcher_utils_test.go",
         "blocks_queue_test.go",
         "fsm_test.go",
         "initial_sync_test.go",

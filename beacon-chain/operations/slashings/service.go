@@ -12,6 +12,7 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
 )
 
@@ -259,10 +260,15 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 // this function checks a few items about a validator before proceeding with inserting
 // a proposer/attester slashing into the pool. First, it checks if the validator
 // has been recently included in the pool, then it checks if the validator is slashable.
+// Note: this method requires caller to hold the lock.
 func (p *Pool) validatorSlashingPreconditionCheck(
 	state *beaconstate.BeaconState,
 	valIdx uint64,
 ) (bool, error) {
+	if !mutexasserts.RWMutexLocked(&p.lock) && !mutexasserts.RWMutexRLocked(&p.lock) {
+		return false, errors.New("pool.validatorSlashingPreconditionCheck: caller must hold read/write lock")
+	}
+
 	// Check if the validator index has been included recently.
 	if p.included[valIdx] {
 		return false, nil
