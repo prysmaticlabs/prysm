@@ -8,13 +8,10 @@ import (
 	"net"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	ethpbv1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -275,27 +272,27 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
-	beaconChainServerV1 := &beaconv1.Server{
-		Ctx:                 s.ctx,
-		BeaconDB:            s.beaconDB,
-		AttestationsPool:    s.attestationsPool,
-		SlashingsPool:       s.slashingsPool,
-		ChainInfoFetcher:    s.chainInfoFetcher,
-		ChainStartFetcher:   s.chainStartFetcher,
-		DepositFetcher:      s.depositFetcher,
-		BlockFetcher:        s.powChainService,
-		CanonicalStateChan:  s.canonicalStateChan,
-		GenesisTimeFetcher:  s.genesisTimeFetcher,
-		StateNotifier:       s.stateNotifier,
-		BlockNotifier:       s.blockNotifier,
-		AttestationNotifier: s.operationNotifier,
-		Broadcaster:         s.p2p,
-		StateGen:            s.stateGen,
-		SyncChecker:         s.syncService,
-	}
+	//beaconChainServerV1 := &beaconv1.Server{
+	//	Ctx:                 s.ctx,
+	//	BeaconDB:            s.beaconDB,
+	//	AttestationsPool:    s.attestationsPool,
+	//	SlashingsPool:       s.slashingsPool,
+	//	ChainInfoFetcher:    s.chainInfoFetcher,
+	//	ChainStartFetcher:   s.chainStartFetcher,
+	//	DepositFetcher:      s.depositFetcher,
+	//	BlockFetcher:        s.powChainService,
+	//	CanonicalStateChan:  s.canonicalStateChan,
+	//	GenesisTimeFetcher:  s.genesisTimeFetcher,
+	//	StateNotifier:       s.stateNotifier,
+	//	BlockNotifier:       s.blockNotifier,
+	//	AttestationNotifier: s.operationNotifier,
+	//	Broadcaster:         s.p2p,
+	//	StateGen:            s.stateGen,
+	//	SyncChecker:         s.syncService,
+	//}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
+	//ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	if s.enableDebugRPCEndpoints {
 		log.Info("Enabled debug RPC endpoints")
 		debugServer := &debug.Server{
