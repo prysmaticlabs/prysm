@@ -25,9 +25,10 @@ import (
 const (
 	phraseWordCount                 = 24
 	newMnemonicPassphraseYesNoText  = "(Advanced) Do you want to setup a '25th word' passphrase for your mnemonic? [y/n]"
-	newMnemonicPassphrasePromptText = "(Advanced) Setup a passphrase '25th word' for your mnemonic"
-	mnemonicPassphraseYesNoText     = "(Advanced) Do you have an optional '25th word' passphrase for your mnemonic? [y/n]"
-	mnemonicPassphrasePromptText    = "(Advanced) Enter the '25th word' passphrase for your mnemonic"
+	newMnemonicPassphrasePromptText = "(Advanced) Setup a passphrase '25th word' for your mnemonic " +
+		"(WARNING: You cannot recover your keys from your mnemonic if you forget this passphrase!)"
+	mnemonicPassphraseYesNoText  = "(Advanced) Do you have an optional '25th word' passphrase for your mnemonic? [y/n]"
+	mnemonicPassphrasePromptText = "(Advanced) Enter the '25th word' passphrase for your mnemonic"
 )
 
 // RecoverWalletConfig to run the recover wallet function.
