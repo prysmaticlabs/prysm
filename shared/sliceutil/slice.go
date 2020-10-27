@@ -353,3 +353,13 @@ func NotSlot(a, b []types.Slot) []types.Slot {
 	}
 	return set
 }
+
+// IsInSlots returns true if a is in b and False otherwise.
+func IsInSlots(a types.Slot, b []types.Slot) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
+}

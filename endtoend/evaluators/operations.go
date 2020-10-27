@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -31,11 +32,11 @@ var churnLimit = uint64(4)
 var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
-var depositsInBlockStart = uint64(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
+var depositsInBlockStart = basetypes.Epoch(uint64(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2)))
 
 // deposits included + finalization + MaxSeedLookahead for activation.
-var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead
-var depositEndEpoch = depositActivationStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
+var depositActivationStartEpoch = depositsInBlockStart.Add(2 + params.E2ETestConfig().MaxSeedLookahead.Uint64())
+var depositEndEpoch = depositActivationStartEpoch.Add(uint64(math.Ceil(float64(depositValCount) / float64(churnLimit))))
 
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
 var ProcessesDepositsInBlocks = types.Evaluator{
@@ -300,7 +301,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 	for _, blk := range blks.BlockContainers {
 		slot, vote := blk.Block.Block.Slot, blk.Block.Block.Body.Eth1Data.BlockHash
-		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch * params.E2ETestConfig().EpochsPerEth1VotingPeriod
+		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.MulEpoch(params.E2ETestConfig().EpochsPerEth1VotingPeriod)
 
 		// We treat epoch 1 differently from other epoch for two reasons:
 		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -127,7 +128,7 @@ func finishedSyncing(conns ...*grpc.ClientConn) error {
 }
 
 func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
-	headEpochs := make([]uint64, len(conns))
+	headEpochs := make([]basetypes.Epoch, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))

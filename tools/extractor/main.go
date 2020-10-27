@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -29,7 +30,7 @@ func main() {
 		panic(err)
 	}
 	ctx := context.Background()
-	slot := uint64(*state)
+	slot := types.Slot(*state)
 	roots, err := d.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
 	if err != nil {
 		panic(err)

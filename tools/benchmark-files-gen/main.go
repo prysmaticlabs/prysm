@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 
 	"github.com/pkg/errors"
@@ -95,8 +96,8 @@ func generateMarshalledFullStateAndBlock() error {
 	conf := &testutil.BlockGenConfig{}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	// Small offset for the beacon state so we dont process a block on an epoch.
-	slotOffset := uint64(2)
-	block, err := testutil.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
+	slotOffset := types.Slot(2)
+	block, err := testutil.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch.AddSlot(slotOffset))
 	if err != nil {
 		return err
 	}
@@ -106,11 +107,11 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / slotsPerEpoch,
+		NumAttestations: benchutil.AttestationsPerEpoch / slotsPerEpoch.Uint64(),
 	}
 
 	var atts []*ethpb.Attestation
-	for i := slotOffset + 1; i < slotsPerEpoch+slotOffset; i++ {
+	for i := slotOffset + 1; i < slotsPerEpoch.AddSlot(slotOffset); i++ {
 		attsForSlot, err := testutil.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
 		if err != nil {
 			return err
@@ -181,10 +182,10 @@ func generate2FullEpochState() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / params.BeaconConfig().SlotsPerEpoch,
+		NumAttestations: benchutil.AttestationsPerEpoch / params.BeaconConfig().SlotsPerEpoch.Uint64(),
 	}
 
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
+	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch.Mul(2).Sub(1); i++ {
 		block, err := testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 		if err != nil {
 			return err

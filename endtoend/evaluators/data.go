@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
@@ -14,7 +15,7 @@ const epochToCheck = 50 // must be more than 46 (32 hot states + 16 chkpt interv
 // ColdStateCheckpoint checks data from the database using cold state storage.
 var ColdStateCheckpoint = types.Evaluator{
 	Name: "cold_state_assignments_from_epoch_%d",
-	Policy: func(currentEpoch uint64) bool {
+	Policy: func(currentEpoch basetypes.Epoch) bool {
 		return currentEpoch == epochToCheck
 	},
 	Evaluation: checkColdStateCheckpoint,
@@ -25,7 +26,7 @@ func checkColdStateCheckpoint(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conns[0])
 
-	for i := uint64(0); i < epochToCheck; i++ {
+	for i := basetypes.Epoch(0); i < epochToCheck; i++ {
 		res, err := client.ListValidatorAssignments(ctx, &eth.ListValidatorAssignmentsRequest{
 			QueryFilter: &eth.ListValidatorAssignmentsRequest_Epoch{Epoch: i},
 		})
