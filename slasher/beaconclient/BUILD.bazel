@@ -65,6 +65,7 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "//slasher/cache:go_default_library",
         "//slasher/db/testing:go_default_library",
+        "@com_github_farazdagi_prysm_shared_types//:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
