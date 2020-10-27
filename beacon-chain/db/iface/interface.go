@@ -94,6 +94,7 @@ type HeadAccessDatabase interface {
 	HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
+	// Deprecated: This method may return nil. Prefer to use HighestSlotStatesBelow.
 	HeadState(ctx context.Context) (*state.BeaconState, error)
 }
 

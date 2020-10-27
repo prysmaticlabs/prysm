@@ -36,6 +36,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSta
 }
 
 // HeadState returns the latest canonical state in beacon chain.
+// Deprecated: This method may return nil. Prefer to use HighestSlotStatesBelow.
 func (s *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
