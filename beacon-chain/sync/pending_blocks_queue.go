@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
+	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
 )
 
@@ -255,6 +256,8 @@ func (s *Service) clearPendingSlots() {
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
 func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) {
+	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
+
 	blks, ok := s.slotToPendingBlocks[slot]
 	if !ok {
 		return
@@ -277,6 +280,8 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
 func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) {
+	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
+
 	if s.seenPendingBlocks[r] {
 		return
 	}

@@ -8,10 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"go.opencensus.io/trace"
@@ -67,53 +64,6 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	// Verify beacon node has seen the target block before.
 	if !s.hasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
 		return nil, ErrTargetRootNotInDB
-	}
-
-	if featureconfig.Get().UseCheckPointInfoCache {
-		c, err := s.AttestationCheckPtInfo(ctx, a)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.verifyAttTargetEpoch(ctx, uint64(s.genesisTime.Unix()), uint64(timeutils.Now().Unix()), tgt); err != nil {
-			return nil, err
-		}
-		if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
-			return nil, errors.Wrap(err, "could not verify attestation beacon block")
-		}
-		if err := s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot); err != nil {
-			return nil, errors.Wrap(err, "could not verify attestation beacon block")
-		}
-		if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-			return nil, err
-		}
-		committee, err := helpers.BeaconCommittee(c.ActiveIndices, bytesutil.ToBytes32(c.Seed), a.Data.Slot, a.Data.CommitteeIndex)
-		if err != nil {
-			return nil, err
-		}
-		indexedAtt := attestationutil.ConvertToIndexed(ctx, a, committee)
-		if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
-			return nil, err
-		}
-		domain, err := helpers.Domain(c.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, c.GenesisRoot)
-		if err != nil {
-			return nil, err
-		}
-		indices := indexedAtt.AttestingIndices
-		var pubkeys []bls.PublicKey
-		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := c.PubKeys[indices[i]]
-			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx)
-			if err != nil {
-				return nil, err
-			}
-			pubkeys = append(pubkeys, pk)
-		}
-		if err := attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain); err != nil {
-			return nil, err
-		}
-		s.forkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-
-		return indexedAtt.AttestingIndices, nil
 	}
 
 	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and

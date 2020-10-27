@@ -78,6 +78,7 @@ var appFlags = []cli.Flag{
 	flags.EnableHistoricalDetectionFlag,
 	flags.SpanCacheSize,
 	cmd.AcceptTosFlag,
+	flags.HighestAttCacheSize,
 }
 
 func init() {

@@ -50,6 +50,8 @@ var appFlags = []cli.Flag{
 	flags.InteropGenesisTimeFlag,
 	flags.SlotsPerArchivedPoint,
 	flags.EnableDebugRPCEndpoints,
+	flags.EnableBackupWebhookFlag,
+	flags.BackupWebhookOutputDir,
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
