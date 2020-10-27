@@ -232,6 +232,7 @@ func (store *Store) MigrateV2AttestationProtectionDb(ctx context.Context) error 
 	if !importAttestations {
 		return nil
 	}
+	log.Info("Starting proposals protection db migration to v2...")
 	err = store.MigrateV2AttestationProtection(ctx)
 	if err != nil {
 		return errors.Wrap(err, "filed to import attestations")
@@ -245,6 +246,7 @@ func (store *Store) MigrateV2AttestationProtectionDb(ctx context.Context) error 
 		}
 		return nil
 	})
+	log.Info("Finished proposals protection db migration to v2")
 	return err
 }
 
