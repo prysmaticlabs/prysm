@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -45,7 +46,9 @@ func TestServer_CreateAccount(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,
@@ -71,7 +74,9 @@ func TestServer_ListAccounts(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,
@@ -172,7 +177,9 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	ss := &Server{
 		wallet:     w,
@@ -207,7 +214,9 @@ func TestServer_DeleteAccounts_OK(t *testing.T) {
 		PublicKeys: pubKeys[:1], // Delete the 0th public key
 	})
 	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 
 	// We expect one of the keys to have been deleted.
