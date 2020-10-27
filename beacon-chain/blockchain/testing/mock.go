@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -229,7 +230,7 @@ func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBea
 }
 
 // HeadSlot mocks HeadSlot method in chain service.
-func (ms *ChainService) HeadSlot() uint64 {
+func (ms *ChainService) HeadSlot() types.Slot {
 	if ms.State == nil {
 		return 0
 	}
@@ -290,7 +291,7 @@ func (ms *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestat
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (ms *ChainService) HeadValidatorsIndices(_ context.Context, epoch uint64) ([]uint64, error) {
+func (ms *ChainService) HeadValidatorsIndices(_ context.Context, epoch types.Epoch) ([]uint64, error) {
 	if ms.State == nil {
 		return []uint64{}, nil
 	}
@@ -298,7 +299,7 @@ func (ms *ChainService) HeadValidatorsIndices(_ context.Context, epoch uint64) (
 }
 
 // HeadSeed mocks the same method in the chain service.
-func (ms *ChainService) HeadSeed(_ context.Context, epoch uint64) ([32]byte, error) {
+func (ms *ChainService) HeadSeed(_ context.Context, epoch types.Epoch) ([32]byte, error) {
 	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
@@ -323,8 +324,8 @@ func (ms *ChainService) GenesisValidatorRoot() [32]byte {
 }
 
 // CurrentSlot mocks the same method in the chain service.
-func (ms *ChainService) CurrentSlot() uint64 {
-	return uint64(time.Now().Unix()-ms.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot
+func (ms *ChainService) CurrentSlot() types.Slot {
+	return types.ToSlot(uint64(time.Now().Unix()-ms.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // Participation mocks the same method in the chain service.

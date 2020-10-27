@@ -64,7 +64,6 @@ func (bs *Server) ListBeaconCommittees(
 	}, nil
 }
 
-
 func (bs *Server) retrieveCommitteesForEpoch(
 	ctx context.Context,
 	epoch types.Epoch,

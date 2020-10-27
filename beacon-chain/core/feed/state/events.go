@@ -3,7 +3,11 @@
 // and chain start.
 package state
 
-import "time"
+import (
+	"time"
+
+	types "github.com/farazdagi/prysm-shared-types"
+)
 
 const (
 	// BlockProcessed is sent after a block has been processed and updated the state database.
@@ -22,7 +26,7 @@ const (
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
 	// Slot is the slot of the processed block.
-	Slot uint64
+	Slot types.Slot
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// Verified is true if the block's BLS contents have been verified.
@@ -52,7 +56,7 @@ type InitializedData struct {
 // ReorgData is the data alongside a reorg event.
 type ReorgData struct {
 	// NewSlot is the slot of new state after the reorg.
-	NewSlot uint64
+	NewSlot types.Slot
 	// OldSlot is the slot of the head state before the reorg.
-	OldSlot uint64
+	OldSlot types.Slot
 }
