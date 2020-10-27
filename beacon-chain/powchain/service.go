@@ -522,7 +522,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	if rt != [32]byte{} {
 		currentState, err := s.beaconDB.State(ctx, rt)
 		if err != nil {
-			return errors.Wrap(err, "could not get head state")
+			return errors.Wrap(err, "could not get last archived state")
 		}
 		// Set deposit index to the one in the current archived state.
 		if currentState != nil {
