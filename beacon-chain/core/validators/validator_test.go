@@ -272,7 +272,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -295,7 +294,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -308,7 +306,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
