@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -100,7 +101,9 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 		select {
 		case w := <-walletChan:
 			keyManager, err := w.InitializeKeymanager(
-				ctx, true, /* skipMnemonicConfirm */
+				ctx, &iface.InitializeKeymanagerConfig{
+					SkipMnemonicConfirm: true,
+				},
 			)
 			if err != nil {
 				return errors.Wrap(err, "could not read keymanager")
@@ -584,6 +587,31 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
+}
+
+// AllValidatorsAreExited informs whether all validators have already exited.
+func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
+	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "could not fetch validating keys")
+	}
+	var publicKeys [][]byte
+	for _, key := range validatingKeys {
+		publicKeys = append(publicKeys, key[:])
+	}
+	request := &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: publicKeys,
+	}
+	response, err := v.validatorClient.MultipleValidatorStatus(ctx, request)
+	if err != nil {
+		return false, err
+	}
+	for _, status := range response.Statuses {
+		if status.Status != ethpb.ValidatorStatus_EXITED {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {
