@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -54,7 +55,7 @@ func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
 }
 
 // SetSlot for the beacon state.
-func (b *BeaconState) SetSlot(val uint64) error {
+func (b *BeaconState) SetSlot(val types.Slot) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}

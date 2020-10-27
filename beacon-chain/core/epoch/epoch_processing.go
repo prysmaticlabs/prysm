@@ -276,20 +276,20 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	slashedEpoch := nextEpoch % slashedExitLength
 	slashings := state.Slashings()
-	if uint64(len(slashings)) != slashedExitLength {
+	if uint64(len(slashings)) != slashedExitLength.Uint64() {
 		return nil, fmt.Errorf(
 			"state slashing length %d different than EpochsPerHistoricalVector %d",
 			len(slashings),
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(slashedEpoch /* index */, 0 /* value */); err != nil {
+	if err := state.UpdateSlashingsAtIndex(slashedEpoch.Uint64() /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	if uint64(state.RandaoMixesLength()) != randaoMixLength {
+	if uint64(state.RandaoMixesLength()) != randaoMixLength.Uint64() {
 		return nil, fmt.Errorf(
 			"state randao length %d different than EpochsPerHistoricalVector %d",
 			state.RandaoMixesLength(),
@@ -300,13 +300,13 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(nextEpoch%randaoMixLength, mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(nextEpoch.Uint64()%randaoMixLength.Uint64(), mix); err != nil {
 		return nil, err
 	}
 
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
-	if nextEpoch%epochsPerHistoricalRoot == 0 {
+	if nextEpoch.Uint64()%epochsPerHistoricalRoot.Uint64() == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots(),
 			StateRoots: state.StateRoots(),

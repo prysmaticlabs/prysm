@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +26,7 @@ var SubnetIDs = newSubnetIDs()
 func newSubnetIDs() *subnetIDs {
 	// Given a node can calculate committee assignments of current epoch and next epoch.
 	// Max size is set to 2 epoch length.
-	cacheSize := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch * 2)
+	cacheSize := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch.Uint64() * 2)
 	attesterCache, err := lru.New(cacheSize)
 	if err != nil {
 		panic(err)
@@ -34,14 +35,14 @@ func newSubnetIDs() *subnetIDs {
 	if err != nil {
 		panic(err)
 	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Uint64() * params.BeaconConfig().SecondsPerSlot)
 	subLength := epochDuration * time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
 	persistentCache := cache.New(subLength*time.Second, epochDuration*time.Second)
 	return &subnetIDs{attester: attesterCache, aggregator: aggregatorCache, persistentSubnets: persistentCache}
 }
 
 // AddAttesterSubnetID adds the subnet index for subscribing subnet for the attester of a given slot.
-func (c *subnetIDs) AddAttesterSubnetID(slot, subnetID uint64) {
+func (c *subnetIDs) AddAttesterSubnetID(slot types.Slot, subnetID uint64) {
 	c.attesterLock.Lock()
 	defer c.attesterLock.Unlock()
 
@@ -54,7 +55,7 @@ func (c *subnetIDs) AddAttesterSubnetID(slot, subnetID uint64) {
 }
 
 // GetAttesterSubnetIDs gets the subnet IDs for subscribed subnets for attesters of the slot.
-func (c *subnetIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
+func (c *subnetIDs) GetAttesterSubnetIDs(slot types.Slot) []uint64 {
 	c.attesterLock.RLock()
 	defer c.attesterLock.RUnlock()
 
@@ -69,7 +70,7 @@ func (c *subnetIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
 }
 
 // AddAggregatorSubnetID adds the subnet ID for subscribing subnet for the aggregator of a given slot.
-func (c *subnetIDs) AddAggregatorSubnetID(slot, subnetID uint64) {
+func (c *subnetIDs) AddAggregatorSubnetID(slot types.Slot, subnetID uint64) {
 	c.aggregatorLock.Lock()
 	defer c.aggregatorLock.Unlock()
 
@@ -82,7 +83,7 @@ func (c *subnetIDs) AddAggregatorSubnetID(slot, subnetID uint64) {
 }
 
 // GetAggregatorSubnetIDs gets the subnet IDs for subscribing subnet for aggregator of the slot.
-func (c *subnetIDs) GetAggregatorSubnetIDs(slot uint64) []uint64 {
+func (c *subnetIDs) GetAggregatorSubnetIDs(slot types.Slot) []uint64 {
 	c.aggregatorLock.RLock()
 	defer c.aggregatorLock.RUnlock()
 

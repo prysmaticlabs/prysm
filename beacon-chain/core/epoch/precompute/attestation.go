@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -103,7 +104,7 @@ func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool
 }
 
 // SameTarget returns true if attestation `a` attested to the same target block in state.
-func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
+func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e types.Epoch) (bool, error) {
 	r, err := helpers.BlockRoot(state, e)
 	if err != nil {
 		return false, err
@@ -127,7 +128,7 @@ func SameHead(state *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, err
 }
 
 // UpdateValidator updates pre computed validator store.
-func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb.PendingAttestation, aSlot uint64) []*Validator {
+func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb.PendingAttestation, aSlot types.Slot) []*Validator {
 	inclusionSlot := aSlot + a.InclusionDelay
 
 	for _, i := range indices {

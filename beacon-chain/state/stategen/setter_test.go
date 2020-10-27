@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -144,7 +145,7 @@ func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.EnableSaveHotStateToDB(ctx)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, beaconState.SetSlot(defaultHotStateDBInterval))
+	require.NoError(t, beaconState.SetSlot(types.Slot(defaultHotStateDBInterval)))
 
 	r := [32]byte{'A'}
 	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))

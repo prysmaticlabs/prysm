@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -300,7 +301,7 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 
 	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, 0)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), savedSlot, "Did not save genesis slot")
+	assert.Equal(t, types.Slot(0), savedSlot, "Did not save genesis slot")
 	assert.Equal(t, savedRoot, savedRoot, "Did not save genesis root")
 }
 

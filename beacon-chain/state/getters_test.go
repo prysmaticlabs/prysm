@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -18,7 +19,7 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		require.NoError(t, headState.SetSlot(uint64(0)))
+		require.NoError(t, headState.SetSlot(types.ToSlot(0)))
 		wg.Done()
 	}()
 	go func() {
@@ -87,5 +88,5 @@ func TestReadOnlyValidator_NoPanic(t *testing.T) {
 
 func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
 	v := &ReadOnlyValidator{}
-	assert.Equal(t, uint64(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
+	assert.Equal(t, types.Epoch(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
 }

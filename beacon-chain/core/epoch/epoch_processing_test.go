@@ -3,6 +3,7 @@ package epoch_test
 import (
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -108,7 +109,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Slot:   uint64(i),
+				Slot:   types.Slot(i),
 			},
 			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
@@ -261,7 +262,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 }
 
 func TestProcessFinalUpdates_CanProcess(t *testing.T) {
-	s := buildState(t, params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
+	s := buildState(t, params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch.Uint64())
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
 	require.NoError(t, s.SetEth1DataVotes([]*ethpb.Eth1Data{}))
@@ -287,7 +288,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	assert.Equal(t, newS.Slashings()[ce], newS.Slashings()[ne], "Unexpected slashed balance")
 
 	// Verify randao is correctly updated in the right position.
-	mix, err := newS.RandaoMixAtIndex(ne)
+	mix, err := newS.RandaoMixAtIndex(ne.Uint64())
 	assert.NoError(t, err)
 	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
 
@@ -395,11 +396,11 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 }
 
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
-	e := uint64(5)
+	e := types.Epoch(5)
 	exitEpoch := helpers.ActivationExitEpoch(e)
 	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	base := &pb.BeaconState{
-		Slot: e * params.BeaconConfig().SlotsPerEpoch,
+		Slot: params.BeaconConfig().SlotsPerEpoch.Mul(e.Uint64()),
 		Validators: []*ethpb.Validator{
 			{
 				ExitEpoch:         exitEpoch,
@@ -419,7 +420,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 }
 
-func buildState(t testing.TB, slot, validatorCount uint64) *state.BeaconState {
+func buildState(t testing.TB, slot types.Slot, validatorCount uint64) *state.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{

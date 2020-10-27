@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sync"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -55,7 +56,7 @@ func NewCommitteesCache() *CommitteeCache {
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]uint64, error) {
+func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index uint64) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -77,11 +78,11 @@ func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]
 	}
 
 	committeeCountPerSlot := uint64(1)
-	if item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch > 1 {
-		committeeCountPerSlot = item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch
+	if item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch.Uint64() > 1 {
+		committeeCountPerSlot = item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch.Uint64()
 	}
 
-	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
+	indexOffSet := index + (slot.Uint64()%params.BeaconConfig().SlotsPerEpoch.Uint64())*committeeCountPerSlot
 	start, end := startEndIndices(item, indexOffSet)
 
 	if end > uint64(len(item.ShuffledIndices)) || end < start {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -38,7 +39,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	stateSlot := uint64(1)
+	stateSlot := types.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
@@ -68,7 +69,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	stateSlot := uint64(1)
+	stateSlot := types.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 2
@@ -105,7 +106,7 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	stateSlot := uint64(1)
+	stateSlot := types.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2

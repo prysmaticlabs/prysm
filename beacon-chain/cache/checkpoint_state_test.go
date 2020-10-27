@@ -3,6 +3,7 @@ package cache
 import (
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -60,8 +61,8 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := uint64(0); i < uint64(maxCheckpointStateSize+100); i++ {
-		require.NoError(t, st.SetSlot(i))
-		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: i, Root: make([]byte, 32)}, st))
+		require.NoError(t, st.SetSlot(types.Slot(i)))
+		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: types.Epoch(i), Root: make([]byte, 32)}, st))
 	}
 
 	assert.Equal(t, maxCheckpointStateSize, len(c.cache.Keys()))

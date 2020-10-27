@@ -1,6 +1,7 @@
 package precompute
 
 import (
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -68,7 +69,7 @@ func AttestationsDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Valida
 	return rewards, penalties, nil
 }
 
-func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uint64) (uint64, uint64) {
+func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	if !eligible || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
@@ -85,7 +86,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uin
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAttesterReward := br - proposerReward
-		r += maxAttesterReward / v.InclusionDistance
+		r += maxAttesterReward / v.InclusionDistance.Uint64()
 
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
@@ -139,7 +140,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uin
 		// Equivalent to the following condition from the spec:
 		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`
 		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
-			p += vb * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
+			p += vb * finalityDelay.Uint64() / params.BeaconConfig().InactivityPenaltyQuotient
 		}
 	}
 	return r, p
@@ -182,7 +183,7 @@ func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator
 // Spec code:
 // def is_in_inactivity_leak(state: BeaconState) -> bool:
 //    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
-func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
+func isInInactivityLeak(prevEpoch, finalizedEpoch types.Epoch) bool {
 	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
 }
 
@@ -191,6 +192,6 @@ func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
 // Spec code:
 // def get_finality_delay(state: BeaconState) -> uint64:
 //    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
-func finalityDelay(prevEpoch, finalizedEpoch uint64) uint64 {
+func finalityDelay(prevEpoch, finalizedEpoch types.Epoch) types.Epoch {
 	return prevEpoch - finalizedEpoch
 }

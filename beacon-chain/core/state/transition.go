@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -224,7 +225,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 		return nil, err
 	}
 	if err := state.UpdateStateRootAtIndex(
-		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
+		state.Slot().Uint64()%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(),
 		prevStateRoot,
 	); err != nil {
 		return nil, err
@@ -246,7 +247,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	}
 	// Cache the block root.
 	if err := state.UpdateBlockRootAtIndex(
-		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
+		state.Slot().Uint64()%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(),
 		prevBlockRoot,
 	); err != nil {
 		return nil, err
@@ -266,7 +267,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 //            process_epoch(state)
 //        state.slot += 1
 //    ]
-func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot types.Slot) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
 	defer span.End()
 	if state == nil {

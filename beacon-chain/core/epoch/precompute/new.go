@@ -6,6 +6,7 @@ package precompute
 import (
 	"context"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -45,8 +46,8 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 		}
 		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
 		// with the lower values
-		pVal.InclusionSlot = params.BeaconConfig().FarFutureEpoch
-		pVal.InclusionDistance = params.BeaconConfig().FarFutureEpoch
+		pVal.InclusionSlot = types.Slot(params.BeaconConfig().FarFutureEpoch)
+		pVal.InclusionDistance = types.Slot(params.BeaconConfig().FarFutureEpoch)
 
 		pValidators[idx] = pVal
 		return nil

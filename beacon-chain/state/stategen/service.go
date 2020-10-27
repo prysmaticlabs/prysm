@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -20,7 +21,7 @@ var defaultHotStateDBInterval uint64 = 128 // slots
 // logic of maintaining both hot and cold states in DB.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
-	slotsPerArchivedPoint   uint64
+	slotsPerArchivedPoint   types.Slot
 	hotStateCache           *cache.HotStateCache
 	finalizedInfo           *finalizedInfo
 	stateSummaryCache       *cache.StateSummaryCache
@@ -41,7 +42,7 @@ type saveHotStateDbConfig struct {
 // This tracks the finalized point. It's also the point where slot and the block root of
 // cold and hot sections of the DB splits.
 type finalizedInfo struct {
-	slot  uint64
+	slot  types.Slot
 	root  [32]byte
 	state *state.BeaconState
 	lock  sync.RWMutex
@@ -86,7 +87,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 // SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.
 // This used for migration at the correct start slot and used for hot state play back to ensure
 // lower bound to start is always at the last finalized state.
-func (s *State) SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState) {
+func (s *State) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState *state.BeaconState) {
 	s.finalizedInfo.lock.Lock()
 	defer s.finalizedInfo.lock.Unlock()
 	s.finalizedInfo.root = fRoot

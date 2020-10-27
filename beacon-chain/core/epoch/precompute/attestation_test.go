@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestUpdateValidator_Works(t *testing.T) {
-	e := params.BeaconConfig().FarFutureEpoch
+	e := types.Slot(params.BeaconConfig().FarFutureEpoch.Uint64())
 	vp := []*precompute.Validator{{}, {InclusionSlot: e}, {}, {InclusionSlot: e}, {}, {InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true}
@@ -33,7 +34,7 @@ func TestUpdateValidator_Works(t *testing.T) {
 }
 
 func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
-	e := params.BeaconConfig().FarFutureEpoch
+	e := types.Slot(params.BeaconConfig().FarFutureEpoch.Uint64())
 	vp := []*precompute.Validator{{InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true}
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}

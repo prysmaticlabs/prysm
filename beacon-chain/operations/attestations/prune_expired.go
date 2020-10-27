@@ -3,6 +3,7 @@ package attestations
 import (
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -65,9 +66,9 @@ func (s *Service) pruneExpiredAtts() {
 
 // Return true if the input slot has been expired.
 // Expired is defined as one epoch behind than current time.
-func (s *Service) expired(slot uint64) bool {
+func (s *Service) expired(slot types.Slot) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
-	expirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
+	expirationTime := s.genesisTime + expirationSlot.Uint64()*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(timeutils.Now().Unix())
 	return currentTime >= expirationTime
 }

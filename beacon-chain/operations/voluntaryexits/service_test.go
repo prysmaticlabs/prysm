@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -335,7 +336,7 @@ func TestPool_PendingExits(t *testing.T) {
 		noLimit bool
 	}
 	type args struct {
-		slot uint64
+		slot types.Slot
 	}
 	tests := []struct {
 		name   string

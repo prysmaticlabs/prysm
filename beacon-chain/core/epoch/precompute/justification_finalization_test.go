@@ -3,6 +3,7 @@ package precompute_test
 import (
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -39,15 +40,15 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 	state, err := beaconstate.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * e * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
+	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance.Uint64()}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	require.NoError(t, err)
 	rt := [32]byte{byte(64)}
 	assert.DeepEqual(t, rt[:], newState.CurrentJustifiedCheckpoint().Root, "Unexpected justified root")
-	assert.Equal(t, uint64(2), newState.CurrentJustifiedCheckpoint().Epoch, "Unexpected justified epoch")
-	assert.Equal(t, uint64(0), newState.PreviousJustifiedCheckpoint().Epoch, "Unexpected previous justified epoch")
+	assert.Equal(t, types.Epoch(2), newState.CurrentJustifiedCheckpoint().Epoch, "Unexpected justified epoch")
+	assert.Equal(t, types.Epoch(0), newState.PreviousJustifiedCheckpoint().Epoch, "Unexpected previous justified epoch")
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], newState.FinalizedCheckpoint().Root, "Unexpected finalized root")
-	assert.Equal(t, uint64(0), newState.FinalizedCheckpointEpoch(), "Unexpected finalized epoch")
+	assert.Equal(t, types.Epoch(0), newState.FinalizedCheckpointEpoch(), "Unexpected finalized epoch")
 }
 
 func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *testing.T) {
@@ -76,15 +77,15 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	state, err := beaconstate.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * e * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
+	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance.Uint64()}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	require.NoError(t, err)
 	rt := [32]byte{byte(64)}
 	assert.DeepEqual(t, rt[:], newState.CurrentJustifiedCheckpoint().Root, "Unexpected current justified root")
-	assert.Equal(t, uint64(2), newState.CurrentJustifiedCheckpoint().Epoch, "Unexpected justified epoch")
-	assert.Equal(t, uint64(0), newState.PreviousJustifiedCheckpoint().Epoch, "Unexpected previous justified epoch")
+	assert.Equal(t, types.Epoch(2), newState.CurrentJustifiedCheckpoint().Epoch, "Unexpected justified epoch")
+	assert.Equal(t, types.Epoch(0), newState.PreviousJustifiedCheckpoint().Epoch, "Unexpected previous justified epoch")
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], newState.FinalizedCheckpoint().Root)
-	assert.Equal(t, uint64(0), newState.FinalizedCheckpointEpoch(), "Unexpected finalized epoch")
+	assert.Equal(t, types.Epoch(0), newState.FinalizedCheckpointEpoch(), "Unexpected finalized epoch")
 }
 
 func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testing.T) {
@@ -112,13 +113,13 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 	state, err := beaconstate.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * e * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
+	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance.Uint64()}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	require.NoError(t, err)
 	rt := [32]byte{byte(64)}
 	assert.DeepEqual(t, rt[:], newState.CurrentJustifiedCheckpoint().Root, "Unexpected current justified root")
-	assert.Equal(t, uint64(0), newState.PreviousJustifiedCheckpoint().Epoch, "Unexpected previous justified epoch")
-	assert.Equal(t, uint64(2), newState.CurrentJustifiedCheckpoint().Epoch, "Unexpected justified epoch")
+	assert.Equal(t, types.Epoch(0), newState.PreviousJustifiedCheckpoint().Epoch, "Unexpected previous justified epoch")
+	assert.Equal(t, types.Epoch(2), newState.CurrentJustifiedCheckpoint().Epoch, "Unexpected justified epoch")
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], newState.FinalizedCheckpoint().Root)
-	assert.Equal(t, uint64(0), newState.FinalizedCheckpointEpoch(), "Unexpected finalized epoch")
+	assert.Equal(t, types.Epoch(0), newState.FinalizedCheckpointEpoch(), "Unexpected finalized epoch")
 }

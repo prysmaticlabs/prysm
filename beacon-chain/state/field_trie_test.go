@@ -16,9 +16,9 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
-	trie, err := state.NewFieldTrie(5, newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot)
+	trie, err := state.NewFieldTrie(5, newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot.Uint64())
 	require.NoError(t, err)
-	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
-	trie, err := state.NewFieldTrie(13, newState.RandaoMixes(), params.BeaconConfig().EpochsPerHistoricalVector)
+	trie, err := state.NewFieldTrie(13, newState.RandaoMixes(), params.BeaconConfig().EpochsPerHistoricalVector.Uint64())
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()

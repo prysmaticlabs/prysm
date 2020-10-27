@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,7 +24,7 @@ func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
 
 // ActivationEligibilityEpoch returns the activation eligibility epoch of the
 // read only validator.
-func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
+func (v *ReadOnlyValidator) ActivationEligibilityEpoch() types.Epoch {
 	if v == nil || v.validator == nil {
 		return 0
 	}
@@ -32,7 +33,7 @@ func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
 
 // ActivationEpoch returns the activation epoch of the
 // read only validator.
-func (v *ReadOnlyValidator) ActivationEpoch() uint64 {
+func (v *ReadOnlyValidator) ActivationEpoch() types.Epoch {
 	if v == nil || v.validator == nil {
 		return 0
 	}
@@ -41,7 +42,7 @@ func (v *ReadOnlyValidator) ActivationEpoch() uint64 {
 
 // WithdrawableEpoch returns the withdrawable epoch of the
 // read only validator.
-func (v *ReadOnlyValidator) WithdrawableEpoch() uint64 {
+func (v *ReadOnlyValidator) WithdrawableEpoch() types.Epoch {
 	if v == nil || v.validator == nil {
 		return 0
 	}
@@ -50,7 +51,7 @@ func (v *ReadOnlyValidator) WithdrawableEpoch() uint64 {
 
 // ExitEpoch returns the exit epoch of the
 // read only validator.
-func (v *ReadOnlyValidator) ExitEpoch() uint64 {
+func (v *ReadOnlyValidator) ExitEpoch() types.Epoch {
 	if v == nil || v.validator == nil {
 		return 0
 	}
@@ -215,7 +216,7 @@ func (b *BeaconState) genesisUnixTime() time.Time {
 }
 
 // Slot of the current beacon chain state.
-func (b *BeaconState) Slot() uint64 {
+func (b *BeaconState) Slot() types.Slot {
 	if !b.HasInnerState() {
 		return 0
 	}
@@ -228,7 +229,7 @@ func (b *BeaconState) Slot() uint64 {
 
 // slot of the current beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slot() uint64 {
+func (b *BeaconState) slot() types.Slot {
 	if !b.HasInnerState() {
 		return 0
 	}
@@ -1058,7 +1059,7 @@ func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
-func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
+func (b *BeaconState) FinalizedCheckpointEpoch() types.Epoch {
 	if !b.HasInnerState() {
 		return 0
 	}

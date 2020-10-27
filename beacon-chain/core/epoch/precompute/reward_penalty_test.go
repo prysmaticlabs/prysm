@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -112,7 +113,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
-		wanted += (base-proposerReward)*params.BeaconConfig().MinAttestationInclusionDelay - 1
+		wanted += (base-proposerReward)*params.BeaconConfig().MinAttestationInclusionDelay.Uint64() - 1
 		assert.Equal(t, wanted, rewards[i], "Unexpected reward balance for validator with index %d", i)
 		// Since all these validators attested, they shouldn't get penalized.
 		assert.Equal(t, uint64(0), penalties[i], "Unexpected penalty balance")
@@ -248,13 +249,13 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 		penalty := 3 * base
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
 		penalty += params.BeaconConfig().BaseRewardsPerEpoch*base - proposerReward
-		penalty += vp[i].CurrentEpochEffectiveBalance * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
+		penalty += vp[i].CurrentEpochEffectiveBalance * finalityDelay.Uint64() / params.BeaconConfig().InactivityPenaltyQuotient
 		assert.Equal(t, penalty, penalties[i], "Unexpected slashed indices penalty balance")
 		assert.Equal(t, uint64(0), rewards[i], "Unexpected slashed indices reward balance")
 	}
 }
 
-func buildState(slot, validatorCount uint64) *pb.BeaconState {
+func buildState(slot types.Slot, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -353,8 +354,8 @@ func TestFinalityDelay(t *testing.T) {
 	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
 	state, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
-	prevEpoch := uint64(0)
-	finalizedEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
+	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
 		prevEpoch = helpers.PrevEpoch(state)
@@ -383,8 +384,8 @@ func TestIsInInactivityLeak(t *testing.T) {
 	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
 	state, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
-	prevEpoch := uint64(0)
-	finalizedEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
+	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
 		prevEpoch = helpers.PrevEpoch(state)

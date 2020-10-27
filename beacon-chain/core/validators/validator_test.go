@@ -3,6 +3,7 @@ package validators
 import (
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -39,7 +40,7 @@ func TestHasVoted_OK(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
-	exitEpoch := uint64(199)
+	exitEpoch := types.Epoch(199)
 	base := &pb.BeaconState{Validators: []*ethpb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
@@ -53,7 +54,7 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_ProperExit(t *testing.T) {
-	exitedEpoch := uint64(100)
+	exitedEpoch := types.Epoch(100)
 	idx := uint64(3)
 	base := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch},
@@ -71,7 +72,7 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
-	exitedEpoch := uint64(100)
+	exitedEpoch := types.Epoch(100)
 	idx := uint64(4)
 	base := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch + 2},
@@ -133,7 +134,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	assert.Equal(t, helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
 
 	maxBalance := params.BeaconConfig().MaxEffectiveBalance
-	slashedBalance := state.Slashings()[state.Slot()%params.BeaconConfig().EpochsPerSlashingsVector]
+	slashedBalance := state.Slashings()[state.Slot().Uint64()%params.BeaconConfig().EpochsPerSlashingsVector.Uint64()]
 	assert.Equal(t, maxBalance, slashedBalance, "Slashed balance isnt the expected amount")
 
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
@@ -272,7 +273,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -295,7 +295,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -308,7 +307,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
