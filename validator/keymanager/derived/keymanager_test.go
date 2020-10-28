@@ -21,6 +21,56 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+// We test that using a '25th word' mnemonic passphrase leads to different
+// public keys derived than not specifying the passphrase.
+func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
+	sampleMnemonic := "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
+	ctx := context.Background()
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   "secretPassw0rd$1999",
+	}
+	km, err := KeymanagerForPhrase(ctx, &SetupConfig{
+		Opts:                DefaultKeymanagerOpts(),
+		Wallet:              wallet,
+		SkipMnemonicConfirm: true,
+		Mnemonic:            sampleMnemonic,
+		Mnemonic25thWord:    "",
+	})
+	require.NoError(t, err)
+	numAccounts := 5
+	for i := 0; i < numAccounts; i++ {
+		_, _, err = km.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+	without25thWord, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	wallet = &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   "secretPassw0rd$1999",
+	}
+	km, err = KeymanagerForPhrase(ctx, &SetupConfig{
+		Opts:                DefaultKeymanagerOpts(),
+		Wallet:              wallet,
+		SkipMnemonicConfirm: true,
+		Mnemonic:            sampleMnemonic,
+		Mnemonic25thWord:    "mnemonicpass",
+	})
+	require.NoError(t, err)
+	for i := 0; i < numAccounts; i++ {
+		_, _, err = km.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+	with25thWord, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	for i, k := range with25thWord {
+		without := without25thWord[i]
+		assert.DeepNotEqual(t, k, without)
+	}
+}
+
 func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	mnemonicEntropy := make([]byte, 32)
 	n, err := rand.NewGenerator().Read(mnemonicEntropy)

@@ -45,10 +45,9 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedR
 
 	newBalances := justifiedStateBalances
 
-	// Using the read lock is ok here, rest of the operations below is read only.
-	// The only time it writes to node indices is inserting and pruning blocks from the store.
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
+	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
 	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")

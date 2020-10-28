@@ -15,21 +15,22 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	c := cache.NewSkipSlotCache()
 
-	state, err := c.Get(ctx, 5)
+	r := [32]byte{'a'}
+	state, err := c.Get(ctx, r)
 	require.NoError(t, err)
 	assert.Equal(t, (*stateTrie.BeaconState)(nil), state, "Empty cache returned an object")
 
-	require.NoError(t, c.MarkInProgress(5))
+	require.NoError(t, c.MarkInProgress(r))
 
 	state, err = stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 10,
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, c.Put(ctx, 5, state))
-	require.NoError(t, c.MarkNotInProgress(5))
+	require.NoError(t, c.Put(ctx, r, state))
+	require.NoError(t, c.MarkNotInProgress(r))
 
-	res, err := c.Get(ctx, 5)
+	res, err := c.Get(ctx, r)
 	require.NoError(t, err)
 	assert.DeepEqual(t, res.CloneInnerState(), state.CloneInnerState(), "Expected equal protos to return from cache")
 }

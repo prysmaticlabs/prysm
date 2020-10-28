@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -25,7 +24,6 @@ type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
 	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
-	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
@@ -80,19 +78,6 @@ func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestatio
 	return s.getAttPreState(ctx, att.Data.Target)
 }
 
-// AttestationCheckPtInfo returns the check point info of attestation that can be used to verify the attestation
-// contents and signatures.
-func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
-	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
-	if err != nil {
-		return nil, err
-	}
-	if err := helpers.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
-		return nil, err
-	}
-	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
-}
-
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
 	return s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot)
@@ -102,6 +87,12 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 // When the input root is not be consistent with finalized store then we know it is not
 // on the finalized check point that leads to current canonical chain and should be rejected accordingly.
 func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
+	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
+	// In this case, we could exit early to save on additional computation.
+	if s.forkChoiceStore.IsCanonical(bytesutil.ToBytes32(root)) {
+		return nil
+	}
+
 	f := s.FinalizedCheckpt()
 	ss, err := helpers.StartSlot(f.Epoch)
 	if err != nil {

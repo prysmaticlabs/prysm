@@ -1,7 +1,12 @@
 package state
 
 import (
+	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // SkipSlotCache exists for the unlikely scenario that is a large gap between the head state and
@@ -9,3 +14,14 @@ import (
 // difficult or impossible to compute the appropriate beacon state for assignments within a
 // reasonable amount of time.
 var SkipSlotCache = cache.NewSkipSlotCache()
+
+// The key for skip slot cache is mixed between state root and state slot.
+// state root is in the mix to defend against different forks with same skip slots
+// to hit the same cache. We don't want beacon states mixed up between different chains.
+func cacheKey(ctx context.Context, state *beaconstate.BeaconState) ([32]byte, error) {
+	r, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return hashutil.Hash(append(bytesutil.Bytes32(state.Slot()), r[:]...)), nil
+}

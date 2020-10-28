@@ -62,17 +62,14 @@ type Service struct {
 	finalizedCheckpt      *ethpb.Checkpoint
 	prevFinalizedCheckpt  *ethpb.Checkpoint
 	nextEpochBoundarySlot uint64
-	initSyncState         map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots         [][32]byte
-	checkpointState       *cache.CheckpointStateCache
-	checkpointStateLock   sync.Mutex
+	checkpointStateCache  *cache.CheckpointStateCache
 	stateGen              *stategen.State
 	opsService            *attestations.Service
 	initSyncBlocks        map[[32]byte]*ethpb.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	checkPtInfoCache      *checkPtInfoCache
 	wsEpoch               uint64
 	wsRoot                []byte
 	wsVerified            bool
@@ -102,28 +99,26 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:               ctx,
-		cancel:            cancel,
-		beaconDB:          cfg.BeaconDB,
-		depositCache:      cfg.DepositCache,
-		chainStartFetcher: cfg.ChainStartFetcher,
-		attPool:           cfg.AttPool,
-		exitPool:          cfg.ExitPool,
-		slashingPool:      cfg.SlashingPool,
-		p2p:               cfg.P2p,
-		maxRoutines:       cfg.MaxRoutines,
-		stateNotifier:     cfg.StateNotifier,
-		forkChoiceStore:   cfg.ForkChoiceStore,
-		initSyncState:     make(map[[32]byte]*stateTrie.BeaconState),
-		boundaryRoots:     [][32]byte{},
-		checkpointState:   cache.NewCheckpointStateCache(),
-		opsService:        cfg.OpsService,
-		stateGen:          cfg.StateGen,
-		initSyncBlocks:    make(map[[32]byte]*ethpb.SignedBeaconBlock),
-		justifiedBalances: make([]uint64, 0),
-		checkPtInfoCache:  newCheckPointInfoCache(),
-		wsEpoch:           cfg.WspEpoch,
-		wsRoot:            cfg.WspBlockRoot,
+		ctx:                  ctx,
+		cancel:               cancel,
+		beaconDB:             cfg.BeaconDB,
+		depositCache:         cfg.DepositCache,
+		chainStartFetcher:    cfg.ChainStartFetcher,
+		attPool:              cfg.AttPool,
+		exitPool:             cfg.ExitPool,
+		slashingPool:         cfg.SlashingPool,
+		p2p:                  cfg.P2p,
+		maxRoutines:          cfg.MaxRoutines,
+		stateNotifier:        cfg.StateNotifier,
+		forkChoiceStore:      cfg.ForkChoiceStore,
+		boundaryRoots:        [][32]byte{},
+		checkpointStateCache: cache.NewCheckpointStateCache(),
+		opsService:           cfg.OpsService,
+		stateGen:             cfg.StateGen,
+		initSyncBlocks:       make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		justifiedBalances:    make([]uint64, 0),
+		wsEpoch:              cfg.WspEpoch,
+		wsRoot:               cfg.WspBlockRoot,
 	}, nil
 }
 
@@ -339,12 +334,6 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// ClearCachedStates removes all stored caches states. This is done after the node
-// is synced.
-func (s *Service) ClearCachedStates() {
-	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
-}
-
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
@@ -431,6 +420,12 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not hash head block")
 		}
+		finalizedState, err := s.stateGen.Resume(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized state from db")
+		}
+		log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
+			"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block.Slot)
 		headState, err := s.stateGen.StateByRoot(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state")
