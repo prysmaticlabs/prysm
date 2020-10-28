@@ -286,7 +286,8 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	privKeyFileName := filepath.Join(privKeyDir, "privatekey.txt")
 
 	// We create a new private key and save it to a file on disk.
-	privKey, _ := bls.RandKey()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
 	privKeyHex := fmt.Sprintf("%x", privKey.Marshal())
 	require.NoError(
 		t,

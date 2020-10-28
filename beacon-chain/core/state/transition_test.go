@@ -677,7 +677,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	proposerIdx, err := helpers.BeaconProposerIndex(s)
 	require.NoError(b, err)
 	priv, err := bls.RandKey()
-	require.NoError(t, err)
+	require.NoError(b, err)
 	v := s.Validators()
 	v[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)

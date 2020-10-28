@@ -147,7 +147,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 		gomock.Any(),
 		&ptypes.Empty{},
 	).Return(clientStream, errors.New("failed stream"))
-	err := v.WaitForChainStart(context.Background())
+	err = v.WaitForChainStart(context.Background())
 	want := "could not setup beacon chain ChainStart streaming client"
 	assert.ErrorContains(t, want, err)
 }
@@ -326,7 +326,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, errors.New("failed stream"))
-	err := v.WaitForActivation(context.Background())
+	err = v.WaitForActivation(context.Background())
 	want := "could not setup validator WaitForActivation streaming client"
 	assert.ErrorContains(t, want, err)
 }
@@ -360,7 +360,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 		nil,
 		errors.New("fails"),
 	)
-	err := v.WaitForActivation(context.Background())
+	err = v.WaitForActivation(context.Background())
 	want := "could not receive validator activation from stream"
 	assert.ErrorContains(t, want, err)
 }
