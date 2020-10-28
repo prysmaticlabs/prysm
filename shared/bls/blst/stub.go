@@ -107,7 +107,7 @@ func NewAggregateSignature() common.Signature {
 }
 
 // RandKey -- stub
-func RandKey() common.SecretKey {
+func RandKey() (common.SecretKey, error) {
 	panic(err)
 }
 
