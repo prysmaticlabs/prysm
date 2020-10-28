@@ -77,12 +77,14 @@ func setupWalletCtx(
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
+	set.Bool(flags.SkipMnemonic25thWordCheckFlag.Name, true, "")
 
 	if cfg.privateKeyFile != "" {
 		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
 		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
 	}
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(tb, set.Set(flags.SkipMnemonic25thWordCheckFlag.Name, "true"))
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))

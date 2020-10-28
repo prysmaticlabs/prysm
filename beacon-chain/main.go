@@ -50,6 +50,8 @@ var appFlags = []cli.Flag{
 	flags.InteropGenesisTimeFlag,
 	flags.SlotsPerArchivedPoint,
 	flags.EnableDebugRPCEndpoints,
+	flags.EnableBackupWebhookFlag,
+	flags.BackupWebhookOutputDir,
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
@@ -171,7 +173,6 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
 	}
 }
 

@@ -79,11 +79,10 @@ func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle s
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
-	return s.subscribeWithBase(base, s.addDigestToTopic(topic), validator, handle)
+	return s.subscribeWithBase(s.addDigestToTopic(topic), validator, handle)
 }
 
-// TODO(7437): Refactor this method to remove unused arg "base".
-func (s *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
+func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
 	topic += s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
@@ -169,10 +168,10 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 			return pubsub.ValidationReject
 		}
-		// Reject any messages received before chainstart.
+		// Ignore any messages received before chainstart.
 		if !s.chainStarted {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
-			return pubsub.ValidationReject
+			return pubsub.ValidationIgnore
 		}
 		b := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
@@ -190,7 +189,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
 	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-		s.subscribeWithBase(base, s.addDigestAndIndexToTopic(topic, i), validator, handle)
+		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, i), validator, handle)
 	}
 	genesis := s.chain.GenesisTime()
 	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
@@ -268,7 +267,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 
 				// subscribe desired aggregator subnets.
 				for _, idx := range wantedSubs {
-					s.subscribeAggregatorSubnet(subscriptions, idx, base, digest, validate, handle)
+					s.subscribeAggregatorSubnet(subscriptions, idx, digest, validate, handle)
 				}
 				// find desired subs for attesters
 				attesterSubs := s.attesterSubnetIndices(currentSlot)
@@ -303,15 +302,20 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 }
 
 // subscribe missing subnets for our aggregators.
-func (s *Service) subscribeAggregatorSubnet(subscriptions map[uint64]*pubsub.Subscription, idx uint64,
-	base proto.Message, digest [4]byte, validate pubsub.ValidatorEx, handle subHandler) {
+func (s *Service) subscribeAggregatorSubnet(
+	subscriptions map[uint64]*pubsub.Subscription,
+	idx uint64,
+	digest [4]byte,
+	validate pubsub.ValidatorEx,
+	handle subHandler,
+) {
 	// do not subscribe if we have no peers in the same
 	// subnet
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
 	// check if subscription exists and if not subscribe the relevant subnet.
 	if _, exists := subscriptions[idx]; !exists {
-		subscriptions[idx] = s.subscribeWithBase(base, subnetTopic, validate, handle)
+		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
 	if !s.validPeersExist(subnetTopic, idx) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+

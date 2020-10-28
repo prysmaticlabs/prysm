@@ -7,11 +7,15 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// This defines how many epochs since finality the run time will begin to save hot state on to the DB.
+var epochsSinceFinalitySaveHotStateDB = 100
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
@@ -55,6 +59,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 
 	// Handle post block operations such as attestations and exits.
 	if err := s.handlePostBlockOperations(blockCopy.Block); err != nil {
+		return err
+	}
+
+	// Have we been finalizing? Should we start saving hot states to db?
+	if err := s.checkSaveHotStateDB(ctx); err != nil {
 		return err
 	}
 
@@ -178,4 +187,22 @@ func (s *Service) handlePostBlockOperations(b *ethpb.BeaconBlock) error {
 		s.slashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil
+}
+
+// This checks whether it's time to start saving hot state to DB.
+// It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
+func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
+	currentEpoch := helpers.SlotToEpoch(s.CurrentSlot())
+	// Prevent `sinceFinality` going underflow.
+	var sinceFinality uint64
+	if currentEpoch > s.finalizedCheckpt.Epoch {
+		sinceFinality = currentEpoch - s.finalizedCheckpt.Epoch
+	}
+
+	if sinceFinality >= uint64(epochsSinceFinalitySaveHotStateDB) {
+		s.stateGen.EnableSaveHotStateToDB(ctx)
+		return nil
+	}
+
+	return s.stateGen.DisableSaveHotStateToDB(ctx)
 }

@@ -38,10 +38,6 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	enableBackupWebhookFlag = &cli.BoolFlag{
-		Name:  "enable-db-backup-webhook",
-		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
-	}
 	kafkaBootstrapServersFlag = &cli.StringFlag{
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
@@ -72,17 +68,13 @@ var (
 		Name:  "blst",
 		Usage: "Enable new BLS library, blst, from Supranational",
 	}
-	enableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:  "enable-eth1-data-majority-vote",
-		Usage: "When enabled, voting on eth1 data will use the Voting With The Majority algorithm.",
+	disableEth1DataMajorityVote = &cli.BoolFlag{
+		Name:  "disable-eth1-data-majority-vote",
+		Usage: "Disables the Voting With The Majority algorithm when voting for eth1data.",
 	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
-	}
-	enableAttBroadcastDiscoveryAttempts = &cli.BoolFlag{
-		Name:  "enable-att-broadcast-discovery-attempts",
-		Usage: "Enable experimental attestation subnet discovery before broadcasting.",
 	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
@@ -101,8 +93,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableEth1DataMajorityVote,
-	enableAttBroadcastDiscoveryAttempts,
 	enablePeerScorer,
 }
 
@@ -139,7 +129,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	kafkaBootstrapServersFlag,
-	enableBackupWebhookFlag,
 	waitForSyncedFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
@@ -149,8 +138,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SpadinaTestnet,
 	ZinkenTestnet,
 	enableBlst,
-	enableEth1DataMajorityVote,
-	enableAttBroadcastDiscoveryAttempts,
+	disableEth1DataMajorityVote,
 	enablePeerScorer,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
@@ -160,6 +148,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
-	"--enable-eth1-data-majority-vote",
 	"--use-check-point-cache",
 }

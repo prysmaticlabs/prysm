@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -28,14 +29,14 @@ type DeleteAccountConfig struct {
 // This function uses the CLI to extract necessary values.
 func DeleteAccountCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, errors.New(
-			"no wallet found, nothing to delete",
-		)
+		return nil, wallet.ErrNoWalletFound
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: false,
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

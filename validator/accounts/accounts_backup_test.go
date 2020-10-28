@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -76,7 +77,9 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 
 	km, err := w.InitializeKeymanager(
 		cliCtx.Context,
-		true, /* skip mnemonic confirm */
+		&iface.InitializeKeymanagerConfig{
+			SkipMnemonicConfirm: true,
+		},
 	)
 	require.NoError(t, err)
 

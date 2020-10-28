@@ -266,33 +266,25 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		return nil, status.Error(codes.Internal, "Could not get genesis block")
 	}
 
-	var b *ethpb.SignedBeaconBlock
-
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
-	if isGenesis(finalizedCheckpoint) {
-		b = genBlock
-	} else {
-		b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+	if !isGenesis(finalizedCheckpoint) {
+		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 		if err != nil || b == nil || b.Block == nil {
 			return nil, status.Error(codes.Internal, "Could not get finalized block")
 		}
 	}
 
 	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
-	if isGenesis(justifiedCheckpoint) {
-		b = genBlock
-	} else {
-		b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+	if !isGenesis(justifiedCheckpoint) {
+		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 		if err != nil || b == nil || b.Block == nil {
 			return nil, status.Error(codes.Internal, "Could not get justified block")
 		}
 	}
 
 	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
-	if isGenesis(prevJustifiedCheckpoint) {
-		b = genBlock
-	} else {
-		b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
+	if !isGenesis(prevJustifiedCheckpoint) {
+		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
 		if err != nil || b == nil || b.Block == nil {
 			return nil, status.Error(codes.Internal, "Could not get prev justified block")
 		}
