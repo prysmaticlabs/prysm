@@ -666,13 +666,14 @@ func TestUpdateProposerIndicesInCache_CouldNotGetActiveIndices(t *testing.T) {
 }
 
 func TestBeaconCommitteeSizeFromState(t *testing.T) {
+	// Initialize state with an imperfect amount of validators to demonstrate differences in
+	// committee sizes.
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount + 55)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-
 	st, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
