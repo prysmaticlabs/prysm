@@ -439,8 +439,8 @@ func fetchBlockRootsBySlotRange(
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
 		if step > 1 {
-			slot := bytesutil.BytesToUint64BigEndian(k)
-			if (slot-uint64(startSlot))%step != 0 {
+			slot := types.Slot(bytesutil.BytesToUint64BigEndian(k))
+			if slot.SubSlot(startSlot).Mod(step) != 0 {
 				continue
 			}
 		}

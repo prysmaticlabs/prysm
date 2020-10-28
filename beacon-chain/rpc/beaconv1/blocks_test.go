@@ -44,7 +44,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb
 		att1.Data.CommitteeIndex = uint64(i)
 		att2 := testutil.NewAttestation()
 		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = uint64(i.Add(1))
+		att2.Data.CommitteeIndex = uint64(i + 1)
 		b.Block.Body.Attestations = []*ethpb_alpha.Attestation{att1, att2}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)

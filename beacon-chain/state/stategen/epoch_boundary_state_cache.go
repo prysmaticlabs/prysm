@@ -149,7 +149,7 @@ func popProcessNoopFunc(_ interface{}) error {
 	return nil
 }
 
-// Converts input uint64 to string. To be used as key for slot to get root.
+// Converts input slot to string. To be used as key for slot to get root.
 func slotToString(s types.Slot) string {
 	return strconv.FormatUint(uint64(s), 10)
 }
