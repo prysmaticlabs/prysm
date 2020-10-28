@@ -212,7 +212,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	c2, err := lru.New(10)
 	require.NoError(t, err)
 	stateGen := stategen.New(db, stateSummaryCache)
-	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot.Uint64()*params.BeaconConfig().SecondsPerSlot), 0),
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot)), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -676,7 +676,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	slotsSinceGenesis := types.Slot(1000)
 	// max uint, divided by slot time. But avoid losing precision too much.
 	overflowBase := (1 << 63) / (perSlot >> 1)
-	msg.Block.Slot = types.ToSlot(overflowBase + slotsSinceGenesis.Uint64())
+	msg.Block.Slot = slotsSinceGenesis.Add(overflowBase)
 
 	// valid block
 	msg.Block.ParentRoot = bRoot[:]
@@ -691,7 +691,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 
 	stateGen := stategen.New(db, stateSummaryCache)
 	chainService := &mock.ChainService{
-		Genesis: time.Unix(genesisTime.Unix()-int64(slotsSinceGenesis.Uint64()*perSlot), 0),
+		Genesis: time.Unix(genesisTime.Unix()-int64(slotsSinceGenesis.Mul(perSlot)), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		},

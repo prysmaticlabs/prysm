@@ -175,7 +175,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID uint64, aggregateBits []byte) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(slot.Uint64()), bytesutil.Bytes32(committeeID)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
 	_, seen := s.seenAttestationCache.Get(string(b))
 	return seen
@@ -185,7 +185,7 @@ func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID uint6
 func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID uint64, aggregateBits []byte) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(slot.Uint64()), bytesutil.Bytes32(committeeID)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
 	s.seenAttestationCache.Add(string(b), true)
 }

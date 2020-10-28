@@ -167,7 +167,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 func (s *Service) hasSeenBlockIndexSlot(slot types.Slot, proposerIdx uint64) bool {
 	s.seenBlockLock.RLock()
 	defer s.seenBlockLock.RUnlock()
-	b := append(bytesutil.Bytes32(slot.Uint64()), bytesutil.Bytes32(proposerIdx)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(proposerIdx)...)
 	_, seen := s.seenBlockCache.Get(string(b))
 	return seen
 }
@@ -176,7 +176,7 @@ func (s *Service) hasSeenBlockIndexSlot(slot types.Slot, proposerIdx uint64) boo
 func (s *Service) setSeenBlockIndexSlot(slot types.Slot, proposerIdx uint64) {
 	s.seenBlockLock.Lock()
 	defer s.seenBlockLock.Unlock()
-	b := append(bytesutil.Bytes32(slot.Uint64()), bytesutil.Bytes32(proposerIdx)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(proposerIdx)...)
 	s.seenBlockCache.Add(string(b), true)
 }
 

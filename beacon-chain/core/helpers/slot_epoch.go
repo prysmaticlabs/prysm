@@ -26,7 +26,7 @@ const MaxSlotBuffer = uint64(1 << 7)
 //    """
 //    return Epoch(slot // SLOTS_PER_EPOCH)
 func SlotToEpoch(slot types.Slot) types.Epoch {
-	return types.ToEpoch(slot.DivSlot(params.BeaconConfig().SlotsPerEpoch).Uint64())
+	return types.Epoch(slot.DivSlot(params.BeaconConfig().SlotsPerEpoch))
 }
 
 // CurrentEpoch returns the current epoch number calculated from
