@@ -201,7 +201,7 @@ func (s *Service) Start() {
 
 		finalizedBlock, err := s.beaconDB.Block(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root)))
 		if err != nil {
-			log.Fatal("Could not get finalized block: %v", err)
+			log.Fatalf("Could not get finalized block: %v", err)
 		}
 		if err := s.fillInForkChoiceMissingBlocks(s.ctx, finalizedBlock.Block, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
 			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
