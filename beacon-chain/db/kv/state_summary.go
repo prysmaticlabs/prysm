@@ -56,8 +56,6 @@ func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.State
 
 // HasStateSummary returns true if a state summary exists in DB.
 func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
-	defer span.End()
 	enc, err := s.stateSummaryBytes(ctx, blockRoot)
 	if err != nil {
 		panic(err)
@@ -66,9 +64,6 @@ func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 func (s *Store) stateSummaryBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateSummaryBytes")
-	defer span.End()
-
 	var enc []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
