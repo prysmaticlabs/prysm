@@ -41,10 +41,10 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
 		att1 := testutil.NewAttestation()
 		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = i.Uint64()
+		att1.Data.CommitteeIndex = uint64(i)
 		att2 := testutil.NewAttestation()
 		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = i.Uint64() + 1
+		att2.Data.CommitteeIndex = uint64(i.Add(1))
 		b.Block.Body.Attestations = []*ethpb_alpha.Attestation{att1, att2}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)

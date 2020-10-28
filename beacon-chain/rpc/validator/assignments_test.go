@@ -351,7 +351,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	require.Equal(t, true, ok, "No cache entry found for validator")
 	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Uint64() * params.BeaconConfig().SecondsPerSlot)
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
 	receivedTime := time.Until(exp.Round(time.Second))
 	if receivedTime < totalTime {

@@ -50,7 +50,7 @@ func (s *Store) ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
 	var blockRoot []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSlotIndicesBucket)
-		blockRoot = bucket.Get(bytesutil.Uint64ToBytesBigEndian(slot.Uint64()))
+		blockRoot = bucket.Get(bytesutil.SlotToBytesBigEndian(slot))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
@@ -66,7 +66,7 @@ func (s *Store) HasArchivedPoint(ctx context.Context, slot types.Slot) bool {
 	var exists bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(stateSlotIndicesBucket)
-		exists = iBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot.Uint64())) != nil
+		exists = iBucket.Get(bytesutil.SlotToBytesBigEndian(slot)) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)

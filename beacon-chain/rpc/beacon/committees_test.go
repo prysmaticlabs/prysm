@@ -31,8 +31,9 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	ctx := context.Background()
 	headState := setupActiveValidators(t, numValidators)
 
+	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot().Uint64()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -91,9 +92,10 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 
+	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
 		State:   headState,
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot().Uint64()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -145,8 +147,9 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, numValidators)
 
+	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot().Uint64()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,

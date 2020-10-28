@@ -13,7 +13,7 @@ import (
 var (
 	// maxCacheSize is 8. That means 8 epochs and roughly an hour
 	// of no finality can be endured.
-	maxCacheSize        = types.Epoch(8).Uint64()
+	maxCacheSize        = uint64(8)
 	errNotSlotRootInfo  = errors.New("not slot root info type")
 	errNotRootStateInfo = errors.New("not root state info type")
 )
@@ -151,5 +151,5 @@ func popProcessNoopFunc(_ interface{}) error {
 
 // Converts input uint64 to string. To be used as key for slot to get root.
 func slotToString(s types.Slot) string {
-	return strconv.FormatUint(s.Uint64(), 10)
+	return strconv.FormatUint(uint64(s), 10)
 }

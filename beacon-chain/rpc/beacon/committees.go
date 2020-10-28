@@ -143,7 +143,7 @@ func computeCommittees(
 ) (SlotToCommiteesMap, error) {
 	committeesListsBySlot := make(SlotToCommiteesMap, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch.Uint64() / params.BeaconConfig().TargetCommitteeSize
+		var countAtSlot = uint64(len(activeIndices)) / uint64(params.BeaconConfig().SlotsPerEpoch.Div(params.BeaconConfig().TargetCommitteeSize))
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
 			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
 		}
@@ -180,7 +180,7 @@ type SlotToCommiteesMap map[types.Slot]*ethpb.BeaconCommittees_CommitteesList
 func (m SlotToCommiteesMap) SlotToUint64() map[uint64]*ethpb.BeaconCommittees_CommitteesList {
 	updatedCommittees := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList, len(m))
 	for k, v := range m {
-		updatedCommittees[k.Uint64()] = v
+		updatedCommittees[uint64(k)] = v
 	}
 	return updatedCommittees
 }

@@ -61,7 +61,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 		return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 	}
 
-	inclusionSlot := types.ToSlot(uint64(1<<64 - 1))
+	inclusionSlot := types.Slot(1<<64 - 1)
 	targetStates := make(map[[32]byte]*state.BeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block.Body.Attestations {

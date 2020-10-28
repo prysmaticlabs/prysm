@@ -90,7 +90,7 @@ func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch, targetE
 		if safeTargetToSource(history, i) == farFuture {
 			continue
 		}
-		if history.TargetToSource[i.Uint64()%wsPeriod.Uint64()] > sourceEpoch.Uint64() {
+		if history.TargetToSource[uint64(i%wsPeriod)] > uint64(sourceEpoch) {
 			return true
 		}
 	}
@@ -118,11 +118,11 @@ func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEp
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
 		maxToWrite := history.LatestEpochWritten + wsPeriod
 		for i := history.LatestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
-			history.TargetToSource[i.Uint64()%wsPeriod.Uint64()] = params.BeaconConfig().FarFutureEpoch.Uint64()
+			history.TargetToSource[uint64(i%wsPeriod)] = uint64(params.BeaconConfig().FarFutureEpoch)
 		}
 		history.LatestEpochWritten = targetEpoch
 	}
-	history.TargetToSource[targetEpoch.Uint64()%wsPeriod.Uint64()] = sourceEpoch.Uint64()
+	history.TargetToSource[uint64(targetEpoch%wsPeriod)] = uint64(sourceEpoch)
 	return history
 }
 
@@ -133,5 +133,5 @@ func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch types.E
 	if targetEpoch > history.LatestEpochWritten || int(targetEpoch) < int(history.LatestEpochWritten)-int(wsPeriod) {
 		return params.BeaconConfig().FarFutureEpoch
 	}
-	return types.ToEpoch(history.TargetToSource[targetEpoch.Uint64()%wsPeriod.Uint64()])
+	return types.Epoch(history.TargetToSource[uint64(targetEpoch%wsPeriod)])
 }

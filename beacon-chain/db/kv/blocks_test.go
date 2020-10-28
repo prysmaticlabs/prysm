@@ -74,7 +74,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	oddBlocks := make([]*ethpb.SignedBeaconBlock, 0)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
-		b.Block.Slot = types.ToSlot(uint64(i))
+		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = b
 		if i%2 == 0 {
@@ -309,7 +309,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
-	slots := params.BeaconConfig().SlotsPerEpoch.Uint64() * 7
+	slots := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(7))
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, slots)
 	for i := uint64(0); i < slots; i++ {
 		b := testutil.NewBeaconBlock()
@@ -321,12 +321,12 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
 	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetStartEpoch(5).SetEndEpoch(6))
 	require.NoError(t, err)
-	want := params.BeaconConfig().SlotsPerEpoch * 2
-	assert.Equal(t, want.Uint64(), uint64(len(retrieved)))
+	want := params.BeaconConfig().SlotsPerEpoch.Mul(2)
+	assert.Equal(t, uint64(want), uint64(len(retrieved)))
 	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
 	require.NoError(t, err)
 	want = params.BeaconConfig().SlotsPerEpoch
-	assert.Equal(t, want.Uint64(), uint64(len(retrieved)))
+	assert.Equal(t, uint64(want), uint64(len(retrieved)))
 }
 
 func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {

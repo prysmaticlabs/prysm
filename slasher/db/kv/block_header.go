@@ -121,7 +121,7 @@ func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch types.Epoch
 	if pruneTill <= 0 {
 		return nil
 	}
-	pruneTillSlot := uint64(pruneTill) * params.BeaconConfig().SlotsPerEpoch.Uint64()
+	pruneTillSlot := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(pruneTill)))
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()

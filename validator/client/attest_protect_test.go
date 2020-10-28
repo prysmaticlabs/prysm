@@ -144,7 +144,7 @@ func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 
 func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	newMap[0] = uint64(params.BeaconConfig().FarFutureEpoch)
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
@@ -167,7 +167,7 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 func TestAttestationHistory_Prunes(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	newMap[0] = uint64(params.BeaconConfig().FarFutureEpoch)
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
@@ -211,7 +211,7 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 
 func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	newMap[0] = uint64(params.BeaconConfig().FarFutureEpoch)
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
@@ -231,7 +231,7 @@ func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 
 func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	newMap[0] = uint64(params.BeaconConfig().FarFutureEpoch)
 	attestations := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
@@ -242,7 +242,7 @@ func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	newAttTarget := types.Epoch(2)
 	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	require.Equal(t, newAttTarget, attestations.LatestEpochWritten)
-	require.Equal(t, newAttSource.Uint64(), attestations.TargetToSource[newAttTarget.Uint64()])
+	require.Equal(t, uint64(newAttSource), attestations.TargetToSource[uint64(newAttTarget)])
 
 	// Try an attestation that should be slashable (surrounding) spanning epochs 0 to 3.
 	newAttSource = types.Epoch(0)

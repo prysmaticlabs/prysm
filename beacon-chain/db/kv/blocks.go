@@ -299,7 +299,7 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 			if root == nil {
 				continue
 			}
-			if key >= slot.Uint64() {
+			if key >= uint64(slot) {
 				break
 			}
 			best = root
@@ -421,8 +421,8 @@ func fetchBlockRootsBySlotRange(
 		}
 		endSlot = endSlot + params.BeaconConfig().SlotsPerEpoch - 1
 	}
-	min := bytesutil.Uint64ToBytesBigEndian(startSlot.Uint64())
-	max := bytesutil.Uint64ToBytesBigEndian(endSlot.Uint64())
+	min := bytesutil.SlotToBytesBigEndian(startSlot)
+	max := bytesutil.SlotToBytesBigEndian(endSlot)
 
 	conditional := func(key, max []byte) bool {
 		return key != nil && bytes.Compare(key, max) <= 0
@@ -434,13 +434,13 @@ func fetchBlockRootsBySlotRange(
 	if endSlot == 0 {
 		return [][]byte{}, nil
 	}
-	rootsRange := (endSlot - startSlot).Uint64() / step
+	rootsRange := endSlot.SubSlot(startSlot).Div(step)
 	roots := make([][]byte, 0, rootsRange)
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
 		if step > 1 {
 			slot := bytesutil.BytesToUint64BigEndian(k)
-			if (slot-startSlot.Uint64())%step != 0 {
+			if (slot-uint64(startSlot))%step != 0 {
 				continue
 			}
 		}
@@ -467,7 +467,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block *ethpb.BeaconBlock) 
 		blockSlotIndicesBucket,
 	}
 	indices := [][]byte{
-		bytesutil.Uint64ToBytesBigEndian(block.Slot.Uint64()),
+		bytesutil.SlotToBytesBigEndian(block.Slot),
 	}
 	if block.ParentRoot != nil && len(block.ParentRoot) > 0 {
 		buckets = append(buckets, blockParentRootIndicesBucket)

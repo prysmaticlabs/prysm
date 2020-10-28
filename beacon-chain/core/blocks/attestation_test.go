@@ -513,7 +513,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 }
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
-	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch.Uint64()
+	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
@@ -679,7 +679,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 
 func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	ctx := context.Background()
-	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch.Uint64()
+	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
@@ -749,7 +749,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	// In this test, att1 is from the prior fork and att2 is from the new fork.
 	ctx := context.Background()
-	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch.Uint64()
+	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
@@ -825,7 +825,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing.T) {
 	ctx := context.Background()
-	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch.Uint64()
+	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)

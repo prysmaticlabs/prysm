@@ -86,13 +86,13 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 }
 
 func TestBlocksFetcher_RoundRobin(t *testing.T) {
-	blockBatchLimit := types.Slot(uint64(flags.Get().BlockBatchLimit))
+	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
 	requestsGenerator := func(start, end, batchSize types.Slot) []*fetchRequestParams {
 		var requests []*fetchRequestParams
 		for i := start; i <= end; i += batchSize {
 			requests = append(requests, &fetchRequestParams{
 				start: i,
-				count: batchSize.Uint64(),
+				count: uint64(batchSize),
 			})
 		}
 		return requests
@@ -182,15 +182,15 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			requests: []*fetchRequestParams{
 				{
 					start: 1,
-					count: blockBatchLimit.Uint64(),
+					count: uint64(blockBatchLimit),
 				},
 				{
 					start: blockBatchLimit + 1,
-					count: blockBatchLimit.Uint64(),
+					count: uint64(blockBatchLimit),
 				},
 				{
 					start: 2*blockBatchLimit + 1,
-					count: blockBatchLimit.Uint64(),
+					count: uint64(blockBatchLimit),
 				},
 				{
 					start: 500,
@@ -231,11 +231,11 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			requests: []*fetchRequestParams{
 				{
 					start: 1,
-					count: blockBatchLimit.Uint64(),
+					count: uint64(blockBatchLimit),
 				},
 				{
 					start: blockBatchLimit + 1,
-					count: blockBatchLimit.Uint64(),
+					count: uint64(blockBatchLimit),
 				},
 			},
 		},
@@ -367,7 +367,7 @@ func TestBlocksFetcher_scheduleRequest(t *testing.T) {
 	})
 }
 func TestBlocksFetcher_handleRequest(t *testing.T) {
-	blockBatchLimit := types.Slot(uint64(flags.Get().BlockBatchLimit))
+	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
 	chainConfig := struct {
 		expectedBlockSlots []types.Slot
 		peers              []*peerData
@@ -398,7 +398,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		})
 
 		cancel()
-		response := fetcher.handleRequest(ctx, 1, blockBatchLimit.Uint64())
+		response := fetcher.handleRequest(ctx, 1, uint64(blockBatchLimit))
 		assert.ErrorContains(t, "context canceled", response.err)
 	})
 
@@ -414,7 +414,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer reqCancel()
 		go func() {
-			response := fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchLimit.Uint64() /* count */)
+			response := fetcher.handleRequest(requestCtx, 1 /* start */, uint64(blockBatchLimit) /* count */)
 			select {
 			case <-ctx.Done():
 			case fetcher.fetchResponses <- response:
@@ -432,7 +432,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 				blocks = resp.blocks
 			}
 		}
-		if uint64(len(blocks)) != blockBatchLimit.Uint64() {
+		if uint64(len(blocks)) != uint64(blockBatchLimit) {
 			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(blocks))
 		}
 

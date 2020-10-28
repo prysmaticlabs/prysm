@@ -79,7 +79,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		if i == len(responses)-1 { // Handle last log.
 			hook = logTest.NewGlobal()
 		}
-		v.UpdateLogAggregateStats(val, types.Slot(uint64(32*(i+1))))
+		v.UpdateLogAggregateStats(val, types.Slot(32*(i+1)))
 	}
 
 	require.LogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+

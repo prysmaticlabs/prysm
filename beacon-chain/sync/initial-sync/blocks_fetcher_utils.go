@@ -82,7 +82,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot types.Slot
 	start := slot + 1
 	end := start + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
 	for ind := start; ind < end; ind += slotsPerEpoch {
-		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, slotsPerEpoch.Uint64(), 1)
+		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, uint64(slotsPerEpoch), 1)
 		if err != nil {
 			return 0, err
 		}
@@ -100,8 +100,8 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot types.Slot
 		return 0, err
 	}
 	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind.Add(uint64(f.rand.Intn(int(slotsPerEpoch.Uint64()))))
-		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch.Uint64()/2, slotsPerEpoch.Uint64())
+		start := ind.Add(uint64(f.rand.Intn(int(slotsPerEpoch))))
+		nextSlot, err := fetch(peers[pidInd%len(peers)], start, uint64(slotsPerEpoch)/2, uint64(slotsPerEpoch))
 		if err != nil {
 			return 0, err
 		}
@@ -120,7 +120,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot types.Slot
 	if err != nil {
 		return 0, err
 	}
-	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch.Uint64()*2, 1)
+	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, uint64(slotsPerEpoch)*2, 1)
 	if err != nil {
 		return 0, err
 	}

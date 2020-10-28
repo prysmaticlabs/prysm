@@ -78,11 +78,11 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index uint64)
 	}
 
 	committeeCountPerSlot := uint64(1)
-	if item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch.Uint64() > 1 {
-		committeeCountPerSlot = item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch.Uint64()
+	if item.CommitteeCount/uint64(params.BeaconConfig().SlotsPerEpoch) > 1 {
+		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet := index + (slot.Uint64()%params.BeaconConfig().SlotsPerEpoch.Uint64())*committeeCountPerSlot
+	indexOffSet := uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot).Add(index))
 	start, end := startEndIndices(item, indexOffSet)
 
 	if end > uint64(len(item.ShuffledIndices)) || end < start {

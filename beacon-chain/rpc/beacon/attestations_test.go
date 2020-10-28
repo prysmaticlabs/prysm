@@ -699,7 +699,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	}
 	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
-		Slot: params.BeaconConfig().SlotsPerEpoch.Mul(epoch.Uint64()),
+		Slot: params.BeaconConfig().SlotsPerEpoch.MulEpoch(epoch),
 	})
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))))
@@ -781,7 +781,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
 	for i := 0; i < len(atts); i++ {
 		att := testutil.NewAttestation()
-		att.Data.Slot = types.ToSlot(uint64(i))
+		att.Data.Slot = types.Slot(i)
 		atts[i] = att
 	}
 	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
@@ -803,7 +803,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	atts := make([]*ethpb.Attestation, numAtts)
 	for i := 0; i < len(atts); i++ {
 		att := testutil.NewAttestation()
-		att.Data.Slot = types.ToSlot(uint64(i))
+		att.Data.Slot = types.Slot(i)
 		atts[i] = att
 	}
 	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
@@ -899,7 +899,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	epoch := types.Epoch(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	committees, err := computeCommittees(params.BeaconConfig().SlotsPerEpoch.Mul(epoch.Uint64()), activeIndices, attesterSeed)
+	committees, err := computeCommittees(params.BeaconConfig().SlotsPerEpoch.MulEpoch(epoch), activeIndices, attesterSeed)
 	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch

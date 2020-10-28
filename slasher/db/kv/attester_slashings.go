@@ -165,7 +165,7 @@ func (db *Store) GetLatestEpochDetected(ctx context.Context) (basetypes.Epoch, e
 			epoch = 0
 			return nil
 		}
-		epoch = basetypes.ToEpoch(bytesutil.FromBytes8(enc))
+		epoch = basetypes.Epoch(bytesutil.FromBytes8(enc))
 		return nil
 	})
 	return epoch, err
@@ -177,7 +177,7 @@ func (db *Store) SetLatestEpochDetected(ctx context.Context, epoch basetypes.Epo
 	defer span.End()
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(epoch.Uint64()))
+		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(uint64(epoch)))
 		return err
 	})
 }

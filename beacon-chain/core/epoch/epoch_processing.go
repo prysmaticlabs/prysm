@@ -273,23 +273,23 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	}
 
 	// Set total slashed balances.
-	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	slashedEpoch := nextEpoch % slashedExitLength
+	slashedExitLength := uint64(params.BeaconConfig().EpochsPerSlashingsVector)
+	slashedEpoch := nextEpoch.Mod(slashedExitLength)
 	slashings := state.Slashings()
-	if uint64(len(slashings)) != slashedExitLength.Uint64() {
+	if uint64(len(slashings)) != slashedExitLength {
 		return nil, fmt.Errorf(
 			"state slashing length %d different than EpochsPerHistoricalVector %d",
 			len(slashings),
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(slashedEpoch.Uint64() /* index */, 0 /* value */); err != nil {
+	if err := state.UpdateSlashingsAtIndex(uint64(slashedEpoch) /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
 
 	// Set RANDAO mix.
-	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	if uint64(state.RandaoMixesLength()) != randaoMixLength.Uint64() {
+	randaoMixLength := uint64(params.BeaconConfig().EpochsPerHistoricalVector)
+	if uint64(state.RandaoMixesLength()) != randaoMixLength {
 		return nil, fmt.Errorf(
 			"state randao length %d different than EpochsPerHistoricalVector %d",
 			state.RandaoMixesLength(),
@@ -300,13 +300,13 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(nextEpoch.Uint64()%randaoMixLength.Uint64(), mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch.Mod(randaoMixLength)), mix); err != nil {
 		return nil, err
 	}
 
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
-	if nextEpoch.Uint64()%epochsPerHistoricalRoot.Uint64() == 0 {
+	if nextEpoch.ModSlot(epochsPerHistoricalRoot) == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots(),
 			StateRoots: state.StateRoots(),

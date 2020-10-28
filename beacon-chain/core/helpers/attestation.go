@@ -88,7 +88,7 @@ func ComputeSubnetForAttestation(activeValCount uint64, att *ethpb.Attestation) 
 func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx uint64, attSlot types.Slot) uint64 {
 	slotSinceStart := SlotsSinceEpochStarts(attSlot)
 	comCount := SlotCommitteeCount(activeValCount)
-	commsSinceStart := comCount * slotSinceStart.Uint64()
+	commsSinceStart := uint64(slotSinceStart.Mul(comCount))
 	computedSubnet := (commsSinceStart + comIdx) % params.BeaconNetworkConfig().AttestationSubnetCount
 	return computedSubnet
 }

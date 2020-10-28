@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	ptypes "github.com/gogo/protobuf/types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -89,7 +90,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)
 
-	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	epochSeconds := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	epochSecondsHalf := time.Duration(int64(epochSeconds*1000)/2) * time.Millisecond
 	// Adding a half slot here to ensure the requests are in the middle of an epoch.
 	middleOfEpoch := epochSecondsHalf + slotutil.DivideSlotBy(2 /* half a slot */)
@@ -101,7 +102,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.
-			if !evaluator.Policy(currentEpoch) {
+			if !evaluator.Policy(basetypes.Epoch(currentEpoch)) {
 				continue
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
@@ -129,7 +130,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	conns = append(conns, syncConn)
 
 	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
-	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 4 * config.EpochsToRun)
+	extraSecondsToSync := uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(config.EpochsToRun).Add((config.EpochsToRun) * epochSeconds))
 	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
 	time.Sleep(time.Until(waitForSync))
 

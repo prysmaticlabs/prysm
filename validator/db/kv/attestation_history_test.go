@@ -17,7 +17,7 @@ func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 	require.NoError(t, err)
 
 	newMap := make(map[uint64]uint64)
-	newMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	newMap[0] = uint64(params.BeaconConfig().FarFutureEpoch)
 	clean := &slashpb.AttestationHistory{
 		TargetToSource: newMap,
 	}
@@ -33,11 +33,11 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 	pubKeys := [][48]byte{{3}, {4}}
 	db := setupDB(t, pubKeys)
 
-	farFuture := params.BeaconConfig().FarFutureEpoch
+	farFuture := uint64(params.BeaconConfig().FarFutureEpoch)
 	newMap := make(map[uint64]uint64)
 	// The validator attested at target epoch 2 but had no attestations for target epochs 0 and 1.
-	newMap[0] = farFuture.Uint64()
-	newMap[1] = farFuture.Uint64()
+	newMap[0] = farFuture
+	newMap[1] = farFuture
 	newMap[2] = 1
 	history := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
@@ -46,9 +46,9 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 
 	newMap2 := make(map[uint64]uint64)
 	// The validator attested at target epoch 1 and 3 but had no attestations for target epochs 0 and 2.
-	newMap2[0] = farFuture.Uint64()
+	newMap2[0] = farFuture
 	newMap2[1] = 0
-	newMap2[2] = farFuture.Uint64()
+	newMap2[2] = farFuture
 	newMap2[3] = 2
 	history2 := &slashpb.AttestationHistory{
 		TargetToSource:     newMap2,
@@ -79,18 +79,18 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 
 func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 	db := setupDB(t, [][48]byte{})
-	farFuture := params.BeaconConfig().FarFutureEpoch
+	farFuture := uint64(params.BeaconConfig().FarFutureEpoch)
 	newMap1 := make(map[uint64]uint64)
-	newMap1[0] = farFuture.Uint64()
+	newMap1[0] = farFuture
 	newMap1[1] = 0
 	newMap2 := make(map[uint64]uint64)
-	newMap2[0] = farFuture.Uint64()
-	newMap2[1] = farFuture.Uint64()
+	newMap2[0] = farFuture
+	newMap2[1] = farFuture
 	newMap2[2] = 1
 	newMap3 := make(map[uint64]uint64)
-	newMap3[0] = farFuture.Uint64()
-	newMap3[1] = farFuture.Uint64()
-	newMap3[2] = farFuture.Uint64()
+	newMap3[0] = farFuture
+	newMap3[1] = farFuture
+	newMap3[2] = farFuture
 	newMap3[3] = 2
 	tests := []struct {
 		pubkey  [48]byte
@@ -135,7 +135,7 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 		require.DeepEqual(t, tt.history, history, "Expected DB to keep object the same")
 		require.Equal(t, tt.epoch-1, history.TargetToSource[tt.epoch],
 			"Expected target epoch %d to be marked with correct source epoch %d", tt.epoch, history.TargetToSource[tt.epoch])
-		require.Equal(t, farFuture.Uint64(), history.TargetToSource[tt.epoch-1],
+		require.Equal(t, farFuture, history.TargetToSource[tt.epoch-1],
 			"Expected target epoch %d to not be marked as attested for, received %d", tt.epoch-1, history.TargetToSource[tt.epoch-1])
 	}
 }
