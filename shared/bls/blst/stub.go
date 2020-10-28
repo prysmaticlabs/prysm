@@ -2,7 +2,7 @@
 
 package blst
 
-import "github.com/prysmaticlabs/prysm/shared/bls/iface"
+import "github.com/prysmaticlabs/prysm/shared/bls/common"
 
 // This stub file exists until build issues can be resolved for darwin and windows.
 const err = "blst is only supported on linux with blst_enabled gotag"

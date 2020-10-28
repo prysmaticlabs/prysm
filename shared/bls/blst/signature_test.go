@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )

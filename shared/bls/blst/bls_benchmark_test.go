@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 )
 
 func BenchmarkSignature_Verify(b *testing.B) {

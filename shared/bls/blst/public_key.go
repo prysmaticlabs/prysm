@@ -8,7 +8,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -26,7 +26,7 @@ type PublicKey struct {
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
-func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
+func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
@@ -36,7 +36,9 @@ func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy(), nil
 	}
-
+	if common.PublicKeyIsInfinite(pubKey) {
+		return nil, common.ErrInfinitePubKey
+	}
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {
 		return nil, errors.New("could not unmarshal bytes into public key")
@@ -48,7 +50,7 @@ func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
 }
 
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
-func AggregatePublicKeys(pubs [][]byte) (iface.PublicKey, error) {
+func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
@@ -80,13 +82,13 @@ func (p *PublicKey) Marshal() []byte {
 }
 
 // Copy the public key to a new pointer reference.
-func (p *PublicKey) Copy() iface.PublicKey {
+func (p *PublicKey) Copy() common.PublicKey {
 	np := *p.p
 	return &PublicKey{p: &np}
 }
 
 // Aggregate two public keys.
-func (p *PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
+func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 	if featureconfig.Get().SkipBLSVerify {
 		return p
 	}
