@@ -727,7 +727,7 @@ func TestBeaconCommitteeSizeFromState(t *testing.T) {
 				t.Fatal(err)
 			}
 			if uint64(len(committee)) != got {
-				t.Errorf("Committee count does not match results from BeaconCommitteeFromState. got=%d, wanted=%d", got, len(committee))
+				t.Errorf("Committee size does not match results from BeaconCommitteeFromState. got=%d, wanted=%d", got, len(committee))
 			}
 		})
 	}
