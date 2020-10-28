@@ -66,8 +66,8 @@ func ProcessRandaoNoVerify(
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	latestMixSlice, err := beaconState.RandaoMixAtIndex(currentEpoch.Uint64() % latestMixesLength.Uint64())
+	latestMixesLength := uint64(params.BeaconConfig().EpochsPerHistoricalVector)
+	latestMixSlice, err := beaconState.RandaoMixAtIndex(uint64(currentEpoch.Mod(latestMixesLength)))
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func ProcessRandaoNoVerify(
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
-	if err := beaconState.UpdateRandaoMixesAtIndex(currentEpoch.Uint64()%latestMixesLength.Uint64(), latestMixSlice); err != nil {
+	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch.Mod(latestMixesLength)), latestMixSlice); err != nil {
 		return nil, err
 	}
 	return beaconState, nil

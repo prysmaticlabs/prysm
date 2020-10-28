@@ -31,7 +31,7 @@ func (db *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch t
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
-	key := bytesutil.Bytes8(targetEpoch.Uint64())
+	key := bytesutil.Bytes8(uint64(targetEpoch))
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
 		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, enc = c.Next() {

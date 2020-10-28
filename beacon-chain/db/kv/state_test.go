@@ -86,12 +86,12 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	evenBlockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
-		b.Block.Slot = types.ToSlot(uint64(i))
+		b.Block.Slot = types.Slot(i)
 		totalBlocks[i] = b
 		r, err := totalBlocks[i].Block.HashTreeRoot()
 		require.NoError(t, err)
 		st := testutil.NewBeaconState()
-		require.NoError(t, st.SetSlot(types.ToSlot(uint64(i))))
+		require.NoError(t, st.SetSlot(types.Slot(i)))
 		require.NoError(t, db.SaveState(context.Background(), st, r))
 		blockRoots = append(blockRoots, r)
 		if i%2 == 0 {

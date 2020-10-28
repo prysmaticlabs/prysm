@@ -88,7 +88,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 		exitQueueEpoch++
 	}
 	validator.ExitEpoch = exitQueueEpoch
-	validator.WithdrawableEpoch = exitQueueEpoch.Add(params.BeaconConfig().MinValidatorWithdrawabilityDelay.Uint64())
+	validator.WithdrawableEpoch = exitQueueEpoch.AddEpoch(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 	if err := state.UpdateValidatorAtIndex(idx, validator); err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64) (*stateTrie
 	slashings := state.Slashings()
 	currentSlashing := slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector]
 	if err := state.UpdateSlashingsAtIndex(
-		currentEpoch.Uint64()%params.BeaconConfig().EpochsPerSlashingsVector.Uint64(),
+		uint64(currentEpoch % params.BeaconConfig().EpochsPerSlashingsVector),
 		currentSlashing+validator.EffectiveBalance,
 	); err != nil {
 		return nil, err
@@ -227,7 +227,7 @@ func ExitedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, ac
 	if churn < exitQueueChurn {
 		exitQueueEpoch++
 	}
-	withdrawableEpoch := exitQueueEpoch.Add(params.BeaconConfig().MinValidatorWithdrawabilityDelay.Uint64())
+	withdrawableEpoch := exitQueueEpoch.AddEpoch(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 	for i, val := range validators {
 		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
 			val.EffectiveBalance > params.BeaconConfig().EjectionBalance {
@@ -268,7 +268,7 @@ func EjectedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, a
 	if churn < exitQueueChurn {
 		exitQueueEpoch++
 	}
-	withdrawableEpoch := exitQueueEpoch.Add(params.BeaconConfig().MinValidatorWithdrawabilityDelay.Uint64())
+	withdrawableEpoch := exitQueueEpoch.AddEpoch(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 	for i, val := range validators {
 		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
 			val.EffectiveBalance <= params.BeaconConfig().EjectionBalance {

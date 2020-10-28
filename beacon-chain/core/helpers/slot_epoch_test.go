@@ -69,11 +69,11 @@ func TestNextEpoch_OK(t *testing.T) {
 		slot  types.Slot
 		epoch types.Epoch
 	}{
-		{slot: 0, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch.Uint64() + 1)},
-		{slot: 50, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch.Uint64() + 2)},
-		{slot: 64, epoch: types.Epoch(64/params.BeaconConfig().SlotsPerEpoch.Uint64() + 1)},
-		{slot: 128, epoch: types.Epoch(128/params.BeaconConfig().SlotsPerEpoch.Uint64() + 1)},
-		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch.Uint64() + 1)},
+		{slot: 0, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 50, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 2)},
+		{slot: 64, epoch: types.Epoch(64/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 128, epoch: types.Epoch(128/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
@@ -342,7 +342,7 @@ func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
 
 	assert.NoError(t, ValidateSlotClock(types.Slot(MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
 	assert.NoError(t, ValidateSlotClock(types.Slot(2*MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
-	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(types.ToSlot(2*MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(types.Slot(2*MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(1<<63, uint64(genTime)), "no error from bad slot")
 }
 

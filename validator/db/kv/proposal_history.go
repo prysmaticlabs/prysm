@@ -29,9 +29,9 @@ func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byt
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key %#x", publicKey)
 		}
-		slotBits := valBucket.Get(bytesutil.Bytes8(epoch.Uint64()))
+		slotBits := valBucket.Get(bytesutil.Bytes8(uint64(epoch)))
 		if len(slotBits) == 0 {
-			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch.Uint64())
+			slotBitlist = bitfield.NewBitlist(uint64(params.BeaconConfig().SlotsPerEpoch))
 			return nil
 		}
 		copy(slotBitlist, slotBits)
@@ -51,7 +51,7 @@ func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []by
 		if valBucket == nil {
 			return fmt.Errorf("validator history is empty for validator %#x", pubKey)
 		}
-		if err := valBucket.Put(bytesutil.Bytes8(epoch.Uint64()), slotBits); err != nil {
+		if err := valBucket.Put(bytesutil.Bytes8(uint64(epoch)), slotBits); err != nil {
 			return err
 		}
 		return pruneProposalHistory(valBucket, epoch)
@@ -75,7 +75,7 @@ func (store *Store) OldUpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch types.Epoch) error {
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
-		epoch := types.ToEpoch(binary.LittleEndian.Uint64(k))
+		epoch := types.Epoch(binary.LittleEndian.Uint64(k))
 		// Only delete epochs that are older than the weak subjectivity period.
 		if epoch+params.BeaconConfig().WeakSubjectivityPeriod <= newestEpoch {
 			if err := c.Delete(); err != nil {

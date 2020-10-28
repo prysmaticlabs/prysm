@@ -113,7 +113,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
-		wanted += (base-proposerReward)*params.BeaconConfig().MinAttestationInclusionDelay.Uint64() - 1
+		wanted += (base-proposerReward)*uint64(params.BeaconConfig().MinAttestationInclusionDelay) - 1
 		assert.Equal(t, wanted, rewards[i], "Unexpected reward balance for validator with index %d", i)
 		// Since all these validators attested, they shouldn't get penalized.
 		assert.Equal(t, uint64(0), penalties[i], "Unexpected penalty balance")
@@ -249,7 +249,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 		penalty := 3 * base
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
 		penalty += params.BeaconConfig().BaseRewardsPerEpoch*base - proposerReward
-		penalty += vp[i].CurrentEpochEffectiveBalance * finalityDelay.Uint64() / params.BeaconConfig().InactivityPenaltyQuotient
+		penalty += vp[i].CurrentEpochEffectiveBalance * uint64(finalityDelay) / params.BeaconConfig().InactivityPenaltyQuotient
 		assert.Equal(t, penalty, penalties[i], "Unexpected slashed indices penalty balance")
 		assert.Equal(t, uint64(0), rewards[i], "Unexpected slashed indices reward balance")
 	}

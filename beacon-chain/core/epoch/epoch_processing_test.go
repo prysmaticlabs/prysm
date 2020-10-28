@@ -262,7 +262,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 }
 
 func TestProcessFinalUpdates_CanProcess(t *testing.T) {
-	s := buildState(t, params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch.Uint64())
+	s := buildState(t, params.BeaconConfig().SlotsPerHistoricalRoot-1, uint64(params.BeaconConfig().SlotsPerEpoch))
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
 	require.NoError(t, s.SetEth1DataVotes([]*ethpb.Eth1Data{}))
@@ -288,7 +288,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	assert.Equal(t, newS.Slashings()[ce], newS.Slashings()[ne], "Unexpected slashed balance")
 
 	// Verify randao is correctly updated in the right position.
-	mix, err := newS.RandaoMixAtIndex(ne.Uint64())
+	mix, err := newS.RandaoMixAtIndex(uint64(ne))
 	assert.NoError(t, err)
 	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
 
@@ -400,7 +400,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	exitEpoch := helpers.ActivationExitEpoch(e)
 	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	base := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch.Mul(e.Uint64()),
+		Slot: params.BeaconConfig().SlotsPerEpoch.MulEpoch(e),
 		Validators: []*ethpb.Validator{
 			{
 				ExitEpoch:         exitEpoch,

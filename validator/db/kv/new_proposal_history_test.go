@@ -104,8 +104,8 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 	}{
 		{
 			// Go 2 epochs past pruning point.
-			slots:        []types.Slot{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(wsPeriod.Uint64()+3) + 8},
-			storedSlots:  []types.Slot{slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(wsPeriod.Uint64()+3) + 8},
+			slots:        []types.Slot{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, slotsPerEpoch.MulEpoch(wsPeriod.Add(3)) + 8},
+			storedSlots:  []types.Slot{slotsPerEpoch*5 + 6, slotsPerEpoch.MulEpoch(wsPeriod.Add(3)) + 8},
 			removedSlots: []types.Slot{slotsPerEpoch / 2},
 		},
 		{
@@ -116,9 +116,9 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 				slotsPerEpoch * 3,
 				slotsPerEpoch * 4,
 				slotsPerEpoch * 5,
-				slotsPerEpoch.Mul(wsPeriod.Uint64()+10) + 8,
+				slotsPerEpoch.MulEpoch(wsPeriod.Add(10)) + 8,
 			},
-			storedSlots: []types.Slot{slotsPerEpoch.Mul(wsPeriod.Uint64()+10) + 8},
+			storedSlots: []types.Slot{slotsPerEpoch.MulEpoch(wsPeriod.Add(10)) + 8},
 			removedSlots: []types.Slot{
 				slotsPerEpoch + 4,
 				slotsPerEpoch * 2,
@@ -174,7 +174,7 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 	for slot := range proposedSlots {
 		slotBitlist, err := db.ProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot))
 		require.NoError(t, err)
-		slotBitlist.SetBitAt(slot.Uint64()%params.BeaconConfig().SlotsPerEpoch.Uint64(), true)
+		slotBitlist.SetBitAt(uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch)), true)
 		err = db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot), slotBitlist)
 		require.NoError(t, err)
 	}

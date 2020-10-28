@@ -175,7 +175,7 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex uint64) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(epoch.Uint64()), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
 	_, seen := s.seenAttestationCache.Get(string(b))
 	return seen
 }
@@ -184,7 +184,7 @@ func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex
 func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex uint64) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(epoch.Uint64()), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
 	s.seenAttestationCache.Add(string(b), true)
 }
 

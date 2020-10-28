@@ -598,7 +598,7 @@ func (bs *Server) GetValidatorQueue(
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
-	minEpoch := exitQueueEpoch.Add(params.BeaconConfig().MinValidatorWithdrawabilityDelay.Uint64())
+	minEpoch := exitQueueEpoch.AddEpoch(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 	exitQueueIndices := make([]uint64, 0)
 	for _, valIdx := range awaitingExit {
 		val := vals[valIdx]

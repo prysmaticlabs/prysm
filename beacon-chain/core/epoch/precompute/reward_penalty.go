@@ -86,7 +86,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAttesterReward := br - proposerReward
-		r += maxAttesterReward / v.InclusionDistance.Uint64()
+		r += maxAttesterReward / uint64(v.InclusionDistance)
 
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
@@ -140,7 +140,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 		// Equivalent to the following condition from the spec:
 		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`
 		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
-			p += vb * finalityDelay.Uint64() / params.BeaconConfig().InactivityPenaltyQuotient
+			p += vb * uint64(finalityDelay) / params.BeaconConfig().InactivityPenaltyQuotient
 		}
 	}
 	return r, p

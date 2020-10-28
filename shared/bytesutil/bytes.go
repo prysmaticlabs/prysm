@@ -334,6 +334,12 @@ func SlotToBytesBigEndian(i types.Slot) []byte {
 	return Uint64ToBytesBigEndian(uint64(i))
 }
 
+// BytesToSlotBigEndian conversion. Returns 0 if empty bytes or byte slice with length less
+// than 8.
+func BytesToSlotBigEndian(b []byte) types.Slot {
+	return types.Slot(BytesToUint64BigEndian(b))
+}
+
 // EpochToBytesLittleEndian conversion.
 func EpochToBytesLittleEndian(i types.Epoch) []byte {
 	return Uint64ToBytesLittleEndian(uint64(i))

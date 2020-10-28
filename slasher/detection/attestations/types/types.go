@@ -39,7 +39,7 @@ type DetectionResult struct {
 
 // Marshal the result into bytes, used for removing duplicates.
 func (result *DetectionResult) Marshal() []byte {
-	numBytes := bytesutil.ToBytes(result.SlashableEpoch.Uint64(), 8)
+	numBytes := bytesutil.ToBytes(uint64(result.SlashableEpoch), 8)
 	var resultBytes []byte
 	resultBytes = append(resultBytes, uint8(result.Kind))
 	resultBytes = append(resultBytes, result.SigBytes[:]...)

@@ -76,7 +76,7 @@ func TestStore_OnBlock(t *testing.T) {
 			blk: func() *ethpb.SignedBeaconBlock {
 				b := testutil.NewBeaconBlock()
 				b.Block.ParentRoot = randomParentRoot2
-				b.Block.Slot = types.Slot(params.BeaconConfig().FarFutureEpoch.Uint64())
+				b.Block.Slot = types.Slot(params.BeaconConfig().FarFutureEpoch)
 				return b
 			}(),
 			s:             st.Copy(),
@@ -198,7 +198,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, newJustifiedBlk))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, lastJustifiedBlk))
 
-	diff := (params.BeaconConfig().SlotsPerEpoch.Uint64() - 1) * params.BeaconConfig().SecondsPerSlot
+	diff := params.BeaconConfig().SlotsPerEpoch.Sub(1).Mul(params.BeaconConfig().SecondsPerSlot)
 	service.genesisTime = time.Unix(time.Now().Unix()-int64(diff), 0)
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
 	update, err = service.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
@@ -226,7 +226,7 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, newJustifiedBlk))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, lastJustifiedBlk))
 
-	diff := (params.BeaconConfig().SlotsPerEpoch.Uint64() - 1) * params.BeaconConfig().SecondsPerSlot
+	diff := params.BeaconConfig().SlotsPerEpoch.Sub(1).Mul(params.BeaconConfig().SecondsPerSlot)
 	service.genesisTime = time.Unix(time.Now().Unix()-int64(diff), 0)
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
 

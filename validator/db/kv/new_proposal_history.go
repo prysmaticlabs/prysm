@@ -29,7 +29,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
-		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot.Uint64()))
+		sr := valBucket.Get(bytesutil.SlotToBytesBigEndian(slot))
 		if len(sr) == 0 {
 			return nil
 		}
@@ -50,7 +50,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 		}
-		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot.Uint64()), signingRoot); err != nil {
+		if err := valBucket.Put(bytesutil.SlotToBytesBigEndian(slot), signingRoot); err != nil {
 			return err
 		}
 		return pruneProposalHistoryBySlot(valBucket, slot)
@@ -112,12 +112,12 @@ func (store *Store) MigrateV2ProposalFormat(ctx context.Context) error {
 				}
 				copy(slotBitlist, slotBits)
 				for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-					if slotBitlist.BitAt(i.Uint64()) {
-						ss, err := helpers.StartSlot(types.ToEpoch(bytesutil.FromBytes8(epochProposals.Epoch)))
+					if slotBitlist.BitAt(uint64(i)) {
+						ss, err := helpers.StartSlot(types.Epoch(bytesutil.FromBytes8(epochProposals.Epoch)))
 						if err != nil {
 							return errors.Wrapf(err, "failed to get start slot of epoch: %d", epochProposals.Epoch)
 						}
-						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian((ss + i).Uint64()), []byte{1}); err != nil {
+						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(uint64(ss + i)), []byte{1}); err != nil {
 							return err
 						}
 					}
@@ -146,7 +146,7 @@ func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot types.Slot) error {
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
-		slot := types.ToSlot(bytesutil.BytesToUint64BigEndian(k))
+		slot := bytesutil.BytesToSlotBigEndian(k)
 		epoch := helpers.SlotToEpoch(slot)
 		newestEpoch := helpers.SlotToEpoch(newestSlot)
 		// Only delete epochs that are older than the weak subjectivity period.

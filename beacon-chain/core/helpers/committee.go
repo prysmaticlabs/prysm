@@ -39,7 +39,7 @@ var proposerIndicesCache = cache.NewProposerIndicesCache()
 //        len(get_active_validator_indices(state, epoch)) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //    ))
 func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
-	var committeePerSlot = activeValidatorCount / uint64(params.BeaconConfig().SlotsPerEpoch.Div(params.BeaconConfig().TargetCommitteeSize))
+	var committeePerSlot = activeValidatorCount / uint64(params.BeaconConfig().SlotsPerEpoch) / params.BeaconConfig().TargetCommitteeSize
 
 	if committeePerSlot > params.BeaconConfig().MaxCommitteesPerSlot {
 		return params.BeaconConfig().MaxCommitteesPerSlot

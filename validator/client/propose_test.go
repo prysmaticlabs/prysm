@@ -65,7 +65,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
 	require.NoError(t, err)
 	cleanMap := make(map[uint64]uint64)
-	cleanMap[0] = params.BeaconConfig().FarFutureEpoch.Uint64()
+	cleanMap[0] = uint64(params.BeaconConfig().FarFutureEpoch)
 	clean := &slashpb.AttestationHistory{
 		TargetToSource: cleanMap,
 	}
@@ -247,7 +247,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	farFuture := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() + 9)
+	farFuture := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().WeakSubjectivityPeriod.Add(9))
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
@@ -267,7 +267,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() + 9)
+	farAhead := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().WeakSubjectivityPeriod.Add(9))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(
@@ -288,7 +288,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
-	past := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() - 400)
+	past := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().WeakSubjectivityPeriod.Sub(400))
 	blk2 := testutil.NewBeaconBlock()
 	blk2.Block.Slot = past
 	m.validatorClient.EXPECT().GetBlock(
@@ -311,7 +311,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().WeakSubjectivityPeriod.Uint64() + 9)
+	farAhead := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().WeakSubjectivityPeriod.Add(9))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(

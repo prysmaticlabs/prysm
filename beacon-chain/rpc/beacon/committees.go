@@ -143,7 +143,7 @@ func computeCommittees(
 ) (SlotToCommiteesMap, error) {
 	committeesListsBySlot := make(SlotToCommiteesMap, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var countAtSlot = uint64(len(activeIndices)) / uint64(params.BeaconConfig().SlotsPerEpoch.Div(params.BeaconConfig().TargetCommitteeSize))
+		var countAtSlot = uint64(len(activeIndices)) / uint64(params.BeaconConfig().SlotsPerEpoch) / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
 			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
 		}

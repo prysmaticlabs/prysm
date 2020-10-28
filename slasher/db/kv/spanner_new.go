@@ -83,7 +83,7 @@ func (db *Store) EpochSpans(_ context.Context, epoch basetypes.Epoch, fromCache 
 		if b == nil {
 			return nil
 		}
-		spans := b.Get(bytesutil.Bytes8(epoch.Uint64()))
+		spans := b.Get(bytesutil.Bytes8(uint64(epoch)))
 		copiedSpans = make([]byte, len(spans))
 		copy(copiedSpans, spans)
 		return nil
@@ -119,7 +119,7 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch basetypes.Epoch, es *
 		if err != nil {
 			return err
 		}
-		return b.Put(bytesutil.Bytes8(epoch.Uint64()), es.Bytes())
+		return b.Put(bytesutil.Bytes8(uint64(epoch)), es.Bytes())
 	})
 }
 

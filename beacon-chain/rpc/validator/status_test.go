@@ -594,7 +594,7 @@ func TestActivationStatus_OK(t *testing.T) {
 		t.Errorf("Validator with pubkey %#x is not unknown and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}
-	if response[2].Index != params.BeaconConfig().FarFutureEpoch.Uint64() {
+	if response[2].Index != uint64(params.BeaconConfig().FarFutureEpoch) {
 		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[2].PublicKey, params.BeaconConfig().FarFutureEpoch, response[2].Index)
 	}
 
@@ -648,14 +648,14 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       types.ToEpoch(currentSlot.Div(params.BeaconConfig().SlotsPerEpoch.Uint64()).Add(1).Uint64()),
+			ActivationEpoch:       types.Epoch(currentSlot.DivSlot(params.BeaconConfig().SlotsPerEpoch).Add(1)),
 			PublicKey:             pbKey,
 			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			ActivationEpoch:       types.ToEpoch(currentSlot.Div(params.BeaconConfig().SlotsPerEpoch.Uint64()).Add(4).Uint64()),
+			ActivationEpoch:       types.Epoch(currentSlot.DivSlot(params.BeaconConfig().SlotsPerEpoch).Add(4)),
 			PublicKey:             pubKey(5),
 			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,

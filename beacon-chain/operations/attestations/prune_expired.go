@@ -68,7 +68,7 @@ func (s *Service) pruneExpiredAtts() {
 // Expired is defined as one epoch behind than current time.
 func (s *Service) expired(slot types.Slot) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
-	expirationTime := s.genesisTime + expirationSlot.Uint64()*params.BeaconConfig().SecondsPerSlot
+	expirationTime := uint64(expirationSlot.Mul(params.BeaconConfig().SecondsPerSlot).Add(s.genesisTime))
 	currentTime := uint64(timeutils.Now().Unix())
 	return currentTime >= expirationTime
 }

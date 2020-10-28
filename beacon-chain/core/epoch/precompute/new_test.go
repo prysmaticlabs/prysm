@@ -30,7 +30,7 @@ func TestNew(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	e := types.Slot(params.BeaconConfig().FarFutureEpoch.Uint64())
+	e := types.Slot(params.BeaconConfig().FarFutureEpoch)
 	v, b, err := precompute.New(context.Background(), s)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &precompute.Validator{

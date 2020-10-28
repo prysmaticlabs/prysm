@@ -94,7 +94,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		// Reduce capacity of peer in the rate limiter first.
 		// Decrease allowed blocks capacity by the number of streamed blocks.
 		if startSlot <= endSlot {
-			s.rateLimiter.add(stream, int64(1+(endSlot-startSlot).Uint64()/m.Step))
+			s.rateLimiter.add(stream, int64(endSlot.SubSlot(startSlot).Div(m.Step).Add(1)))
 		}
 		// Exit in the event we have a disjoint chain to
 		// return.

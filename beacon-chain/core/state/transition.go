@@ -225,7 +225,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 		return nil, err
 	}
 	if err := state.UpdateStateRootAtIndex(
-		state.Slot().Uint64()%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(),
+		uint64(state.Slot().ModSlot(params.BeaconConfig().SlotsPerHistoricalRoot)),
 		prevStateRoot,
 	); err != nil {
 		return nil, err
@@ -247,7 +247,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	}
 	// Cache the block root.
 	if err := state.UpdateBlockRootAtIndex(
-		state.Slot().Uint64()%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(),
+		uint64(state.Slot().ModSlot(params.BeaconConfig().SlotsPerHistoricalRoot)),
 		prevBlockRoot,
 	); err != nil {
 		return nil, err

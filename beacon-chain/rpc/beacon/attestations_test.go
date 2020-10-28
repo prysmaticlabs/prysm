@@ -529,7 +529,6 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 }
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
-	t.Skip("see #7536 - unskip")
 	params.UseMainnetConfig()
 	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()

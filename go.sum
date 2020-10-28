@@ -198,6 +198,8 @@ github.com/farazdagi/prysm-shared-types v0.0.0-20201028133736-44b4e3104ebd h1:zD
 github.com/farazdagi/prysm-shared-types v0.0.0-20201028133736-44b4e3104ebd/go.mod h1:J8EYrUIfa/Yq9jNY07wmn9M4CpD0wmnxTJNK4lvbU0A=
 github.com/farazdagi/prysm-shared-types v0.0.0-20201028155105-39036f66aad8 h1:K/G0wzuGuL8thiLYODKn+V4bkqoPH1ubdT9I5gT3vhM=
 github.com/farazdagi/prysm-shared-types v0.0.0-20201028155105-39036f66aad8/go.mod h1:J8EYrUIfa/Yq9jNY07wmn9M4CpD0wmnxTJNK4lvbU0A=
+github.com/farazdagi/prysm-shared-types v0.0.0-20201028181018-86a10a990d8e h1:K7ijC0HO2QT+jx35dorJSOefYRSbxY1N+ZqyCVz4YG4=
+github.com/farazdagi/prysm-shared-types v0.0.0-20201028181018-86a10a990d8e/go.mod h1:J8EYrUIfa/Yq9jNY07wmn9M4CpD0wmnxTJNK4lvbU0A=
 github.com/fatih/color v1.3.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=

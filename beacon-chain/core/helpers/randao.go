@@ -28,7 +28,7 @@ func Seed(state *stateTrie.BeaconState, epoch types.Epoch, domain [bls.DomainByt
 	if err != nil {
 		return [32]byte{}, err
 	}
-	seed := append(domain[:], bytesutil.Bytes8(epoch.Uint64())...)
+	seed := append(domain[:], bytesutil.Bytes8(uint64(epoch))...)
 	seed = append(seed, randaoMix...)
 
 	seed32 := hashutil.Hash(seed)
@@ -46,5 +46,5 @@ func Seed(state *stateTrie.BeaconState, epoch types.Epoch, domain [bls.DomainByt
 //    """
 //    return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
 func RandaoMix(state *stateTrie.BeaconState, epoch types.Epoch) ([]byte, error) {
-	return state.RandaoMixAtIndex(epoch.Uint64() % params.BeaconConfig().EpochsPerHistoricalVector.Uint64())
+	return state.RandaoMixAtIndex(uint64(epoch % params.BeaconConfig().EpochsPerHistoricalVector))
 }

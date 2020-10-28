@@ -20,10 +20,10 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		slot := types.ToSlot(uint64(randFunc()))
+		slot := types.Slot(randFunc())
 		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}}
 		blks = append(blks, newBlk)
-		root := bytesutil.ToBytes32(bytesutil.Bytes32(slot.Uint64()))
+		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
 		roots = append(roots, root)
 	}
 
@@ -36,7 +36,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 		if b.Block.Slot < previousSlot {
 			t.Errorf("Block list is not sorted as %d is smaller than previousSlot %d", b.Block.Slot, previousSlot)
 		}
-		if bytesutil.FromBytes8(newRoots[i][:]) != b.Block.Slot.Uint64() {
+		if bytesutil.FromBytes8(newRoots[i][:]) != uint64(b.Block.Slot) {
 			t.Errorf("root doesn't match stored slot in block: wanted %d but got %d", b.Block.Slot, bytesutil.FromBytes8(newRoots[i][:]))
 		}
 		previousSlot = b.Block.Slot
@@ -53,13 +53,13 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		slot := types.ToSlot(uint64(randFunc()))
+		slot := types.Slot(randFunc())
 		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}}
 		// append twice
 		blks = append(blks, newBlk, newBlk)
 
 		// append twice
-		root := bytesutil.ToBytes32(bytesutil.Bytes32(slot.Uint64()))
+		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
 		roots = append(roots, root, root)
 	}
 

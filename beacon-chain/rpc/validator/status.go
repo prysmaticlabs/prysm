@@ -275,7 +275,7 @@ func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.B
 	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
 	period := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	votingPeriod := time.Duration(period.Uint64()*params.BeaconConfig().SecondsPerSlot) * time.Second
+	votingPeriod := time.Duration(period.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
 	timeToInclusion := eth1UnixTime.Add(votingPeriod)
 
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime()), 0)
@@ -284,7 +284,7 @@ func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.B
 		depositBlockSlot = 0
 	} else {
 		eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
-		depositBlockSlot = types.ToSlot(uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot)
+		depositBlockSlot = types.Slot(uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot)
 	}
 
 	return depositBlockSlot, nil

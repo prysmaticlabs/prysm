@@ -26,7 +26,7 @@ var SubnetIDs = newSubnetIDs()
 func newSubnetIDs() *subnetIDs {
 	// Given a node can calculate committee assignments of current epoch and next epoch.
 	// Max size is set to 2 epoch length.
-	cacheSize := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch.Uint64() * 2)
+	cacheSize := int(params.BeaconConfig().SlotsPerEpoch.Mul(2).Mul(params.BeaconConfig().MaxCommitteesPerSlot))
 	attesterCache, err := lru.New(cacheSize)
 	if err != nil {
 		panic(err)
@@ -35,7 +35,7 @@ func newSubnetIDs() *subnetIDs {
 	if err != nil {
 		panic(err)
 	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Uint64() * params.BeaconConfig().SecondsPerSlot)
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	subLength := epochDuration * time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
 	persistentCache := cache.New(subLength*time.Second, epochDuration*time.Second)
 	return &subnetIDs{attester: attesterCache, aggregator: aggregatorCache, persistentSubnets: persistentCache}

@@ -30,7 +30,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 	state, privKeys := testutil.DeterministicGenesisState(t, 5)
 	vals := state.Validators()
 	for _, vv := range vals {
-		vv.WithdrawableEpoch = types.ToEpoch(params.BeaconConfig().SlotsPerEpoch.Uint64())
+		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
 	require.NoError(t, state.SetValidators(vals))
 

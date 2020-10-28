@@ -177,7 +177,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		Epoch: 3,
 		Root:  finalizedRoot[:],
 	}
-	totalSec := params.BeaconConfig().SlotsPerEpoch.Uint64() * 5 * params.BeaconConfig().SecondsPerSlot
+	totalSec := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(5).Mul(params.BeaconConfig().SecondsPerSlot))
 	genTime := time.Now().Unix() - int64(totalSec)
 
 	r := &Service{
@@ -387,7 +387,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -462,7 +462,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
 	require.NoError(t, db.SaveBlock(context.Background(), blk))
@@ -471,7 +471,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		Epoch: 3,
 		Root:  finalizedRoot[:],
 	}
-	totalSec := params.BeaconConfig().SlotsPerEpoch.Uint64() * 5 * params.BeaconConfig().SecondsPerSlot
+	totalSec := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(5).Mul(params.BeaconConfig().SecondsPerSlot))
 	genTime := time.Now().Unix() - int64(totalSec)
 	r := &Service{
 		p2p: p1,
@@ -625,7 +625,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, nState.SetSlot(headSlot))
-		require.NoError(t, nState.UpdateBlockRootAtIndex(headSlot.Uint64()%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), headRoot))
+		require.NoError(t, nState.UpdateBlockRootAtIndex(uint64(headSlot.ModSlot(params.BeaconConfig().SlotsPerHistoricalRoot)), headRoot))
 
 		finalizedCheckpt := &ethpb.Checkpoint{
 			Epoch: expectedFinalizedEpoch,
@@ -638,7 +638,8 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), finalizedCheckpt))
 
-		totalSec := params.BeaconConfig().SlotsPerEpoch.Uint64() * (expectedFinalizedEpoch.Uint64() + 2) * params.BeaconConfig().SecondsPerSlot
+		epoch := expectedFinalizedEpoch.Add(2)
+		totalSec := uint64(params.BeaconConfig().SlotsPerEpoch.MulEpoch(epoch).Mul(params.BeaconConfig().SecondsPerSlot))
 		genTime := time.Now().Unix() - int64(totalSec)
 		r := &Service{
 			p2p: p1,
@@ -716,7 +717,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -795,7 +796,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(), headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -903,7 +904,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
 		blocks[j-i] = testutil.NewBeaconBlock()
-		blocks[j-i].Block.Slot = types.ToSlot(j + 1)
+		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()

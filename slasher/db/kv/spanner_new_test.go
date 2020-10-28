@@ -59,7 +59,7 @@ func TestValidatorSpans_NilDB(t *testing.T) {
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
-	es, err := db.EpochSpans(ctx, basetypes.ToEpoch(validatorIdx), false)
+	es, err := db.EpochSpans(ctx, basetypes.Epoch(validatorIdx), false)
 	require.NoError(t, err, "Nil EpochSpansMap should not return error")
 	cleanStore, err := types.NewEpochStore([]byte{})
 	require.NoError(t, err)

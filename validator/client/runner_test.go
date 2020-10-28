@@ -75,7 +75,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 	run(ctx, v)
 
 	require.Equal(t, true, v.UpdateDutiesCalled, "Expected UpdateAssignments(%d) to be called", slot)
-	assert.Equal(t, slot.Uint64(), v.UpdateDutiesArg1, "UpdateAssignments was called with wrong argument")
+	assert.Equal(t, uint64(slot), v.UpdateDutiesArg1, "UpdateAssignments was called with wrong argument")
 }
 
 func TestUpdateDuties_HandlesError(t *testing.T) {
@@ -114,7 +114,7 @@ func TestRoleAt_NextSlot(t *testing.T) {
 	run(ctx, v)
 
 	require.Equal(t, true, v.RoleAtCalled, "Expected RoleAt(%d) to be called", slot)
-	assert.Equal(t, slot.Uint64(), v.RoleAtArg1, "RoleAt called with the wrong arg")
+	assert.Equal(t, uint64(slot), v.RoleAtArg1, "RoleAt called with the wrong arg")
 }
 
 func TestAttests_NextSlot(t *testing.T) {
@@ -134,7 +134,7 @@ func TestAttests_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
-	assert.Equal(t, slot.Uint64(), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
 }
 
 func TestProposes_NextSlot(t *testing.T) {
@@ -154,7 +154,7 @@ func TestProposes_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
-	assert.Equal(t, slot.Uint64(), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
 
 func TestBothProposesAndAttests_NextSlot(t *testing.T) {
@@ -174,7 +174,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
-	assert.Equal(t, slot.Uint64(), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
-	assert.Equal(t, slot.Uint64(), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }

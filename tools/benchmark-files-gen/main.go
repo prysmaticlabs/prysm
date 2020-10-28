@@ -107,7 +107,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / slotsPerEpoch.Uint64(),
+		NumAttestations: benchutil.AttestationsPerEpoch / uint64(slotsPerEpoch),
 	}
 
 	var atts []*ethpb.Attestation
@@ -182,7 +182,7 @@ func generate2FullEpochState() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / params.BeaconConfig().SlotsPerEpoch.Uint64(),
+		NumAttestations: benchutil.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
 	}
 
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch.Mul(2).Sub(1); i++ {

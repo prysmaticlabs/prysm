@@ -30,15 +30,15 @@ var (
 )
 
 func encodeSlotValidatorID(slot basetypes.Slot, validatorID uint64) []byte {
-	return append(bytesutil.Bytes8(slot.Uint64()), bytesutil.Bytes8(validatorID)...)
+	return append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(validatorID)...)
 }
 
 func encodeSlotValidatorIDSig(slot basetypes.Slot, validatorID uint64, sig []byte) []byte {
-	return append(append(bytesutil.Bytes8(slot.Uint64()), bytesutil.Bytes8(validatorID)...), sig...)
+	return append(append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(validatorID)...), sig...)
 }
 
 func encodeEpochSig(targetEpoch basetypes.Epoch, sig []byte) []byte {
-	return append(bytesutil.Bytes8(targetEpoch.Uint64()), sig...)
+	return append(bytesutil.Bytes8(uint64(targetEpoch)), sig...)
 }
 func encodeType(st types.SlashingType) []byte {
 	return []byte{byte(st)}

@@ -306,7 +306,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 			if root == nil {
 				continue
 			}
-			if key >= slot.Uint64() {
+			if key >= uint64(slot) {
 				break
 			}
 			best = root
@@ -348,7 +348,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[s
 	}
 
 	indices := [][]byte{
-		bytesutil.Uint64ToBytesBigEndian(slot.Uint64()),
+		bytesutil.Uint64ToBytesBigEndian(uint64(slot)),
 	}
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]

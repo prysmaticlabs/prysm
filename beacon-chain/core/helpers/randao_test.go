@@ -77,7 +77,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch.MulEpoch(test.epoch+1)))
 		mix, err := RandaoMix(state, test.epoch)
 		require.NoError(t, err)
-		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector.Uint64() + 1000
+		uniqueNumber := uint64(params.BeaconConfig().EpochsPerHistoricalVector.Mul(1000))
 		binary.LittleEndian.PutUint64(mix, uniqueNumber)
 
 		for _, mx := range randaoMixes {

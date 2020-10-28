@@ -43,7 +43,7 @@ func TestRandaoReveal(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	assert.NoError(t, err)
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch.Uint64())
+	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature, err := helpers.ComputeDomainAndSign(beaconState, epoch, epoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 	require.NoError(t, err)

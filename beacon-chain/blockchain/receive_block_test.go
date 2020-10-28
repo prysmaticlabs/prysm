@@ -382,7 +382,7 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
 	require.NoError(t, err)
-	st := params.BeaconConfig().SlotsPerEpoch.Uint64() * uint64(epochsSinceFinalitySaveHotStateDB)
+	st := params.BeaconConfig().SlotsPerEpoch.MulEpoch(epochsSinceFinalitySaveHotStateDB)
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
 

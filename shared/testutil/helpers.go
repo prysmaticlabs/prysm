@@ -24,7 +24,7 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch types.Epoch, privKey
 		return []byte{}, errors.Wrap(err, "could not get beacon proposer index")
 	}
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch.Uint64())
+	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	return helpers.ComputeDomainAndSign(beaconState, epoch, epoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])

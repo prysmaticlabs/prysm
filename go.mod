@@ -19,7 +19,7 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
-	github.com/farazdagi/prysm-shared-types v0.0.0-20201028155105-39036f66aad8
+	github.com/farazdagi/prysm-shared-types v0.0.0-20201028181018-86a10a990d8e
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20201020132831-68dc48984fd3
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5

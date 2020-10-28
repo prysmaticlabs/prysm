@@ -194,7 +194,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 		ret := make([]*eth.SignedBeaconBlock, 0)
 		for _, slot := range slots {
-			if (slot-req.StartSlot).Uint64()%req.Step != 0 {
+			if slot.SubSlot(req.StartSlot).Mod(req.Step) != 0 {
 				continue
 			}
 			cache.RLock()

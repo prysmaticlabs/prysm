@@ -273,7 +273,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
 	}
 	if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
 		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
-		scorer.IncrementProcessedBlocks(pid, diff.Uint64())
+		scorer.IncrementProcessedBlocks(pid, uint64(diff))
 	}
 }
 

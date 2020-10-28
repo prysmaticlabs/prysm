@@ -35,7 +35,7 @@ var depositValCount = e2e.DepositCount
 var depositsInBlockStart = basetypes.Epoch(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
 
 // deposits included + finalization + MaxSeedLookahead for activation.
-var depositActivationStartEpoch = depositsInBlockStart.Add(2 + params.E2ETestConfig().MaxSeedLookahead.Uint64())
+var depositActivationStartEpoch = depositsInBlockStart.Add(2 + uint64(params.E2ETestConfig().MaxSeedLookahead))
 var depositEndEpoch = depositActivationStartEpoch.Add(uint64(math.Ceil(float64(depositValCount) / float64(churnLimit))))
 
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.

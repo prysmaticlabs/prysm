@@ -366,7 +366,7 @@ func (v *validator) NextSlot() <-chan types.Slot {
 
 // SlotDeadline is the start time of the next slot.
 func (v *validator) SlotDeadline(slot types.Slot) time.Time {
-	secs := slot.Add(1).Mul(params.BeaconConfig().SecondsPerSlot).Uint64()
+	secs := uint64(slot.Add(1).Mul(params.BeaconConfig().SecondsPerSlot))
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
 }
 
@@ -393,7 +393,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 		return err
 	}
 	req := &ethpb.DutiesRequest{
-		Epoch:      types.ToEpoch(slot.Uint64() / params.BeaconConfig().SlotsPerEpoch.Uint64()),
+		Epoch:      types.Epoch(slot.DivSlot(params.BeaconConfig().SlotsPerEpoch)),
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
 
@@ -624,7 +624,7 @@ func (v *validator) domainData(ctx context.Context, epoch types.Epoch, domain []
 		Domain: domain,
 	}
 
-	key := strings.Join([]string{strconv.FormatUint(req.Epoch.Uint64(), 10), hex.EncodeToString(req.Domain)}, ",")
+	key := strings.Join([]string{strconv.FormatUint(uint64(req.Epoch), 10), hex.EncodeToString(req.Domain)}, ",")
 
 	if val, ok := v.domainDataCache.Get(key); ok {
 		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
@@ -646,7 +646,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 		attesterKeys[i] = make([]string, 0)
 	}
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
-	slotOffset := slot.Sub(slot.Uint64() % params.BeaconConfig().SlotsPerEpoch.Uint64())
+	slotOffset := slot.SubSlot(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
@@ -691,7 +691,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 // This constructs a validator subscribed key, it's used to track
 // which subnet has already been pending requested.
 func validatorSubscribeKey(slot types.Slot, committeeID uint64) [64]byte {
-	return bytesutil.ToBytes64(append(bytesutil.Bytes32(slot.Uint64()), bytesutil.Bytes32(committeeID)...))
+	return bytesutil.ToBytes64(append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(committeeID)...))
 }
 
 // This tracks all validators' voting status.

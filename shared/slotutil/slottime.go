@@ -22,13 +22,13 @@ func SlotsSinceGenesis(genesis time.Time) types.Slot {
 	if genesis.After(timeutils.Now()) { // Genesis has not occurred yet.
 		return 0
 	}
-	return types.ToSlot(uint64(timeutils.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot)
+	return types.Slot(uint64(timeutils.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // EpochsSinceGenesis returns the number of slots since
 // the provided genesis time.
 func EpochsSinceGenesis(genesis time.Time) types.Epoch {
-	return types.ToEpoch(SlotsSinceGenesis(genesis).Uint64() / params.BeaconConfig().SlotsPerEpoch.Uint64())
+	return types.Epoch(SlotsSinceGenesis(genesis) / params.BeaconConfig().SlotsPerEpoch)
 }
 
 // DivideSlotBy divides the SECONDS_PER_SLOT configuration

@@ -40,7 +40,7 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 		if err := decode(context.TODO(), b, blk); err != nil {
 			return err
 		}
-		if err := tx.Bucket(stateSlotIndicesBucket).Put(bytesutil.Uint64ToBytesBigEndian(blk.Block.Slot.Uint64()), v); err != nil {
+		if err := tx.Bucket(stateSlotIndicesBucket).Put(bytesutil.SlotToBytesBigEndian(blk.Block.Slot), v); err != nil {
 			return err
 		}
 		if blk.Block.Slot > highest {

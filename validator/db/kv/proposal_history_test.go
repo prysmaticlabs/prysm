@@ -20,7 +20,7 @@ func TestProposalHistoryForEpoch_InitializesNewPubKeys(t *testing.T) {
 		slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pub[:], 0)
 		require.NoError(t, err)
 
-		cleanBits := bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch.Uint64())
+		cleanBits := bitfield.NewBitlist(uint64(params.BeaconConfig().SlotsPerEpoch))
 		require.DeepEqual(t, cleanBits.Bytes(), slotBits.Bytes(), "Expected proposal history slot bits to be empty")
 	}
 }
@@ -48,9 +48,9 @@ func TestSaveProposalHistoryForEpoch_OK(t *testing.T) {
 
 	require.NotNil(t, savedBits)
 	require.DeepEqual(t, slotBits, savedBits, "Expected DB to keep object the same")
-	require.Equal(t, true, savedBits.BitAt(slot.Uint64()), "Expected slot %d to be marked as proposed", slot)
-	require.Equal(t, false, savedBits.BitAt(slot.Add(1).Uint64()), "Expected slot %d to not be marked as proposed", slot+1)
-	require.Equal(t, false, savedBits.BitAt(slot.Sub(1).Uint64()), "Expected slot %d to not be marked as proposed", slot-1)
+	require.Equal(t, true, savedBits.BitAt(uint64(slot)), "Expected slot %d to be marked as proposed", slot)
+	require.Equal(t, false, savedBits.BitAt(uint64(slot.Add(1))), "Expected slot %d to not be marked as proposed", slot+1)
+	require.Equal(t, false, savedBits.BitAt(uint64(slot.Sub(1))), "Expected slot %d to not be marked as proposed", slot-1)
 }
 
 func TestSaveProposalHistoryForEpoch_Overwrites(t *testing.T) {
@@ -126,13 +126,13 @@ func TestProposalHistoryForEpoch_MultipleEpochs(t *testing.T) {
 		for _, slot := range tt.slots {
 			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
 			require.NoError(t, err, "Failed to get proposal history")
-			slotBits.SetBitAt(slot.Uint64()%params.BeaconConfig().SlotsPerEpoch.Uint64(), true)
+			slotBits.SetBitAt(uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch)), true)
 			err = db.SaveProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot), slotBits)
 			require.NoError(t, err, "Saving proposal history failed")
 		}
 
 		for i, slotBits := range tt.expectedBits {
-			savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], types.ToEpoch(uint64(i)))
+			savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], types.Epoch(i))
 			require.NoError(t, err, "Failed to get proposal history")
 			require.DeepEqual(t, slotBits, savedBits, "Unexpected difference in bytes for slots %v", tt.slots)
 		}
@@ -150,7 +150,7 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 	}{
 		{
 			// Go 2 epochs past pruning point.
-			slots:         []types.Slot{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(wsPeriod.Uint64()+3) + 8},
+			slots:         []types.Slot{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, slotsPerEpoch.MulEpoch(wsPeriod.Add(3)) + 8},
 			storedEpochs:  []types.Epoch{5, 54003},
 			removedEpochs: []types.Epoch{0},
 		},
@@ -159,7 +159,7 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 			slots: []types.Slot{
 				slotsPerEpoch + 4, slotsPerEpoch * 2,
 				slotsPerEpoch * 3, slotsPerEpoch * 4,
-				slotsPerEpoch * 5, slotsPerEpoch.Mul(wsPeriod.Uint64()+10) + 8,
+				slotsPerEpoch * 5, slotsPerEpoch.MulEpoch(wsPeriod.Add(10)) + 8,
 			},
 			storedEpochs:  []types.Epoch{54010},
 			removedEpochs: []types.Epoch{1, 2, 3, 4},
@@ -176,7 +176,7 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 		for _, slot := range tt.slots {
 			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
 			require.NoError(t, err, "Failed to get proposal history")
-			slotBits.SetBitAt(slot.Uint64()%params.BeaconConfig().SlotsPerEpoch.Uint64(), true)
+			slotBits.SetBitAt(uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch)), true)
 			err = db.SaveProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot), slotBits)
 			require.NoError(t, err, "Saving proposal history failed")
 		}
@@ -184,13 +184,13 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 		for _, epoch := range tt.removedEpochs {
 			savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], epoch)
 			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, bitfield.NewBitlist(slotsPerEpoch.Uint64()), savedBits, "Unexpected difference in bytes for epoch %d", epoch)
+			require.DeepEqual(t, bitfield.NewBitlist(uint64(slotsPerEpoch)), savedBits, "Unexpected difference in bytes for epoch %d", epoch)
 		}
 		for _, epoch := range tt.storedEpochs {
 			savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], epoch)
 			require.NoError(t, err, "Failed to get proposal history")
-			if bytes.Equal(bitfield.NewBitlist(slotsPerEpoch.Uint64()), savedBits) {
-				t.Fatalf("unexpected difference in bytes for epoch %d, expected %v vs received %v", epoch, bitfield.NewBitlist(slotsPerEpoch.Uint64()), savedBits)
+			if bytes.Equal(bitfield.NewBitlist(uint64(slotsPerEpoch)), savedBits) {
+				t.Fatalf("unexpected difference in bytes for epoch %d, expected %v vs received %v", epoch, bitfield.NewBitlist(uint64(slotsPerEpoch)), savedBits)
 			}
 		}
 	}

@@ -380,7 +380,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, slotInVotingPeriod.AddEpoch(helpers.SlotToEpoch(slot)).Uint64())
+	enc = fastssz.MarshalUint64(enc, uint64(slotInVotingPeriod.AddEpoch(helpers.SlotToEpoch(slot))))
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{

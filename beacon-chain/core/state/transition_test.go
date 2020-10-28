@@ -279,7 +279,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(); i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
@@ -353,7 +353,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 
 	proposerSlashIdx := uint64(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	err = beaconState.SetSlot(slotsPerEpoch.Mul(params.BeaconConfig().ShardCommitteePeriod.Uint64()) + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot(slotsPerEpoch.MulEpoch(params.BeaconConfig().ShardCommitteePeriod).AddSlot(params.BeaconConfig().MinAttestationInclusionDelay))
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
@@ -436,7 +436,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	}
 
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot.Uint64(); i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
@@ -754,7 +754,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	s, privKeys := testutil.DeterministicGenesisState(t, validatorCount)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bitCount := validatorCount / params.BeaconConfig().SlotsPerEpoch.Uint64()
+	bitCount := validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	aggBits := bitfield.NewBitlist(bitCount)
 	for i := uint64(1); i < bitCount; i++ {
 		aggBits.SetBitAt(i, true)

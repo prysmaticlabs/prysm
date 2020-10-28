@@ -106,7 +106,7 @@ func (fv *FakeValidator) NextSlot() <-chan types.Slot {
 // UpdateDuties for mocking.
 func (fv *FakeValidator) UpdateDuties(_ context.Context, slot types.Slot) error {
 	fv.UpdateDutiesCalled = true
-	fv.UpdateDutiesArg1 = slot.Uint64()
+	fv.UpdateDutiesArg1 = uint64(slot)
 	return fv.UpdateDutiesRet
 }
 
@@ -131,7 +131,7 @@ func (fv *FakeValidator) SaveProtections(_ context.Context) error {
 // RolesAt for mocking.
 func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]byte][]ValidatorRole, error) {
 	fv.RoleAtCalled = true
-	fv.RoleAtArg1 = slot.Uint64()
+	fv.RoleAtArg1 = uint64(slot)
 	vr := make(map[[48]byte][]ValidatorRole)
 	vr[[48]byte{1}] = fv.RolesAtRet
 	return vr, nil
@@ -140,13 +140,13 @@ func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]by
 // SubmitAttestation for mocking.
 func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot types.Slot, _ [48]byte) {
 	fv.AttestToBlockHeadCalled = true
-	fv.AttestToBlockHeadArg1 = slot.Uint64()
+	fv.AttestToBlockHeadArg1 = uint64(slot)
 }
 
 // ProposeBlock for mocking.
 func (fv *FakeValidator) ProposeBlock(_ context.Context, slot types.Slot, _ [48]byte) {
 	fv.ProposeBlockCalled = true
-	fv.ProposeBlockArg1 = slot.Uint64()
+	fv.ProposeBlockArg1 = uint64(slot)
 }
 
 // SubmitAggregateAndProof for mocking.

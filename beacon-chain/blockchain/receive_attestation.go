@@ -169,7 +169,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
 	now := uint64(timeutils.Now().Unix())
 	genesisTime := uint64(s.genesisTime.Unix())
-	currentSlot := types.ToSlot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
+	currentSlot := types.Slot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
 	var prevEpoch types.Epoch

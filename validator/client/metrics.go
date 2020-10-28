@@ -156,8 +156,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 
 	prevEpoch := types.Epoch(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
-		prevEpoch = types.ToEpoch((slot.Uint64() / params.BeaconConfig().SlotsPerEpoch.Uint64()) - 1)
-		if v.voteStats.startEpoch.Uint64() == ^uint64(0) { // Handles unknown first epoch.
+		prevEpoch = types.Epoch(slot.DivSlot(params.BeaconConfig().SlotsPerEpoch).Sub(1))
+		if uint64(v.voteStats.startEpoch) == ^uint64(0) { // Handles unknown first epoch.
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
@@ -214,7 +214,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	var correctSource, correctTarget, correctHead int
 
 	for i := range resp.PublicKeys {
-		if resp.InclusionSlots[i].Uint64() != ^uint64(0) {
+		if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
 			included++
 			summary.includedAttestedCount++
 			summary.totalDistance += resp.InclusionDistances[i]
@@ -253,7 +253,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	log.WithFields(logrus.Fields{
-		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch.Sub(summary.startEpoch.Uint64())),
+		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch.SubEpoch(summary.startEpoch)),
 		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
 		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount)),
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),

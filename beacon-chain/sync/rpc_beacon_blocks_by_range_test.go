@@ -42,7 +42,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	}
 
 	// Populate the database with blocks that would match the request.
-	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.ToSlot(req.Step) {
+	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.Slot = i
 		require.NoError(t, d.SaveBlock(context.Background(), blk))
@@ -57,11 +57,11 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.ToSlot(req.Step) {
+		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 			expectSuccess(t, stream)
 			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
-			if (res.Block.Slot-req.StartSlot).Uint64()%req.Step != 0 {
+			if res.Block.Slot.SubSlot(req.StartSlot).Mod(req.Step) != 0 {
 				t.Errorf("Received unexpected block slot %d", res.Block.Slot)
 			}
 		}
@@ -164,7 +164,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	endSlot := req.StartSlot.Add(req.Step * (req.Count - 1))
 	expectedRoots := make([][32]byte, req.Count)
 	// Populate the database with blocks that would match the request.
-	for i, j := endSlot, req.Count-1; i >= req.StartSlot; i -= types.ToSlot(req.Step) {
+	for i, j := endSlot, req.Count-1; i >= req.StartSlot; i -= types.Slot(req.Step) {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.Slot = i
 		rt, err := blk.Block.HashTreeRoot()
@@ -187,7 +187,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 		defer wg.Done()
 		prevSlot := types.Slot(0)
 		require.Equal(t, uint64(len(expectedRoots)), req.Count, "Number of roots not expected")
-		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Count*req.Step); i += types.ToSlot(req.Step) {
+		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 			expectSuccess(t, stream)
 			res := &ethpb.SignedBeaconBlock{}
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -255,7 +255,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		res := &ethpb.SignedBeaconBlock{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
 		assert.Equal(t, types.Slot(0), res.Block.Slot, "genesis block was not returned")
-		for i := req.StartSlot.Add(req.Step); i < types.ToSlot(req.Count*req.Step); i += types.ToSlot(req.Step) {
+		for i := req.StartSlot.Add(req.Step); i < types.Slot(req.Count*req.Step); i += types.Slot(req.Step) {
 			expectSuccess(t, stream)
 			res := &ethpb.SignedBeaconBlock{}
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -306,7 +306,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 				expectSuccess(t, stream)
 				res := testutil.NewBeaconBlock()
 				assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
-				if (res.Block.Slot-req.StartSlot).Uint64()%req.Step != 0 {
+				if res.Block.Slot.SubSlot(req.StartSlot).Mod(req.Step) != 0 {
 					t.Errorf("Received unexpected block slot %d", res.Block.Slot)
 				}
 			}
@@ -424,8 +424,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 
 func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 	slotsSinceGenesis := types.Slot(1000)
+	offset := int64(slotsSinceGenesis.Mul(params.BeaconConfig().SecondsPerSlot))
 	r := &Service{chain: &chainMock.ChainService{
-		Genesis: time.Now().Add(time.Second * time.Duration(-slotsSinceGenesis.Uint64()*params.BeaconConfig().SecondsPerSlot)),
+		Genesis: time.Now().Add(time.Second * time.Duration(-1*offset)),
 	}}
 
 	tests := []struct {
@@ -560,11 +561,11 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
 			blocks := make([]*ethpb.SignedBeaconBlock, 0, req.Count)
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.ToSlot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 				expectSuccess(t, stream)
 				blk := testutil.NewBeaconBlock()
 				assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, blk))
-				if (blk.Block.Slot-req.StartSlot).Uint64()%req.Step != 0 {
+				if blk.Block.Slot.SubSlot(req.StartSlot).Mod(req.Step) != 0 {
 					t.Errorf("Received unexpected block slot %d", blk.Block.Slot)
 				}
 				blocks = append(blocks, blk)

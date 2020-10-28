@@ -746,7 +746,7 @@ func (s *Service) logTillChainStart() {
 // instead of making multiple RPC requests to the ETH1 endpoint.
 func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
 	slots := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	blocksPerVotingPeriod := slots.Uint64() * params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
+	blocksPerVotingPeriod := uint64(slots.Div(params.BeaconConfig().SecondsPerSlot)) / params.BeaconConfig().SecondsPerETH1Block
 
 	end, err := s.followBlockHeight(ctx)
 	if err != nil {

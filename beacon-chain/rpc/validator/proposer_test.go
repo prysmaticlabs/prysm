@@ -1099,7 +1099,7 @@ func TestProposer_Eth1Data(t *testing.T) {
 
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
-			slot.Uint64() * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
+			uint64(slot.Mul(params.BeaconConfig().SecondsPerSlot)): big.NewInt(8196),
 		},
 		HashesByHeight: map[int][]byte{
 			8180: []byte("8180"),
@@ -1164,7 +1164,7 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
-			slot.Uint64() * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
+			uint64(slot.Mul(params.BeaconConfig().SecondsPerSlot)): big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
 			4080: []byte("4080"),
@@ -1219,7 +1219,7 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, wantedSlot.AddEpoch(currentEpoch).Uint64())
+	enc = fastssz.MarshalUint64(enc, uint64(wantedSlot.AddEpoch(currentEpoch)))
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
@@ -2127,8 +2127,9 @@ func TestProposer_SortProfitableAtts(t *testing.T) {
 }
 
 func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
-	slots := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().EpochsPerEth1VotingPeriod.Uint64())
-	slotStartTime := uint64(mockPOW.GenesisTime) + (slot.Uint64()-(slot.Uint64()%slots.Uint64()))*params.BeaconConfig().SecondsPerSlot
+	slots := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
+	slots = slot.SubSlot(slot.ModSlot(slots))
+	slotStartTime := uint64(slots.Mul(params.BeaconConfig().SecondsPerSlot).Add(uint64(mockPOW.GenesisTime)))
 	earliestValidTime := slotStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 

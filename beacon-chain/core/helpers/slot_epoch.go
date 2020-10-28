@@ -77,11 +77,11 @@ func NextEpoch(state *stateTrie.BeaconState) types.Epoch {
 //    """
 //    return Slot(epoch * SLOTS_PER_EPOCH)
 func StartSlot(epoch types.Epoch) (types.Slot, error) {
-	slot, err := mathutil.Mul64(epoch.Uint64(), params.BeaconConfig().SlotsPerEpoch.Uint64())
+	slot, err := mathutil.Mul64(uint64(epoch), uint64(params.BeaconConfig().SlotsPerEpoch))
 	if err != nil {
-		return types.ToSlot(slot), errors.Errorf("start slot calculation overflows: %v", err)
+		return types.Slot(slot), errors.Errorf("start slot calculation overflows: %v", err)
 	}
-	return types.ToSlot(slot), nil
+	return types.Slot(slot), nil
 }
 
 // EndSlot returns the last slot number of the
@@ -138,7 +138,7 @@ func VerifySlotTime(genesisTime uint64, slot types.Slot, timeTolerance time.Dura
 
 // SlotToTime takes the given slot and genesis time to determine the start time of the slot.
 func SlotToTime(genesisTimeSec uint64, slot types.Slot) (time.Time, error) {
-	timeSinceGenesis, err := mathutil.Mul64(slot.Uint64(), params.BeaconConfig().SecondsPerSlot)
+	timeSinceGenesis, err := mathutil.Mul64(uint64(slot), params.BeaconConfig().SecondsPerSlot)
 	if err != nil {
 		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
@@ -162,7 +162,7 @@ func CurrentSlot(genesisTimeSec uint64) types.Slot {
 	if now < genesis {
 		return 0
 	}
-	return types.ToSlot(uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot)
+	return types.Slot(uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // ValidateSlotClock validates a provided slot against the local
@@ -208,14 +208,14 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (types.Epoch, error) {
 	d := params.BeaconConfig().SafetyDecay
 	if valCount >= m*q {
 		v := d * q / (2 * 100)
-		wsp += types.ToEpoch(v)
+		wsp += types.Epoch(v)
 	} else {
 		v, err := mathutil.Mul64(d, valCount)
 		if err != nil {
 			return 0, err
 		}
 		v = v / (2 * 100 * m)
-		wsp += types.ToEpoch(v)
+		wsp += types.Epoch(v)
 	}
 	return wsp, nil
 }
@@ -225,6 +225,6 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (types.Epoch, error) {
 func VotingPeriodStartTime(genesis uint64, slot types.Slot) uint64 {
 	startTime := genesis
 	slots := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	startTime += slot.SubSlot(slot.ModSlot(slots)).Mul(params.BeaconConfig().SecondsPerSlot).Uint64()
+	startTime += uint64(slot.SubSlot(slot.ModSlot(slots)).Mul(params.BeaconConfig().SecondsPerSlot))
 	return startTime
 }
