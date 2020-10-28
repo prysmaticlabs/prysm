@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -19,14 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -208,7 +205,6 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-		moveSlashingProtectionDatabase(cliCtx, dataDir)
 	}
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
@@ -258,34 +254,6 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveSlashingProtectionDatabase(cliCtx *cli.Context, defaultDir string) {
-	dataFile := filepath.Join(defaultDir, kv.ProtectionDbFileName)
-	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	if clearFlag || forceClearFlag || cliCtx.Bool(flags.AllowEmptyProtectionDB.Name) {
-		return
-	}
-	if !fileutil.FileExists(dataFile) {
-		// Input the directory where the old protection db resides.
-		protectionDbPath, err := prompt.InputDir(cliCtx, specifyProtectionDBPath, defaultDir)
-		if err != nil {
-			log.WithError(err).Fatal("could not parse protection db directory")
-		}
-		if protectionDbPath == defaultDir {
-			return
-		}
-		oldDataFile := filepath.Join(protectionDbPath, kv.ProtectionDbFileName)
-		log.WithFields(logrus.Fields{
-			"oldDbPath":      oldDataFile,
-			"validatorDbDir": dataFile,
-		}).Info("Moving validator protection db")
-		err = fileutil.CopyFile(oldDataFile, dataFile)
-		if err != nil {
-			log.WithError(err).Fatal("could not copy old db file")
-		}
-	}
-}
-
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
@@ -318,8 +286,6 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-		moveSlashingProtectionDatabase(cliCtx, dataDir)
-
 	}
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
