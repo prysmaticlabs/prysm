@@ -118,8 +118,6 @@ func (s *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 
 // HasBlock checks if a block by root exists in the db.
 func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
-	defer span.End()
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return true
 	}
