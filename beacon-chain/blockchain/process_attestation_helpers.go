@@ -26,6 +26,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	if cachedState != nil {
 		return cachedState, nil
 	}
+
 	if err := s.checkpointStateCache.MarkInProgress(c); err != nil {
 		if errors.Is(err, cache.ErrAlreadyInProgress) {
 			cachedState, err = s.checkpointStateCache.StateByCheckpoint(ctx, c)
@@ -35,8 +36,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 			if cachedState != nil {
 				return cachedState, nil
 			}
+		} else {
+			return nil, err
 		}
-		return nil, err
 	}
 	defer func() {
 		if err := s.checkpointStateCache.MarkNotInProgress(c); err != nil {

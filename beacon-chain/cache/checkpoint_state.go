@@ -81,6 +81,8 @@ func (c *CheckpointStateCache) StateByCheckpoint(ctx context.Context, cp *ethpb.
 		delay = math.Min(delay, maxDelay)
 	}
 
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	item, exists := c.cache.Get(k)
 	if exists && item != nil {
 		checkpointStateHit.Inc()
@@ -101,7 +103,7 @@ func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s *state
 	if err != nil {
 		return err
 	}
-	c.cache.Add(k, s)
+	c.cache.ContainsOrAdd(k, s)
 	return nil
 }
 
@@ -139,5 +141,5 @@ func checkpointKey(cp *ethpb.Checkpoint) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(h[:]), err
+	return string(h[:]), nil
 }
