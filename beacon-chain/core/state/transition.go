@@ -283,7 +283,10 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot types.
 	}
 
 	highestSlot := state.Slot()
-	key := state.Slot()
+	key, err := cacheKey(ctx, state)
+	if err != nil {
+		return nil, err
+	}
 
 	// Restart from cached value, if one exists.
 	cachedState, err := SkipSlotCache.Get(ctx, key)
