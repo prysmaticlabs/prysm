@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -21,7 +20,6 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
@@ -47,22 +45,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	}
 
 	return nil
-}
-
-// IsValidAttestation returns true if the attestation can be verified against its pre-state.
-func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
-	baseState, err := s.AttestationPreState(ctx, att)
-	if err != nil {
-		log.WithError(err).Error("Failed to get attestation pre state")
-		return false
-	}
-
-	if err := blocks.VerifyAttestationSignature(ctx, baseState, att); err != nil {
-		log.WithError(err).Error("Failed to validate attestation")
-		return false
-	}
-
-	return true
 }
 
 // AttestationPreState returns the pre state of attestation.
