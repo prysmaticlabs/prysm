@@ -194,10 +194,6 @@ github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7
 github.com/evanphx/json-patch v4.2.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/farazdagi/prysm-shared-types v0.0.0-20201019221602-a80cc791f553 h1:e2zkyhuTX0jnreU2xB7JJlZonpekt1wWREJ/x1C79r8=
 github.com/farazdagi/prysm-shared-types v0.0.0-20201019221602-a80cc791f553/go.mod h1:5rQ5PIY+Q54onzfzzYv0UZZ22AphY/W20axGJ2oapx8=
-github.com/farazdagi/prysm-shared-types v0.0.0-20201028133736-44b4e3104ebd h1:zDUzRn559hiN7Nd2js6ChwNr3axmO3uMuDYnX6qY+FY=
-github.com/farazdagi/prysm-shared-types v0.0.0-20201028133736-44b4e3104ebd/go.mod h1:J8EYrUIfa/Yq9jNY07wmn9M4CpD0wmnxTJNK4lvbU0A=
-github.com/farazdagi/prysm-shared-types v0.0.0-20201028155105-39036f66aad8 h1:K/G0wzuGuL8thiLYODKn+V4bkqoPH1ubdT9I5gT3vhM=
-github.com/farazdagi/prysm-shared-types v0.0.0-20201028155105-39036f66aad8/go.mod h1:J8EYrUIfa/Yq9jNY07wmn9M4CpD0wmnxTJNK4lvbU0A=
 github.com/farazdagi/prysm-shared-types v0.0.0-20201028181018-86a10a990d8e h1:K7ijC0HO2QT+jx35dorJSOefYRSbxY1N+ZqyCVz4YG4=
 github.com/farazdagi/prysm-shared-types v0.0.0-20201028181018-86a10a990d8e/go.mod h1:J8EYrUIfa/Yq9jNY07wmn9M4CpD0wmnxTJNK4lvbU0A=
 github.com/fatih/color v1.3.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
