@@ -37,6 +37,7 @@ require (
 	github.com/google/gopacket v1.1.18 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.1.2
+	github.com/googleapis/gnostic v0.5.3 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/graph-gophers/graphql-go v0.0.0-20200309224638-dae41bde9ef9 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
@@ -59,7 +60,7 @@ require (
 	github.com/libp2p/go-libp2p v0.10.2
 	github.com/libp2p/go-libp2p-blankhost v0.2.0
 	github.com/libp2p/go-libp2p-circuit v0.3.1
-	github.com/libp2p/go-libp2p-core v0.7.0
+	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-noise v0.1.1
 	github.com/libp2p/go-libp2p-pubsub v0.3.6

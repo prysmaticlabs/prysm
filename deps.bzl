@@ -2204,8 +2204,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_core",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-core",
-        sum = "h1:4a0TMjrWNTZlNvcqxZmrMRDi/NQWrhwO2pkTuLSQ/IQ=",
-        version = "v0.7.0",
+        sum = "h1:XS+Goh+QegCDojUZp00CaPMfiEADCrLjNZskWE7pvqs=",
+        version = "v0.6.1",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_crypto",
