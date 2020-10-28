@@ -157,7 +157,7 @@ go_rules_dependencies()
 
 go_register_toolchains(nogo = "@//:nogo")
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
@@ -373,10 +373,3 @@ load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 geth_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
-
-go_repository(
-    name = "com_github_stoewer_go_strcase",
-    importpath = "github.com/stoewer/go-strcase",
-    sum = "h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=",
-    version = "v1.2.0",
-)
