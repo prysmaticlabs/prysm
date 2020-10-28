@@ -249,6 +249,11 @@ var (
 		Usage: "Kind of keymanager, either imported, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
+	// AllowEmptyProtectionDB allow new protection db to be created without prompting the user.
+	AllowEmptyProtectionDB = &cli.BoolFlag{
+		Name:  "allow-new-protection-db",
+		Usage: "Use this flag allow new protection db to be created non-interactively",
+	}
 	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.
 	SkipDepositConfirmationFlag = &cli.BoolFlag{
 		Name:  "skip-deposit-confirmation",
