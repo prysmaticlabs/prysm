@@ -22,6 +22,8 @@ var AccountCommands = &cli.Command{
 specified input, capable of creating a imported, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
 			Flags: cmd.WrapFlags([]cli.Flag{
+				flags.Mnemonic25thWordFileFlag,
+				flags.SkipMnemonic25thWordCheckFlag,
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.NumAccountsFlag,

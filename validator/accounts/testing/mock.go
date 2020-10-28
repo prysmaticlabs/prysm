@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -89,6 +90,6 @@ func (m *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) err
 }
 
 // InitializeKeymanager --
-func (m *Wallet) InitializeKeymanager(_ context.Context, _ bool) (keymanager.IKeymanager, error) {
+func (m *Wallet) InitializeKeymanager(_ context.Context, _ *iface.InitializeKeymanagerConfig) (keymanager.IKeymanager, error) {
 	return nil, nil
 }
