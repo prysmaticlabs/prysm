@@ -153,6 +153,11 @@ func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicK
 		}
 		return nil
 	})
+	for pk, ah := range attestationHistoryForVals {
+		ehd := make(EncHistoryData, len(*ah))
+		copy(ehd, *ah)
+		attestationHistoryForVals[pk] = &ehd
+	}
 	return attestationHistoryForVals, err
 }
 
