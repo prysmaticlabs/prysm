@@ -199,6 +199,14 @@ func (s *Service) Start() {
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
+		finalizedBlock, err := s.beaconDB.Block(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root)))
+		if err != nil {
+			log.Fatal("Could not get finalized block: %v", err)
+		}
+		if err := s.fillInForkChoiceMissingBlocks(s.ctx, finalizedBlock.Block, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
+			log.Fatal("Could not fill in fork choice store missing blocks: %v", err)
+		}
+
 		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
