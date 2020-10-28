@@ -208,8 +208,8 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+		moveSlashingProtectionDatabase(cliCtx, dataDir)
 	}
-	moveSlashingProtectionDatabase(cliCtx, dataDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
@@ -318,8 +318,9 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+		moveSlashingProtectionDatabase(cliCtx, dataDir)
+
 	}
-	moveSlashingProtectionDatabase(cliCtx, dataDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 
