@@ -6,8 +6,10 @@ import (
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // Signature used in the BLS signature scheme.
@@ -165,19 +167,40 @@ func VerifyMultipleSignatures(sigs []common.Signature, msgs [][32]byte, pubKeys 
 		return false, errors.Errorf("provided signatures, pubkeys and messages have differing lengths. S: %d, P: %d,M %d",
 			length, len(pubKeys), len(msgs))
 	}
-	signatures := make([]bls12.Sign, length)
-	rawPubkeys := make([]bls12.PublicKey, length)
+	// Use a secure source of RNG.
+	newGen := rand.NewGenerator()
+	randNums := make([]bls12.Fr, length)
+	signatures := make([]bls12.G2, length)
 	msgSlices := make([]byte, 0, 32*len(msgs))
-	for i := 0; i < length; i++ {
-		// Extract signature and pubkeys from interface
-		// objects.
-		signatures[i] = *sigs[i].(*Signature).s
-		rawPubkeys[i] = *pubKeys[i].(*PublicKey).p
+	for i := 0; i < len(sigs); i++ {
+		rNum := newGen.Uint64()
+		if err := randNums[i].SetLittleEndian(bytesutil.Bytes8(rNum)); err != nil {
+			return false, err
+		}
+		// Cast signature to a G2 value
+		signatures[i] = *bls12.CastFromSign(sigs[i].(*Signature).s)
+
 		// Flatten message to single byte slice to make it compatible with herumi.
 		msgSlices = append(msgSlices, msgs[i][:]...)
 	}
+	// Perform multi scalar multiplication on all the relevant G2 points
+	// with our generated random numbers.
+	finalSig := new(bls12.G2)
+	bls12.G2MulVec(finalSig, signatures, randNums)
 
-	return bls12.MultiVerify(signatures, rawPubkeys, msgSlices), nil
+	multiKeys := make([]bls12.PublicKey, length)
+	for i := 0; i < len(pubKeys); i++ {
+		if pubKeys[i] == nil {
+			return false, errors.New("nil public key")
+		}
+		// Perform scalar multiplication for the corresponding g1 points.
+		g1 := new(bls12.G1)
+		bls12.G1Mul(g1, bls12.CastFromPublicKey(pubKeys[i].(*PublicKey).p), &randNums[i])
+		multiKeys[i] = *bls12.CastToPublicKey(g1)
+	}
+	aggSig := bls12.CastToSign(finalSig)
+
+	return aggSig.AggregateVerifyNoCheck(multiKeys, msgSlices), nil
 }
 
 // Marshal a signature into a LittleEndian byte slice.
