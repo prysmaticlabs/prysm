@@ -63,8 +63,7 @@ type Service struct {
 	prevFinalizedCheckpt  *ethpb.Checkpoint
 	nextEpochBoundarySlot uint64
 	boundaryRoots         [][32]byte
-	checkpointState       *cache.CheckpointStateCache
-	checkpointStateLock   sync.Mutex
+	checkpointStateCache  *cache.CheckpointStateCache
 	stateGen              *stategen.State
 	opsService            *attestations.Service
 	initSyncBlocks        map[[32]byte]*ethpb.SignedBeaconBlock
@@ -100,26 +99,26 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:               ctx,
-		cancel:            cancel,
-		beaconDB:          cfg.BeaconDB,
-		depositCache:      cfg.DepositCache,
-		chainStartFetcher: cfg.ChainStartFetcher,
-		attPool:           cfg.AttPool,
-		exitPool:          cfg.ExitPool,
-		slashingPool:      cfg.SlashingPool,
-		p2p:               cfg.P2p,
-		maxRoutines:       cfg.MaxRoutines,
-		stateNotifier:     cfg.StateNotifier,
-		forkChoiceStore:   cfg.ForkChoiceStore,
-		boundaryRoots:     [][32]byte{},
-		checkpointState:   cache.NewCheckpointStateCache(),
-		opsService:        cfg.OpsService,
-		stateGen:          cfg.StateGen,
-		initSyncBlocks:    make(map[[32]byte]*ethpb.SignedBeaconBlock),
-		justifiedBalances: make([]uint64, 0),
-		wsEpoch:           cfg.WspEpoch,
-		wsRoot:            cfg.WspBlockRoot,
+		ctx:                  ctx,
+		cancel:               cancel,
+		beaconDB:             cfg.BeaconDB,
+		depositCache:         cfg.DepositCache,
+		chainStartFetcher:    cfg.ChainStartFetcher,
+		attPool:              cfg.AttPool,
+		exitPool:             cfg.ExitPool,
+		slashingPool:         cfg.SlashingPool,
+		p2p:                  cfg.P2p,
+		maxRoutines:          cfg.MaxRoutines,
+		stateNotifier:        cfg.StateNotifier,
+		forkChoiceStore:      cfg.ForkChoiceStore,
+		boundaryRoots:        [][32]byte{},
+		checkpointStateCache: cache.NewCheckpointStateCache(),
+		opsService:           cfg.OpsService,
+		stateGen:             cfg.StateGen,
+		initSyncBlocks:       make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		justifiedBalances:    make([]uint64, 0),
+		wsEpoch:              cfg.WspEpoch,
+		wsRoot:               cfg.WspBlockRoot,
 	}, nil
 }
 

@@ -178,11 +178,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
-	s1, err = service.checkpointState.StateByCheckpoint(cp1)
+	s1, err = service.checkpointStateCache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
-	s2, err = service.checkpointState.StateByCheckpoint(cp2)
+	s2, err = service.checkpointStateCache.StateByCheckpoint(cp2)
 	require.NoError(t, err)
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
@@ -218,7 +218,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), checkpoint.Epoch*params.BeaconConfig().SlotsPerEpoch, "Incorrectly returned base state")
 
-	cached, err := service.checkpointState.StateByCheckpoint(checkpoint)
+	cached, err := service.checkpointStateCache.StateByCheckpoint(checkpoint)
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), cached.Slot(), "State should have been cached")
 
@@ -233,7 +233,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
 
-	cached, err = service.checkpointState.StateByCheckpoint(newCheckpoint)
+	cached, err = service.checkpointStateCache.StateByCheckpoint(newCheckpoint)
 	require.NoError(t, err)
 	if !proto.Equal(returned.InnerStateUnsafe(), cached.InnerStateUnsafe()) {
 		t.Error("Incorrectly cached base state")
