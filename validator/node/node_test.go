@@ -26,7 +26,6 @@ func TestNode_Builds(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
-	set.Bool("allow-new-protection-db", true, "dont prompt")
 	dir := testutil.TempDir() + "/walletpath"
 	passwordDir := testutil.TempDir() + "/password"
 	require.NoError(t, os.MkdirAll(passwordDir, os.ModePerm))
