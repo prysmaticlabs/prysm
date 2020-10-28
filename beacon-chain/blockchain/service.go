@@ -204,7 +204,7 @@ func (s *Service) Start() {
 			log.Fatal("Could not get finalized block: %v", err)
 		}
 		if err := s.fillInForkChoiceMissingBlocks(s.ctx, finalizedBlock.Block, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
-			log.Fatal("Could not fill in fork choice store missing blocks: %v", err)
+			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
 		}
 
 		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
