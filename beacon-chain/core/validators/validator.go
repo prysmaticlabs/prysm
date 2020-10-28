@@ -143,7 +143,7 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64) (*stateTrie
 	slashings := state.Slashings()
 	currentSlashing := slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector]
 	if err := state.UpdateSlashingsAtIndex(
-		uint64(currentEpoch % params.BeaconConfig().EpochsPerSlashingsVector),
+		uint64(currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector),
 		currentSlashing+validator.EffectiveBalance,
 	); err != nil {
 		return nil, err

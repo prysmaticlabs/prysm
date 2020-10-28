@@ -117,7 +117,7 @@ func (store *Store) MigrateV2ProposalFormat(ctx context.Context) error {
 						if err != nil {
 							return errors.Wrapf(err, "failed to get start slot of epoch: %d", epochProposals.Epoch)
 						}
-						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(uint64(ss + i)), []byte{1}); err != nil {
+						if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(uint64(ss+i)), []byte{1}); err != nil {
 							return err
 						}
 					}

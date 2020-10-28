@@ -325,7 +325,9 @@ func (ms *ChainService) GenesisValidatorRoot() [32]byte {
 
 // CurrentSlot mocks the same method in the chain service.
 func (ms *ChainService) CurrentSlot() types.Slot {
-	return types.Slot(uint64(time.Now().Unix()-ms.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot)
+	var slot types.Slot
+	slot.Add(uint64(time.Now().Unix() - ms.Genesis.Unix()))
+	return slot.Div(params.BeaconConfig().SecondsPerSlot)
 }
 
 // Participation mocks the same method in the chain service.
