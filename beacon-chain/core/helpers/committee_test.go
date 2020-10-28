@@ -664,3 +664,71 @@ func TestUpdateProposerIndicesInCache_CouldNotGetActiveIndices(t *testing.T) {
 	want := "nil inner state"
 	require.ErrorContains(t, want, err)
 }
+
+func TestBeaconCommitteeSizeFromState(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount + 55)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	st, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type args struct {
+		slot           uint64
+		committeeIndex uint64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    uint64
+		wantErr bool
+	}{
+		{
+			name: "slot 2 index 2",
+			args: args{
+				slot:           2,
+				committeeIndex: 2,
+			},
+			want:    128,
+			wantErr: false,
+		},
+		{
+			name: "slot 2 index 119",
+			args: args{
+				slot:           2,
+				committeeIndex: 119,
+			},
+			want:    129,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := BeaconCommitteeSizeFromState(st, tt.args.slot, tt.args.committeeIndex)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("BeaconCommitteeSizeFromState() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("BeaconCommitteeSizeFromState() got = %v, want %v", got, tt.want)
+			}
+			// Sanity check that the computed beacon committee size from state matches the beacon
+			// committee length from the spec canonical method.
+			committee, err := BeaconCommitteeFromState(st, tt.args.slot, tt.args.committeeIndex)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if uint64(len(committee)) != got {
+				t.Errorf("Committee count does not match results from BeaconCommitteeFromState. got=%d, wanted=%d", got, len(committee))
+			}
+		})
+	}
+}

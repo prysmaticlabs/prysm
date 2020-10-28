@@ -90,6 +90,15 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot, committeeIndex
 	return BeaconCommittee(activeIndices, seed, slot, committeeIndex)
 }
 
+func BeaconCommitteeSizeFromState(state *stateTrie.BeaconState, slot, committeeIndex uint64) (uint64, error) {
+	activeValidators, err := ActiveValidatorIndices(state, SlotToEpoch(slot))
+	if err != nil {
+		return 0, err
+	}
+	activeValidatorCount := uint64(len(activeValidators))
+	return activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / SlotCommitteeCount(uint64(state.NumValidators())), nil
+}
+
 // BeaconCommittee returns the crosslink committee of a given slot and committee index. The
 // validator indices and seed are provided as an argument rather than a imported implementation
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
