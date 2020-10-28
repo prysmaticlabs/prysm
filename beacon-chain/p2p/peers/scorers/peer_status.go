@@ -51,7 +51,7 @@ func (s *PeerStatusScorer) score(pid peer.ID) float64 {
 	}
 	// Calculate
 	if peerData.ProcessedBlocks > 10 {
-
+		// todo
 	}
 	return score
 }
@@ -79,6 +79,7 @@ func (s *PeerStatusScorer) Decay() {
 
 	for _, peerData := range s.store.Peers() {
 		if peerData.ProcessedBlocks > 42 {
+			// todo
 		}
 	}
 }
