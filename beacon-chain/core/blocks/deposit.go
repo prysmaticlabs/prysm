@@ -34,7 +34,7 @@ func ProcessPreGenesisDeposits(
 		pubkey := deposit.Data.PublicKey
 		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
 		if !ok {
-			return beaconState, nil
+			return nil, fmt.Errorf("no validator for pubkey %#x found in state", pubkey)
 		}
 		balance, err := beaconState.BalanceAtIndex(index)
 		if err != nil {
