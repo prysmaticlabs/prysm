@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -24,13 +23,13 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	state, err := cache.StateByCheckpoint(context.Background(), cp1)
+	state, err := cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 	assert.Equal(t, (*stateTrie.BeaconState)(nil), state, "Expected state not to exist in empty cache")
 
 	require.NoError(t, cache.AddCheckpointState(cp1, st))
 
-	state, err = cache.StateByCheckpoint(context.Background(), cp1)
+	state, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
 	if !proto.Equal(state.InnerStateUnsafe(), st.InnerStateUnsafe()) {
@@ -44,11 +43,11 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, cache.AddCheckpointState(cp2, st2))
 
-	state, err = cache.StateByCheckpoint(context.Background(), cp2)
+	state, err = cache.StateByCheckpoint(cp2)
 	require.NoError(t, err)
 	assert.DeepEqual(t, st2.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
 
-	state, err = cache.StateByCheckpoint(context.Background(), cp1)
+	state, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 	assert.DeepEqual(t, st.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
 }
