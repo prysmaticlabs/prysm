@@ -162,9 +162,9 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 	a := satt.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
-	hasStateSummary := s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
-	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
-	hasBlock := s.db.HasBlock(ctx, blockRoot) || s.chain.HasInitSyncBlock(blockRoot)
+	hasStateSummary := s.stateSummaryCache.Has(blockRoot) || s.db.HasStateSummary(ctx, blockRoot)
+	hasState := hasStateSummary || s.db.HasState(ctx, blockRoot)
+	hasBlock := s.chain.HasInitSyncBlock(blockRoot) || s.db.HasBlock(ctx, blockRoot)
 	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(satt)
