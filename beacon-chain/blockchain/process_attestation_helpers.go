@@ -19,9 +19,9 @@ import (
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
-	// Use a multilock to allow scoped holding of a mutex by a checkpoint root
+	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
-	lock := mputil.NewMultilock(string(c.Root))
+	lock := mputil.NewMultilock(string(c.Root) + fmt.Sprintf("%d", c.Epoch))
 	lock.Lock()
 	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
 	if err != nil {
