@@ -72,25 +72,25 @@ func (smm *stateMachineManager) addEventHandler(event eventID, state stateID, fn
 }
 
 // addStateMachine allocates memory for new FSM.
-func (smm *stateMachineManager) addStateMachine(start uint64) *stateMachine {
-	smm.machines[start] = &stateMachine{
+func (smm *stateMachineManager) addStateMachine(startSlot uint64) *stateMachine {
+	smm.machines[startSlot] = &stateMachine{
 		smm:     smm,
-		start:   start,
+		start:   startSlot,
 		state:   stateNew,
 		blocks:  []*eth.SignedBeaconBlock{},
 		updated: timeutils.Now(),
 	}
 	smm.recalculateMachineAttribs()
-	return smm.machines[start]
+	return smm.machines[startSlot]
 }
 
 // removeStateMachine frees memory of a processed/finished FSM.
-func (smm *stateMachineManager) removeStateMachine(start uint64) error {
-	if _, ok := smm.machines[start]; !ok {
-		return fmt.Errorf("state for machine %v is not found", start)
+func (smm *stateMachineManager) removeStateMachine(startSlot uint64) error {
+	if _, ok := smm.machines[startSlot]; !ok {
+		return fmt.Errorf("state for machine %v is not found", startSlot)
 	}
-	smm.machines[start].blocks = nil
-	delete(smm.machines, start)
+	smm.machines[startSlot].blocks = nil
+	delete(smm.machines, startSlot)
 	smm.recalculateMachineAttribs()
 	return nil
 }
@@ -118,14 +118,14 @@ func (smm *stateMachineManager) recalculateMachineAttribs() {
 	smm.keys = keys
 }
 
-// findStateMachine returns a state machine for a given start block (if exists).
-func (smm *stateMachineManager) findStateMachine(startBlock uint64) (*stateMachine, bool) {
-	fsm, ok := smm.machines[startBlock]
+// findStateMachine returns a state machine for a given start slot (if exists).
+func (smm *stateMachineManager) findStateMachine(startSlot uint64) (*stateMachine, bool) {
+	fsm, ok := smm.machines[startSlot]
 	return fsm, ok
 }
 
-// highestStartBlock returns the start block number for the latest known state machine.
-func (smm *stateMachineManager) highestStartBlock() (uint64, error) {
+// highestStartSlot returns the start slot for the latest known state machine.
+func (smm *stateMachineManager) highestStartSlot() (uint64, error) {
 	if len(smm.keys) == 0 {
 		return 0, errors.New("no state machine exist")
 	}
@@ -176,12 +176,12 @@ func (m *stateMachine) trigger(event eventID, data interface{}) error {
 	return nil
 }
 
-// isFirst checks whether a given machine has the lowest start block.
+// isFirst checks whether a given machine has the lowest start slot.
 func (m *stateMachine) isFirst() bool {
 	return m.start == (*m.smm).keys[0]
 }
 
-// isLast checks whether a given machine has the highest start block.
+// isLast checks whether a given machine has the highest start slot.
 func (m *stateMachine) isLast() bool {
 	return m.start == (*m.smm).keys[len((*m.smm).keys)-1]
 }
@@ -201,7 +201,7 @@ func (s stateID) String() string {
 		stateSent:       "sent",
 	}
 	if _, ok := states[s]; !ok {
-		return ""
+		return "stateUnknown"
 	}
 	return states[s]
 }
@@ -213,7 +213,7 @@ func (e eventID) String() string {
 		eventDataReceived: "dataReceived",
 	}
 	if _, ok := events[e]; !ok {
-		return ""
+		return "eventUnknown"
 	}
 	return events[e]
 }

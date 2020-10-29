@@ -62,3 +62,9 @@ func TestRateLimiter_ExceedCapacity(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
+
+func Test_limiter_retrieveCollector_requiresLock(t *testing.T) {
+	l := limiter{}
+	_, err := l.retrieveCollector("")
+	require.ErrorContains(t, "caller must hold read/write lock", err)
+}

@@ -51,7 +51,45 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		lastHeadRoot = bestNode.root
 	}
 
+	// Update canonical mapping given the head root.
+	if err := s.updateCanonicalNodes(ctx, bestNode.root); err != nil {
+		return [32]byte{}, err
+	}
+
 	return bestNode.root, nil
+}
+
+// updateCanonicalNodes updates the canonical nodes mapping given the input block root.
+func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateCanonicalNodes")
+	defer span.End()
+
+	// Set the input node to canonical.
+	s.canonicalNodes[root] = true
+
+	// Get the input's parent node index.
+	i := s.nodesIndices[root]
+	n := s.nodes[i]
+	p := n.parent
+
+	for p != NonExistentNode {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		// Get the parent node, if the node is already in canonical mapping,
+		// we can be sure rest of the ancestors are canonical. Exit early.
+		n = s.nodes[p]
+		if s.canonicalNodes[n.root] {
+			break
+		}
+
+		// Set parent node to canonical. Repeat until parent node index is undefined.
+		s.canonicalNodes[n.root] = true
+		p = n.parent
+	}
+
+	return nil
 }
 
 // insert registers a new block node to the fork choice store's node list.

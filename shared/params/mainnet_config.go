@@ -27,6 +27,8 @@ var mainnetNetworkConfig = &NetworkConfig{
 	TtfbTimeout:                       5 * time.Second,
 	RespTimeout:                       10 * time.Second,
 	MaximumGossipClockDisparity:       500 * time.Millisecond,
+	MessageDomainInvalidSnappy:        [4]byte{00, 00, 00, 00},
+	MessageDomainValidSnappy:          [4]byte{01, 00, 00, 00},
 	ETH2Key:                           "eth2",
 	AttSubnetKey:                      "attnets",
 	ContractDeploymentBlock:           0,

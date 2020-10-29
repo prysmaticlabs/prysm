@@ -189,6 +189,13 @@ func (q *blocksQueue) loop() {
 			q.cancel()
 		}
 
+		log.WithFields(logrus.Fields{
+			"highestExpectedSlot":       q.highestExpectedSlot,
+			"noRequiredPeersErrRetries": q.exitConditions.noRequiredPeersErrRetries,
+			"headSlot":                  q.headFetcher.HeadSlot(),
+			"state":                     q.smm,
+		}).Debug("tick")
+
 		select {
 		case <-ticker.C:
 			for _, key := range q.smm.keys {
@@ -216,7 +223,7 @@ func (q *blocksQueue) loop() {
 				}
 				// Do garbage collection, and advance sliding window forward.
 				if q.headFetcher.HeadSlot() >= fsm.start+blocksPerRequest-1 {
-					highestStartBlock, err := q.smm.highestStartBlock()
+					highestStartSlot, err := q.smm.highestStartSlot()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
 						continue
@@ -225,7 +232,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove state machine")
 					}
 					if len(q.smm.machines) < lookaheadSteps {
-						q.smm.addStateMachine(highestStartBlock + blocksPerRequest)
+						q.smm.addStateMachine(highestStartSlot + blocksPerRequest)
 					}
 				}
 			}

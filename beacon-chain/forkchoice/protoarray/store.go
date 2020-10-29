@@ -23,6 +23,7 @@ func New(justifiedEpoch, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkCho
 		finalizedRoot:  finalizedRoot,
 		nodes:          make([]*Node, 0),
 		nodesIndices:   make(map[[32]byte]uint64),
+		canonicalNodes: make(map[[32]byte]bool),
 		pruneThreshold: defaultPruneThreshold,
 	}
 
@@ -44,10 +45,9 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedR
 
 	newBalances := justifiedStateBalances
 
-	// Using the read lock is ok here, rest of the operations below is read only.
-	// The only time it writes to node indices is inserting and pruning blocks from the store.
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
+	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
 	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
@@ -158,8 +158,19 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 	return f.store.nodes[i].parent != NonExistentNode
 }
 
+// IsCanonical returns true if the given root is part of the canonical chain.
+func (f *ForkChoice) IsCanonical(root [32]byte) bool {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	return f.store.canonicalNodes[root]
+}
+
 // AncestorRoot returns the ancestor root of input block root at a given slot.
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
+	defer span.End()
+
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 

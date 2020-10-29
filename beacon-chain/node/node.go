@@ -62,7 +62,6 @@ const testSkipPowFlag = "test-skip-pow"
 type BeaconNode struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
-	cancel            context.CancelFunc
 	services          *shared.ServiceRegistry
 	lock              sync.RWMutex
 	stop              chan struct{} // Channel to wait for termination notifications.
@@ -155,11 +154,9 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	registry := shared.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
 		cliCtx:            cliCtx,
-		ctx:               ctx,
-		cancel:            cancel,
+		ctx:               cliCtx.Context,
 		services:          registry,
 		stop:              make(chan struct{}),
 		stateFeed:         new(event.Feed),
@@ -216,7 +213,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := beacon.registerPrometheusService(); err != nil {
+		if err := beacon.registerPrometheusService(cliCtx); err != nil {
 			return nil, err
 		}
 	}
@@ -279,7 +276,6 @@ func (b *BeaconNode) Close() {
 	defer b.lock.Unlock()
 
 	log.Info("Stopping beacon node")
-	b.cancel() // Cancel the beacon node struct's context.
 	b.services.StopAll()
 	if err := b.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
@@ -306,7 +302,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	}
 	clearDBConfirmed := false
 	if clearDB && !forceClearDB {
-		actionText := "This will delete your beacon chain data base stored in your data directory. " +
+		actionText := "This will delete your beacon chain database stored in your data directory. " +
 			"Your database backups will not be removed - do you want to proceed? (Y/N)"
 		deniedText := "Database will not be deleted. No changes have been made."
 		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
@@ -642,7 +638,7 @@ func (b *BeaconNode) registerRPCService() error {
 	return b.services.RegisterService(rpcService)
 }
 
-func (b *BeaconNode) registerPrometheusService() error {
+func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	var p *p2p.Service
 	if err := b.services.FetchService(&p); err != nil {
@@ -655,8 +651,14 @@ func (b *BeaconNode) registerPrometheusService() error {
 		panic(err)
 	}
 
-	if featureconfig.Get().EnableBackupWebhook {
-		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/db/backup", Handler: db.BackupHandler(b.db)})
+	if cliCtx.IsSet(flags.EnableBackupWebhookFlag.Name) {
+		additionalHandlers = append(
+			additionalHandlers,
+			prometheus.Handler{
+				Path:    "/db/backup",
+				Handler: db.BackupHandler(b.db, cliCtx.String(flags.BackupWebhookOutputDir.Name)),
+			},
+		)
 	}
 
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})

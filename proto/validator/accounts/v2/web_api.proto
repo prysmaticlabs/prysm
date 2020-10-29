@@ -34,12 +34,6 @@ service Wallet {
             get: "/v2/validator/mnemonic/generate"
         };
     }
-    rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/password/edit",
-            body: "*"
-        };
-    }
     rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/import",
@@ -66,6 +60,12 @@ service Accounts {
             body: "*"
         };
     }
+    rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/password/edit",
+            body: "*"
+        };
+    }
 }
 
 service Health {
@@ -86,6 +86,12 @@ service Auth {
     rpc Signup(AuthRequest) returns (AuthResponse) {
         option (google.api.http) = {
             post: "/v2/validator/signup",
+            body: "*"
+        };
+    }
+    rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/logout",
             body: "*"
         };
     }

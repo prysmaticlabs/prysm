@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -20,12 +21,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// BalancesTimeout for gRPC requests to ListValidatorBalances.
+const BalancesTimeout = time.Second * 30
+
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
 // An optional Epoch parameter is provided to request historical validator balances from
 // archived, persistent data.
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
-	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
+	req *ethpb.ListValidatorBalancesRequest,
+) (*ethpb.ValidatorBalances, error) {
+	ctx, cancel := context.WithTimeout(ctx, BalancesTimeout)
+	defer cancel()
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
@@ -160,6 +167,10 @@ func (bs *Server) ListValidatorBalances(
 			TotalSize:     int32(balancesCount),
 			NextPageToken: nextPageToken,
 		}, nil
+	}
+
+	if end > len(res) || end < start {
+		return nil, status.Error(codes.OutOfRange, "Request exceeds response length")
 	}
 
 	return &ethpb.ValidatorBalances{

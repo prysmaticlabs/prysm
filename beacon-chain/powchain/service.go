@@ -505,19 +505,32 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		return nil
 	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
-	currentState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head state")
-	}
-	// do not add to pending cache
-	// if no state exists.
-	if currentState == nil {
+	if !s.chainStartData.Chainstarted {
+		// do not add to pending cache
+		// if no genesis state exists.
 		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex() + 1))
 		return nil
 	}
-	currIndex := currentState.Eth1DepositIndex()
+	genesisState, err := s.beaconDB.GenesisState(ctx)
+	if err != nil {
+		return err
+	}
+	// Default to all deposits post-genesis deposits in
+	// the event we cannot find a suitable head state.
+	currIndex := genesisState.Eth1DepositIndex()
+	rt := s.beaconDB.LastArchivedRoot(ctx)
+	if rt != [32]byte{} {
+		currentState, err := s.beaconDB.State(ctx, rt)
+		if err != nil {
+			return errors.Wrap(err, "could not get last archived state")
+		}
+		if currentState == nil {
+			return errors.Errorf("archived state with root %#x does not exist in the db", rt)
+		}
+		// Set deposit index to the one in the current archived state.
+		currIndex = currentState.Eth1DepositIndex()
+	}
 	validDepositsCount.Add(float64(currIndex + 1))
-
 	// Only add pending deposits if the container slice length
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
@@ -724,8 +737,8 @@ func (s *Service) logTillChainStart() {
 	}
 
 	log.WithFields(logrus.Fields{
-		"Extra validators needed":   valNeeded,
-		"Time till minimum genesis": time.Duration(secondsLeft) * time.Second,
+		"Extra validators needed":      valNeeded,
+		"Generating genesis state in ": time.Duration(secondsLeft) * time.Second,
 	}).Infof("Currently waiting for chainstart")
 }
 

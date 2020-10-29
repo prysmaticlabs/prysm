@@ -15,15 +15,28 @@ import (
 )
 
 const (
+	// Spec defined codes
 	codeClientShutdown types.SSZUint64 = iota
 	codeWrongNetwork
 	codeGenericError
+
+	// Teku specific codes
+	codeUnableToVerifyNetwork = types.SSZUint64(128)
+
+	// Lighthouse specific codes
+	codeTooManyPeers = types.SSZUint64(129)
+	codeBadScore     = types.SSZUint64(250)
+	codeBanned       = types.SSZUint64(251)
 )
 
 var goodByes = map[types.SSZUint64]string{
-	codeClientShutdown: "client shutdown",
-	codeWrongNetwork:   "irrelevant network",
-	codeGenericError:   "fault/error",
+	codeClientShutdown:        "client shutdown",
+	codeWrongNetwork:          "irrelevant network",
+	codeGenericError:          "fault/error",
+	codeUnableToVerifyNetwork: "unable to verify network",
+	codeTooManyPeers:          "client has too many peers",
+	codeBadScore:              "peer score too low",
+	codeBanned:                "client banned this node",
 }
 
 // Add a short delay to allow the stream to flush before resetting it.

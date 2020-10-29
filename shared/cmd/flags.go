@@ -173,7 +173,7 @@ var (
 	// LogFormat specifies the log output format.
 	LogFormat = &cli.StringFlag{
 		Name:  "log-format",
-		Usage: "Specify log formatting. Supports: text, json, fluentd.",
+		Usage: "Specify log formatting. Supports: text, json, fluentd, journald.",
 		Value: "text",
 	}
 	// MaxGoroutines specifies the maximum amount of goroutines tolerated, before a status check fails.

@@ -97,7 +97,7 @@ func (s *Server) DeleteAccounts(
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
 	}
 	if s.wallet == nil || s.keymanager == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Imported {
 		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can delete accounts")

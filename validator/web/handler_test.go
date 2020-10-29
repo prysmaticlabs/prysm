@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-func TestWebHandler(t *testing.T) {
+func TestHandler(t *testing.T) {
 	tests := []struct {
 		name            string
 		requestURI      string
@@ -45,7 +45,7 @@ func TestWebHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := &http.Request{RequestURI: tt.requestURI}
 			res := httptest.NewRecorder()
-			webHandler(res, req)
+			Handler(res, req)
 			assert.Equal(t, tt.wantStatus, res.Result().StatusCode)
 			if tt.wantContentType != "" {
 				assert.Equal(t, tt.wantContentType, res.Result().Header.Get("Content-Type"))

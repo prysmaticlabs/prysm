@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -54,7 +55,9 @@ func createRecoverCliCtx(t *testing.T, cfg *recoverCfgStruct) *cli.Context {
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath, "")
 	set.String(flags.KeymanagerKindFlag.Name, keymanager.Derived.String(), "")
 	set.String(flags.MnemonicFileFlag.Name, cfg.mnemonicFilePath, "")
+	set.Bool(flags.SkipMnemonic25thWordCheckFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	assert.NoError(t, set.Set(flags.SkipMnemonic25thWordCheckFlag.Name, "true"))
 	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
 	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath))
 	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanager.Derived.String()))
@@ -84,7 +87,9 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	wantCfg := derived.DefaultKeymanagerOpts()
 	assert.DeepEqual(t, wantCfg, walletCfg)
 
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, true)
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {

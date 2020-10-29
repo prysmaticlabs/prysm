@@ -319,7 +319,6 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	st := testutil.NewBeaconState()
-	service.initSyncState[r] = st.Copy()
 	require.NoError(t, db.SaveState(ctx, st.Copy(), r))
 
 	// Could update
@@ -836,4 +835,16 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	cp, err := service.beaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
+}
+
+func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	s := testutil.NewBeaconState()
+	require.NoError(t, s.SetSlot(1))
+	service.head = &head{}
+	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
 }

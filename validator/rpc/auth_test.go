@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dgrijalva/jwt-go"
+	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -77,6 +79,28 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 		Password: strongPass,
 	})
 	require.NoError(t, err)
+}
+
+func TestServer_Logout(t *testing.T) {
+	key, err := createRandomJWTKey()
+	require.NoError(t, err)
+	ss := &Server{
+		jwtKey: key,
+	}
+	tokenString, _, err := ss.createTokenString()
+	require.NoError(t, err)
+	checkParsedKey := func(*jwt.Token) (interface{}, error) {
+		return ss.jwtKey, nil
+	}
+	_, err = jwt.Parse(tokenString, checkParsedKey)
+	assert.NoError(t, err)
+
+	_, err = ss.Logout(context.Background(), &ptypes.Empty{})
+	require.NoError(t, err)
+
+	// Attempting to validate the same token string after logout should fail.
+	_, err = jwt.Parse(tokenString, checkParsedKey)
+	assert.ErrorContains(t, "signature is invalid", err)
 }
 
 func TestServer_ChangePassword_Preconditions(t *testing.T) {

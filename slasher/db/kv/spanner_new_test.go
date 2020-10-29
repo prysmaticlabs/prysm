@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
@@ -150,4 +151,48 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.UseDB)
 	require.NoError(t, err)
 	require.DeepEqual(t, epochStore.Bytes(), esFromDB.Bytes())
+}
+
+func TestStore_SlasherObservedEpoch(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	prevConfig := params.BeaconConfig().Copy()
+
+	defer params.OverrideBeaconConfig(prevConfig)
+
+	for _, tt := range tests {
+		require.NoError(t, db.SaveIndexedAttestation(ctx, tt.idxAtt), "Save indexed attestation failed")
+
+		found, err := db.HasIndexedAttestation(ctx, tt.idxAtt)
+		require.NoError(t, err, "Failed to get indexed attestation")
+		require.Equal(t, true, found, "Expected to find attestation in DB")
+	}
+	//dont prune when not multiple of PruneSlasherStoragePeriod
+	params.BeaconConfig().PruneSlasherStoragePeriod = 2
+	highestObservedEpoch = params.BeaconConfig().WeakSubjectivityPeriod
+	require.NoError(t, db.setObservedEpochs(ctx, highestObservedEpoch+1))
+	for _, tt := range tests {
+		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt)
+		require.NoError(t, err)
+		require.Equal(t, true, exists, "Expected to find attestation newer than prune age in DB")
+
+	}
+	//prune on PruneSlasherStoragePeriod
+	params.BeaconConfig().PruneSlasherStoragePeriod = 1
+	highestObservedEpoch = params.BeaconConfig().WeakSubjectivityPeriod
+	currentEpoch := highestObservedEpoch + 1
+	historyToKeep := highestObservedEpoch
+	require.NoError(t, db.setObservedEpochs(ctx, highestObservedEpoch+1))
+
+	for _, tt := range tests {
+		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt)
+		require.NoError(t, err)
+
+		if tt.idxAtt.Data.Target.Epoch > currentEpoch-historyToKeep {
+			require.Equal(t, true, exists, "Expected to find attestation newer than prune age in DB")
+		} else {
+			require.Equal(t, false, exists, "Expected to not find attestation older than prune age in DB")
+		}
+	}
 }

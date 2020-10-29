@@ -36,6 +36,8 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSta
 }
 
 // HeadState returns the latest canonical state in beacon chain.
+// Deprecated: This method may return nil. Prefer to use HighestSlotStatesBelow
+// or blockchain.HeadFetcher.HeadState().
 func (s *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
@@ -296,6 +298,9 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		c := bkt.Cursor()
 		for s, root := c.First(); s != nil; s, root = c.Next() {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			key := bytesutil.BytesToUint64BigEndian(s)
 			if root == nil {
 				continue

@@ -19,7 +19,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	_, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	require.NoError(t, err)
 }
 
@@ -32,7 +32,7 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	_, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	require.NoError(t, err)
 }
 

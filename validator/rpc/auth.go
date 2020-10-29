@@ -53,7 +53,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 		return nil, status.Error(codes.FailedPrecondition, "Could not check if wallet directory exists")
 	}
 	if !hasDir {
-		if err := os.MkdirAll(walletDir, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		if err := os.MkdirAll(walletDir, os.ModePerm); err != nil {
 			return nil, status.Errorf(codes.Internal, "could not write directory %s to disk: %v", walletDir, err)
 		}
 	}
@@ -88,6 +88,17 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 		return nil, status.Error(codes.Unauthenticated, "Incorrect validator RPC password")
 	}
 	return s.sendAuthResponse()
+}
+
+// Logout a user by invalidating their JWT key.
+func (s *Server) Logout(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty, error) {
+	// Invalidate the old JWT key, making all requests done with its token fail.
+	jwtKey, err := createRandomJWTKey()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not invalidate JWT key")
+	}
+	s.jwtKey = jwtKey
+	return &ptypes.Empty{}, nil
 }
 
 // Sends an auth response via gRPC containing a new JWT token.

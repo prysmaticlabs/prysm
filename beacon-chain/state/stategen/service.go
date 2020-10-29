@@ -14,6 +14,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var defaultHotStateDBInterval uint64 = 128 // slots
+
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
@@ -23,6 +25,17 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	stateSummaryCache       *cache.StateSummaryCache
 	epochBoundaryStateCache *epochBoundaryState
+	saveHotStateDB          *saveHotStateDbConfig
+}
+
+// This tracks the config in the event of long non-finality,
+// how often does the node save hot states to db? what are
+// the saved hot states in db?... etc
+type saveHotStateDbConfig struct {
+	enabled         bool
+	lock            sync.Mutex
+	duration        uint64
+	savedStateRoots [][32]byte
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
@@ -43,6 +56,9 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
 		epochBoundaryStateCache: newBoundaryStateCache(),
+		saveHotStateDB: &saveHotStateDbConfig{
+			duration: defaultHotStateDBInterval,
+		},
 	}
 }
 

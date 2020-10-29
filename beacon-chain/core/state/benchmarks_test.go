@@ -37,7 +37,6 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 	block, err := benchutil.PreGenFullBlock()
 	require.NoError(b, err)
 
-	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block)
@@ -64,7 +63,6 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	_, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	require.NoError(b, err, "Failed to process block, benchmarks will fail")
 
-	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := state.ExecuteStateTransition(context.Background(), cleanStates[i], block)
@@ -97,7 +95,6 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 	beaconState, err := benchutil.PreGenState2FullEpochs()
 	require.NoError(b, err)
 
-	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := beaconState.HashTreeRoot(context.Background())
@@ -115,7 +112,6 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 	_, err = beaconState.HashTreeRoot(ctx)
 	require.NoError(b, err)
 
-	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := beaconState.HashTreeRoot(ctx)
@@ -131,7 +127,6 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 	b.Run("Proto_Marshal", func(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
-		b.N = 1000
 		for i := 0; i < b.N; i++ {
 			_, err := proto.Marshal(natState)
 			require.NoError(b, err)
@@ -141,7 +136,6 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 	b.Run("Fast_SSZ_Marshal", func(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
-		b.N = 1000
 		for i := 0; i < b.N; i++ {
 			_, err := natState.MarshalSSZ()
 			require.NoError(b, err)
@@ -161,7 +155,6 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	b.Run("Proto_Unmarshal", func(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
-		b.N = 1000
 		for i := 0; i < b.N; i++ {
 			require.NoError(b, proto.Unmarshal(protoObject, &pb.BeaconState{}))
 		}
@@ -170,7 +163,6 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	b.Run("Fast_SSZ_Unmarshal", func(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
-		b.N = 1000
 		for i := 0; i < b.N; i++ {
 			sszState := &pb.BeaconState{}
 			require.NoError(b, sszState.UnmarshalSSZ(sszObject))

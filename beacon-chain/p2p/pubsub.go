@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/golang/snappy"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // JoinTopic will join PubSub topic, if not already joined.
@@ -48,11 +49,6 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 		return err
 	}
 
-	// If feature flag isn't enabled, don't wait for peers to be present.
-	if !featureconfig.Get().EnableAttBroadcastDiscoveryAttempts {
-		return topicHandle.Publish(ctx, data, opts...)
-	}
-
 	// Wait for at least 1 peer to be available to receive the published message.
 	for {
 		if len(topicHandle.ListPeers()) > 0 {
@@ -81,10 +77,24 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 // Content addressable ID function.
 //
 // ETH2 spec defines the message ID as:
-//    message-id: SHA256(message.data)
+//    The `message-id` of a gossipsub message MUST be the following 20 byte value computed from the message data:
+//    If `message.data` has a valid snappy decompression, set `message-id` to the first 20 bytes of the `SHA256` hash of
+//    the concatenation of `MESSAGE_DOMAIN_VALID_SNAPPY` with the snappy decompressed message data,
+//    i.e. `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]`.
+//
+//    Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of
+//    the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
+//    i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
-	h := hashutil.Hash(pmsg.Data)
-	return string(h[:])
+	decodedData, err := snappy.Decode(nil /*dst*/, pmsg.Data)
+	if err != nil {
+		combinedData := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pmsg.Data...)
+		h := hashutil.Hash(combinedData)
+		return string(h[:20])
+	}
+	combinedData := append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], decodedData...)
+	h := hashutil.Hash(combinedData)
+	return string(h[:20])
 }
 
 func setPubSubParameters() {

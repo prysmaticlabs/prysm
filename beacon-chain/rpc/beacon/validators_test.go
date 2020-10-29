@@ -372,6 +372,33 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	}
 }
 
+func TestServer_ListValidatorBalances_ResponseOutOfBound(t *testing.T) {
+	db, sc := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	count := 10
+	setupValidators(t, db, count)
+	headState, err := db.HeadState(context.Background())
+	require.NoError(t, err)
+	b := testutil.NewBeaconBlock()
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
+
+	bs := &Server{
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, sc),
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	req := &ethpb.ListValidatorBalancesRequest{PageSize: 250, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}, PublicKeys: [][]byte{{'a'}}}
+	_, err = bs.ListValidatorBalances(context.Background(), req)
+	require.ErrorContains(t, "Request exceeds response length", err)
+}
+
 func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
 

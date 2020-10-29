@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"math"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -9,6 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -58,6 +60,23 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
+	// Duration can't be 0 to prevent panic for division.
+	duration := uint64(math.Max(float64(s.saveHotStateDB.duration), 1))
+
+	s.saveHotStateDB.lock.Lock()
+	if s.saveHotStateDB.enabled && state.Slot()%duration == 0 {
+		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
+			return err
+		}
+		s.saveHotStateDB.savedStateRoots = append(s.saveHotStateDB.savedStateRoots, blockRoot)
+
+		log.WithFields(logrus.Fields{
+			"slot":                   state.Slot(),
+			"totalHotStateSavedInDB": len(s.saveHotStateDB.savedStateRoots),
+		}).Info("Saving hot state to DB")
+	}
+	s.saveHotStateDB.lock.Unlock()
+
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
 	if s.hotStateCache.Has(blockRoot) {
 		return nil
@@ -78,6 +97,47 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 
 	// Store the copied state in the hot state cache.
 	s.hotStateCache.Put(blockRoot, state)
+
+	return nil
+}
+
+// EnableSaveHotStateToDB enters the mode that saves hot beacon state to the DB.
+// This usually gets triggered when there's long duration since finality.
+func (s *State) EnableSaveHotStateToDB(_ context.Context) {
+	s.saveHotStateDB.lock.Lock()
+	defer s.saveHotStateDB.lock.Unlock()
+	if s.saveHotStateDB.enabled {
+		return
+	}
+
+	s.saveHotStateDB.enabled = true
+
+	log.WithFields(logrus.Fields{
+		"enabled":       s.saveHotStateDB.enabled,
+		"slotsInterval": s.saveHotStateDB.duration,
+	}).Warn("Entering mode to save hot states in DB")
+}
+
+// DisableSaveHotStateToDB exits the mode that saves beacon state to DB for the hot states.
+// This usually gets triggered once there's finality after long duration since finality.
+func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
+	s.saveHotStateDB.lock.Lock()
+	defer s.saveHotStateDB.lock.Unlock()
+	if !s.saveHotStateDB.enabled {
+		return nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"enabled":          s.saveHotStateDB.enabled,
+		"deletedHotStates": len(s.saveHotStateDB.savedStateRoots),
+	}).Warn("Exiting mode to save hot states in DB")
+
+	// Delete previous saved states in DB as we are turning this mode off.
+	s.saveHotStateDB.enabled = false
+	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.savedStateRoots); err != nil {
+		return err
+	}
+	s.saveHotStateDB.savedStateRoots = nil
 
 	return nil
 }
