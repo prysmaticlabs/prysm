@@ -116,8 +116,18 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 					continue
 				}
 
+				hasState := s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				if !(hasState && hasBlock) {
+					continue
+				}
+
 				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
 					log.WithError(err).Error("Could not delete fork choice attestation in pool")
+				}
+
+				if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
+					continue
 				}
 
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
