@@ -144,3 +144,23 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 	}
 	return nil
 }
+
+// VerifyCheckpointEpoch is within current epoch and previous epoch
+// with respect to current time. Returns true if it's within, false if it's not.
+func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
+	now := uint64(timeutils.Now().Unix())
+	genesisTime := uint64(genesis.Unix())
+	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := SlotToEpoch(currentSlot)
+
+	var prevEpoch uint64
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return false
+	}
+
+	return true
+}
