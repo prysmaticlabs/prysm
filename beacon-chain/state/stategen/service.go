@@ -69,27 +69,26 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
-	checkpoint, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	c, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return nil, err
 	}
-	lastArchivedRoot := bytesutil.ToBytes32(checkpoint.Root)
-
+	fRoot := bytesutil.ToBytes32(c.Root)
 	// Resume as genesis state if last finalized root is zero hashes.
-	if lastArchivedRoot == params.BeaconConfig().ZeroHash {
+	if fRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.GenesisState(ctx)
 	}
-	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
+	fState, err := s.beaconDB.State(ctx, fRoot)
 	if err != nil {
 		return nil, err
 	}
-	if lastArchivedState == nil {
+	if fState == nil {
 		return nil, errors.New("finalized state not found in disk")
 	}
 
-	s.finalizedInfo = &finalizedInfo{slot: lastArchivedState.Slot(), root: lastArchivedRoot, state: lastArchivedState.Copy()}
+	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
 
-	return lastArchivedState, nil
+	return fState, nil
 }
 
 // SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.
