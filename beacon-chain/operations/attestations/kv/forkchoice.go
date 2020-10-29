@@ -16,9 +16,10 @@ func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
+	att = stateTrie.CopyAttestation(att)
 	p.forkchoiceAttLock.Lock()
 	defer p.forkchoiceAttLock.Unlock()
-	p.forkchoiceAtt[r] = stateTrie.CopyAttestation(att) // Copied.
+	p.forkchoiceAtt[r] = att
 
 	return nil
 }

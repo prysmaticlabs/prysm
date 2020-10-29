@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -62,17 +63,14 @@ type Service struct {
 	finalizedCheckpt      *ethpb.Checkpoint
 	prevFinalizedCheckpt  *ethpb.Checkpoint
 	nextEpochBoundarySlot uint64
-	initSyncState         map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots         [][32]byte
-	checkpointState       *cache.CheckpointStateCache
-	checkpointStateLock   sync.Mutex
+	checkpointStateCache  *cache.CheckpointStateCache
 	stateGen              *stategen.State
 	opsService            *attestations.Service
 	initSyncBlocks        map[[32]byte]*ethpb.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	checkPtInfoCache      *checkPtInfoCache
 	wsEpoch               uint64
 	wsRoot                []byte
 	wsVerified            bool
@@ -102,28 +100,26 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:               ctx,
-		cancel:            cancel,
-		beaconDB:          cfg.BeaconDB,
-		depositCache:      cfg.DepositCache,
-		chainStartFetcher: cfg.ChainStartFetcher,
-		attPool:           cfg.AttPool,
-		exitPool:          cfg.ExitPool,
-		slashingPool:      cfg.SlashingPool,
-		p2p:               cfg.P2p,
-		maxRoutines:       cfg.MaxRoutines,
-		stateNotifier:     cfg.StateNotifier,
-		forkChoiceStore:   cfg.ForkChoiceStore,
-		initSyncState:     make(map[[32]byte]*stateTrie.BeaconState),
-		boundaryRoots:     [][32]byte{},
-		checkpointState:   cache.NewCheckpointStateCache(),
-		opsService:        cfg.OpsService,
-		stateGen:          cfg.StateGen,
-		initSyncBlocks:    make(map[[32]byte]*ethpb.SignedBeaconBlock),
-		justifiedBalances: make([]uint64, 0),
-		checkPtInfoCache:  newCheckPointInfoCache(),
-		wsEpoch:           cfg.WspEpoch,
-		wsRoot:            cfg.WspBlockRoot,
+		ctx:                  ctx,
+		cancel:               cancel,
+		beaconDB:             cfg.BeaconDB,
+		depositCache:         cfg.DepositCache,
+		chainStartFetcher:    cfg.ChainStartFetcher,
+		attPool:              cfg.AttPool,
+		exitPool:             cfg.ExitPool,
+		slashingPool:         cfg.SlashingPool,
+		p2p:                  cfg.P2p,
+		maxRoutines:          cfg.MaxRoutines,
+		stateNotifier:        cfg.StateNotifier,
+		forkChoiceStore:      cfg.ForkChoiceStore,
+		boundaryRoots:        [][32]byte{},
+		checkpointStateCache: cache.NewCheckpointStateCache(),
+		opsService:           cfg.OpsService,
+		stateGen:             cfg.StateGen,
+		initSyncBlocks:       make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		justifiedBalances:    make([]uint64, 0),
+		wsEpoch:              cfg.WspEpoch,
+		wsRoot:               cfg.WspBlockRoot,
 	}, nil
 }
 
@@ -203,6 +199,19 @@ func (s *Service) Start() {
 		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
+
+		ss, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		if err != nil {
+			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
+		}
+		h := s.headBlock().Block
+		log.WithFields(logrus.Fields{
+			"startSlot": ss,
+			"endSlot":   h.Slot,
+		}).Info("Loading blocks to fork choice store, this may take a while.")
+		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
+			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
+		}
 
 		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
@@ -337,12 +346,6 @@ func (s *Service) Status() error {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
 	return nil
-}
-
-// ClearCachedStates removes all stored caches states. This is done after the node
-// is synced.
-func (s *Service) ClearCachedStates() {
-	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
