@@ -78,7 +78,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.GenesisState(ctx)
 	}
-	fState, err := s.beaconDB.State(ctx, fRoot)
+	fState, err := s.StateByRoot(ctx, fRoot)
 	if err != nil {
 		return nil, err
 	}
