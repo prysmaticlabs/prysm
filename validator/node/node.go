@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -183,9 +184,9 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(
-			cliCtx.Context, false, /* skipMnemonicConfirm */
-		)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+			SkipMnemonicConfirm: false,
+		})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
@@ -280,9 +281,9 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(
-			cliCtx.Context, false, /* skipMnemonicConfirm */
-		)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+			SkipMnemonicConfirm: false,
+		})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
