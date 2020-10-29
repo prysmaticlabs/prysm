@@ -33,7 +33,10 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		}
 		return errors.New(failedPreAttSignLocalErr)
 	} else if !ok {
-		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
+		v.attesterHistoryByPubKeyLock.Lock()
+		v.attesterHistoryByPubKey[pubKey] = kv.NewAttestationHistoryArray(0)
+		v.attesterHistoryByPubKeyLock.Unlock()
+		log.WithField("publicKey", fmtKey).Debug("Initialized slashing protection data for validator")
 	}
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
