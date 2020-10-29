@@ -54,9 +54,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	if !helpers.VerifyCheckpointEpoch(m.Message.Aggregate.Data.Target, s.chain.GenesisTime()) {
-		return pubsub.ValidationIgnore
-	}
 
 	// Verify this is the first aggregate received from the aggregator with index and slot.
 	if s.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {

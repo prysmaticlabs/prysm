@@ -71,9 +71,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	if !helpers.VerifyCheckpointEpoch(att.Data.Target, s.chain.GenesisTime()) {
-		return pubsub.ValidationIgnore
-	}
 	if helpers.SlotToEpoch(att.Data.Slot) != att.Data.Target.Epoch {
 		return pubsub.ValidationReject
 	}
