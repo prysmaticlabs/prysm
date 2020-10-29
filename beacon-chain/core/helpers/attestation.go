@@ -151,10 +151,10 @@ func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time) error {
 func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
 	now := uint64(timeutils.Now().Unix())
 	genesisTime := uint64(genesis.Unix())
-	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentSlot := types.Slot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := SlotToEpoch(currentSlot)
 
-	var prevEpoch uint64
+	var prevEpoch types.Epoch
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}
