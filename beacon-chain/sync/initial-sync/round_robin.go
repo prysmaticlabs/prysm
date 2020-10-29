@@ -275,7 +275,11 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
 func (s *Service) isProcessedBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blkRoot [32]byte) bool {
-	if blk.Block.Slot <= s.chain.HeadSlot() && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
+	finalizedSlot, err := helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch)
+	if err != nil {
+		return false
+	}
+	if blk.Block.Slot <= finalizedSlot || (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
 		return true
 	}
 	return false
