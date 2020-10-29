@@ -85,6 +85,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	if fState == nil {
 		return nil, errors.New("finalized state not found in disk")
 	}
+	s.StateByRoot()
 
 	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
 
