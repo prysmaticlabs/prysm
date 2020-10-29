@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -199,11 +200,16 @@ func (s *Service) Start() {
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		finalizedBlock, err := s.beaconDB.Block(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root)))
+		ss, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if err != nil {
-			log.Fatalf("Could not get finalized block: %v", err)
+			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
 		}
-		if err := s.fillInForkChoiceMissingBlocks(s.ctx, finalizedBlock.Block, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
+		h := s.headBlock().Block
+		log.WithFields(logrus.Fields{
+			"startSlot": ss,
+			"endSlot":   h.Slot,
+		}).Info("Loading blocks to fork choice store, this may take a while.")
+		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
 			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
 		}
 
