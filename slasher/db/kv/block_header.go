@@ -114,7 +114,7 @@ func (db *Store) DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.Signe
 }
 
 // PruneBlockHistory leaves only records younger then history size.
-func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch types.Epoch, pruningEpochAge types.Epoch) error {
+func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpochAge types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneBlockHistory")
 	defer span.End()
 	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)

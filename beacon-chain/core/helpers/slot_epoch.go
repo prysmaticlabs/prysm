@@ -223,8 +223,8 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (types.Epoch, error) {
 // VotingPeriodStartTime returns the current voting period's start time
 // depending on the provided genesis and current slot.
 func VotingPeriodStartTime(genesis uint64, slot types.Slot) uint64 {
-	startTime := genesis
 	slots := params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
-	startTime += uint64(slot.SubSlot(slot.ModSlot(slots)).Mul(params.BeaconConfig().SecondsPerSlot))
-	return startTime
+	slots = slot.ModSlot(slots)
+	startTime := uint64(slot.SubSlot(slots).Mul(params.BeaconConfig().SecondsPerSlot))
+	return genesis + startTime
 }
