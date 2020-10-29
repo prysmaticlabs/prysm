@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/tevino/abool"
 )
 
 // General note for writing validation tests: Use a random value for any field
@@ -303,6 +304,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	r := &Service{
 		p2p:                 p,
 		db:                  db,
+		chainStarted:        abool.New(),
 		initialSync:         &mockSync.Sync{IsSyncing: false},
 		chain:               chainService,
 		blockNotifier:       chainService.BlockNotifier(),

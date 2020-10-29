@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/tevino/abool"
 )
 
 var _ shared.Service = (*Service)(nil)
@@ -88,7 +89,7 @@ type Service struct {
 	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	pendingAttsLock           sync.RWMutex
 	pendingQueueLock          sync.RWMutex
-	chainStarted              bool
+	chainStarted              *abool.AtomicBool
 	initialSync               Checker
 	validateBlockLock         sync.RWMutex
 	stateNotifier             statefeed.Notifier
@@ -123,6 +124,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		attPool:              cfg.AttPool,
 		exitPool:             cfg.ExitPool,
 		slashingPool:         cfg.SlashingPool,
+		chainStarted:         abool.New(),
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
 		attestationNotifier:  cfg.AttestationNotifier,
@@ -177,7 +179,7 @@ func (s *Service) Stop() error {
 
 // Status of the currently running regular sync service.
 func (s *Service) Status() error {
-	if !s.chainStarted {
+	if s.chainStarted.IsNotSet() {
 		return errors.New("chain not yet started")
 	}
 	if s.initialSync.Syncing() {
@@ -279,7 +281,7 @@ func (s *Service) registerHandlers() {
 
 // marks the chain as having started.
 func (s *Service) markForChainStart() {
-	s.chainStarted = true
+	s.chainStarted.Set()
 }
 
 // Checker defines a struct which can verify whether a node is currently

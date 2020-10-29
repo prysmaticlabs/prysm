@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tevino/abool"
+
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -30,8 +32,9 @@ func TestService_StatusZeroEpoch(t *testing.T) {
 			Genesis: time.Now(),
 			State:   bState,
 		},
+		chainStarted: abool.New(),
 	}
-	r.chainStarted = true
+	r.chainStarted.Set()
 
 	assert.NoError(t, r.Status(), "Wanted non failing status")
 }
@@ -47,6 +50,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
+		chainStarted:  abool.New(),
 		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -73,7 +77,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
 	time.Sleep(400 * time.Millisecond)
-	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 }
 
 func TestSyncHandlers_WaitForChainStart(t *testing.T) {
@@ -88,6 +92,7 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
 		initialSync:   &mockSync.Sync{IsSyncing: false},
+		chainStarted:  abool.New(),
 	}
 
 	go r.registerHandlers()
@@ -120,6 +125,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
 		initialSync:   &mockSync.Sync{IsSyncing: false},
+		chainStarted:  abool.New(),
 	}
 
 	topic := "/eth2/%x/beacon_block"
