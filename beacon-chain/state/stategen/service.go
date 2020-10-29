@@ -5,6 +5,7 @@ package stategen
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -76,6 +77,9 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
 	if err != nil {
 		return nil, err
+	}
+	if lastArchivedState == nil {
+		return nil, errors.New("no finalized state found in disk")
 	}
 
 	// Resume as genesis state if there's no last archived state.
