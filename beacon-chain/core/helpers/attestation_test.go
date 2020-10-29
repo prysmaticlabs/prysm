@@ -218,7 +218,8 @@ func Test_ValidateAttestationTime(t *testing.T) {
 
 func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 	// Genesis was 6 epochs ago exactly.
-	genesis := time.Now().Add(-1 * time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch*6))
+	offset := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot).Mul(6)
+	genesis := time.Now().Add(-1 * time.Second * time.Duration(offset))
 	assert.Equal(t, true, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 6}, genesis))
 	assert.Equal(t, true, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 5}, genesis))
 	assert.Equal(t, false, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 4}, genesis))
