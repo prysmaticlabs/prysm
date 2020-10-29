@@ -191,10 +191,9 @@ func (q *blocksQueue) loop() {
 
 		log.WithFields(logrus.Fields{
 			"highestExpectedSlot":       q.highestExpectedSlot,
-			"noRequiredPeersErrRetries": q.exitConditions.noRequiredPeersErrRetries,
 			"headSlot":                  q.headFetcher.HeadSlot(),
-			"state":                     q.smm,
-		}).Debug("tick")
+			"state":                     q.smm.String(),
+		}).Trace("tick")
 
 		select {
 		case <-ticker.C:
