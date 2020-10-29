@@ -668,7 +668,7 @@ func TestUpdateProposerIndicesInCache_CouldNotGetActiveIndices(t *testing.T) {
 func TestBeaconCommitteeSizeFromState(t *testing.T) {
 	// Initialize state with an imperfect amount of validators to demonstrate differences in
 	// committee sizes.
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount + 55)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount+55)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -732,4 +732,59 @@ func TestBeaconCommitteeSizeFromState(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkBeaconCommitteeSizeFromState(b *testing.B) {
+	// Initialize state with an imperfect amount of validators to demonstrate differences in
+	// committee sizes.
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount+55)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	st, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.Run("BeaconCommitteeSizeFromState", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ClearCache()
+			_, err := BeaconCommitteeSizeFromState(st, 2, 2)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("len(BeaconCommitteeFromState)", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ClearCache()
+			_, err := BeaconCommitteeFromState(st, 2, 2)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("BeaconCommitteeSizeFromState-cached", func(b *testing.B) {
+		ClearCache()
+		for i := 0; i < b.N; i++ {
+			_, err := BeaconCommitteeSizeFromState(st, 2, 2)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("len(BeaconCommitteeFromState)-cached", func(b *testing.B) {
+		ClearCache()
+		for i := 0; i < b.N; i++ {
+			_, err := BeaconCommitteeFromState(st, 2, 2)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
