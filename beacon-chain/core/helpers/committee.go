@@ -98,9 +98,9 @@ func BeaconCommitteeSizeFromState(state *stateTrie.BeaconState, slot, committeeI
 	}
 	committeesPerSlot := SlotCommitteeCount(c)
 	slotCommitteeIndex := committeeIndex + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
-	totalCommitteesCount := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
-	start := sliceutil.SplitOffset(c, totalCommitteesCount, slotCommitteeIndex)
-	end := sliceutil.SplitOffset(c, totalCommitteesCount, slotCommitteeIndex+1)
+	epochCommitteesCount := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
+	start := sliceutil.SplitOffset(c, epochCommitteesCount, slotCommitteeIndex)
+	end := sliceutil.SplitOffset(c, epochCommitteesCount, slotCommitteeIndex+1)
 	return end - start, nil
 }
 
