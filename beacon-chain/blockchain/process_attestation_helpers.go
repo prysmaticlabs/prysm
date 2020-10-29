@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -18,7 +19,7 @@ import (
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
-	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
+	cachedState, err := s.checkpointStateCache.StateByCheckpoint(ctx, c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
@@ -26,17 +27,33 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
+	if err := s.checkpointStateCache.MarkInProgress(c); err != nil {
+		if errors.Is(err, cache.ErrAlreadyInProgress) {
+			cachedState, err = s.checkpointStateCache.StateByCheckpoint(ctx, c)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get cached checkpoint state")
+			}
+			if cachedState != nil {
+				return cachedState, nil
+			}
+		} else {
+			return nil, err
+		}
+	}
+	defer func() {
+		if err := s.checkpointStateCache.MarkNotInProgress(c); err != nil {
+			log.WithError(err).Error("Failed to mark cache not in progress")
+		}
+	}()
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
-
 	epochStartSlot, err := helpers.StartSlot(c.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
-		baseState = baseState.Copy()
 		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
@@ -46,7 +63,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		}
 		return baseState, nil
 	}
-
 	has, err := s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, err
@@ -57,7 +73,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		}
 	}
 	return baseState, nil
-
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
