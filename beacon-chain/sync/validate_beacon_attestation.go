@@ -133,21 +133,21 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
+	committeeSize, err := helpers.BeaconCommitteeSizeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
 	// Verify number of aggregation bits matches the committee size.
-	if err := helpers.VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
+	if err := helpers.VerifyBitfieldLength(att.AggregationBits, committeeSize); err != nil {
 		return pubsub.ValidationReject
 	}
 
 	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
 	// Note: eth2 spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
 	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
-	if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
+	if att.AggregationBits.Count() != 1 || uint64(att.AggregationBits.BitIndices()[0]) >= committeeSize {
 		return pubsub.ValidationReject
 	}
 

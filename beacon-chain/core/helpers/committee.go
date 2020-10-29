@@ -90,13 +90,18 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot, committeeIndex
 	return BeaconCommittee(activeIndices, seed, slot, committeeIndex)
 }
 
+// BeaconCommitteeSizeFromState returns the crosslink committee size of a given slot and committee index.
 func BeaconCommitteeSizeFromState(state *stateTrie.BeaconState, slot, committeeIndex uint64) (uint64, error) {
-	activeValidators, err := ActiveValidatorCount(state, SlotToEpoch(slot))
+	c, err := ActiveValidatorCount(state, SlotToEpoch(slot))
 	if err != nil {
 		return 0, err
 	}
-	activeValidatorCount := activeValidators
-	return activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / SlotCommitteeCount(uint64(state.NumValidators())), nil
+	committeesPerSlot := SlotCommitteeCount(c)
+	slotCommitteeIndex := committeeIndex + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
+	totalCommitteesCount := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
+	start := sliceutil.SplitOffset(c, totalCommitteesCount, slotCommitteeIndex)
+	end := sliceutil.SplitOffset(c, totalCommitteesCount, slotCommitteeIndex+1)
+	return end - start, nil
 }
 
 // BeaconCommittee returns the crosslink committee of a given slot and committee index. The
