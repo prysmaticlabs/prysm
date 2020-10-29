@@ -357,7 +357,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	currentState, err := s.beaconDB.State(ctx, r)
+	currentState, err := s.stateGen.StateByRoot(ctx, r)
 	if err != nil {
 		return errors.Wrap(err, "could not get head state")
 	}
