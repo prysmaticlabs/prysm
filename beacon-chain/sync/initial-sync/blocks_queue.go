@@ -190,9 +190,9 @@ func (q *blocksQueue) loop() {
 		}
 
 		log.WithFields(logrus.Fields{
-			"highestExpectedSlot":       q.highestExpectedSlot,
-			"headSlot":                  q.headFetcher.HeadSlot(),
-			"state":                     q.smm.String(),
+			"highestExpectedSlot": q.highestExpectedSlot,
+			"headSlot":            q.headFetcher.HeadSlot(),
+			"state":               q.smm.String(),
 		}).Trace("tick")
 
 		select {
