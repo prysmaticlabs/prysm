@@ -74,17 +74,17 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 		return nil, err
 	}
 	lastArchivedRoot := bytesutil.ToBytes32(checkpoint.Root)
+
+	// Resume as genesis state if there's no last archived state.
+	if lastArchivedRoot == params.BeaconConfig().ZeroHash {
+		return s.beaconDB.GenesisState(ctx)
+	}
 	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
 	if err != nil {
 		return nil, err
 	}
 	if lastArchivedState == nil {
-		return nil, errors.New("no finalized state found in disk")
-	}
-
-	// Resume as genesis state if there's no last archived state.
-	if lastArchivedState == nil {
-		return s.beaconDB.GenesisState(ctx)
+		return nil, errors.New("finalized state not found in disk")
 	}
 
 	s.finalizedInfo = &finalizedInfo{slot: lastArchivedState.Slot(), root: lastArchivedRoot, state: lastArchivedState.Copy()}
