@@ -75,7 +75,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	}
 	lastArchivedRoot := bytesutil.ToBytes32(checkpoint.Root)
 
-	// Resume as genesis state if there's no last archived state.
+	// Resume as genesis state if last finalized root is zero hashes.
 	if lastArchivedRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.GenesisState(ctx)
 	}
