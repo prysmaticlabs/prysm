@@ -125,11 +125,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
-	beaconState, err := s.beaconDB.HeadState(s.ctx)
-	if err != nil {
-		log.Fatalf("Could not fetch beacon state: %v", err)
-	}
-
 	// For running initial sync with state cache, in an event of restart, we use
 	// last finalized check point as start point to sync instead of head
 	// state. This is because we no longer save state every slot during sync.
@@ -138,27 +133,25 @@ func (s *Service) Start() {
 		log.Fatalf("Could not fetch finalized cp: %v", err)
 	}
 
-	if beaconState == nil {
-		r := bytesutil.ToBytes32(cp.Root)
-		// Before the first finalized epoch, in the current epoch,
-		// the finalized root is defined as zero hashes instead of genesis root hash.
-		// We want to use genesis root to retrieve for state.
-		if r == params.BeaconConfig().ZeroHash {
-			genesisBlock, err := s.beaconDB.GenesisBlock(s.ctx)
-			if err != nil {
-				log.Fatalf("Could not fetch finalized cp: %v", err)
-			}
-			if genesisBlock != nil {
-				r, err = genesisBlock.Block.HashTreeRoot()
-				if err != nil {
-					log.Fatalf("Could not tree hash genesis block: %v", err)
-				}
-			}
-		}
-		beaconState, err = s.stateGen.StateByRoot(s.ctx, r)
+	r := bytesutil.ToBytes32(cp.Root)
+	// Before the first finalized epoch, in the current epoch,
+	// the finalized root is defined as zero hashes instead of genesis root hash.
+	// We want to use genesis root to retrieve for state.
+	if r == params.BeaconConfig().ZeroHash {
+		genesisBlock, err := s.beaconDB.GenesisBlock(s.ctx)
 		if err != nil {
-			log.Fatalf("Could not fetch beacon state by root: %v", err)
+			log.Fatalf("Could not fetch finalized cp: %v", err)
 		}
+		if genesisBlock != nil {
+			r, err = genesisBlock.Block.HashTreeRoot()
+			if err != nil {
+				log.Fatalf("Could not tree hash genesis block: %v", err)
+			}
+		}
+	}
+	beaconState, err := s.stateGen.StateByRoot(s.ctx, r)
+	if err != nil {
+		log.Fatalf("Could not fetch beacon state by root: %v", err)
 	}
 
 	// Make sure that attestation processor is subscribed and ready for state initializing event.
