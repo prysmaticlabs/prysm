@@ -350,6 +350,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if b == nil || b.Block == nil {
+		return nil
+	}
 	r, err := b.Block.HashTreeRoot()
 	if err != nil {
 		return err
