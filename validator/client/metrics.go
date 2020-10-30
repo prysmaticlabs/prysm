@@ -97,6 +97,17 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorAttestedSlotsGaugeVec used to keep track of validator attested slots by public key.
+	ValidatorAttestedSlotsGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:	   "last_attested_slot",
+			Help:	   "Last attested slot.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
 	// ValidatorInclusionSlotsGaugeVec used to keep track of validator inclusion slots by public key.
 	ValidatorInclusionSlotsGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
