@@ -25,6 +25,11 @@ func (s SecretKey) Marshal() []byte {
 	panic(err)
 }
 
+// IsZero -- stub
+func (s SecretKey) IsZero() bool {
+	panic(err)
+}
+
 // PublicKey -- stub
 type PublicKey struct{}
 
@@ -40,6 +45,11 @@ func (p PublicKey) Copy() common.PublicKey {
 
 // Aggregate -- stub
 func (p PublicKey) Aggregate(_ common.PublicKey) common.PublicKey {
+	panic(err)
+}
+
+// IsInfinite -- stub
+func (s PublicKey) IsInfinite() bool {
 	panic(err)
 }
 
