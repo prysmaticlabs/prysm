@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -248,6 +247,7 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 	if len(inSeq) == 0 {
 		outSeq[0] = testutil.NewBeaconBlock()
 		startSlot++
+		outSeq = append(outSeq, nil)
 	}
 
 	// Extend block chain sequentially.
@@ -280,8 +280,10 @@ func connectPeerHavingBlocks(
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
-		endSlot := mathutil.Min(req.StartSlot+req.Count, uint64(len(blocks)))
-		for i := req.StartSlot; i < endSlot; i++ {
+		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+			if i >= uint64(len(blocks)) {
+				break
+			}
 			require.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), blocks[i]))
 		}
 	})
