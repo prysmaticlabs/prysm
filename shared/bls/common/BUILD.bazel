@@ -5,7 +5,8 @@ go_library(
     srcs = [
         "constants.go",
         "error.go",
+        "interface.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls/common",
-    visibility = ["//visibility:public"],
+    visibility = ["//shared/bls:__subpackages__"],
 )

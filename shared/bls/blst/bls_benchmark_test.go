@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -29,8 +29,8 @@ func BenchmarkSignature_Verify(b *testing.B) {
 func BenchmarkSignature_AggregateVerify(b *testing.B) {
 	sigN := 128 // MAX_ATTESTATIONS per block.
 
-	var pks []iface.PublicKey
-	var sigs []iface.Signature
+	var pks []common.PublicKey
+	var sigs []common.Signature
 	var msgs [][32]byte
 	for i := 0; i < sigN; i++ {
 		msg := [32]byte{'s', 'i', 'g', 'n', 'e', 'd', byte(i)}

@@ -3,8 +3,6 @@ package herumi
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
-
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
@@ -18,7 +16,7 @@ type bls12SecretKey struct {
 }
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
-func RandKey() (iface.SecretKey, error) {
+func RandKey() (common.SecretKey, error) {
 	secKey := &bls12.SecretKey{}
 	secKey.SetByCSPRNG()
 	if secKey.IsZero() {
@@ -28,7 +26,7 @@ func RandKey() (iface.SecretKey, error) {
 }
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
-func SecretKeyFromBytes(privKey []byte) (iface.SecretKey, error) {
+func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 	if len(privKey) != params.BeaconConfig().BLSSecretKeyLength {
 		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretKeyLength)
 	}
@@ -45,7 +43,7 @@ func SecretKeyFromBytes(privKey []byte) (iface.SecretKey, error) {
 }
 
 // PublicKey obtains the public key corresponding to the BLS secret key.
-func (s *bls12SecretKey) PublicKey() iface.PublicKey {
+func (s *bls12SecretKey) PublicKey() common.PublicKey {
 	return &PublicKey{p: s.p.GetPublicKey()}
 }
 
@@ -57,7 +55,7 @@ func (s *bls12SecretKey) PublicKey() iface.PublicKey {
 //
 // In ETH2.0 specification:
 // def Sign(SK: int, message: Bytes) -> BLSSignature
-func (s *bls12SecretKey) Sign(msg []byte) iface.Signature {
+func (s *bls12SecretKey) Sign(msg []byte) common.Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}

@@ -9,7 +9,6 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -38,7 +37,7 @@ func testFastAggregateVerifyYaml(t *testing.T) {
 			test := &FastAggregateVerifyTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))
 
-			pubkeys := make([]iface.PublicKey, len(test.Input.Pubkeys))
+			pubkeys := make([]common.PublicKey, len(test.Input.Pubkeys))
 			for j, raw := range test.Input.Pubkeys {
 				pkBytes, err := hex.DecodeString(raw[2:])
 				require.NoError(t, err)
