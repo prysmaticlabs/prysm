@@ -18,7 +18,7 @@ func runAttestationTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			attestationFile, err := testutil.BazelFileBytes(folderPath, "attestation.ssz")
+			attestationFile, err := testutil.BazelFileBytes(folderPath, "beaconfuzz_78_attestation.ssz")
 			require.NoError(t, err)
 			att := &ethpb.Attestation{}
 			require.NoError(t, att.UnmarshalSSZ(attestationFile), "Failed to unmarshal")
