@@ -66,7 +66,6 @@ cc_library(
         "include/mcl/bn.hpp",
         "include/mcl/operator.hpp",
         "include/mcl/window_method.hpp",
-
     ],
     includes = ["include"],
 )

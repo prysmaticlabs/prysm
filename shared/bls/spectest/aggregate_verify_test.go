@@ -42,7 +42,7 @@ func testAggregateVerifyYaml(t *testing.T) {
 				require.NoError(t, err)
 				pk, err := bls.PublicKeyFromBytes(pkBytes)
 				if err != nil {
-					if test.Output == false && err == common.ErrInfinitePubKey {
+					if test.Output == false && errors.Is(err, common.ErrInfinitePubKey) {
 						return
 					}
 					t.Fatalf("cannot unmarshal pubkey: %v", err)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"

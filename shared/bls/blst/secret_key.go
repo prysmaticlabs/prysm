@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -32,9 +31,8 @@ func RandKey() (common.SecretKey, error) {
 	// Defensive check, that we have not generated a secret key,
 	secKey := &bls12SecretKey{blst.KeyGen(ikm[:])}
 	rawKey := secKey.Marshal()
-	zeroKey := [32]byte{}
-	if bytes.Equal(rawKey, zeroKey[:]) {
-		return nil, errors.New("generated a zero secret key")
+	if common.SecretKeyIsZero(rawKey) {
+		return nil, common.ErrZeroKey
 	}
 	return secKey, nil
 }
