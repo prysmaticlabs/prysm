@@ -3,9 +3,9 @@ package herumi
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -35,10 +35,11 @@ func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into secret key")
 	}
-	if secKey.IsZero() {
+	wrappedKey := &bls12SecretKey{p: secKey}
+	if wrappedKey.IsZero() {
 		return nil, common.ErrZeroKey
 	}
-	return &bls12SecretKey{p: secKey}, err
+	return wrappedKey, err
 }
 
 // PublicKey obtains the public key corresponding to the BLS secret key.
@@ -70,4 +71,9 @@ func (s *bls12SecretKey) Marshal() []byte {
 		keyBytes = append(emptyBytes, keyBytes...)
 	}
 	return keyBytes
+}
+
+// IsZero checks if the secret key is a zero key.
+func (s *bls12SecretKey) IsZero() bool {
+	return s.p.IsZero()
 }

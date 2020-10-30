@@ -5,6 +5,7 @@ package spectest
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"path"
 	"testing"
 

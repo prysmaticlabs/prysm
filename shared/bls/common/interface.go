@@ -10,6 +10,7 @@ type SecretKey interface {
 	PublicKey() PublicKey
 	Sign(msg []byte) Signature
 	Marshal() []byte
+	IsZero() bool
 }
 
 // PublicKey represents a BLS public key.
@@ -17,6 +18,7 @@ type PublicKey interface {
 	Marshal() []byte
 	Copy() PublicKey
 	Aggregate(p2 PublicKey) PublicKey
+	IsInfinite() bool
 }
 
 // Signature represents a BLS signature.

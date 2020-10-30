@@ -4,11 +4,10 @@
 package blst
 
 import (
-	"bytes"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -30,8 +29,7 @@ func RandKey() (common.SecretKey, error) {
 	}
 	// Defensive check, that we have not generated a secret key,
 	secKey := &bls12SecretKey{blst.KeyGen(ikm[:])}
-	rawKey := secKey.Marshal()
-	if common.SecretKeyIsZero(rawKey) {
+	if secKey.IsZero() {
 		return nil, common.ErrZeroKey
 	}
 	return secKey, nil
@@ -42,19 +40,26 @@ func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 	if len(privKey) != params.BeaconConfig().BLSSecretKeyLength {
 		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretKeyLength)
 	}
-	if common.SecretKeyIsZero(privKey) {
-		return nil, common.ErrZeroKey
-	}
 	secKey := new(blst.SecretKey).Deserialize(privKey)
 	if secKey == nil {
 		return nil, errors.New("could not unmarshal bytes into secret key")
 	}
-	return &bls12SecretKey{p: secKey}, nil
+	wrappedKey := &bls12SecretKey{p: secKey}
+	if wrappedKey.IsZero() {
+		return nil, common.ErrZeroKey
+	}
+	return wrappedKey, nil
 }
 
 // PublicKey obtains the public key corresponding to the BLS secret key.
 func (s *bls12SecretKey) PublicKey() common.PublicKey {
 	return &PublicKey{p: new(blstPublicKey).From(s.p)}
+}
+
+// IsZero checks if the secret key is a zero key.
+func (s *bls12SecretKey) IsZero() bool {
+	zeroKey := new(blst.SecretKey)
+	return s.p.Equals(zeroKey)
 }
 
 // Sign a message using a secret key - in a beacon/validator client.

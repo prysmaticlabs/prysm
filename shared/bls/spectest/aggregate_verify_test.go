@@ -2,6 +2,7 @@ package spectest
 
 import (
 	"encoding/hex"
+	"errors"
 	"path"
 	"testing"
 

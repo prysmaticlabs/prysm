@@ -9,42 +9,43 @@ import (
 )
 
 func TestDisallowZeroSecretKeys(t *testing.T) {
-    t.Run("herumi", func(t *testing.T) {
-        flags := &featureconfig.Flags{}
-        reset := featureconfig.InitWithReset(flags)
-        defer reset()
+	flags := &featureconfig.Flags{}
+	t.Run("herumi", func(t *testing.T) {
+		flags := &featureconfig.Flags{}
+		reset := featureconfig.InitWithReset(flags)
+		defer reset()
 
-        _, err := SecretKeyFromBytes(common.ZeroSecretKey[:])
-        require.Equal(t, err, common.ErrZeroKey)
-    })
+		_, err := SecretKeyFromBytes(common.ZeroSecretKey[:])
+		require.Equal(t, common.ErrZeroKey, err)
+	})
 
+	t.Run("blst", func(t *testing.T) {
+		flags.EnableBlst = true
+		reset := featureconfig.InitWithReset(flags)
+		defer reset()
 
-    t.Run("blst", func(t *testing.T) {
-        flags.EnableBlst = true
-        reset = featureconfig.InitWithReset(flags)
-        defer reset()
-
-        _, err = SecretKeyFromBytes(common.ZeroSecretKey[:])
-        require.Equal(t, err, common.ErrZeroKey)
-    })
+		_, err := SecretKeyFromBytes(common.ZeroSecretKey[:])
+		require.Equal(t, common.ErrZeroKey, err)
+	})
 }
 
 func TestDisallowZeroPublicKeys(t *testing.T) {
-    t.Run("herumi", func(t *testing.T) {
-        flags := &featureconfig.Flags{}
-        reset := featureconfig.InitWithReset(flags)
-        defer reset()
+	flags := &featureconfig.Flags{}
 
-        _, err := PublicKeyFromBytes(common.InfinitePublicKey[:])
-        require.Equal(t, err, common.ErrInfinitePubKey)
-    })
+	t.Run("herumi", func(t *testing.T) {
+		reset := featureconfig.InitWithReset(flags)
+		defer reset()
 
-    t.Run("blst", func(t *testing.T) {
-        flags.EnableBlst = true
-        reset = featureconfig.InitWithReset(flags)
-        defer reset()
+		_, err := PublicKeyFromBytes(common.InfinitePublicKey[:])
+		require.Equal(t, common.ErrInfinitePubKey, err)
+	})
 
-        _, err = PublicKeyFromBytes(common.InfinitePublicKey[:])
-        require.Equal(t, err, common.ErrInfinitePubKey)
-    })
+	t.Run("blst", func(t *testing.T) {
+		flags.EnableBlst = true
+		reset := featureconfig.InitWithReset(flags)
+		defer reset()
+
+		_, err := PublicKeyFromBytes(common.InfinitePublicKey[:])
+		require.Equal(t, common.ErrInfinitePubKey, err)
+	})
 }

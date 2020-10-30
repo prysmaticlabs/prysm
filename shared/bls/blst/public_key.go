@@ -36,14 +36,14 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy(), nil
 	}
-	if common.PublicKeyIsInfinite(pubKey) {
-		return nil, common.ErrInfinitePubKey
-	}
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {
 		return nil, errors.New("could not unmarshal bytes into public key")
 	}
 	pubKeyObj := &PublicKey{p: p}
+	if pubKeyObj.IsInfinite() {
+		return nil, common.ErrInfinitePubKey
+	}
 	copiedKey := pubKeyObj.Copy()
 	pubkeyCache.Set(string(pubKey), copiedKey, 48)
 	return pubKeyObj, nil
@@ -85,6 +85,12 @@ func (p *PublicKey) Marshal() []byte {
 func (p *PublicKey) Copy() common.PublicKey {
 	np := *p.p
 	return &PublicKey{p: &np}
+}
+
+// IsInfinite checks if the public key is infinite.
+func (p *PublicKey) IsInfinite() bool {
+	zeroKey := new(blstPublicKey)
+	return p.p.Equals(zeroKey)
 }
 
 // Aggregate two public keys.
