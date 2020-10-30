@@ -28,7 +28,8 @@ var (
 
 const (
 	// HashedRPCPassword for the validator RPC access.
-	HashedRPCPassword = "rpc-password-hash"
+	HashedRPCPassword       = "rpc-password-hash"
+	checkUserSignupInterval = time.Second * 30
 )
 
 // Signup to authenticate access to the validator RPC API using bcrypt and
@@ -143,6 +144,40 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	return &ptypes.Empty{}, nil
 }
 
+// SaveHashedPassword to disk for the validator RPC.
+func (s *Server) SaveHashedPassword(password string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
+	if err != nil {
+		return errors.Wrap(err, "could not generate hashed password")
+	}
+	hashFilePath := filepath.Join(s.walletDir, HashedRPCPassword)
+	return ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions)
+}
+
+// Interval in which we should check if a user has not yet used the RPC Signup endpoint
+// which means they are using the --web flag and someone could come in and signup for them
+// if they have their web host:port exposed to the Internet.
+func (s *Server) checkUserSignup(ctx context.Context) {
+	ticker := time.NewTicker(checkUserSignupInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
+			if fileutil.FileExists(hashedPasswordPath) {
+				return
+			}
+			log.Warn(
+				"You are using the --web option but have not yet signed via a browser. " +
+					"If your web host and port are exposed to the Internet, someone else can attempt to sign up " +
+					"for you!",
+			)
+		case <-s.ctx.Done():
+			return
+		}
+	}
+}
+
 // Creates a JWT token string using the JWT key with an expiration timestamp.
 func (s *Server) createTokenString() (string, uint64, error) {
 	// Create a new token object, specifying signing method and the claims
@@ -157,14 +192,4 @@ func (s *Server) createTokenString() (string, uint64, error) {
 		return "", 0, err
 	}
 	return tokenString, uint64(expirationTime.Unix()), nil
-}
-
-// SaveHashedPassword to disk for the validator RPC.
-func (s *Server) SaveHashedPassword(password string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
-	if err != nil {
-		return errors.Wrap(err, "could not generate hashed password")
-	}
-	hashFilePath := filepath.Join(s.walletDir, HashedRPCPassword)
-	return ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions)
 }

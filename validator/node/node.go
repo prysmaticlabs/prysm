@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -18,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -160,7 +158,6 @@ func (s *ValidatorClient) Close() {
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
-	var accountsDir string
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
@@ -190,15 +187,19 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
-		accountsDir = s.wallet.AccountsDir()
 	}
-
-	dataDir := moveDb(cliCtx, accountsDir)
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if s.wallet != nil {
+		dataDir = s.wallet.AccountsDir()
+	}
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+	}
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
-		if dataDir == "" {
-			dataDir = cmd.DefaultDataDir()
+		if dataDir == "" && s.wallet != nil {
+			dataDir = s.wallet.AccountsDir()
 			if dataDir == "" {
 				log.Fatal(
 					"Could not determine your system's HOME path, please specify a --datadir you wish " +
@@ -242,26 +243,6 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context, accountsDir string) string {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	if accountsDir != "" {
-		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
-		if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
-			log.WithFields(logrus.Fields{
-				"oldDbPath": dataDir,
-				"walletDir": accountsDir,
-			}).Info("Moving validator protection db to wallet dir")
-			err := fileutil.CopyFile(dataFile, newDataFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		dataDir = accountsDir
-	}
-	return dataDir
-}
-
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
@@ -288,10 +269,16 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if s.wallet != nil {
+		dataDir = s.wallet.AccountsDir()
+	}
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+	}
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -441,6 +428,12 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 
 func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	if gatewayHost != flags.DefaultGatewayHost {
+		log.WithField("web-host", gatewayHost).Warn(
+			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
+				"changing this parameter if you are exposing this host to the Internet!",
+		)
+	}
 	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)

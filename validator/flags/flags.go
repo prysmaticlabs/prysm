@@ -14,6 +14,8 @@ import (
 const (
 	// WalletDefaultDirName for accounts.
 	WalletDefaultDirName = "prysm-wallet-v2"
+	// DefaultGatewayHost for the validator client.
+	DefaultGatewayHost = "127.0.0.1"
 )
 
 var (
@@ -102,7 +104,7 @@ var (
 	GRPCGatewayHost = &cli.StringFlag{
 		Name:  "grpc-gateway-host",
 		Usage: "The host on which the gateway server runs on",
-		Value: "127.0.0.1",
+		Value: DefaultGatewayHost,
 	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.
 	GRPCGatewayPort = &cli.IntFlag{

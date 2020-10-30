@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -198,6 +199,19 @@ func (s *Service) Start() {
 		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
+
+		ss, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		if err != nil {
+			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
+		}
+		h := s.headBlock().Block
+		log.WithFields(logrus.Fields{
+			"startSlot": ss,
+			"endSlot":   h.Slot,
+		}).Info("Loading blocks to fork choice store, this may take a while.")
+		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
+			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
+		}
 
 		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
