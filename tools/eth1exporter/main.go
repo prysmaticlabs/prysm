@@ -120,7 +120,7 @@ func ToEther(o *big.Int) *big.Float {
 }
 
 // MetricsHTTP - HTTP response handler for /metrics.
-func MetricsHTTP(w http.ResponseWriter, r *http.Request) {
+func MetricsHTTP(w http.ResponseWriter, _ *http.Request) {
 	var allOut []string
 	total := big.NewFloat(0)
 	for _, v := range allWatching {
@@ -132,10 +132,12 @@ func MetricsHTTP(w http.ResponseWriter, r *http.Request) {
 		total.Add(total, bal)
 		allOut = append(allOut, fmt.Sprintf("%veth_balance{name=\"%v\",address=\"%v\"} %v", *prefix, v.Name, v.Address, v.Balance))
 	}
-	allOut = append(allOut, fmt.Sprintf("%veth_balance_total %0.18f", *prefix, total))
-	allOut = append(allOut, fmt.Sprintf("%veth_load_seconds %0.2f", *prefix, loadSeconds))
-	allOut = append(allOut, fmt.Sprintf("%veth_loaded_addresses %v", *prefix, totalLoaded))
-	allOut = append(allOut, fmt.Sprintf("%veth_total_addresses %v", *prefix, len(allWatching)))
+	allOut = append(allOut,
+		fmt.Sprintf("%veth_balance_total %0.18f", *prefix, total),
+		fmt.Sprintf("%veth_load_seconds %0.2f", *prefix, loadSeconds),
+		fmt.Sprintf("%veth_loaded_addresses %v", *prefix, totalLoaded),
+		fmt.Sprintf("%veth_total_addresses %v", *prefix, len(allWatching)))
+
 	if _, err := fmt.Fprintln(w, strings.Join(allOut, "\n")); err != nil {
 		logrus.WithError(err).Error("Failed to write metrics")
 	}

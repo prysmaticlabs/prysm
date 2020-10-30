@@ -22,9 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-var _ = shared.Service(&Service{})
-var _ = depositcache.DepositFetcher(&Service{})
-var _ = powchain.ChainStartFetcher(&Service{})
+var _ shared.Service = (*Service)(nil)
+var _ depositcache.DepositFetcher = (*Service)(nil)
+var _ powchain.ChainStartFetcher = (*Service)(nil)
 
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
@@ -48,10 +48,10 @@ type Config struct {
 	GenesisPath   string
 }
 
-// NewColdStartService is an interoperability testing service to inject a deterministically generated genesis state
+// NewService is an interoperability testing service to inject a deterministically generated genesis state
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
-func NewColdStartService(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	log.Warn("Saving generated genesis state in database for interop testing")
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -121,7 +121,7 @@ func (s *Service) Status() error {
 }
 
 // AllDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+func (s *Service) AllDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
@@ -146,22 +146,22 @@ func (s *Service) ClearPreGenesisData() {
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
-func (s *Service) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
+func (s *Service) DepositByPubkey(_ context.Context, _ []byte) (*ethpb.Deposit, *big.Int) {
 	return &ethpb.Deposit{}, nil
 }
 
 // DepositsNumberAndRootAtHeight mocks out the deposit cache functionality for interop.
-func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
+func (s *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (uint64, [32]byte) {
 	return 0, [32]byte{}
 }
 
 // FinalizedDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) FinalizedDeposits(ctx context.Context) *depositcache.FinalizedDeposits {
+func (s *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDeposits {
 	return nil
 }
 
 // NonFinalizedDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) NonFinalizedDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 

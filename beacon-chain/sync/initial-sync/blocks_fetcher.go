@@ -133,6 +133,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		fetchRequests:       make(chan *fetchRequestParams, maxPendingRequests),
 		fetchResponses:      make(chan *fetchRequestResponse, maxPendingRequests),
 		capacityWeight:      capacityWeight,
+		mode:                cfg.mode,
 		quit:                make(chan struct{}),
 	}
 }
@@ -363,7 +364,7 @@ func (f *blocksFetcher) requestBlocks(
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
 		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

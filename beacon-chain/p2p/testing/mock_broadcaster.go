@@ -19,7 +19,7 @@ func (m *MockBroadcaster) Broadcast(context.Context, proto.Message) error {
 }
 
 // BroadcastAttestation records a broadcast occurred.
-func (m *MockBroadcaster) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
+func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
 	m.BroadcastCalled = true
 	return nil
 }

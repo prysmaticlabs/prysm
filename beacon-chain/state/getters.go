@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -73,7 +72,7 @@ func (v *ReadOnlyValidator) PublicKey() [48]byte {
 // read only validator.
 func (v *ReadOnlyValidator) WithdrawalCredentials() []byte {
 	creds := make([]byte, len(v.validator.WithdrawalCredentials))
-	copy(creds[:], v.validator.WithdrawalCredentials)
+	copy(creds, v.validator.WithdrawalCredentials)
 	return creds
 }
 
@@ -108,55 +107,30 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 		return nil
 	}
 
-	if featureconfig.Get().NewBeaconStateLocks {
-		b.lock.RLock()
-		defer b.lock.RUnlock()
-		return &pbp2p.BeaconState{
-			GenesisTime:                 b.genesisTime(),
-			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
-			Slot:                        b.slot(),
-			Fork:                        b.fork(),
-			LatestBlockHeader:           b.latestBlockHeader(),
-			BlockRoots:                  b.blockRoots(),
-			StateRoots:                  b.stateRoots(),
-			HistoricalRoots:             b.historicalRoots(),
-			Eth1Data:                    b.eth1Data(),
-			Eth1DataVotes:               b.eth1DataVotes(),
-			Eth1DepositIndex:            b.eth1DepositIndex(),
-			Validators:                  b.validators(),
-			Balances:                    b.balances(),
-			RandaoMixes:                 b.randaoMixes(),
-			Slashings:                   b.slashings(),
-			PreviousEpochAttestations:   b.previousEpochAttestations(),
-			CurrentEpochAttestations:    b.currentEpochAttestations(),
-			JustificationBits:           b.justificationBits(),
-			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
-			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
-			FinalizedCheckpoint:         b.finalizedCheckpoint(),
-		}
-	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 	return &pbp2p.BeaconState{
-		GenesisTime:                 b.GenesisTime(),
-		GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
-		Slot:                        b.Slot(),
-		Fork:                        b.Fork(),
-		LatestBlockHeader:           b.LatestBlockHeader(),
-		BlockRoots:                  b.BlockRoots(),
-		StateRoots:                  b.StateRoots(),
-		HistoricalRoots:             b.HistoricalRoots(),
-		Eth1Data:                    b.Eth1Data(),
-		Eth1DataVotes:               b.Eth1DataVotes(),
-		Eth1DepositIndex:            b.Eth1DepositIndex(),
-		Validators:                  b.Validators(),
-		Balances:                    b.Balances(),
-		RandaoMixes:                 b.RandaoMixes(),
-		Slashings:                   b.Slashings(),
-		PreviousEpochAttestations:   b.PreviousEpochAttestations(),
-		CurrentEpochAttestations:    b.CurrentEpochAttestations(),
-		JustificationBits:           b.JustificationBits(),
-		PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
-		CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
-		FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+		GenesisTime:                 b.genesisTime(),
+		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+		Slot:                        b.slot(),
+		Fork:                        b.fork(),
+		LatestBlockHeader:           b.latestBlockHeader(),
+		BlockRoots:                  b.blockRoots(),
+		StateRoots:                  b.stateRoots(),
+		HistoricalRoots:             b.historicalRoots(),
+		Eth1Data:                    b.eth1Data(),
+		Eth1DataVotes:               b.eth1DataVotes(),
+		Eth1DepositIndex:            b.eth1DepositIndex(),
+		Validators:                  b.validators(),
+		Balances:                    b.balances(),
+		RandaoMixes:                 b.randaoMixes(),
+		Slashings:                   b.slashings(),
+		PreviousEpochAttestations:   b.previousEpochAttestations(),
+		CurrentEpochAttestations:    b.currentEpochAttestations(),
+		JustificationBits:           b.justificationBits(),
+		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         b.finalizedCheckpoint(),
 	}
 }
 
@@ -439,6 +413,32 @@ func (b *BeaconState) stateRoots() [][]byte {
 	return b.safeCopy2DByteSlice(b.state.StateRoots)
 }
 
+// StateRootAtIndex retrieves a specific state root based on an
+// input index value.
+func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	if b.state.StateRoots == nil {
+		return nil, nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.stateRootAtIndex(idx)
+}
+
+// stateRootAtIndex retrieves a specific state root based on an
+// input index value.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	return b.safeCopyBytesAtIndex(b.state.StateRoots, idx)
+}
+
 // HistoricalRoots based on epochs stored in the beacon state.
 func (b *BeaconState) HistoricalRoots() [][]byte {
 	if !b.HasInnerState() {
@@ -677,6 +677,9 @@ func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if b.state.Validators[idx] == nil {
+		return [48]byte{}
+	}
 	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 

@@ -10,31 +10,35 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
 
 	require.LogsContain(t, hook, "Could not fetch validator assignment")
 }
 
 func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
-				PublicKey: validatorKey.PublicKey.Marshal(),
+				PublicKey: validatorKey.PublicKey().Marshal(),
 			},
 		},
 	}
@@ -68,16 +72,18 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: nil}, errors.New("bad domain root"))
 
-	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
+	validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
 }
 
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
-				PublicKey: validatorKey.PublicKey.Marshal(),
+				PublicKey: validatorKey.PublicKey().Marshal(),
 			},
 		},
 	}
@@ -116,13 +122,13 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
 	).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
 
-	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
+	validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
 }
 
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
-	validator, _, finish := setup(t)
+	validator, _, _, finish := setup(t)
 	defer finish()
-	currentTime := roughtime.Now()
+	currentTime := timeutils.Now()
 	numOfSlots := uint64(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
@@ -130,14 +136,16 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 
 	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
-	currentTime = roughtime.Now()
+	currentTime = timeutils.Now()
 	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
 }
 
 func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		&ethpb.DomainRequest{Epoch: 0, Domain: params.BeaconConfig().DomainAggregateAndProof[:]},
@@ -155,7 +163,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 		},
 		SelectionProof: make([]byte, 96),
 	}
-	sig, err := validator.aggregateAndProofSig(context.Background(), validatorPubKey, agg)
+	sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg)
 	require.NoError(t, err)
 	_, err = bls.SignatureFromBytes(sig)
 	require.NoError(t, err)

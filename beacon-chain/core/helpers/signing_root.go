@@ -6,7 +6,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -66,7 +65,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 	if err != nil {
 		return [32]byte{}, err
 	}
-	container := &p2ppb.SigningData{
+	container := &pb.SigningData{
 		ObjectRoot: objRoot[:],
 		Domain:     domain,
 	}
@@ -74,7 +73,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 }
 
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
-func ComputeDomainVerifySigningRoot(state *state.BeaconState, index uint64, epoch uint64, obj interface{}, domain [4]byte, sig []byte) error {
+func ComputeDomainVerifySigningRoot(state *state.BeaconState, index, epoch uint64, obj interface{}, domain [4]byte, sig []byte) error {
 	v, err := state.ValidatorAtIndex(index)
 	if err != nil {
 		return err
@@ -87,7 +86,7 @@ func ComputeDomainVerifySigningRoot(state *state.BeaconState, index uint64, epoc
 }
 
 // VerifySigningRoot verifies the signing root of an object given it's public key, signature and domain.
-func VerifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []byte) error {
+func VerifySigningRoot(obj interface{}, pub, signature, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -107,7 +106,7 @@ func VerifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []b
 }
 
 // VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
-func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte, domain []byte) error {
+func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub, signature, domain []byte) error {
 	set, err := RetrieveBlockSignatureSet(blk, pub, signature, domain)
 	if err != nil {
 		return err
@@ -129,15 +128,13 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte
 
 // RetrieveBlockSignatureSet retrieves the relevant signature, message and pubkey data from a block and collating it
 // into a signature set object.
-func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []byte, domain []byte) (*bls.SignatureSet, error) {
+func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub, signature, domain []byte) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	root, err := signingData(func() ([32]byte, error) {
-		// utilize custom block hashing function
-		return blk.HashTreeRoot()
-	}, domain)
+	// utilize custom block hashing function
+	root, err := signingData(blk.HashTreeRoot, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
@@ -149,7 +146,7 @@ func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []b
 }
 
 // VerifyBlockHeaderSigningRoot verifies the signing root of a block header given it's public key, signature and domain.
-func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, signature []byte, domain []byte) error {
+func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signature, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -158,9 +155,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := signingData(func() ([32]byte, error) {
-		return blkHdr.HashTreeRoot()
-	}, domain)
+	root, err := signingData(blkHdr.HashTreeRoot, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
@@ -183,7 +178,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 //        genesis_validators_root = Root()  # all bytes zero by default
 //    fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
 //    return Domain(domain_type + fork_data_root[:28])
-func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte, genesisValidatorsRoot []byte) ([]byte, error) {
+func ComputeDomain(domainType [DomainByteLength]byte, forkVersion, genesisValidatorsRoot []byte) ([]byte, error) {
 	if forkVersion == nil {
 		forkVersion = params.BeaconConfig().GenesisForkVersion
 	}
@@ -203,7 +198,7 @@ func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte, genesi
 
 // This returns the bls domain given by the domain type and fork data root.
 func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
-	b := []byte{}
+	var b []byte
 	b = append(b, domainType[:4]...)
 	b = append(b, forkDataRoot[:28]...)
 	return b
@@ -222,7 +217,7 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //        current_version=current_version,
 //        genesis_validators_root=genesis_validators_root,
 //    ))
-func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
+func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	r, err := (&pb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
@@ -243,7 +238,7 @@ func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 //    4-bytes suffices for practical separation of forks/chains.
 //    """
 //    return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
-func ComputeForkDigest(version []byte, genesisValidatorsRoot []byte) ([4]byte, error) {
+func ComputeForkDigest(version, genesisValidatorsRoot []byte) ([4]byte, error) {
 	dataRoot, err := computeForkDataRoot(version, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, err

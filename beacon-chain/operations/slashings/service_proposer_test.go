@@ -323,6 +323,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 func TestPool_PendingProposerSlashings(t *testing.T) {
 	type fields struct {
 		pending []*ethpb.ProposerSlashing
+		noLimit bool
 	}
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	slashings := make([]*ethpb.ProposerSlashing, 20)
@@ -344,7 +345,15 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 			want: []*ethpb.ProposerSlashing{},
 		},
 		{
-			name: "All eligible",
+			name: "All",
+			fields: fields{
+				pending: slashings,
+				noLimit: true,
+			},
+			want: slashings,
+		},
+		{
+			name: "All block eligible",
 			fields: fields{
 				pending: slashings[:params.BeaconConfig().MaxProposerSlashings],
 			},
@@ -363,13 +372,14 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 			p := &Pool{
 				pendingProposerSlashing: tt.fields.pending,
 			}
-			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState))
+			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState, tt.fields.noLimit))
 		})
 	}
 }
 
 func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	type fields struct {
+		all     bool
 		pending []*ethpb.ProposerSlashing
 	}
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
@@ -382,13 +392,16 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	val.Slashed = true
 	require.NoError(t, beaconState.UpdateValidatorAtIndex(5, val))
 	slashings := make([]*ethpb.ProposerSlashing, 32)
+	slashings2 := make([]*ethpb.ProposerSlashing, 32)
+	result := make([]*ethpb.ProposerSlashing, 32)
 	for i := 0; i < len(slashings); i++ {
 		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
 		require.NoError(t, err)
 		slashings[i] = sl
+		slashings2[i] = sl
+		result[i] = sl
 	}
-	result := make([]*ethpb.ProposerSlashing, 32)
-	copy(result, slashings)
+	result = append(result[1:5], result[6:]...)
 	tests := []struct {
 		name   string
 		fields fields
@@ -399,7 +412,15 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 			fields: fields{
 				pending: slashings,
 			},
-			want: append(result[1:5], result[6:18]...),
+			want: result[:16],
+		},
+		{
+			name: "gets noLimit and no slashed",
+			fields: fields{
+				all:     true,
+				pending: slashings2,
+			},
+			want: result,
 		},
 	}
 	for _, tt := range tests {
@@ -407,7 +428,10 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 			p := &Pool{
 				pendingProposerSlashing: tt.fields.pending,
 			}
-			assert.DeepEqual(t, tt.want, p.PendingProposerSlashings(context.Background(), beaconState))
+			result := p.PendingProposerSlashings(context.Background(), beaconState, tt.fields.all /*noLimit*/)
+			t.Log(tt.want[0].Header_1.Header.ProposerIndex)
+			t.Log(result[0].Header_1.Header.ProposerIndex)
+			assert.DeepEqual(t, tt.want, result)
 		})
 	}
 }

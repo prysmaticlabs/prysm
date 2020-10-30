@@ -6,34 +6,14 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-// SlotSignature returns the signed signature of the hash tree root of input slot.
-//
-// Spec pseudocode definition:
-//   def get_slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
-//    domain = get_domain(state, DOMAIN_SELECTION_PROOF, compute_epoch_at_slot(slot))
-//    signing_root = compute_signing_root(slot, domain)
-//    return bls.Sign(privkey, signing_root)
-func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey bls.SecretKey) (bls.Signature, error) {
-	d, err := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
-	if err != nil {
-		return nil, err
-	}
-	s, err := ComputeSigningRoot(slot, d)
-	if err != nil {
-		return nil, err
-	}
-	return privKey.Sign(s[:]), nil
-}
-
 // IsAggregator returns true if the signature is from the input validator. The committee
-// count is provided as an argument rather than direct implementation from spec. Having
+// count is provided as an argument rather than imported implementation from spec. Having
 // committee count as an argument allows cheaper computation at run time.
 //
 // Spec pseudocode definition:
@@ -139,7 +119,7 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 
 	// An attestation cannot be from the future, so the upper bounds is set to now, with a minor
 	// tolerance for peer clock disparity.
-	upperBounds := roughtime.Now().Add(clockDisparity)
+	upperBounds := timeutils.Now().Add(clockDisparity)
 
 	// An attestation cannot be older than the current slot - attestation propagation slot range
 	// with a minor tolerance for peer clock disparity.
@@ -163,4 +143,24 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 		)
 	}
 	return nil
+}
+
+// VerifyCheckpointEpoch is within current epoch and previous epoch
+// with respect to current time. Returns true if it's within, false if it's not.
+func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
+	now := uint64(timeutils.Now().Unix())
+	genesisTime := uint64(genesis.Unix())
+	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := SlotToEpoch(currentSlot)
+
+	var prevEpoch uint64
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return false
+	}
+
+	return true
 }

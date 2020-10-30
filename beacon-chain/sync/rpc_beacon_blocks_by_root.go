@@ -9,12 +9,13 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
-func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
+func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -27,10 +28,10 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
-	for i := 0; i < len(blockRoots); i++ {
+	for i := 0; i < len(*blockRoots); i++ {
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		// Exit if peer sends more than max request blocks.
@@ -66,10 +67,11 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_root")
 
-	blockRoots, ok := msg.([][32]byte)
+	rawMsg, ok := msg.(*types.BeaconBlockByRootsReq)
 	if !ok {
-		return errors.New("message is not type [][32]byte")
+		return errors.New("message is not type BeaconBlockByRootsReq")
 	}
+	blockRoots := *rawMsg
 	if err := s.rateLimiter.validateRequest(stream, uint64(len(blockRoots))); err != nil {
 		return err
 	}

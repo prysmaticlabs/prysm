@@ -9,11 +9,13 @@ import (
 	"context"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
@@ -73,8 +75,8 @@ type Config struct {
 	NodeClient            ethpb.NodeClient
 }
 
-// NewBeaconClientService instantiation.
-func NewBeaconClientService(ctx context.Context, cfg *Config) (*Service, error) {
+// NewService instantiation.
+func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
@@ -164,10 +166,14 @@ func (bs *Service) Start() {
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
+			grpc_retry.StreamClientInterceptor(),
+			grpcutils.LogGRPCStream,
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
+			grpc_retry.UnaryClientInterceptor(),
+			grpcutils.LogGRPCRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(bs.ctx, bs.provider, beaconOpts...)

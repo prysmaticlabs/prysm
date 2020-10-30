@@ -1,3 +1,5 @@
+// Package comparesame implements a static analyzer to ensure that code does not contain
+// comparisons of identical expressions.
 package comparesame
 
 import (
@@ -13,7 +15,7 @@ import (
 )
 
 // Doc explaining the tool.
-const Doc = "Tool to detect comparison (==, !=, >=, <=, >, <) of identical boolean expressions."
+const Doc = "Tool to detect comparison (==, !=, >=, <=, >, <) of identical expressions."
 
 const messageTemplate = "Boolean expression has identical expressions on both sides. The result is always %v."
 

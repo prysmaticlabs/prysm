@@ -96,6 +96,7 @@ func TestNodeServer_GetHost(t *testing.T) {
 	peersProvider := &mockP2p.MockPeersProvider{}
 	mP2P := mockP2p.NewTestP2P(t)
 	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)
 	lNode := enode.NewLocalNode(db, key)

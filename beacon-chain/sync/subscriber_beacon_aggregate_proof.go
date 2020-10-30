@@ -14,7 +14,7 @@ import (
 
 // beaconAggregateProofSubscriber forwards the incoming validated aggregated attestation and proof to the
 // attestation pool for processing.
-func (s *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.Message) error {
+func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Message) error {
 	a, ok := msg.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.SignedAggregateAttestationAndProof, type=%T", msg)

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -182,6 +184,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			attsl, err := db.AttesterSlashings(ctx, status.Active)
+			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(attsl), "Didnt save slashing to db")
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
@@ -332,6 +335,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(slashings), "Unexpected amount of slashings found")
 			savedSlashings, err := db.AttesterSlashings(ctx, status.Active)
+			require.NoError(t, err)
 			require.Equal(t, tt.slashingsFound, len(savedSlashings), "Did not save slashing to db")
 
 			for _, ss := range slashings {
@@ -349,6 +353,146 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 	}
 }
 
+func TestDetect_updateHighestAttestation(t *testing.T) {
+	tests := []struct {
+		name         string
+		savedHighest *slashpb.HighestAttestation
+		incomingAtt  *ethpb.IndexedAttestation
+		expected     *slashpb.HighestAttestation
+	}{
+		{
+			name: "update only target to higher",
+			savedHighest: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 1,
+				HighestTargetEpoch: 2,
+			},
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 3, 7},
+				Data: &ethpb.AttestationData{
+					Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
+				},
+				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+			},
+			expected: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 1,
+				HighestTargetEpoch: 4,
+			},
+		},
+		{
+			name: "update target and source to higher",
+			savedHighest: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 1,
+				HighestTargetEpoch: 2,
+			},
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 3, 7},
+				Data: &ethpb.AttestationData{
+					Source:          &ethpb.Checkpoint{Epoch: 3, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
+				},
+				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+			},
+			expected: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 3,
+				HighestTargetEpoch: 4,
+			},
+		},
+		{
+			name: "no update",
+			savedHighest: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 1,
+				HighestTargetEpoch: 2,
+			},
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 3, 7},
+				Data: &ethpb.AttestationData{
+					Source:          &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
+				},
+				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+			},
+			expected: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 1,
+				HighestTargetEpoch: 2,
+			},
+		},
+		{
+			name: "update target to higher when source is lower(should be a slashable attestation)",
+			savedHighest: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 5,
+				HighestTargetEpoch: 6,
+			},
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 3, 7},
+				Data: &ethpb.AttestationData{
+					Source:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 8, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
+				},
+				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+			},
+			expected: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 5,
+				HighestTargetEpoch: 8,
+			},
+		},
+		{
+			name: "update source to higher when target is same",
+			savedHighest: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 3,
+				HighestTargetEpoch: 6,
+			},
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 3, 7},
+				Data: &ethpb.AttestationData{
+					Source:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+					Target:          &ethpb.Checkpoint{Epoch: 6, Root: make([]byte, 32)},
+					BeaconBlockRoot: make([]byte, 32),
+				},
+				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+			},
+			expected: &slashpb.HighestAttestation{
+				ValidatorId:        1,
+				HighestSourceEpoch: 4,
+				HighestTargetEpoch: 6,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := testDB.SetupSlasherDB(t, false)
+			ctx := context.Background()
+			ds := Service{
+				ctx:               ctx,
+				slasherDB:         db,
+				proposalsDetector: proposals.NewProposeDetector(db),
+			}
+			require.NoError(t, db.SaveHighestAttestation(ctx, tt.savedHighest))
+
+			// Update and assert.
+			require.NoError(t, ds.UpdateHighestAttestation(ctx, tt.incomingAtt))
+			h, err := db.HighestAttestation(ctx, tt.savedHighest.ValidatorId)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected.HighestSourceEpoch, h.HighestSourceEpoch)
+			assert.Equal(t, tt.expected.HighestTargetEpoch, h.HighestTargetEpoch)
+		})
+	}
+}
+
 func TestDetect_detectProposerSlashing(t *testing.T) {
 	type testStruct struct {
 		name        string
@@ -356,11 +500,15 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 		incomingBlk *ethpb.SignedBeaconBlockHeader
 		slashing    *ethpb.ProposerSlashing
 	}
-	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	s0, err := helpers.StartSlot(0)
 	require.NoError(t, err)
-	sigBlk2slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	sigBlk1slot0, err := testDetect.SignedBlockHeader(s0, 0)
 	require.NoError(t, err)
-	sigBlk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
+	sigBlk2slot0, err := testDetect.SignedBlockHeader(s0, 0)
+	require.NoError(t, err)
+	s1, err := helpers.StartSlot(1)
+	require.NoError(t, err)
+	sigBlk1epoch1, err := testDetect.SignedBlockHeader(s1, 0)
 	require.NoError(t, err)
 	tests := []testStruct{
 		{
@@ -397,6 +545,7 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			require.NoError(t, err)
 			assert.DeepEqual(t, tt.slashing, slashing)
 			savedSlashings, err := db.ProposalSlashingsByStatus(ctx, status.Active)
+			require.NoError(t, err)
 			if tt.slashing != nil {
 				require.Equal(t, 1, len(savedSlashings), "Did not save slashing to db")
 			}
@@ -418,18 +567,20 @@ func TestDetect_detectProposerSlashingNoUpdate(t *testing.T) {
 		noUpdtaeBlk *ethpb.BeaconBlockHeader
 		slashable   bool
 	}
-	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	s0, err := helpers.StartSlot(0)
 	require.NoError(t, err)
-	blk1slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	sigBlk1slot0, err := testDetect.SignedBlockHeader(s0, 0)
 	require.NoError(t, err)
-	blk2slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	blk1slot0, err := testDetect.BlockHeader(s0, 0)
+	require.NoError(t, err)
+	blk2slot0, err := testDetect.BlockHeader(s0, 0)
 	require.NoError(t, err)
 	diffRoot := [32]byte{1, 1, 1}
 	blk2slot0.ParentRoot = diffRoot[:]
-	blk3slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	blk3slot0, err := testDetect.BlockHeader(s0, 0)
 	require.NoError(t, err)
 	blk3slot0.StateRoot = diffRoot[:]
-	blk4slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	blk4slot0, err := testDetect.BlockHeader(s0, 0)
 	require.NoError(t, err)
 	blk4slot0.BodyRoot = diffRoot[:]
 	tests := []testStruct{

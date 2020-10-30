@@ -37,6 +37,7 @@ type Validator interface {
 	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
+	AllValidatorsAreExited(ctx context.Context) (bool, error)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -50,8 +51,11 @@ type Validator interface {
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
-	defer v.Done()
+	cleanup := v.Done
+	defer cleanup()
 	if err := v.WaitForWalletInitialization(ctx); err != nil {
+		// log.Fatalf will prevent defer from being called
+		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
 	}
 	if featureconfig.Get().SlasherProtection {
@@ -81,15 +85,33 @@ func run(ctx context.Context, v Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
+
+	// We initially assume not all validators are exited
+	allExited := false
+
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
+			span.End()
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+
+			if allExited {
+				log.Info("All validators are exited, no more work to perform...")
+				continue
+			}
+			allExited, err = v.AllValidatorsAreExited(ctx)
+			if err != nil {
+				log.WithError(err).Error("Could not check if validators are exited")
+			}
+			if allExited {
+				continue
+			}
+
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
 			// Report this validator client's rewards and penalties throughout its lifecycle.
@@ -108,11 +130,10 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 
-			if featureconfig.Get().LocalProtection {
-				if err := v.UpdateProtections(ctx, slot); err != nil {
-					log.WithError(err).Error("Could not update validator protection")
-					continue
-				}
+			if err := v.UpdateProtections(ctx, slot); err != nil {
+				log.WithError(err).Error("Could not update validator protection")
+				span.End()
+				continue
 			}
 
 			// Start fetching domain data for the next epoch.
@@ -125,6 +146,7 @@ func run(ctx context.Context, v Validator) {
 			allRoles, err := v.RolesAt(ctx, slot)
 			if err != nil {
 				log.WithError(err).Error("Could not get validator roles")
+				span.End()
 				continue
 			}
 			for pubKey, roles := range allRoles {
@@ -151,10 +173,8 @@ func run(ctx context.Context, v Validator) {
 			go func() {
 				wg.Wait()
 				v.LogAttestationsSubmitted()
-				if featureconfig.Get().LocalProtection {
-					if err := v.SaveProtections(ctx); err != nil {
-						log.WithError(err).Error("Could not save validator protection")
-					}
+				if err := v.SaveProtections(ctx); err != nil {
+					log.WithError(err).Error("Could not save validator protection")
 				}
 				span.End()
 			}()

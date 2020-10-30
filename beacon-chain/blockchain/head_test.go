@@ -5,6 +5,7 @@ import (
 	"context"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -93,39 +94,6 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.LogsContain(t, hook, "Chain reorg occurred")
 }
 
-func TestUpdateRecentCanonicalBlocks_CanUpdateWithoutParent(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
-
-	r := [32]byte{'a'}
-	require.NoError(t, service.updateRecentCanonicalBlocks(context.Background(), r))
-	canonical, err := service.IsCanonical(context.Background(), r)
-	require.NoError(t, err)
-	assert.Equal(t, true, canonical, "Block should be canonical")
-}
-
-func TestUpdateRecentCanonicalBlocks_CanUpdateWithParent(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
-	oldHead := [32]byte{'a'}
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 1, oldHead, [32]byte{'g'}, [32]byte{}, 0, 0))
-	currentHead := [32]byte{'b'}
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 3, currentHead, oldHead, [32]byte{}, 0, 0))
-	forkedRoot := [32]byte{'c'}
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 2, forkedRoot, oldHead, [32]byte{}, 0, 0))
-
-	require.NoError(t, service.updateRecentCanonicalBlocks(context.Background(), currentHead))
-	canonical, err := service.IsCanonical(context.Background(), currentHead)
-	require.NoError(t, err)
-	assert.Equal(t, true, canonical, "Block should be canonical")
-	canonical, err = service.IsCanonical(context.Background(), oldHead)
-	require.NoError(t, err)
-	assert.Equal(t, true, canonical, "Block should be canonical")
-	canonical, err = service.IsCanonical(context.Background(), forkedRoot)
-	require.NoError(t, err)
-	assert.Equal(t, false, canonical, "Block should not be canonical")
-}
-
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	service := setupBeaconChain(t, db, sc)
@@ -136,4 +104,20 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(context.Background(), state, r))
 	require.NoError(t, service.cacheJustifiedStateBalances(context.Background(), r))
 	require.DeepEqual(t, service.getJustifiedBalances(), state.Balances(), "Incorrect justified balances")
+}
+
+func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
+
+	b := testutil.NewBeaconBlock()
+	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), b))
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.finalizedCheckpt = &ethpb.Checkpoint{}
+	service.bestJustifiedCheckpt = &ethpb.Checkpoint{}
+
+	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
 }

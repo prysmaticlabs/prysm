@@ -141,8 +141,9 @@ func TestComputeDelta_MoveOutOfTree(t *testing.T) {
 
 	indices[indexToHash(1)] = 0
 
-	votes = append(votes, Vote{indexToHash(1), params.BeaconConfig().ZeroHash, 0})
-	votes = append(votes, Vote{indexToHash(1), [32]byte{'A'}, 0})
+	votes = append(votes,
+		Vote{indexToHash(1), params.BeaconConfig().ZeroHash, 0},
+		Vote{indexToHash(1), [32]byte{'A'}, 0})
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	require.NoError(t, err)
@@ -201,8 +202,9 @@ func TestComputeDelta_ValidatorAppear(t *testing.T) {
 	indices[indexToHash(1)] = 0
 	indices[indexToHash(2)] = 1
 
-	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
-	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
+	votes = append(votes,
+		Vote{indexToHash(1), indexToHash(2), 0},
+		Vote{indexToHash(1), indexToHash(2), 0})
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	require.NoError(t, err)
@@ -225,8 +227,9 @@ func TestComputeDelta_ValidatorDisappears(t *testing.T) {
 	indices[indexToHash(1)] = 0
 	indices[indexToHash(2)] = 1
 
-	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
-	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
+	votes = append(votes,
+		Vote{indexToHash(1), indexToHash(2), 0},
+		Vote{indexToHash(1), indexToHash(2), 0})
 
 	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	require.NoError(t, err)

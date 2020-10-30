@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -24,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -140,6 +138,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 			PublicKey: pubKey(uint64(i)),
 			Index:     uint64(i),
 			Balance:   params.BeaconConfig().MaxEffectiveBalance,
+			Status:    "EXITED",
 		}
 	}
 	st := testutil.NewBeaconState()
@@ -172,28 +171,31 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
-	setupValidators(t, db, 3)
-	st := testutil.NewBeaconState()
+
+	setupValidators(t, db, 100)
+	headState, err := db.HeadState(context.Background())
+	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, db.SaveState(ctx, st, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, sc),
 		HeadFetcher: &mock.ChainService{
-			State: st,
+			State: headState,
 		},
 	}
 
-	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 100, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
-	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(st.Balances()))
-	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil {
-		assert.ErrorContains(t, wanted, err)
-	}
+	wanted := fmt.Sprintf("page start %d >= list %d", 200, len(headState.Balances()))
+	_, err = bs.ListValidatorBalances(context.Background(), &ethpb.ListValidatorBalancesRequest{
+		PageToken:   strconv.Itoa(2),
+		PageSize:    100,
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
+	})
+	assert.ErrorContains(t, wanted, err)
 }
 
 func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
@@ -244,7 +246,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{pubKey(99)}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 99, PublicKey: pubKey(99), Balance: 99},
+					{Index: 99, PublicKey: pubKey(99), Balance: 99, Status: "EXITED"},
 				},
 				NextPageToken: "",
 				TotalSize:     1,
@@ -253,9 +255,9 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{Indices: []uint64{1, 2, 3}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 1, PublicKey: pubKey(1), Balance: 1},
-					{Index: 2, PublicKey: pubKey(2), Balance: 2},
-					{Index: 3, PublicKey: pubKey(3), Balance: 3},
+					{Index: 1, PublicKey: pubKey(1), Balance: 1, Status: "EXITED"},
+					{Index: 2, PublicKey: pubKey(2), Balance: 2, Status: "EXITED"},
+					{Index: 3, PublicKey: pubKey(3), Balance: 3, Status: "EXITED"},
 				},
 				NextPageToken: "",
 				TotalSize:     3,
@@ -264,9 +266,9 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{pubKey(10), pubKey(11), pubKey(12)}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 10, PublicKey: pubKey(10), Balance: 10},
-					{Index: 11, PublicKey: pubKey(11), Balance: 11},
-					{Index: 12, PublicKey: pubKey(12), Balance: 12},
+					{Index: 10, PublicKey: pubKey(10), Balance: 10, Status: "EXITED"},
+					{Index: 11, PublicKey: pubKey(11), Balance: 11, Status: "EXITED"},
+					{Index: 12, PublicKey: pubKey(12), Balance: 12, Status: "EXITED"},
 				},
 				NextPageToken: "",
 				TotalSize:     3,
@@ -274,9 +276,9 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{pubKey(2), pubKey(3)}, Indices: []uint64{3, 4}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}, // Duplication
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 2, PublicKey: pubKey(2), Balance: 2},
-					{Index: 3, PublicKey: pubKey(3), Balance: 3},
-					{Index: 4, PublicKey: pubKey(4), Balance: 4},
+					{Index: 2, PublicKey: pubKey(2), Balance: 2, Status: "EXITED"},
+					{Index: 3, PublicKey: pubKey(3), Balance: 3, Status: "EXITED"},
+					{Index: 4, PublicKey: pubKey(4), Balance: 4, Status: "EXITED"},
 				},
 				NextPageToken: "",
 				TotalSize:     3,
@@ -284,8 +286,8 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}, // Public key has a blank value
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 3, PublicKey: pubKey(3), Balance: 3},
-					{Index: 4, PublicKey: pubKey(4), Balance: 4},
+					{Index: 3, PublicKey: pubKey(3), Balance: 3, Status: "EXITED"},
+					{Index: 4, PublicKey: pubKey(4), Balance: 4, Status: "EXITED"},
 				},
 				NextPageToken: "",
 				TotalSize:     2,
@@ -329,35 +331,35 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 3, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: pubKey(3), Index: 3, Balance: uint64(3)},
-					{PublicKey: pubKey(4), Index: 4, Balance: uint64(4)},
-					{PublicKey: pubKey(5), Index: 5, Balance: uint64(5)}},
+					{PublicKey: pubKey(3), Index: 3, Balance: uint64(3), Status: "EXITED"},
+					{PublicKey: pubKey(4), Index: 4, Balance: uint64(4), Status: "EXITED"},
+					{PublicKey: pubKey(5), Index: 5, Balance: uint64(5), Status: "EXITED"}},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(10), PageSize: 5, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: pubKey(50), Index: 50, Balance: uint64(50)},
-					{PublicKey: pubKey(51), Index: 51, Balance: uint64(51)},
-					{PublicKey: pubKey(52), Index: 52, Balance: uint64(52)},
-					{PublicKey: pubKey(53), Index: 53, Balance: uint64(53)},
-					{PublicKey: pubKey(54), Index: 54, Balance: uint64(54)}},
+					{PublicKey: pubKey(50), Index: 50, Balance: uint64(50), Status: "EXITED"},
+					{PublicKey: pubKey(51), Index: 51, Balance: uint64(51), Status: "EXITED"},
+					{PublicKey: pubKey(52), Index: 52, Balance: uint64(52), Status: "EXITED"},
+					{PublicKey: pubKey(53), Index: 53, Balance: uint64(53), Status: "EXITED"},
+					{PublicKey: pubKey(54), Index: 54, Balance: uint64(54), Status: "EXITED"}},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(33), PageSize: 3, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: pubKey(99), Index: 99, Balance: uint64(99)},
-					{PublicKey: pubKey(100), Index: 100, Balance: uint64(100)},
-					{PublicKey: pubKey(101), Index: 101, Balance: uint64(101)},
+					{PublicKey: pubKey(99), Index: 99, Balance: uint64(99), Status: "EXITED"},
+					{PublicKey: pubKey(100), Index: 100, Balance: uint64(100), Status: "EXITED"},
+					{PublicKey: pubKey(101), Index: 101, Balance: uint64(101), Status: "EXITED"},
 				},
 				NextPageToken: "34",
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorBalancesRequest{PageSize: 2, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: pubKey(0), Index: 0, Balance: uint64(0)},
-					{PublicKey: pubKey(1), Index: 1, Balance: uint64(1)}},
+					{PublicKey: pubKey(0), Index: 0, Balance: uint64(0), Status: "EXITED"},
+					{PublicKey: pubKey(1), Index: 1, Balance: uint64(1), Status: "EXITED"}},
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     int32(count)}},
 	}
@@ -368,6 +370,33 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 			t.Errorf("Expected %v, received %v", test.res, res)
 		}
 	}
+}
+
+func TestServer_ListValidatorBalances_ResponseOutOfBound(t *testing.T) {
+	db, sc := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	count := 10
+	setupValidators(t, db, count)
+	headState, err := db.HeadState(context.Background())
+	require.NoError(t, err)
+	b := testutil.NewBeaconBlock()
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, headState, gRoot))
+
+	bs := &Server{
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, sc),
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	req := &ethpb.ListValidatorBalancesRequest{PageSize: 250, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}, PublicKeys: [][]byte{{'a'}}}
+	_, err = bs.ListValidatorBalances(context.Background(), req)
+	require.ErrorContains(t, "Request exceeds response length", err)
 }
 
 func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
@@ -526,6 +555,75 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.DeepEqual(t, activeValidators, received.ValidatorList)
+}
+
+func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
+	ctx := context.Background()
+	db, _ := dbTest.SetupDB(t)
+	count := 100
+	balances := make([]uint64, count)
+	validators := make([]*ethpb.Validator, count)
+	activeValidators := make([]*ethpb.Validators_ValidatorContainer, 0)
+	for i := 0; i < count; i++ {
+		pubKey := pubKey(uint64(i))
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+
+		// We mark even validators as active, and odd validators as inactive.
+		if i%2 == 0 {
+			val := &ethpb.Validator{
+				PublicKey:             pubKey,
+				WithdrawalCredentials: make([]byte, 32),
+				ActivationEpoch:       0,
+				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			}
+			validators[i] = val
+			activeValidators = append(activeValidators, &ethpb.Validators_ValidatorContainer{
+				Index:     uint64(i),
+				Validator: val,
+			})
+		} else {
+			validators[i] = &ethpb.Validator{
+				PublicKey:             pubKey,
+				WithdrawalCredentials: make([]byte, 32),
+				ActivationEpoch:       0,
+				ExitEpoch:             0,
+			}
+		}
+	}
+
+	// Set first validator to be inactive.
+	validators[0].ActivationEpoch = params.BeaconConfig().FarFutureEpoch
+	activeValidators[0].Validator.ActivationEpoch = params.BeaconConfig().FarFutureEpoch
+
+	st := testutil.NewBeaconState()
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetBalances(balances))
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
+
+	b := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, b))
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, db.SaveState(ctx, st, gRoot))
+
+	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		Active: true,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, count/2-1, len(received.ValidatorList))
+	require.Equal(t, count/2-1, int(received.TotalSize))
 }
 
 func TestServer_ListValidators_NoPagination(t *testing.T) {
@@ -910,7 +1008,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	res, err := bs.ListValidators(context.Background(), req)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(res.ValidatorList))
+	assert.Equal(t, 30, len(res.ValidatorList))
 
 	req = &ethpb.ListValidatorsRequest{
 		QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
@@ -919,7 +1017,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	res, err = bs.ListValidators(context.Background(), req)
 	require.NoError(t, err)
-	assert.DeepEqual(t, want[:21], res.ValidatorList, "Incorrect number of validators")
+	assert.DeepEqual(t, want, res.ValidatorList, "Incorrect number of validators")
 }
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
@@ -1160,7 +1258,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
-	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	headState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:            helpers.ActivationExitEpoch(0),
@@ -1258,7 +1356,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
-	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	headState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:       0,
@@ -1353,7 +1451,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*pbp2p.PendingAttestation{{
+	atts := []*pb.PendingAttestation{{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: make([]byte, 32),
 			Source: &ethpb.Checkpoint{
@@ -1403,37 +1501,6 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		PreviousEpochHeadAttestingGwei:   params.BeaconConfig().EffectiveBalanceIncrement,
 	}
 	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
-}
-
-func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
-	db, sc := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2-1))
-
-	b := testutil.NewBeaconBlock()
-	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
-	require.NoError(t, db.SaveBlock(ctx, b))
-	bRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, headState, bRoot))
-
-	m := &mock.ChainService{State: headState}
-	bs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        m,
-		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
-	}
-
-	wanted := "Participation information for epoch 0 is not yet available"
-	_, err = bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0},
-	})
-	if err != nil && !strings.Contains(err.Error(), wanted) {
-		assert.ErrorContains(t, wanted, err)
-	}
 }
 
 func TestGetValidatorPerformance_Syncing(t *testing.T) {
@@ -1568,7 +1635,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	require.NoError(t, err)
 	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)
 	require.NoError(t, err)
-	c, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
+	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -1639,7 +1706,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	require.NoError(t, err)
 	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)
 	require.NoError(t, err)
-	c, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
+	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -1860,4 +1927,87 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 		},
 	}
 	assert.DeepEqual(t, wanted, res, "Unexpected response")
+}
+
+func Test_validatorStatus(t *testing.T) {
+	tests := []struct {
+		name      string
+		validator *ethpb.Validator
+		epoch     uint64
+		want      ethpb.ValidatorStatus
+	}{
+		{
+			name:      "Unknown",
+			validator: nil,
+			epoch:     0,
+			want:      ethpb.ValidatorStatus_UNKNOWN_STATUS,
+		},
+		{
+			name: "Deposited",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(1),
+			},
+			epoch: 0,
+			want:  ethpb.ValidatorStatus_DEPOSITED,
+		},
+		{
+			name: "Pending",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(1),
+			},
+			epoch: 0,
+			want:  ethpb.ValidatorStatus_PENDING,
+		},
+		{
+			name: "Active",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch: 0,
+			want:  ethpb.ValidatorStatus_ACTIVE,
+		},
+		{
+			name: "Slashed",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  uint64(5),
+				Slashed:                    true,
+			},
+			epoch: 4,
+			want:  ethpb.ValidatorStatus_SLASHING,
+		},
+		{
+			name: "Exiting",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  uint64(5),
+				Slashed:                    false,
+			},
+			epoch: 4,
+			want:  ethpb.ValidatorStatus_EXITING,
+		},
+		{
+			name: "Exiting",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: uint64(0),
+				ActivationEpoch:            uint64(0),
+				ExitEpoch:                  uint64(3),
+				Slashed:                    false,
+			},
+			epoch: 4,
+			want:  ethpb.ValidatorStatus_EXITED,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := validatorStatus(tt.validator, tt.epoch); got != tt.want {
+				t.Errorf("validatorStatus() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

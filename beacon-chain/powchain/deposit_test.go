@@ -41,7 +41,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 	valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
 	require.NoError(t, err)
-	require.Equal(t, int(1), int(valcount), "Did not get correct active validator count")
+	require.Equal(t, 1, int(valcount), "Did not get correct active validator count")
 }
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
@@ -86,7 +86,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
 
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	deposits[0].Proof, err = trie.MerkleProof(0)
@@ -124,7 +124,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
 
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	root := trie.Root()
@@ -154,7 +154,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
-	deposits[0].Data.Signature = sig.Marshal()[:]
+	deposits[0].Data.Signature = sig.Marshal()
 
 	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
@@ -201,7 +201,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	sig := sk.Sign(signedRoot[:])
 	deposit.Data.Signature = sig.Marshal()
 
-	trie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 	root := trie.Root()
 	eth1Data := &ethpb.Eth1Data{
@@ -230,7 +230,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 		valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
 		require.NoError(t, err)
-		require.Equal(t, int(0), int(valcount), "Did not get correct active validator count")
+		require.Equal(t, 0, int(valcount), "Did not get correct active validator count")
 	}
 }
 

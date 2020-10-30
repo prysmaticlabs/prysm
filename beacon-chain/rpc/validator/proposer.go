@@ -11,7 +11,6 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -109,7 +108,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	blk := &ethpb.BeaconBlock{
 		Slot:          req.Slot,
-		ParentRoot:    parentRoot[:],
+		ParentRoot:    parentRoot,
 		StateRoot:     stateRoot,
 		ProposerIndex: idx,
 		Body: &ethpb.BeaconBlockBody{
@@ -117,9 +116,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			Deposits:          deposits,
 			Attestations:      atts,
 			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head),
-			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head),
-			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot),
+			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:          graffiti[:],
 		},
 	}
@@ -232,9 +231,9 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 	}
 	eth1DataNotification = false
 
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
-	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*uint64(eth1FollowDistance)
+	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
+	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
+	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
 	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, earliestValidTime)
 	if err != nil {
@@ -297,24 +296,20 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 
 func (vs *Server) slotStartTime(slot uint64) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	startTime +=
-		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
-			params.BeaconConfig().SecondsPerSlot
-	return startTime
+	return helpers.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState *stateTrie.BeaconState,
-	firstValidBlockNumber *big.Int,
-	lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
+	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
 
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
 
 	var inRangeVotes []eth1DataSingleVote
 	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		ok, height, err := vs.BlockFetcher.BlockExists(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
+		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
 		if err != nil {
-			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
+			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
 		}
 		// Make sure we don't "undo deposit progress". See https://github.com/ethereum/eth2.0-specs/pull/1836
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {
@@ -323,7 +318,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		// firstValidBlockNumber.Cmp(height) < 1 filters out all blocks before firstValidBlockNumber
 		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
 		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
-		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
+		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
 	}
@@ -348,7 +343,9 @@ func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVo
 			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
 		}
 	}
-
+	if len(voteCount) == 0 {
+		return eth1DataAggregatedVote{}
+	}
 	currentVote := voteCount[0]
 	for _, aggregatedVote := range voteCount[1:] {
 		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
@@ -537,39 +534,18 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 
 	var depositTrie *trieutil.SparseMerkleTrie
 
-	var finalizedDeposits *depositcache.FinalizedDeposits
-	if featureconfig.Get().EnableFinalizedDepositsCache {
-		finalizedDeposits = vs.DepositFetcher.FinalizedDeposits(ctx)
-		depositTrie = finalizedDeposits.Deposits
-		upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
-		insertIndex := finalizedDeposits.MerkleTrieIndex + 1
+	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
+	depositTrie = finalizedDeposits.Deposits
+	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
-		for _, dep := range upToEth1DataDeposits {
-			depHash, err := dep.Data.HashTreeRoot()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not hash deposit data")
-			}
-			depositTrie.Insert(depHash[:], int(insertIndex))
-			insertIndex++
-		}
-
-		return depositTrie, nil
-	}
-
-	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
-	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := dep.Data.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash deposit data")
 		}
-		depositData = append(depositData, depHash[:])
-	}
-
-	var err error
-	depositTrie, err = trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+		depositTrie.Insert(depHash[:], int(insertIndex))
+		insertIndex++
 	}
 
 	return depositTrie, nil
@@ -671,6 +647,9 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			return nil, errors.Wrap(err, "could not get unaggregated attestations")
 		}
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not filter attestations")
+		}
 		atts = append(atts, uAtts...)
 
 		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))

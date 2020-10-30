@@ -10,10 +10,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	scorers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -23,12 +23,12 @@ func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
 	f.Lock()
 	defer f.Unlock()
 	if lock, ok := f.peerLocks[pid]; ok {
-		lock.accessed = roughtime.Now()
+		lock.accessed = timeutils.Now()
 		return lock
 	}
 	f.peerLocks[pid] = &peerLock{
 		Mutex:    sync.Mutex{},
-		accessed: roughtime.Now(),
+		accessed: timeutils.Now(),
 	}
 	return f.peerLocks[pid]
 }

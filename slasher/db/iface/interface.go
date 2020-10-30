@@ -8,6 +8,7 @@ import (
 	"io"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	detectionTypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
@@ -21,8 +22,8 @@ type ReadOnlyDatabase interface {
 	GetLatestEpochDetected(ctx context.Context) (uint64, error)
 
 	// BlockHeader related methods.
-	BlockHeaders(ctx context.Context, epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
-	HasBlockHeader(ctx context.Context, epoch uint64, validatorID uint64) bool
+	BlockHeaders(ctx context.Context, slot uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
+	HasBlockHeader(ctx context.Context, slot uint64, validatorID uint64) bool
 
 	// IndexedAttestations related methods.
 	HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error)
@@ -30,11 +31,11 @@ type ReadOnlyDatabase interface {
 	IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error)
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 
+	// Highest Attestation related methods.
+	HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error)
+
 	// MinMaxSpan related methods.
 	EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (*detectionTypes.EpochStore, error)
-	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, bool, error)
-	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (detectionTypes.Span, error)
-	EpochsSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]detectionTypes.Span, error)
 
 	// ProposerSlashing related methods.
 	ProposalSlashingsByStatus(ctx context.Context, status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
@@ -68,14 +69,11 @@ type WriteAccessDatabase interface {
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
+	// Highest Attestation related methods.
+	SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error
+
 	// MinMaxSpan related methods.
 	SaveEpochSpans(ctx context.Context, epoch uint64, spans *detectionTypes.EpochStore, toCache bool) error
-	SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]detectionTypes.Span) error
-	SaveValidatorEpochSpan(ctx context.Context, validatorIdx uint64, epoch uint64, spans detectionTypes.Span) error
-	SaveCachedSpansMaps(ctx context.Context) error
-	SaveEpochsSpanByValidatorsIndices(ctx context.Context, epochsSpans map[uint64]map[uint64]detectionTypes.Span) error
-	DeleteEpochSpans(ctx context.Context, validatorIdx uint64) error
-	DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
 
 	// ProposerSlashing related methods.
 	DeleteProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error

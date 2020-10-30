@@ -1,18 +1,18 @@
 package helpers
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestIsActiveValidator_OK(t *testing.T) {
@@ -275,6 +275,39 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 }
 
+func TestBeaconProposerIndex_BadState(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ClearCache()
+	c := params.BeaconConfig()
+	c.MinGenesisActiveValidatorCount = 16384
+	params.OverrideBeaconConfig(c)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+		roots[i] = make([]byte, 32)
+	}
+
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		Slot:        0,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:  roots,
+		StateRoots:  roots,
+	})
+	require.NoError(t, err)
+	// Set a very high slot, so that retrieved block root will be
+	// non existent for the proposer cache.
+	require.NoError(t, state.SetSlot(100))
+	_, err = BeaconProposerIndex(state)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(proposerIndicesCache.ProposerIndicesCache.ListKeys()))
+}
+
 func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -309,7 +342,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
-		index, err := ComputeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)
+		index, err := computeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)
 		require.NoError(t, err)
 		wantedProposerIndices = append(wantedProposerIndices, index)
 	}
@@ -741,5 +774,35 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, IsEligibleForActivation(s, tt.validator), "IsEligibleForActivation()")
 		})
+	}
+}
+
+func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
+	length := uint64(len(activeIndices))
+	if length == 0 {
+		return 0, errors.New("empty active indices list")
+	}
+	maxRandomByte := uint64(1<<8 - 1)
+	hashFunc := hashutil.CustomSHA256Hasher()
+
+	for i := uint64(0); ; i++ {
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
+		if err != nil {
+			return 0, err
+		}
+		candidateIndex = activeIndices[candidateIndex]
+		if candidateIndex >= uint64(len(validators)) {
+			return 0, errors.New("active index out of range")
+		}
+		b := append(seed[:], bytesutil.Bytes8(i/32)...)
+		randomByte := hashFunc(b)[i%32]
+		v := validators[candidateIndex]
+		var effectiveBal uint64
+		if v != nil {
+			effectiveBal = v.EffectiveBalance
+		}
+		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
+			return candidateIndex, nil
+		}
 	}
 }

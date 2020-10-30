@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -40,7 +40,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	// the number epochs since the genesis time, otherwise 0 by default.
 	genesisTime := vs.GenesisTimeFetcher.GenesisTime()
 	var currentEpoch uint64
-	if genesisTime.Before(roughtime.Now()) {
+	if genesisTime.Before(timeutils.Now()) {
 		currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
 	}
 	req.Epoch = currentEpoch
@@ -128,7 +128,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 	// Query the next epoch assignments for committee subnet subscriptions.
-	nextCommitteeAssignments, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(s, req.Epoch+1)
+	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
@@ -153,9 +153,9 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			assignment.Status = assignmentStatus(s, idx)
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
 
+			// The next epoch has no lookup for proposer indexes.
 			nextAssignment.ValidatorIndex = idx
 			nextAssignment.Status = assignmentStatus(s, idx)
-			nextAssignment.ProposerSlots = nextProposerIndexToSlots[idx]
 
 			ca, ok := committeeAssignments[idx]
 			if ok {
@@ -199,11 +199,11 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	}
 
 	_, ok, expTime := cache.SubnetIDs.GetPersistentSubnets(pubkey)
-	if ok && expTime.After(roughtime.Now()) {
+	if ok && expTime.After(timeutils.Now()) {
 		return
 	}
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
-	assignedIdxs := []uint64{}
+	var assignedIdxs []uint64
 	randGen := rand.NewGenerator()
 	for i := uint64(0); i < params.BeaconNetworkConfig().RandomSubnetsPerValidator; i++ {
 		assignedIdx := randGen.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))

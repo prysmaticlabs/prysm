@@ -37,11 +37,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() {
+	cleanup := func() {
 		if err := file.Close(); err != nil {
 			log.Fatal(err)
 		}
-	}()
+	}
+	defer cleanup()
 
 	var ctnr *keygen.UnencryptedKeysContainer
 	if *random {
@@ -50,6 +51,8 @@ func main() {
 		ctnr = generateUnencryptedKeys(*startIndex)
 	}
 	if err := keygen.SaveUnencryptedKeysToFile(file, ctnr); err != nil {
+		// log.Fatal will prevent defer from being called
+		cleanup()
 		log.Fatal(err)
 	}
 }

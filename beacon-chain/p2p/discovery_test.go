@@ -189,6 +189,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		s.Start()
 		<-exitRoutine
 	}()
+	time.Sleep(50 * time.Millisecond)
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
 		sent = s.stateNotifier.StateFeed().Send(&feed.Event{

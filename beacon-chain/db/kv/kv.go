@@ -17,7 +17,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var _ = iface.Database(&Store{})
+var _ iface.Database = (*Store)(nil)
 
 const (
 	// VotesCacheSize with 1M validators will be 8MB.
@@ -52,7 +52,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
 	if err != nil {
-		if err == bolt.ErrTimeout {
+		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err
@@ -122,26 +122,26 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 }
 
 // ClearDB removes the previously stored database in the data directory.
-func (kv *Store) ClearDB() error {
-	if _, err := os.Stat(kv.databasePath); os.IsNotExist(err) {
+func (s *Store) ClearDB() error {
+	if _, err := os.Stat(s.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	prometheus.Unregister(createBoltCollector(kv.db))
-	if err := os.Remove(path.Join(kv.databasePath, databaseFileName)); err != nil {
+	prometheus.Unregister(createBoltCollector(s.db))
+	if err := os.Remove(path.Join(s.databasePath, databaseFileName)); err != nil {
 		return errors.Wrap(err, "could not remove database file")
 	}
 	return nil
 }
 
 // Close closes the underlying BoltDB database.
-func (kv *Store) Close() error {
-	prometheus.Unregister(createBoltCollector(kv.db))
-	return kv.db.Close()
+func (s *Store) Close() error {
+	prometheus.Unregister(createBoltCollector(s.db))
+	return s.db.Close()
 }
 
 // DatabasePath at which this database writes files.
-func (kv *Store) DatabasePath() string {
-	return kv.databasePath
+func (s *Store) DatabasePath() string {
+	return s.databasePath
 }
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {

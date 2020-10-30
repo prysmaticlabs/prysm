@@ -1,20 +1,17 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -23,9 +20,9 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
-	AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error)
+	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
+	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
@@ -42,33 +39,12 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process attestation")
 	}
 
-	if !featureconfig.Get().DisableUpdateHeadPerAttestation {
-		// This updates fork choice head, if a new head could not be updated due to
-		// long range or intermediate forking. It simply logs a warning and returns nil
-		// as that's more appropriate than returning errors.
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.Warnf("Resolving fork due to new attestation: %v", err)
-			return nil
-		}
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		log.Warnf("Resolving fork due to new attestation: %v", err)
+		return nil
 	}
 
 	return nil
-}
-
-// IsValidAttestation returns true if the attestation can be verified against its pre-state.
-func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
-	baseState, err := s.AttestationPreState(ctx, att)
-	if err != nil {
-		log.WithError(err).Error("Failed to get attestation pre state")
-		return false
-	}
-
-	if err := blocks.VerifyAttestationSignature(ctx, baseState, att); err != nil {
-		log.WithError(err).Error("Failed to validate attestation")
-		return false
-	}
-
-	return true
 }
 
 // AttestationPreState returns the pre state of attestation.
@@ -83,17 +59,35 @@ func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestatio
 	return s.getAttPreState(ctx, att.Data.Target)
 }
 
-// AttestationCheckPtInfo returns the check point info of attestation that can be used to verify the attestation
-// contents and signatures.
-func (s *Service) AttestationCheckPtInfo(ctx context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
-	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
+// VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
+func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
+	return s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot)
+}
+
+// VerifyFinalizedConsistency verifies input root is consistent with finalized store.
+// When the input root is not be consistent with finalized store then we know it is not
+// on the finalized check point that leads to current canonical chain and should be rejected accordingly.
+func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
+	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
+	// In this case, we could exit early to save on additional computation.
+	if s.forkChoiceStore.IsCanonical(bytesutil.ToBytes32(root)) {
+		return nil
+	}
+
+	f := s.FinalizedCheckpt()
+	ss, err := helpers.StartSlot(f.Epoch)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err := helpers.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
-		return nil, err
+	r, err := s.ancestor(ctx, root, ss)
+	if err != nil {
+		return err
 	}
-	return s.getAttCheckPtInfo(ctx, att.Data.Target, helpers.SlotToEpoch(att.Data.Slot))
+	if !bytes.Equal(f.Root, r) {
+		return errors.New("Root and finalized store are not consistent")
+	}
+
+	return nil
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
@@ -132,7 +126,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 					log.WithError(err).Error("Could not delete fork choice attestation in pool")
 				}
 
-				if !s.verifyCheckpointEpoch(a.Data.Target) {
+				if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
 					continue
 				}
 
@@ -148,24 +142,4 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 			}
 		}
 	}
-}
-
-// This verifies the epoch of input checkpoint is within current epoch and previous epoch
-// with respect to current time. Returns true if it's within, false if it's not.
-func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
-	now := uint64(roughtime.Now().Unix())
-	genesisTime := uint64(s.genesisTime.Unix())
-	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
-
-	var prevEpoch uint64
-	if currentEpoch > 1 {
-		prevEpoch = currentEpoch - 1
-	}
-
-	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
-		return false
-	}
-
-	return true
 }

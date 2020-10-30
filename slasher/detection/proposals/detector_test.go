@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
@@ -12,7 +13,7 @@ import (
 	testDetect "github.com/prysmaticlabs/prysm/slasher/detection/testing"
 )
 
-var _ = iface.ProposalsDetector(&ProposeDetector{})
+var _ iface.ProposalsDetector = (*ProposeDetector)(nil)
 
 func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 	type testStruct struct {
@@ -21,13 +22,17 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 		incomingBlk *ethpb.SignedBeaconBlockHeader
 		slashing    *ethpb.ProposerSlashing
 	}
-	blk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	s0, err := helpers.StartSlot(0)
 	require.NoError(t, err)
-	blk2slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	blk1slot0, err := testDetect.SignedBlockHeader(s0, 0)
 	require.NoError(t, err)
-	blk1slot1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0)+1, 0)
+	blk2slot0, err := testDetect.SignedBlockHeader(s0, 0)
 	require.NoError(t, err)
-	blk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
+	blk1slot1, err := testDetect.SignedBlockHeader(s0+1, 0)
+	require.NoError(t, err)
+	s1, err := helpers.StartSlot(1)
+	require.NoError(t, err)
+	blk1epoch1, err := testDetect.SignedBlockHeader(s1, 0)
 	require.NoError(t, err)
 	tests := []testStruct{
 		{

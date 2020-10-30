@@ -107,7 +107,7 @@ function get_prysm_version() {
     else
         # Find the latest Prysm version available for download.
         readonly reason="automatically selected latest available version"
-        prysm_version=$(curl -f -s https://prysmaticlabs.com/releases/latest) || (color "31" "Starting prysm requires an internet connection. If you are being blocked by your antivirus, you can re-run with --ssl-no-revoke" && exit 1)
+        prysm_version=$(curl -f -s https://prysmaticlabs.com/releases/latest) || (color "31" "Starting prysm requires an internet connection. If you are being blocked by your antivirus, you can download the beacon chain and validator executables from our releases page on Github here https://github.com/prysmaticlabs/prysm/releases/" && exit 1)
         readonly prysm_version
     fi
 }
@@ -119,10 +119,13 @@ function verify() {
     if [[ $skip == 1 ]]; then
         return 0
     fi
-
+    checkSum="shasum -a 256"
     hash shasum 2>/dev/null || {
-        echo >&2 "shasum is not available. Either install it or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
-        exit 1
+	checkSum="sha256sum"
+    	hash sha256sum 2>/dev/null || {
+		echo >&2 "SHA checksum utility not available. Either install one (shasum or sha256sum) or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
+		exit 1
+    	}
     }
     hash gpg 2>/dev/null || {
         echo >&2 "gpg is not available. Either install it or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
@@ -134,7 +137,7 @@ function verify() {
     gpg --list-keys $PRYLABS_SIGNING_KEY >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
     (
         cd $wrapper_dir
-        shasum -a 256 -c "${file}.sha256" || failed_verification
+	$checkSum -c "${file}.sha256" || failed_verification
     )
     (
         cd $wrapper_dir

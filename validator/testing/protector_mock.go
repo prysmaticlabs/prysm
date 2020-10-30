@@ -18,25 +18,25 @@ type MockProtector struct {
 }
 
 // CheckAttestationSafety returns bool with allow attestation value.
-func (mp MockProtector) CheckAttestationSafety(ctx context.Context, attestation *eth.IndexedAttestation) bool {
+func (mp MockProtector) CheckAttestationSafety(_ context.Context, _ *eth.IndexedAttestation) bool {
 	mp.VerifyAttestationCalled = true
 	return mp.AllowAttestation
 }
 
 // CommitAttestation returns bool with allow attestation value.
-func (mp MockProtector) CommitAttestation(ctx context.Context, attestation *eth.IndexedAttestation) bool {
+func (mp MockProtector) CommitAttestation(_ context.Context, _ *eth.IndexedAttestation) bool {
 	mp.CommitAttestationCalled = true
 	return mp.AllowAttestation
 }
 
 // CheckBlockSafety returns bool with allow block value.
-func (mp MockProtector) CheckBlockSafety(ctx context.Context, blockHeader *eth.BeaconBlockHeader) bool {
+func (mp MockProtector) CheckBlockSafety(_ context.Context, _ *eth.BeaconBlockHeader) bool {
 	mp.VerifyBlockCalled = true
 	return mp.AllowBlock
 }
 
 // CommitBlock returns bool with allow block value.
-func (mp MockProtector) CommitBlock(ctx context.Context, blockHeader *eth.SignedBeaconBlockHeader) (bool, error) {
+func (mp MockProtector) CommitBlock(_ context.Context, _ *eth.SignedBeaconBlockHeader) (bool, error) {
 	mp.CommitBlockCalled = true
 	return mp.AllowBlock, nil
 }

@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -28,7 +27,7 @@ var (
 func main() {
 	flag.Parse()
 
-	if len(*privateKey) == 0 {
+	if *privateKey == "" {
 		log.Fatal("No private key given")
 	}
 	dst, err := hex.DecodeString(*privateKey)
@@ -39,7 +38,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	ecdsaPrivKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
+	ecdsaPrivKey := (*ecdsa.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey))
 
 	if net.ParseIP(*ipAddr).To4() == nil {
 		log.Fatalf("Invalid ipv4 address given: %v\n", err)

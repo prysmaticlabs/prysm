@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -36,20 +36,25 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
-	trie, err := trieutil.GenerateTrieFromItems(
-		depositDataRoots,
-		int(params.BeaconConfig().DepositContractTreeDepth),
-	)
+	return GenerateGenesisStateFromDepositData(genesisTime, depositDataItems, depositDataRoots)
+}
+
+// GenerateGenesisStateFromDepositData creates a genesis state given a list of
+// deposit data items and their corresponding roots.
+func GenerateGenesisStateFromDepositData(
+	genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte,
+) (*pb.BeaconState, []*ethpb.Deposit, error) {
+	trie, err := trieutil.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
 	}
-	deposits, err := GenerateDepositsFromData(depositDataItems, trie)
+	deposits, err := GenerateDepositsFromData(depositData, trie)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
 	root := trie.Root()
 	if genesisTime == 0 {
-		genesisTime = uint64(roughtime.Now().Unix())
+		genesisTime = uint64(timeutils.Now().Unix())
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],

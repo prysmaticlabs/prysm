@@ -6,13 +6,15 @@ package ethereum_validator_accounts_v2
 import (
 	context "context"
 	fmt "fmt"
+	math "math"
+
+	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -26,49 +28,47 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type CreateWalletRequest_KeymanagerKind int32
+type KeymanagerKind int32
 
 const (
-	CreateWalletRequest_DERIVED CreateWalletRequest_KeymanagerKind = 0
-	CreateWalletRequest_DIRECT  CreateWalletRequest_KeymanagerKind = 1
-	CreateWalletRequest_REMOTE  CreateWalletRequest_KeymanagerKind = 2
+	KeymanagerKind_DERIVED  KeymanagerKind = 0
+	KeymanagerKind_IMPORTED KeymanagerKind = 1
+	KeymanagerKind_REMOTE   KeymanagerKind = 2
 )
 
-var CreateWalletRequest_KeymanagerKind_name = map[int32]string{
+var KeymanagerKind_name = map[int32]string{
 	0: "DERIVED",
-	1: "DIRECT",
+	1: "IMPORTED",
 	2: "REMOTE",
 }
 
-var CreateWalletRequest_KeymanagerKind_value = map[string]int32{
-	"DERIVED": 0,
-	"DIRECT":  1,
-	"REMOTE":  2,
+var KeymanagerKind_value = map[string]int32{
+	"DERIVED":  0,
+	"IMPORTED": 1,
+	"REMOTE":   2,
 }
 
-func (x CreateWalletRequest_KeymanagerKind) String() string {
-	return proto.EnumName(CreateWalletRequest_KeymanagerKind_name, int32(x))
+func (x KeymanagerKind) String() string {
+	return proto.EnumName(KeymanagerKind_name, int32(x))
 }
 
-func (CreateWalletRequest_KeymanagerKind) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{0, 0}
+func (KeymanagerKind) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{0}
 }
 
 type CreateWalletRequest struct {
-	WalletPath           string                             `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
-	Keymanager           CreateWalletRequest_KeymanagerKind `protobuf:"varint,2,opt,name=keymanager,proto3,enum=ethereum.validator.accounts.v2.CreateWalletRequest_KeymanagerKind" json:"keymanager,omitempty"`
-	WalletPassword       string                             `protobuf:"bytes,3,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
-	Mnemonic             string                             `protobuf:"bytes,4,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
-	NumAccounts          uint64                             `protobuf:"varint,5,opt,name=num_accounts,json=numAccounts,proto3" json:"num_accounts,omitempty"`
-	KeystoresImported    []string                           `protobuf:"bytes,6,rep,name=keystores_imported,json=keystoresImported,proto3" json:"keystores_imported,omitempty"`
-	KeystoresPassword    string                             `protobuf:"bytes,7,opt,name=keystores_password,json=keystoresPassword,proto3" json:"keystores_password,omitempty"`
-	RemoteAddr           string                             `protobuf:"bytes,8,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
-	RemoteCrtPath        string                             `protobuf:"bytes,9,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
-	RemoteKeyPath        string                             `protobuf:"bytes,10,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
-	RemoteCaCrtPath      string                             `protobuf:"bytes,11,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
-	XXX_unrecognized     []byte                             `json:"-"`
-	XXX_sizecache        int32                              `json:"-"`
+	WalletPath           string         `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
+	Keymanager           KeymanagerKind `protobuf:"varint,2,opt,name=keymanager,proto3,enum=ethereum.validator.accounts.v2.KeymanagerKind" json:"keymanager,omitempty"`
+	WalletPassword       string         `protobuf:"bytes,3,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
+	Mnemonic             string         `protobuf:"bytes,4,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
+	NumAccounts          uint64         `protobuf:"varint,5,opt,name=num_accounts,json=numAccounts,proto3" json:"num_accounts,omitempty"`
+	RemoteAddr           string         `protobuf:"bytes,6,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
+	RemoteCrtPath        string         `protobuf:"bytes,7,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
+	RemoteKeyPath        string         `protobuf:"bytes,8,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
+	RemoteCaCrtPath      string         `protobuf:"bytes,9,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *CreateWalletRequest) Reset()         { *m = CreateWalletRequest{} }
@@ -103,11 +103,11 @@ func (m *CreateWalletRequest) GetWalletPath() string {
 	return ""
 }
 
-func (m *CreateWalletRequest) GetKeymanager() CreateWalletRequest_KeymanagerKind {
+func (m *CreateWalletRequest) GetKeymanager() KeymanagerKind {
 	if m != nil {
 		return m.Keymanager
 	}
-	return CreateWalletRequest_DERIVED
+	return KeymanagerKind_DERIVED
 }
 
 func (m *CreateWalletRequest) GetWalletPassword() string {
@@ -129,20 +129,6 @@ func (m *CreateWalletRequest) GetNumAccounts() uint64 {
 		return m.NumAccounts
 	}
 	return 0
-}
-
-func (m *CreateWalletRequest) GetKeystoresImported() []string {
-	if m != nil {
-		return m.KeystoresImported
-	}
-	return nil
-}
-
-func (m *CreateWalletRequest) GetKeystoresPassword() string {
-	if m != nil {
-		return m.KeystoresPassword
-	}
-	return ""
 }
 
 func (m *CreateWalletRequest) GetRemoteAddr() string {
@@ -173,6 +159,53 @@ func (m *CreateWalletRequest) GetRemoteCaCrtPath() string {
 	return ""
 }
 
+type CreateWalletResponse struct {
+	Wallet               *WalletResponse      `protobuf:"bytes,1,opt,name=wallet,proto3" json:"wallet,omitempty"`
+	AccountsCreated      *DepositDataResponse `protobuf:"bytes,2,opt,name=accounts_created,json=accountsCreated,proto3" json:"accounts_created,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *CreateWalletResponse) Reset()         { *m = CreateWalletResponse{} }
+func (m *CreateWalletResponse) String() string { return proto.CompactTextString(m) }
+func (*CreateWalletResponse) ProtoMessage()    {}
+func (*CreateWalletResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{1}
+}
+
+func (m *CreateWalletResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateWalletResponse.Unmarshal(m, b)
+}
+func (m *CreateWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateWalletResponse.Marshal(b, m, deterministic)
+}
+func (m *CreateWalletResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateWalletResponse.Merge(m, src)
+}
+func (m *CreateWalletResponse) XXX_Size() int {
+	return xxx_messageInfo_CreateWalletResponse.Size(m)
+}
+func (m *CreateWalletResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateWalletResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CreateWalletResponse proto.InternalMessageInfo
+
+func (m *CreateWalletResponse) GetWallet() *WalletResponse {
+	if m != nil {
+		return m.Wallet
+	}
+	return nil
+}
+
+func (m *CreateWalletResponse) GetAccountsCreated() *DepositDataResponse {
+	if m != nil {
+		return m.AccountsCreated
+	}
+	return nil
+}
+
 type EditWalletConfigRequest struct {
 	RemoteAddr           string   `protobuf:"bytes,1,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
 	RemoteCrtPath        string   `protobuf:"bytes,2,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
@@ -187,7 +220,7 @@ func (m *EditWalletConfigRequest) Reset()         { *m = EditWalletConfigRequest
 func (m *EditWalletConfigRequest) String() string { return proto.CompactTextString(m) }
 func (*EditWalletConfigRequest) ProtoMessage()    {}
 func (*EditWalletConfigRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{1}
+	return fileDescriptor_8a5153635bfe042e, []int{2}
 }
 
 func (m *EditWalletConfigRequest) XXX_Unmarshal(b []byte) error {
@@ -247,7 +280,7 @@ func (m *GenerateMnemonicResponse) Reset()         { *m = GenerateMnemonicRespon
 func (m *GenerateMnemonicResponse) String() string { return proto.CompactTextString(m) }
 func (*GenerateMnemonicResponse) ProtoMessage()    {}
 func (*GenerateMnemonicResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{2}
+	return fileDescriptor_8a5153635bfe042e, []int{3}
 }
 
 func (m *GenerateMnemonicResponse) XXX_Unmarshal(b []byte) error {
@@ -276,18 +309,19 @@ func (m *GenerateMnemonicResponse) GetMnemonic() string {
 }
 
 type WalletResponse struct {
-	WalletPath           string                           `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
-	KeymanagerConfig     *WalletResponse_KeymanagerConfig `protobuf:"bytes,2,opt,name=keymanager_config,json=keymanagerConfig,proto3" json:"keymanager_config,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                         `json:"-"`
-	XXX_unrecognized     []byte                           `json:"-"`
-	XXX_sizecache        int32                            `json:"-"`
+	WalletPath           string            `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
+	KeymanagerKind       KeymanagerKind    `protobuf:"varint,2,opt,name=keymanager_kind,json=keymanagerKind,proto3,enum=ethereum.validator.accounts.v2.KeymanagerKind" json:"keymanager_kind,omitempty"`
+	KeymanagerConfig     map[string]string `protobuf:"bytes,3,rep,name=keymanager_config,json=keymanagerConfig,proto3" json:"keymanager_config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *WalletResponse) Reset()         { *m = WalletResponse{} }
 func (m *WalletResponse) String() string { return proto.CompactTextString(m) }
 func (*WalletResponse) ProtoMessage()    {}
 func (*WalletResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{3}
+	return fileDescriptor_8a5153635bfe042e, []int{4}
 }
 
 func (m *WalletResponse) XXX_Unmarshal(b []byte) error {
@@ -315,93 +349,25 @@ func (m *WalletResponse) GetWalletPath() string {
 	return ""
 }
 
-func (m *WalletResponse) GetKeymanagerConfig() *WalletResponse_KeymanagerConfig {
+func (m *WalletResponse) GetKeymanagerKind() KeymanagerKind {
+	if m != nil {
+		return m.KeymanagerKind
+	}
+	return KeymanagerKind_DERIVED
+}
+
+func (m *WalletResponse) GetKeymanagerConfig() map[string]string {
 	if m != nil {
 		return m.KeymanagerConfig
 	}
 	return nil
 }
 
-type WalletResponse_KeymanagerConfig struct {
-	Configs              map[string]string `protobuf:"bytes,1,rep,name=configs,proto3" json:"configs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
-}
-
-func (m *WalletResponse_KeymanagerConfig) Reset()         { *m = WalletResponse_KeymanagerConfig{} }
-func (m *WalletResponse_KeymanagerConfig) String() string { return proto.CompactTextString(m) }
-func (*WalletResponse_KeymanagerConfig) ProtoMessage()    {}
-func (*WalletResponse_KeymanagerConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{3, 0}
-}
-
-func (m *WalletResponse_KeymanagerConfig) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_WalletResponse_KeymanagerConfig.Unmarshal(m, b)
-}
-func (m *WalletResponse_KeymanagerConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_WalletResponse_KeymanagerConfig.Marshal(b, m, deterministic)
-}
-func (m *WalletResponse_KeymanagerConfig) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_WalletResponse_KeymanagerConfig.Merge(m, src)
-}
-func (m *WalletResponse_KeymanagerConfig) XXX_Size() int {
-	return xxx_messageInfo_WalletResponse_KeymanagerConfig.Size(m)
-}
-func (m *WalletResponse_KeymanagerConfig) XXX_DiscardUnknown() {
-	xxx_messageInfo_WalletResponse_KeymanagerConfig.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_WalletResponse_KeymanagerConfig proto.InternalMessageInfo
-
-func (m *WalletResponse_KeymanagerConfig) GetConfigs() map[string]string {
-	if m != nil {
-		return m.Configs
-	}
-	return nil
-}
-
-type CreateAccountResponse struct {
-	Account              *Account `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *CreateAccountResponse) Reset()         { *m = CreateAccountResponse{} }
-func (m *CreateAccountResponse) String() string { return proto.CompactTextString(m) }
-func (*CreateAccountResponse) ProtoMessage()    {}
-func (*CreateAccountResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{4}
-}
-
-func (m *CreateAccountResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_CreateAccountResponse.Unmarshal(m, b)
-}
-func (m *CreateAccountResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_CreateAccountResponse.Marshal(b, m, deterministic)
-}
-func (m *CreateAccountResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CreateAccountResponse.Merge(m, src)
-}
-func (m *CreateAccountResponse) XXX_Size() int {
-	return xxx_messageInfo_CreateAccountResponse.Size(m)
-}
-func (m *CreateAccountResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_CreateAccountResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_CreateAccountResponse proto.InternalMessageInfo
-
-func (m *CreateAccountResponse) GetAccount() *Account {
-	if m != nil {
-		return m.Account
-	}
-	return nil
-}
-
 type ListAccountsRequest struct {
 	GetDepositTxData     bool     `protobuf:"varint,1,opt,name=get_deposit_tx_data,json=getDepositTxData,proto3" json:"get_deposit_tx_data,omitempty"`
+	PageSize             int32    `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken            string   `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	All                  bool     `protobuf:"varint,4,opt,name=all,proto3" json:"all,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -439,8 +405,31 @@ func (m *ListAccountsRequest) GetGetDepositTxData() bool {
 	return false
 }
 
+func (m *ListAccountsRequest) GetPageSize() int32 {
+	if m != nil {
+		return m.PageSize
+	}
+	return 0
+}
+
+func (m *ListAccountsRequest) GetPageToken() string {
+	if m != nil {
+		return m.PageToken
+	}
+	return ""
+}
+
+func (m *ListAccountsRequest) GetAll() bool {
+	if m != nil {
+		return m.All
+	}
+	return false
+}
+
 type ListAccountsResponse struct {
 	Accounts             []*Account `protobuf:"bytes,1,rep,name=accounts,proto3" json:"accounts,omitempty"`
+	NextPageToken        string     `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	TotalSize            int32      `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
 	XXX_unrecognized     []byte     `json:"-"`
 	XXX_sizecache        int32      `json:"-"`
@@ -476,6 +465,20 @@ func (m *ListAccountsResponse) GetAccounts() []*Account {
 		return m.Accounts
 	}
 	return nil
+}
+
+func (m *ListAccountsResponse) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+func (m *ListAccountsResponse) GetTotalSize() int32 {
+	if m != nil {
+		return m.TotalSize
+	}
+	return 0
 }
 
 type Account struct {
@@ -590,6 +593,7 @@ func (m *AccountRequest) GetIndices() []uint64 {
 
 type AuthRequest struct {
 	Password             string   `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
+	WalletDir            string   `protobuf:"bytes,2,opt,name=wallet_dir,json=walletDir,proto3" json:"wallet_dir,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -623,6 +627,13 @@ var xxx_messageInfo_AuthRequest proto.InternalMessageInfo
 func (m *AuthRequest) GetPassword() string {
 	if m != nil {
 		return m.Password
+	}
+	return ""
+}
+
+func (m *AuthRequest) GetWalletDir() string {
+	if m != nil {
+		return m.WalletDir
 	}
 	return ""
 }
@@ -745,15 +756,444 @@ func (m *NodeConnectionResponse) GetDepositContractAddress() []byte {
 	return nil
 }
 
+type ChangePasswordRequest struct {
+	CurrentPassword      string   `protobuf:"bytes,1,opt,name=current_password,json=currentPassword,proto3" json:"current_password,omitempty"`
+	Password             string   `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	PasswordConfirmation string   `protobuf:"bytes,3,opt,name=password_confirmation,json=passwordConfirmation,proto3" json:"password_confirmation,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ChangePasswordRequest) Reset()         { *m = ChangePasswordRequest{} }
+func (m *ChangePasswordRequest) String() string { return proto.CompactTextString(m) }
+func (*ChangePasswordRequest) ProtoMessage()    {}
+func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{12}
+}
+
+func (m *ChangePasswordRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ChangePasswordRequest.Unmarshal(m, b)
+}
+func (m *ChangePasswordRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ChangePasswordRequest.Marshal(b, m, deterministic)
+}
+func (m *ChangePasswordRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ChangePasswordRequest.Merge(m, src)
+}
+func (m *ChangePasswordRequest) XXX_Size() int {
+	return xxx_messageInfo_ChangePasswordRequest.Size(m)
+}
+func (m *ChangePasswordRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ChangePasswordRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ChangePasswordRequest proto.InternalMessageInfo
+
+func (m *ChangePasswordRequest) GetCurrentPassword() string {
+	if m != nil {
+		return m.CurrentPassword
+	}
+	return ""
+}
+
+func (m *ChangePasswordRequest) GetPassword() string {
+	if m != nil {
+		return m.Password
+	}
+	return ""
+}
+
+func (m *ChangePasswordRequest) GetPasswordConfirmation() string {
+	if m != nil {
+		return m.PasswordConfirmation
+	}
+	return ""
+}
+
+type HasWalletResponse struct {
+	WalletExists         bool     `protobuf:"varint,1,opt,name=wallet_exists,json=walletExists,proto3" json:"wallet_exists,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *HasWalletResponse) Reset()         { *m = HasWalletResponse{} }
+func (m *HasWalletResponse) String() string { return proto.CompactTextString(m) }
+func (*HasWalletResponse) ProtoMessage()    {}
+func (*HasWalletResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{13}
+}
+
+func (m *HasWalletResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_HasWalletResponse.Unmarshal(m, b)
+}
+func (m *HasWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_HasWalletResponse.Marshal(b, m, deterministic)
+}
+func (m *HasWalletResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HasWalletResponse.Merge(m, src)
+}
+func (m *HasWalletResponse) XXX_Size() int {
+	return xxx_messageInfo_HasWalletResponse.Size(m)
+}
+func (m *HasWalletResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_HasWalletResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HasWalletResponse proto.InternalMessageInfo
+
+func (m *HasWalletResponse) GetWalletExists() bool {
+	if m != nil {
+		return m.WalletExists
+	}
+	return false
+}
+
+type ImportKeystoresRequest struct {
+	KeystoresImported    []string `protobuf:"bytes,1,rep,name=keystores_imported,json=keystoresImported,proto3" json:"keystores_imported,omitempty"`
+	KeystoresPassword    string   `protobuf:"bytes,2,opt,name=keystores_password,json=keystoresPassword,proto3" json:"keystores_password,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ImportKeystoresRequest) Reset()         { *m = ImportKeystoresRequest{} }
+func (m *ImportKeystoresRequest) String() string { return proto.CompactTextString(m) }
+func (*ImportKeystoresRequest) ProtoMessage()    {}
+func (*ImportKeystoresRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{14}
+}
+
+func (m *ImportKeystoresRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ImportKeystoresRequest.Unmarshal(m, b)
+}
+func (m *ImportKeystoresRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ImportKeystoresRequest.Marshal(b, m, deterministic)
+}
+func (m *ImportKeystoresRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ImportKeystoresRequest.Merge(m, src)
+}
+func (m *ImportKeystoresRequest) XXX_Size() int {
+	return xxx_messageInfo_ImportKeystoresRequest.Size(m)
+}
+func (m *ImportKeystoresRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ImportKeystoresRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ImportKeystoresRequest proto.InternalMessageInfo
+
+func (m *ImportKeystoresRequest) GetKeystoresImported() []string {
+	if m != nil {
+		return m.KeystoresImported
+	}
+	return nil
+}
+
+func (m *ImportKeystoresRequest) GetKeystoresPassword() string {
+	if m != nil {
+		return m.KeystoresPassword
+	}
+	return ""
+}
+
+type ImportKeystoresResponse struct {
+	ImportedPublicKeys   [][]byte `protobuf:"bytes,1,rep,name=imported_public_keys,json=importedPublicKeys,proto3" json:"imported_public_keys,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ImportKeystoresResponse) Reset()         { *m = ImportKeystoresResponse{} }
+func (m *ImportKeystoresResponse) String() string { return proto.CompactTextString(m) }
+func (*ImportKeystoresResponse) ProtoMessage()    {}
+func (*ImportKeystoresResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{15}
+}
+
+func (m *ImportKeystoresResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ImportKeystoresResponse.Unmarshal(m, b)
+}
+func (m *ImportKeystoresResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ImportKeystoresResponse.Marshal(b, m, deterministic)
+}
+func (m *ImportKeystoresResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ImportKeystoresResponse.Merge(m, src)
+}
+func (m *ImportKeystoresResponse) XXX_Size() int {
+	return xxx_messageInfo_ImportKeystoresResponse.Size(m)
+}
+func (m *ImportKeystoresResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ImportKeystoresResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ImportKeystoresResponse proto.InternalMessageInfo
+
+func (m *ImportKeystoresResponse) GetImportedPublicKeys() [][]byte {
+	if m != nil {
+		return m.ImportedPublicKeys
+	}
+	return nil
+}
+
+type CreateAccountRequest struct {
+	NumAccounts          uint64   `protobuf:"varint,1,opt,name=num_accounts,json=numAccounts,proto3" json:"num_accounts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CreateAccountRequest) Reset()         { *m = CreateAccountRequest{} }
+func (m *CreateAccountRequest) String() string { return proto.CompactTextString(m) }
+func (*CreateAccountRequest) ProtoMessage()    {}
+func (*CreateAccountRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{16}
+}
+
+func (m *CreateAccountRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateAccountRequest.Unmarshal(m, b)
+}
+func (m *CreateAccountRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateAccountRequest.Marshal(b, m, deterministic)
+}
+func (m *CreateAccountRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateAccountRequest.Merge(m, src)
+}
+func (m *CreateAccountRequest) XXX_Size() int {
+	return xxx_messageInfo_CreateAccountRequest.Size(m)
+}
+func (m *CreateAccountRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateAccountRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CreateAccountRequest proto.InternalMessageInfo
+
+func (m *CreateAccountRequest) GetNumAccounts() uint64 {
+	if m != nil {
+		return m.NumAccounts
+	}
+	return 0
+}
+
+type DepositMessage struct {
+	Pubkey                []byte   `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
+	WithdrawalCredentials []byte   `protobuf:"bytes,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty"`
+	Amount                uint64   `protobuf:"varint,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{} `json:"-"`
+	XXX_unrecognized      []byte   `json:"-"`
+	XXX_sizecache         int32    `json:"-"`
+}
+
+func (m *DepositMessage) Reset()         { *m = DepositMessage{} }
+func (m *DepositMessage) String() string { return proto.CompactTextString(m) }
+func (*DepositMessage) ProtoMessage()    {}
+func (*DepositMessage) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{17}
+}
+
+func (m *DepositMessage) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DepositMessage.Unmarshal(m, b)
+}
+func (m *DepositMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DepositMessage.Marshal(b, m, deterministic)
+}
+func (m *DepositMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DepositMessage.Merge(m, src)
+}
+func (m *DepositMessage) XXX_Size() int {
+	return xxx_messageInfo_DepositMessage.Size(m)
+}
+func (m *DepositMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_DepositMessage.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DepositMessage proto.InternalMessageInfo
+
+func (m *DepositMessage) GetPubkey() []byte {
+	if m != nil {
+		return m.Pubkey
+	}
+	return nil
+}
+
+func (m *DepositMessage) GetWithdrawalCredentials() []byte {
+	if m != nil {
+		return m.WithdrawalCredentials
+	}
+	return nil
+}
+
+func (m *DepositMessage) GetAmount() uint64 {
+	if m != nil {
+		return m.Amount
+	}
+	return 0
+}
+
+type DepositDataResponse struct {
+	DepositDataList      []*DepositDataResponse_DepositData `protobuf:"bytes,1,rep,name=deposit_data_list,json=depositDataList,proto3" json:"deposit_data_list,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
+	XXX_unrecognized     []byte                             `json:"-"`
+	XXX_sizecache        int32                              `json:"-"`
+}
+
+func (m *DepositDataResponse) Reset()         { *m = DepositDataResponse{} }
+func (m *DepositDataResponse) String() string { return proto.CompactTextString(m) }
+func (*DepositDataResponse) ProtoMessage()    {}
+func (*DepositDataResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{18}
+}
+
+func (m *DepositDataResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DepositDataResponse.Unmarshal(m, b)
+}
+func (m *DepositDataResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DepositDataResponse.Marshal(b, m, deterministic)
+}
+func (m *DepositDataResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DepositDataResponse.Merge(m, src)
+}
+func (m *DepositDataResponse) XXX_Size() int {
+	return xxx_messageInfo_DepositDataResponse.Size(m)
+}
+func (m *DepositDataResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_DepositDataResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DepositDataResponse proto.InternalMessageInfo
+
+func (m *DepositDataResponse) GetDepositDataList() []*DepositDataResponse_DepositData {
+	if m != nil {
+		return m.DepositDataList
+	}
+	return nil
+}
+
+type DepositDataResponse_DepositData struct {
+	Data                 map[string]string `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
+}
+
+func (m *DepositDataResponse_DepositData) Reset()         { *m = DepositDataResponse_DepositData{} }
+func (m *DepositDataResponse_DepositData) String() string { return proto.CompactTextString(m) }
+func (*DepositDataResponse_DepositData) ProtoMessage()    {}
+func (*DepositDataResponse_DepositData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{18, 0}
+}
+
+func (m *DepositDataResponse_DepositData) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DepositDataResponse_DepositData.Unmarshal(m, b)
+}
+func (m *DepositDataResponse_DepositData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DepositDataResponse_DepositData.Marshal(b, m, deterministic)
+}
+func (m *DepositDataResponse_DepositData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DepositDataResponse_DepositData.Merge(m, src)
+}
+func (m *DepositDataResponse_DepositData) XXX_Size() int {
+	return xxx_messageInfo_DepositDataResponse_DepositData.Size(m)
+}
+func (m *DepositDataResponse_DepositData) XXX_DiscardUnknown() {
+	xxx_messageInfo_DepositDataResponse_DepositData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DepositDataResponse_DepositData proto.InternalMessageInfo
+
+func (m *DepositDataResponse_DepositData) GetData() map[string]string {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type DeleteAccountsRequest struct {
+	PublicKeys           [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DeleteAccountsRequest) Reset()         { *m = DeleteAccountsRequest{} }
+func (m *DeleteAccountsRequest) String() string { return proto.CompactTextString(m) }
+func (*DeleteAccountsRequest) ProtoMessage()    {}
+func (*DeleteAccountsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{19}
+}
+
+func (m *DeleteAccountsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DeleteAccountsRequest.Unmarshal(m, b)
+}
+func (m *DeleteAccountsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DeleteAccountsRequest.Marshal(b, m, deterministic)
+}
+func (m *DeleteAccountsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeleteAccountsRequest.Merge(m, src)
+}
+func (m *DeleteAccountsRequest) XXX_Size() int {
+	return xxx_messageInfo_DeleteAccountsRequest.Size(m)
+}
+func (m *DeleteAccountsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeleteAccountsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeleteAccountsRequest proto.InternalMessageInfo
+
+func (m *DeleteAccountsRequest) GetPublicKeys() [][]byte {
+	if m != nil {
+		return m.PublicKeys
+	}
+	return nil
+}
+
+type DeleteAccountsResponse struct {
+	DeletedKeys          [][]byte `protobuf:"bytes,1,rep,name=deleted_keys,json=deletedKeys,proto3" json:"deleted_keys,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DeleteAccountsResponse) Reset()         { *m = DeleteAccountsResponse{} }
+func (m *DeleteAccountsResponse) String() string { return proto.CompactTextString(m) }
+func (*DeleteAccountsResponse) ProtoMessage()    {}
+func (*DeleteAccountsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8a5153635bfe042e, []int{20}
+}
+
+func (m *DeleteAccountsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DeleteAccountsResponse.Unmarshal(m, b)
+}
+func (m *DeleteAccountsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DeleteAccountsResponse.Marshal(b, m, deterministic)
+}
+func (m *DeleteAccountsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeleteAccountsResponse.Merge(m, src)
+}
+func (m *DeleteAccountsResponse) XXX_Size() int {
+	return xxx_messageInfo_DeleteAccountsResponse.Size(m)
+}
+func (m *DeleteAccountsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeleteAccountsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeleteAccountsResponse proto.InternalMessageInfo
+
+func (m *DeleteAccountsResponse) GetDeletedKeys() [][]byte {
+	if m != nil {
+		return m.DeletedKeys
+	}
+	return nil
+}
+
 func init() {
-	proto.RegisterEnum("ethereum.validator.accounts.v2.CreateWalletRequest_KeymanagerKind", CreateWalletRequest_KeymanagerKind_name, CreateWalletRequest_KeymanagerKind_value)
+	proto.RegisterEnum("ethereum.validator.accounts.v2.KeymanagerKind", KeymanagerKind_name, KeymanagerKind_value)
 	proto.RegisterType((*CreateWalletRequest)(nil), "ethereum.validator.accounts.v2.CreateWalletRequest")
+	proto.RegisterType((*CreateWalletResponse)(nil), "ethereum.validator.accounts.v2.CreateWalletResponse")
 	proto.RegisterType((*EditWalletConfigRequest)(nil), "ethereum.validator.accounts.v2.EditWalletConfigRequest")
 	proto.RegisterType((*GenerateMnemonicResponse)(nil), "ethereum.validator.accounts.v2.GenerateMnemonicResponse")
 	proto.RegisterType((*WalletResponse)(nil), "ethereum.validator.accounts.v2.WalletResponse")
-	proto.RegisterType((*WalletResponse_KeymanagerConfig)(nil), "ethereum.validator.accounts.v2.WalletResponse.KeymanagerConfig")
-	proto.RegisterMapType((map[string]string)(nil), "ethereum.validator.accounts.v2.WalletResponse.KeymanagerConfig.ConfigsEntry")
-	proto.RegisterType((*CreateAccountResponse)(nil), "ethereum.validator.accounts.v2.CreateAccountResponse")
+	proto.RegisterMapType((map[string]string)(nil), "ethereum.validator.accounts.v2.WalletResponse.KeymanagerConfigEntry")
 	proto.RegisterType((*ListAccountsRequest)(nil), "ethereum.validator.accounts.v2.ListAccountsRequest")
 	proto.RegisterType((*ListAccountsResponse)(nil), "ethereum.validator.accounts.v2.ListAccountsResponse")
 	proto.RegisterType((*Account)(nil), "ethereum.validator.accounts.v2.Account")
@@ -761,6 +1201,17 @@ func init() {
 	proto.RegisterType((*AuthRequest)(nil), "ethereum.validator.accounts.v2.AuthRequest")
 	proto.RegisterType((*AuthResponse)(nil), "ethereum.validator.accounts.v2.AuthResponse")
 	proto.RegisterType((*NodeConnectionResponse)(nil), "ethereum.validator.accounts.v2.NodeConnectionResponse")
+	proto.RegisterType((*ChangePasswordRequest)(nil), "ethereum.validator.accounts.v2.ChangePasswordRequest")
+	proto.RegisterType((*HasWalletResponse)(nil), "ethereum.validator.accounts.v2.HasWalletResponse")
+	proto.RegisterType((*ImportKeystoresRequest)(nil), "ethereum.validator.accounts.v2.ImportKeystoresRequest")
+	proto.RegisterType((*ImportKeystoresResponse)(nil), "ethereum.validator.accounts.v2.ImportKeystoresResponse")
+	proto.RegisterType((*CreateAccountRequest)(nil), "ethereum.validator.accounts.v2.CreateAccountRequest")
+	proto.RegisterType((*DepositMessage)(nil), "ethereum.validator.accounts.v2.DepositMessage")
+	proto.RegisterType((*DepositDataResponse)(nil), "ethereum.validator.accounts.v2.DepositDataResponse")
+	proto.RegisterType((*DepositDataResponse_DepositData)(nil), "ethereum.validator.accounts.v2.DepositDataResponse.DepositData")
+	proto.RegisterMapType((map[string]string)(nil), "ethereum.validator.accounts.v2.DepositDataResponse.DepositData.DataEntry")
+	proto.RegisterType((*DeleteAccountsRequest)(nil), "ethereum.validator.accounts.v2.DeleteAccountsRequest")
+	proto.RegisterType((*DeleteAccountsResponse)(nil), "ethereum.validator.accounts.v2.DeleteAccountsResponse")
 }
 
 func init() {
@@ -768,87 +1219,121 @@ func init() {
 }
 
 var fileDescriptor_8a5153635bfe042e = []byte{
-	// 1265 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcf, 0x6f, 0x1b, 0xc5,
-	0x17, 0xff, 0xae, 0xed, 0x24, 0xce, 0xb3, 0x9b, 0xba, 0x93, 0x34, 0xdd, 0xaf, 0x5b, 0x1a, 0x77,
-	0x05, 0xad, 0xfb, 0xcb, 0x46, 0x2e, 0x2d, 0x55, 0x2e, 0x28, 0x75, 0xac, 0x52, 0xa5, 0xbf, 0xb4,
-	0x44, 0x20, 0xc1, 0x61, 0x35, 0xd9, 0x7d, 0x75, 0x46, 0xf1, 0xce, 0x2c, 0xbb, 0xe3, 0xb4, 0xbe,
-	0x56, 0x1c, 0xb8, 0x70, 0x81, 0x03, 0x42, 0xdc, 0xfa, 0x1f, 0xf4, 0x00, 0xfc, 0x1d, 0x88, 0x0b,
-	0x37, 0x2e, 0xfc, 0x21, 0x68, 0x67, 0x66, 0xd7, 0x76, 0xe4, 0xe0, 0x04, 0xc4, 0x69, 0x77, 0xde,
-	0xfb, 0xcc, 0x7b, 0x9f, 0x79, 0xf3, 0x7e, 0x0c, 0x5c, 0x8f, 0x62, 0x21, 0x45, 0xfb, 0x90, 0x0e,
-	0x58, 0x40, 0xa5, 0x88, 0xdb, 0xd4, 0xf7, 0xc5, 0x90, 0xcb, 0xa4, 0x7d, 0xd8, 0x69, 0xbf, 0xc4,
-	0x3d, 0x8f, 0x46, 0xac, 0xa5, 0x30, 0xe4, 0x32, 0xca, 0x7d, 0x8c, 0x71, 0x18, 0xb6, 0x72, 0x74,
-	0x2b, 0x43, 0xb7, 0x0e, 0x3b, 0xf5, 0x4b, 0x7d, 0x21, 0xfa, 0x03, 0x6c, 0xd3, 0x88, 0xb5, 0x29,
-	0xe7, 0x42, 0x52, 0xc9, 0x04, 0x4f, 0xf4, 0xee, 0xfa, 0x45, 0xa3, 0x55, 0xab, 0xbd, 0xe1, 0x8b,
-	0x36, 0x86, 0x91, 0x1c, 0x69, 0xa5, 0xf3, 0x53, 0x09, 0x56, 0xbb, 0x31, 0x52, 0x89, 0x9f, 0xd1,
-	0xc1, 0x00, 0xa5, 0x8b, 0x5f, 0x0e, 0x31, 0x91, 0x64, 0x03, 0x2a, 0x2f, 0x95, 0xc0, 0x8b, 0xa8,
-	0xdc, 0xb7, 0xad, 0x86, 0xd5, 0x5c, 0x76, 0x41, 0x8b, 0x9e, 0x53, 0xb9, 0x4f, 0xf6, 0x00, 0x0e,
-	0x70, 0x14, 0x52, 0x4e, 0xfb, 0x18, 0xdb, 0x85, 0x86, 0xd5, 0x5c, 0xe9, 0x3c, 0x68, 0xfd, 0x3d,
-	0xd1, 0xd6, 0x0c, 0x4f, 0xad, 0x9d, 0xdc, 0xca, 0x0e, 0xe3, 0x81, 0x3b, 0x61, 0x95, 0x5c, 0x83,
-	0xb3, 0x39, 0x89, 0x24, 0x79, 0x29, 0xe2, 0xc0, 0x2e, 0x2a, 0x22, 0x2b, 0x19, 0x11, 0x2d, 0x25,
-	0x75, 0x28, 0x87, 0x1c, 0x43, 0xc1, 0x99, 0x6f, 0x97, 0x14, 0x22, 0x5f, 0x93, 0x2b, 0x50, 0xe5,
-	0xc3, 0xd0, 0xcb, 0x68, 0xd8, 0x0b, 0x0d, 0xab, 0x59, 0x72, 0x2b, 0x7c, 0x18, 0x6e, 0x19, 0x11,
-	0xb9, 0x0d, 0xe4, 0x00, 0x47, 0x89, 0x14, 0x31, 0x26, 0x1e, 0x0b, 0x23, 0x11, 0x4b, 0x0c, 0xec,
-	0xc5, 0x46, 0xb1, 0xb9, 0xec, 0x9e, 0xcb, 0x35, 0x8f, 0x8c, 0x62, 0x1a, 0x9e, 0x33, 0x5b, 0x52,
-	0x7e, 0xc7, 0xf0, 0x9c, 0xdc, 0x06, 0x54, 0x62, 0x0c, 0x85, 0x44, 0x8f, 0x06, 0x41, 0x6c, 0x97,
-	0x75, 0x28, 0xb5, 0x68, 0x2b, 0x08, 0x62, 0x72, 0x15, 0xce, 0x1a, 0x80, 0x1f, 0x9b, 0x78, 0x2f,
-	0x2b, 0xd0, 0x19, 0x2d, 0xee, 0xc6, 0x3a, 0xe4, 0x63, 0xdc, 0x01, 0x8e, 0x34, 0x0e, 0x26, 0x71,
-	0x3b, 0x38, 0x52, 0xb8, 0x9b, 0x40, 0x32, 0x7b, 0x74, 0x6c, 0xb2, 0xa2, 0xa0, 0xc6, 0x42, 0x97,
-	0x1a, 0xa3, 0xce, 0x5d, 0x58, 0x99, 0xbe, 0x01, 0x52, 0x81, 0xa5, 0xed, 0x9e, 0xfb, 0xe8, 0xd3,
-	0xde, 0x76, 0xed, 0x7f, 0x04, 0x60, 0x71, 0xfb, 0x91, 0xdb, 0xeb, 0xee, 0xd6, 0xac, 0xf4, 0xdf,
-	0xed, 0x3d, 0x79, 0xb6, 0xdb, 0xab, 0x15, 0x9c, 0x5f, 0x2c, 0xb8, 0xd0, 0x0b, 0x98, 0xd4, 0x77,
-	0xd9, 0x15, 0xfc, 0x05, 0xeb, 0x4f, 0xe4, 0xce, 0xe4, 0x81, 0xad, 0x93, 0x1c, 0xb8, 0x70, 0xc2,
-	0x03, 0x17, 0x4f, 0x7e, 0xe0, 0xd2, 0xec, 0x03, 0xdf, 0x03, 0xfb, 0x21, 0x72, 0x8c, 0xa9, 0xc4,
-	0x27, 0x26, 0x47, 0x5c, 0x4c, 0x22, 0xc1, 0x13, 0x9c, 0xca, 0x23, 0x6b, 0x3a, 0x8f, 0x9c, 0xdf,
-	0x0b, 0xb0, 0x92, 0x65, 0xae, 0x81, 0xcf, 0x2d, 0x92, 0x01, 0x9c, 0x1b, 0xa7, 0xb3, 0xe7, 0xab,
-	0x28, 0xa9, 0xa3, 0x56, 0x3a, 0x1f, 0xcd, 0xab, 0x95, 0x69, 0x5f, 0x13, 0x65, 0x62, 0x82, 0x5d,
-	0x3b, 0x38, 0x22, 0xa9, 0xff, 0x6c, 0x41, 0xed, 0x28, 0x8c, 0xbc, 0x80, 0x25, 0xed, 0x37, 0xb1,
-	0xad, 0x46, 0xb1, 0x59, 0xe9, 0x3c, 0xfe, 0x97, 0x8e, 0x5b, 0xfa, 0x93, 0xf4, 0xb8, 0x8c, 0x47,
-	0x6e, 0x66, 0xbc, 0xbe, 0x09, 0xd5, 0x49, 0x05, 0xa9, 0x41, 0xf1, 0x00, 0x47, 0x26, 0x26, 0xe9,
-	0x2f, 0x59, 0x83, 0x85, 0x43, 0x3a, 0x18, 0xa2, 0xb9, 0x6b, 0xbd, 0xd8, 0x2c, 0xdc, 0xb7, 0x9c,
-	0xcf, 0xe1, 0xbc, 0xee, 0x0c, 0xa6, 0x22, 0xf3, 0x00, 0x6f, 0xc1, 0x92, 0x61, 0xa6, 0x0c, 0x55,
-	0x3a, 0xd7, 0xe6, 0x91, 0xcf, 0x2c, 0x64, 0xfb, 0x9c, 0x6d, 0x58, 0x7d, 0xcc, 0x12, 0x99, 0xd5,
-	0x7a, 0x96, 0xa3, 0xb7, 0x61, 0xb5, 0x8f, 0xd2, 0x0b, 0x30, 0x12, 0x09, 0x93, 0x9e, 0x7c, 0xe5,
-	0x05, 0x54, 0x52, 0xe5, 0xa5, 0xec, 0xd6, 0xfa, 0x28, 0xb7, 0xb5, 0x66, 0xf7, 0xd5, 0x36, 0x95,
-	0xd4, 0xf9, 0x02, 0xd6, 0xa6, 0xad, 0x18, 0x82, 0x5d, 0x28, 0xe7, 0x8d, 0x45, 0x87, 0xf7, 0xc4,
-	0x0c, 0xf3, 0x8d, 0xce, 0x5b, 0x0b, 0x96, 0x8c, 0x94, 0x74, 0xe0, 0xbc, 0xd9, 0xc6, 0x78, 0xdf,
-	0x8b, 0x86, 0x7b, 0x03, 0xe6, 0x7b, 0x59, 0x20, 0xab, 0xee, 0xea, 0x58, 0xf9, 0x5c, 0xe9, 0x76,
-	0x70, 0x94, 0x76, 0x38, 0x63, 0xcb, 0xe3, 0x34, 0xcc, 0xe2, 0x5b, 0x31, 0xb2, 0xa7, 0x34, 0xc4,
-	0xb4, 0x92, 0x8e, 0x1e, 0xb5, 0xa8, 0x0c, 0x9e, 0x09, 0x26, 0xcf, 0x99, 0x76, 0xdc, 0x00, 0x63,
-	0x76, 0xa8, 0x06, 0xc8, 0x64, 0x19, 0xad, 0x8c, 0xc5, 0xaa, 0x8a, 0x76, 0x60, 0x25, 0xbf, 0xac,
-	0xbc, 0xea, 0xc7, 0x74, 0x75, 0x34, 0xaa, 0x2e, 0x44, 0x19, 0xcb, 0x84, 0xd8, 0xb0, 0xc4, 0x78,
-	0xc0, 0x7c, 0x4c, 0xec, 0x42, 0xa3, 0xd8, 0x2c, 0xb9, 0xd9, 0xd2, 0xb9, 0x0e, 0x95, 0xad, 0xa1,
-	0xdc, 0xcf, 0x2c, 0xd5, 0xa1, 0x9c, 0x77, 0x55, 0x53, 0x85, 0xd9, 0xda, 0x79, 0x06, 0x55, 0x0d,
-	0x35, 0x17, 0xb0, 0x06, 0x0b, 0x52, 0x1c, 0x20, 0x37, 0x40, 0xbd, 0x20, 0xd7, 0xa1, 0xa6, 0x7e,
-	0x3c, 0x7c, 0x15, 0xb1, 0x58, 0xb1, 0x56, 0x51, 0x29, 0xb9, 0x67, 0x95, 0xbc, 0x97, 0x8b, 0x9d,
-	0x3f, 0x2c, 0x58, 0x7f, 0x2a, 0x02, 0xec, 0x0a, 0xce, 0xd1, 0x4f, 0x45, 0xb9, 0xed, 0xf7, 0x61,
-	0x6d, 0x0f, 0xa9, 0x2f, 0xb8, 0xc7, 0x45, 0x80, 0x1e, 0xf2, 0x20, 0x12, 0xcc, 0xa4, 0xe2, 0xb2,
-	0x4b, 0xb4, 0x2e, 0xdd, 0xdb, 0x33, 0x1a, 0x72, 0x09, 0x96, 0x7d, 0x6d, 0x07, 0x03, 0xe5, 0xb0,
-	0xec, 0x8e, 0x05, 0x69, 0x00, 0x92, 0x11, 0xf7, 0x19, 0xef, 0xab, 0xe0, 0x97, 0xdd, 0x6c, 0x99,
-	0xde, 0x60, 0x1f, 0x39, 0x26, 0x2c, 0xf1, 0x24, 0x0b, 0x51, 0xc5, 0xbc, 0xe4, 0x56, 0x8c, 0x6c,
-	0x97, 0x85, 0x48, 0xee, 0x83, 0x9d, 0xdd, 0xa0, 0x2f, 0xb8, 0x8c, 0xa9, 0x2f, 0x55, 0x7b, 0xc5,
-	0x44, 0x8f, 0xb4, 0xaa, 0xbb, 0x6e, 0xf4, 0x5d, 0xa3, 0xde, 0xd2, 0xda, 0xce, 0xaf, 0x25, 0x58,
-	0xd4, 0x35, 0x4d, 0x7e, 0xb4, 0xa0, 0x3a, 0x39, 0x83, 0xc9, 0x9d, 0x7f, 0x30, 0xb1, 0xeb, 0xad,
-	0xd3, 0x75, 0x10, 0xe7, 0xea, 0xeb, 0xdf, 0xfe, 0xfc, 0xae, 0xd0, 0x70, 0x2e, 0xa6, 0x2f, 0x9b,
-	0xf1, 0x7b, 0x47, 0xf7, 0xc9, 0xb6, 0xaf, 0x3c, 0x6c, 0x5a, 0x37, 0xc8, 0x1b, 0x0b, 0x20, 0x9d,
-	0x29, 0xa6, 0x73, 0x7d, 0x38, 0xcf, 0xcd, 0x31, 0xf3, 0xe7, 0xd4, 0xfc, 0x6e, 0x2a, 0x7e, 0xef,
-	0x39, 0x8d, 0xd9, 0xfc, 0x94, 0xed, 0x36, 0x06, 0x4c, 0xa6, 0x24, 0x25, 0x54, 0x27, 0x7d, 0x92,
-	0xf5, 0x96, 0x7e, 0x5e, 0xb5, 0xb2, 0xe7, 0x55, 0xab, 0x97, 0x3e, 0xaf, 0x4e, 0x4d, 0xe2, 0x92,
-	0x22, 0xb1, 0x4e, 0xd6, 0x66, 0x91, 0x20, 0xdf, 0x58, 0x50, 0x3b, 0x3a, 0xb5, 0x8e, 0x75, 0x7d,
-	0x7f, 0x9e, 0xeb, 0xe3, 0xe6, 0x9f, 0x73, 0x4d, 0x91, 0xb8, 0x42, 0x36, 0xa6, 0x49, 0x64, 0x33,
-	0xb0, 0xdd, 0x37, 0x1b, 0x3b, 0x6f, 0x0b, 0x50, 0xce, 0x9f, 0x4f, 0x5f, 0x5b, 0x70, 0x66, 0xaa,
-	0x7f, 0x1f, 0xcb, 0xec, 0xee, 0xc9, 0xd2, 0xed, 0xc8, 0x18, 0x70, 0x9a, 0x8a, 0x96, 0xe3, 0xbc,
-	0x33, 0x4d, 0x2b, 0x7f, 0x30, 0x8f, 0x53, 0xe8, 0x07, 0x0b, 0xaa, 0x93, 0x8d, 0x7a, 0x7e, 0x82,
-	0xcf, 0x18, 0x0e, 0xf5, 0x0f, 0x4e, 0xb7, 0xc9, 0xb0, 0xbc, 0xac, 0x58, 0xda, 0x64, 0x7d, 0x36,
-	0xcb, 0xce, 0x1b, 0x0b, 0x16, 0x3f, 0x46, 0x3a, 0x90, 0xfb, 0xe4, 0x7b, 0x0b, 0x2e, 0x3c, 0x44,
-	0xf9, 0x20, 0xef, 0x20, 0xe3, 0xee, 0x73, 0x6c, 0xec, 0xee, 0xcd, 0x23, 0x35, 0xbb, 0x8b, 0x39,
-	0xb7, 0x14, 0xad, 0xab, 0xe4, 0xdd, 0x69, 0x5a, 0xfb, 0x8a, 0x49, 0x5b, 0x75, 0x36, 0x3f, 0xdf,
-	0xd5, 0xf9, 0xb6, 0x00, 0xa5, 0xb4, 0xc1, 0x92, 0xd7, 0x16, 0x2c, 0x3c, 0x16, 0x7d, 0xc6, 0xc9,
-	0xcd, 0xb9, 0x13, 0x6d, 0xdc, 0xbb, 0xeb, 0xb7, 0x4e, 0x06, 0x9e, 0x0e, 0x99, 0xb3, 0x3a, 0xcd,
-	0x6d, 0x90, 0xfa, 0x4d, 0xaf, 0xf3, 0x2b, 0x0b, 0x16, 0x3f, 0x61, 0x7d, 0x3e, 0x8c, 0xfe, 0x4b,
-	0x16, 0x1b, 0x8a, 0xc5, 0xff, 0x9d, 0x23, 0xa5, 0x97, 0x28, 0xc7, 0x9b, 0xd6, 0x8d, 0xbd, 0x45,
-	0x75, 0x15, 0x77, 0xfe, 0x0a, 0x00, 0x00, 0xff, 0xff, 0x0c, 0xb7, 0x90, 0x4f, 0xb3, 0x0d, 0x00,
-	0x00,
+	// 1817 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0x4d, 0x6f, 0x23, 0x49,
+	0xf9, 0xff, 0xb7, 0xed, 0x38, 0xf6, 0x63, 0xc7, 0x71, 0x2a, 0x89, 0xc7, 0x7f, 0xcf, 0xcc, 0x4e,
+	0xa6, 0x97, 0x9d, 0x49, 0x32, 0x3b, 0xf6, 0xe2, 0x59, 0x76, 0x42, 0x38, 0xa0, 0x59, 0xc7, 0xec,
+	0x44, 0x99, 0x37, 0xf5, 0x46, 0xac, 0x38, 0x40, 0xab, 0xd2, 0x5d, 0xdb, 0x2e, 0xd9, 0xae, 0xf6,
+	0x76, 0x97, 0xf3, 0x32, 0xdc, 0x56, 0x48, 0x1c, 0x80, 0x0b, 0x7b, 0x40, 0x1c, 0x38, 0x30, 0x12,
+	0x17, 0x38, 0x21, 0x21, 0x71, 0xe3, 0xc0, 0x57, 0xe0, 0xbe, 0x5c, 0xb8, 0x72, 0xe1, 0x13, 0xa0,
+	0x7a, 0xe9, 0x17, 0x3b, 0x36, 0x4e, 0x06, 0x71, 0xb1, 0xba, 0x9e, 0x7a, 0xea, 0x79, 0x7e, 0xf5,
+	0xbc, 0x97, 0x61, 0x67, 0x14, 0xf8, 0xdc, 0x6f, 0x9d, 0xe2, 0x01, 0x75, 0x31, 0xf7, 0x83, 0x16,
+	0x76, 0x1c, 0x7f, 0xcc, 0x78, 0xd8, 0x3a, 0x6d, 0xb7, 0xce, 0xc8, 0x89, 0x8d, 0x47, 0xb4, 0x29,
+	0x79, 0xd0, 0x3b, 0x84, 0xf7, 0x48, 0x40, 0xc6, 0xc3, 0x66, 0xcc, 0xdd, 0x8c, 0xb8, 0x9b, 0xa7,
+	0xed, 0xc6, 0x2d, 0xcf, 0xf7, 0xbd, 0x01, 0x69, 0xe1, 0x11, 0x6d, 0x61, 0xc6, 0x7c, 0x8e, 0x39,
+	0xf5, 0x59, 0xa8, 0x4e, 0x37, 0x6e, 0xea, 0x5d, 0xb9, 0x3a, 0x19, 0x7f, 0xde, 0x22, 0xc3, 0x11,
+	0xbf, 0xd0, 0x9b, 0x0f, 0x3d, 0xca, 0x7b, 0xe3, 0x93, 0xa6, 0xe3, 0x0f, 0x5b, 0x9e, 0xef, 0xf9,
+	0x09, 0x97, 0x58, 0x29, 0x88, 0xe2, 0x4b, 0xb1, 0x9b, 0x3f, 0xcf, 0xc2, 0x7a, 0x27, 0x20, 0x98,
+	0x93, 0xcf, 0xf0, 0x60, 0x40, 0xb8, 0x45, 0xbe, 0x18, 0x93, 0x90, 0xa3, 0x3b, 0x50, 0x3a, 0x93,
+	0x04, 0x7b, 0x84, 0x79, 0xaf, 0x6e, 0x6c, 0x19, 0xdb, 0x45, 0x0b, 0x14, 0xe9, 0x15, 0xe6, 0x3d,
+	0xf4, 0x02, 0xa0, 0x4f, 0x2e, 0x86, 0x98, 0x61, 0x8f, 0x04, 0xf5, 0xcc, 0x96, 0xb1, 0x5d, 0x69,
+	0x37, 0x9b, 0xff, 0xf9, 0x5e, 0xcd, 0xa3, 0xf8, 0xc4, 0x11, 0x65, 0xae, 0x95, 0x92, 0x80, 0xee,
+	0xc3, 0x6a, 0xac, 0x30, 0x0c, 0xcf, 0xfc, 0xc0, 0xad, 0x67, 0xa5, 0xd2, 0x4a, 0xa4, 0x54, 0x51,
+	0x51, 0x03, 0x0a, 0x43, 0x46, 0x86, 0x3e, 0xa3, 0x4e, 0x3d, 0x27, 0x39, 0xe2, 0x35, 0xba, 0x0b,
+	0x65, 0x36, 0x1e, 0xda, 0x91, 0xca, 0xfa, 0xd2, 0x96, 0xb1, 0x9d, 0xb3, 0x4a, 0x6c, 0x3c, 0x7c,
+	0xa2, 0x49, 0xe2, 0x62, 0x01, 0x19, 0xfa, 0x9c, 0xd8, 0xd8, 0x75, 0x83, 0x7a, 0x5e, 0x5d, 0x4c,
+	0x91, 0x9e, 0xb8, 0x6e, 0x80, 0xee, 0xc1, 0xaa, 0x66, 0x70, 0x02, 0x7d, 0xfb, 0x65, 0xc9, 0xb4,
+	0xa2, 0xc8, 0x9d, 0x40, 0x19, 0x20, 0xe1, 0xeb, 0x93, 0x0b, 0xc5, 0x57, 0x48, 0xf3, 0x1d, 0x91,
+	0x0b, 0xc9, 0xf7, 0x00, 0x50, 0x24, 0x0f, 0x27, 0x22, 0x8b, 0x92, 0x55, 0x4b, 0xe8, 0x60, 0x2d,
+	0xd4, 0xfc, 0x8b, 0x01, 0x1b, 0x93, 0xee, 0x08, 0x47, 0x3e, 0x0b, 0x09, 0xfa, 0x1e, 0xe4, 0x95,
+	0x1d, 0xa4, 0x2b, 0x4a, 0x8b, 0x4d, 0x3d, 0x79, 0xde, 0xd2, 0xa7, 0xd1, 0x8f, 0xa0, 0x1a, 0x71,
+	0xd9, 0x8e, 0x54, 0xe4, 0x4a, 0xe7, 0x95, 0xda, 0x8f, 0x16, 0x49, 0x3c, 0x20, 0x23, 0x3f, 0xa4,
+	0xfc, 0x00, 0x73, 0x1c, 0x8b, 0x5d, 0x8d, 0x18, 0x14, 0x68, 0xd7, 0xfc, 0xb3, 0x01, 0x37, 0xba,
+	0x2e, 0xe5, 0x4a, 0x7d, 0xc7, 0x67, 0x9f, 0x53, 0x2f, 0x15, 0x53, 0x69, 0xd3, 0x1b, 0x57, 0x31,
+	0x7d, 0xe6, 0x8a, 0xa6, 0xcf, 0x5e, 0xdd, 0xf4, 0xb9, 0xd9, 0xa6, 0xff, 0x08, 0xea, 0x9f, 0x10,
+	0x46, 0x02, 0xcc, 0xc9, 0x73, 0x1d, 0x4f, 0xb1, 0xf5, 0xd3, 0x31, 0x67, 0x4c, 0xc6, 0x9c, 0xf9,
+	0xd7, 0x0c, 0x54, 0xa6, 0x9c, 0xb5, 0x30, 0x79, 0x3e, 0x83, 0xd5, 0x24, 0xf4, 0xed, 0x3e, 0x65,
+	0xee, 0x5b, 0x66, 0x50, 0xa5, 0x3f, 0xb1, 0x46, 0x5f, 0xc0, 0x5a, 0x4a, 0xb0, 0x23, 0xcd, 0x5f,
+	0xcf, 0x6e, 0x65, 0xb7, 0x4b, 0xed, 0x83, 0xeb, 0x45, 0x4c, 0x4a, 0x93, 0xf2, 0x62, 0x97, 0xf1,
+	0xe0, 0xc2, 0xaa, 0xf6, 0xa7, 0xc8, 0x8d, 0x0e, 0x6c, 0xce, 0x64, 0x45, 0x55, 0xc8, 0xf6, 0xc9,
+	0x85, 0xbe, 0xbd, 0xf8, 0x44, 0x1b, 0xb0, 0x74, 0x8a, 0x07, 0x63, 0xa2, 0xbd, 0xaa, 0x16, 0xfb,
+	0x99, 0x3d, 0xc3, 0xfc, 0xa5, 0x01, 0xeb, 0xcf, 0x68, 0xc8, 0xa3, 0x34, 0x8d, 0x42, 0xe6, 0x21,
+	0xac, 0x7b, 0x84, 0xdb, 0xae, 0x0a, 0x3d, 0x9b, 0x9f, 0xdb, 0x2e, 0xe6, 0x58, 0xca, 0x2c, 0x58,
+	0x55, 0x8f, 0x70, 0x1d, 0x94, 0xc7, 0xe7, 0x22, 0x2c, 0xd1, 0x4d, 0x28, 0x8e, 0xb0, 0x47, 0xec,
+	0x90, 0xbe, 0x56, 0x4a, 0x96, 0xac, 0x82, 0x20, 0x7c, 0x4a, 0x5f, 0x13, 0x74, 0x1b, 0x40, 0x6e,
+	0x72, 0xbf, 0x4f, 0x98, 0x0e, 0x18, 0xc9, 0x7e, 0x2c, 0x08, 0x02, 0x2e, 0x1e, 0x0c, 0x64, 0x74,
+	0x14, 0x2c, 0xf1, 0x69, 0xbe, 0x31, 0x60, 0x63, 0x12, 0x94, 0xf6, 0x6f, 0x07, 0x0a, 0x71, 0x89,
+	0x31, 0xa4, 0x71, 0xef, 0x2f, 0x32, 0xae, 0x96, 0x61, 0xc5, 0x07, 0x45, 0x10, 0x33, 0x72, 0x2e,
+	0x42, 0x24, 0xc6, 0xa4, 0x83, 0x5d, 0x90, 0x5f, 0xc5, 0xb8, 0x6e, 0x03, 0x70, 0x9f, 0xe3, 0x81,
+	0xba, 0x54, 0x56, 0x5e, 0xaa, 0x28, 0x29, 0xe2, 0x56, 0xe6, 0x1f, 0x0d, 0x58, 0xd6, 0xc2, 0x51,
+	0x1b, 0x36, 0xb5, 0x76, 0xca, 0x3c, 0x7b, 0x34, 0x3e, 0x19, 0x50, 0xc7, 0x8e, 0x7c, 0x50, 0xb6,
+	0xd6, 0x93, 0xcd, 0x57, 0x72, 0xef, 0x88, 0x5c, 0x88, 0x92, 0xa9, 0x21, 0xd9, 0x0c, 0x0f, 0x23,
+	0xd7, 0x94, 0x34, 0xed, 0x05, 0x1e, 0x12, 0x81, 0x74, 0xda, 0x01, 0x59, 0x29, 0x70, 0xc5, 0x9d,
+	0xb0, 0xfe, 0x7d, 0xc1, 0x17, 0xd0, 0x53, 0xd9, 0xac, 0xd2, 0xb9, 0x56, 0x49, 0xc8, 0x32, 0xd5,
+	0x8e, 0xa0, 0x12, 0xd9, 0x23, 0x29, 0x0d, 0x09, 0x5c, 0x65, 0xd4, 0xb2, 0x05, 0xa3, 0x08, 0x65,
+	0x88, 0xea, 0xb0, 0x4c, 0x99, 0x4b, 0x1d, 0x12, 0xd6, 0x33, 0x5b, 0xd9, 0xed, 0x9c, 0x15, 0x2d,
+	0xcd, 0xa7, 0x50, 0x7a, 0x32, 0xe6, 0xbd, 0x48, 0x52, 0x03, 0x0a, 0x71, 0x03, 0xd1, 0xa9, 0x1a,
+	0xad, 0x85, 0x29, 0x75, 0x5e, 0xba, 0x34, 0xd0, 0x37, 0x2d, 0x2a, 0xca, 0x01, 0x0d, 0xcc, 0x97,
+	0x50, 0x56, 0x92, 0xb4, 0x9b, 0x37, 0x60, 0x49, 0xf9, 0x45, 0xc9, 0x51, 0x0b, 0xb4, 0x03, 0x55,
+	0xf9, 0x61, 0x93, 0xf3, 0x11, 0x0d, 0xe4, 0xa5, 0xa4, 0xa8, 0x9c, 0xb5, 0x2a, 0xe9, 0xdd, 0x98,
+	0x6c, 0xfe, 0xdd, 0x80, 0xda, 0x0b, 0xdf, 0x25, 0x1d, 0x9f, 0x31, 0xe2, 0x08, 0x52, 0x2c, 0xfb,
+	0x03, 0xd8, 0x38, 0x21, 0xd8, 0xf1, 0x99, 0xcd, 0x7c, 0x97, 0xd8, 0x84, 0xb9, 0x23, 0x9f, 0x32,
+	0xae, 0x55, 0x21, 0xb5, 0x27, 0xce, 0x76, 0xf5, 0x0e, 0xba, 0x05, 0x45, 0x47, 0xc9, 0xd1, 0x25,
+	0xbb, 0x60, 0x25, 0x04, 0x61, 0x9f, 0xf0, 0x82, 0x39, 0x94, 0x79, 0xd2, 0x37, 0x05, 0x2b, 0x5a,
+	0x0a, 0x07, 0x7b, 0x84, 0x91, 0x90, 0x86, 0x36, 0xa7, 0x43, 0x22, 0x5d, 0x92, 0xb3, 0x4a, 0x9a,
+	0x76, 0x4c, 0x87, 0x04, 0xed, 0x41, 0x3d, 0x72, 0xb0, 0xe3, 0x33, 0x1e, 0x60, 0x87, 0xcb, 0x12,
+	0x4d, 0x42, 0xd5, 0x42, 0xcb, 0x56, 0x4d, 0xef, 0x77, 0xf4, 0xf6, 0x13, 0xb5, 0x6b, 0x7e, 0x65,
+	0xc0, 0x66, 0xa7, 0x87, 0x99, 0x47, 0xa2, 0xfe, 0x1c, 0xf9, 0x61, 0x07, 0xaa, 0xce, 0x38, 0x08,
+	0x08, 0x4b, 0x35, 0x74, 0x75, 0xb9, 0x55, 0x4d, 0x4f, 0x77, 0xf4, 0x98, 0x25, 0x33, 0xe5, 0xb2,
+	0x47, 0xb0, 0x19, 0x7d, 0xab, 0x72, 0x16, 0x0c, 0x95, 0xc9, 0x55, 0xfe, 0x6e, 0x44, 0x9b, 0x9d,
+	0xd4, 0x9e, 0xb9, 0x07, 0x6b, 0x4f, 0x71, 0x38, 0x55, 0x94, 0xdf, 0x85, 0x15, 0xed, 0x7c, 0x72,
+	0x4e, 0x43, 0x99, 0xb9, 0xc2, 0x4e, 0x65, 0x45, 0xec, 0x4a, 0x9a, 0x79, 0x0a, 0xb5, 0xc3, 0xe1,
+	0xc8, 0x0f, 0xb8, 0x08, 0x3a, 0xee, 0x07, 0x24, 0x55, 0x89, 0x50, 0x3f, 0xa2, 0xd9, 0x54, 0xf2,
+	0x10, 0x57, 0x06, 0x6a, 0xd1, 0x5a, 0x8b, 0x77, 0x0e, 0xf5, 0xc6, 0x24, 0xfb, 0xd4, 0xed, 0x12,
+	0xf6, 0xc8, 0x04, 0xe6, 0x11, 0xdc, 0xb8, 0xa4, 0x37, 0x89, 0x94, 0x48, 0x9d, 0x7d, 0x39, 0x47,
+	0x50, 0xb4, 0x17, 0x67, 0x74, 0x68, 0x7e, 0x3b, 0x9a, 0x21, 0xa6, 0x92, 0x6c, 0x7a, 0x3a, 0x32,
+	0x2e, 0x4d, 0x47, 0xe6, 0x6f, 0x0c, 0xa8, 0xe8, 0x92, 0xfa, 0x9c, 0x84, 0x21, 0xf6, 0x08, 0xda,
+	0x81, 0xfc, 0x68, 0x7c, 0x12, 0x57, 0x91, 0x8f, 0xd7, 0xfe, 0xf5, 0xf5, 0x9d, 0x95, 0x30, 0x7c,
+	0xfd, 0x50, 0xd4, 0xa3, 0x7d, 0xf3, 0xc3, 0x3d, 0xd3, 0xd2, 0x0c, 0xe8, 0x29, 0xd4, 0xce, 0x28,
+	0xef, 0xb9, 0x01, 0x3e, 0xc3, 0x03, 0x31, 0x5e, 0xb8, 0x84, 0x71, 0x8a, 0x07, 0xa1, 0xbc, 0xf8,
+	0xa5, 0xa3, 0x8f, 0xda, 0xa6, 0xb5, 0x99, 0x1c, 0xe8, 0x24, 0xfc, 0xa8, 0x06, 0x79, 0x3c, 0x14,
+	0x90, 0xa4, 0x9f, 0x73, 0x96, 0x5e, 0x99, 0xbf, 0xcf, 0xc0, 0xfa, 0x8c, 0x39, 0x04, 0xf5, 0x61,
+	0x2d, 0x8a, 0x60, 0x51, 0x9f, 0xec, 0x01, 0x0d, 0xb9, 0x2e, 0xcd, 0xdf, 0x7d, 0x8b, 0xb9, 0x66,
+	0x82, 0x16, 0x15, 0x3f, 0xb1, 0x10, 0xed, 0xa0, 0xf1, 0x3b, 0x03, 0x4a, 0x29, 0x06, 0xf4, 0x43,
+	0xc8, 0xe9, 0xae, 0x24, 0xf4, 0x1d, 0xfe, 0x97, 0xfa, 0x9a, 0xe2, 0x47, 0x35, 0x5b, 0x29, 0xb6,
+	0xf1, 0x18, 0x8a, 0x31, 0xe9, 0x5a, 0x4d, 0x75, 0x0f, 0x36, 0x0f, 0xc8, 0x80, 0xc4, 0x71, 0x10,
+	0x5e, 0xb5, 0xda, 0x9a, 0xdf, 0x81, 0xda, 0xf4, 0x49, 0x6d, 0xe8, 0xbb, 0x50, 0x76, 0xe5, 0x8e,
+	0x9b, 0x3e, 0x5b, 0xd2, 0x34, 0x71, 0x78, 0xf7, 0x31, 0x54, 0x26, 0xa7, 0x14, 0x54, 0x82, 0xe5,
+	0x83, 0xae, 0x75, 0xf8, 0xfd, 0xee, 0x41, 0xf5, 0xff, 0x50, 0x19, 0x0a, 0x87, 0xcf, 0x5f, 0xbd,
+	0xb4, 0x8e, 0xbb, 0x07, 0x55, 0x03, 0x01, 0xe4, 0xad, 0xee, 0xf3, 0x97, 0xc7, 0xdd, 0x6a, 0xa6,
+	0xfd, 0xb3, 0x65, 0xc8, 0xab, 0xa4, 0x45, 0x3f, 0x86, 0x62, 0x9c, 0xc1, 0xa8, 0xd6, 0x54, 0x0f,
+	0x9e, 0x66, 0xf4, 0x94, 0x69, 0x76, 0xc5, 0x83, 0xa7, 0xf1, 0xcd, 0x45, 0x96, 0xbe, 0x54, 0x04,
+	0xcc, 0x77, 0xbf, 0xfc, 0xdb, 0x3f, 0xbe, 0xca, 0xdc, 0x46, 0x37, 0xc5, 0x9b, 0x2c, 0x79, 0xa9,
+	0xa9, 0x1a, 0xd0, 0x52, 0x85, 0x01, 0xfd, 0xd6, 0x80, 0x72, 0x7a, 0x08, 0x47, 0x0b, 0x47, 0xe3,
+	0x19, 0x2f, 0xa8, 0xc6, 0x87, 0xd7, 0x3b, 0xa4, 0x01, 0xde, 0x93, 0x00, 0xb7, 0xcc, 0xd9, 0x00,
+	0xd5, 0xc4, 0xbe, 0x6f, 0xec, 0xa2, 0x37, 0x06, 0x80, 0x98, 0xb3, 0xd5, 0xc0, 0x85, 0x1e, 0x2f,
+	0x52, 0x36, 0x67, 0x26, 0x6f, 0x5c, 0xf3, 0x1d, 0x61, 0x3e, 0x90, 0xf8, 0xde, 0x33, 0xb7, 0x66,
+	0xe3, 0x93, 0xb2, 0x5b, 0xc4, 0xa5, 0x5c, 0x80, 0xe4, 0x50, 0x4e, 0xeb, 0x9c, 0xeb, 0xc8, 0xeb,
+	0x82, 0xb8, 0x25, 0x41, 0xd4, 0xd0, 0xc6, 0x2c, 0x10, 0xe8, 0x17, 0x06, 0x54, 0xa7, 0x27, 0xf9,
+	0xb9, 0xaa, 0xf7, 0x16, 0xa9, 0x9e, 0xf7, 0x26, 0x30, 0xef, 0x4b, 0x10, 0x77, 0xd1, 0x9d, 0x49,
+	0x10, 0xd1, 0xbb, 0xa0, 0xe5, 0xe9, 0x83, 0xe8, 0x4f, 0x06, 0xac, 0x4e, 0x15, 0x77, 0xf4, 0xd1,
+	0x22, 0xb5, 0xb3, 0xbb, 0x50, 0xe3, 0xf1, 0xb5, 0xcf, 0x69, 0xb4, 0x1f, 0x48, 0xb4, 0xbb, 0xe6,
+	0x7b, 0x33, 0xfd, 0x16, 0x37, 0xa4, 0x96, 0x6a, 0x27, 0xfb, 0xc6, 0x6e, 0xfb, 0xeb, 0x2c, 0x14,
+	0xe2, 0x57, 0xf3, 0x1f, 0x0c, 0x58, 0x99, 0xe8, 0x29, 0xe8, 0x8a, 0xe1, 0x3d, 0xd9, 0x82, 0x1a,
+	0x6f, 0xf3, 0xc8, 0x34, 0x5b, 0x12, 0xfb, 0x8e, 0xf9, 0x8d, 0x99, 0xd8, 0xe3, 0x7f, 0x59, 0x92,
+	0xe4, 0xf8, 0xb5, 0x01, 0xe5, 0xf4, 0xe0, 0xbe, 0x38, 0x81, 0x67, 0xbc, 0x3d, 0x16, 0x27, 0xf0,
+	0xac, 0xb7, 0x81, 0xf9, 0x8e, 0x04, 0x5b, 0x47, 0xb5, 0x49, 0xb0, 0xf1, 0xd8, 0xff, 0x53, 0x03,
+	0x2a, 0x93, 0x13, 0x13, 0xfa, 0xd6, 0x42, 0x53, 0xce, 0x9a, 0xb0, 0x1a, 0x73, 0x42, 0x7a, 0x5e,
+	0x09, 0x89, 0x86, 0x90, 0x28, 0x3b, 0xdb, 0x6f, 0x0c, 0xc8, 0x3f, 0x25, 0x78, 0xc0, 0x7b, 0xe8,
+	0x57, 0x06, 0xdc, 0xf8, 0x84, 0xf0, 0x8f, 0xe3, 0xa9, 0x33, 0x99, 0x58, 0xe7, 0x66, 0xce, 0xc2,
+	0x10, 0x9e, 0x3d, 0xf9, 0x9a, 0xef, 0x4b, 0x78, 0xf7, 0xd0, 0x94, 0x37, 0x7b, 0x12, 0x49, 0x4b,
+	0x4e, 0xc3, 0x4e, 0x7c, 0xaa, 0xfd, 0xcf, 0x0c, 0xe4, 0xc4, 0x50, 0x8e, 0xbe, 0x34, 0x60, 0xe9,
+	0x99, 0xef, 0x51, 0x86, 0x1e, 0x2c, 0x7c, 0x6b, 0x25, 0xcf, 0x81, 0xc6, 0xfb, 0x57, 0x63, 0x9e,
+	0x74, 0x9e, 0xb9, 0x3e, 0x89, 0x6d, 0x20, 0xf4, 0x8a, 0xc0, 0xfa, 0x89, 0x01, 0xf9, 0x4f, 0xa9,
+	0xc7, 0xc6, 0xa3, 0xff, 0x25, 0x8a, 0x3b, 0x12, 0xc5, 0xff, 0x9b, 0x53, 0xe5, 0x2d, 0x94, 0x8a,
+	0x05, 0x8c, 0x1f, 0x40, 0xfe, 0x99, 0xef, 0xf9, 0xe3, 0xf9, 0xad, 0x71, 0x5e, 0x6c, 0xcc, 0x11,
+	0x3d, 0x90, 0xd2, 0xf6, 0x8d, 0xdd, 0x93, 0xbc, 0x3c, 0xf0, 0xe8, 0xdf, 0x01, 0x00, 0x00, 0xff,
+	0xff, 0x5e, 0xfd, 0x9b, 0x9e, 0xcd, 0x14, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -863,10 +1348,12 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type WalletClient interface {
-	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*WalletResponse, error)
+	HasWallet(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasWalletResponse, error)
+	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, error)
 	EditConfig(ctx context.Context, in *EditWalletConfigRequest, opts ...grpc.CallOption) (*WalletResponse, error)
 	WalletConfig(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
 	GenerateMnemonic(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
+	ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error)
 }
 
 type walletClient struct {
@@ -877,8 +1364,17 @@ func NewWalletClient(cc grpc.ClientConnInterface) WalletClient {
 	return &walletClient{cc}
 }
 
-func (c *walletClient) CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*WalletResponse, error) {
-	out := new(WalletResponse)
+func (c *walletClient) HasWallet(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasWalletResponse, error) {
+	out := new(HasWalletResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/HasWallet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *walletClient) CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, error) {
+	out := new(CreateWalletResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/CreateWallet", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -913,19 +1409,33 @@ func (c *walletClient) GenerateMnemonic(ctx context.Context, in *empty.Empty, op
 	return out, nil
 }
 
+func (c *walletClient) ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error) {
+	out := new(ImportKeystoresResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/ImportKeystores", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WalletServer is the server API for Wallet service.
 type WalletServer interface {
-	CreateWallet(context.Context, *CreateWalletRequest) (*WalletResponse, error)
+	HasWallet(context.Context, *empty.Empty) (*HasWalletResponse, error)
+	CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, error)
 	EditConfig(context.Context, *EditWalletConfigRequest) (*WalletResponse, error)
 	WalletConfig(context.Context, *empty.Empty) (*WalletResponse, error)
 	GenerateMnemonic(context.Context, *empty.Empty) (*GenerateMnemonicResponse, error)
+	ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error)
 }
 
 // UnimplementedWalletServer can be embedded to have forward compatible implementations.
 type UnimplementedWalletServer struct {
 }
 
-func (*UnimplementedWalletServer) CreateWallet(ctx context.Context, req *CreateWalletRequest) (*WalletResponse, error) {
+func (*UnimplementedWalletServer) HasWallet(ctx context.Context, req *empty.Empty) (*HasWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HasWallet not implemented")
+}
+func (*UnimplementedWalletServer) CreateWallet(ctx context.Context, req *CreateWalletRequest) (*CreateWalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWallet not implemented")
 }
 func (*UnimplementedWalletServer) EditConfig(ctx context.Context, req *EditWalletConfigRequest) (*WalletResponse, error) {
@@ -937,9 +1447,30 @@ func (*UnimplementedWalletServer) WalletConfig(ctx context.Context, req *empty.E
 func (*UnimplementedWalletServer) GenerateMnemonic(ctx context.Context, req *empty.Empty) (*GenerateMnemonicResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateMnemonic not implemented")
 }
+func (*UnimplementedWalletServer) ImportKeystores(ctx context.Context, req *ImportKeystoresRequest) (*ImportKeystoresResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportKeystores not implemented")
+}
 
 func RegisterWalletServer(s *grpc.Server, srv WalletServer) {
 	s.RegisterService(&_Wallet_serviceDesc, srv)
+}
+
+func _Wallet_HasWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).HasWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/HasWallet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).HasWallet(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Wallet_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1014,10 +1545,32 @@ func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Wallet_ImportKeystores_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportKeystoresRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletServer).ImportKeystores(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Wallet/ImportKeystores",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletServer).ImportKeystores(ctx, req.(*ImportKeystoresRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Wallet_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.validator.accounts.v2.Wallet",
 	HandlerType: (*WalletServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "HasWallet",
+			Handler:    _Wallet_HasWallet_Handler,
+		},
 		{
 			MethodName: "CreateWallet",
 			Handler:    _Wallet_CreateWallet_Handler,
@@ -1034,6 +1587,10 @@ var _Wallet_serviceDesc = grpc.ServiceDesc{
 			MethodName: "GenerateMnemonic",
 			Handler:    _Wallet_GenerateMnemonic_Handler,
 		},
+		{
+			MethodName: "ImportKeystores",
+			Handler:    _Wallet_ImportKeystores_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/validator/accounts/v2/web_api.proto",
@@ -1043,8 +1600,9 @@ var _Wallet_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AccountsClient interface {
-	CreateAccount(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*CreateAccountResponse, error)
+	CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*DepositDataResponse, error)
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type accountsClient struct {
@@ -1055,8 +1613,8 @@ func NewAccountsClient(cc grpc.ClientConnInterface) AccountsClient {
 	return &accountsClient{cc}
 }
 
-func (c *accountsClient) CreateAccount(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*CreateAccountResponse, error) {
-	out := new(CreateAccountResponse)
+func (c *accountsClient) CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*DepositDataResponse, error) {
+	out := new(DepositDataResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/CreateAccount", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1073,21 +1631,34 @@ func (c *accountsClient) ListAccounts(ctx context.Context, in *ListAccountsReque
 	return out, nil
 }
 
+func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/ChangePassword", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountsServer is the server API for Accounts service.
 type AccountsServer interface {
-	CreateAccount(context.Context, *empty.Empty) (*CreateAccountResponse, error)
+	CreateAccount(context.Context, *CreateAccountRequest) (*DepositDataResponse, error)
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*empty.Empty, error)
 }
 
 // UnimplementedAccountsServer can be embedded to have forward compatible implementations.
 type UnimplementedAccountsServer struct {
 }
 
-func (*UnimplementedAccountsServer) CreateAccount(ctx context.Context, req *empty.Empty) (*CreateAccountResponse, error) {
+func (*UnimplementedAccountsServer) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*DepositDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateAccount not implemented")
 }
 func (*UnimplementedAccountsServer) ListAccounts(ctx context.Context, req *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (*UnimplementedAccountsServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
 
 func RegisterAccountsServer(s *grpc.Server, srv AccountsServer) {
@@ -1095,7 +1666,7 @@ func RegisterAccountsServer(s *grpc.Server, srv AccountsServer) {
 }
 
 func _Accounts_CreateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(CreateAccountRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1107,7 +1678,7 @@ func _Accounts_CreateAccount_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/ethereum.validator.accounts.v2.Accounts/CreateAccount",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServer).CreateAccount(ctx, req.(*empty.Empty))
+		return srv.(AccountsServer).CreateAccount(ctx, req.(*CreateAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1130,6 +1701,24 @@ func _Accounts_ListAccounts_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Accounts_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangePasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServer).ChangePassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Accounts/ChangePassword",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Accounts_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.validator.accounts.v2.Accounts",
 	HandlerType: (*AccountsServer)(nil),
@@ -1141,6 +1730,10 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAccounts",
 			Handler:    _Accounts_ListAccounts_Handler,
+		},
+		{
+			MethodName: "ChangePassword",
+			Handler:    _Accounts_ChangePassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1225,6 +1818,7 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 type AuthClient interface {
 	Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
+	Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type authClient struct {
@@ -1253,10 +1847,20 @@ func (c *authClient) Signup(ctx context.Context, in *AuthRequest, opts ...grpc.C
 	return out, nil
 }
 
+func (c *authClient) Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Logout", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServer is the server API for Auth service.
 type AuthServer interface {
 	Login(context.Context, *AuthRequest) (*AuthResponse, error)
 	Signup(context.Context, *AuthRequest) (*AuthResponse, error)
+	Logout(context.Context, *empty.Empty) (*empty.Empty, error)
 }
 
 // UnimplementedAuthServer can be embedded to have forward compatible implementations.
@@ -1268,6 +1872,9 @@ func (*UnimplementedAuthServer) Login(ctx context.Context, req *AuthRequest) (*A
 }
 func (*UnimplementedAuthServer) Signup(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Signup not implemented")
+}
+func (*UnimplementedAuthServer) Logout(ctx context.Context, req *empty.Empty) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 
 func RegisterAuthServer(s *grpc.Server, srv AuthServer) {
@@ -1310,6 +1917,24 @@ func _Auth_Signup_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).Logout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.validator.accounts.v2.Auth/Logout",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).Logout(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Auth_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.validator.accounts.v2.Auth",
 	HandlerType: (*AuthServer)(nil),
@@ -1321,6 +1946,10 @@ var _Auth_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Signup",
 			Handler:    _Auth_Signup_Handler,
+		},
+		{
+			MethodName: "Logout",
+			Handler:    _Auth_Logout_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

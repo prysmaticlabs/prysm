@@ -55,7 +55,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	endSlot := req.Slot + params.BeaconConfig().SlotsPerEpoch
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	blks, err := ds.BeaconDB.Blocks(ctx, filter)
+	blks, _, err := ds.BeaconDB.Blocks(ctx, filter)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 	}

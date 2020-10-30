@@ -1,3 +1,4 @@
+// Package featureconfig implements a static analyzer to prevent leaking globals in tests.
 package featureconfig
 
 import (

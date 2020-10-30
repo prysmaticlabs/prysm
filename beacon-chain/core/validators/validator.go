@@ -52,7 +52,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state, nil
 	}
-	exitEpochs := []uint64{}
+	var exitEpochs []uint64
 	for _, val := range readOnlyVals {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch())
@@ -69,7 +69,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
-	exitQueueChurn := 0
+	exitQueueChurn := uint64(0)
 	for _, val := range readOnlyVals {
 		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
@@ -84,7 +84,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
 
-	if uint64(exitQueueChurn) >= churn {
+	if exitQueueChurn >= churn {
 		exitQueueEpoch++
 	}
 	validator.ExitEpoch = exitQueueEpoch
@@ -214,7 +214,7 @@ func ExitedValidatorIndices(epoch uint64, validators []*ethpb.Validator, activeV
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
-	exitQueueChurn := 0
+	exitQueueChurn := uint64(0)
 	for _, val := range validators {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
@@ -224,7 +224,7 @@ func ExitedValidatorIndices(epoch uint64, validators []*ethpb.Validator, activeV
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
-	if churn < uint64(exitQueueChurn) {
+	if churn < exitQueueChurn {
 		exitQueueEpoch++
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
@@ -255,7 +255,7 @@ func EjectedValidatorIndices(epoch uint64, validators []*ethpb.Validator, active
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
-	exitQueueChurn := 0
+	exitQueueChurn := uint64(0)
 	for _, val := range validators {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
@@ -265,7 +265,7 @@ func EjectedValidatorIndices(epoch uint64, validators []*ethpb.Validator, active
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
-	if churn < uint64(exitQueueChurn) {
+	if churn < exitQueueChurn {
 		exitQueueEpoch++
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay

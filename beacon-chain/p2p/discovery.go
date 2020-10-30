@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"net"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -98,25 +97,31 @@ func (s *Service) createListener(
 	ipAddr net.IP,
 	privKey *ecdsa.PrivateKey,
 ) (*discover.UDPv5, error) {
-	// assume ip is either ipv4 or ipv6
-	networkVersion := ""
+	// Listen to all network interfaces
+	// for both ip protocols.
+	var networkVersion string
+	// BindIP is used to specify the ip
+	// on which we will bind our listener on
+	// by default we will listen to all interfaces.
+	var bindIP net.IP
 	if ipAddr.To4() != nil {
 		networkVersion = "udp4"
+		bindIP = net.IPv4zero
 	} else {
 		networkVersion = "udp6"
+		bindIP = net.IPv6zero
 	}
-	// Check for the real local address which may
-	// be different in the presence of virtual networks.
-	ipAddr = s.localAddress(networkVersion, ipAddr)
+
 	// If local ip is specified then use that instead.
 	if s.cfg.LocalIP != "" {
 		ipAddr = net.ParseIP(s.cfg.LocalIP)
 		if ipAddr == nil {
 			return nil, errors.New("invalid local ip provided")
 		}
+		bindIP = ipAddr
 	}
 	udpAddr := &net.UDPAddr{
-		IP:   ipAddr,
+		IP:   bindIP,
 		Port: int(s.cfg.UDPPort),
 	}
 	conn, err := net.ListenUDP(networkVersion, udpAddr)
@@ -126,7 +131,7 @@ func (s *Service) createListener(
 
 	localNode, err := s.createLocalNode(
 		privKey,
-		udpAddr.IP,
+		ipAddr,
 		int(s.cfg.UDPPort),
 		int(s.cfg.TCPPort),
 	)
@@ -177,14 +182,14 @@ func (s *Service) createListener(
 func (s *Service) createLocalNode(
 	privKey *ecdsa.PrivateKey,
 	ipAddr net.IP,
-	udpPort int,
-	tcpPort int,
+	udpPort, tcpPort int,
 ) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open node's peer database")
 	}
 	localNode := enode.NewLocalNode(db, privKey)
+
 	ipEntry := enr.IP(ipAddr)
 	udpEntry := enr.UDP(udpPort)
 	tcpEntry := enr.TCP(tcpPort)
@@ -275,37 +280,6 @@ func (s *Service) isPeerAtLimit() bool {
 	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
-// retrieve real local address of the node. In the event
-// that is not possible we return the provided ip.
-func (s *Service) localAddress(network string, addr net.IP) net.IP {
-	if len(s.cfg.BootstrapNodeAddr) == 0 {
-		return addr
-	}
-	// Dial the first bootnode to determine our 'real' local address.
-	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.BootstrapNodeAddr[0])
-	if err != nil {
-		log.Error("Could not parse bootnode address")
-		return addr
-	}
-	conn, err := net.DialTimeout(network, net.JoinHostPort(bootNode.IP().String(), strconv.Itoa(bootNode.UDP())), dialTimeout)
-	if err != nil {
-		log.Error("Could not dial remote peer")
-		return addr
-	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Error(err)
-		}
-	}()
-	// Determine the real address from which the initial connection was made.
-	realAddr, _, err := net.SplitHostPort(conn.LocalAddr().String())
-	if err != nil {
-		log.Error("Could not dial remote peer")
-		return addr
-	}
-	return net.ParseIP(realAddr)
-}
-
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
 	discv5Nodes, _ = parseGenericAddrs(addrs)
 	if len(discv5Nodes) == 0 {
@@ -314,7 +288,7 @@ func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
 	return discv5Nodes
 }
 
-func parseGenericAddrs(addrs []string) (enodeString []string, multiAddrString []string) {
+func parseGenericAddrs(addrs []string) (enodeString, multiAddrString []string) {
 	for _, addr := range addrs {
 		if addr == "" {
 			// Ignore empty entries

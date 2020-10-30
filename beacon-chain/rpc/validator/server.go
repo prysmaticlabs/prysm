@@ -131,7 +131,7 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 }
 
 // DomainData fetches the current domain version information from the beacon state.
-func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
+func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
 	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
@@ -145,7 +145,7 @@ func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) 
 
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
-func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
+func (vs *Server) CanonicalHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
 	headBlk, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
@@ -157,7 +157,7 @@ func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.
 // has started its runtime and validators begin their responsibilities. If it has not, it then
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
-func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
+func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
 	head, err := vs.HeadFetcher.HeadState(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
@@ -212,7 +212,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 
 // WaitForSynced subscribes to the state channel and ends the stream when the state channel
 // indicates the beacon node has been initialized and is ready
-func (vs *Server) WaitForSynced(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
+func (vs *Server) WaitForSynced(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
 	head, err := vs.HeadFetcher.HeadState(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)

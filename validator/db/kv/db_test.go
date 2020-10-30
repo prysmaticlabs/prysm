@@ -17,7 +17,8 @@ func setupDB(t testing.TB, pubkeys [][48]byte) *Store {
 	require.NoError(t, os.RemoveAll(p), "Failed to remove directory")
 	db, err := NewKVStore(p, pubkeys)
 	require.NoError(t, err, "Failed to instantiate DB")
-
+	err = db.OldUpdatePublicKeysBuckets(pubkeys)
+	require.NoError(t, err, "Failed to create old buckets for public keys")
 	t.Cleanup(func() {
 		require.NoError(t, db.Close(), "Failed to close database")
 		require.NoError(t, db.ClearDB(), "Failed to clear database")

@@ -22,10 +22,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestProposeAttestation_OK(t *testing.T) {
@@ -302,7 +302,8 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	}
 
 	res := &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 55, Root: make([]byte, 32)},
+		CommitteeIndex: 1,
+		Target:         &ethpb.Checkpoint{Epoch: 55, Root: make([]byte, 32)},
 	}
 
 	require.NoError(t, server.AttestationCache.MarkInProgress(req))
@@ -484,7 +485,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: roughtime.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
+		GenesisTimeFetcher: &mock.ChainService{Genesis: timeutils.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:      chainService.StateNotifier(),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))

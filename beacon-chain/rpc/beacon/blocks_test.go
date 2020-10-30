@@ -497,6 +497,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot, err = helpers.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
+	require.NoError(t, err)
 
 	hRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)

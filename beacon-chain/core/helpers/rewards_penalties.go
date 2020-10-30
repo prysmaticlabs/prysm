@@ -64,7 +64,7 @@ func TotalActiveBalance(state *stateTrie.BeaconState) (uint64, error) {
 //    Increase the validator balance at index ``index`` by ``delta``.
 //    """
 //    state.balances[index] += delta
-func IncreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) error {
+func IncreaseBalance(state *stateTrie.BeaconState, idx, delta uint64) error {
 	balAtIdx, err := state.BalanceAtIndex(idx)
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func IncreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 //    Increase the validator balance at index ``index`` by ``delta``.
 //    """
 //    state.balances[index] += delta
-func IncreaseBalanceWithVal(currBalance uint64, delta uint64) uint64 {
+func IncreaseBalanceWithVal(currBalance, delta uint64) uint64 {
 	return currBalance + delta
 }
 
@@ -94,7 +94,7 @@ func IncreaseBalanceWithVal(currBalance uint64, delta uint64) uint64 {
 //    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
 //    """
 //    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
-func DecreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) error {
+func DecreaseBalance(state *stateTrie.BeaconState, idx, delta uint64) error {
 	balAtIdx, err := state.BalanceAtIndex(idx)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func DecreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 //    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
 //    """
 //    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
-func DecreaseBalanceWithVal(currBalance uint64, delta uint64) uint64 {
+func DecreaseBalanceWithVal(currBalance, delta uint64) uint64 {
 	if delta > currBalance {
 		return 0
 	}

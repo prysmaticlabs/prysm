@@ -16,13 +16,13 @@ type mockSyncChecker struct {
 	syncing bool
 }
 
-func (m *mockSyncChecker) Syncing(ctx context.Context) (bool, error) {
+func (m *mockSyncChecker) Syncing(_ context.Context) (bool, error) {
 	return m.syncing, nil
 }
 
 type mockGenesisFetcher struct{}
 
-func (m *mockGenesisFetcher) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
+func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, error) {
 	genesis, err := ptypes.TimestampProto(time.Unix(0, 0))
 	if err != nil {
 		log.Info(err)

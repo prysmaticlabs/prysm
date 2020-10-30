@@ -13,7 +13,7 @@ SRCS = [
 
 DEPS = [
     "//proto/faucet:faucet_go_proto",
-    "//shared/roughtime:go_default_library",
+    "//shared/timeutils:go_default_library",
     "//shared/maxprocs:go_default_library",
     "@org_golang_google_grpc//:go_default_library",
     "@org_golang_google_grpc//peer:go_default_library",

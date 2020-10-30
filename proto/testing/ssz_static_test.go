@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	webpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -107,8 +108,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
 	case "DepositMessage":
-		t.Skip("Unused type")
-		return nil, nil
+		obj = &webpb.DepositMessage{}
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
 	case "Eth1Block":

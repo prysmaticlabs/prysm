@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -77,14 +76,6 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	}
 
-	// Should throw an error if no genesis data is found.
-	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
-			GenesisEpoch: true,
-		},
-	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
-		t.Fatal(err)
-	}
 	att := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(0),
 		Signature:       make([]byte, 96),
@@ -118,17 +109,6 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.DeepEqual(t, wanted, res)
-
-	// Should throw an error if there is more than 1 block
-	// for the genesis slot.
-	require.NoError(t, db.SaveBlock(ctx, signedBlock))
-	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
-			GenesisEpoch: true,
-		},
-	}); err != nil && !strings.Contains(err.Error(), "Found more than 1") {
-		t.Fatal(err)
-	}
 }
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {

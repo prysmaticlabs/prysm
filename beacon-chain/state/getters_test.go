@@ -47,6 +47,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.ParentRoot()
 	_ = st.BlockRoots()
 	_, err := st.BlockRootAtIndex(0)
+	_ = err
 	_ = st.StateRoots()
 	_ = st.HistoricalRoots()
 	_ = st.Eth1Data()
@@ -54,16 +55,20 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.Eth1DepositIndex()
 	_ = st.ValidatorsReadOnly()
 	_, err = st.ValidatorAtIndex(0)
+	_ = err
 	_, err = st.ValidatorAtIndexReadOnly(0)
+	_ = err
 	_, _ = st.ValidatorIndexByPubkey([48]byte{})
 	_ = st.validatorIndexMap()
 	_ = st.PubkeyAtIndex(0)
 	_ = st.NumValidators()
 	_ = st.Balances()
 	_, err = st.BalanceAtIndex(0)
+	_ = err
 	_ = st.BalancesLength()
 	_ = st.RandaoMixes()
 	_, err = st.RandaoMixAtIndex(0)
+	_ = err
 	_ = st.RandaoMixesLength()
 	_ = st.Slashings()
 	_ = st.PreviousEpochAttestations()
@@ -72,7 +77,6 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
-	_ = err
 }
 
 func TestReadOnlyValidator_NoPanic(t *testing.T) {

@@ -55,7 +55,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 
 	val, err := state.ValidatorAtIndex(0)
 	require.NoError(t, err)
-	val.PublicKey = priv.PublicKey().Marshal()[:]
+	val.PublicKey = priv.PublicKey().Marshal()
 	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
 
 	b := make([]byte, 32)
@@ -85,12 +85,11 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(exit)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
@@ -119,12 +118,11 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(exit)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
@@ -147,12 +145,11 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err := p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(exit)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept

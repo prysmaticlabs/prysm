@@ -41,10 +41,13 @@ func main() {
 
 	ctx := context.Background()
 	log.Start(ctx, "main")
-	defer log.Finish(ctx)
+	cleanup := func() { log.Finish(ctx) }
+	defer cleanup()
 
 	srcMAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *port))
 	if err != nil {
+		// log.Fatalf will prevent defer from being called
+		cleanup()
 		log.Fatalf("Unable to construct multiaddr %v", err)
 	}
 

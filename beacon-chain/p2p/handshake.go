@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -10,7 +11,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -98,7 +100,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				if conn.Stat().Direction == network.DirInbound {
 					_, err := s.peers.ChainState(remotePeer)
 					peerExists := err == nil
-					currentTime := roughtime.Now()
+					currentTime := timeutils.Now()
 
 					// Wait for peer to initiate handshake
 					time.Sleep(timeForStatus)
@@ -109,7 +111,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					}
 
 					// If peer hasn't sent a status request, we disconnect with them
-					if _, err := s.peers.ChainState(remotePeer); err == peers.ErrPeerUnknown {
+					if _, err := s.peers.ChainState(remotePeer); errors.Is(err, peerdata.ErrPeerUnknown) {
 						disconnectFromPeer()
 						return
 					}

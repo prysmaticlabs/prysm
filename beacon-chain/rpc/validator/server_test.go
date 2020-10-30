@@ -69,7 +69,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	vs := &Server{
@@ -112,8 +112,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	priv1 := bls.RandKey()
 	priv2 := bls.RandKey()
 
-	pubKey1 := priv1.PublicKey().Marshal()[:]
-	pubKey2 := priv2.PublicKey().Marshal()[:]
+	pubKey1 := priv1.PublicKey().Marshal()
+	pubKey2 := priv2.PublicKey().Marshal()
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
@@ -138,14 +138,14 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := helpers.ComputeSigningRoot(depData, domain)
 	require.NoError(t, err)
-	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()[:]
+	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()
 
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
@@ -200,9 +200,9 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	priv2 := bls.RandKey()
 	priv3 := bls.RandKey()
 
-	pubKey1 := priv1.PublicKey().Marshal()[:]
-	pubKey2 := priv2.PublicKey().Marshal()[:]
-	pubKey3 := priv3.PublicKey().Marshal()[:]
+	pubKey1 := priv1.PublicKey().Marshal()
+	pubKey2 := priv2.PublicKey().Marshal()
+	pubKey3 := priv3.PublicKey().Marshal()
 
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
@@ -282,8 +282,6 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
@@ -427,8 +425,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 func TestWaitForSynced_ContextClosed(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{

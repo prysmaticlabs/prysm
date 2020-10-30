@@ -2,7 +2,6 @@ package sync
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -10,16 +9,22 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
+var errNilPubsubMessage = errors.New("nil pubsub message")
+var errInvalidTopic = errors.New("invalid topic format")
+
 func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error) {
-	if msg == nil || msg.TopicIDs == nil || len(msg.TopicIDs) == 0 {
-		return nil, errors.New("nil pubsub message")
+	if msg == nil || msg.Topic == nil || *msg.Topic == "" {
+		return nil, errNilPubsubMessage
 	}
-	topic := msg.TopicIDs[0]
+	topic := *msg.Topic
 	topic = strings.TrimSuffix(topic, s.p2p.Encoding().ProtocolSuffix())
-	topic = s.replaceForkDigest(topic)
+	topic, err := s.replaceForkDigest(topic)
+	if err != nil {
+		return nil, err
+	}
 	base, ok := p2p.GossipTopicMappings[topic]
 	if !ok {
-		return nil, fmt.Errorf("no message mapped for topic %s", topic)
+		return nil, p2p.ErrMessageNotMapped
 	}
 	m := proto.Clone(base)
 	if err := s.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
@@ -29,8 +34,11 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 }
 
 // Replaces our fork digest with the formatter.
-func (s *Service) replaceForkDigest(topic string) string {
+func (s *Service) replaceForkDigest(topic string) (string, error) {
 	subStrings := strings.Split(topic, "/")
+	if len(subStrings) != 4 {
+		return "", errInvalidTopic
+	}
 	subStrings[2] = "%x"
-	return strings.Join(subStrings, "/")
+	return strings.Join(subStrings, "/"), nil
 }

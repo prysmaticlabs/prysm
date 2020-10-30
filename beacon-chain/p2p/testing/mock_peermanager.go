@@ -39,9 +39,9 @@ func (m MockPeerManager) ENR() *enr.Record {
 func (m MockPeerManager) RefreshENR() {}
 
 // FindPeersWithSubnet .
-func (m MockPeerManager) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
+func (m MockPeerManager) FindPeersWithSubnet(_ context.Context, _ uint64) (bool, error) {
 	return true, nil
 }
 
 // AddPingMethod .
-func (m MockPeerManager) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {}
+func (m MockPeerManager) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {}
