@@ -48,6 +48,8 @@ func main() {
 	if *random {
 		ctnr, err = generateRandomKeys(*numKeys)
 		if err != nil {
+			// log.Fatal will prevent defer from being called
+			cleanup()
 			log.Fatal(err)
 		}
 	} else {
