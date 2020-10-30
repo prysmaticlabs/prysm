@@ -141,6 +141,7 @@
       "validator/.*": ""
     },
     "exclude_files": {
+      "shared/fileutil/.*": ""
     }
   }
 }
