@@ -3698,14 +3698,14 @@ def prysm_deps():
     go_repository(
         name = "com_github_bloxapp_eth2_key_manager",
         importpath = "github.com/bloxapp/eth2-key-manager",
-        sum = "h1:SYLs+hfkVD0YvzvLr0kg/e5yM6PPUF9JZooWwPUiZIk=",
-        version = "v0.2.11",
+        sum = "h1:yCKqwNaTj/DQcoucBR3sUVT5g9xmP2XH4PqK1sBL+xs=",
+        version = "v0.2.12",
     )
     go_repository(
         name = "com_github_bloxapp_key_vault",
         importpath = "github.com/bloxapp/key-vault",
-        sum = "h1:jJqCfSpcMQsuAIsAfI6nfZprY1cG8BSmzbEVTvdaH3E=",
-        version = "v0.1.11",
+        sum = "h1:5L+faxWex/L4ZRbGDkB6uY0J56qT5rJetJyC9bzIsVo=",
+        version = "v0.0.0-20201030122303-fae489619d15",
     )
     go_repository(
         name = "com_github_cloudflare_roughtime",

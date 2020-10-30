@@ -112,16 +112,10 @@ github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+Ce
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
-github.com/bloxapp/eth2-key-manager v0.2.10/go.mod h1:j/NDpCQskMmh77BBqHXXjHEg7GquTjftwFL8oNSonYk=
-github.com/bloxapp/eth2-key-manager v0.2.11 h1:SYLs+hfkVD0YvzvLr0kg/e5yM6PPUF9JZooWwPUiZIk=
-github.com/bloxapp/eth2-key-manager v0.2.11/go.mod h1:54S5eq6EoCTC0kkFykFdKvFgwYw7Dy3m839OMqkAZdY=
 github.com/bloxapp/eth2-key-manager v0.2.12 h1:yCKqwNaTj/DQcoucBR3sUVT5g9xmP2XH4PqK1sBL+xs=
 github.com/bloxapp/eth2-key-manager v0.2.12/go.mod h1:54S5eq6EoCTC0kkFykFdKvFgwYw7Dy3m839OMqkAZdY=
-github.com/bloxapp/key-vault v0.0.0-20200921083650-93357365c025/go.mod h1:lc9cEO/qZFfvU6snQ2dLq/We3Tzi5fp9zxZbqLKML+E=
 github.com/bloxapp/key-vault v0.0.0-20201030122303-fae489619d15 h1:5L+faxWex/L4ZRbGDkB6uY0J56qT5rJetJyC9bzIsVo=
 github.com/bloxapp/key-vault v0.0.0-20201030122303-fae489619d15/go.mod h1:SKCK5b9XhUuHuRTe0zCEcFs8Q0Qu6O4MuDWqY9oJKy0=
-github.com/bloxapp/key-vault v0.1.11 h1:jJqCfSpcMQsuAIsAfI6nfZprY1cG8BSmzbEVTvdaH3E=
-github.com/bloxapp/key-vault v0.1.11/go.mod h1:yoQDD+IfMjjIVt4yBfUNYJD2ohH5OEKN+wDTzYU5F9A=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40/go.mod h1:8rLXio+WjiTceGBHIoTvn60HIbs7Hm7bcHjyrSqYB9c=
 github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
@@ -228,6 +222,7 @@ github.com/dlclark/regexp2 v1.2.0/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55k
 github.com/docker/distribution v2.7.1+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
 github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf h1:sh8rkQZavChcmakYiSlqu2425CHyFXLZZnvm7PDpU8M=
 github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible h1:iWPIG7pWIsCwT6ZtHnTUpoVMnete7O/pzd9HFE3+tn8=
 github.com/docker/docker v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
 github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
@@ -262,6 +257,7 @@ github.com/fatih/color v1.3.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5Kwzbycv
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
+github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
 github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472 h1:maoKvILdMk6CSWHanFcUdxXIZGKD9YpWIaVbUQ/4kfg=
 github.com/ferranbt/fastssz v0.0.0-20200514094935-99fccaf93472/go.mod h1:LlFXPmgrgVYsuoFDwV8rDJ9tvt1pLQdjKvU1b5IRES0=
@@ -278,6 +274,7 @@ github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6/go.mod h1:1i71OnUq3iUe
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/francoispqt/gojay v1.2.13/go.mod h1:ehT5mTG4ua4581f1++1WLG0vPdaA9HaiDsoyrBGkyDY=
+github.com/frankban/quicktest v1.7.2 h1:2QxQoC1TS09S7fhCPsrvqYdvP1H5M1P1ih5ABm3BTYk=
 github.com/frankban/quicktest v1.7.2/go.mod h1:jaStnuzAqU1AJdCO0l53JDCJrVDKcS03DbaAcR7Ks/o=
 github.com/fsnotify/fsnotify v1.4.3-0.20170329110642-4da3e2cfbabc/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
@@ -329,6 +326,7 @@ github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LB
 github.com/go-stack/stack v1.6.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/go-stack/stack v1.8.0 h1:5SgMzNM5HxrEjV0ww2lTmX6E2Izsfxas4+YHWRs3Lsk=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31 h1:28FVBuwkwowZMjbA7M0wXsI6t3PYulRTMio3SO+eKCM=
 github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/go-yaml/yaml v2.1.0+incompatible h1:RYi2hDdss1u4YE7GwixGzWwVo47T8UQwnTLB6vQiq+o=
 github.com/go-yaml/yaml v2.1.0+incompatible/go.mod h1:w2MrLa16VYP0jy6N7M5kHaCkaLENm+P+Tv+MfurjSw0=
@@ -1162,7 +1160,6 @@ github.com/protolambda/zssz v0.1.5/go.mod h1:a4iwOX5FE7/JkKA+J/PH0Mjo9oXftN6P8NZ
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201016095414-974cbc1dd92e h1:+AspXGWVJzMtcy24DkGEJqut1grik397nnb7JybNBy8=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201016095414-974cbc1dd92e/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20200827165051-58ccb36e36b9/go.mod h1:k7b2dxy6RppCG6kmOJkNOXzRpEoTdsPygc2aQhsUsZk=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200909190233-a9190508298e/go.mod h1:k7b2dxy6RppCG6kmOJkNOXzRpEoTdsPygc2aQhsUsZk=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20201003171600-a72e5f77d233 h1:dGeuKeaXxCepTbwsz7kYSfP1yazw1uRMn58CqNCcPP4=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20201003171600-a72e5f77d233/go.mod h1:k7b2dxy6RppCG6kmOJkNOXzRpEoTdsPygc2aQhsUsZk=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20191017011753-53b773adde52/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
@@ -1177,8 +1174,6 @@ github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae/go.mod h1:Vec
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796 h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796/go.mod h1:5JkKm84FcLZQPNuHwjX8Mtd5emni/PH5CylWCNqnKos=
 github.com/prysmaticlabs/prysm v1.0.0-alpha.24/go.mod h1:uBRhPzgVEdXw+ZJD8MMn2XvNm0Fh9OIxHmAeA9h0ZA8=
-github.com/prysmaticlabs/prysm v1.0.0-alpha.25/go.mod h1:/o5WnzgAM+ViBamSTgq1FC9v/OoU5ExQo5w3rshRuVk=
-github.com/prysmaticlabs/prysm v1.0.0-alpha.27/go.mod h1:peHP/ntxUCee7c0PwVuejahMcdLY8/vXV0F2U0CVfls=
 github.com/prysmaticlabs/prysm v1.0.0-beta.0/go.mod h1:SrEUoY8yx9OFYcuGPBZJUxXuAcMNWsSK3X/9Zk1Sl90=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
