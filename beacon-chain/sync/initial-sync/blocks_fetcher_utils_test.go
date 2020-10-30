@@ -6,9 +6,16 @@ import (
 	"testing"
 
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -128,6 +135,128 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
 		assert.Equal(t, uint64(0), slot)
 	})
+}
+
+func TestBlocksFetcher_alternativeSlotBefore(t *testing.T) {
+	// Chain graph:
+	// A - B - C - D - E
+	//      \
+	// 		 - C'- D'- E'- F'- G'
+	// Allow fetcher to proceed till E, then connect peer having alternative, branch.
+	// Test that G' slot can be reached i.e. fetcher can track back and explore alternative paths.
+	beaconDB, _ := dbtest.SetupDB(t)
+	p2p := p2pt.NewTestP2P(t)
+
+	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 256)
+	finalizedSlot := uint64(64)
+	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+
+	genesisBlock := chain1[0]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesisBlock))
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: finalizedEpoch,
+			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			finalizationFetcher: mc,
+			headFetcher:         mc,
+			p2p:                 p2p,
+			minBacktrackEpochs:  2,
+			maxBacktrackEpochs:  4,
+		},
+	)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+
+	// Consume all chain1 blocks from many peers (alternative fork will be featured by a single peer,
+	// and should still be enough to explore alternative paths).
+	peers := make([]peer.ID, 0)
+	for i := 0; i < 5; i++ {
+		peers = append(peers, connectPeerHavingBlocks(t, p2p, chain1, finalizedSlot, p2p.Peers()))
+	}
+
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit) * 2
+	pidInd := 0
+	for i := uint64(1); i < 256; i += blockBatchLimit {
+		req := &p2ppb.BeaconBlocksByRangeRequest{
+			StartSlot: i,
+			Step:      1,
+			Count:     blockBatchLimit,
+		}
+		blocks, err := fetcher.requestBlocks(ctx, req, peers[pidInd%len(peers)])
+		require.NoError(t, err)
+		for _, blk := range blocks {
+			require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+			require.NoError(t, st.SetSlot(blk.Block.Slot))
+		}
+		pidInd++
+	}
+	// Assert that all the blocks from chain1 are known.
+	for _, blk := range chain1 {
+		blkRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot))
+	}
+	assert.Equal(t, uint64(256), mc.HeadSlot())
+
+	// Assert no blocks on further requests, disallowing to progress.
+	req := &p2ppb.BeaconBlocksByRangeRequest{
+		StartSlot: 257,
+		Step:      1,
+		Count:     blockBatchLimit,
+	}
+	blocks, err := fetcher.requestBlocks(ctx, req, peers[pidInd%len(peers)])
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(blocks))
+
+	// Check that if we do not provide peers with alternative paths,
+	// returned slot defaults to a slot max backtrack epochs behind.
+	forkSlot, err := fetcher.alternativeSlotBefore(ctx, 256)
+	require.NoError(t, err)
+	require.Equal(t, uint64(160), forkSlot)
+
+	// Search for alternative paths (add single peer having alternative path).
+	chain2 := extendBlockSequence(t, chain1[:129], 128)
+	alternativePeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
+	forkSlot, err = fetcher.alternativeSlotBefore(ctx, 250)
+	require.NoError(t, err)
+	require.Equal(t, uint64(128), forkSlot)
+
+	// Assert errors are resolved, we are able to progress further (128 more blocks further).
+	for i := forkSlot; i < 256+128; i += blockBatchLimit {
+		req := &p2ppb.BeaconBlocksByRangeRequest{
+			StartSlot: i,
+			Step:      1,
+			Count:     blockBatchLimit,
+		}
+		blocks, err := fetcher.requestBlocks(ctx, req, alternativePeer)
+		require.NoError(t, err)
+		for _, blk := range blocks {
+			require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+			require.NoError(t, st.SetSlot(blk.Block.Slot))
+		}
+	}
+
+	// Assert that all the blocks from chain2 are known.
+	for _, blk := range chain2 {
+		blkRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot))
+	}
+	assert.Equal(t, uint64(256+128), mc.HeadSlot())
 }
 
 func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
