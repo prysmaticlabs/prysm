@@ -42,6 +42,13 @@ const (
 	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
 	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
 	peerFilterCapacityWeight = 0.2
+	// defaultMinBacktrackEpochs minimum distance (in epochs) of the current head from finalized
+	// epoch, before backtracking algorithm is used. If distance is less, then alternativeSlotBefore
+	// returns finalized slot as a result (it is considered ok to start from finalized epoch, w/o
+	// any backtracking search whatsoever).
+	defaultMinBacktrackEpochs = 32
+	// defaultMaxBacktrackEpochs number of epochs to look back in a single run of backtracking algorithm.
+	defaultMaxBacktrackEpochs = 128
 )
 
 var (
@@ -59,6 +66,8 @@ type blocksFetcherConfig struct {
 	p2p                      p2p.P2P
 	peerFilterCapacityWeight float64
 	mode                     syncMode
+	minBacktrackEpochs       uint64
+	maxBacktrackEpochs       uint64
 }
 
 // blocksFetcher is a service to fetch chain data from peers.
@@ -77,7 +86,9 @@ type blocksFetcher struct {
 	peerLocks           map[peer.ID]*peerLock
 	fetchRequests       chan *fetchRequestParams
 	fetchResponses      chan *fetchRequestResponse
-	capacityWeight      float64       // how remaining capacity affects peer selection
+	capacityWeight      float64 // how remaining capacity affects peer selection
+	minBacktrackEpochs  uint64
+	maxBacktrackEpochs  uint64
 	mode                syncMode      // allows to use fetcher in different sync scenarios
 	quit                chan struct{} // termination notifier
 }
@@ -117,6 +128,14 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	if capacityWeight >= 1 {
 		capacityWeight = peerFilterCapacityWeight
 	}
+	minBacktrackEpochs := cfg.minBacktrackEpochs
+	if minBacktrackEpochs == 0 {
+		minBacktrackEpochs = defaultMinBacktrackEpochs
+	}
+	maxBacktrackEpochs := cfg.maxBacktrackEpochs
+	if maxBacktrackEpochs == 0 {
+		maxBacktrackEpochs = defaultMaxBacktrackEpochs
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	return &blocksFetcher{
@@ -133,6 +152,8 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		fetchResponses:      make(chan *fetchRequestResponse, maxPendingRequests),
 		capacityWeight:      capacityWeight,
 		mode:                cfg.mode,
+		minBacktrackEpochs:  minBacktrackEpochs,
+		maxBacktrackEpochs:  maxBacktrackEpochs,
 		quit:                make(chan struct{}),
 	}
 }
