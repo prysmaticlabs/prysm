@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
