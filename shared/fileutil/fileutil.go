@@ -34,7 +34,7 @@ func ExpandPath(p string) (string, error) {
 // with standardized, Prysm project permissions. This is the static-analysis enforced
 // method for creating a directory programmatically in Prysm.
 func MkdirAll(pth string) error {
-	return os.MkdirAll(pth, os.ModePerm)
+	return os.MkdirAll(pth, params.BeaconIoConfig().ReadWriteExecutePermissions)
 }
 
 // WriteFile is the static-analysis enforced method for writing binary data to a file
