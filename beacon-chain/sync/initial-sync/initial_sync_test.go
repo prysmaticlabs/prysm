@@ -3,7 +3,6 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
@@ -26,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -53,7 +53,7 @@ type peerData struct {
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	//logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 		EnablePeerScorer: true,
@@ -124,6 +124,13 @@ func makeSequence(start, end uint64) []uint64 {
 	return seq
 }
 
+// sanity test on helper function
+func TestMakeSequence(t *testing.T) {
+	got := makeSequence(3, 5)
+	want := []uint64{3, 4, 5}
+	require.DeepEqual(t, want, got)
+}
+
 func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 	c.Lock()
 	defer c.Unlock()
@@ -147,13 +154,6 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 		c.parentSlotCache[slot] = parentSlot
 		parentSlot = slot
 	}
-}
-
-// sanity test on helper function
-func TestMakeSequence(t *testing.T) {
-	got := makeSequence(3, 5)
-	want := []uint64{3, 4, 5}
-	require.DeepEqual(t, want, got)
 }
 
 // Connect peers with local host. This method sets up peer statuses and the appropriate handlers
@@ -232,6 +232,74 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		FinalizedEpoch: datum.finalizedEpoch,
 		HeadRoot:       bytesutil.PadTo([]byte("head_root"), 32),
 		HeadSlot:       datum.headSlot,
+	})
+
+	return p.PeerID()
+}
+
+// extendBlockSequence extends block chain sequentially (creating genesis block, if necessary).
+func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int) []*eth.SignedBeaconBlock {
+	// Start from the original sequence.
+	outSeq := make([]*eth.SignedBeaconBlock, len(inSeq)+size)
+	copy(outSeq, inSeq)
+
+	// See if genesis block needs to be created.
+	startSlot := len(inSeq)
+	if len(inSeq) == 0 {
+		outSeq[0] = testutil.NewBeaconBlock()
+		startSlot++
+	}
+
+	// Extend block chain sequentially.
+	for slot := startSlot; slot < len(outSeq); slot++ {
+		outSeq[slot] = testutil.NewBeaconBlock()
+		outSeq[slot].Block.Slot = uint64(slot)
+		parentRoot, err := outSeq[slot-1].Block.HashTreeRoot()
+		require.NoError(t, err)
+		outSeq[slot].Block.ParentRoot = parentRoot[:]
+		// Make sure that blocks having the same slot number, produce different hashes.
+		// That way different branches/forks will have different blocks for the same slots.
+		outSeq[slot].Block.StateRoot = testutil.Random32Bytes(t)
+	}
+
+	return outSeq
+}
+
+// connectPeerHavingBlocks connect host with a peer having provided blocks.
+func connectPeerHavingBlocks(
+	t *testing.T, host *p2pt.TestP2P, blocks []*eth.SignedBeaconBlock, finalizedSlot uint64,
+	peerStatus *peers.Status,
+) peer.ID {
+	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy"
+	p := p2pt.NewTestP2P(t)
+	p.SetStreamHandler(topic, func(stream network.Stream) {
+		defer func() {
+			assert.NoError(t, stream.Close())
+		}()
+
+		req := &p2ppb.BeaconBlocksByRangeRequest{}
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+
+		endSlot := mathutil.Min(req.StartSlot+req.Count, uint64(len(blocks)))
+		for i := req.StartSlot; i < endSlot; i++ {
+			require.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), blocks[i]))
+		}
+	})
+
+	p.Connect(host)
+
+	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+	headRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
+	peerStatus.SetConnectionState(p.PeerID(), peers.PeerConnected)
+	peerStatus.SetChainState(p.PeerID(), &p2ppb.Status{
+		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
+		FinalizedEpoch: finalizedEpoch,
+		HeadRoot:       headRoot[:],
+		HeadSlot:       blocks[len(blocks)-1].Block.Slot,
 	})
 
 	return p.PeerID()
