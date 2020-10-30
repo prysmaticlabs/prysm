@@ -134,7 +134,9 @@ func TestServer_ListAccounts(t *testing.T) {
 
 func Test_createAccountWithDepositData(t *testing.T) {
 	ctx := context.Background()
-	pubKey := bls.RandKey().PublicKey().Marshal()
+	secretKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := secretKey.PublicKey().Marshal()
 	m := &mockAccountCreator{
 		data: &ethpb.Deposit_Data{
 			PublicKey:             pubKey,

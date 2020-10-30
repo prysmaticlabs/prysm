@@ -5,13 +5,14 @@ package spectest
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -40,8 +41,12 @@ func testSignMessageYaml(t *testing.T) {
 			pkBytes, err := hex.DecodeString(test.Input.Privkey[2:])
 			require.NoError(t, err)
 			sk, err := bls.SecretKeyFromBytes(pkBytes)
-			require.NoError(t, err)
-
+			if err != nil {
+				if test.Output == "" && errors.Is(err, common.ErrZeroKey) {
+					return
+				}
+				t.Fatalf("cannot unmarshal secret key: %v", err)
+			}
 			msgBytes, err := hex.DecodeString(test.Input.Message[2:])
 			require.NoError(t, err)
 			sig := sk.Sign(msgBytes)
