@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )

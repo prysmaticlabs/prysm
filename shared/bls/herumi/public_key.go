@@ -3,11 +3,11 @@ package herumi
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/dgraph-io/ristretto"
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
