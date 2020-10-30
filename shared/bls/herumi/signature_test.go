@@ -4,8 +4,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -20,8 +21,8 @@ func TestSignVerify(t *testing.T) {
 }
 
 func TestAggregateVerify(t *testing.T) {
-	pubkeys := make([]common.PublicKey, 0, 100)
-	sigs := make([]common.Signature, 0, 100)
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
@@ -38,8 +39,8 @@ func TestAggregateVerify(t *testing.T) {
 }
 
 func TestFastAggregateVerify(t *testing.T) {
-	pubkeys := make([]common.PublicKey, 0, 100)
-	sigs := make([]common.Signature, 0, 100)
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	for i := 0; i < 100; i++ {
 		priv, err := RandKey()
@@ -54,8 +55,8 @@ func TestFastAggregateVerify(t *testing.T) {
 }
 
 func TestMultipleSignatureVerification(t *testing.T) {
-	pubkeys := make([]common.PublicKey, 0, 100)
-	sigs := make([]common.Signature, 0, 100)
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
@@ -73,8 +74,8 @@ func TestMultipleSignatureVerification(t *testing.T) {
 }
 
 func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
-	pubkeys := make([]common.PublicKey, 0, 100)
-	sigs := make([]common.Signature, 0, 100)
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
@@ -137,7 +138,7 @@ func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
 }
 
 func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
-	var pubkeys []common.PublicKey
+	var pubkeys []iface.PublicKey
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
 	aggSig := NewAggregateSignature()

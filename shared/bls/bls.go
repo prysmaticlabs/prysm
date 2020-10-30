@@ -5,8 +5,8 @@ package bls
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
-	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -43,7 +43,7 @@ func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
-func AggregateSignatures(sigs []common.Signature) common.Signature {
+func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 	if featureconfig.Get().EnableBlst {
 		return blst.AggregateSignatures(sigs)
 	}
@@ -51,7 +51,7 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 }
 
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
-func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.PublicKey) (bool, error) {
+func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
 	if featureconfig.Get().EnableBlst {
 		return blst.VerifyMultipleSignatures(sigs, msgs, pubKeys)
 	}
@@ -69,7 +69,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
-func NewAggregateSignature() common.Signature {
+func NewAggregateSignature() iface.Signature {
 	if featureconfig.Get().EnableBlst {
 		return blst.NewAggregateSignature()
 	}
@@ -77,7 +77,7 @@ func NewAggregateSignature() common.Signature {
 }
 
 // RandKey creates a new private key using a random input.
-func RandKey() (common.SecretKey, error) {
+func RandKey() (iface.SecretKey, error) {
 	if featureconfig.Get().EnableBlst {
 		return blst.RandKey()
 	}

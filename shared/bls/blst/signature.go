@@ -6,8 +6,9 @@ package blst
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -25,7 +26,7 @@ type Signature struct {
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
-func SignatureFromBytes(sig []byte) (common.Signature, error) {
+func SignatureFromBytes(sig []byte) (iface.Signature, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}, nil
 	}
@@ -48,7 +49,7 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 //
 // In ETH2.0 specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
-func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
+func (s *Signature) Verify(pubKey iface.PublicKey, msg []byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -68,7 +69,7 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //
 // In ETH2.0 specification:
 // def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> boo
-func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte) bool {
+func (s *Signature) AggregateVerify(pubKeys []iface.PublicKey, msgs [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -98,7 +99,7 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 //
 // In ETH2.0 specification:
 // def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
-func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
+func (s *Signature) FastAggregateVerify(pubKeys []iface.PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -114,13 +115,13 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
-func NewAggregateSignature() common.Signature {
+func NewAggregateSignature() iface.Signature {
 	sig := blst.HashToG2([]byte{'m', 'o', 'c', 'k'}, dst).ToAffine()
 	return &Signature{s: sig}
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
-func AggregateSignatures(sigs []common.Signature) common.Signature {
+func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 	if len(sigs) == 0 {
 		return nil
 	}
@@ -151,7 +152,7 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 // def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
 //
 // Deprecated: Use AggregateSignatures.
-func Aggregate(sigs []common.Signature) common.Signature {
+func Aggregate(sigs []iface.Signature) iface.Signature {
 	return AggregateSignatures(sigs)
 }
 
@@ -162,7 +163,7 @@ func Aggregate(sigs []common.Signature) common.Signature {
 // P'_{i,j} = P_{i,j} * r_i
 // e(S*, G) = \prod_{i=1}^n \prod_{j=1}^{m_i} e(P'_{i,j}, M_{i,j})
 // Using this we can verify multiple signatures safely.
-func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.PublicKey) (bool, error) {
+func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return true, nil
 	}
@@ -205,7 +206,7 @@ func (s *Signature) Marshal() []byte {
 }
 
 // Copy returns a full deep copy of a signature.
-func (s *Signature) Copy() common.Signature {
+func (s *Signature) Copy() iface.Signature {
 	sign := *s.s
 	return &Signature{s: &sign}
 }

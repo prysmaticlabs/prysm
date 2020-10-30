@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -14,10 +14,10 @@ import (
 func BenchmarkAggregateAttestations_Aggregate(b *testing.B) {
 	// Override expensive BLS aggregation method with cheap no-op such that this benchmark profiles
 	// the logic of aggregation selection rather than BLS logic.
-	aggregateSignatures = func(sigs []common.Signature) common.Signature {
+	aggregateSignatures = func(sigs []iface.Signature) iface.Signature {
 		return sigs[0]
 	}
-	signatureFromBytes = func(sig []byte) (common.Signature, error) {
+	signatureFromBytes = func(sig []byte) (iface.Signature, error) {
 		return bls.NewAggregateSignature(), nil
 	}
 	defer func() {

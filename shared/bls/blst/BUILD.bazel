@@ -81,6 +81,7 @@ go_library(
             ":blst_enabled_android_amd64",
             ":blst_enabled_android_arm64",
         ): [
+            "//shared/bls/iface:go_default_library",
             "//shared/bls/common:go_default_library",
             "//shared/featureconfig:go_default_library",
             "//shared/params:go_default_library",
@@ -89,7 +90,7 @@ go_library(
             "@com_github_pkg_errors//:go_default_library",
             "@com_github_supranational_blst//:go_default_library",
         ],
-        "//conditions:default": ["//shared/bls/common:go_default_library"],
+        "//conditions:default": ["//shared/bls/iface:go_default_library"],
     }),
 )
 
