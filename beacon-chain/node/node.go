@@ -491,6 +491,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 		StateNotifier:   b,
+		StateGen:        b.stateGen,
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
