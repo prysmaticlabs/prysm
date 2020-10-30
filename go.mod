@@ -100,7 +100,7 @@ require (
 	k8s.io/client-go v0.18.3
 )
 
-replace gopkg.in/urfave/cli.v2 => github.com/urfave/cli/v2 v2.1.1
+replace gopkg.in/urfave/cli.v2 => github.com/urfave/cli/v2 v2.2.0
 
 replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201016095414-974cbc1dd92e
 
