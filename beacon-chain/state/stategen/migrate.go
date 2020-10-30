@@ -68,27 +68,29 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				if err != nil {
 					return err
 				}
+
+				if s.beaconDB.HasState(ctx, aRoot) {
+					// Remove hot state DB root to prevent it gets deleted later when we turn hot state save DB mode off.
+					s.saveHotStateDB.lock.Lock()
+					roots := s.saveHotStateDB.savedStateRoots
+					for i := 0; i < len(roots); i++ {
+						if aRoot == roots[i] {
+							s.saveHotStateDB.savedStateRoots = append(roots[:i], roots[i+1:]...)
+							// There shouldn't be duplicated roots in `savedStateRoots`.
+							// Break here is ok.
+							break
+						}
+					}
+					s.saveHotStateDB.lock.Unlock()
+					continue
+				}
+
 				missingState, err := s.StateByRoot(ctx, missingRoot)
 				if err != nil {
 					return err
 				}
 				aRoot = missingRoot
 				aState = missingState
-			}
-			if s.beaconDB.HasState(ctx, aRoot) {
-				// Remove hot state DB root to prevent it gets deleted later when we turn hot state save DB mode off.
-				s.saveHotStateDB.lock.Lock()
-				roots := s.saveHotStateDB.savedStateRoots
-				for i := 0; i < len(roots); i++ {
-					if aRoot == roots[i] {
-						s.saveHotStateDB.savedStateRoots = append(roots[:i], roots[i+1:]...)
-						// There shouldn't be duplicated roots in `savedStateRoots`.
-						// Break here is ok.
-						break
-					}
-				}
-				s.saveHotStateDB.lock.Unlock()
-				continue
 			}
 
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
