@@ -104,14 +104,6 @@ func HashKeccak256(data []byte) [32]byte {
 
 // HashProto hashes a protocol buffer message using sha256.
 func HashProto(msg proto.Message) (result [32]byte, err error) {
-	// Hashing a proto with nil pointers will cause a panic in the unsafe
-	// proto.Marshal library.
-	defer func() {
-		if r := recover(); r != nil {
-			err = ErrNilProto
-		}
-	}()
-
 	if msg == nil || reflect.ValueOf(msg).IsNil() {
 		return [32]byte{}, ErrNilProto
 	}

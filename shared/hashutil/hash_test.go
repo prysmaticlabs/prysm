@@ -71,6 +71,11 @@ func TestHashProto(t *testing.T) {
 
 func TestHashProtoFuzz(t *testing.T) {
 	f := fuzz.New().NilChance(.2)
+	defer func(tt *testing.T) {
+		if r := recover(); r != nil {
+			t.Log("cannot hash nil proto")
+		}
+	}(t)
 
 	for i := 0; i < 1000; i++ {
 		msg := &pb.AddressBook{}
