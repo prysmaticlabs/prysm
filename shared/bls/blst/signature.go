@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
