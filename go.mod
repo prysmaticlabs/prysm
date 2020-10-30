@@ -8,6 +8,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
+	github.com/bloxapp/key-vault v0.0.0-20201030122303-fae489619d15
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
@@ -18,7 +19,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/emicklei/dot v0.11.0
-	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
+	github.com/ethereum/go-ethereum v1.9.20
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20200826142241-3a913c5a1313
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5

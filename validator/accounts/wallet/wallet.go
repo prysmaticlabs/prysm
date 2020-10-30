@@ -57,10 +57,10 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
-		keymanager.Imported: "Imported Wallet (Recommended)",
-		keymanager.Derived:  "HD Wallet (Least secure)",
-		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
-		keymanager.RemoteHTTP:   "Remote HTTP Signing Wallet (Advanced)",
+		keymanager.Imported:   "Imported Wallet (Recommended)",
+		keymanager.Derived:    "HD Wallet (Least secure)",
+		keymanager.Remote:     "Remote Signing Wallet (Advanced)",
+		keymanager.RemoteHTTP: "Remote HTTP Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -328,7 +328,7 @@ func (w *Wallet) InitializeKeymanager(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote HTTP keymanager")
 		}
-		keymanager = remotehttp.NewKeyManagerV2(keymanagerv1)
+		km = remotehttp.NewKeyManagerV2(keymanagerv1)
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)
 	}
