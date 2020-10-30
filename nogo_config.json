@@ -132,5 +132,15 @@
     },
     "exclude_files": {
     }
+  },
+  "writefile": {
+    "only_files": {
+      "beacon-chain/.*": "",
+      "shared/.*": "",
+      "slasher/.*": "",
+      "validator/.*": ""
+    },
+    "exclude_files": {
+    }
   }
 }
