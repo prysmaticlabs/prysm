@@ -50,6 +50,7 @@ var (
 	errFetcherCtxIsDone      = errors.New("fetcher's context is done, reinitialize")
 	errSlotIsTooHigh         = errors.New("slot is higher than the finalized slot")
 	errBlockAlreadyProcessed = errors.New("block is already processed")
+	errParentDoesNotExist    = errors.New("beacon node doesn't have a parent in db with root")
 	errInvalidFetchedData    = errors.New("invalid data returned from peer")
 )
 
