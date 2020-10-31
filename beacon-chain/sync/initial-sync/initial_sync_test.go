@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
@@ -53,7 +54,7 @@ type peerData struct {
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	//logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 		EnablePeerScorer: true,
@@ -124,13 +125,6 @@ func makeSequence(start, end uint64) []uint64 {
 	return seq
 }
 
-// sanity test on helper function
-func TestMakeSequence(t *testing.T) {
-	got := makeSequence(3, 5)
-	want := []uint64{3, 4, 5}
-	require.DeepEqual(t, want, got)
-}
-
 func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 	c.Lock()
 	defer c.Unlock()
@@ -154,6 +148,13 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 		c.parentSlotCache[slot] = parentSlot
 		parentSlot = slot
 	}
+}
+
+// sanity test on helper function
+func TestMakeSequence(t *testing.T) {
+	got := makeSequence(3, 5)
+	want := []uint64{3, 4, 5}
+	require.DeepEqual(t, want, got)
 }
 
 // Connect peers with local host. This method sets up peer statuses and the appropriate handlers
