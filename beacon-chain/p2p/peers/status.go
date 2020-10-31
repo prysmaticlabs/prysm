@@ -484,17 +484,17 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 
 // BestNonFinalized returns the highest known epoch, which is higher than ours, and is shared
 // by at least minPeers.
-func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []peer.ID) {
+func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	epochVotes := make(map[uint64]uint64)
 	pidEpoch := make(map[peer.ID]uint64, len(connected))
 	pidHead := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourHeadSlot := ourHeadEpoch * params.BeaconConfig().SlotsPerEpoch
+	ourFinalizedSlot := ourFinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
+		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourFinalizedSlot {
 			epoch := helpers.SlotToEpoch(peerChainState.HeadSlot)
 			epochVotes[epoch]++
 			pidEpoch[pid] = epoch
