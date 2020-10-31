@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -270,9 +271,9 @@ func connectPeerHavingBlocks(
 	t *testing.T, host *p2pt.TestP2P, blocks []*eth.SignedBeaconBlock, finalizedSlot uint64,
 	peerStatus *peers.Status,
 ) peer.ID {
-	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy"
 	p := p2pt.NewTestP2P(t)
-	p.SetStreamHandler(topic, func(stream network.Stream) {
+
+	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy", func(stream network.Stream) {
 		defer func() {
 			assert.NoError(t, stream.Close())
 		}()
@@ -285,6 +286,29 @@ func connectPeerHavingBlocks(
 				break
 			}
 			require.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), blocks[i]))
+		}
+	})
+
+	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy", func(stream network.Stream) {
+		defer func() {
+			assert.NoError(t, stream.Close())
+		}()
+
+		req := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+		if len(*req) == 0 {
+			return
+		}
+		for _, expectedRoot := range *req {
+			for _, blk := range blocks {
+				if root, err := blk.Block.HashTreeRoot(); err == nil && expectedRoot == root {
+					log.Printf("Found blocks_by_root: %#x for slot: %v", root, blk.Block.Slot)
+					_, err := stream.Write([]byte{0x00})
+					assert.NoError(t, err, "Failed to write to stream")
+					_, err = p.Encoding().EncodeWithMaxLength(stream, blk)
+					assert.NoError(t, err, "Could not send response back")
+				}
+			}
 		}
 	})
 
