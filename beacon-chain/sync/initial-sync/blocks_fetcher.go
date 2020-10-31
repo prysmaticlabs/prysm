@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -42,6 +43,9 @@ const (
 	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
 	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
 	peerFilterCapacityWeight = 0.2
+	// backtrackingMaxHops how many hops (in slots) from block to its parent to do, before giving up
+	// (during search for common ancestor in backtracking algorithm).
+	backtrackingMaxHops = 128
 )
 
 var (
@@ -372,6 +376,72 @@ func (f *blocksFetcher) requestBlocks(
 			return nil, errInvalidFetchedData
 		}
 		prevSlot = blk.Block.Slot
+		blocks = append(blocks, blk)
+	}
+	return blocks, nil
+}
+
+// requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.
+func (f *blocksFetcher) requestBlocksByRoot(
+	ctx context.Context,
+	req *p2pTypes.BeaconBlockByRootsReq,
+	pid peer.ID,
+) ([]*eth.SignedBeaconBlock, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if req == nil {
+		return nil, errors.New("nil request")
+	}
+	l := f.getPeerLock(pid)
+	if l == nil {
+		return nil, errors.New("cannot obtain lock")
+	}
+	l.Lock()
+	log.WithFields(logrus.Fields{
+		"peer":     pid,
+		"numRoots": len(*req),
+		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
+	}).Debug("Requesting blocks (by roots)")
+	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
+		log.WithField("peer", pid).Debug("Slowing down for rate limit")
+		timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
+		defer timer.Stop()
+		select {
+		case <-f.ctx.Done():
+			return nil, errFetcherCtxIsDone
+		case <-timer.C:
+			// Peer has gathered enough capacity to be polled again.
+		}
+	}
+	f.rateLimiter.Add(pid.String(), int64(len(*req)))
+	l.Unlock()
+
+	stream, err := f.p2p.Send(ctx, req, p2p.RPCBlocksByRootTopic, pid)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
+			log.WithError(err).Debugf("Failed to close stream with protocol %s", stream.Protocol())
+		}
+	}()
+
+	blocks := make([]*eth.SignedBeaconBlock, 0)
+	for i := 0; i < len(*req); i++ {
+		isFirstChunk := i == 0
+		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		// Exit if peer sends more than max request blocks.
+		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
+			break
+		}
 		blocks = append(blocks, blk)
 	}
 	return blocks, nil
