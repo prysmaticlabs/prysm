@@ -47,7 +47,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return baseState, nil
 	}
 
-	has, err := s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root))
+	// To avoid sharing the same state across checkpoint state cache and hot state cache,
+	// we don't add the state to check point cache.
+	has, err := s.stateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, err
 	}
