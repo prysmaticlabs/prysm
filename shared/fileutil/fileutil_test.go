@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -45,6 +46,30 @@ func TestPathExpansion(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expected, expanded)
 	}
+}
+
+func TestMkdirAll(t *testing.T) {
+	dirName := testutil.TempDir() + "somedir"
+	err := os.MkdirAll(dirName, os.ModePerm)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(dirName))
+	}()
+	err = fileutil.MkdirAll(dirName)
+	assert.ErrorContains(t, "already exists with wrong permissions", err)
+}
+
+func TestWriteFile(t *testing.T) {
+	dirName := testutil.TempDir() + "somedir"
+	err := os.MkdirAll(dirName, os.ModePerm)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(dirName))
+	}()
+	someFileName := filepath.Join(dirName, "somefile.txt")
+	require.NoError(t, ioutil.WriteFile(someFileName, []byte("hi"), os.ModePerm))
+	err = fileutil.WriteFile(someFileName, []byte("hi"))
+	assert.ErrorContains(t, "already exists with wrong permissions", err)
 }
 
 func TestCopyFile(t *testing.T) {

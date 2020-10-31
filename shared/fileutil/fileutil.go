@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,13 +33,43 @@ func ExpandPath(p string) (string, error) {
 // with standardized, Prysm project permissions. This is the static-analysis enforced
 // method for creating a directory programmatically in Prysm.
 func MkdirAll(pth string) error {
-	return os.MkdirAll(pth, params.BeaconIoConfig().ReadWriteExecutePermissions)
+	expanded, err := ExpandPath(pth)
+	if err != nil {
+		return err
+	}
+	exists, err := HasDir(pth)
+	if err != nil {
+		return err
+	}
+	if exists {
+		info, err := os.Stat(expanded)
+		if err != nil {
+			return err
+		}
+		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
+			return errors.New("dir already exists with wrong permissions")
+		}
+	}
+	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
 }
 
 // WriteFile is the static-analysis enforced method for writing binary data to a file
 // in Prysm, enforcing a single entrypoint with standardized permissions.
 func WriteFile(file string, data []byte) error {
-	return ioutil.WriteFile(file, data, params.BeaconIoConfig().ReadWritePermissions)
+	expanded, err := ExpandPath(file)
+	if err != nil {
+		return err
+	}
+	if FileExists(expanded) {
+		info, err := os.Stat(expanded)
+		if err != nil {
+			return err
+		}
+		if info.Mode() != params.BeaconIoConfig().ReadWritePermissions {
+			return errors.New("file already exists with wrong permissions")
+		}
+	}
+	return ioutil.WriteFile(expanded, data, params.BeaconIoConfig().ReadWritePermissions)
 }
 
 // HomeDir for a user.
