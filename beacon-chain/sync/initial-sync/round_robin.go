@@ -53,8 +53,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		db:                  s.db,
-		headFetcher:         s.chain,
-		finalizationFetcher: s.chain,
+		chain:               s.chain,
 		highestExpectedSlot: highestFinalizedSlot,
 		mode:                modeStopOnFinalizedEpoch,
 	})
@@ -85,8 +84,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	queue = newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		db:                  s.db,
-		headFetcher:         s.chain,
-		finalizationFetcher: s.chain,
+		chain:               s.chain,
 		highestExpectedSlot: helpers.SlotsSince(genesis),
 		mode:                modeNonConstrained,
 	})
