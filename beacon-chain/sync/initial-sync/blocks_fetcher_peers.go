@@ -95,12 +95,12 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 // if necessary (when only percentage of peers returned).
 // When peer scorer is enabled, fallbacks filterScoredPeers.
 func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
-	if len(peers) == 0 {
-		return peers, nil
-	}
-
 	if featureconfig.Get().EnablePeerScorer {
 		return f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	}
+
+	if len(peers) == 0 {
+		return peers, nil
 	}
 
 	// Shuffle peers to prevent a bad peer from
