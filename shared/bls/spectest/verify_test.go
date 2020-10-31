@@ -2,13 +2,14 @@ package spectest
 
 import (
 	"encoding/hex"
+	"errors"
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -38,8 +39,12 @@ func testVerifyMessageYaml(t *testing.T) {
 			pkBytes, err := hex.DecodeString(test.Input.Pubkey[2:])
 			require.NoError(t, err)
 			pk, err := bls.PublicKeyFromBytes(pkBytes)
-			require.NoError(t, err)
-
+			if err != nil {
+				if test.Output == false && errors.Is(err, common.ErrInfinitePubKey) {
+					return
+				}
+				t.Fatalf("cannot unmarshal pubkey: %v", err)
+			}
 			msgBytes, err := hex.DecodeString(test.Input.Message[2:])
 			require.NoError(t, err)
 

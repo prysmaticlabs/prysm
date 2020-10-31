@@ -35,12 +35,6 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
-
-	// Short cut if the cachedState is already in the DB.
-	if s.beaconDB.HasState(ctx, blockRoot) {
-		return s.beaconDB.State(ctx, blockRoot)
-	}
-
 	return s.loadStateByRoot(ctx, blockRoot)
 }
 
@@ -167,6 +161,11 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 	}
 	if ok {
 		return cachedInfo.state, nil
+	}
+
+	// Short cut if the cachedState is already in the DB.
+	if s.beaconDB.HasState(ctx, blockRoot) {
+		return s.beaconDB.State(ctx, blockRoot)
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)

@@ -89,31 +89,6 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 	}, nil
 }
 
-// DeleteAccounts deletes accounts from a user if their wallet is an imported wallet.
-func (s *Server) DeleteAccounts(
-	ctx context.Context, req *pb.DeleteAccountsRequest,
-) (*pb.DeleteAccountsResponse, error) {
-	if req.PublicKeys == nil || len(req.PublicKeys) < 1 {
-		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
-	}
-	if s.wallet == nil || s.keymanager == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
-	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported {
-		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can delete accounts")
-	}
-	if err := accounts.DeleteAccount(ctx, &accounts.DeleteAccountConfig{
-		Wallet:     s.wallet,
-		Keymanager: s.keymanager,
-		PublicKeys: req.PublicKeys,
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
-	}
-	return &pb.DeleteAccountsResponse{
-		DeletedKeys: req.PublicKeys,
-	}, nil
-}
-
 func createAccountWithDepositData(ctx context.Context, km accountCreator) (*pb.DepositDataResponse_DepositData, error) {
 	// Create a new validator account using the specified keymanager.
 	_, depositData, err := km.CreateAccount(ctx)

@@ -51,7 +51,8 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 	keystores := make([]string, numAccounts)
 	pubKeys := make([][]byte, len(keystores))
 	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 		id, err := uuid.NewRandom()
 		require.NoError(t, err)
@@ -116,7 +117,8 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	encryptor := keystorev4.New()
 	keystores := make([]string, 3)
 	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 		id, err := uuid.NewRandom()
 		require.NoError(t, err)
@@ -352,7 +354,8 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	keystores := make([]string, 3)
 	pubKeys := make([][]byte, 3)
 	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 		id, err := uuid.NewRandom()
 		require.NoError(t, err)

@@ -276,7 +276,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			assert.NoError(t, queue.start())
 			processBlock := func(block *eth.SignedBeaconBlock) error {
 				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block.ParentRoot)) {
-					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
+					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block.ParentRoot)
 				}
 				root, err := block.Block.HashTreeRoot()
 				if err != nil {

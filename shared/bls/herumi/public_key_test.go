@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPublicKeyFromBytes(t *testing.T) {
@@ -59,11 +60,15 @@ func TestPublicKeyFromBytes(t *testing.T) {
 }
 
 func TestPublicKey_Copy(t *testing.T) {
-	pubkeyA := herumi.RandKey().PublicKey()
+	priv, err := herumi.RandKey()
+	require.NoError(t, err)
+	pubkeyA := priv.PublicKey()
 	pubkeyBytes := pubkeyA.Marshal()
 
 	pubkeyB := pubkeyA.Copy()
-	pubkeyB.Aggregate(herumi.RandKey().PublicKey())
+	priv2, err := herumi.RandKey()
+	require.NoError(t, err)
+	pubkeyB.Aggregate(priv2.PublicKey())
 
 	if !bytes.Equal(pubkeyA.Marshal(), pubkeyBytes) {
 		t.Fatal("Pubkey was mutated after copy")
