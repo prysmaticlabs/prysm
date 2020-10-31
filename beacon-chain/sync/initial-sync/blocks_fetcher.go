@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -42,13 +42,6 @@ const (
 	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
 	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
 	peerFilterCapacityWeight = 0.2
-	// defaultMinBacktrackEpochs minimum distance (in epochs) of the current head from finalized
-	// epoch, before backtracking algorithm is used. If distance is less, then alternativeSlotBefore
-	// returns finalized slot as a result (it is considered ok to start from finalized epoch, w/o
-	// any backtracking search whatsoever).
-	defaultMinBacktrackEpochs = 32
-	// defaultMaxBacktrackEpochs number of epochs to look back in a single run of backtracking algorithm.
-	defaultMaxBacktrackEpochs = 128
 )
 
 var (
@@ -57,17 +50,16 @@ var (
 	errSlotIsTooHigh         = errors.New("slot is higher than the finalized slot")
 	errBlockAlreadyProcessed = errors.New("block is already processed")
 	errInvalidFetchedData    = errors.New("invalid data returned from peer")
+	errNoPeersWithAltBlocks  = errors.New("no peers with alternative blocks found")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
-	headFetcher              blockchain.HeadFetcher
-	finalizationFetcher      blockchain.FinalizationFetcher
+	chain                    blockchainService
 	p2p                      p2p.P2P
+	db                       db.ReadOnlyDatabase
 	peerFilterCapacityWeight float64
 	mode                     syncMode
-	minBacktrackEpochs       uint64
-	maxBacktrackEpochs       uint64
 }
 
 // blocksFetcher is a service to fetch chain data from peers.
@@ -75,22 +67,20 @@ type blocksFetcherConfig struct {
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
 	sync.Mutex
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	rand                *rand.Rand
-	headFetcher         blockchain.HeadFetcher
-	finalizationFetcher blockchain.FinalizationFetcher
-	p2p                 p2p.P2P
-	blocksPerSecond     uint64
-	rateLimiter         *leakybucket.Collector
-	peerLocks           map[peer.ID]*peerLock
-	fetchRequests       chan *fetchRequestParams
-	fetchResponses      chan *fetchRequestResponse
-	capacityWeight      float64 // how remaining capacity affects peer selection
-	minBacktrackEpochs  uint64
-	maxBacktrackEpochs  uint64
-	mode                syncMode      // allows to use fetcher in different sync scenarios
-	quit                chan struct{} // termination notifier
+	ctx             context.Context
+	cancel          context.CancelFunc
+	rand            *rand.Rand
+	chain           blockchainService
+	p2p             p2p.P2P
+	db              db.ReadOnlyDatabase
+	blocksPerSecond uint64
+	rateLimiter     *leakybucket.Collector
+	peerLocks       map[peer.ID]*peerLock
+	fetchRequests   chan *fetchRequestParams
+	fetchResponses  chan *fetchRequestResponse
+	capacityWeight  float64       // how remaining capacity affects peer selection
+	mode            syncMode      // allows to use fetcher in different sync scenarios
+	quit            chan struct{} // termination notifier
 }
 
 // peerLock restricts fetcher actions on per peer basis. Currently, used for rate limiting.
@@ -128,33 +118,23 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	if capacityWeight >= 1 {
 		capacityWeight = peerFilterCapacityWeight
 	}
-	minBacktrackEpochs := cfg.minBacktrackEpochs
-	if minBacktrackEpochs == 0 {
-		minBacktrackEpochs = defaultMinBacktrackEpochs
-	}
-	maxBacktrackEpochs := cfg.maxBacktrackEpochs
-	if maxBacktrackEpochs == 0 {
-		maxBacktrackEpochs = defaultMaxBacktrackEpochs
-	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	return &blocksFetcher{
-		ctx:                 ctx,
-		cancel:              cancel,
-		rand:                rand.NewGenerator(),
-		headFetcher:         cfg.headFetcher,
-		finalizationFetcher: cfg.finalizationFetcher,
-		p2p:                 cfg.p2p,
-		blocksPerSecond:     uint64(blocksPerSecond),
-		rateLimiter:         rateLimiter,
-		peerLocks:           make(map[peer.ID]*peerLock),
-		fetchRequests:       make(chan *fetchRequestParams, maxPendingRequests),
-		fetchResponses:      make(chan *fetchRequestResponse, maxPendingRequests),
-		capacityWeight:      capacityWeight,
-		mode:                cfg.mode,
-		minBacktrackEpochs:  minBacktrackEpochs,
-		maxBacktrackEpochs:  maxBacktrackEpochs,
-		quit:                make(chan struct{}),
+		ctx:             ctx,
+		cancel:          cancel,
+		rand:            rand.NewGenerator(),
+		chain:           cfg.chain,
+		p2p:             cfg.p2p,
+		db:              cfg.db,
+		blocksPerSecond: uint64(blocksPerSecond),
+		rateLimiter:     rateLimiter,
+		peerLocks:       make(map[peer.ID]*peerLock),
+		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
+		fetchResponses:  make(chan *fetchRequestResponse, maxPendingRequests),
+		capacityWeight:  capacityWeight,
+		mode:            cfg.mode,
+		quit:            make(chan struct{}),
 	}
 }
 

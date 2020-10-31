@@ -75,10 +75,10 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 		}
 		var peers []peer.ID
 		if f.mode == modeStopOnFinalizedEpoch {
-			headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
+			headEpoch := f.chain.FinalizedCheckpt().Epoch
 			_, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		} else {
-			headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+			headEpoch := helpers.SlotToEpoch(f.chain.HeadSlot())
 			_, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
 		}
 		if len(peers) >= required {

@@ -52,6 +52,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
+		db:                  s.db,
 		headFetcher:         s.chain,
 		finalizationFetcher: s.chain,
 		highestExpectedSlot: highestFinalizedSlot,
@@ -83,6 +84,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// world view on non-finalized epoch.
 	queue = newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
+		db:                  s.db,
 		headFetcher:         s.chain,
 		finalizationFetcher: s.chain,
 		highestExpectedSlot: helpers.SlotsSince(genesis),

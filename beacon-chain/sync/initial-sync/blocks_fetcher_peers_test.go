@@ -324,8 +324,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 			fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
-				finalizationFetcher:      mc,
-				headFetcher:              mc,
+				chain:                    mc,
 				p2p:                      p2p,
 				peerFilterCapacityWeight: tt.args.capacityWeight,
 			})
