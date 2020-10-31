@@ -1,7 +1,10 @@
 package cache
 
 import (
+	"context"
+	"math"
 	"sync"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
@@ -30,8 +33,9 @@ var (
 
 // CheckpointStateCache is a struct with 1 queue for looking up state by checkpoint.
 type CheckpointStateCache struct {
-	cache *lru.Cache
-	lock  sync.RWMutex
+	cache      *lru.Cache
+	lock       sync.RWMutex
+	inProgress map[string]bool
 }
 
 // NewCheckpointStateCache creates a new checkpoint state cache for storing/accessing processed state.
@@ -41,22 +45,45 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 		panic(err)
 	}
 	return &CheckpointStateCache{
-		cache: cache,
+		cache:      cache,
+		inProgress: map[string]bool{},
 	}
 }
 
 // StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
-func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	h, err := hashutil.HashProto(cp)
+func (c *CheckpointStateCache) StateByCheckpoint(ctx context.Context, cp *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
+	k, err := checkpointKey(cp)
 	if err != nil {
 		return nil, err
 	}
 
-	item, exists := c.cache.Get(h)
+	delay := minDelay
 
+	// Another identical request may be in progress already. Let's wait until
+	// any in progress request resolves or our timeout is exceeded.
+	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		c.lock.RLock()
+		if !c.inProgress[k] {
+			c.lock.RUnlock()
+			break
+		}
+		c.lock.RUnlock()
+
+		// This increasing backoff is to decrease the CPU cycles while waiting
+		// for the in progress boolean to flip to false.
+		time.Sleep(time.Duration(delay) * time.Nanosecond)
+		delay *= delayFactor
+		delay = math.Min(delay, maxDelay)
+	}
+
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	item, exists := c.cache.Get(k)
 	if exists && item != nil {
 		checkpointStateHit.Inc()
 		// Copy here is unnecessary since the return will only be used to verify attestation signature.
@@ -72,10 +99,47 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s *stateTrie.BeaconState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	h, err := hashutil.HashProto(cp)
+	k, err := checkpointKey(cp)
 	if err != nil {
 		return err
 	}
-	c.cache.Add(h, s)
+	c.cache.ContainsOrAdd(k, s)
 	return nil
+}
+
+// MarkInProgress a request so that any other similar requests will block on
+// Get until MarkNotInProgress is called.
+func (c *CheckpointStateCache) MarkInProgress(cp *ethpb.Checkpoint) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	k, err := checkpointKey(cp)
+	if err != nil {
+		return err
+	}
+	if c.inProgress[k] {
+		return ErrAlreadyInProgress
+	}
+	c.inProgress[k] = true
+	return nil
+}
+
+// MarkNotInProgress will release the lock on a given request. This should be
+// called after put.
+func (c *CheckpointStateCache) MarkNotInProgress(cp *ethpb.Checkpoint) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	k, err := checkpointKey(cp)
+	if err != nil {
+		return err
+	}
+	delete(c.inProgress, k)
+	return nil
+}
+
+func checkpointKey(cp *ethpb.Checkpoint) (string, error) {
+	h, err := hashutil.HashProto(cp)
+	if err != nil {
+		return "", err
+	}
+	return string(h[:]), nil
 }
