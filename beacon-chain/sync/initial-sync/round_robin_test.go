@@ -560,3 +560,17 @@ func TestService_blockProviderScoring(t *testing.T) {
 	assert.Equal(t, true, score2 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score2, peer2, score3)
 	assert.Equal(t, true, scorer.ProcessedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer: %d", scorer.ProcessedBlocks(peer3))
 }
+
+func TestService_trackbackInSearchOfAlternativeBranches(t *testing.T) {
+	// Consider the following graph:
+	// Peer1: A - B - C - D - E
+	//            \            \
+	// Peer2:      \            - F - G - H
+	// Peer3:       - C'- D'- E'- F'- G'
+	//
+	// Scenario:
+	// Connect Peer1, no other peers are available at first. Allow service to proceed till slot E,
+	// then connect Peer3 having, alternative, longer path. Test that G' slot can be reached i.e.
+	// fetcher can track back and explore alternative path.
+	// Finally, connect Peer2, checking if service can track back once again, and reach slot H.
+}
