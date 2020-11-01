@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,6 +29,8 @@ const (
 	// noRequiredPeersErrRefreshInterval defines interval for which queue will be paused before
 	// making the next attempt to obtain data.
 	noRequiredPeersErrRefreshInterval = 15 * time.Second
+	// maxResetAttempts number of times stale FSM is reset, before backtracking is triggered.
+	maxResetAttempts = 8
 )
 
 var (
@@ -71,6 +74,7 @@ type blocksQueue struct {
 		noRequiredPeersErrRetries int
 	}
 	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
+	staleEpochs map[uint64]uint8             // counter to keep track of stale FSMs
 	quit        chan struct{}                // termination notifier
 }
 
@@ -113,6 +117,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
+		staleEpochs:         make(map[uint64]uint8, 0),
 	}
 
 	// Configure state machines.
@@ -398,35 +403,25 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 			}
 		}
 
-		// Shift start position of all the machines except for the last one.
+		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
-		blocksPerRequest := q.blocksFetcher.blocksPerSecond
-		if err := q.smm.removeAllStateMachines(); err != nil {
-			return stateSkipped, err
-		}
-		for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
-			q.smm.addStateMachine(i)
+		if featureconfig.Get().EnableSyncBacktracking {
+			q.staleEpochs[helpers.SlotToEpoch(startSlot)]++
+			// If FSMs have been reset enough times, try to explore alternative forks.
+			if q.staleEpochs[helpers.SlotToEpoch(startSlot)] > maxResetAttempts {
+				delete(q.staleEpochs, helpers.SlotToEpoch(startSlot))
+				fork, err := q.blocksFetcher.findFork(ctx, startSlot)
+				if err == nil {
+					return stateSkipped, q.resetFromFork(ctx, fork)
+				}
+				log.WithFields(logrus.Fields{
+					"epoch": helpers.SlotToEpoch(startSlot),
+					"error": err.Error(),
+				}).Debug("Can not explore alternative branches")
+			}
 		}
 
-		// Replace the last (currently activated) state machine.
-		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot+blocksPerRequest*(lookaheadSteps-1)-1)
-		if err != nil {
-			return stateSkipped, err
-		}
-		if q.mode == modeStopOnFinalizedEpoch {
-			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
-				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
-			}
-		} else {
-			if q.highestExpectedSlot < q.blocksFetcher.bestNonFinalizedSlot() {
-				q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
-			}
-		}
-		if nonSkippedSlot > q.highestExpectedSlot {
-			nonSkippedSlot = startSlot + blocksPerRequest*(lookaheadSteps-1)
-		}
-		q.smm.addStateMachine(nonSkippedSlot)
-		return stateSkipped, nil
+		return stateSkipped, q.resetFromSlot(ctx, startSlot)
 	}
 }
 
