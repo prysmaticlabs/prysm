@@ -117,7 +117,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
-		staleEpochs:         make(map[uint64]uint8, 0),
+		staleEpochs:         make(map[uint64]uint8),
 	}
 
 	// Configure state machines.

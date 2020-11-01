@@ -783,7 +783,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 
 		queue.smm.addStateMachine(256)
 		// Machine is skipped for too long. Reset.
-		queue.smm.machines[256].updated = timeutils.Now().Add(-5 * staleEpochTimeout)
+		queue.smm.machines[256].updated = timeutils.Now().Add(-10 * staleEpochTimeout)
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateScheduled

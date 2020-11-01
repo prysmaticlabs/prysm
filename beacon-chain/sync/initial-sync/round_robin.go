@@ -215,10 +215,7 @@ func (s *Service) processBlock(
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("%w: %#x", errParentDoesNotExist, blk.Block.ParentRoot)
 	}
-	if err := blockReceiver(ctx, blk, blkRoot); err != nil {
-		return err
-	}
-	return nil
+	return blockReceiver(ctx, blk, blkRoot)
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,

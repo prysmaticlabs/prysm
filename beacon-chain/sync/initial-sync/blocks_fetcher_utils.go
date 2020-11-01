@@ -221,9 +221,6 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 		return nil, fmt.Errorf("cannot locate non-empty slot for a peer: %w", err)
 	}
 
-	// TODO remove log
-	log.Debugf("Found peer non-empty slot: %v\n", nonSkippedSlot)
-
 	// Request blocks starting from the first non-empty slot.
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: nonSkippedSlot,
@@ -239,8 +236,11 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	for _, block := range blocks {
 		parentRoot := bytesutil.ToBytes32(block.Block.ParentRoot)
 		if !f.db.HasBlock(ctx, parentRoot) && !f.chain.HasInitSyncBlock(parentRoot) {
-			// TODO remove log
-			log.Debugf("FOUND!!!!! slot: %v\n", block.Block.Slot)
+			log.WithFields(logrus.Fields{
+				"peer": pid,
+				"slot": block.Block.Slot,
+				"root": parentRoot,
+			}).Debug("Block with unknown parent root has been found")
 			// Backtrack on a root, to find a common ancestor from which we can resume syncing.
 			fork, err := f.findAncestor(ctx, pid, block)
 			if err != nil {
