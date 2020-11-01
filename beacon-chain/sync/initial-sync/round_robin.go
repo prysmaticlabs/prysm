@@ -23,8 +23,6 @@ const (
 	counterSeconds = 20
 )
 
-var errParentBlockMissing = errors.New("parent block is not found in DB")
-
 // blockReceiverFn defines block receiving function.
 type blockReceiverFn func(ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error
 
@@ -264,10 +262,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 		blockRoots[i] = blkRoot
 	}
-	if err := bFunc(ctx, blks, blockRoots); err != nil {
-		return err
-	}
-	return nil
+	return bFunc(ctx, blks, blockRoots)
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
