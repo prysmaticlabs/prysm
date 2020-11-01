@@ -409,7 +409,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		if featureconfig.Get().EnableSyncBacktracking {
 			q.staleEpochs[helpers.SlotToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
-			if q.staleEpochs[helpers.SlotToEpoch(startSlot)] > maxResetAttempts {
+			if q.staleEpochs[helpers.SlotToEpoch(startSlot)] >= maxResetAttempts {
 				delete(q.staleEpochs, helpers.SlotToEpoch(startSlot))
 				fork, err := q.blocksFetcher.findFork(ctx, startSlot)
 				if err == nil {
