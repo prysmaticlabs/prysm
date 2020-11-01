@@ -329,14 +329,8 @@ func (f *blocksFetcher) requestBlocks(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
-		log.WithField("peer", pid).Debug("Slowing down for rate limit")
-		timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
-		defer timer.Stop()
-		select {
-		case <-f.ctx.Done():
-			return nil, errFetcherCtxIsDone
-		case <-timer.C:
-			// Peer has gathered enough capacity to be polled again.
+		if err := f.waitForBandwidth(pid); err != nil {
+			return nil, err
 		}
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
@@ -406,14 +400,8 @@ func (f *blocksFetcher) requestBlocksByRoot(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
-		log.WithField("peer", pid).Debug("Slowing down for rate limit")
-		timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
-		defer timer.Stop()
-		select {
-		case <-f.ctx.Done():
-			return nil, errFetcherCtxIsDone
-		case <-timer.C:
-			// Peer has gathered enough capacity to be polled again.
+		if err := f.waitForBandwidth(pid); err != nil {
+			return nil, err
 		}
 	}
 	f.rateLimiter.Add(pid.String(), int64(len(*req)))
@@ -446,4 +434,18 @@ func (f *blocksFetcher) requestBlocksByRoot(
 		blocks = append(blocks, blk)
 	}
 	return blocks, nil
+}
+
+// waitForBandwidth blocks up until peer's bandwidth is restored.
+func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
+	log.WithField("peer", pid).Debug("Slowing down for rate limit")
+	timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
+	defer timer.Stop()
+	select {
+	case <-f.ctx.Done():
+		return errFetcherCtxIsDone
+	case <-timer.C:
+		// Peer has gathered enough capacity to be polled again.
+	}
+	return nil
 }
