@@ -30,7 +30,7 @@ const (
 	// making the next attempt to obtain data.
 	noRequiredPeersErrRefreshInterval = 15 * time.Second
 	// maxResetAttempts number of times stale FSM is reset, before backtracking is triggered.
-	maxResetAttempts = 8
+	maxResetAttempts = 4
 )
 
 var (
@@ -198,7 +198,8 @@ func (q *blocksQueue) loop() {
 			"highestExpectedSlot": q.highestExpectedSlot,
 			"headSlot":            q.chain.HeadSlot(),
 			"state":               q.smm.String(),
-		}).Trace("tick")
+			"staleEpoch":          q.staleEpochs,
+		}).Debug("tick")
 
 		select {
 		case <-ticker.C:
@@ -380,7 +381,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		// Only the highest epoch with skipped state can trigger extension.
 		if !m.isLast() {
 			// When a state machine stays in skipped state for too long - reset it.
-			if time.Since(m.updated) > 5*staleEpochTimeout {
+			if time.Since(m.updated) > 10*staleEpochTimeout {
 				return stateNew, nil
 			}
 			return m.state, nil
