@@ -3053,12 +3053,6 @@ def prysm_deps():
         version = "v3.0.0-20200619000410-60c24ae608a6",
     )
     go_repository(
-        name = "in_gopkg_urfave_cli_v1",
-        importpath = "gopkg.in/urfave/cli.v1",
-        sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
-        version = "v1.20.0",
-    )
-    go_repository(
         name = "com_github_ajstarks_svgo",
         importpath = "github.com/ajstarks/svgo",
         sum = "h1:wVe6/Ea46ZMeNkQjjBW6xcqyQA/j5e0D6GytH95g0gQ=",
@@ -4402,4 +4396,10 @@ def prysm_deps():
         importpath = "bazil.org/fuse",
         sum = "h1:SC+c6A1qTFstO9qmB86mPV2IpYme/2ZoEQ0hrP+wo+Q=",
         version = "v0.0.0-20160811212531-371fbbdaa898",
+    )
+    go_repository(
+        name = "in_gopkg_urfave_cli_v1",
+        importpath = "gopkg.in/urfave/cli.v1",
+        sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
+        version = "v1.20.0",
     )
