@@ -44,14 +44,17 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if !ok {
 		return pubsub.ValidationReject
 	}
+	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
+		return pubsub.ValidationReject
+	}
+	if helpers.SlotToEpoch(m.Message.Aggregate.Data.Slot) != m.Message.Aggregate.Data.Target.Epoch {
+		return pubsub.ValidationReject
+	}
 	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
-	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
-		return pubsub.ValidationReject
-	}
 	// Verify this is the first aggregate received from the aggregator with index and slot.
 	if s.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
 		return pubsub.ValidationIgnore
@@ -159,10 +162,7 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 	a := satt.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
-	hasStateSummary := s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
-	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
-	hasBlock := s.db.HasBlock(ctx, blockRoot) || s.chain.HasInitSyncBlock(blockRoot)
-	if !(hasState && hasBlock) {
+	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(satt)
 		return false

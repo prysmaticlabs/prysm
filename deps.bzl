@@ -692,8 +692,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:KUHKqKMt9r78Ko07pTvlvEW6vPq24+efv1YXWk9Ba1U=",
-        version = "v0.0.0-20201008062400-71567a52ad65",
+        sum = "h1:S7pKW74AvYc89WawL6IxGSnJRxF4TkE1GITYqKFyYy4=",
+        version = "v0.0.0-20201019012252-4b463a10c225",
     )
     go_repository(
         name = "com_github_hpcloud_tail",
@@ -3409,11 +3409,11 @@ def prysm_deps():
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/cd0847a7580b22677e9069f671a79f0d874442b3.tar.gz",
+            "https://github.com/supranational/blst/archive/03c38676b08bd0bdbb120b94464d9c692a509842.tar.gz",
         ],
-        strip_prefix = "blst-cd0847a7580b22677e9069f671a79f0d874442b3",
+        strip_prefix = "blst-03c38676b08bd0bdbb120b94464d9c692a509842",
         build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "047aee659f6228b7d0d8a1c963d0e75de6e5d605756ff9cc1f3aafd2ea2b378b",
+        sha256 = "390695dd5084228de3e9f06e6800c79a5f90cdef4129fa36aaa18b1d24730138",
     )
     go_repository(
         name = "com_github_nbutton23_zxcvbn_go",
