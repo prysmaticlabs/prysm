@@ -4,5 +4,5 @@ go_library(
     name = "go_default_library",
     srcs = ["protection_interchange_format.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/db/iface/interchange",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator/db:__subpackages__"],
 )
