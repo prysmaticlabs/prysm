@@ -163,7 +163,7 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 		return s.headState(ctx), nil
 	}
 
-	return s.beaconDB.HeadState(ctx)
+	return s.stateGen.StateByRoot(ctx, s.headRoot())
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
