@@ -239,7 +239,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 			log.WithFields(logrus.Fields{
 				"peer": pid,
 				"slot": block.Block.Slot,
-				"root": parentRoot,
+				"root": fmt.Sprintf("%#x", parentRoot),
 			}).Debug("Block with unknown parent root has been found")
 			// Backtrack on a root, to find a common ancestor from which we can resume syncing.
 			fork, err := f.findAncestor(ctx, pid, block)

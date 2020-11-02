@@ -3,9 +3,6 @@ package initialsync
 import (
 	"context"
 	"errors"
-	"fmt"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // resetWithBlocks removes all state machines, then re-adds enough machines to contain all provided
@@ -22,22 +19,18 @@ func (q *blocksQueue) resetFromFork(ctx context.Context, fork *forkData) error {
 	if firstBlock == nil {
 		return errors.New("invalid first block in fork data")
 	}
-	firstBlockEpochStartSlot, err := helpers.StartSlot(helpers.SlotToEpoch(firstBlock.Slot))
-	if err != nil {
-		return fmt.Errorf("cannot determine epoch's start slot: %w", err)
-	}
 
 	blocksPerRequest := q.blocksFetcher.blocksPerSecond
 	if err := q.smm.removeAllStateMachines(); err != nil {
 		return err
 	}
-	fsm := q.smm.addStateMachine(firstBlockEpochStartSlot)
+	fsm := q.smm.addStateMachine(firstBlock.Slot)
 	fsm.pid = fork.peer
 	fsm.blocks = fork.blocks
 	fsm.state = stateDataParsed
 
 	// The rest of machines are in skipped state.
-	startSlot := firstBlockEpochStartSlot + uint64(len(fork.blocks))
+	startSlot := firstBlock.Slot + uint64(len(fork.blocks))
 	for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
 		fsm := q.smm.addStateMachine(i)
 		fsm.state = stateSkipped

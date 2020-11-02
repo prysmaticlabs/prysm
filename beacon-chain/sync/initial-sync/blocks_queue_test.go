@@ -5,11 +5,17 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -306,7 +312,8 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 			}
-			missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			missing := sliceutil.NotUint64(
+				sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
@@ -892,7 +899,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			_, ok := queue.smm.findStateMachine(slot)
 			assert.Equal(t, true, ok)
 		}
-		// Update head slot, so that machines are re-arranges starging from the next slot i.e.
+		// Update head slot, so that machines are re-arranged starting from the next slot i.e.
 		// there's no point to reset machines for some slot that has already been processed.
 		updatedSlot := uint64(100)
 		defer func() {
@@ -943,7 +950,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			_, ok := queue.smm.findStateMachine(slot)
 			assert.Equal(t, true, ok)
 		}
-		// Update head slot, so that machines are re-arranges starging from the next slot i.e.
+		// Update head slot, so that machines are re-arranged starting from the next slot i.e.
 		// there's no point to reset machines for some slot that has already been processed.
 		updatedSlot := uint64(100)
 		require.NoError(t, mc.State.SetSlot(updatedSlot))
@@ -1041,5 +1048,195 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		// State should change, as machine is stale.
 		assert.NoError(t, err)
 		assert.Equal(t, stateSkipped, updatedState)
+	})
+}
+
+func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		EnableSyncBacktracking: true,
+	})
+	defer resetCfg()
+
+	beaconDB, _ := dbtest.SetupDB(t)
+	p2p := p2pt.NewTestP2P(t)
+
+	// The chain1 contains 250 blocks and is a dead end.
+	// The chain2 contains 296 blocks, with fork started at slot 128 of chain1.
+	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
+	forkedSlot := uint64(201)
+	chain2 := extendBlockSequence(t, chain1[:forkedSlot], 100)
+	finalizedSlot := uint64(63)
+	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+
+	genesisBlock := chain1[0]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesisBlock))
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: finalizedEpoch,
+			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			chain: mc,
+			p2p:   p2p,
+			db:    beaconDB,
+		},
+	)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+
+	queue := newBlocksQueue(ctx, &blocksQueueConfig{
+		blocksFetcher:       fetcher,
+		chain:               mc,
+		highestExpectedSlot: uint64(len(chain2) - 1),
+		mode:                modeNonConstrained,
+	})
+
+	// Populate database with blocks from unfavourable fork i.e. branch that leads to dead end.
+	for _, blk := range chain1[1:] {
+		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+		// Save block only if parent root is already in database or cache.
+		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
+			require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+			require.NoError(t, st.SetSlot(blk.Block.Slot))
+		}
+	}
+	require.Equal(t, uint64(len(chain1)-1), mc.HeadSlot())
+	hook := logTest.NewGlobal()
+
+	t.Run("unfavourable fork and no alternative branches", func(t *testing.T) {
+		defer hook.Reset()
+		// Reset all machines.
+		require.NoError(t, queue.smm.removeAllStateMachines())
+
+		// Add peer that will advertise high non-finalized slot, but will not be able to support
+		// its claims with actual blocks.
+		emptyPeer := connectPeerHavingBlocks(t, p2p, chain1, finalizedSlot, p2p.Peers())
+		defer func() {
+			p2p.Peers().SetConnectionState(emptyPeer, peers.PeerDisconnected)
+		}()
+		chainState, err := p2p.Peers().ChainState(emptyPeer)
+		require.NoError(t, err)
+		chainState.HeadSlot = 500
+		p2p.Peers().SetChainState(emptyPeer, chainState)
+
+		startSlot := mc.HeadSlot() + 1
+		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		machineSlots := make([]uint64, 0)
+		for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+			queue.smm.addStateMachine(i).setState(stateSkipped)
+			machineSlots = append(machineSlots, i)
+		}
+		for _, slot := range machineSlots {
+			_, ok := queue.smm.findStateMachine(slot)
+			assert.Equal(t, true, ok)
+		}
+		// Since counter for stale epochs hasn't exceeded threshold, backtracking is not triggered.
+		handlerFn := queue.onProcessSkippedEvent(ctx)
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		updatedState, err := handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
+		assert.LogsDoNotContain(t, hook, "Searching for alternative blocks")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found in peer")
+		hook.Reset()
+
+		// The last machine got removed (it was for non-skipped slot, which fails).
+		queue.smm.addStateMachine(machineSlots[len(machineSlots)-1])
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		for _, slot := range machineSlots {
+			fsm, ok := queue.smm.findStateMachine(slot)
+			require.Equal(t, true, ok)
+			fsm.setState(stateSkipped)
+		}
+
+		// Update counter, and trigger backtracking.
+		queue.staleEpochs[helpers.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		handlerFn = queue.onProcessSkippedEvent(ctx)
+		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
+		assert.LogsContain(t, hook, "Searching for alternative blocks")
+		assert.LogsContain(t, hook, "No alternative blocks found in peer")
+	})
+
+	t.Run("unfavourable fork and alternative branches exist", func(t *testing.T) {
+		defer hook.Reset()
+		// Reset all machines.
+		require.NoError(t, queue.smm.removeAllStateMachines())
+
+		// Add peer that will advertise high non-finalized slot, but will not be able to support
+		// its claims with actual blocks.
+		forkedPeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
+		startSlot := mc.HeadSlot() + 1
+		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		machineSlots := make([]uint64, 0)
+		for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+			queue.smm.addStateMachine(i).setState(stateSkipped)
+			machineSlots = append(machineSlots, i)
+		}
+		for _, slot := range machineSlots {
+			_, ok := queue.smm.findStateMachine(slot)
+			assert.Equal(t, true, ok)
+		}
+		// Since counter for stale epochs hasn't exceeded threshold, backtracking is not triggered.
+		handlerFn := queue.onProcessSkippedEvent(ctx)
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		updatedState, err := handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
+		assert.LogsDoNotContain(t, hook, "Searching for alternative blocks")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found in peer")
+		hook.Reset()
+
+		// The last machine got removed (it was for non-skipped slot, which fails).
+		queue.smm.addStateMachine(machineSlots[len(machineSlots)-1])
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		for _, slot := range machineSlots {
+			fsm, ok := queue.smm.findStateMachine(slot)
+			require.Equal(t, true, ok)
+			fsm.setState(stateSkipped)
+		}
+
+		// Update counter, and trigger backtracking.
+		queue.staleEpochs[helpers.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		handlerFn = queue.onProcessSkippedEvent(ctx)
+		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		require.NoError(t, err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.LogsContain(t, hook, "Searching for alternative blocks")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found in peer")
+		require.Equal(t, lookaheadSteps, len(queue.smm.machines))
+
+		// Alternative fork should start on slot 201, make sure that the first machine contains all
+		// required forked data.
+		firstFSM, ok := queue.smm.findStateMachine(forkedSlot)
+		require.Equal(t, true, ok)
+		require.Equal(t, stateDataParsed, firstFSM.state)
+		require.Equal(t, forkedPeer, firstFSM.pid)
+		require.Equal(t, 2, len(firstFSM.blocks))
+		require.Equal(t, uint64(201), firstFSM.blocks[0].Block.Slot)
+
+		// Assert that machines are in the expected state.
+		startSlot = forkedSlot + uint64(len(firstFSM.blocks))
+		for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
+			fsm, ok := queue.smm.findStateMachine(i)
+			require.Equal(t, true, ok)
+			assert.Equal(t, stateSkipped, fsm.state)
+		}
 	})
 }
