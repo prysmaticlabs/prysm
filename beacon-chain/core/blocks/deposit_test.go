@@ -331,10 +331,10 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		)
 	}
 	if len(newState.Validators()) != 100 {
-		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators()))
+		t.Errorf("Expected validator list to have length 100, received: %v", len(newState.Validators()))
 	}
 	if len(newState.Balances()) != 100 {
-		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances()))
+		t.Errorf("Expected validator balances list to have length 100, received: %v", len(newState.Balances()))
 	}
 	if newState.Balances()[0] != 0 {
 		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances()[0])
