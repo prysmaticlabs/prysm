@@ -93,10 +93,6 @@ type HeadAccessDatabase interface {
 	// Block related methods.
 	HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
-	// State related methods.
-	// Deprecated: This method may return nil. Prefer to use HighestSlotStatesBelow or
-	// blockchain.HeadFetcher.HeadState().
-	HeadState(ctx context.Context) (*state.BeaconState, error)
 }
 
 // Database interface with full access.

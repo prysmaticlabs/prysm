@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/herumi/bls-eth-go-binary/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -31,7 +31,8 @@ func BenchmarkPairing(b *testing.B) {
 
 }
 func BenchmarkSignature_Verify(b *testing.B) {
-	sk := herumi.RandKey()
+	sk, err := herumi.RandKey()
+	require.NoError(b, err)
 
 	msg := []byte("Some msg")
 	sig := sk.Sign(msg)
@@ -45,12 +46,13 @@ func BenchmarkSignature_Verify(b *testing.B) {
 func BenchmarkSignature_AggregateVerify(b *testing.B) {
 	sigN := 128 // MAX_ATTESTATIONS per block.
 
-	var pks []iface.PublicKey
-	var sigs []iface.Signature
+	var pks []common.PublicKey
+	var sigs []common.Signature
 	var msgs [][32]byte
 	for i := 0; i < sigN; i++ {
 		msg := [32]byte{'s', 'i', 'g', 'n', 'e', 'd', byte(i)}
-		sk := herumi.RandKey()
+		sk, err := herumi.RandKey()
+		require.NoError(b, err)
 		sig := sk.Sign(msg[:])
 		pks = append(pks, sk.PublicKey())
 		sigs = append(sigs, sig)
@@ -66,7 +68,8 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 }
 
 func BenchmarkSecretKey_Marshal(b *testing.B) {
-	key := herumi.RandKey()
+	key, err := herumi.RandKey()
+	require.NoError(b, err)
 	d := key.Marshal()
 
 	b.ResetTimer()

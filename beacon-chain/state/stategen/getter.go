@@ -13,10 +13,7 @@ import (
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	if s.hotStateCache.Has(blockRoot) {
-		return true, nil
-	}
-	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	has, err := s.HasStateInCache(ctx, blockRoot)
 	if err != nil {
 		return false, err
 	}
@@ -24,6 +21,18 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) 
 		return true, nil
 	}
 	return s.beaconDB.HasState(ctx, blockRoot), nil
+}
+
+// HasStateInCache returns true if the state exists in cache.
+func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	if s.hotStateCache.Has(blockRoot) {
+		return true, nil
+	}
+	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return false, err
+	}
+	return has, nil
 }
 
 // StateByRoot retrieves the state using input block root.
