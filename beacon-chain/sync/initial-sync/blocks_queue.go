@@ -394,8 +394,9 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		}
 
 		// Check if we have enough peers to progress, or sync needs to halt (due to no peers available).
+		bestFinalizedSlot := q.blocksFetcher.bestFinalizedSlot()
 		if q.mode == modeStopOnFinalizedEpoch {
-			if q.blocksFetcher.bestFinalizedSlot() <= q.chain.HeadSlot() {
+			if bestFinalizedSlot <= q.chain.HeadSlot() {
 				return stateSkipped, errNoRequiredPeers
 			}
 		} else {
@@ -406,7 +407,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
-		if featureconfig.Get().EnableSyncBacktracking {
+		if featureconfig.Get().EnableSyncBacktracking && q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
 			q.staleEpochs[helpers.SlotToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
 			if q.staleEpochs[helpers.SlotToEpoch(startSlot)] >= maxResetAttempts {
@@ -421,7 +422,6 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 				}).Debug("Can not explore alternative branches")
 			}
 		}
-
 		return stateSkipped, q.resetFromSlot(ctx, startSlot)
 	}
 }
