@@ -491,7 +491,7 @@ func (bs *Server) GetValidatorParticipation(
 		)
 	}
 
-	// Get current slot state.
+	// Get current slot state for current epoch attestations.
 	state, err := bs.StateGen.StateBySlot(ctx, currentSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
@@ -516,8 +516,8 @@ func (bs *Server) GetValidatorParticipation(
 		},
 	}
 
-	// Get previous epoch state.
-	state, err = bs.StateGen.StateBySlot(ctx, currentSlot-(currentSlot%params.BeaconConfig().SlotsPerEpoch))
+	// Get head state for previous epoch attestations.
+	state, err = bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
