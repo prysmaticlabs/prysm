@@ -201,7 +201,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
@@ -209,7 +210,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			BeaconBlockRoot: make([]byte, 32),
 		},
 		AggregationBits: bitfield.NewBitlist(3),
-		Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
+		Signature:       priv.Sign([]byte("foo")).Marshal(),
 	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
@@ -675,7 +676,8 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	// Set up randao reveal object for block
 	proposerIdx, err := helpers.BeaconProposerIndex(s)
 	require.NoError(b, err)
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(b, err)
 	v := s.Validators()
 	v[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)

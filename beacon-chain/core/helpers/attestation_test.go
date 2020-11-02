@@ -49,7 +49,8 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 		atts := make([]*ethpb.Attestation, 0, 100)
 		msg := bytesutil.ToBytes32([]byte("hello"))
 		for i := 0; i < 100; i++ {
-			priv := bls.RandKey()
+			priv, err := bls.RandKey()
+			require.NoError(t, err)
 			pub := priv.PublicKey()
 			sig := priv.Sign(msg[:])
 			pubkeys = append(pubkeys, pub)
@@ -66,7 +67,8 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 		atts := make([]*ethpb.Attestation, 0, 100)
 		msg := []byte("hello")
 		for i := 0; i < 100; i++ {
-			priv := bls.RandKey()
+			priv, err := bls.RandKey()
+			require.NoError(t, err)
 			pub := priv.PublicKey()
 			sig := priv.Sign(msg)
 			pubkeys = append(pubkeys, pub)
