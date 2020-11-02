@@ -273,8 +273,12 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 }
 
 func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
+	testutil.ResetCache()
 	dep, _, err := testutil.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
+	defer func() {
+		testutil.ResetCache()
+	}()
 	dep[0].Data.Signature = make([]byte, 96)
 	trie, _, err := testutil.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
