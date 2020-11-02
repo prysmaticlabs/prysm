@@ -25,6 +25,12 @@ jobs:
         with:
           path: ./
 
+      - name: Write Go list
+          run: go list -json -m all > go.list
+
+      - name: Nancy OSS check
+        uses: sonatype-nexus-community/nancy-github-action@main
+
   build:
     name: Build
     runs-on: ubuntu-latest
