@@ -117,9 +117,6 @@ func run(ctx context.Context, v Validator) {
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
-			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
-				log.WithError(err).Error("Could not report validator's rewards/penalties")
-			}
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
@@ -138,6 +135,9 @@ func run(ctx context.Context, v Validator) {
 
 			// Start fetching domain data for the next epoch.
 			if helpers.IsEpochEnd(slot) {
+				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
+					log.WithError(err).Error("Could not report validator's rewards/penalties")
+				}
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 
