@@ -114,8 +114,8 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bloxapp/eth2-key-manager v0.2.12 h1:yCKqwNaTj/DQcoucBR3sUVT5g9xmP2XH4PqK1sBL+xs=
 github.com/bloxapp/eth2-key-manager v0.2.12/go.mod h1:54S5eq6EoCTC0kkFykFdKvFgwYw7Dy3m839OMqkAZdY=
-github.com/bloxapp/key-vault v0.1.12 h1:MMFsd9/DcuYG92g+4bW3bvOsCDRsHhLIIRqqC9+8hSY=
-github.com/bloxapp/key-vault v0.1.12/go.mod h1:SKCK5b9XhUuHuRTe0zCEcFs8Q0Qu6O4MuDWqY9oJKy0=
+github.com/bloxapp/key-vault v0.0.0-20201102101732-20121ffe7869 h1:0wREKbI8SSqvkf0jzwXWMRSO9akJJlZCs8msr2tO+ls=
+github.com/bloxapp/key-vault v0.0.0-20201102101732-20121ffe7869/go.mod h1:RfcGgP88x7py9nPzPMC/ZqPMuz1xBq8HeUcyxOYX4Ns=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40/go.mod h1:8rLXio+WjiTceGBHIoTvn60HIbs7Hm7bcHjyrSqYB9c=
 github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=

@@ -7,7 +7,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
-	github.com/bloxapp/key-vault v0.1.12
+	github.com/bloxapp/key-vault v0.0.0-20201102101732-20121ffe7869
 	github.com/d4l3k/messagediff v1.2.1
 	github.com/dgraph-io/ristretto v0.0.3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible

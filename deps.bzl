@@ -3704,8 +3704,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_bloxapp_key_vault",
         importpath = "github.com/bloxapp/key-vault",
-        sum = "h1:MMFsd9/DcuYG92g+4bW3bvOsCDRsHhLIIRqqC9+8hSY=",
-        version = "v0.1.12",
+        sum = "h1:0wREKbI8SSqvkf0jzwXWMRSO9akJJlZCs8msr2tO+ls=",
+        version = "v0.0.0-20201102101732-20121ffe7869",
     )
     go_repository(
         name = "com_github_cloudflare_roughtime",
