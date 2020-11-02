@@ -11,7 +11,9 @@ import (
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
-	b := herumi.RandKey().Marshal()
+	priv, err := herumi.RandKey()
+	require.NoError(t, err)
+	b := priv.Marshal()
 	b32 := bytesutil.ToBytes32(b)
 	pk, err := herumi.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
@@ -70,9 +72,10 @@ func TestSecretKeyFromBytes(t *testing.T) {
 }
 
 func TestSerialize(t *testing.T) {
-	rk := herumi.RandKey()
+	rk, err := herumi.RandKey()
+	require.NoError(t, err)
 	b := rk.Marshal()
 
-	_, err := herumi.SecretKeyFromBytes(b)
+	_, err = herumi.SecretKeyFromBytes(b)
 	assert.NoError(t, err)
 }

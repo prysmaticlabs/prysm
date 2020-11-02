@@ -31,7 +31,8 @@ func createGenesisDepositData(t *testing.T) ([]*GenesisValidator, []*ethpb.Depos
 	pubKeys := make([]bls.PublicKey, numKeys)
 	privKeys := make([]bls.SecretKey, numKeys)
 	for i := 0; i < numKeys; i++ {
-		randKey := bls.RandKey()
+		randKey, err := bls.RandKey()
+		require.NoError(t, err)
 		privKeys[i] = randKey
 		pubKeys[i] = randKey.PublicKey()
 	}
