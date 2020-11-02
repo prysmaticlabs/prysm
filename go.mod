@@ -42,7 +42,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/herumi/bls-eth-go-binary v0.0.0-20201008062400-71567a52ad65
+	github.com/herumi/bls-eth-go-binary v0.0.0-20201019012252-4b463a10c225
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-ipfs-addr v0.0.1
@@ -97,7 +97,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
 	github.com/stretchr/testify v1.6.1
-	github.com/supranational/blst v0.1.2-alpha.1.0.20200917144033-cd0847a7580b
+	github.com/supranational/blst v0.2.1-0.20201025154037-03c38676b08b
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
