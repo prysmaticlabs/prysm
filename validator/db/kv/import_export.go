@@ -46,7 +46,10 @@ func (store *Store) ImportInterchangeData(ctx context.Context, j []byte) error {
 					return err
 				}
 			}
-			ehd.SetTargetData(ctx, target, &HistoryData{Source: source, SigningRoot: sr})
+			ehd, err = ehd.SetTargetData(ctx, target, &HistoryData{Source: source, SigningRoot: sr})
+			if err != nil {
+				return err
+			}
 		}
 		attesterHistoryByPubKey[pk] = ehd
 		for _, proposals := range validatorData.SignedBlocks {
