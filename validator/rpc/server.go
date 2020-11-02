@@ -154,6 +154,7 @@ func (s *Server) Start() {
 			}
 		}
 	}()
+	go s.checkUserSignup(s.ctx)
 	log.WithField("address", address).Info("gRPC server listening on address")
 }
 

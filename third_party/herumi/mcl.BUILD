@@ -44,7 +44,6 @@ cc_library(
         "src/fp_generator.hpp",
         "src/proto.hpp",
         "src/low_func_llvm.hpp",
-        "src/detect_cpu.hpp",
     ],
 )
 
@@ -66,6 +65,7 @@ cc_library(
         "include/mcl/lagrange.hpp",
         "include/mcl/bn.hpp",
         "include/mcl/operator.hpp",
+        "include/mcl/window_method.hpp",
     ],
     includes = ["include"],
 )
