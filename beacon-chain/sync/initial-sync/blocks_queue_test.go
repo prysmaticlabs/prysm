@@ -9,6 +9,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -528,9 +529,9 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			state: stateScheduled,
 		}, &fetchRequestResponse{
 			pid: "abc",
-			err: errInvalidFetchedData,
+			err: prysmsync.ErrInvalidFetchedData,
 		})
-		assert.ErrorContains(t, errInvalidFetchedData.Error(), err)
+		assert.ErrorContains(t, prysmsync.ErrInvalidFetchedData.Error(), err)
 		assert.Equal(t, stateScheduled, updatedState)
 		assert.LogsContain(t, hook, "msg=\"Peer is penalized for invalid blocks\" pid=ZiCa")
 	})

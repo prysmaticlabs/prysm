@@ -18,6 +18,7 @@ import (
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -633,7 +634,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: prysmsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "not in a consecutive order",
@@ -657,7 +658,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: prysmsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "same slot number",
@@ -681,7 +682,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: prysmsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "slot is too low",
@@ -709,7 +710,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}
 				}
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: prysmsync.ErrInvalidFetchedData.Error(),
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
@@ -740,7 +741,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}
 				}
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: prysmsync.ErrInvalidFetchedData.Error(),
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
@@ -790,7 +791,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: prysmsync.ErrInvalidFetchedData.Error(),
 		},
 	}
 
