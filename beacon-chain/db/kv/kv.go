@@ -13,6 +13,7 @@ import (
 	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 )
@@ -46,7 +47,7 @@ type Store struct {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
-	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+	if err := fileutil.MkdirAll(dirPath); err != nil {
 		return nil, err
 	}
 	datafile := path.Join(dirPath, databaseFileName)

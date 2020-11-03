@@ -18,6 +18,7 @@ import (
 
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 const (
@@ -133,7 +134,7 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 
 // WritePprofFiles writes the memory heap and cpu profile files to the test path.
 func WritePprofFiles(testDir string, index int) error {
-	if err := os.MkdirAll(filepath.Join(testDir), os.ModePerm); err != nil {
+	if err := fileutil.MkdirAll(filepath.Join(testDir)); err != nil {
 		return err
 	}
 	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
