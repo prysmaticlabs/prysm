@@ -520,19 +520,23 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		return err
 	}
 	// Default to all deposits post-genesis deposits in
-	// the event we cannot find a suitable head state.
+	// the event we cannot find a finalized state.
 	currIndex := genesisState.Eth1DepositIndex()
-	rt := s.beaconDB.LastArchivedRoot(ctx)
+	chkPt, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+	rt := bytesutil.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
-		currentState, err := s.beaconDB.State(ctx, rt)
+		fState, err := s.stateGen.StateByRoot(ctx, rt)
 		if err != nil {
-			return errors.Wrap(err, "could not get last archived state")
+			return errors.Wrap(err, "could not get finalized state")
 		}
-		if currentState == nil {
-			return errors.Errorf("archived state with root %#x does not exist in the db", rt)
+		if fState == nil {
+			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
 		}
 		// Set deposit index to the one in the current archived state.
-		currIndex = currentState.Eth1DepositIndex()
+		currIndex = fState.Eth1DepositIndex()
 	}
 	validDepositsCount.Add(float64(currIndex + 1))
 	// Only add pending deposits if the container slice length
