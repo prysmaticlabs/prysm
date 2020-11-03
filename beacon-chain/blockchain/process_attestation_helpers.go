@@ -25,12 +25,11 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	epochKey := strconv.FormatUint(c.Epoch, 10 /* base 10 */)
 	lock := mputil.NewMultilock(string(c.Root) + epochKey)
 	lock.Lock()
+	defer lock.Unlock()
 	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
 	if err != nil {
-		lock.Unlock()
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
-	lock.Unlock()
 	if cachedState != nil {
 		return cachedState, nil
 	}
@@ -50,12 +49,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 		}
-		lock.Lock()
 		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			lock.Unlock()
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 		}
-		lock.Unlock()
 		return baseState, nil
 	}
 
@@ -66,12 +62,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return nil, err
 	}
 	if !has {
-		lock.Lock()
 		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			lock.Unlock()
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 		}
-		lock.Unlock()
 	}
 	return baseState, nil
 
