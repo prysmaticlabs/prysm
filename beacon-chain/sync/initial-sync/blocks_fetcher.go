@@ -324,7 +324,7 @@ func (f *blocksFetcher) requestBlocks(
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
 
-	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.p2p, pid, req)
+	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.p2p, pid, req, nil)
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.
