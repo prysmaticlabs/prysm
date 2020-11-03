@@ -86,7 +86,8 @@ func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEp
 		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return false
 	}
-	if int(targetEpoch) <= int(lew)-int(wsPeriod) {
+
+	if lew >= wsPeriod && targetEpoch <= lew-wsPeriod { //Underflow protected older then weak subjectivity check.
 		return false
 	}
 
@@ -165,7 +166,7 @@ func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryDa
 }
 
 // safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at
-// returns the "default" FAR_FUTURE_EPOCH value.
+// returns the "default" nil value.
 func safeTargetToSource(ctx context.Context, history *kv.EncHistoryData, targetEpoch uint64) *kv.HistoryData {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	lew, err := history.GetLatestEpochWritten(ctx)
@@ -173,7 +174,10 @@ func safeTargetToSource(ctx context.Context, history *kv.EncHistoryData, targetE
 		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return nil
 	}
-	if targetEpoch > lew || int(targetEpoch) < int(lew)-int(wsPeriod) {
+	if targetEpoch > lew {
+		return nil
+	}
+	if lew >= wsPeriod && targetEpoch < lew-wsPeriod { //Underflow protected older then weak subjectivity check.
 		return nil
 	}
 	hd, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)

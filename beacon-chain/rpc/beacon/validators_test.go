@@ -1409,7 +1409,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 	assert.ErrorContains(t, wanted, err)
 }
 
-func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
+func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	db, sc := dbTest.SetupDB(t)
 
 	ctx := context.Background()
@@ -1441,7 +1441,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		AggregationBits: bitfield.NewBitlist(2),
 	}}
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2-1))
+	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, headState.SetValidators(validators))
 	require.NoError(t, headState.SetBalances(balances))
 	require.NoError(t, headState.SetPreviousEpochAttestations(atts))
@@ -1450,15 +1450,20 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
 	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, bRoot))
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, headState, bRoot))
 
 	m := &mock.ChainService{State: headState}
 	bs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        m,
-		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		BeaconDB:    db,
+		HeadFetcher: m,
+		StateGen:    stategen.New(db, sc),
+		GenesisTimeFetcher: &mock.ChainService{
+			Genesis: time.Now(),
+		},
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
