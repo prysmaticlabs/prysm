@@ -130,7 +130,7 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorCorrectlyVotedHeadGaugeVec used to keep track of validator's accuracy on voting target by public key.
+	// ValidatorCorrectlyVotedHeadGaugeVec used to keep track of validator's accuracy on voting head by public key.
 	ValidatorCorrectlyVotedHeadGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "validator",
