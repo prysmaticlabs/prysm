@@ -47,8 +47,14 @@ type Store struct {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
-	if err := fileutil.MkdirAll(dirPath); err != nil {
+	hasDir, err := fileutil.HasDir(dirPath)
+	if err != nil {
 		return nil, err
+	}
+	if !hasDir {
+		if err := fileutil.MkdirAll(dirPath); err != nil {
+			return nil, err
+		}
 	}
 	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
