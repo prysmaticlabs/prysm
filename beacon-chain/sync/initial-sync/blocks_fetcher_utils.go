@@ -147,14 +147,12 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 
 // findFork queries all peers that have higher head slot, in an attempt to find
 // ones that feature blocks from alternative branches. Once found, peer is further queried
-// to find common ancestor slot. If found, that ancestor slot, all obtained blocks and peer
-// is returned. Otherwise, peer is de-scored, to account for malicious peers that produce
-// orphaned blocks.
+// to find common ancestor slot. On success, all obtained blocks and peer is returned.
 func (f *blocksFetcher) findFork(ctx context.Context, slot uint64) (*forkData, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.findFork")
 	defer span.End()
 
-	// Safe-guard, since we are stepping back an epoch, when calculating.
+	// Safe-guard, since previous epoch is used when calculating.
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	if slot < slotsPerEpoch*2 {
 		return nil, fmt.Errorf("slot is to low to backtrack, min. expected %d", slotsPerEpoch*2)
@@ -174,14 +172,14 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot uint64) (*forkData, e
 	}
 
 	// Select peers that have higher head slot, and potentially blocks from more favourable fork.
-	_, peers := f.p2p.Peers().BestNonFinalized(1, epoch+1)
-	f.rand.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
 	// Exit early if no peers are ready.
+	_, peers := f.p2p.Peers().BestNonFinalized(1, epoch+1)
 	if len(peers) == 0 {
 		return nil, errNoPeersAvailable
 	}
+	f.rand.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
 
 	// Query all found peers, stop on peer with alternative blocks, and try backtracking.
 	for i, pid := range peers {
@@ -194,7 +192,7 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot uint64) (*forkData, e
 			log.WithFields(logrus.Fields{
 				"peer":  pid,
 				"error": err.Error(),
-			}).Debug("No alternative blocks found in peer")
+			}).Debug("No alternative blocks found for peer")
 			continue
 		}
 		return fork, nil
@@ -210,7 +208,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 		return nil, fmt.Errorf("cannot obtain peer's status: %w", err)
 	}
 
-	// When searching for non-empty slot start an epoch earlier - for those blocks we
+	// When searching for non-empty slot, start an epoch earlier - for those blocks we
 	// definitely have roots. So, spotting a fork will be easier. It is not a problem if unknown
 	// block of the current fork is found: we are searching for forks when FSMs are stuck, so
 	// being able to progress on any fork is good.
