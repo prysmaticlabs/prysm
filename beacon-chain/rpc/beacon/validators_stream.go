@@ -386,7 +386,7 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 				pendingValidators = append(pendingValidators, validatorIndex)
 			}
 		}
-		if helpers.IsActiveValidatorUsingTrie(validator, epoch) {
+		if helpers.IsActiveValidatorUsingTrie(*validator, epoch) {
 			numAttestingValidators++
 		}
 	}
