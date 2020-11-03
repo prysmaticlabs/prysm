@@ -15,8 +15,10 @@ import (
 )
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
-	k1 := bls.RandKey()
-	k2 := bls.RandKey()
+	k1, err := bls.RandKey()
+	require.NoError(t, err)
+	k2, err := bls.RandKey()
+	require.NoError(t, err)
 
 	result, _, err := depositutil.DepositInput(k1, k2, 0)
 	require.NoError(t, err)

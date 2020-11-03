@@ -437,3 +437,60 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }
+
+func TestState_HasState(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	s := testutil.NewBeaconState()
+	rHit1 := [32]byte{1}
+	rHit2 := [32]byte{2}
+	rMiss := [32]byte{3}
+	service.hotStateCache.Put(rHit1, s)
+	require.NoError(t, service.epochBoundaryStateCache.put(rHit2, s))
+
+	b := testutil.NewBeaconBlock()
+	rHit3, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, rHit3))
+	tt := []struct {
+		root [32]byte
+		want bool
+	}{
+		{rHit1, true},
+		{rHit2, true},
+		{rMiss, false},
+		{rHit3, true},
+	}
+	for _, tc := range tt {
+		got, err := service.HasState(ctx, tc.root)
+		require.NoError(t, err)
+		require.Equal(t, tc.want, got)
+	}
+}
+
+func TestState_HasStateInCache(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	s := testutil.NewBeaconState()
+	rHit1 := [32]byte{1}
+	rHit2 := [32]byte{2}
+	rMiss := [32]byte{3}
+	service.hotStateCache.Put(rHit1, s)
+	require.NoError(t, service.epochBoundaryStateCache.put(rHit2, s))
+
+	tt := []struct {
+		root [32]byte
+		want bool
+	}{
+		{rHit1, true},
+		{rHit2, true},
+		{rMiss, false},
+	}
+	for _, tc := range tt {
+		got, err := service.HasStateInCache(ctx, tc.root)
+		require.NoError(t, err)
+		require.Equal(t, tc.want, got)
+	}
+}

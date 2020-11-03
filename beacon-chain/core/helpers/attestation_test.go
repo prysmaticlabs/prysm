@@ -49,7 +49,8 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 		atts := make([]*ethpb.Attestation, 0, 100)
 		msg := bytesutil.ToBytes32([]byte("hello"))
 		for i := 0; i < 100; i++ {
-			priv := bls.RandKey()
+			priv, err := bls.RandKey()
+			require.NoError(t, err)
 			pub := priv.PublicKey()
 			sig := priv.Sign(msg[:])
 			pubkeys = append(pubkeys, pub)
@@ -66,7 +67,8 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 		atts := make([]*ethpb.Attestation, 0, 100)
 		msg := []byte("hello")
 		for i := 0; i < 100; i++ {
-			priv := bls.RandKey()
+			priv, err := bls.RandKey()
+			require.NoError(t, err)
 			pub := priv.PublicKey()
 			sig := priv.Sign(msg)
 			pubkeys = append(pubkeys, pub)
@@ -213,4 +215,13 @@ func Test_ValidateAttestationTime(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
+	// Genesis was 6 epochs ago exactly.
+	genesis := time.Now().Add(-1 * time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch*6))
+	assert.Equal(t, true, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 6}, genesis))
+	assert.Equal(t, true, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 5}, genesis))
+	assert.Equal(t, false, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 4}, genesis))
+	assert.Equal(t, false, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 2}, genesis))
 }

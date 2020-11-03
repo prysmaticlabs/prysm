@@ -36,11 +36,19 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
+	return GenerateGenesisStateFromDepositData(genesisTime, depositDataItems, depositDataRoots)
+}
+
+// GenerateGenesisStateFromDepositData creates a genesis state given a list of
+// deposit data items and their corresponding roots.
+func GenerateGenesisStateFromDepositData(
+	genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte,
+) (*pb.BeaconState, []*ethpb.Deposit, error) {
 	trie, err := trieutil.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
 	}
-	deposits, err := GenerateDepositsFromData(depositDataItems, trie)
+	deposits, err := GenerateDepositsFromData(depositData, trie)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
