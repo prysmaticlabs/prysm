@@ -74,7 +74,8 @@
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
       ".*/testmain\\.go": "Test runner generated code",
-      "proto/.*": "Generated protobuf related code"
+      "proto/.*": "Generated protobuf related code",
+      "tools/analyzers/writefile/testdata/.*": "Analyzer breaks rules"
     }
   },
   "featureconfig": {
