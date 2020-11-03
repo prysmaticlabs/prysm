@@ -3660,9 +3660,3 @@ def prysm_deps():
         sum = "h1:8LRP+2JK8piIUU16ZDgWDXwjJcuJNTtCzadjTZj8Jf0=",
         version = "v0.0.0-20200708152505-19999e7d3cef",
     )
-    go_repository(
-        name = "com_github_tevino_abool",
-        importpath = "github.com/tevino/abool",
-        sum = "h1:heAkClL8H6w+mK5md9dzsuohKeXHUpY7Vw0ZCKW+huA=",
-        version = "v1.2.0",
-    )

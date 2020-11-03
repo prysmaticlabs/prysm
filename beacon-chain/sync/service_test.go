@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tevino/abool"
-
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -15,6 +13,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -106,11 +105,11 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 	if i == 0 {
 		t.Fatal("didn't send genesis time to subscribers")
 	}
-	require.Equal(t, false, r.chainStarted, "Chainstart was marked prematurely")
+	require.Equal(t, false, r.chainStarted.IsSet(), "Chainstart was marked prematurely")
 
 	// wait for chainstart to be sent
 	time.Sleep(3 * time.Second)
-	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 }
 
 func TestSyncHandlers_WaitTillSynced(t *testing.T) {
@@ -158,7 +157,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 
 	// wait for chainstart to be sent
 	time.Sleep(2 * time.Second)
-	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
 	assert.Equal(t, 0, len(blockChan), "block was received by sync service despite not being fully synced")
 
