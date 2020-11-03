@@ -29,12 +29,15 @@ func (store *Store) ImportInterchangeData(ctx context.Context, j []byte) error {
 		var pk [48]byte
 		copy(pk[:], pubkey[:48])
 		ehd := NewAttestationHistoryArray(0)
+		lew := uint64(0)
 		for _, attestation := range validatorData.SignedAttestations {
 			target, err := strconv.ParseUint(attestation.TargetEpoch, 10, 64)
 			if err != nil {
 				return err
 			}
-
+			if target > lew {
+				lew = target
+			}
 			source, err := strconv.ParseUint(attestation.SourceEpoch, 10, 64)
 			if err != nil {
 				return err
@@ -50,6 +53,10 @@ func (store *Store) ImportInterchangeData(ctx context.Context, j []byte) error {
 			if err != nil {
 				return err
 			}
+		}
+		ehd, err = ehd.SetLatestEpochWritten(ctx, lew)
+		if err != nil {
+			return err
 		}
 		attesterHistoryByPubKey[pk] = ehd
 		for _, proposals := range validatorData.SignedBlocks {
@@ -70,7 +77,7 @@ func (store *Store) ImportInterchangeData(ctx context.Context, j []byte) error {
 			}
 		}
 	}
-	err = store.SaveAttestationHistoryNewForPubKeys(ctx, attesterHistoryByPubKey)
+	err = store.SaveAttestationHistoryForPubKeysV2(ctx, attesterHistoryByPubKey)
 	if err != nil {
 		return err
 	}

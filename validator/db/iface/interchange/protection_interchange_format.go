@@ -7,18 +7,21 @@ type PlainDataInterchangeFormat struct {
 		InterchangeFormatVersion string `json:"interchange_format_version"`
 		GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 	} `json:"metadata"`
-	Data []struct {
-		Pubkey       string `json:"pubkey"`
-		SignedBlocks []struct {
-			Slot        string `json:"slot"`
-			SigningRoot string `json:"signing_root,omitempty"`
-		} `json:"signed_blocks"`
-		SignedAttestations []struct {
-			SourceEpoch string `json:"source_epoch"`
-			TargetEpoch string `json:"target_epoch"`
-			SigningRoot string `json:"signing_root,omitempty"`
-		} `json:"signed_attestations"`
-	} `json:"data"`
+	Data []Data `json:"data"`
+}
+type Data struct {
+	Pubkey             string               `json:"pubkey"`
+	SignedBlocks       []SignedBlocks       `json:"signed_blocks"`
+	SignedAttestations []SignedAttestations `json:"signed_attestations"`
+}
+type SignedAttestations struct {
+	SourceEpoch string `json:"source_epoch"`
+	TargetEpoch string `json:"target_epoch"`
+	SigningRoot string `json:"signing_root,omitempty"`
+}
+type SignedBlocks struct {
+	Slot        string `json:"slot"`
+	SigningRoot string `json:"signing_root,omitempty"`
 }
 
 // DataInterchangeFormat represents the data interchange format of validator slashing protection db data.
