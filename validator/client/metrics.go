@@ -101,8 +101,8 @@ var (
 	ValidatorAttestedSlotsGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "validator",
-			Name:	   "last_attested_slot",
-			Help:	   "Last attested slot.",
+			Name:      "last_attested_slot",
+			Help:      "Last attested slot.",
 		},
 		[]string{
 			"pubkey",
