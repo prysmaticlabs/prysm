@@ -13,17 +13,12 @@ limitations under the License.
 package mputil
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestSetup(t *testing.T) {
-	fmt.Println() // just so we don't have to remove/unremove fmt
-}
 
 func TestUnique(t *testing.T) {
 	var arr []string
