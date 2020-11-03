@@ -139,7 +139,7 @@ func TestAttestationHistoryForPubKeysNew_EmptyVals(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := setupDB(t, pubkeys)
 
-	historyForPubKeys, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
+	historyForPubKeys, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
 	require.NoError(t, err)
 
 	cleanAttHistoryForPubKeys := make(map[[48]byte]*EncHistoryData)
@@ -156,7 +156,7 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := setupDB(t, pubkeys)
 
-	_, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
+	_, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
 	require.NoError(t, err)
 
 	setAttHistoryForPubKeys := make(map[[48]byte]*EncHistoryData)
@@ -172,9 +172,9 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 		setAttHistoryForPubKeys[pubKey] = enc
 
 	}
-	err = db.SaveAttestationHistoryNewForPubKeys(context.Background(), setAttHistoryForPubKeys)
+	err = db.SaveAttestationHistoryForPubKeysV2(context.Background(), setAttHistoryForPubKeys)
 	require.NoError(t, err)
-	historyForPubKeys, err := db.AttestationHistoryNewForPubKeys(context.Background(), pubkeys)
+	historyForPubKeys, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
 	require.NoError(t, err)
 	require.DeepEqual(t, setAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
@@ -229,7 +229,7 @@ func TestStore_ImportOldAttestationFormat(t *testing.T) {
 	require.NoError(t, db.SaveAttestationHistoryForPubKeys(context.Background(), attestationHistory), "Saving attestation history failed")
 	require.NoError(t, db.MigrateV2AttestationProtection(ctx), "Import attestation history failed")
 
-	attHis, err := db.AttestationHistoryNewForPubKeys(ctx, pubKeys)
+	attHis, err := db.AttestationHistoryForPubKeysV2(ctx, pubKeys)
 	require.NoError(t, err)
 	for pk, encHis := range attHis {
 		his, ok := attestationHistory[pk]
