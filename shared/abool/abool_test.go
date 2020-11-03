@@ -183,18 +183,14 @@ func TestRace(t *testing.T) {
 }
 
 func ExampleAtomicBool() {
-	cond := New() // default to false
-	any := true
-	old := any
-	new := !any
-
-	cond.Set()             // Sets to true
-	cond.IsSet()           // Returns true
-	cond.UnSet()           // Sets to false
-	cond.IsNotSet()        // Returns true
-	cond.SetTo(any)        // Sets to whatever you want
-	cond.SetToIf(new, old) // Sets to `new` only if the Boolean matches the `old`, returns whether succeeded
-	cond.Toggle()          // Inverts the boolean then returns the value before inverting
+	cond := New()             // default to false
+	cond.Set()                // Sets to true
+	cond.IsSet()              // Returns true
+	cond.UnSet()              // Sets to false
+	cond.IsNotSet()           // Returns true
+	cond.SetTo(true)          // Sets to whatever you want
+	cond.SetToIf(true, false) // Sets to `new` only if the Boolean matches the `old`, returns whether succeeded
+	cond.Toggle()             // Inverts the boolean then returns the value before inverting
 }
 
 // Benchmark Read
