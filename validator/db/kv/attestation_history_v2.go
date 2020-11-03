@@ -125,7 +125,7 @@ func (hd *EncHistoryData) SetTargetData(ctx context.Context, target uint64, hist
 	return &h, nil
 }
 
-// AttestationHistoryNewForPubKeys accepts an array of validator public keys and returns a mapping of corresponding attestation history.
+// AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
 func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeys")
 	defer span.End()
@@ -161,7 +161,7 @@ func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicK
 	return attestationHistoryForVals, err
 }
 
-// SaveAttestationHistoryNewForPubKeys saves the attestation histories for the requested validator public keys.
+// SaveAttestationHistoryForPubKeysV2 saves the attestation histories for the requested validator public keys.
 func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*EncHistoryData) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeys")
 	defer span.End()

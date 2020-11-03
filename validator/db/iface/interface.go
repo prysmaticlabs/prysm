@@ -27,7 +27,7 @@ type ValidatorDB interface {
 	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
 	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
 
-	//new attestation store methods
-	AttestationHistoryNewForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*kv.EncHistoryData, error)
-	SaveAttestationHistoryNewForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*kv.EncHistoryData) error
+	// New attestation store methods
+	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*kv.EncHistoryData, error)
+	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]*kv.EncHistoryData) error
 }
