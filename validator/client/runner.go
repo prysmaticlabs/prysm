@@ -179,6 +179,12 @@ func run(ctx context.Context, v Validator) {
 				}
 				span.End()
 			}()
+
+			// Log this client performance in the previous epoch
+			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
+				log.WithError(err).Error("Could not report validator's rewards/penalties")
+			}
+
 		}
 	}
 }
