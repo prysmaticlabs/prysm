@@ -21,11 +21,17 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ErrInvalidFetchedData is thrown if stream fails to provide requested blocks.
 var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
+
+// BeaconBlockProcessor defines a block processing function, which allows to start utilizing
+// blocks even before all blocks are ready.
+type BeaconBlockProcessor func(block *ethpb.SignedBeaconBlock) error
 
 // SendBeaconBlocksByRangeRequest sends BeaconBlocksByRange and returns fetched blocks, if any.
 func SendBeaconBlocksByRangeRequest(
-	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID, req *pb.BeaconBlocksByRangeRequest,
+	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID,
+	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
 ) ([]*ethpb.SignedBeaconBlock, error) {
 	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
 	if err != nil {
@@ -37,7 +43,15 @@ func SendBeaconBlocksByRangeRequest(
 		}
 	}()
 
+	// Augment block processing function, if non-nil block processor is provided.
 	blocks := make([]*ethpb.SignedBeaconBlock, 0, req.Count)
+	process := func(blk *ethpb.SignedBeaconBlock) error {
+		blocks = append(blocks, blk)
+		if blockProcessor != nil {
+			return blockProcessor(blk)
+		}
+		return nil
+	}
 	var prevSlot uint64
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
@@ -63,7 +77,9 @@ func SendBeaconBlocksByRangeRequest(
 			return nil, ErrInvalidFetchedData
 		}
 		prevSlot = blk.Block.Slot
-		blocks = append(blocks, blk)
+		if err := process(blk); err != nil {
+			return nil, err
+		}
 	}
 	return blocks, nil
 }
