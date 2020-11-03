@@ -202,7 +202,7 @@ func (s *Service) Start() {
 			"startSlot": ss,
 			"endSlot":   h.Slot,
 		}).Info("Loading blocks to fork choice store, this may take a while.")
-		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.justifiedCheckpt, s.finalizedCheckpt); err != nil {
+		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.finalizedCheckpt, s.justifiedCheckpt); err != nil {
 			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
 		}
 

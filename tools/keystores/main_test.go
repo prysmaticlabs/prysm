@@ -51,7 +51,8 @@ func createRandomKeystore(t testing.TB, password string) (*keymanager.Keystore, 
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	pubKey := validatingKey.PublicKey().Marshal()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
@@ -118,7 +119,8 @@ func TestEncrypt(t *testing.T) {
 	keystoresDir := setupRandomDir(t)
 	password := "secretPassw0rd$1999"
 	keystoreFilePath := filepath.Join(keystoresDir, "keystore.json")
-	privKey := bls.RandKey()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
 
 	cliCtx := setupCliContext(t, &cliConfig{
 		outputPath: keystoreFilePath,
