@@ -19,8 +19,9 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"))
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := priv.Sign([]byte("dummy_test_data"))
 	var mockRoot [32]byte
 
 	unaggregatedAtts := []*ethpb.Attestation{
@@ -115,8 +116,9 @@ func TestBatchAttestations_Single(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"))
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := priv.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -156,8 +158,9 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"))
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := priv.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -179,8 +182,9 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"))
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := priv.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],

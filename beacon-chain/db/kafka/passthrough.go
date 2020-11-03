@@ -61,11 +61,6 @@ func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Sta
 	return e.db.StateSummary(ctx, blockRoot)
 }
 
-// HeadState -- passthrough.
-func (e Exporter) HeadState(ctx context.Context) (*state.BeaconState, error) {
-	return e.db.HeadState(ctx)
-}
-
 // GenesisState -- passthrough.
 func (e Exporter) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	return e.db.GenesisState(ctx)
