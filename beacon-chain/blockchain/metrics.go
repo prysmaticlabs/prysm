@@ -173,6 +173,10 @@ func reportEpochMetrics(ctx context.Context, postState, headState *stateTrie.Bea
 		activeBalance += bal
 		activeEffectiveBalance += validator.EffectiveBalance
 	}
+	activeInstances += exitingInstances + slashingInstances
+	activeBalance += exitingBalance + slashingBalance
+	activeEffectiveBalance += exitingEffectiveBalance + slashingEffectiveBalance
+
 	validatorsCount.WithLabelValues("Pending").Set(float64(pendingInstances))
 	validatorsCount.WithLabelValues("Active").Set(float64(activeInstances))
 	validatorsCount.WithLabelValues("Exiting").Set(float64(exitingInstances))
