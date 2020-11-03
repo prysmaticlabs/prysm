@@ -21,6 +21,7 @@ go_library(
         "rpc_goodbye.go",
         "rpc_metadata.go",
         "rpc_ping.go",
+        "rpc_send_request.go",
         "rpc_status.go",
         "service.go",
         "subscriber.go",

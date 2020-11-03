@@ -2,63 +2,14 @@ package sync
 
 import (
 	"context"
-	"io"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// SendBeaconBlocksByRootRequest sends BeaconBlocksByRoot and returns fetched blocks, if any.
-func SendBeaconBlocksByRootRequest(
-	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID,
-	req *types.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
-) ([]*ethpb.SignedBeaconBlock, error) {
-	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRootTopic, pid)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
-		}
-	}()
-
-	// Augment block processing function, if non-nil block processor is provided.
-	blocks := make([]*ethpb.SignedBeaconBlock, 0, len(*req))
-	process := func(block *ethpb.SignedBeaconBlock) error {
-		blocks = append(blocks, block)
-		if blockProcessor != nil {
-			return blockProcessor(block)
-		}
-		return nil
-	}
-	for i := 0; i < len(*req); i++ {
-		// Exit if peer sends more than max request blocks.
-		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
-			break
-		}
-		isFirstChunk := i == 0
-		blk, err := ReadChunkedBlock(stream, p2pProvider, isFirstChunk)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		if err := process(blk); err != nil {
-			return nil, err
-		}
-	}
-	return blocks, nil
-}
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
