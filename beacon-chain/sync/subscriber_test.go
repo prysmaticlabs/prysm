@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -38,6 +39,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 			ValidatorsRoot: [32]byte{'A'},
 			Genesis:        time.Now(),
 		},
+		chainStarted: abool.New(),
 	}
 	var err error
 	p2p.Digest, err = r.forkDigest()
@@ -82,6 +84,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		chain:                     chainService,
 		db:                        d,
 		seenAttesterSlashingCache: c,
+		chainStarted:              abool.New(),
 	}
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
@@ -133,6 +136,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		chain:                     chainService,
 		db:                        d,
 		seenProposerSlashingCache: c,
+		chainStarted:              abool.New(),
 	}
 	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
@@ -172,7 +176,8 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		p2p: p,
+		p2p:          p,
+		chainStarted: abool.New(),
 	}
 	var err error
 	p.Digest, err = r.forkDigest()
@@ -338,8 +343,10 @@ func Test_wrapAndReportValidation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			chainStarted := abool.New()
+			chainStarted.SetTo(tt.args.chainstarted)
 			s := &Service{
-				chainStarted: tt.args.chainstarted,
+				chainStarted: chainStarted,
 			}
 			_, v := s.wrapAndReportValidation(tt.args.topic, tt.args.v)
 			got := v(context.Background(), tt.args.pid, tt.args.msg)
