@@ -225,7 +225,8 @@ func TestRemoteKeymanager_Sign(t *testing.T) {
 	}
 
 	// Expected signing success.
-	randKey := bls.RandKey()
+	randKey, err := bls.RandKey()
+	require.NoError(t, err)
 	data := []byte("hello-world")
 	sig := randKey.Sign(data)
 	m.EXPECT().Sign(
