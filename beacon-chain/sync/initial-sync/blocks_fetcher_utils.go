@@ -203,15 +203,14 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot uint64) (*forkData, e
 // findForkWithPeer loads some blocks from a peer in an attempt to find alternative blocks.
 func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot uint64) (*forkData, error) {
 	// Locate non-skipped slot, supported by a given peer (can survive long periods of empty slots).
-	pidState, err := f.p2p.Peers().ChainState(pid)
-	if err != nil {
-		return nil, fmt.Errorf("cannot obtain peer's status: %w", err)
-	}
-
 	// When searching for non-empty slot, start an epoch earlier - for those blocks we
 	// definitely have roots. So, spotting a fork will be easier. It is not a problem if unknown
 	// block of the current fork is found: we are searching for forks when FSMs are stuck, so
 	// being able to progress on any fork is good.
+	pidState, err := f.p2p.Peers().ChainState(pid)
+	if err != nil {
+		return nil, fmt.Errorf("cannot obtain peer's status: %w", err)
+	}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	nonSkippedSlot, err := f.nonSkippedSlotAfterWithPeersTarget(
 		ctx, slot-slotsPerEpoch, []peer.ID{pid}, helpers.SlotToEpoch(pidState.HeadSlot))
