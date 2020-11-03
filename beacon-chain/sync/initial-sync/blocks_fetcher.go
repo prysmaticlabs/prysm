@@ -43,8 +43,8 @@ const (
 	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
 	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
 	peerFilterCapacityWeight = 0.2
-	// backtrackingMaxHops how many hops (in slots) from block to its parent to do, before giving up
-	// (during search for common ancestor in backtracking algorithm).
+	// backtrackingMaxHops how many hops (during search for common ancestor in backtracking) to do
+	// before giving up.
 	backtrackingMaxHops = 128
 )
 

@@ -18,9 +18,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// forkData represents alternative chain path, supported by a given peer.
-// Blocks are stored in slot order, the first block is guaranteed to have parent either in DB
-// or initial sync cache.
+// forkData represents alternative chain path supported by a given peer.
+// Blocks are stored in an ascending slot order. The first block is guaranteed to have parent
+// either in DB or initial sync cache.
 type forkData struct {
 	peer   peer.ID
 	blocks []*eth.SignedBeaconBlock
