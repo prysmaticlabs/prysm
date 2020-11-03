@@ -249,13 +249,13 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	return nil, errors.New("no alternative blocks exist within scanned range")
 }
 
-// findAncestor tries to figure out common ancestor slot, that connects a given root to known block.
+// findAncestor tries to figure out common ancestor slot that connects a given root to known block.
 func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block *eth.SignedBeaconBlock) (*forkData, error) {
-	outBlocks := make([]*eth.SignedBeaconBlock, 0)
-	outBlocks = append(outBlocks, block)
+	outBlocks := []*eth.SignedBeaconBlock{block}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block.ParentRoot)
 		if f.db.HasBlock(ctx, parentRoot) || f.chain.HasInitSyncBlock(parentRoot) {
+			// Common ancestor found, forward blocks back to processor.
 			sort.Slice(outBlocks, func(i, j int) bool {
 				return outBlocks[i].Block.Slot < outBlocks[j].Block.Slot
 			})

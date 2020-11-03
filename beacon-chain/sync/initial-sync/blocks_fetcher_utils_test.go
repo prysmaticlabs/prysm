@@ -141,7 +141,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	// A - B - C - D - E
 	//      \
 	//       - C'- D'- E'- F'- G'
-	// Allow fetcher to proceed till E, then connect peer having alternative, branch.
+	// Allow fetcher to proceed till E, then connect peer having alternative branch.
 	// Test that G' slot can be reached i.e. fetcher can track back and explore alternative paths.
 	beaconDB, _ := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
@@ -227,7 +227,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	require.Equal(t, (*forkData)(nil), fork)
 
 	// Add peer that has blocks after 250, but those blocks are orphaned i.e. they do not have common
-	// ancestor with what we already have. So, no common ancestor exists.
+	// ancestor with what we already have. So, error is expected.
 	chain1a := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 265)
 	connectPeerHavingBlocks(t, p2p, chain1a, finalizedSlot, p2p.Peers())
 	fork, err = fetcher.findFork(ctx, 251)
@@ -248,7 +248,6 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
 		require.NoError(t, st.SetSlot(blk.Block.Slot))
 	}
-
 	forkSlot := 129
 	chain2 := extendBlockSequence(t, chain1[:forkSlot], 165)
 	// Assert that forked blocks from chain2 are unknown.
@@ -258,6 +257,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, false, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot))
 	}
+
 	// Search for alternative paths (add single peer having alternative path).
 	alternativePeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
 	fork, err = fetcher.findFork(ctx, 251)
