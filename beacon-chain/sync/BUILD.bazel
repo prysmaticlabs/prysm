@@ -114,6 +114,7 @@ go_test(
         "rpc_goodbye_test.go",
         "rpc_metadata_test.go",
         "rpc_ping_test.go",
+        "rpc_send_request_test.go",
         "rpc_status_test.go",
         "rpc_test.go",
         "service_test.go",
