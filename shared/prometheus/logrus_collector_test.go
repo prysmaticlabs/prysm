@@ -1,7 +1,6 @@
 package prometheus_test
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,13 +24,12 @@ type logger interface {
 }
 
 func TestLogrusCollector(t *testing.T) {
-	ctx := context.Background()
 	service := prometheus.NewService(addr, nil)
 	hook := prometheus.NewLogrusCollector()
 	log.AddHook(hook)
-	go service.Start(ctx)
+	go service.Start()
 	defer func() {
-		err := service.Stop(ctx)
+		err := service.Stop()
 		require.NoError(t, err)
 	}()
 

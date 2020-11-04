@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,17 +29,35 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestStop_CancelsContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	vs := &ValidatorService{
+		ctx:    ctx,
+		cancel: cancel,
+	}
+
+	assert.NoError(t, vs.Stop())
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Error("Context not canceled within 1s")
+	case <-vs.ctx.Done():
+	}
+}
+
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
 	// Use canceled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{
+		ctx:      ctx,
+		cancel:   cancel,
 		endpoint: "merkle tries",
 		withCert: "alice.crt",
 	}
-	validatorService.Start(ctx)
-	require.NoError(t, validatorService.Stop(ctx), "Could not stop service")
+	validatorService.Start()
+	require.NoError(t, validatorService.Stop(), "Could not stop service")
 	require.LogsContain(t, hook, "Stopping service")
 }
 
@@ -48,11 +67,13 @@ func TestLifecycle_Insecure(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{
+		ctx:      ctx,
+		cancel:   cancel,
 		endpoint: "merkle tries",
 	}
-	validatorService.Start(ctx)
+	validatorService.Start()
 	require.LogsContain(t, hook, "You are using an insecure gRPC connection")
-	require.NoError(t, validatorService.Stop(ctx), "Could not stop service")
+	require.NoError(t, validatorService.Stop(), "Could not stop service")
 	require.LogsContain(t, hook, "Stopping service")
 }
 

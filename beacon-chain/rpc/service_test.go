@@ -26,8 +26,10 @@ func TestLifecycle_OK(t *testing.T) {
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
-	rpcService := NewService(&Config{
+	rpcService := NewService(context.Background(), &Config{
 		Port:                "7348",
+		CertFlag:            "alice.crt",
+		KeyFlag:             "alice.key",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
 		AttestationReceiver: chainService,
@@ -37,11 +39,10 @@ func TestLifecycle_OK(t *testing.T) {
 		StateNotifier:       chainService.StateNotifier(),
 	})
 
-	ctx := context.Background()
-	rpcService.Start(ctx)
+	rpcService.Start()
 
 	require.LogsContain(t, hook, "listening on port")
-	assert.NoError(t, rpcService.Stop(ctx))
+	assert.NoError(t, rpcService.Stop())
 }
 
 func TestStatus_CredentialError(t *testing.T) {
@@ -54,7 +55,7 @@ func TestStatus_CredentialError(t *testing.T) {
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := &mock.ChainService{Genesis: time.Now()}
-	rpcService := NewService(&Config{
+	rpcService := NewService(context.Background(), &Config{
 		Port:                "7777",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
@@ -65,10 +66,9 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		StateNotifier:       chainService.StateNotifier(),
 	})
 
-	ctx := context.Background()
-	rpcService.Start(ctx)
+	rpcService.Start()
 
 	require.LogsContain(t, hook, "listening on port")
 	require.LogsContain(t, hook, "You are using an insecure gRPC server")
-	assert.NoError(t, rpcService.Stop(ctx))
+	assert.NoError(t, rpcService.Stop())
 }

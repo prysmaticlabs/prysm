@@ -31,7 +31,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -48,19 +48,18 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 
-	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		web3Service.run(ctx)
+		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
-	header, err := web3Service.eth1DataFetcher.HeaderByNumber(context.Background(), nil)
+	header, err := web3Service.eth1DataFetcher.HeaderByNumber(web3Service.ctx, nil)
 	require.NoError(t, err)
 
 	tickerChan := make(chan time.Time)
 	web3Service.headTicker = &time.Ticker{C: tickerChan}
 	tickerChan <- time.Now()
-	cancel()
+	web3Service.cancel()
 	exitRoutine <- true
 
 	assert.Equal(t, web3Service.latestEth1Data.BlockHeight, header.Number.Uint64())
@@ -70,7 +69,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -97,7 +96,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -113,7 +112,7 @@ func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -144,7 +143,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 
 func TestBlockExists_InvalidHash(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -158,7 +157,7 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -181,7 +180,7 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 
 func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -202,7 +201,7 @@ func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 
 func TestBlockExistsWithCache_HeaderNotCached(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -218,7 +217,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -245,7 +244,7 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -278,7 +277,7 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
@@ -309,7 +308,7 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 
 func TestService_BlockTimeByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})

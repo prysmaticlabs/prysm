@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -17,10 +16,10 @@ type secondMockService struct {
 	status error
 }
 
-func (m *mockService) Start(_ context.Context) {
+func (m *mockService) Start() {
 }
 
-func (m *mockService) Stop(_ context.Context) error {
+func (m *mockService) Stop() error {
 	return nil
 }
 
@@ -28,10 +27,10 @@ func (m *mockService) Status() error {
 	return m.status
 }
 
-func (s *secondMockService) Start(_ context.Context) {
+func (s *secondMockService) Start() {
 }
 
-func (s *secondMockService) Stop(_ context.Context) error {
+func (s *secondMockService) Stop() error {
 	return nil
 }
 
@@ -41,7 +40,6 @@ func (s *secondMockService) Status() error {
 
 func TestRegisterService_Twice(t *testing.T) {
 	registry := &ServiceRegistry{
-		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 
@@ -55,7 +53,6 @@ func TestRegisterService_Twice(t *testing.T) {
 
 func TestRegisterService_Different(t *testing.T) {
 	registry := &ServiceRegistry{
-		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 
@@ -75,7 +72,6 @@ func TestRegisterService_Different(t *testing.T) {
 
 func TestFetchService_OK(t *testing.T) {
 	registry := &ServiceRegistry{
-		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 
@@ -94,7 +90,6 @@ func TestFetchService_OK(t *testing.T) {
 
 func TestServiceStatus_OK(t *testing.T) {
 	registry := &ServiceRegistry{
-		contexts: make(map[reflect.Type]cancellableContext),
 		services: make(map[reflect.Type]Service),
 	}
 

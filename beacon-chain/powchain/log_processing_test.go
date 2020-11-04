@@ -39,7 +39,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -72,7 +72,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	if len(logs) == 0 {
@@ -103,7 +103,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -140,7 +140,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	web3Service.chainStartData.Chainstarted = true
@@ -160,7 +160,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := testDB.SetupDB(t)
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		BeaconDB:        beaconDB,
 		DepositContract: testAcc.ContractAddr,
@@ -191,7 +191,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		},
 	}
 
-	logz, err := testAcc.Backend.FilterLogs(context.Background(), query)
+	logz, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	loggedPubkey, withCreds, _, loggedSig, index, err := contracts.UnpackDepositLogData(logz[0].Data)
@@ -211,7 +211,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -257,7 +257,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
 	for _, log := range logs {
@@ -282,7 +282,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -325,7 +325,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 	require.Equal(t, depositsReqForChainStart, len(logs))
 
@@ -369,7 +369,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
@@ -462,7 +462,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -503,7 +503,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		},
 	}
 
-	logs, err := testAcc.Backend.FilterLogs(context.Background(), query)
+	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 	require.Equal(t, depositsWanted, len(logs), "Did not receive enough logs")
 
@@ -558,7 +558,7 @@ func TestConsistentGenesisState(t *testing.T) {
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
-	go web3Service.run(ctx)
+	go web3Service.run(ctx.Done())
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
@@ -589,7 +589,7 @@ func TestConsistentGenesisState(t *testing.T) {
 	newBeaconDB, _ := testDB.SetupDB(t)
 
 	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
-	go newWeb3Service.run(ctx)
+	go newWeb3Service.run(ctx.Done())
 
 	time.Sleep(2 * time.Second)
 	require.Equal(t, true, newWeb3Service.chainStartData.Chainstarted, fmt.Sprintf("Service hasn't chainstarted yet with a block height of %d", newWeb3Service.latestEth1Data.BlockHeight))
@@ -614,7 +614,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(&Web3ServiceConfig{
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: eth1Backend.ContractAddr,
 		BeaconDB:        beaconDB,

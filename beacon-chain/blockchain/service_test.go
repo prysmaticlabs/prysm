@@ -91,14 +91,14 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		DepositContainers: []*protodb.DepositContainer{},
 	})
 	require.NoError(t, err)
-	web3Service, err = powchain.NewService(&powchain.Web3ServiceConfig{
+	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
 		HTTPEndPoint:    endpoint,
 		DepositContract: common.Address{},
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
 
-	opsService, err := attestations.NewService(&attestations.Config{Pool: attestations.NewPool()})
+	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
 	depositCache, err := depositcache.New()
@@ -109,6 +109,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		BeaconDB:          beaconDB,
 		DepositCache:      depositCache,
 		ChainStartFetcher: web3Service,
+		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
 		StateGen:          stategen.New(beaconDB, sc),
@@ -119,7 +120,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
-	chainService, err := NewService(cfg)
+	chainService, err := NewService(ctx, cfg)
 	require.NoError(t, err, "Unable to setup chain service")
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
@@ -146,9 +147,12 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 
 	// Test the start function.
-	chainService.Start(ctx)
+	chainService.Start()
 
-	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+
+	// The context should have been canceled.
+	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
 	require.LogsContain(t, hook, "data already exists")
 }
 
@@ -169,11 +173,12 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}))
 
 	// Test the start function.
-	chainService.Start(ctx)
+	chainService.Start()
 
-	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
 
 	// The context should have been canceled.
+	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
 	require.LogsContain(t, hook, "data already exists")
 }
 
@@ -238,12 +243,12 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 
 	// Test the start function.
-	chainService.Start(ctx)
+	chainService.Start()
 
 	require.DeepEqual(t, blkRoot[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.justifiedCheckpt.Root, "Justified Checkpoint root is incorrect")
 
-	require.NoError(t, chainService.Stop(ctx), "Unable to stop chain service")
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
 
 }
 
@@ -359,9 +364,11 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 }
 
 func TestServiceStop_SaveCachedBlocks(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	db, _ := testDB.SetupDB(t)
 	s := &Service{
+		ctx:            ctx,
+		cancel:         cancel,
 		beaconDB:       db,
 		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
 	}
@@ -369,7 +376,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s.saveInitSyncBlock(r, b)
-	require.NoError(t, s.Stop(ctx))
+	require.NoError(t, s.Stop())
 	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
 }
 

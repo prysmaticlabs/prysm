@@ -12,17 +12,16 @@ import (
 
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewService(&Config{
+	rpcService := NewService(context.Background(), &Config{
 		Port:     "7348",
 		CertFlag: "alice.crt",
 		KeyFlag:  "alice.key",
 	})
 
-	ctx := context.Background()
-	rpcService.Start(ctx)
+	rpcService.Start()
 
 	require.LogsContain(t, hook, "listening on port")
-	require.NoError(t, rpcService.Stop(ctx))
+	require.NoError(t, rpcService.Stop())
 }
 
 func TestStatus_CredentialError(t *testing.T) {
@@ -34,13 +33,12 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewService(&Config{
+	rpcService := NewService(context.Background(), &Config{
 		Port: "7777",
 	})
 
-	ctx := context.Background()
-	rpcService.Start(ctx)
+	rpcService.Start()
 
 	require.LogsContain(t, hook, "listening on port")
-	require.NoError(t, rpcService.Stop(ctx))
+	require.NoError(t, rpcService.Stop())
 }

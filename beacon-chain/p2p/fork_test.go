@@ -93,7 +93,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
-	s, err = NewService(cfg)
+	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
@@ -110,7 +110,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 
 	// We should not have valid peers if the fork digest mismatched.
 	assert.Equal(t, 0, len(addrs), "Expected 0 valid peers")
-	require.NoError(t, s.Stop(context.Background()))
+	require.NoError(t, s.Stop())
 }
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
@@ -184,7 +184,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
 	cfg.StateNotifier = &mock.MockStateNotifier{}
-	s, err = NewService(cfg)
+	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 
 	s.genesisTime = genesisTime
@@ -204,7 +204,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	}
 
 	require.LogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
-	require.NoError(t, s.Stop(context.Background()))
+	require.NoError(t, s.Stop())
 }
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {

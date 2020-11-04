@@ -43,6 +43,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
+		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
@@ -50,7 +51,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	}
 
 	topic := "/eth2/%x/beacon_block"
-	go r.registerHandlers(context.Background())
+	go r.registerHandlers()
 	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
@@ -82,13 +83,14 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
+		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
 		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
-	go r.registerHandlers(context.Background())
+	go r.registerHandlers()
 	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
@@ -113,6 +115,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
+		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
@@ -120,7 +123,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	}
 
 	topic := "/eth2/%x/beacon_block"
-	go r.registerHandlers(context.Background())
+	go r.registerHandlers()
 	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,

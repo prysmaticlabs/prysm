@@ -289,13 +289,14 @@ func TestService_roundRobinSync(t *testing.T) {
 				},
 			} // no-op mock
 			s := &Service{
+				ctx:          context.Background(),
 				chain:        mc,
 				p2p:          p,
 				db:           beaconDB,
 				synced:       false,
 				chainStarted: true,
 			}
-			assert.NoError(t, s.roundRobinSync(context.Background(), makeGenesisTime(tt.currentSlot)))
+			assert.NoError(t, s.roundRobinSync(makeGenesisTime(tt.currentSlot)))
 			if s.chain.HeadSlot() < tt.currentSlot {
 				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
 			}
@@ -320,7 +321,7 @@ func TestService_processBlock(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewService(&Config{
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -380,7 +381,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewService(&Config{
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -519,6 +520,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 		},
 	} // no-op mock
 	s := &Service{
+		ctx:          context.Background(),
 		chain:        mc,
 		p2p:          p,
 		db:           beaconDB,
@@ -533,7 +535,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer2))
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer3))
 
-	assert.NoError(t, s.roundRobinSync(context.Background(), makeGenesisTime(currentSlot)))
+	assert.NoError(t, s.roundRobinSync(makeGenesisTime(currentSlot)))
 	if s.chain.HeadSlot() < currentSlot {
 		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
 	}

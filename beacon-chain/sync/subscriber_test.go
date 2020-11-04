@@ -31,6 +31,7 @@ import (
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	r := Service{
+		ctx:         context.Background(),
 		p2p:         p2p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mockChain.ChainService{
@@ -45,7 +46,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(context.Background(), topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		m, ok := msg.(*pb.SignedVoluntaryExit)
 		assert.Equal(t, true, ok, "Object is not of type *pb.SignedVoluntaryExit")
 		if m.Exit == nil || m.Exit.Epoch != 55 {
@@ -74,6 +75,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := Service{
+		ctx:                       ctx,
 		p2p:                       p2p,
 		initialSync:               &mockSync.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
@@ -86,7 +88,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	r.subscribe(ctx, topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
+	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.attesterSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
@@ -124,6 +126,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := Service{
+		ctx:                       ctx,
 		p2p:                       p2p,
 		initialSync:               &mockSync.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
@@ -136,7 +139,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	r.subscribe(ctx, topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
+	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.proposerSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
@@ -164,6 +167,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 func TestSubscribe_HandlesPanic(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	r := Service{
+		ctx: context.Background(),
 		chain: &mockChain.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
@@ -178,7 +182,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(context.Background(), topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		defer wg.Done()
 		panic("bad")
 	})
@@ -191,10 +195,10 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 }
 
 func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
-	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
 	hook := logTest.NewGlobal()
 	r := Service{
+		ctx: context.Background(),
 		chain: &mockChain.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
@@ -209,14 +213,14 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	// committee index 1
 	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.p2p.Encoding().ProtocolSuffix()
 	require.NoError(t, r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator))
-	subscriptions[1], err = r.p2p.SubscribeToTopic(ctx, fullTopic)
+	subscriptions[1], err = r.p2p.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	// committee index 2
 	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.p2p.Encoding().ProtocolSuffix()
 	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
 	require.NoError(t, err)
-	subscriptions[2], err = r.p2p.SubscribeToTopic(ctx, fullTopic)
+	subscriptions[2], err = r.p2p.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
@@ -227,6 +231,7 @@ func TestStaticSubnets(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := Service{
+		ctx: ctx,
 		chain: &mockChain.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
@@ -234,7 +239,7 @@ func TestStaticSubnets(t *testing.T) {
 		p2p: p,
 	}
 	defaultTopic := "/eth2/%x/beacon_attestation_%d"
-	r.subscribeStaticWithSubnets(ctx, defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		// no-op
 		return nil
 	})
@@ -275,7 +280,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				},
 				chainstarted: false,
 			},
-			want: pubsub.ValidationIgnore,
+			want: pubsub.ValidationReject,
 		},
 		{
 			name: "validator panicked",
