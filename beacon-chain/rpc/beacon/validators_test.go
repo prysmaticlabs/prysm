@@ -1415,7 +1415,7 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 	ctx := context.Background()
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(0))
-	epoch := uint64(10)
+	epoch := uint64(50)
 	slots := epoch * params.BeaconConfig().SlotsPerEpoch
 	bs := &Server{
 		BeaconDB: db,
