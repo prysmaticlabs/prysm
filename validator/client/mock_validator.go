@@ -43,7 +43,9 @@ type FakeValidator struct {
 	PubkeysToStatusesMap              map[[48]byte]ethpb.ValidatorStatus
 }
 
-const allValidatorsAreExitedCtxKey = "exited"
+type ctxKey string
+
+var allValidatorsAreExitedCtxKey = ctxKey("exited")
 
 // Done for mocking.
 func (fv *FakeValidator) Done() {
