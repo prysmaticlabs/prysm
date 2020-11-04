@@ -344,7 +344,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 			slot := bytesutil.BytesToUint64BigEndian(k)
 			mod := slot % slotsPerArchivedPoint
 			// The following conditions cover 1, 2, and 3 above.
-			if mod != 0 && mod < slotsPerArchivedPoint-params.BeaconConfig().SlotsPerEpoch/2 && !finalized {
+			if mod != 0 && mod <= slotsPerArchivedPoint-params.BeaconConfig().SlotsPerEpoch/2 && !finalized {
 				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
 			}
 			return nil

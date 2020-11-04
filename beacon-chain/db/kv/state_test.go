@@ -248,7 +248,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	require.NoError(t, db.CleanUpDirtyStates(context.Background(), params.BeaconConfig().SlotsPerEpoch))
 
 	for i, root := range bRoots {
-		if uint64(i) >= params.BeaconConfig().SlotsPerEpoch/2-1 {
+		if uint64(i) > params.BeaconConfig().SlotsPerEpoch/2-1 {
 			require.Equal(t, true, db.HasState(context.Background(), root))
 		} else {
 			require.Equal(t, false, db.HasState(context.Background(), root))
