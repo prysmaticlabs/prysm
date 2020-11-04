@@ -585,27 +585,6 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 	return res
 }
 
-// ValidatorsReadOnly returns validators participating in consensus on the beacon chain. This
-// method doesn't clone the respective validators and returns read only references to the validators.
-func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
-	if !b.HasInnerState() {
-		return nil
-	}
-	if b.state.Validators == nil {
-		return nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	res := make([]*ReadOnlyValidator, len(b.state.Validators))
-	for i := 0; i < len(res); i++ {
-		val := b.state.Validators[i]
-		res[i] = &ReadOnlyValidator{validator: val}
-	}
-	return res
-}
-
 // ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if !b.HasInnerState() {
