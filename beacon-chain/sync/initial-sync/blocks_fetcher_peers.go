@@ -23,7 +23,7 @@ import (
 func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
 	f.Lock()
 	defer f.Unlock()
-	if lock, ok := f.peerLocks[pid]; ok {
+	if lock, ok := f.peerLocks[pid]; ok && lock != nil {
 		lock.accessed = timeutils.Now()
 		return lock
 	}
