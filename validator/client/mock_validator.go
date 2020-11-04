@@ -181,5 +181,8 @@ func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[48]byte]ethpb
 
 // AllValidatorsAreExited for mocking
 func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
+	if ctx.Value(allValidatorsAreExitedCtxKey) == nil {
+		return false, nil
+	}
 	return ctx.Value(allValidatorsAreExitedCtxKey).(bool), nil
 }
