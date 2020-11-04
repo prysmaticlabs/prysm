@@ -140,6 +140,9 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 				if err != pubsub.ErrSubscriptionCancelled { // Only log a warning on unexpected errors.
 					log.WithError(err).Warn("Subscription next failed")
 				}
+				// Cancel subscription in the event of an error, as we are
+				// now exiting topic event loop.
+				sub.Cancel()
 				return
 			}
 
