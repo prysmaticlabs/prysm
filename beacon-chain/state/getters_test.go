@@ -53,7 +53,6 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.Eth1Data()
 	_ = st.Eth1DataVotes()
 	_ = st.Eth1DepositIndex()
-	_ = st.ValidatorsReadOnly()
 	_, err = st.ValidatorAtIndex(0)
 	_ = err
 	_, err = st.ValidatorAtIndexReadOnly(0)
