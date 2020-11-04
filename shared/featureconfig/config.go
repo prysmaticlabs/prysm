@@ -133,7 +133,7 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UseZinkenNetworkConfig()
 		cfg.ZinkenTestnet = true
 	} else {
-		log.Warn("--<testnet> flag is not specified (default: Mainnet), this will become required from next release! ")
+		log.Warn("Running on ETH2 Mainnet")
 		params.UseMainnetConfig()
 	}
 }
