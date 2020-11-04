@@ -744,10 +744,14 @@ func (s *Service) logTillChainStart() {
 		secondsLeft = params.BeaconConfig().MinGenesisTime - genesisTime
 	}
 
-	log.WithFields(logrus.Fields{
-		"Extra validators needed":      valNeeded,
-		"Generating genesis state in ": time.Duration(secondsLeft) * time.Second,
-	}).Infof("Currently waiting for chainstart")
+	fields := logrus.Fields{
+		"Additional validators needed": valNeeded,
+	}
+	if secondsLeft > 0 {
+		fields["Generating genesis state in"] = time.Duration(secondsLeft) * time.Second
+	}
+
+	log.WithFields(fields).Infof("Currently waiting for chainstart")
 }
 
 // cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
