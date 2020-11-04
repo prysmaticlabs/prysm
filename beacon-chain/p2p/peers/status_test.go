@@ -460,7 +460,6 @@ func TestPeerValidTime(t *testing.T) {
 
 	// Now confirm the states
 	assert.Equal(t, numPeersConnected, len(p.Connected()), "Unexpected number of connected peers")
-
 }
 
 func TestPrune(t *testing.T) {
