@@ -13,6 +13,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -30,8 +31,9 @@ func TestService_StatusZeroEpoch(t *testing.T) {
 			Genesis: time.Now(),
 			State:   bState,
 		},
+		chainStarted: abool.New(),
 	}
-	r.chainStarted = true
+	r.chainStarted.Set()
 
 	assert.NoError(t, r.Status(), "Wanted non failing status")
 }
@@ -47,6 +49,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
+		chainStarted:  abool.New(),
 		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -73,7 +76,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
 	time.Sleep(400 * time.Millisecond)
-	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 }
 
 func TestSyncHandlers_WaitForChainStart(t *testing.T) {
@@ -88,6 +91,7 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
 		initialSync:   &mockSync.Sync{IsSyncing: false},
+		chainStarted:  abool.New(),
 	}
 
 	go r.registerHandlers()
@@ -101,11 +105,11 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 	if i == 0 {
 		t.Fatal("didn't send genesis time to subscribers")
 	}
-	require.Equal(t, false, r.chainStarted, "Chainstart was marked prematurely")
+	require.Equal(t, false, r.chainStarted.IsSet(), "Chainstart was marked prematurely")
 
 	// wait for chainstart to be sent
 	time.Sleep(3 * time.Second)
-	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 }
 
 func TestSyncHandlers_WaitTillSynced(t *testing.T) {
@@ -120,6 +124,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
 		initialSync:   &mockSync.Sync{IsSyncing: false},
+		chainStarted:  abool.New(),
 	}
 
 	topic := "/eth2/%x/beacon_block"
@@ -152,7 +157,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 
 	// wait for chainstart to be sent
 	time.Sleep(2 * time.Second)
-	require.Equal(t, true, r.chainStarted, "Did not receive chain start event.")
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
 	assert.Equal(t, 0, len(blockChan), "block was received by sync service despite not being fully synced")
 
@@ -179,4 +184,65 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	p2p.ReceivePubSub(topic, msg)
 	// wait for message to be sent
 	testutil.WaitTimeout(wg, 2*time.Second)
+}
+
+func TestSyncService_StopCleanly(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	r := Service{
+		ctx:           ctx,
+		cancel:        cancel,
+		p2p:           p2p,
+		chain:         chainService,
+		stateNotifier: chainService.StateNotifier(),
+		initialSync:   &mockSync.Sync{IsSyncing: false},
+		chainStarted:  abool.New(),
+	}
+
+	go r.registerHandlers()
+	time.Sleep(100 * time.Millisecond)
+	i := r.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{
+			StartTime: time.Now(),
+		},
+	})
+	if i == 0 {
+		t.Fatal("didn't send genesis time to subscribers")
+	}
+
+	var err error
+	p2p.Digest, err = r.forkDigest()
+	require.NoError(t, err)
+
+	// wait for chainstart to be sent
+	time.Sleep(2 * time.Second)
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
+
+	i = r.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Synced,
+		Data: &statefeed.SyncedData{
+			StartTime: time.Now(),
+		},
+	})
+	if i == 0 {
+		t.Fatal("didn't send genesis time to sync event subscribers")
+	}
+
+	time.Sleep(1 * time.Second)
+
+	require.NotEqual(t, 0, len(r.p2p.PubSub().GetTopics()))
+	require.NotEqual(t, 0, len(r.p2p.Host().Mux().Protocols()))
+
+	// Both pubsub and rpc topcis should be unsubscribed.
+	require.NoError(t, r.Stop())
+
+	// Sleep to allow pubsub topics to be deregistered.
+	time.Sleep(1 * time.Second)
+	require.Equal(t, 0, len(r.p2p.PubSub().GetTopics()))
+	require.Equal(t, 0, len(r.p2p.Host().Mux().Protocols()))
 }

@@ -159,7 +159,7 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 	c := helpers.SlotCommitteeCount(activeValidatorCount)
-	if att.Data.CommitteeIndex > c {
+	if att.Data.CommitteeIndex >= c {
 		return nil, fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
 	}
 

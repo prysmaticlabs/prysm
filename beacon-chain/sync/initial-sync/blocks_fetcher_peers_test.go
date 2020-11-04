@@ -13,6 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -108,6 +109,11 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 }
 
 func TestBlocksFetcher_filterPeers(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
+
 	type weightedPeer struct {
 		peer.ID
 		usedCapacity int64
@@ -176,7 +182,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				pids = append(pids, pid.ID)
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
-			got, err := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			got, err := fetcher.filterPeers(context.Background(), pids, tt.args.peersPercentage)
 			require.NoError(t, err)
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
@@ -319,8 +325,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 			fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{
-				finalizationFetcher:      mc,
-				headFetcher:              mc,
+				chain:                    mc,
 				p2p:                      p2p,
 				peerFilterCapacityWeight: tt.args.capacityWeight,
 			})
@@ -341,7 +346,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 			var filteredPIDs []peer.ID
 			var err error
 			for i := 0; i < 1000; i++ {
-				filteredPIDs, err = fetcher.filterScoredPeers(context.Background(), peerIDs, tt.args.peersPercentage)
+				filteredPIDs, err = fetcher.filterPeers(context.Background(), peerIDs, tt.args.peersPercentage)
 				if len(filteredPIDs) <= 1 {
 					break
 				}

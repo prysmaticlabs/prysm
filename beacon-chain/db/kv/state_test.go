@@ -42,21 +42,6 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	assert.Equal(t, (*state.BeaconState)(nil), savedS, "Unsaved state should've been nil")
 }
 
-func TestHeadState_CanSaveRetrieve(t *testing.T) {
-	db := setupDB(t)
-
-	headRoot := [32]byte{'A'}
-
-	st := testutil.NewBeaconState()
-	require.NoError(t, st.SetSlot(100))
-	require.NoError(t, db.SaveState(context.Background(), st, headRoot))
-	require.NoError(t, db.SaveHeadBlockRoot(context.Background(), headRoot))
-
-	savedHeadS, err := db.HeadState(context.Background())
-	require.NoError(t, err)
-	assert.DeepEqual(t, st.InnerStateUnsafe(), savedHeadS.InnerStateUnsafe(), "Did not retrieve saved state")
-}
-
 func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 
@@ -71,10 +56,6 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, st.InnerStateUnsafe(), savedGenesisS.InnerStateUnsafe(), "Did not retrieve saved state")
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), [32]byte{'C'}))
-
-	savedGenesisS, err = db.HeadState(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, (*state.BeaconState)(nil), savedGenesisS, "Unsaved genesis state should've been nil")
 }
 
 func TestStore_StatesBatchDelete(t *testing.T) {

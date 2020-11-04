@@ -54,12 +54,6 @@ service Accounts {
             get: "/v2/validator/accounts"
         };
     }
-    rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/accounts/delete",
-            body: "*"
-        };
-    }
     rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/v2/validator/password/edit",

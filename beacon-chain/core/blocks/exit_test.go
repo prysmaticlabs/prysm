@@ -172,7 +172,9 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	err = state.SetSlot(state.Slot().AddSlot(params.BeaconConfig().SlotsPerEpoch.MulEpoch(params.BeaconConfig().ShardCommitteePeriod)))
 	require.NoError(t, err)
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+
 	val, err := state.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()

@@ -49,7 +49,8 @@ func (m mockSignature) Copy() bls.Signature {
 }
 
 func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
-	validatorKey := bls.RandKey()
+	validatorKey, err := bls.RandKey()
+	require.NoError(t, err)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})

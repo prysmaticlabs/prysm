@@ -4,23 +4,30 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 
 	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
-	cachedState, err := s.checkpointStateCache.StateByCheckpoint(ctx, c)
+	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
+	// allowing us to behave smarter in terms of how this function is used concurrently.
+	epochKey := strconv.FormatUint(c.Epoch, 10 /* base 10 */)
+	lock := mputil.NewMultilock(string(c.Root) + epochKey)
+	lock.Lock()
+	defer lock.Unlock()
+	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
@@ -28,33 +35,17 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
-	if err := s.checkpointStateCache.MarkInProgress(c); err != nil {
-		if errors.Is(err, cache.ErrAlreadyInProgress) {
-			cachedState, err = s.checkpointStateCache.StateByCheckpoint(ctx, c)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get cached checkpoint state")
-			}
-			if cachedState != nil {
-				return cachedState, nil
-			}
-		} else {
-			return nil, err
-		}
-	}
-	defer func() {
-		if err := s.checkpointStateCache.MarkNotInProgress(c); err != nil {
-			log.WithError(err).Error("Failed to mark cache not in progress")
-		}
-	}()
 	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
+
 	epochStartSlot, err := helpers.StartSlot(c.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
+		baseState = baseState.Copy()
 		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
@@ -64,7 +55,10 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		}
 		return baseState, nil
 	}
-	has, err := s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root))
+
+	// To avoid sharing the same state across checkpoint state cache and hot state cache,
+	// we don't add the state to check point cache.
+	has, err := s.stateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +68,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		}
 	}
 	return baseState, nil
+
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.

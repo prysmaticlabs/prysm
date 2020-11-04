@@ -14,10 +14,7 @@ import (
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	if s.hotStateCache.Has(blockRoot) {
-		return true, nil
-	}
-	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	has, err := s.HasStateInCache(ctx, blockRoot)
 	if err != nil {
 		return false, err
 	}
@@ -25,6 +22,18 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) 
 		return true, nil
 	}
 	return s.beaconDB.HasState(ctx, blockRoot), nil
+}
+
+// HasStateInCache returns true if the state exists in cache.
+func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	if s.hotStateCache.Has(blockRoot) {
+		return true, nil
+	}
+	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return false, err
+	}
+	return has, nil
 }
 
 // StateByRoot retrieves the state using input block root.
@@ -36,12 +45,6 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
-
-	// Short cut if the cachedState is already in the DB.
-	if s.beaconDB.HasState(ctx, blockRoot) {
-		return s.beaconDB.State(ctx, blockRoot)
-	}
-
 	return s.loadStateByRoot(ctx, blockRoot)
 }
 
@@ -168,6 +171,11 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 	}
 	if ok {
 		return cachedInfo.state, nil
+	}
+
+	// Short cut if the cachedState is already in the DB.
+	if s.beaconDB.HasState(ctx, blockRoot) {
+		return s.beaconDB.State(ctx, blockRoot)
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
