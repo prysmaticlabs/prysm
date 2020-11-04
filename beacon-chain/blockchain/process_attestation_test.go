@@ -2,9 +2,7 @@ package blockchain
 
 import (
 	"context"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -180,11 +178,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
-	s1, err = service.checkpointStateCache.StateByCheckpoint(ctx, cp1)
+	s1, err = service.checkpointStateCache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
-	s2, err = service.checkpointStateCache.StateByCheckpoint(ctx, cp2)
+	s2, err = service.checkpointStateCache.StateByCheckpoint(cp2)
 	require.NoError(t, err)
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
@@ -220,7 +218,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), checkpoint.Epoch*params.BeaconConfig().SlotsPerEpoch, "Incorrectly returned base state")
 
-	cached, err := service.checkpointStateCache.StateByCheckpoint(ctx, checkpoint)
+	cached, err := service.checkpointStateCache.StateByCheckpoint(checkpoint)
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), cached.Slot(), "State should have been cached")
 
@@ -235,51 +233,11 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
 
-	cached, err = service.checkpointStateCache.StateByCheckpoint(ctx, newCheckpoint)
+	cached, err = service.checkpointStateCache.StateByCheckpoint(newCheckpoint)
 	require.NoError(t, err)
 	if !proto.Equal(returned.InnerStateUnsafe(), cached.InnerStateUnsafe()) {
 		t.Error("Incorrectly cached base state")
 	}
-}
-
-func TestStore_CheckpointState_InProgress(t *testing.T) {
-	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
-
-	cfg := &Config{
-		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
-	}
-	service, err := NewService(ctx, cfg)
-	require.NoError(t, err)
-
-	epoch := uint64(1)
-	baseState, _ := testutil.DeterministicGenesisState(t, 1)
-	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
-	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
-	require.NoError(t, service.checkpointStateCache.MarkInProgress(checkpoint))
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		response, err := service.getAttPreState(ctx, checkpoint)
-		require.NoError(t, err)
-		if !proto.Equal(baseState.InnerStateUnsafe(), response.InnerStateUnsafe()) {
-			t.Error("Expected  equal responses from cache")
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		assert.NoError(t, service.checkpointStateCache.AddCheckpointState(checkpoint, baseState))
-		assert.NoError(t, service.checkpointStateCache.MarkNotInProgress(checkpoint))
-	}()
-
-	testutil.WaitTimeout(&wg, time.Second*2)
 }
 
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
