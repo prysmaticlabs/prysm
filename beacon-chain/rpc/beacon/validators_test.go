@@ -1388,6 +1388,33 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 	ctx := context.Background()
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(0))
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+	}
+
+	wanted := "Cannot retrieve information about an epoch"
+	_, err := bs.GetValidatorParticipation(
+		ctx,
+		&ethpb.GetValidatorParticipationRequest{
+			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+			},
+		},
+	)
+	assert.ErrorContains(t, wanted, err)
+}
+
+func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+
+	ctx := context.Background()
+	headState := testutil.NewBeaconState()
+	require.NoError(t, headState.SetSlot(0))
 	epoch := uint64(10)
 	slots := epoch * params.BeaconConfig().SlotsPerEpoch
 	bs := &Server{
@@ -1401,7 +1428,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
-	wanted := "Cannot retrieve information about an epoch greater than current epoch"
+	wanted := "Could not get state: unknown state"
 	_, err := bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
