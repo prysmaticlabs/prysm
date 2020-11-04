@@ -3,13 +3,10 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
-	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -54,7 +51,6 @@ var (
 	errSlotIsTooHigh         = errors.New("slot is higher than the finalized slot")
 	errBlockAlreadyProcessed = errors.New("block is already processed")
 	errParentDoesNotExist    = errors.New("beacon node doesn't have a parent in db with root")
-	errInvalidFetchedData    = errors.New("invalid data returned from peer")
 	errNoPeersWithAltBlocks  = errors.New("no peers with alternative blocks found")
 )
 
@@ -316,9 +312,6 @@ func (f *blocksFetcher) requestBlocks(
 		return nil, ctx.Err()
 	}
 	l := f.getPeerLock(pid)
-	if l == nil {
-		return nil, errors.New("cannot obtain lock")
-	}
 	l.Lock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,
@@ -335,45 +328,8 @@ func (f *blocksFetcher) requestBlocks(
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
-	stream, err := f.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to close stream with protocol %s", stream.Protocol())
-		}
-	}()
 
-	blocks := make([]*eth.SignedBeaconBlock, 0, req.Count)
-	var prevSlot uint64
-	for i := uint64(0); ; i++ {
-		isFirstChunk := i == 0
-		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		// The response MUST contain no more than `count` blocks, and no more than
-		// MAX_REQUEST_BLOCKS blocks.
-		if i >= req.Count || i >= params.BeaconNetworkConfig().MaxRequestBlocks {
-			return nil, errInvalidFetchedData
-		}
-		// Returned blocks MUST be in the slot range [start_slot, start_slot + count * step).
-		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
-			return nil, errInvalidFetchedData
-		}
-		// Returned blocks, where they exist, MUST be sent in a consecutive order.
-		// Consecutive blocks MUST have values in `step` increments (slots may be skipped in between).
-		if !isFirstChunk && (prevSlot >= blk.Block.Slot || (blk.Block.Slot-prevSlot)%req.Step != 0) {
-			return nil, errInvalidFetchedData
-		}
-		prevSlot = blk.Block.Slot
-		blocks = append(blocks, blk)
-	}
-	return blocks, nil
+	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.p2p, pid, req, nil)
 }
 
 // requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.
@@ -407,33 +363,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	f.rateLimiter.Add(pid.String(), int64(len(*req)))
 	l.Unlock()
 
-	stream, err := f.p2p.Send(ctx, req, p2p.RPCBlocksByRootTopic, pid)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to close stream with protocol %s", stream.Protocol())
-		}
-	}()
-
-	blocks := make([]*eth.SignedBeaconBlock, 0)
-	for i := 0; i < len(*req); i++ {
-		isFirstChunk := i == 0
-		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p, isFirstChunk)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		// Exit if peer sends more than max request blocks.
-		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
-			break
-		}
-		blocks = append(blocks, blk)
-	}
-	return blocks, nil
+	return prysmsync.SendBeaconBlocksByRootRequest(ctx, f.p2p, pid, req, nil)
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.
