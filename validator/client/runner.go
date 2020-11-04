@@ -108,12 +108,9 @@ func run(ctx context.Context, v Validator) {
 
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
-			// Report this validator client's rewards and penalties throughout its lifecycle.
+
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
-			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
-				log.WithError(err).Error("Could not report validator's rewards/penalties")
-			}
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
@@ -169,6 +166,10 @@ func run(ctx context.Context, v Validator) {
 				v.LogAttestationsSubmitted()
 				if err := v.SaveProtections(ctx); err != nil {
 					log.WithError(err).Error("Could not save validator protection")
+				}
+				// Log this client performance in the previous epoch
+				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
+					log.WithError(err).Error("Could not report validator's rewards/penalties")
 				}
 				span.End()
 			}()
