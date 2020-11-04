@@ -469,7 +469,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	currentSlot := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
 	var requestedEpoch uint64
