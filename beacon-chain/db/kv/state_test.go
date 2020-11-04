@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -225,4 +226,59 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 0)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()))
+}
+
+func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
+	db := setupDB(t)
+
+	bRoots := make([][32]byte, 0)
+	for i := uint64(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = i
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(context.Background(), b))
+		bRoots = append(bRoots, r)
+
+		st := testutil.NewBeaconState()
+		require.NoError(t, st.SetSlot(i))
+		require.NoError(t, db.SaveState(context.Background(), st, r))
+	}
+
+	require.NoError(t, db.CleanUpDirtyStates(context.Background(), params.BeaconConfig().SlotsPerEpoch))
+
+	for i, root := range bRoots {
+		if uint64(i) >= params.BeaconConfig().SlotsPerEpoch/2-1 {
+			require.Equal(t, true, db.HasState(context.Background(), root))
+		} else {
+			require.Equal(t, false, db.HasState(context.Background(), root))
+		}
+	}
+}
+
+func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
+	db := setupDB(t)
+
+	genesisState := testutil.NewBeaconState()
+	genesisRoot := [32]byte{'a'}
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
+	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+
+	bRoots := make([][32]byte, 0)
+	for i := uint64(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = i
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(context.Background(), b))
+		bRoots = append(bRoots, r)
+
+		st := testutil.NewBeaconState()
+		require.NoError(t, st.SetSlot(i))
+		require.NoError(t, db.SaveState(context.Background(), st, r))
+	}
+
+	require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{Root: genesisRoot[:]}))
+	require.NoError(t, db.CleanUpDirtyStates(context.Background(), params.BeaconConfig().SlotsPerEpoch))
+	require.Equal(t, true, db.HasState(context.Background(), genesisRoot))
 }
