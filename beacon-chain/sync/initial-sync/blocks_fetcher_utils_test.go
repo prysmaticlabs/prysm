@@ -6,12 +6,14 @@ import (
 	"testing"
 
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -293,6 +295,65 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot), "slot %d", blk.Block.Slot)
 	}
+}
+
+func TestBlocksFetcher_findAncestor(t *testing.T) {
+	beaconDB, _ := dbtest.SetupDB(t)
+	p2p := p2pt.NewTestP2P(t)
+
+	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+	finalizedSlot := uint64(63)
+	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+
+	genesisBlock := knownBlocks[0]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesisBlock))
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: finalizedEpoch,
+			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			chain: mc,
+			p2p:   p2p,
+			db:    beaconDB,
+		},
+	)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	pcl := fmt.Sprintf("%s/ssz_snappy", p2pm.RPCBlocksByRootTopic)
+
+	t.Run("error on request", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		p2p.Connect(p2)
+
+		_, err := fetcher.findAncestor(ctx, p2.PeerID(), knownBlocks[4])
+		assert.ErrorContains(t, "protocol not supported", err)
+	})
+
+	t.Run("no blocks", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		p2p.Connect(p2)
+
+		p2.SetStreamHandler(pcl, func(stream network.Stream) {
+			assert.NoError(t, stream.Close())
+		})
+
+		fork, err := fetcher.findAncestor(ctx, p2.PeerID(), knownBlocks[4])
+		assert.ErrorContains(t, "no common ancestor found", err)
+		assert.Equal(t, (*forkData)(nil), fork)
+	})
 }
 
 func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
