@@ -341,13 +341,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if req == nil {
-		return nil, errors.New("nil request")
-	}
 	l := f.getPeerLock(pid)
-	if l == nil {
-		return nil, errors.New("cannot obtain lock")
-	}
 	l.Lock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,
