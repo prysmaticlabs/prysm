@@ -61,7 +61,10 @@ func emptyHistoryData() *HistoryData {
 // NewAttestationHistoryArray creates a new encapsulated attestation history byte array
 // sized by the latest epoch written.
 func NewAttestationHistoryArray(target uint64) *EncHistoryData {
-	en := make(EncHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
+	relativeTarget := target % params.BeaconConfig().WeakSubjectivityPeriod
+	historyDataSize := (relativeTarget + 1) * historySize
+	arraySize := latestEpochWrittenSize + historyDataSize
+	en := make(EncHistoryData, arraySize)
 	enc := &en
 	ctx := context.Background()
 	var err error
@@ -145,9 +148,6 @@ func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKe
 				attestationHistory = NewAttestationHistoryArray(0)
 			} else {
 				attestationHistory = (*EncHistoryData)(&enc)
-				if err != nil {
-					return err
-				}
 			}
 			attestationHistoryForVals[key] = attestationHistory
 		}

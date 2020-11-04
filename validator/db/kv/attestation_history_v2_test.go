@@ -138,16 +138,13 @@ func TestSetTargetData(t *testing.T) {
 func TestAttestationHistoryForPubKeysNew_EmptyVals(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := setupDB(t, pubkeys)
-
 	historyForPubKeys, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
 	require.NoError(t, err)
-
 	cleanAttHistoryForPubKeys := make(map[[48]byte]*EncHistoryData)
 	clean := NewAttestationHistoryArray(0)
 	for _, pubKey := range pubkeys {
 		cleanAttHistoryForPubKeys[pubKey] = clean
 	}
-
 	require.DeepEqual(t, cleanAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
 
@@ -170,7 +167,6 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 			})
 		require.NoError(t, err)
 		setAttHistoryForPubKeys[pubKey] = enc
-
 	}
 	err = db.SaveAttestationHistoryForPubKeysV2(context.Background(), setAttHistoryForPubKeys)
 	require.NoError(t, err)

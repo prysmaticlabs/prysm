@@ -33,10 +33,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		}
 		return errors.New(failedPreAttSignLocalErr)
 	} else if !ok {
-		v.attesterHistoryByPubKeyLock.Lock()
-		v.attesterHistoryByPubKey[pubKey] = kv.NewAttestationHistoryArray(0)
-		v.attesterHistoryByPubKeyLock.Unlock()
-		log.WithField("publicKey", fmtKey).Debug("Initialized slashing protection data for validator")
+		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
 	}
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
@@ -58,7 +55,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, signingRoot)
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory
 	} else {
-		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator")
+		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
 	}
 	v.attesterHistoryByPubKeyLock.Unlock()
 
@@ -81,13 +78,13 @@ func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEp
 	}
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Previously pruned, we should return false.
-	lew, err := history.GetLatestEpochWritten(ctx)
+	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return false
 	}
 
-	if lew >= wsPeriod && targetEpoch <= lew-wsPeriod { //Underflow protected older then weak subjectivity check.
+	if latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod { //Underflow protected older then weak subjectivity check.
 		return false
 	}
 
@@ -104,23 +101,22 @@ func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEp
 	// Check if the new attestation would be surrounding another attestation.
 	for i := sourceEpoch; i <= targetEpoch; i++ {
 		// Unattested for epochs are marked as (*kv.HistoryData)(nil).
-		historyBoundry := safeTargetToSource(ctx, history, i)
-		if historyBoundry == (*kv.HistoryData)(nil) {
+		historyBoundary := safeTargetToSource(ctx, history, i)
+		if historyBoundary.IsEmpty() {
 			continue
 		}
-
-		if historyBoundry.Source > sourceEpoch {
+		if historyBoundary.Source > sourceEpoch {
 			return true
 		}
 	}
 
 	// Check if the new attestation is being surrounded.
-	for i := targetEpoch; i <= lew; i++ {
+	for i := targetEpoch; i <= latestEpochWritten; i++ {
 		h := safeTargetToSource(ctx, history, i)
 		if h.IsEmpty() {
 			continue
 		}
-		if safeTargetToSource(ctx, history, i).Source < sourceEpoch {
+		if h.Source < sourceEpoch {
 			return true
 		}
 	}
@@ -135,16 +131,16 @@ func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryDa
 		return nil
 	}
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	lew, err := history.GetLatestEpochWritten(ctx)
+	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return nil
 	}
-	if targetEpoch > lew {
+	if targetEpoch > latestEpochWritten {
 		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		maxToWrite := lew + wsPeriod
-		for i := lew + 1; i < targetEpoch && i <= maxToWrite; i++ {
+		maxToWrite := latestEpochWritten + wsPeriod
+		for i := latestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
 			history, err = history.SetTargetData(ctx, i%wsPeriod, &kv.HistoryData{Source: params.BeaconConfig().FarFutureEpoch})
 			if err != nil {
 				log.WithError(err).Error("Could not set target to the encapsulated data")
@@ -169,23 +165,20 @@ func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryDa
 // returns the "default" nil value.
 func safeTargetToSource(ctx context.Context, history *kv.EncHistoryData, targetEpoch uint64) *kv.HistoryData {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	lew, err := history.GetLatestEpochWritten(ctx)
+	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return nil
 	}
-	if targetEpoch > lew {
+	if targetEpoch > latestEpochWritten {
 		return nil
 	}
-	if lew >= wsPeriod && targetEpoch < lew-wsPeriod { //Underflow protected older then weak subjectivity check.
+	if latestEpochWritten >= wsPeriod && targetEpoch < latestEpochWritten-wsPeriod { //Underflow protected older then weak subjectivity check.
 		return nil
 	}
 	hd, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
 	if err != nil {
 		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
-		return nil
-	}
-	if hd.IsEmpty() {
 		return nil
 	}
 	return hd
