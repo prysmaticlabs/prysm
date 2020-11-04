@@ -86,6 +86,10 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 		return nil, errors.New("finalized state not found in disk")
 	}
 
+	if err := s.beaconDB.CleanUpDirtyStates(ctx, s.slotsPerArchivedPoint); err != nil {
+		return nil, err
+	}
+
 	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
 
 	return fState, nil

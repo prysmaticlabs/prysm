@@ -1,9 +1,12 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -71,4 +74,45 @@ func (s *Store) HasArchivedPoint(ctx context.Context, slot uint64) bool {
 		panic(err)
 	}
 	return exists
+}
+
+// CleanUpDirtyStates removes states in DB that falls to under archived point interval rules.
+// Only following states would be kept:
+// 1.) state_slot % archived_interval == 0. (e.g. archived_interval=2048, states with slot 2048, 4096... etc)
+// 2.) archived_interval - slots_per_epoch/2 < state_slot % archived_interval
+//   (e.g. archived_interval=2048, slots_per_epoch=32, states with slot 2047, 2046, 2032... etc).
+//   This is to tolerate skip slots. Not every state lays on the boundary.
+// 3.) state with current finalized root
+func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CleanUp")
+	defer span.End()
+	f, err := s.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+	deletedRoots := make([][32]byte, 0)
+
+	err = s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(stateSlotIndicesBucket)
+		if err := bkt.ForEach(func(k, v []byte) error {
+			finalized := bytes.Equal(f.Root, v)
+			slot := bytesutil.BytesToUint64BigEndian(k)
+			mod := slot % slotsPerArchivedPoint
+			// The following conditions cover 1, 2, and 3 above.
+			if mod != 0 && mod < slotsPerArchivedPoint-params.BeaconConfig().SlotsPerEpoch/2 && !finalized {
+				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	log.WithField("count", len(deletedRoots)).Info("Cleaning up dirty states, this may take a while")
+	if err := s.DeleteStates(ctx, deletedRoots); err != nil {
+		return err
+	}
+
+	return err
 }
