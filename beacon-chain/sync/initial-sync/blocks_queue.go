@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/sirupsen/logrus"
 )
 
@@ -301,7 +301,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 						fsm.setState(stateNew)
 					}
 				}
-			case prysmsync.ErrInvalidFetchedData:
+			case beaconsync.ErrInvalidFetchedData:
 				// Peer returned invalid data, penalize.
 				q.blocksFetcher.p2p.Peers().Scorers().BadResponsesScorer().Increment(m.pid)
 				log.WithField("pid", response.pid).Debug("Peer is penalized for invalid blocks")
