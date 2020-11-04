@@ -264,14 +264,12 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
-	bRoots := make([][32]byte, 0)
 	for i := uint64(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(context.Background(), b))
-		bRoots = append(bRoots, r)
 
 		st := testutil.NewBeaconState()
 		require.NoError(t, st.SetSlot(i))
