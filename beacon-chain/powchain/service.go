@@ -751,7 +751,7 @@ func (s *Service) logTillChainStart() {
 		fields["Generating genesis state in"] = time.Duration(secondsLeft) * time.Second
 	}
 
-	log.WithFields(fields).Infof("Currently waiting for chainstart")
+	log.WithFields(fields).Info("Currently waiting for chainstart")
 }
 
 // cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
