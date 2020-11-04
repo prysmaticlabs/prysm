@@ -8,8 +8,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -29,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
@@ -183,7 +182,7 @@ func (s *Service) Start() {
 		log.Errorf("Could not listen to port in Start() %s: %v", address, err)
 	}
 	s.listener = lis
-	log.WithField("address", address).Info("RPC-API listening on port")
+	log.WithField("address", address).Info("gRPC server listening on port")
 
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
@@ -297,7 +296,7 @@ func (s *Service) Start() {
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	if s.enableDebugRPCEndpoints {
-		log.Info("Enabled debug RPC endpoints")
+		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debug.Server{
 			GenesisTimeFetcher: s.genesisTimeFetcher,
 			BeaconDB:           s.beaconDB,
