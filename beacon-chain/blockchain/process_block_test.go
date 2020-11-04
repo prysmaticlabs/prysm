@@ -411,7 +411,6 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 		assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(rt)), fmt.Sprintf("Didn't save node: %d", i))
 		assert.Equal(t, true, service.beaconDB.HasBlock(context.Background(), bytesutil.ToBytes32(rt)))
 	}
-
 }
 
 func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
