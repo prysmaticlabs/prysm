@@ -32,9 +32,9 @@ var mainnetNetworkConfig = &NetworkConfig{
 	ETH2Key:                           "eth2",
 	AttSubnetKey:                      "attnets",
 	ContractDeploymentBlock:           0,
-	DepositContractAddress:            "0x", // To be updated once the mainnet contract is deployed.
-	ChainID:                           1,    // Chain ID of eth1 mainnet.
-	NetworkID:                         1,    // Network ID of eth1 mainnet.
+	DepositContractAddress:            "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+	ChainID:                           1, // Chain ID of eth1 mainnet.
+	NetworkID:                         1, // Network ID of eth1 mainnet.
 	BootstrapNodes:                    []string{},
 }
 
@@ -53,7 +53,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
 	MinGenesisActiveValidatorCount: 16384,
-	MinGenesisTime:                 0, // Zero until a proper time is decided.
+	MinGenesisTime:                 1606824000, // Dec 1, 2020, 12pm UTC.
 	TargetAggregatorsPerCommittee:  16,
 	HysteresisQuotient:             4,
 	HysteresisDownwardMultiplier:   1,
