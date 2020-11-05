@@ -89,7 +89,6 @@ def _impl(ctx):
                             "-Wall",
                             "-Wthread-safety",
                             "-Wself-assign",
-                            "-I" + sdkroot + "usr/include",
                         ] + system_include_flags,
                     ),
                 ],
@@ -141,7 +140,7 @@ def _impl(ctx):
                             "-L"+ sdkroot + "usr/lib",
                             "-undefined",
                             "dynamic_lookup",
-                            "-I" + sdkroot + "usr/include",
+                            "-I" + sdkroot + "usr/include"
                             ],
                     ),
                 ],
