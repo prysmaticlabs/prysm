@@ -703,7 +703,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 	history2, err = history2.SetLatestEpochWritten(ctx, 3)
 	require.NoError(t, err)
 
-	histories := make(map[[48]byte]*kv.EncHistoryData)
+	histories := make(map[[48]byte]kv.EncHistoryData)
 	histories[pubKey1] = history
 	histories[pubKey2] = history2
 	require.NoError(t, db.SaveAttestationHistoryForPubKeysV2(context.Background(), histories))

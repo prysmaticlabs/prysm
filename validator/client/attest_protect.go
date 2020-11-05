@@ -72,7 +72,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
 // and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
-func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) bool {
+func isNewAttSlashable(ctx context.Context, history kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) bool {
 	if history == nil {
 		return false
 	}
@@ -126,7 +126,7 @@ func isNewAttSlashable(ctx context.Context, history *kv.EncHistoryData, sourceEp
 
 // markAttestationForTargetEpoch returns the modified attestation history with the passed-in epochs marked
 // as attested for. This is done to prevent the validator client from signing any slashable attestations.
-func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) *kv.EncHistoryData {
+func markAttestationForTargetEpoch(ctx context.Context, history kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) kv.EncHistoryData {
 	if history == nil {
 		return nil
 	}
@@ -163,7 +163,7 @@ func markAttestationForTargetEpoch(ctx context.Context, history *kv.EncHistoryDa
 
 // safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at
 // returns the "default" nil value.
-func safeTargetToSource(ctx context.Context, history *kv.EncHistoryData, targetEpoch uint64) *kv.HistoryData {
+func safeTargetToSource(ctx context.Context, history kv.EncHistoryData, targetEpoch uint64) *kv.HistoryData {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {

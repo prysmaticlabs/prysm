@@ -65,7 +65,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 
 	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
 	require.NoError(t, err)
-	attHistoryByPubKey := make(map[[48]byte]*kv.EncHistoryData)
+	attHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	attHistoryByPubKey[pubKey] = kv.NewAttestationHistoryArray(0)
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	km := &mockKeymanager{
