@@ -65,7 +65,7 @@ func (bs *Server) ListValidatorBalances(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	requestedState, err := bs.BeaconDB.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state")
 	}
@@ -219,7 +219,7 @@ func (bs *Server) ListValidators(
 		if err != nil {
 			return nil, err
 		}
-		reqState, err = bs.StateGen.StateBySlot(ctx, s)
+		reqState, err = bs.BeaconDB.StateBySlot(ctx, s)
 	} else {
 		reqState, err = bs.HeadFetcher.HeadState(ctx)
 	}
@@ -408,7 +408,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
+	requestedState, err := bs.BeaconDB.StateBySlot(ctx, s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -492,7 +492,7 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	// Get current slot state for current epoch attestations.
-	state, err := bs.StateGen.StateBySlot(ctx, currentSlot)
+	state, err := bs.BeaconDB.StateBySlot(ctx, currentSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -775,7 +775,7 @@ func (bs *Server) GetIndividualVotes(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
+	requestedState, err := bs.BeaconDB.StateBySlot(ctx, s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", req.Epoch, err)
 	}

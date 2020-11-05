@@ -334,7 +334,7 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *ptypes.E
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
 	}
 
-	wsState, err := bs.StateGen.StateBySlot(ctx, wsSlot)
+	wsState, err := bs.BeaconDB.StateBySlot(ctx, wsSlot)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state")
 	}

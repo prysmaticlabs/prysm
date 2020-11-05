@@ -1,9 +1,9 @@
-package cache_test
+package kv_test
 
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestHotStateCache_RoundTrip(t *testing.T) {
-	c := cache.NewHotStateCache()
+	c := kv.NewHotStateCache()
 	root := [32]byte{'A'}
 	state := c.Get(root)
 	assert.Equal(t, (*stateTrie.BeaconState)(nil), state)

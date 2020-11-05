@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -128,7 +129,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		}
 
 		// Update deposit cache.
-		finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+		finalizedState, err := s.beaconDB.StateByRoot(ctx, fRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not fetch finalized state")
 		}
@@ -169,7 +170,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return err
 	}
 
-	preState, err := s.stateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(signed.Block.ParentRoot))
+	preState, err := s.beaconDB.StateByRootInitialSync(ctx, bytesutil.ToBytes32(signed.Block.ParentRoot))
 	if err != nil {
 		return err
 	}
@@ -236,7 +237,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
 		return nil, nil, err
 	}
-	preState, err := s.stateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	preState, err := s.beaconDB.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -277,14 +278,14 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		return nil, nil, errors.New("batch block signature verification failed")
 	}
 	for r, st := range boundaries {
-		if err := s.stateGen.SaveState(ctx, r, st); err != nil {
+		if err := s.beaconDB.SaveStateByRoot(ctx, r, st); err != nil {
 			return nil, nil, err
 		}
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
 	lastBR := blockRoots[len(blockRoots)-1]
-	if err := s.stateGen.SaveState(ctx, lastBR, preState); err != nil {
+	if err := s.beaconDB.SaveStateByRoot(ctx, lastBR, preState); err != nil {
 		return nil, nil, err
 	}
 	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
@@ -303,7 +304,12 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	s.stateGen.SaveStateSummary(ctx, signed, blockRoot)
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: blockRoot[:],
+		Slot: signed.Block.Slot,
+	}); err != nil {
+		return err
+	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
@@ -396,7 +402,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.Si
 	} else if err := s.beaconDB.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Block.Slot)
 	}
-	if err := s.stateGen.SaveState(ctx, r, state); err != nil {
+	if err := s.beaconDB.SaveStateByRoot(ctx, r, state); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block, r, state); err != nil {

@@ -62,7 +62,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		s.pendingAttsLock.RUnlock()
 		// Has the pending attestation's missing block arrived and the node processed block yet?
 		hasStateSummary := s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
-		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || hasStateSummary) {
+		hasState, err := s.db.HasState(ctx, bRoot)
+		if err != nil {
+			return err
+		}
+		if s.db.HasBlock(ctx, bRoot) && (hasState || hasStateSummary) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, signedAtt := range attestations {
 				att := signedAtt.Message

@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -42,6 +41,5 @@ type Server struct {
 	SlashingsPool       *slashings.Pool
 	CanonicalStateChan  chan *pbp2p.BeaconState
 	ChainStartChan      chan time.Time
-	StateGen            *stategen.State
 	SyncChecker         sync.Checker
 }

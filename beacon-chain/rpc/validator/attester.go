@@ -83,7 +83,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get historical head root: %v", err)
 		}
-		headState, err = vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(headRoot))
+		headState, err = vs.BeaconDB.StateByRoot(ctx, bytesutil.ToBytes32(headRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get historical head state: %v", err)
 		}

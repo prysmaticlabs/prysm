@@ -1,4 +1,4 @@
-package stategen
+package kv
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	ctx := context.Background()
 	db, c := testDB.SetupDB(t)
-	service := New(db, c)
+	service := stategen.New(db, c)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
@@ -26,7 +26,7 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	require.NoError(t, service.epochBoundaryStateCache.put(br, beaconState))
 	require.NoError(t, service.MigrateToCold(ctx, br))
 
-	wanted := &finalizedInfo{state: beaconState, root: br, slot: 1}
+	wanted := &stategen.finalizedInfo{state: beaconState, root: br, slot: 1}
 	assert.DeepEqual(t, wanted, service.finalizedInfo, "Incorrect finalized info")
 }
 
@@ -35,7 +35,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := stategen.New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
@@ -65,7 +65,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := stategen.New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
@@ -77,7 +77,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, blk))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, fRoot))
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: fRoot[:]}))
-	service.finalizedInfo = &finalizedInfo{
+	service.finalizedInfo = &stategen.finalizedInfo{
 		slot:  1,
 		root:  fRoot,
 		state: beaconState,
@@ -102,7 +102,7 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := stategen.New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)

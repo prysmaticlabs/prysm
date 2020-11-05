@@ -32,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -75,7 +74,6 @@ type BeaconNode struct {
 	blockFeed         *event.Feed
 	opFeed            *event.Feed
 	forkChoiceStore   forkchoice.ForkChoicer
-	stateGen          *stategen.State
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -171,8 +169,6 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	if err := beacon.startDB(cliCtx); err != nil {
 		return nil, err
 	}
-
-	beacon.startStateGen()
 
 	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
@@ -339,10 +335,6 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen() {
-	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
-}
-
 func readbootNodes(fileName string) ([]string, error) {
 	fileContent, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -457,7 +449,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
 		OpsService:        opsService,
-		StateGen:          b.stateGen,
 		WspBlockRoot:      bRoot,
 		WspEpoch:          epoch,
 	})
@@ -491,7 +482,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 		StateNotifier:   b,
-		StateGen:        b.stateGen,
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
@@ -542,7 +532,6 @@ func (b *BeaconNode) registerSyncService() error {
 		ExitPool:            b.exitPool,
 		SlashingPool:        b.slashingsPool,
 		StateSummaryCache:   b.stateSummaryCache,
-		StateGen:            b.stateGen,
 	})
 
 	return b.services.RegisterService(rs)
@@ -632,7 +621,6 @@ func (b *BeaconNode) registerRPCService() error {
 		BlockNotifier:           b,
 		StateNotifier:           b,
 		OperationNotifier:       b,
-		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 	})
 

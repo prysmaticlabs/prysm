@@ -28,7 +28,7 @@ func (ds *Server) GetBeaconState(
 			)
 		}
 
-		st, err := ds.StateGen.StateBySlot(ctx, q.Slot)
+		st, err := ds.BeaconDB.StateBySlot(ctx, q.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute state by slot: %v", err)
 		}
@@ -40,7 +40,7 @@ func (ds *Server) GetBeaconState(
 			Encoded: encoded,
 		}, nil
 	case *pbrpc.BeaconStateRequest_BlockRoot:
-		st, err := ds.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(q.BlockRoot))
+		st, err := ds.BeaconDB.StateByRoot(ctx, bytesutil.ToBytes32(q.BlockRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute state by block root: %v", err)
 		}

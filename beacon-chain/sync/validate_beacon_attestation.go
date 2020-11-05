@@ -88,7 +88,11 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
-	if !s.hasBlockAndState(ctx, blockRoot) {
+	has, err := s.hasBlockAndState(ctx, blockRoot)
+	if err != nil {
+		return pubsub.ValidationIgnore
+	}
+	if !has {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
 		return pubsub.ValidationIgnore
@@ -188,9 +192,13 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot, committeeID uint64, aggregat
 
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the
 // database or cache.
-func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
+func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) (bool, error) {
 	hasStateSummary := s.stateSummaryCache.Has(blockRoot) || s.db.HasStateSummary(ctx, blockRoot)
-	hasState := hasStateSummary || s.db.HasState(ctx, blockRoot)
+	hasState, err := s.db.HasState(ctx, blockRoot)
+	if err != nil {
+		return false, err
+	}
+	hasState = hasState || hasStateSummary
 	hasBlock := s.chain.HasInitSyncBlock(blockRoot) || s.db.HasBlock(ctx, blockRoot)
-	return hasState && hasBlock
+	return hasState && hasBlock, nil
 }

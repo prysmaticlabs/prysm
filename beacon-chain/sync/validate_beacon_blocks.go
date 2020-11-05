@@ -130,7 +130,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("No access to parent state")
 		return pubsub.ValidationIgnore
 	}
-	parentState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+	parentState, err := s.db.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get parent state")
 		return pubsub.ValidationIgnore

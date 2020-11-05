@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -147,7 +146,6 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
-	stateGen                *stategen.State
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -157,7 +155,6 @@ type Web3ServiceConfig struct {
 	BeaconDB        db.HeadAccessDatabase
 	DepositCache    *depositcache.DepositCache
 	StateNotifier   statefeed.Notifier
-	StateGen        *stategen.State
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -199,7 +196,6 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastReceivedMerkleIndex: -1,
 		preGenesisState:         genState,
 		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
-		stateGen:                config.StateGen,
 	}
 
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
@@ -528,7 +524,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	}
 	rt := bytesutil.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
-		fState, err := s.stateGen.StateByRoot(ctx, rt)
+		fState, err := s.beaconDB.StateByRoot(ctx, rt)
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state")
 		}

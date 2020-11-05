@@ -32,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -93,7 +92,6 @@ type Service struct {
 	stateNotifier           statefeed.Notifier
 	blockNotifier           blockfeed.Notifier
 	operationNotifier       opfeed.Notifier
-	stateGen                *stategen.State
 	connectedRPCClients     map[net.Addr]bool
 	clientConnectionLock    sync.Mutex
 }
@@ -129,7 +127,6 @@ type Config struct {
 	StateNotifier           statefeed.Notifier
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
-	StateGen                *stategen.State
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -169,7 +166,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateNotifier:           cfg.StateNotifier,
 		blockNotifier:           cfg.BlockNotifier,
 		operationNotifier:       cfg.OperationNotifier,
-		stateGen:                cfg.StateGen,
 		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
 		connectedRPCClients:     make(map[net.Addr]bool),
 	}
@@ -243,7 +239,6 @@ func (s *Service) Start() {
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		SlashingsPool:          s.slashingsPool,
-		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -270,7 +265,6 @@ func (s *Service) Start() {
 		BlockNotifier:               s.blockNotifier,
 		AttestationNotifier:         s.operationNotifier,
 		Broadcaster:                 s.p2p,
-		StateGen:                    s.stateGen,
 		SyncChecker:                 s.syncService,
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
@@ -290,7 +284,6 @@ func (s *Service) Start() {
 		BlockNotifier:       s.blockNotifier,
 		AttestationNotifier: s.operationNotifier,
 		Broadcaster:         s.p2p,
-		StateGen:            s.stateGen,
 		SyncChecker:         s.syncService,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
@@ -301,7 +294,6 @@ func (s *Service) Start() {
 		debugServer := &debug.Server{
 			GenesisTimeFetcher: s.genesisTimeFetcher,
 			BeaconDB:           s.beaconDB,
-			StateGen:           s.stateGen,
 			HeadFetcher:        s.headFetcher,
 			PeerManager:        s.peerManager,
 			PeersFetcher:       s.peersFetcher,

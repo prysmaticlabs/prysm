@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
@@ -59,7 +58,6 @@ type Config struct {
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
 	StateSummaryCache   *cache.StateSummaryCache
-	StateGen            *stategen.State
 }
 
 // This defines the interface for interacting with block chain service
@@ -110,7 +108,6 @@ type Service struct {
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
 	stateSummaryCache         *cache.StateSummaryCache
-	stateGen                  *stategen.State
 }
 
 // NewService initializes new regular sync service.
@@ -135,7 +132,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
 		stateSummaryCache:    cfg.StateSummaryCache,
-		stateGen:             cfg.StateGen,
 		rateLimiter:          rLimiter,
 	}
 
