@@ -200,7 +200,7 @@ func (q *blocksQueue) loop() {
 			"headSlot":            q.chain.HeadSlot(),
 			"state":               q.smm.String(),
 			"staleEpoch":          q.staleEpochs,
-		}).Debug("tick")
+		}).Trace("tick")
 
 		select {
 		case <-ticker.C:
