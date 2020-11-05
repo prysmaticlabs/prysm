@@ -101,6 +101,55 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	}
 }
 
+func TestStore_BlocksHandleZeroCase(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	numBlocks := 10
+	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = uint64(i)
+		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		totalBlocks[i] = b
+		r, err := totalBlocks[i].Block.HashTreeRoot()
+		require.NoError(t, err)
+		blockRoots = append(blockRoots, r)
+	}
+	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
+	zeroFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(0)
+	retrieved, _, err := db.Blocks(ctx, zeroFilter)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(retrieved), "Unexpected number of blocks received, expected none")
+}
+
+func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	numBlocks := 10
+	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	// Save blocks from slot 1 onwards.
+	for i := 0; i < len(totalBlocks); i++ {
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = uint64(i) + 1
+		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		totalBlocks[i] = b
+		r, err := totalBlocks[i].Block.HashTreeRoot()
+		require.NoError(t, err)
+		blockRoots = append(blockRoots, r)
+	}
+	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
+	badFilter := filters.NewFilter().SetStartSlot(5).SetEndSlot(1)
+	_, _, err := db.Blocks(ctx, badFilter)
+	require.ErrorContains(t, errInvalidSlotRange.Error(), err)
+
+	goodFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(1)
+	requested, _, err := db.Blocks(ctx, goodFilter)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(requested), "Unexpected number of blocks received, only expected two")
+}
+
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
@@ -188,7 +237,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			expectedNumBlocks: 2,
 		},
 		{
-			filter:            filters.NewFilter().SetStartSlot(5),
+			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(9),
 			expectedNumBlocks: 4,
 		},
 		{

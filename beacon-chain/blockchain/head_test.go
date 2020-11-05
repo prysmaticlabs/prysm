@@ -94,39 +94,6 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.LogsContain(t, hook, "Chain reorg occurred")
 }
 
-func TestUpdateRecentCanonicalBlocks_CanUpdateWithoutParent(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
-
-	r := [32]byte{'a'}
-	require.NoError(t, service.updateRecentCanonicalBlocks(context.Background(), r))
-	canonical, err := service.IsCanonical(context.Background(), r)
-	require.NoError(t, err)
-	assert.Equal(t, true, canonical, "Block should be canonical")
-}
-
-func TestUpdateRecentCanonicalBlocks_CanUpdateWithParent(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
-	oldHead := [32]byte{'a'}
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 1, oldHead, [32]byte{'g'}, [32]byte{}, 0, 0))
-	currentHead := [32]byte{'b'}
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 3, currentHead, oldHead, [32]byte{}, 0, 0))
-	forkedRoot := [32]byte{'c'}
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 2, forkedRoot, oldHead, [32]byte{}, 0, 0))
-
-	require.NoError(t, service.updateRecentCanonicalBlocks(context.Background(), currentHead))
-	canonical, err := service.IsCanonical(context.Background(), currentHead)
-	require.NoError(t, err)
-	assert.Equal(t, true, canonical, "Block should be canonical")
-	canonical, err = service.IsCanonical(context.Background(), oldHead)
-	require.NoError(t, err)
-	assert.Equal(t, true, canonical, "Block should be canonical")
-	canonical, err = service.IsCanonical(context.Background(), forkedRoot)
-	require.NoError(t, err)
-	assert.Equal(t, false, canonical, "Block should not be canonical")
-}
-
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	service := setupBeaconChain(t, db, sc)

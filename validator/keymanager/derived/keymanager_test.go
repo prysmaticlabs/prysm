@@ -21,6 +21,56 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+// We test that using a '25th word' mnemonic passphrase leads to different
+// public keys derived than not specifying the passphrase.
+func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
+	sampleMnemonic := "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
+	ctx := context.Background()
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   "secretPassw0rd$1999",
+	}
+	km, err := KeymanagerForPhrase(ctx, &SetupConfig{
+		Opts:                DefaultKeymanagerOpts(),
+		Wallet:              wallet,
+		SkipMnemonicConfirm: true,
+		Mnemonic:            sampleMnemonic,
+		Mnemonic25thWord:    "",
+	})
+	require.NoError(t, err)
+	numAccounts := 5
+	for i := 0; i < numAccounts; i++ {
+		_, _, err = km.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+	without25thWord, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	wallet = &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   "secretPassw0rd$1999",
+	}
+	km, err = KeymanagerForPhrase(ctx, &SetupConfig{
+		Opts:                DefaultKeymanagerOpts(),
+		Wallet:              wallet,
+		SkipMnemonicConfirm: true,
+		Mnemonic:            sampleMnemonic,
+		Mnemonic25thWord:    "mnemonicpass",
+	})
+	require.NoError(t, err)
+	for i := 0; i < numAccounts; i++ {
+		_, _, err = km.CreateAccount(ctx)
+		require.NoError(t, err)
+	}
+	with25thWord, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	for i, k := range with25thWord {
+		without := without25thWord[i]
+		assert.DeepNotEqual(t, k, without)
+	}
+}
+
 func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	mnemonicEntropy := make([]byte, 32)
 	n, err := rand.NewGenerator().Read(mnemonicEntropy)
@@ -269,48 +319,4 @@ func TestDerivedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	dr := &Keymanager{}
 	_, err := dr.Sign(context.Background(), req)
 	assert.ErrorContains(t, "no signing key found", err)
-}
-
-func TestDerivedKeymanager_RefreshWalletPassword(t *testing.T) {
-	password := "secretPassw0rd$1999"
-	wallet := &mock.Wallet{
-		Files:            make(map[string]map[string][]byte),
-		AccountPasswords: make(map[string]string),
-		WalletPassword:   password,
-	}
-	dr := &Keymanager{
-		wallet: wallet,
-		opts:   DefaultKeymanagerOpts(),
-	}
-	seedCfg, err := initializeWalletSeedFile(wallet.Password(), true /* skip mnemonic confirm */)
-	require.NoError(t, err)
-	dr.seedCfg = seedCfg
-	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(dr.seedCfg.Crypto, wallet.Password())
-	require.NoError(t, err)
-	dr.seed = seed
-	require.NoError(t, dr.initializeKeysCachesFromSeed())
-
-	// First, generate some accounts.
-	numAccounts := 2
-	ctx := context.Background()
-	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
-	}
-
-	// We attempt to decrypt with the wallet password and expect no error.
-	_, err = decryptor.Decrypt(dr.seedCfg.Crypto, dr.wallet.Password())
-	require.NoError(t, err)
-
-	// We change the wallet password.
-	wallet.WalletPassword = "NewPassw0rdz9**#"
-	// Attempting to decrypt with this new wallet password should fail.
-	_, err = decryptor.Decrypt(dr.seedCfg.Crypto, dr.wallet.Password())
-	require.ErrorContains(t, "invalid checksum", err)
-
-	// Call the refresh wallet password method, then attempting to decrypt should work.
-	require.NoError(t, dr.RefreshWalletPassword(ctx))
-	_, err = decryptor.Decrypt(dr.seedCfg.Crypto, dr.wallet.Password())
-	require.NoError(t, err)
 }

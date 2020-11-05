@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -89,10 +88,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
-	hasStateSummary := s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
-	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
-	hasBlock := s.db.HasBlock(ctx, blockRoot) || s.chain.HasInitSyncBlock(blockRoot)
-	if !(hasState && hasBlock) {
+	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
 		return pubsub.ValidationIgnore
@@ -111,50 +107,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
-	if featureconfig.Get().UseCheckPointInfoCache {
-		// Use check point info to validate unaggregated attestation.
-		c, err := s.chain.AttestationCheckPtInfo(ctx, att)
-		if err != nil {
-			return pubsub.ValidationIgnore
-		}
-		// Is the attestation committee ID within the expected range.
-		indices := c.ActiveIndices
-		count := helpers.SlotCommitteeCount(uint64(len(indices)))
-		if att.Data.CommitteeIndex > count {
-			return pubsub.ValidationReject
-		}
-		// Is the attestation subnet correct.
-		subnet := helpers.ComputeSubnetForAttestation(uint64(len(indices)), att)
-		if !strings.HasPrefix(*originalTopic, fmt.Sprintf(format, digest, subnet)) {
-			return pubsub.ValidationReject
-		}
-		committee, err := helpers.BeaconCommittee(indices, bytesutil.ToBytes32(c.Seed), att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			return pubsub.ValidationIgnore
-		}
-
-		// Verify number of aggregation bits matches the committee size.
-		if err := helpers.VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
-			return pubsub.ValidationReject
-		}
-
-		// Is the attestation bitfield correct.
-		if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
-			return pubsub.ValidationReject
-		}
-		// Is the attestation signature correct.
-		if err := blocks.VerifyAttSigUseCheckPt(ctx, c, att); err != nil {
-			return pubsub.ValidationReject
-		}
-
-		s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
-		msg.ValidatorData = att
-		return pubsub.ValidationAccept
-	}
-
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
-		log.Error("Failed to retrieve pre state")
+		log.WithError(err).Error("Failed to retrieve pre state")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -199,6 +154,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
+	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+	if err := s.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
 	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
 
 	msg.ValidatorData = att
@@ -223,4 +184,13 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot, committeeID uint64, aggregat
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
 	s.seenAttestationCache.Add(string(b), true)
+}
+
+// hasBlockAndState returns true if the beacon node knows about a block and associated state in the
+// database or cache.
+func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
+	hasStateSummary := s.stateSummaryCache.Has(blockRoot) || s.db.HasStateSummary(ctx, blockRoot)
+	hasState := hasStateSummary || s.db.HasState(ctx, blockRoot)
+	hasBlock := s.chain.HasInitSyncBlock(blockRoot) || s.db.HasBlock(ctx, blockRoot)
+	return hasState && hasBlock
 }

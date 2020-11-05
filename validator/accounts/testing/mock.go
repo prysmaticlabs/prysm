@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -50,11 +51,6 @@ func (m *Wallet) Password() string {
 	return m.WalletPassword
 }
 
-// SetPassword sets a new password for the wallet.
-func (m *Wallet) SetPassword(newPass string) {
-	m.WalletPassword = newPass
-}
-
 // WriteFileAtPath --
 func (m *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
 	m.lock.Lock()
@@ -94,6 +90,6 @@ func (m *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) err
 }
 
 // InitializeKeymanager --
-func (m *Wallet) InitializeKeymanager(_ context.Context, _ bool) (keymanager.IKeymanager, error) {
+func (m *Wallet) InitializeKeymanager(_ context.Context, _ *iface.InitializeKeymanagerConfig) (keymanager.IKeymanager, error) {
 	return nil, nil
 }

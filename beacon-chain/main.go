@@ -39,7 +39,7 @@ var appFlags = []cli.Flag{
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
-	flags.UnsafeSync,
+	flags.HeadSync,
 	flags.DisableSync,
 	flags.DisableDiscv5,
 	flags.BlockBatchLimit,
@@ -50,6 +50,8 @@ var appFlags = []cli.Flag{
 	flags.InteropGenesisTimeFlag,
 	flags.SlotsPerArchivedPoint,
 	flags.EnableDebugRPCEndpoints,
+	flags.EnableBackupWebhookFlag,
+	flags.BackupWebhookOutputDir,
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
@@ -117,10 +119,6 @@ func main() {
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
 			return err
 		}
-		// verify if ToS accepted
-		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
-			return err
-		}
 
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
@@ -155,6 +153,10 @@ func main() {
 			}
 		}
 
+		if err := cmd.ExpandWeb3EndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
+			return err
+		}
+
 		if ctx.IsSet(flags.SetGCPercent.Name) {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}
@@ -171,11 +173,15 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
 	}
 }
 
 func startNode(ctx *cli.Context) error {
+	// verify if ToS accepted
+	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
+		return err
+	}
+
 	verbosity := ctx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {

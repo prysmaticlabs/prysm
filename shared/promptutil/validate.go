@@ -17,7 +17,10 @@ const (
 	minPasswordScore = 2
 )
 
-var errIncorrectPhrase = errors.New("input does not match wanted phrase")
+var (
+	errIncorrectPhrase = errors.New("input does not match wanted phrase")
+	passwordReqsError  = errors.New("password must have at least 8 characters, at least 1 alphabetical character, 1 unicode symbol, and 1 number")
+)
 
 // NotEmpty is a validation function to make sure the input given isn't empty and is valid unicode.
 func NotEmpty(input string) error {
@@ -91,7 +94,7 @@ func ValidatePasswordInput(input string) error {
 			unicode.IsNumber(char) ||
 			unicode.IsPunct(char) ||
 			unicode.IsSymbol(char)):
-			return errors.New("password must only contain alphanumeric characters, punctuation, or symbols")
+			return errors.New("password must only contain unicode alphanumeric characters, numbers, or unicode symbols")
 		case unicode.IsLetter(char):
 			hasLetter = true
 		case unicode.IsNumber(char):
@@ -101,9 +104,7 @@ func ValidatePasswordInput(input string) error {
 		}
 	}
 	if !(hasMinLen && hasLetter && hasNumber && hasSpecial) {
-		return errors.New(
-			"password must have more than 8 characters, at least 1 special character, and 1 number",
-		)
+		return passwordReqsError
 	}
 	strength := strongPasswords.PasswordStrength(input, nil)
 	if strength.Score < minPasswordScore {

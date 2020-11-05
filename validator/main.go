@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
-	"time"
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -27,12 +26,14 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-// connTimeout defines a period after which connection to beacon node is cancelled.
-const connTimeout = 10 * time.Second
-
 var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
+	// verify if ToS accepted
+	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
+		return err
+	}
+
 	validatorClient, err := node.NewValidatorClient(ctx)
 	if err != nil {
 		return err
@@ -67,8 +68,6 @@ var appFlags = []cli.Flag{
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
-	flags.WebHostFlag,
-	flags.WebPortFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -114,10 +113,6 @@ func main() {
 	app.Before = func(ctx *cli.Context) error {
 		// Load flags from config file, if specified.
 		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
-			return err
-		}
-		// verify if ToS accepted
-		if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 			return err
 		}
 
@@ -172,6 +167,5 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
 	}
 }

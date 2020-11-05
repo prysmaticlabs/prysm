@@ -15,15 +15,45 @@ import (
 )
 
 const (
+	// Spec defined codes
 	codeClientShutdown types.SSZUint64 = iota
 	codeWrongNetwork
 	codeGenericError
+
+	// Teku specific codes
+	codeUnableToVerifyNetwork = types.SSZUint64(128)
+
+	// Lighthouse specific codes
+	codeTooManyPeers = types.SSZUint64(129)
+	codeBadScore     = types.SSZUint64(250)
+	codeBanned       = types.SSZUint64(251)
 )
 
 var goodByes = map[types.SSZUint64]string{
-	codeClientShutdown: "client shutdown",
-	codeWrongNetwork:   "irrelevant network",
-	codeGenericError:   "fault/error",
+	codeClientShutdown:        "client shutdown",
+	codeWrongNetwork:          "irrelevant network",
+	codeGenericError:          "fault/error",
+	codeUnableToVerifyNetwork: "unable to verify network",
+	codeTooManyPeers:          "client has too many peers",
+	codeBadScore:              "peer score too low",
+	codeBanned:                "client banned this node",
+}
+
+var backOffTime = map[types.SSZUint64]time.Duration{
+	// Do not dial peers which are from a different/unverifiable
+	// network.
+	codeWrongNetwork:          24 * time.Hour,
+	codeUnableToVerifyNetwork: 24 * time.Hour,
+	// If local peer is banned, we back off for
+	// 2 hours to let the remote peer score us
+	// back up again.
+	codeBadScore:       2 * time.Hour,
+	codeBanned:         2 * time.Hour,
+	codeClientShutdown: 1 * time.Hour,
+	// Wait 5 minutes before dialing a peer who is
+	// 'full'
+	codeTooManyPeers: 5 * time.Minute,
+	codeGenericError: 2 * time.Minute,
 }
 
 // Add a short delay to allow the stream to flush before resetting it.
@@ -49,6 +79,7 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	s.rateLimiter.add(stream, 1)
 	log := log.WithField("Reason", goodbyeMessage(*m))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Peer has sent a goodbye message")
+	s.p2p.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(*m))
 	// closes all streams with the peer
 	return s.p2p.Disconnect(stream.Conn().RemotePeer())
 }
@@ -87,4 +118,14 @@ func goodbyeMessage(num types.SSZUint64) string {
 		return reason
 	}
 	return fmt.Sprintf("unknown goodbye value of %d Received", num)
+}
+
+// determines which backoff time to use depending on the
+// goodbye code provided.
+func goodByeBackoff(num types.SSZUint64) time.Time {
+	duration, ok := backOffTime[num]
+	if !ok {
+		return time.Time{}
+	}
+	return time.Now().Add(duration)
 }

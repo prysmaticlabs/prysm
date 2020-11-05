@@ -18,17 +18,17 @@ func TestValidatePasswordInput(t *testing.T) {
 		{
 			name:      "no numbers nor special characters",
 			input:     "abcdefghijklmnopqrs",
-			wantedErr: "password must have more than 8 characters, at least 1 special character, and 1 number",
+			wantedErr: passwordReqsError.Error(),
 		},
 		{
 			name:      "number and letters but no special characters",
 			input:     "abcdefghijklmnopqrs2020",
-			wantedErr: "password must have more than 8 characters, at least 1 special character, and 1 number",
+			wantedErr: passwordReqsError.Error(),
 		},
 		{
 			name:      "numbers, letters, special characters, but too short",
 			input:     "abc2$",
-			wantedErr: "password must have more than 8 characters, at least 1 special character, and 1 number",
+			wantedErr: passwordReqsError.Error(),
 		},
 		{
 			name:  "proper length and strong password",
@@ -42,6 +42,19 @@ func TestValidatePasswordInput(t *testing.T) {
 		{
 			name:  "allow spaces",
 			input: "x*329293@aAJSD i22903saj",
+		},
+		{
+			name:  "strong password from LastPass",
+			input: "jXl!q5pkQnXsyT6dbJ3X5plQ!9%iqJCTr&*UIoaDu#b6GYJD##^GI3qniKdr240f",
+		},
+		{
+			name:  "allow underscores",
+			input: "jXl!q5pkQn_syT6dbJ3X5plQ_9_iqJCTr_*UIoaDu#b6GYJD##^GI3qniKdr240f",
+		},
+		{
+			name:      "only numbers and symbols should fail",
+			input:     "123493489223423_23923929",
+			wantedErr: passwordReqsError.Error(),
 		},
 	}
 	for _, tt := range tests {

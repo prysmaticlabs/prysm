@@ -5,15 +5,22 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+
+	"github.com/sirupsen/logrus"
 )
 
-const prefix = "external/prysm_web_ui"
+const prefix = "external/prysm_web_ui/prysm-web-ui"
 
-// webHandler serves web requests from the bundled site data.
-var webHandler = func(res http.ResponseWriter, req *http.Request) {
+var (
+	log = logrus.WithField("prefix", "prysm-web")
+)
+
+// Handler serves web requests from the bundled site data.
+var Handler = func(res http.ResponseWriter, req *http.Request) {
 	u, err := url.ParseRequestURI(req.RequestURI)
 	if err != nil {
-		panic(err)
+		log.WithError(err).Error("Cannot parse request URI")
+		return
 	}
 	p := u.Path
 	if p == "/" {

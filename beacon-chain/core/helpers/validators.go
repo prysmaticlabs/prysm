@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"bytes"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -175,26 +177,35 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
-	// The cache uses the block root of the previous epoch's last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
+	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
 	// For simplicity, the node will skip caching of genesis epoch.
-	if e > params.BeaconConfig().GenesisEpoch {
-		s, err := EndSlot(PrevEpoch(state))
+	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+		wantedEpoch := PrevEpoch(state)
+		if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
+			wantedEpoch -= params.BeaconConfig().MinSeedLookahead
+		}
+		s, err := EndSlot(wantedEpoch)
 		if err != nil {
 			return 0, err
 		}
-		r, err := BlockRootAtSlot(state, s)
+		r, err := StateRootAtSlot(state, s)
 		if err != nil {
 			return 0, err
 		}
-		proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
-		if err != nil {
-			return 0, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if proposerIndices != nil {
-			return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
-		}
-		if err := UpdateProposerIndicesInCache(state, e); err != nil {
-			return 0, errors.Wrap(err, "could not update committee cache")
+		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
+			if err != nil {
+				return 0, errors.Wrap(err, "could not interface with committee cache")
+			}
+			if proposerIndices != nil {
+				if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+					return 0, errors.Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
+				}
+				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+			}
+			if err := UpdateProposerIndicesInCache(state, e); err != nil {
+				return 0, errors.Wrap(err, "could not update committee cache")
+			}
 		}
 	}
 

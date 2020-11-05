@@ -43,6 +43,10 @@ type FakeValidator struct {
 	PubkeysToStatusesMap              map[[48]byte]ethpb.ValidatorStatus
 }
 
+type ctxKey string
+
+var allValidatorsAreExitedCtxKey = ctxKey("exited")
+
 // Done for mocking.
 func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
@@ -175,4 +179,12 @@ func (fv *FakeValidator) PubkeysToIndices(_ context.Context) map[[48]byte]uint64
 // PubkeysToStatuses for mocking.
 func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[48]byte]ethpb.ValidatorStatus {
 	return fv.PubkeysToStatusesMap
+}
+
+// AllValidatorsAreExited for mocking
+func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
+	if ctx.Value(allValidatorsAreExitedCtxKey) == nil {
+		return false, nil
+	}
+	return ctx.Value(allValidatorsAreExitedCtxKey).(bool), nil
 }

@@ -219,8 +219,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "7e5f838e0f9110471ef8be9401ea687a8ed4d499664dc0eac34ecfdfd03c2ac3",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.3/general.tar.gz",
+    sha256 = "6b3498001de98c477aa2c256beffc20a85ce1b12b8e0f8e88502a5c3a18c01de",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0-rc.0/general.tar.gz",
 )
 
 http_archive(
@@ -349,10 +349,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "507d574be56a63d5a30a28b4426b9ece89cf70bbb29739e982e0a8fdf1285e3a",
+    sha256 = "6bb16ff0dc9348090cc31a9ea453643d32b617e66ac6e7bb38985d530070631b",
     urls = [
-        "https://prysmaticlabs.com/uploads/prysm-web-ui.0.0.1-alpha.tar.gz",
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/0.0.1-alpha/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/0.0.2-alpha/prysm-web-ui.tar.gz",
     ],
 )
 

@@ -9,11 +9,11 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -45,7 +45,9 @@ func CreateAccountCli(cliCtx *cli.Context) error {
 // CreateAccount creates a new validator account from user input by opening
 // a wallet from the user's specified path.
 func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
-	km, err := cfg.Wallet.InitializeKeymanager(ctx, false /* skip mnemonic confirm */)
+	km, err := cfg.Wallet.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: false,
+	})
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}
@@ -56,14 +58,7 @@ func CreateAccount(ctx context.Context, cfg *CreateAccountConfig) error {
 	case keymanager.Remote:
 		return errors.New("cannot create a new account for a remote keymanager")
 	case keymanager.Imported:
-		km, ok := km.(*imported.Keymanager)
-		if !ok {
-			return errors.New("not a imported keymanager")
-		}
-		// Create a new validator account using the specified keymanager.
-		if _, _, err := km.CreateAccount(ctx); err != nil {
-			return errors.Wrap(err, "could not create account in wallet")
-		}
+		return errors.New("cannot create a new account for an imported wallet")
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
 		if !ok {

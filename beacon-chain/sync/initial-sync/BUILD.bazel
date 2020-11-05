@@ -26,6 +26,7 @@ go_library(
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/peers/scorers:go_default_library",
+        "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared:go_default_library",
@@ -36,8 +37,6 @@ go_library(
         "//shared/rand:go_default_library",
         "//shared/timeutils:go_default_library",
         "@com_github_kevinms_leakybucket_go//:go_default_library",
-        "@com_github_libp2p_go_libp2p_core//helpers:go_default_library",
-        "@com_github_libp2p_go_libp2p_core//mux:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_paulbellamy_ratecounter//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -96,7 +95,9 @@ go_test(
 go_test(
     name = "go_default_test",
     srcs = [
+        "blocks_fetcher_peers_test.go",
         "blocks_fetcher_test.go",
+        "blocks_fetcher_utils_test.go",
         "blocks_queue_test.go",
         "fsm_test.go",
         "initial_sync_test.go",

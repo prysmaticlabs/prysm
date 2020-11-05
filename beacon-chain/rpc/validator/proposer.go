@@ -296,10 +296,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 
 func (vs *Server) slotStartTime(slot uint64) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	startTime +=
-		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
-			params.BeaconConfig().SecondsPerSlot
-	return startTime
+	return helpers.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
@@ -310,9 +307,9 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 
 	var inRangeVotes []eth1DataSingleVote
 	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		ok, height, err := vs.BlockFetcher.BlockExists(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
+		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
 		if err != nil {
-			log.WithError(err).Warning("Could not fetch eth1data height for received eth1data vote")
+			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
 		}
 		// Make sure we don't "undo deposit progress". See https://github.com/ethereum/eth2.0-specs/pull/1836
 		if eth1Data.DepositCount < currentETH1Data.DepositCount {
@@ -321,7 +318,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		// firstValidBlockNumber.Cmp(height) < 1 filters out all blocks before firstValidBlockNumber
 		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
 		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
-		if ok && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
+		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
 			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
 		}
 	}

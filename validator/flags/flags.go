@@ -14,6 +14,8 @@ import (
 const (
 	// WalletDefaultDirName for accounts.
 	WalletDefaultDirName = "prysm-wallet-v2"
+	// DefaultGatewayHost for the validator client.
+	DefaultGatewayHost = "127.0.0.1"
 )
 
 var (
@@ -102,7 +104,7 @@ var (
 	GRPCGatewayHost = &cli.StringFlag{
 		Name:  "grpc-gateway-host",
 		Usage: "The host on which the gateway server runs on",
-		Value: "127.0.0.1",
+		Value: DefaultGatewayHost,
 	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.
 	GRPCGatewayPort = &cli.IntFlag{
@@ -138,6 +140,16 @@ var (
 	WalletPasswordFileFlag = &cli.StringFlag{
 		Name:  "wallet-password-file",
 		Usage: "Path to a plain-text, .txt file containing your wallet password",
+	}
+	// Mnemonic25thWordFileFlag defines a path to a file containing a "25th" word mnemonic passphrase for advanced users.
+	Mnemonic25thWordFileFlag = &cli.StringFlag{
+		Name:  "mnemonic-25th-word-file",
+		Usage: "(Advanced) Path to a plain-text, .txt file containing a 25th word passphrase for your mnemonic for HD wallets",
+	}
+	// SkipMnemonic25thWordCheckFlag allows for skipping a check for mnemonic 25th word passphrases for HD wallets.
+	SkipMnemonic25thWordCheckFlag = &cli.StringFlag{
+		Name:  "skip-mnemonic-25th-word-check",
+		Usage: "Allows for skipping the check for a mnemonic 25th word passphrase for HD wallets",
 	}
 	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
 	ImportPrivateKeyFileFlag = &cli.StringFlag{
@@ -250,18 +262,6 @@ var (
 		Name:  "web",
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
-	}
-	// WebHostFlag specifies the host name to bind the Prysm web UI server.
-	WebHostFlag = &cli.StringFlag{
-		Name:  "web-host",
-		Usage: "The host address which to serve the Prysm web UI",
-		Value: "127.0.0.1",
-	}
-	// WebPortFlag specifies the port number to bind the Prysm web UI server.
-	WebPortFlag = &cli.Uint64Flag{
-		Name:  "web-port",
-		Usage: "The host port which to serve the Prysm web UI",
-		Value: 4242,
 	}
 )
 

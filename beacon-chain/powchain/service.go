@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -84,6 +85,7 @@ type POWBlockFetcher interface {
 	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
 
 // Chain defines a standard interface for the powchain service in Prysm.
@@ -145,6 +147,7 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
+	stateGen                *stategen.State
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -154,6 +157,7 @@ type Web3ServiceConfig struct {
 	BeaconDB        db.HeadAccessDatabase
 	DepositCache    *depositcache.DepositCache
 	StateNotifier   statefeed.Notifier
+	StateGen        *stategen.State
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -195,6 +199,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastReceivedMerkleIndex: -1,
 		preGenesisState:         genState,
 		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
+		stateGen:                config.StateGen,
 	}
 
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
@@ -504,19 +509,36 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		return nil
 	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
-	currentState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head state")
-	}
-	// do not add to pending cache
-	// if no state exists.
-	if currentState == nil {
+	if !s.chainStartData.Chainstarted {
+		// do not add to pending cache
+		// if no genesis state exists.
 		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex() + 1))
 		return nil
 	}
-	currIndex := currentState.Eth1DepositIndex()
+	genesisState, err := s.beaconDB.GenesisState(ctx)
+	if err != nil {
+		return err
+	}
+	// Default to all deposits post-genesis deposits in
+	// the event we cannot find a finalized state.
+	currIndex := genesisState.Eth1DepositIndex()
+	chkPt, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+	rt := bytesutil.ToBytes32(chkPt.Root)
+	if rt != [32]byte{} {
+		fState, err := s.stateGen.StateByRoot(ctx, rt)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized state")
+		}
+		if fState == nil {
+			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
+		}
+		// Set deposit index to the one in the current archived state.
+		currIndex = fState.Eth1DepositIndex()
+	}
 	validDepositsCount.Add(float64(currIndex + 1))
-
 	// Only add pending deposits if the container slice length
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
@@ -658,6 +680,8 @@ func (s *Service) initPOWService() {
 				s.retryETH1Node(err)
 				continue
 			}
+			// Cache eth1 headers from our voting period.
+			s.cacheHeadersForEth1DataVote(ctx)
 			return
 		}
 	}
@@ -720,8 +744,35 @@ func (s *Service) logTillChainStart() {
 		secondsLeft = params.BeaconConfig().MinGenesisTime - genesisTime
 	}
 
-	log.WithFields(logrus.Fields{
-		"Extra validators needed":   valNeeded,
-		"Time till minimum genesis": time.Duration(secondsLeft) * time.Second,
-	}).Infof("Currently waiting for chainstart")
+	fields := logrus.Fields{
+		"Additional validators needed": valNeeded,
+	}
+	if secondsLeft > 0 {
+		fields["Generating genesis state in"] = time.Duration(secondsLeft) * time.Second
+	}
+
+	log.WithFields(fields).Info("Currently waiting for chainstart")
+}
+
+// cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
+// instead of making multiple RPC requests to the ETH1 endpoint.
+func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
+	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
+		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
+
+	end, err := s.followBlockHeight(ctx)
+	if err != nil {
+		log.Errorf("Unable to fetch height of follow block: %v", err)
+	}
+
+	// We fetch twice the number of headers just to be safe.
+	start := uint64(0)
+	if end >= 2*blocksPerVotingPeriod {
+		start = end - 2*blocksPerVotingPeriod
+	}
+	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
+	_, err = s.batchRequestHeaders(start, end)
+	if err != nil {
+		log.Errorf("Unable to cache headers: %v", err)
+	}
 }

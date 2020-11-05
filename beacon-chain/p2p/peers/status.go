@@ -283,6 +283,45 @@ func (p *Status) IsBad(pid peer.ID) bool {
 	return p.scorers.BadResponsesScorer().IsBadPeer(pid)
 }
 
+// NextValidTime gets the earliest possible time it is to contact/dial
+// a peer again. This is used to back-off from peers in the event
+// they are 'full' or have banned us.
+func (p *Status) NextValidTime(pid peer.ID) (time.Time, error) {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	if peerData, ok := p.store.PeerData(pid); ok {
+		return peerData.NextValidTime, nil
+	}
+	return timeutils.Now(), peerdata.ErrPeerUnknown
+}
+
+// SetNextValidTime sets the earliest possible time we are
+// able to contact this peer again.
+func (p *Status) SetNextValidTime(pid peer.ID, nextTime time.Time) {
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	peerData := p.store.PeerDataGetOrCreate(pid)
+	peerData.NextValidTime = nextTime
+}
+
+// IsReadyToDial checks where the given peer is ready to be
+// dialed again.
+func (p *Status) IsReadyToDial(pid peer.ID) bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	if peerData, ok := p.store.PeerData(pid); ok {
+		timeIsZero := peerData.NextValidTime.IsZero()
+		isInvalidTime := peerData.NextValidTime.After(time.Now())
+		return timeIsZero || !isInvalidTime
+	}
+	// If no record exists, we don't restrict dials to the
+	// peer.
+	return true
+}
+
 // Connecting returns the peers that are connecting.
 func (p *Status) Connecting() []peer.ID {
 	p.store.RLock()
@@ -426,11 +465,12 @@ func (p *Status) Prune() {
 	}
 }
 
-// BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed upon by the majority of peers.
-// This method may not return the absolute highest finalized, but the finalized epoch in which most peers can serve blocks.
-// Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their own latency, or because of
-// their finalized epoch at the time we queried them.
-// Returns the best finalized root, epoch number, and list of peers that are at or beyond that epoch.
+// BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed
+// upon by the majority of peers. This method may not return the absolute highest finalized, but
+// the finalized epoch in which most peers can serve blocks (plurality voting).
+// Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their
+// own latency, or because of their finalized epoch at the time we queried them.
+// Returns epoch number and list of peers that are at or beyond that epoch.
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
@@ -451,7 +491,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	var targetEpoch uint64
 	var mostVotes uint64
 	for epoch, count := range finalizedEpochVotes {
-		if count > mostVotes {
+		if count > mostVotes || (count == mostVotes && epoch > targetEpoch) {
 			mostVotes = count
 			targetEpoch = epoch
 		}
@@ -459,8 +499,10 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 
 	// Sort PIDs by finalized epoch, in decreasing order.
 	sort.Slice(potentialPIDs, func(i, j int) bool {
-		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]] &&
-			pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
+		if pidEpoch[potentialPIDs[i]] == pidEpoch[potentialPIDs[j]] {
+			return pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
+		}
+		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]]
 	})
 
 	// Trim potential peers to those on or after target epoch.
@@ -479,19 +521,19 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	return targetEpoch, potentialPIDs
 }
 
-// BestNonFinalized returns the highest known epoch, which is higher than ours, and is shared
-// by at least minPeers.
-func (p *Status) BestNonFinalized(minPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
+// BestNonFinalized returns the highest known epoch, higher than ours,
+// and is shared by at least minPeers.
+func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	epochVotes := make(map[uint64]uint64)
 	pidEpoch := make(map[peer.ID]uint64, len(connected))
 	pidHead := make(map[peer.ID]uint64, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourFinalizedSlot := ourFinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
+	ourHeadSlot := ourHeadEpoch * params.BeaconConfig().SlotsPerEpoch
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourFinalizedSlot {
+		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
 			epoch := helpers.SlotToEpoch(peerChainState.HeadSlot)
 			epochVotes[epoch]++
 			pidEpoch[pid] = epoch

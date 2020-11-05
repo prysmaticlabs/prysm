@@ -1,14 +1,14 @@
 package bls
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 )
 
 // PublicKey represents a BLS public key.
-type PublicKey = iface.PublicKey
+type PublicKey = common.PublicKey
 
 // SecretKey represents a BLS secret or private key.
-type SecretKey = iface.SecretKey
+type SecretKey = common.SecretKey
 
 // Signature represents a BLS signature.
-type Signature = iface.Signature
+type Signature = common.Signature

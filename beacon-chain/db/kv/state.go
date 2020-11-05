@@ -35,40 +35,6 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSta
 	return state.InitializeFromProtoUnsafe(st)
 }
 
-// HeadState returns the latest canonical state in beacon chain.
-func (s *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
-	defer span.End()
-	var st *pb.BeaconState
-	err := s.db.View(func(tx *bolt.Tx) error {
-		// Retrieve head block's signing root from blocks bucket,
-		// to look up what the head state is.
-		bucket := tx.Bucket(blocksBucket)
-		headBlkRoot := bucket.Get(headBlockRootKey)
-
-		bucket = tx.Bucket(stateBucket)
-		enc := bucket.Get(headBlkRoot)
-		if enc == nil {
-			return nil
-		}
-
-		var err error
-		st, err = createState(ctx, enc)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	if st == nil {
-		return nil, nil
-	}
-	span.AddAttributes(trace.BoolAttribute("exists", s != nil))
-	if st != nil {
-		span.AddAttributes(trace.Int64Attribute("slot", int64(st.Slot)))
-	}
-	return state.InitializeFromProtoUnsafe(st)
-}
-
 // GenesisState returns the genesis state in beacon chain.
 func (s *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
@@ -296,6 +262,9 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		c := bkt.Cursor()
 		for s, root := c.First(); s != nil; s, root = c.Next() {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			key := bytesutil.BytesToUint64BigEndian(s)
 			if root == nil {
 				continue

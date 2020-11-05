@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -38,6 +37,7 @@ type ChainService struct {
 	Balance                     *precompute.Balance
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
+	CanonicalRoots              map[[32]byte]bool
 	Fork                        *pb.Fork
 	ETH1Data                    *ethpb.Eth1Data
 	DB                          db.Database
@@ -338,12 +338,13 @@ func (ms *ChainService) IsValidAttestation(_ context.Context, _ *ethpb.Attestati
 
 // IsCanonical returns and determines whether a block with the provided root is part of
 // the canonical chain.
-func (ms *ChainService) IsCanonical(_ context.Context, _ [32]byte) (bool, error) {
+func (ms *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) {
+	if ms.CanonicalRoots != nil {
+		_, ok := ms.CanonicalRoots[r]
+		return ok, nil
+	}
 	return true, nil
 }
-
-// ClearCachedStates does nothing.
-func (ms *ChainService) ClearCachedStates() {}
 
 // HasInitSyncBlock mocks the same method in the chain service.
 func (ms *ChainService) HasInitSyncBlock(_ [32]byte) bool {
@@ -361,36 +362,17 @@ func (ms *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, _ *ethpb.Attestation) error {
+func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
+	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
+		return errors.New("LMD and FFG miss matched")
+	}
 	return nil
 }
 
-// AttestationCheckPtInfo mocks AttestationCheckPtInfo and always returns nil.
-func (ms *ChainService) AttestationCheckPtInfo(_ context.Context, att *ethpb.Attestation) (*pb.CheckPtInfo, error) {
-	f := ms.State.Fork()
-	g := bytesutil.ToBytes32(ms.State.GenesisValidatorRoot())
-	seed, err := helpers.Seed(ms.State, helpers.SlotToEpoch(att.Data.Slot), params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, err
+// VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
+func (ms *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) error {
+	if !bytes.Equal(r, ms.FinalizedCheckPoint.Root) {
+		return errors.New("Root and finalized store are not consistent")
 	}
-	indices, err := helpers.ActiveValidatorIndices(ms.State, helpers.SlotToEpoch(att.Data.Slot))
-	if err != nil {
-		return nil, err
-	}
-	validators := ms.State.ValidatorsReadOnly()
-	pks := make([][]byte, len(validators))
-	for i := 0; i < len(pks); i++ {
-		pk := validators[i].PublicKey()
-		pks[i] = pk[:]
-	}
-
-	info := &pb.CheckPtInfo{
-		Fork:          f,
-		GenesisRoot:   g[:],
-		Seed:          seed[:],
-		ActiveIndices: indices,
-		PubKeys:       pks,
-	}
-
-	return info, nil
+	return nil
 }

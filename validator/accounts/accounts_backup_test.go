@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -76,7 +77,9 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 
 	km, err := w.InitializeKeymanager(
 		cliCtx.Context,
-		true, /* skip mnemonic confirm */
+		&iface.InitializeKeymanagerConfig{
+			SkipMnemonicConfirm: true,
+		},
 	)
 	require.NoError(t, err)
 
@@ -186,7 +189,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanager.Imported,
@@ -194,7 +197,6 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, w.SaveHashedPassword(cliCtx.Context))
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.

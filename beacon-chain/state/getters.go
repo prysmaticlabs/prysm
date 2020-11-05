@@ -413,6 +413,32 @@ func (b *BeaconState) stateRoots() [][]byte {
 	return b.safeCopy2DByteSlice(b.state.StateRoots)
 }
 
+// StateRootAtIndex retrieves a specific state root based on an
+// input index value.
+func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	if b.state.StateRoots == nil {
+		return nil, nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.stateRootAtIndex(idx)
+}
+
+// stateRootAtIndex retrieves a specific state root based on an
+// input index value.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	return b.safeCopyBytesAtIndex(b.state.StateRoots, idx)
+}
+
 // HistoricalRoots based on epochs stored in the beacon state.
 func (b *BeaconState) HistoricalRoots() [][]byte {
 	if !b.HasInnerState() {
@@ -555,27 +581,6 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 			continue
 		}
 		res[i] = CopyValidator(val)
-	}
-	return res
-}
-
-// ValidatorsReadOnly returns validators participating in consensus on the beacon chain. This
-// method doesn't clone the respective validators and returns read only references to the validators.
-func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
-	if !b.HasInnerState() {
-		return nil
-	}
-	if b.state.Validators == nil {
-		return nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	res := make([]*ReadOnlyValidator, len(b.state.Validators))
-	for i := 0; i < len(res); i++ {
-		val := b.state.Validators[i]
-		res[i] = &ReadOnlyValidator{validator: val}
 	}
 	return res
 }

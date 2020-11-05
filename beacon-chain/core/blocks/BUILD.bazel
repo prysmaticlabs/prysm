@@ -50,6 +50,7 @@ go_test(
     name = "go_default_test",
     size = "medium",
     srcs = [
+        "attestation_regression_test.go",
         "attestation_test.go",
         "attester_slashing_test.go",
         "block_operations_fuzz_test.go",
@@ -59,9 +60,11 @@ go_test(
         "exit_test.go",
         "genesis_test.go",
         "header_test.go",
+        "proposer_slashing_regression_test.go",
         "proposer_slashing_test.go",
         "randao_test.go",
     ],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     shard_count = 2,
     deps = [

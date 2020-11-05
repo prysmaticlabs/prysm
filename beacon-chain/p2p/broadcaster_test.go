@@ -9,10 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -21,9 +17,11 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -296,11 +294,6 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 			}
 		}
 	}()
-
-	f := featureconfig.Get()
-	f.EnableAttBroadcastDiscoveryAttempts = true
-	rst := featureconfig.InitWithReset(f)
-	defer rst()
 
 	ps1, err := pubsub.NewFloodSub(context.Background(), hosts[0],
 		pubsub.WithMessageSigning(false),

@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -69,4 +71,28 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 		}
 	}
 	return passphrase, nil
+}
+
+// ExpandWeb3EndpointIfFile expands the path for --http-web3provider if specified as a file.
+func ExpandWeb3EndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
+	// Return early if no flag value is set.
+	if !ctx.IsSet(flag.Name) {
+		return nil
+	}
+	web3endpoint := ctx.String(flag.Name)
+	switch {
+	case strings.HasPrefix(web3endpoint, "http://"):
+	case strings.HasPrefix(web3endpoint, "https://"):
+	case strings.HasPrefix(web3endpoint, "ws://"):
+	case strings.HasPrefix(web3endpoint, "wss://"):
+	default:
+		web3endpoint, err := fileutil.ExpandPath(ctx.String(flag.Name))
+		if err != nil {
+			return errors.Wrapf(err, "could not expand path for %s", web3endpoint)
+		}
+		if err := ctx.Set(flag.Name, web3endpoint); err != nil {
+			return errors.Wrapf(err, "could not set %s to %s", flag.Name, web3endpoint)
+		}
+	}
+	return nil
 }

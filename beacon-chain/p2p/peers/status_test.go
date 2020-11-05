@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -418,6 +419,52 @@ func TestPeerConnectionStatuses(t *testing.T) {
 	assert.Equal(t, numPeersAll, len(p.All()), "Unexpected number of peers")
 }
 
+func TestPeerValidTime(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
+
+	numPeersConnected := 6
+	for i := 0; i < numPeersConnected; i++ {
+		addPeer(t, p, peers.PeerConnected)
+	}
+
+	allPeers := p.All()
+
+	// Add for 1st peer
+	p.SetNextValidTime(allPeers[0], time.Now().Add(-1*time.Second))
+	p.SetNextValidTime(allPeers[1], time.Now().Add(1*time.Second))
+	p.SetNextValidTime(allPeers[2], time.Now().Add(10*time.Second))
+
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[0]))
+	assert.Equal(t, false, p.IsReadyToDial(allPeers[1]))
+	assert.Equal(t, false, p.IsReadyToDial(allPeers[2]))
+
+	nextVal, err := p.NextValidTime(allPeers[3])
+	require.NoError(t, err)
+	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[3]))
+
+	nextVal, err = p.NextValidTime(allPeers[4])
+	require.NoError(t, err)
+	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[4]))
+
+	nextVal, err = p.NextValidTime(allPeers[5])
+	require.NoError(t, err)
+	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[5]))
+
+	// Now confirm the states
+	assert.Equal(t, numPeersConnected, len(p.Connected()), "Unexpected number of connected peers")
+}
+
 func TestPrune(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -536,58 +583,158 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 	assert.Equal(t, pid1, pids[2], "Incorrect third peer")
 }
 
-func TestBestPeer(t *testing.T) {
-	maxBadResponses := 2
-	expectedFinEpoch := uint64(4)
-	expectedRoot := [32]byte{'t', 'e', 's', 't'}
-	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
-	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
-		PeerLimit: 30,
-		ScorerParams: &scorers.Config{
-			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
-				Threshold: maxBadResponses,
+func TestStatus_BestPeer(t *testing.T) {
+	type peerConfig struct {
+		headSlot       uint64
+		finalizedEpoch uint64
+	}
+	tests := []struct {
+		name              string
+		peers             []*peerConfig
+		limitPeers        int
+		ourFinalizedEpoch uint64
+		targetEpoch       uint64
+		// targetEpochSupport denotes how many peers support returned epoch.
+		targetEpochSupport int
+	}{
+		{
+			name: "head slot matches finalized epoch",
+			peers: []*peerConfig{
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 3 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 3 * params.BeaconConfig().SlotsPerEpoch},
 			},
+			limitPeers:         15,
+			targetEpoch:        4,
+			targetEpochSupport: 4,
 		},
-	})
+		{
+			// Peers are compared using their finalized epoch, head should not affect peer selection.
+			// Test case below is a regression case: to ensure that only epoch is used indeed.
+			// (Function sorts peers, and on equal head slot, produced incorrect results).
+			name: "head slots equal for peers with different finalized epochs",
+			peers: []*peerConfig{
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 4 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			limitPeers:         15,
+			targetEpoch:        4,
+			targetEpochSupport: 4,
+		},
+		{
+			name: "head slot significantly ahead of finalized epoch (long period of non-finality)",
+			peers: []*peerConfig{
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			limitPeers:         15,
+			targetEpoch:        4,
+			targetEpochSupport: 4,
+		},
+		{
+			name: "ignore lower epoch peers",
+			peers: []*peerConfig{
+				{finalizedEpoch: 4, headSlot: 41 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 43 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 44 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 45 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 46 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			ourFinalizedEpoch:  5,
+			limitPeers:         15,
+			targetEpoch:        6,
+			targetEpochSupport: 1,
+		},
+		{
+			name: "combine peers from several epochs starting from epoch higher than ours",
+			peers: []*peerConfig{
+				{finalizedEpoch: 4, headSlot: 41 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 43 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 44 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 45 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 46 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 7, headSlot: 7 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			ourFinalizedEpoch:  5,
+			limitPeers:         15,
+			targetEpoch:        6,
+			targetEpochSupport: 5,
+		},
+		{
+			name: "limit number of returned peers",
+			peers: []*peerConfig{
+				{finalizedEpoch: 4, headSlot: 41 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 42 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 43 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 44 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 4, headSlot: 45 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 3, headSlot: 46 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 7, headSlot: 7 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			ourFinalizedEpoch:  5,
+			limitPeers:         4,
+			targetEpoch:        6,
+			targetEpochSupport: 4,
+		},
+		{
+			name: "handle epoch ties",
+			peers: []*peerConfig{
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 6, headSlot: 6 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 7, headSlot: 7 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+				{finalizedEpoch: 8, headSlot: 8 * params.BeaconConfig().SlotsPerEpoch},
+			},
+			ourFinalizedEpoch:  5,
+			limitPeers:         15,
+			targetEpoch:        8,
+			targetEpochSupport: 3,
+		},
+	}
 
-	// Peer 1
-	pid1 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid1, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 2
-	pid2 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid2, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 3
-	pid3 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid3, &pb.Status{
-		FinalizedEpoch: 3,
-		FinalizedRoot:  junkRoot[:],
-	})
-	// Peer 4
-	pid4 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid4, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 5
-	pid5 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid5, &pb.Status{
-		FinalizedEpoch: expectedFinEpoch,
-		FinalizedRoot:  expectedRoot[:],
-	})
-	// Peer 6
-	pid6 := addPeer(t, p, peers.PeerConnected)
-	p.SetChainState(pid6, &pb.Status{
-		FinalizedEpoch: 3,
-		FinalizedRoot:  junkRoot[:],
-	})
-	retEpoch, _ := p.BestFinalized(15, 0)
-	assert.Equal(t, expectedFinEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+				PeerLimit: 30,
+				ScorerParams: &scorers.Config{
+					BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{Threshold: 2},
+				},
+			})
+			for _, peerConfig := range tt.peers {
+				p.SetChainState(addPeer(t, p, peers.PeerConnected), &pb.Status{
+					FinalizedEpoch: peerConfig.finalizedEpoch,
+					HeadSlot:       peerConfig.headSlot,
+				})
+			}
+			epoch, pids := p.BestFinalized(tt.limitPeers, tt.ourFinalizedEpoch)
+			assert.Equal(t, tt.targetEpoch, epoch, "Unexpected epoch retrieved")
+			assert.Equal(t, tt.targetEpochSupport, len(pids), "Unexpected number of peers supporting retrieved epoch")
+		})
+	}
 }
 
 func TestBestFinalized_returnsMaxValue(t *testing.T) {

@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -52,6 +53,7 @@ var (
 	externalIP           = flag.String("external-ip", "", "External IP for the bootnode")
 	forkVersion          = flag.String("fork-version", "", "Fork Version that the bootnode uses")
 	genesisValidatorRoot = flag.String("genesis-root", "", "Genesis Validator Root the beacon node uses")
+	seedNode             = flag.String("seed-node", "", "External node to connect to")
 	log                  = logrus.WithField("prefix", "bootnode")
 	discv5PeersCount     = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bootstrap_node_discv5_peers",
@@ -90,6 +92,14 @@ func main() {
 	privKey := extractPrivateKey()
 	cfg := discover.Config{
 		PrivateKey: privKey,
+	}
+	if *seedNode != "" {
+		log.Debugf("Adding seed node %s", *seedNode)
+		node, err := enode.Parse(enode.ValidSchemes, *seedNode)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cfg.Bootnodes = []*enode.Node{node}
 	}
 	ipAddr, err := iputils.ExternalIP()
 	if err != nil {
@@ -255,6 +265,7 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		}
 		log.Debugf("Private key %x", b)
 	}
+	privKey.Curve = gcrypto.S256()
 
 	return privKey
 }

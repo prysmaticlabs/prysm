@@ -13,15 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -219,83 +215,6 @@ func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
 	return nil
 }
 
-// CreateAccount for a imported keymanager implementation. This utilizes
-// the EIP-2335 keystore standard for BLS12-381 keystores. It
-// stores the generated keystore.json file in the wallet and additionally
-// generates withdrawal credentials. At the end, it logs
-// the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context) ([]byte, *ethpb.Deposit_Data, error) {
-	// Create a petname for an account from its public key and write its password to disk.
-	validatingKey := bls.RandKey()
-	accountName := petnames.DeterministicName(validatingKey.PublicKey().Marshal(), "-")
-	dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, validatingKey.Marshal())
-	dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, validatingKey.PublicKey().Marshal())
-	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not create accounts keystore")
-	}
-
-	// Generate a withdrawal key and confirm user
-	// acknowledgement of a 256-bit entropy mnemonic phrase.
-	withdrawalKey := bls.RandKey()
-	log.Info(
-		"Write down the private key, as it is your unique " +
-			"withdrawal private key for eth2",
-	)
-	fmt.Printf(`
-==========================Withdrawal Key===========================
-
-%#x
-
-===================================================================
-	`, withdrawalKey.Marshal())
-	fmt.Println(" ")
-
-	// Upon confirmation of the withdrawal key, proceed to display
-	// and write associated deposit data to disk.
-	tx, data, err := depositutil.GenerateDepositTransaction(validatingKey, withdrawalKey)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit transaction data")
-	}
-	domain, err := helpers.ComputeDomain(
-		params.BeaconConfig().DomainDeposit,
-		nil, /*forkVersion*/
-		nil, /*genesisValidatorsRoot*/
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err := depositutil.VerifyDepositSignature(data, domain); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to verify deposit signature, please make sure your account was created properly")
-	}
-
-	// Log the deposit transaction data to the user.
-	fmt.Printf(`
-==================Eth1 Deposit Transaction Data=================
-%#x
-================Verified for the %s network================`, tx.Data(), params.BeaconConfig().NetworkName)
-	fmt.Println("")
-
-	// Write the encoded keystore.
-	encoded, err := json.MarshalIndent(newStore, "", "\t")
-	if err != nil {
-		return nil, nil, err
-	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
-		return nil, nil, errors.Wrap(err, "could not write keystore file for accounts")
-	}
-
-	log.WithFields(logrus.Fields{
-		"name": accountName,
-	}).Info("Successfully created new validator account")
-
-	err = dr.initializeKeysCachesFromKeystore()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to initialize keys caches")
-	}
-	return validatingKey.PublicKey().Marshal(), data, nil
-}
-
 // DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
 func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
 	for _, publicKey := range publicKeys {
@@ -390,12 +309,6 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("no signing key found in keys cache")
 	}
 	return secretKey.Sign(req.SigningRoot), nil
-}
-
-// RefreshWalletPassword re-encrypts the accounts store and stores
-// it to disk using a wallet's password which was recently changed.
-func (dr *Keymanager) RefreshWalletPassword(ctx context.Context) error {
-	return dr.rewriteAccountsKeystore(ctx)
 }
 
 func (dr *Keymanager) rewriteAccountsKeystore(ctx context.Context) error {

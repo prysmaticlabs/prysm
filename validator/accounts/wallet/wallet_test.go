@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -140,7 +141,7 @@ func Test_IsValid_RandomFiles(t *testing.T) {
 	require.NoError(t, os.MkdirAll(path, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to create directory")
 
 	valid, err = wallet.IsValid(path)
-	require.ErrorContains(t, "no wallet found at path", err)
+	require.ErrorContains(t, "no wallet found", err)
 	require.Equal(t, false, valid)
 
 	walletDir := filepath.Join(path, "direct")
@@ -159,7 +160,7 @@ func Test_LockUnlockFile(t *testing.T) {
 		passwordsDir:        passwordsDir,
 		walletPasswordFile:  passwordFile,
 		accountPasswordFile: passwordFile,
-		keymanagerKind:      keymanager.Derived,
+		keymanagerKind:      keymanager.Imported,
 		numAccounts:         numAccounts,
 	})
 
@@ -174,7 +175,9 @@ func Test_LockUnlockFile(t *testing.T) {
 	})
 	require.NoError(t, err)
 	defer unlock(t, w)
-	_, err = w.InitializeKeymanager(cliCtx.Context, true)
+	_, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	assert.NoError(t, err)
 	err = w.LockWalletConfigFile(cliCtx.Context)

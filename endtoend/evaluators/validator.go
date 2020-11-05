@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
@@ -16,27 +17,15 @@ var expectedParticipation = 0.95 // 95% participation to make room for minor iss
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
 	Name:       "validators_active_epoch_%d",
-	Policy:     allEpochs,
+	Policy:     policies.AllEpochs,
 	Evaluation: validatorsAreActive,
 }
 
 // ValidatorsParticipating ensures the expected amount of validators are active.
 var ValidatorsParticipating = types.Evaluator{
 	Name:       "validators_participating_epoch_%d",
-	Policy:     afterNthEpoch(2),
+	Policy:     policies.AfterNthEpoch(2),
 	Evaluation: validatorsParticipating,
-}
-
-// Not including first epoch because of issues with genesis.
-func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
-	return func(currentEpoch uint64) bool {
-		return currentEpoch > afterEpoch
-	}
-}
-
-// All epochs.
-func allEpochs(_ uint64) bool {
-	return true
 }
 
 func validatorsAreActive(conns ...*grpc.ClientConn) error {
