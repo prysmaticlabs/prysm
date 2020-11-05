@@ -67,6 +67,9 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, 
 					exists = true
 					continue
 				}
+				if !s.peers.IsReadyToDial(info.ID) {
+					continue
+				}
 				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(ctx, *info); err != nil {
 					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
