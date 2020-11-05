@@ -319,7 +319,7 @@ func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
 
 // IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
 // be placed into the activation queue.
-func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidator) bool {
+func IsEligibleForActivationQueueUsingTrie(validator stateTrie.ReadOnlyValidator) bool {
 	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
 }
 
@@ -348,7 +348,7 @@ func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Vali
 }
 
 // IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
-func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *stateTrie.ReadOnlyValidator) bool {
+func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator stateTrie.ReadOnlyValidator) bool {
 	cpt := state.FinalizedCheckpoint()
 	if cpt == nil {
 		return false
