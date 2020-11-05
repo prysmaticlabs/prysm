@@ -1151,7 +1151,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		assert.Equal(t, stateSkipped, updatedState)
 		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
 		assert.LogsDoNotContain(t, hook, "Searching for alternative blocks")
-		assert.LogsDoNotContain(t, hook, "No alternative blocks found in peer")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found for peer")
 		hook.Reset()
 
 		// The last machine got removed (it was for non-skipped slot, which fails).
@@ -1171,7 +1171,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		assert.Equal(t, stateSkipped, updatedState)
 		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
 		assert.LogsContain(t, hook, "Searching for alternative blocks")
-		assert.LogsContain(t, hook, "No alternative blocks found in peer")
+		assert.LogsContain(t, hook, "No alternative blocks found for peer")
 	})
 
 	t.Run("unfavourable fork and alternative branches exist", func(t *testing.T) {
@@ -1201,7 +1201,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		assert.Equal(t, stateSkipped, updatedState)
 		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
 		assert.LogsDoNotContain(t, hook, "Searching for alternative blocks")
-		assert.LogsDoNotContain(t, hook, "No alternative blocks found in peer")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found for peer")
 		hook.Reset()
 
 		// The last machine got removed (it was for non-skipped slot, which fails).
@@ -1220,20 +1220,34 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, stateSkipped, updatedState)
 		assert.LogsContain(t, hook, "Searching for alternative blocks")
-		assert.LogsDoNotContain(t, hook, "No alternative blocks found in peer")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found for peer")
 		require.Equal(t, lookaheadSteps, len(queue.smm.machines))
 
 		// Alternative fork should start on slot 201, make sure that the first machine contains all
-		// required forked data.
-		firstFSM, ok := queue.smm.findStateMachine(forkedSlot)
+		// required forked data, including data on and after slot 201.
+		forkedEpochStartSlot, err := helpers.StartSlot(helpers.SlotToEpoch(forkedSlot))
+		require.NoError(t, err)
+		firstFSM, ok := queue.smm.findStateMachine(forkedEpochStartSlot + 1)
 		require.Equal(t, true, ok)
 		require.Equal(t, stateDataParsed, firstFSM.state)
 		require.Equal(t, forkedPeer, firstFSM.pid)
-		require.Equal(t, 2, len(firstFSM.blocks))
-		require.Equal(t, uint64(201), firstFSM.blocks[0].Block.Slot)
+		require.Equal(t, 64, len(firstFSM.blocks))
+		require.Equal(t, forkedEpochStartSlot+1, firstFSM.blocks[0].Block.Slot)
+
+		// Assert that forked data from chain2 is available (within 64 fetched blocks).
+		for i, blk := range chain2[forkedEpochStartSlot+1:] {
+			if i >= len(firstFSM.blocks) {
+				break
+			}
+			rootFromFSM, err := firstFSM.blocks[i].Block.HashTreeRoot()
+			require.NoError(t, err)
+			blkRoot, err := blk.Block.HashTreeRoot()
+			require.NoError(t, err)
+			assert.Equal(t, blkRoot, rootFromFSM)
+		}
 
 		// Assert that machines are in the expected state.
-		startSlot = forkedSlot + uint64(len(firstFSM.blocks))
+		startSlot = forkedEpochStartSlot + 1 + uint64(len(firstFSM.blocks))
 		for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
 			fsm, ok := queue.smm.findStateMachine(i)
 			require.Equal(t, true, ok)
