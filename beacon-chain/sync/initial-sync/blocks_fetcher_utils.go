@@ -151,7 +151,7 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot uint64) (*forkData, e
 	// Safe-guard, since previous epoch is used when calculating.
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	if slot < slotsPerEpoch*2 {
-		return nil, fmt.Errorf("slot is to low to backtrack, min. expected %d", slotsPerEpoch*2)
+		return nil, fmt.Errorf("slot is too low to backtrack, min. expected %d", slotsPerEpoch*2)
 	}
 
 	// The current slot's epoch must be after the finalization epoch,
@@ -201,7 +201,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	// Safe-guard, since previous epoch is used when calculating.
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	if slot < slotsPerEpoch*2 {
-		return nil, fmt.Errorf("slot is to low to backtrack, min. expected %d", slotsPerEpoch*2)
+		return nil, fmt.Errorf("slot is too low to backtrack, min. expected %d", slotsPerEpoch*2)
 	}
 
 	// Locate non-skipped slot, supported by a given peer (can survive long periods of empty slots).
@@ -231,7 +231,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	}
 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
-	for _, block := range blocks {
+	for i, block := range blocks {
 		parentRoot := bytesutil.ToBytes32(block.Block.ParentRoot)
 		if !f.db.HasBlock(ctx, parentRoot) && !f.chain.HasInitSyncBlock(parentRoot) {
 			log.WithFields(logrus.Fields{
@@ -239,12 +239,17 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 				"slot": block.Block.Slot,
 				"root": fmt.Sprintf("%#x", parentRoot),
 			}).Debug("Block with unknown parent root has been found")
-			// Backtrack on a root, to find a common ancestor from which we can resume syncing.
-			fork, err := f.findAncestor(ctx, pid, block)
-			if err != nil {
-				return nil, fmt.Errorf("failed to find common ancestor: %w", err)
+			// Backtrack only if the first block is diverging,
+			// otherwise we already know the common ancestor slot.
+			if i == 0 {
+				// Backtrack on a root, to find a common ancestor from which we can resume syncing.
+				fork, err := f.findAncestor(ctx, pid, block)
+				if err != nil {
+					return nil, fmt.Errorf("failed to find common ancestor: %w", err)
+				}
+				return fork, nil
 			}
-			return fork, nil
+			return &forkData{peer: pid, blocks: blocks}, nil
 		}
 	}
 	return nil, errors.New("no alternative blocks exist within scanned range")

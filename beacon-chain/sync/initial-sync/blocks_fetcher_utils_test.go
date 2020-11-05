@@ -243,7 +243,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	curForkMoreBlocksPeer := connectPeerHavingBlocks(t, p2p, chain1b, finalizedSlot, p2p.Peers())
 	fork, err = fetcher.findFork(ctx, 251)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(fork.blocks))
+	require.Equal(t, 64, len(fork.blocks))
 	require.Equal(t, curForkMoreBlocksPeer, fork.peer)
 	// Save all chain1b blocks (so that they do not interfere with alternative fork)
 	for _, blk := range chain1b {
@@ -298,7 +298,22 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 }
 
 func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
-	mc, p1, beaconDB := initializeTestServices(t, []uint64{}, []*peerData{})
+	beaconDB, _ := dbtest.SetupDB(t)
+	p1 := p2pt.NewTestP2P(t)
+
+	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+	genesisBlock := knownBlocks[0]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesisBlock))
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(
@@ -309,6 +324,18 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+
+	for _, blk := range knownBlocks {
+		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+		require.NoError(t, st.SetSlot(blk.Block.Slot))
+	}
+
+	t.Run("slot is too early", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 0)
+		assert.ErrorContains(t, "slot is too low to backtrack", err)
+	})
 
 	t.Run("no peer status", func(t *testing.T) {
 		p2 := p2pt.NewTestP2P(t)
@@ -319,12 +346,60 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	t.Run("no non-skipped blocks found", func(t *testing.T) {
 		p2 := p2pt.NewTestP2P(t)
 		p1.Connect(p2)
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2.PeerID()))
+		}()
 		p1.Peers().SetChainState(p2.PeerID(), &p2ppb.Status{
 			HeadRoot: nil,
 			HeadSlot: 0,
 		})
 		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 64)
 		assert.ErrorContains(t, "cannot locate non-empty slot for a peer", err)
+	})
+
+	t.Run("no diverging blocks", func(t *testing.T) {
+		p2 := connectPeerHavingBlocks(t, p1, knownBlocks, 64, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		_, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		assert.ErrorContains(t, "no alternative blocks exist within scanned range", err)
+	})
+
+	t.Run("first block is diverging - backtrack successfully", func(t *testing.T) {
+		forkedSlot := uint64(24)
+		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
+		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		require.NoError(t, err)
+		require.Equal(t, 10, len(fork.blocks))
+		assert.Equal(t, forkedSlot, fork.blocks[0].Block.Slot, "Expected slot %d to be ancestor", forkedSlot)
+	})
+
+	t.Run("first block is diverging - no common ancestor", func(t *testing.T) {
+		altBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		_, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		require.ErrorContains(t, "failed to find common ancestor", err)
+	})
+
+	t.Run("mid block is diverging - no backtrack is necessary", func(t *testing.T) {
+		forkedSlot := uint64(60)
+		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
+		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		require.NoError(t, err)
+		require.Equal(t, 64, len(fork.blocks))
+		assert.Equal(t, uint64(33), fork.blocks[0].Block.Slot)
 	})
 }
 
