@@ -248,6 +248,7 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 	startSlot := len(inSeq)
 	if len(inSeq) == 0 {
 		outSeq[0] = testutil.NewBeaconBlock()
+		outSeq[0].Block.StateRoot = testutil.Random32Bytes(t)
 		startSlot++
 		outSeq = append(outSeq, nil)
 	}

@@ -134,10 +134,8 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UseZinkenNetworkConfig()
 		cfg.ZinkenTestnet = true
 	} else {
-		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
+		log.Warn("Running on ETH2 Mainnet")
+		params.UseMainnetConfig()
 	}
 }
 

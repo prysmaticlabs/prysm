@@ -6,12 +6,14 @@ import (
 	"testing"
 
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -141,7 +143,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	// A - B - C - D - E
 	//      \
 	//       - C'- D'- E'- F'- G'
-	// Allow fetcher to proceed till E, then connect peer having alternative, branch.
+	// Allow fetcher to proceed till E, then connect peer having alternative branch.
 	// Test that G' slot can be reached i.e. fetcher can track back and explore alternative paths.
 	beaconDB, _ := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
@@ -227,7 +229,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	require.Equal(t, (*forkData)(nil), fork)
 
 	// Add peer that has blocks after 250, but those blocks are orphaned i.e. they do not have common
-	// ancestor with what we already have. So, no common ancestor exists.
+	// ancestor with what we already have. So, error is expected.
 	chain1a := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 265)
 	connectPeerHavingBlocks(t, p2p, chain1a, finalizedSlot, p2p.Peers())
 	fork, err = fetcher.findFork(ctx, 251)
@@ -241,14 +243,13 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	curForkMoreBlocksPeer := connectPeerHavingBlocks(t, p2p, chain1b, finalizedSlot, p2p.Peers())
 	fork, err = fetcher.findFork(ctx, 251)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(fork.blocks))
+	require.Equal(t, 64, len(fork.blocks))
 	require.Equal(t, curForkMoreBlocksPeer, fork.peer)
 	// Save all chain1b blocks (so that they do not interfere with alternative fork)
 	for _, blk := range chain1b {
 		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
 		require.NoError(t, st.SetSlot(blk.Block.Slot))
 	}
-
 	forkSlot := 129
 	chain2 := extendBlockSequence(t, chain1[:forkSlot], 165)
 	// Assert that forked blocks from chain2 are unknown.
@@ -258,9 +259,9 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, false, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot))
 	}
+
 	// Search for alternative paths (add single peer having alternative path).
 	alternativePeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
-	fmt.Printf("altpeer: %v\n", alternativePeer)
 	fork, err = fetcher.findFork(ctx, 251)
 	require.NoError(t, err)
 	assert.Equal(t, alternativePeer, fork.peer)
@@ -294,6 +295,171 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot), "slot %d", blk.Block.Slot)
 	}
+}
+
+func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
+	beaconDB, _ := dbtest.SetupDB(t)
+	p1 := p2pt.NewTestP2P(t)
+
+	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+	genesisBlock := knownBlocks[0]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesisBlock))
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			chain: mc,
+			p2p:   p1,
+			db:    beaconDB,
+		},
+	)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+
+	for _, blk := range knownBlocks {
+		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+		require.NoError(t, st.SetSlot(blk.Block.Slot))
+	}
+
+	t.Run("slot is too early", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 0)
+		assert.ErrorContains(t, "slot is too low to backtrack", err)
+	})
+
+	t.Run("no peer status", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 64)
+		assert.ErrorContains(t, "cannot obtain peer's status", err)
+	})
+
+	t.Run("no non-skipped blocks found", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		p1.Connect(p2)
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2.PeerID()))
+		}()
+		p1.Peers().SetChainState(p2.PeerID(), &p2ppb.Status{
+			HeadRoot: nil,
+			HeadSlot: 0,
+		})
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 64)
+		assert.ErrorContains(t, "cannot locate non-empty slot for a peer", err)
+	})
+
+	t.Run("no diverging blocks", func(t *testing.T) {
+		p2 := connectPeerHavingBlocks(t, p1, knownBlocks, 64, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		_, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		assert.ErrorContains(t, "no alternative blocks exist within scanned range", err)
+	})
+
+	t.Run("first block is diverging - backtrack successfully", func(t *testing.T) {
+		forkedSlot := uint64(24)
+		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
+		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		require.NoError(t, err)
+		require.Equal(t, 10, len(fork.blocks))
+		assert.Equal(t, forkedSlot, fork.blocks[0].Block.Slot, "Expected slot %d to be ancestor", forkedSlot)
+	})
+
+	t.Run("first block is diverging - no common ancestor", func(t *testing.T) {
+		altBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		_, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		require.ErrorContains(t, "failed to find common ancestor", err)
+	})
+
+	t.Run("mid block is diverging - no backtrack is necessary", func(t *testing.T) {
+		forkedSlot := uint64(60)
+		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
+		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		defer func() {
+			assert.NoError(t, p1.Disconnect(p2))
+		}()
+		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
+		require.NoError(t, err)
+		require.Equal(t, 64, len(fork.blocks))
+		assert.Equal(t, uint64(33), fork.blocks[0].Block.Slot)
+	})
+}
+
+func TestBlocksFetcher_findAncestor(t *testing.T) {
+	beaconDB, _ := dbtest.SetupDB(t)
+	p2p := p2pt.NewTestP2P(t)
+
+	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+	finalizedSlot := uint64(63)
+	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+
+	genesisBlock := knownBlocks[0]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesisBlock))
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: finalizedEpoch,
+			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			chain: mc,
+			p2p:   p2p,
+			db:    beaconDB,
+		},
+	)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	pcl := fmt.Sprintf("%s/ssz_snappy", p2pm.RPCBlocksByRootTopic)
+
+	t.Run("error on request", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		p2p.Connect(p2)
+
+		_, err := fetcher.findAncestor(ctx, p2.PeerID(), knownBlocks[4])
+		assert.ErrorContains(t, "protocol not supported", err)
+	})
+
+	t.Run("no blocks", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		p2p.Connect(p2)
+
+		p2.SetStreamHandler(pcl, func(stream network.Stream) {
+			assert.NoError(t, stream.Close())
+		})
+
+		fork, err := fetcher.findAncestor(ctx, p2.PeerID(), knownBlocks[4])
+		assert.ErrorContains(t, "no common ancestor found", err)
+		assert.Equal(t, (*forkData)(nil), fork)
+	})
 }
 
 func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
