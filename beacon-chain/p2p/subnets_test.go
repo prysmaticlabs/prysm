@@ -70,8 +70,8 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		}
 	}()
 
-	// Make one service on port 3001.
-	port = 4000
+	// Make one service on port 4001.
+	port = 4001
 	cfg := &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
