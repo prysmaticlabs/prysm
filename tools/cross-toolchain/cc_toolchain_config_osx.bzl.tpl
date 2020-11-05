@@ -140,7 +140,6 @@ def _impl(ctx):
                             "-L"+ sdkroot + "usr/lib",
                             "-undefined",
                             "dynamic_lookup",
-                            "-I" + sdkroot + "usr/include"
                             ],
                     ),
                 ],
