@@ -297,6 +297,37 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	}
 }
 
+func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
+	mc, p1, beaconDB := initializeTestServices(t, []uint64{}, []*peerData{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			chain: mc,
+			p2p:   p1,
+			db:    beaconDB,
+		},
+	)
+
+	t.Run("no peer status", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 0)
+		assert.ErrorContains(t, "cannot obtain peer's status", err)
+	})
+
+	t.Run("no non-skipped blocks found", func(t *testing.T) {
+		p2 := p2pt.NewTestP2P(t)
+		p1.Connect(p2)
+		p1.Peers().SetChainState(p2.PeerID(), &p2ppb.Status{
+			HeadRoot: nil,
+			HeadSlot: 0,
+		})
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 0)
+		assert.ErrorContains(t, "cannot locate non-empty slot for a peer", err)
+	})
+}
+
 func TestBlocksFetcher_findAncestor(t *testing.T) {
 	beaconDB, _ := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
