@@ -312,7 +312,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 
 	t.Run("no peer status", func(t *testing.T) {
 		p2 := p2pt.NewTestP2P(t)
-		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 0)
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 64)
 		assert.ErrorContains(t, "cannot obtain peer's status", err)
 	})
 
@@ -323,7 +323,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 			HeadRoot: nil,
 			HeadSlot: 0,
 		})
-		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 0)
+		_, err := fetcher.findForkWithPeer(ctx, p2.PeerID(), 64)
 		assert.ErrorContains(t, "cannot locate non-empty slot for a peer", err)
 	})
 }
