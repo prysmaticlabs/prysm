@@ -315,7 +315,7 @@ func (p *Status) IsReadyToDial(pid peer.ID) bool {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		timeIsZero := peerData.NextValidTime.IsZero()
 		isInvalidTime := peerData.NextValidTime.After(time.Now())
-		return !(timeIsZero || isInvalidTime)
+		return timeIsZero || !isInvalidTime
 	}
 	// If no record exists, we don't restrict dials to the
 	// peer.

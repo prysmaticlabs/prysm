@@ -449,14 +449,17 @@ func TestPeerValidTime(t *testing.T) {
 	nextVal, err := p.NextValidTime(allPeers[3])
 	require.NoError(t, err)
 	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[3]))
 
 	nextVal, err = p.NextValidTime(allPeers[4])
 	require.NoError(t, err)
 	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[4]))
 
 	nextVal, err = p.NextValidTime(allPeers[5])
 	require.NoError(t, err)
 	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[5]))
 
 	// Now confirm the states
 	assert.Equal(t, numPeersConnected, len(p.Connected()), "Unexpected number of connected peers")
