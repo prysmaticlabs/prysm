@@ -283,6 +283,45 @@ func (p *Status) IsBad(pid peer.ID) bool {
 	return p.scorers.BadResponsesScorer().IsBadPeer(pid)
 }
 
+// NextValidTime gets the earliest possible time it is to contact/dial
+// a peer again. This is used to back-off from peers in the event
+// they are 'full' or have banned us.
+func (p *Status) NextValidTime(pid peer.ID) (time.Time, error) {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	if peerData, ok := p.store.PeerData(pid); ok {
+		return peerData.NextValidTime, nil
+	}
+	return timeutils.Now(), peerdata.ErrPeerUnknown
+}
+
+// SetNextValidTime sets the earliest possible time we are
+// able to contact this peer again.
+func (p *Status) SetNextValidTime(pid peer.ID, nextTime time.Time) {
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	peerData := p.store.PeerDataGetOrCreate(pid)
+	peerData.NextValidTime = nextTime
+}
+
+// IsReadyToDial checks where the given peer is ready to be
+// dialed again.
+func (p *Status) IsReadyToDial(pid peer.ID) bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	if peerData, ok := p.store.PeerData(pid); ok {
+		timeIsZero := peerData.NextValidTime.IsZero()
+		isInvalidTime := peerData.NextValidTime.After(time.Now())
+		return timeIsZero || !isInvalidTime
+	}
+	// If no record exists, we don't restrict dials to the
+	// peer.
+	return true
+}
+
 // Connecting returns the peers that are connecting.
 func (p *Status) Connecting() []peer.ID {
 	p.store.RLock()
