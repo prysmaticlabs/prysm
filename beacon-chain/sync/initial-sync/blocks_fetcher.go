@@ -276,25 +276,21 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
-	var blocks []*eth.SignedBeaconBlock
-	peers, err := f.filterPeers(ctx, peers, peersPercentagePerRequest)
-	if err != nil {
-		return blocks, "", err
-	}
+	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: start,
 		Count:     count,
 		Step:      1,
 	}
 	for i := 0; i < len(peers); i++ {
-		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
+		if blocks, err := f.requestBlocks(ctx, req, peers[i]); err == nil {
 			if featureconfig.Get().EnablePeerScorer {
 				f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
 			}
 			return blocks, peers[i], err
 		}
 	}
-	return blocks, "", errNoPeersAvailable
+	return nil, "", errNoPeersAvailable
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
