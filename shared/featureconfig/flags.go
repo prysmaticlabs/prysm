@@ -30,6 +30,12 @@ var (
 		Name:  "zinken",
 		Usage: "This defines the flag through which we can run on the Zinken Multiclient Testnet",
 	}
+	// Mainnet flag for easier tooling, no-op
+	Mainnet = &cli.BoolFlag{
+		Value: true,
+		Name:  "mainnet",
+		Usage: "Run on Ethereum 2.0 Main Net. This is the default and can be omitted.",
+	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
@@ -105,6 +111,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
+	Mainnet,
 	disableAccountsV2,
 	enableBlst,
 }...)
@@ -117,6 +124,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
+	Mainnet,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
@@ -137,6 +145,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
+	Mainnet,
 	enableBlst,
 	disableEth1DataMajorityVote,
 	enablePeerScorer,
