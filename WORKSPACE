@@ -15,9 +15,9 @@ http_archive(
 
 http_archive(
     name = "com_grail_bazel_toolchain",
-    sha256 = "0bec89e35d8a141c87f28cfc506d6d344785c8eb2ff3a453140a1fe972ada79d",
-    strip_prefix = "bazel-toolchain-77a87103145f86f03f90475d19c2c8854398a444",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/77a87103145f86f03f90475d19c2c8854398a444.tar.gz"],
+    sha256 = "b924b102adc0c3368d38a19bd971cb4fa75362a27bc363d0084b90ca6877d3f0",
+    strip_prefix = "bazel-toolchain-0.5.7",
+    urls = ["https://github.com/grailbio/bazel-toolchain/archive/0.5.7.tar.gz"],
 )
 
 load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
@@ -28,7 +28,7 @@ load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
 
 llvm_toolchain(
     name = "llvm_toolchain",
-    llvm_version = "9.0.0",
+    llvm_version = "10.0.0",
 )
 
 load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
@@ -76,9 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "dc97fccceacd4c6be14e800b2a00693d5e8d07f69ee187babfd04a80a9f8e250",
-    strip_prefix = "rules_docker-0.14.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.14.1.tar.gz",
+    sha256 = "1698624e878b0607052ae6131aa216d45ebb63871ec497f26c67455b34119c80",
+    strip_prefix = "rules_docker-0.15.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.15.0/rules_docker-v0.15.0.tar.gz"],
 )
 
 http_archive(
