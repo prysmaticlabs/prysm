@@ -11,6 +11,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -173,6 +174,16 @@ func (s *Service) Stop() error {
 			s.rateLimiter.free()
 		}
 	}()
+	// Removing RPC Stream handlers.
+	for _, p := range s.p2p.Host().Mux().Protocols() {
+		s.p2p.Host().RemoveStreamHandler(protocol.ID(p))
+	}
+	// Deregister Topic Subscribers.
+	for _, t := range s.p2p.PubSub().GetTopics() {
+		if err := s.p2p.PubSub().UnregisterTopicValidator(t); err != nil {
+			log.Errorf("Could not successfully unregister for topic %s: %v", t, err)
+		}
+	}
 	defer s.cancel()
 	return nil
 }
