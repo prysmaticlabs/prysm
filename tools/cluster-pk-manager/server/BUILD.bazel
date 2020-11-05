@@ -91,6 +91,7 @@ go_image(
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
         "//shared/keystore:go_default_library",
+        "//shared/maxprocs:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
@@ -113,7 +114,6 @@ go_image(
         "@io_k8s_client_go//rest:go_default_library",
         "@io_opencensus_go//plugin/ocgrpc:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
-        "//shared/maxprocs:go_default_library",
     ],
 )
 

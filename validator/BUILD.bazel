@@ -51,7 +51,6 @@ go_image(
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
-        "//shared/tos:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
@@ -60,6 +59,7 @@ go_image(
         "//shared/logutil:go_default_library",
         "//shared/maxprocs:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/tos:go_default_library",
         "//shared/version:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/client:go_default_library",

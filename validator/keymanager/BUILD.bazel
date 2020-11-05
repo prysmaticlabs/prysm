@@ -6,9 +6,9 @@ go_library(
     srcs = ["types.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager",
     visibility = [
+        "//tools/keystores:__pkg__",
         "//validator:__pkg__",
         "//validator:__subpackages__",
-        "//tools/keystores:__pkg__",
     ],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
