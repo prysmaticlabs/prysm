@@ -18,9 +18,9 @@ import (
 )
 
 // Ensure Service implements chain info interface.
-var _ = ChainInfoFetcher(&Service{})
-var _ = TimeFetcher(&Service{})
-var _ = ForkFetcher(&Service{})
+var _ ChainInfoFetcher = (*Service)(nil)
+var _ TimeFetcher = (*Service)(nil)
+var _ ForkFetcher = (*Service)(nil)
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
@@ -180,4 +180,24 @@ func TestHeadETH1Data_CanRetrieve(t *testing.T) {
 	if !proto.Equal(c.HeadETH1Data(), d) {
 		t.Error("Received incorrect eth1 data")
 	}
+}
+
+func TestIsCanonical_Ok(t *testing.T) {
+	ctx := context.Background()
+	db, sc := testDB.SetupDB(t)
+	c := setupBeaconChain(t, db, sc)
+
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 0
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+	can, err := c.IsCanonical(ctx, root)
+	require.NoError(t, err)
+	assert.Equal(t, true, can)
+
+	can, err = c.IsCanonical(ctx, [32]byte{'a'})
+	require.NoError(t, err)
+	assert.Equal(t, false, can)
 }

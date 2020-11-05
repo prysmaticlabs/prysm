@@ -62,7 +62,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 }
 
 // Returns true if the node has already received a valid attester slashing with the attesting indices.
-func (s *Service) hasSeenAttesterSlashingIndices(indices1 []uint64, indices2 []uint64) bool {
+func (s *Service) hasSeenAttesterSlashingIndices(indices1, indices2 []uint64) bool {
 	s.seenAttesterSlashingLock.RLock()
 	defer s.seenAttesterSlashingLock.RUnlock()
 
@@ -81,7 +81,7 @@ func (s *Service) hasSeenAttesterSlashingIndices(indices1 []uint64, indices2 []u
 }
 
 // Set attester slashing indices in attester slashing cache.
-func (s *Service) setAttesterSlashingIndicesSeen(indices1 []uint64, indices2 []uint64) {
+func (s *Service) setAttesterSlashingIndicesSeen(indices1, indices2 []uint64) {
 	s.seenAttesterSlashingLock.Lock()
 	defer s.seenAttesterSlashingLock.Unlock()
 

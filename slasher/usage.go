@@ -61,6 +61,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ForceClearDB,
 			cmd.ClearDB,
 			cmd.ConfigFileFlag,
+			cmd.AcceptTosFlag,
 		},
 	},
 	{
@@ -85,6 +86,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.BeaconRPCProviderFlag,
 			flags.EnableHistoricalDetectionFlag,
 			flags.SpanCacheSize,
+			flags.HighestAttCacheSize,
 		},
 	},
 	{

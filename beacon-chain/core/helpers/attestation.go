@@ -13,7 +13,7 @@ import (
 )
 
 // IsAggregator returns true if the signature is from the input validator. The committee
-// count is provided as an argument rather than direct implementation from spec. Having
+// count is provided as an argument rather than imported implementation from spec. Having
 // committee count as an argument allows cheaper computation at run time.
 //
 // Spec pseudocode definition:
@@ -143,4 +143,24 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 		)
 	}
 	return nil
+}
+
+// VerifyCheckpointEpoch is within current epoch and previous epoch
+// with respect to current time. Returns true if it's within, false if it's not.
+func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
+	now := uint64(timeutils.Now().Unix())
+	genesisTime := uint64(genesis.Unix())
+	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := SlotToEpoch(currentSlot)
+
+	var prevEpoch uint64
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return false
+	}
+
+	return true
 }

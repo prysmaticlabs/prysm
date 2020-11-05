@@ -21,9 +21,7 @@ func convertWspInput(wsp string) ([]byte, uint64, error) {
 	}
 
 	// Strip prefix "0x" if it's part of the input string.
-	if strings.HasPrefix(wsp, "0x") {
-		wsp = wsp[2:]
-	}
+	wsp = strings.TrimPrefix(wsp, "0x")
 
 	// Get the hexadecimal block root from input string.
 	s := strings.Split(wsp, ":")

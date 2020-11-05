@@ -67,6 +67,9 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, 
 					exists = true
 					continue
 				}
+				if !s.peers.IsReadyToDial(info.ID) {
+					continue
+				}
 				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(ctx, *info); err != nil {
 					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
@@ -112,7 +115,7 @@ func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
-	committeeIdxs := []uint64{}
+	var committeeIdxs []uint64
 	for i := uint64(0); i < attestationSubnetCount; i++ {
 		if bitV.BitAt(i) {
 			committeeIdxs = append(committeeIdxs, i)

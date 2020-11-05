@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -198,7 +198,7 @@ func encrypt(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not encrypt into new keystore")
 	}
-	item := &v2keymanager.Keystore{
+	item := &keymanager.Keystore{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Version: encryptor.Version(),
@@ -224,13 +224,13 @@ func encrypt(cliCtx *cli.Context) error {
 
 // Reads the keystore file at the provided path and attempts
 // to decrypt it with the specified passwords.
-func readAndDecryptKeystore(fullPath string, password string) error {
+func readAndDecryptKeystore(fullPath, password string) error {
 	file, err := ioutil.ReadFile(fullPath)
 	if err != nil {
 		return errors.Wrapf(err, "could not read file at path: %s", fullPath)
 	}
 	decryptor := keystorev4.New()
-	keystoreFile := &v2keymanager.Keystore{}
+	keystoreFile := &keymanager.Keystore{}
 
 	if err := json.Unmarshal(file, keystoreFile); err != nil {
 		return errors.Wrap(err, "could not JSON unmarshal keystore file")

@@ -4,7 +4,7 @@ package params
 // network config.
 func UseZinkenNetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
-	cfg.ContractDeploymentBlock = 3384340
+	cfg.ContractDeploymentBlock = 3488417
 	cfg.ChainID = 5
 	cfg.NetworkID = 5
 	cfg.DepositContractAddress = "0x99F0Ec06548b086E46Cb0019C78D0b9b9F36cD53"

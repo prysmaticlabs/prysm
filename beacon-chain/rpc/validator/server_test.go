@@ -109,8 +109,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	ctx := context.Background()
 
-	priv1 := bls.RandKey()
-	priv2 := bls.RandKey()
+	priv1, err := bls.RandKey()
+	require.NoError(t, err)
+	priv2, err := bls.RandKey()
+	require.NoError(t, err)
 
 	pubKey1 := priv1.PublicKey().Marshal()
 	pubKey2 := priv2.PublicKey().Marshal()
@@ -143,7 +145,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -196,9 +198,12 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 
-	priv1 := bls.RandKey()
-	priv2 := bls.RandKey()
-	priv3 := bls.RandKey()
+	priv1, err := bls.RandKey()
+	require.NoError(t, err)
+	priv2, err := bls.RandKey()
+	require.NoError(t, err)
+	priv3, err := bls.RandKey()
+	require.NoError(t, err)
 
 	pubKey1 := priv1.PublicKey().Marshal()
 	pubKey2 := priv2.PublicKey().Marshal()

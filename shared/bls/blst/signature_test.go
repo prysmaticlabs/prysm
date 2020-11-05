@@ -1,4 +1,5 @@
 // +build linux,amd64 linux,arm64
+// +build blst_enabled
 
 package blst
 
@@ -7,13 +8,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSignVerify(t *testing.T) {
-	priv := RandKey()
+	priv, err := RandKey()
+	require.NoError(t, err)
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
@@ -21,12 +23,13 @@ func TestSignVerify(t *testing.T) {
 }
 
 func TestAggregateVerify(t *testing.T) {
-	pubkeys := make([]iface.PublicKey, 0, 100)
-	sigs := make([]iface.Signature, 0, 100)
+	pubkeys := make([]common.PublicKey, 0, 100)
+	sigs := make([]common.Signature, 0, 100)
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := RandKey()
+		priv, err := RandKey()
+		require.NoError(t, err)
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
@@ -38,11 +41,12 @@ func TestAggregateVerify(t *testing.T) {
 }
 
 func TestFastAggregateVerify(t *testing.T) {
-	pubkeys := make([]iface.PublicKey, 0, 100)
-	sigs := make([]iface.Signature, 0, 100)
+	pubkeys := make([]common.PublicKey, 0, 100)
+	sigs := make([]common.Signature, 0, 100)
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	for i := 0; i < 100; i++ {
-		priv := RandKey()
+		priv, err := RandKey()
+		require.NoError(t, err)
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
@@ -54,7 +58,8 @@ func TestFastAggregateVerify(t *testing.T) {
 }
 
 func TestVerifyCompressed(t *testing.T) {
-	priv := RandKey()
+	priv, err := RandKey()
+	require.NoError(t, err)
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
@@ -63,12 +68,13 @@ func TestVerifyCompressed(t *testing.T) {
 }
 
 func TestMultipleSignatureVerification(t *testing.T) {
-	pubkeys := make([]iface.PublicKey, 0, 100)
+	pubkeys := make([]common.PublicKey, 0, 100)
 	sigs := make([][]byte, 0, 100)
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := RandKey()
+		priv, err := RandKey()
+		require.NoError(t, err)
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:]).Marshal()
 		pubkeys = append(pubkeys, pub)
@@ -81,7 +87,7 @@ func TestMultipleSignatureVerification(t *testing.T) {
 }
 
 func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
-	var pubkeys []iface.PublicKey
+	var pubkeys []common.PublicKey
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
 	aggSig := NewAggregateSignature()
@@ -139,7 +145,9 @@ func TestSignatureFromBytes(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
-	key, ok := RandKey().(*bls12SecretKey)
+	priv, err := RandKey()
+	require.NoError(t, err)
+	key, ok := priv.(*bls12SecretKey)
 	require.Equal(t, true, ok)
 
 	signatureA := &Signature{s: new(blstSignature).Sign(key.p, []byte("foo"), dst)}

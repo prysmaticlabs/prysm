@@ -8,10 +8,13 @@ import (
 	"net"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	ethpbv1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -33,14 +36,12 @@ import (
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
@@ -59,6 +60,7 @@ type Service struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	beaconDB                db.HeadAccessDatabase
+	chainInfoFetcher        blockchain.ChainInfoFetcher
 	headFetcher             blockchain.HeadFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
@@ -91,11 +93,6 @@ type Service struct {
 	stateNotifier           statefeed.Notifier
 	blockNotifier           blockfeed.Notifier
 	operationNotifier       opfeed.Notifier
-	slasherConn             *grpc.ClientConn
-	slasherProvider         string
-	slasherCert             string
-	slasherCredentialError  error
-	slasherClient           slashpb.SlasherClient
 	stateGen                *stategen.State
 	connectedRPCClients     map[net.Addr]bool
 	clientConnectionLock    sync.Mutex
@@ -108,6 +105,7 @@ type Config struct {
 	CertFlag                string
 	KeyFlag                 string
 	BeaconDB                db.HeadAccessDatabase
+	ChainInfoFetcher        blockchain.ChainInfoFetcher
 	HeadFetcher             blockchain.HeadFetcher
 	ForkFetcher             blockchain.ForkFetcher
 	FinalizationFetcher     blockchain.FinalizationFetcher
@@ -128,8 +126,6 @@ type Config struct {
 	PeerManager             p2p.PeerManager
 	DepositFetcher          depositcache.DepositFetcher
 	PendingDepositFetcher   depositcache.PendingDepositsFetcher
-	SlasherProvider         string
-	SlasherCert             string
 	StateNotifier           statefeed.Notifier
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
@@ -144,6 +140,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		ctx:                     ctx,
 		cancel:                  cancel,
 		beaconDB:                cfg.BeaconDB,
+		chainInfoFetcher:        cfg.ChainInfoFetcher,
 		headFetcher:             cfg.HeadFetcher,
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
@@ -172,8 +169,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateNotifier:           cfg.StateNotifier,
 		blockNotifier:           cfg.BlockNotifier,
 		operationNotifier:       cfg.OperationNotifier,
-		slasherProvider:         cfg.SlasherProvider,
-		slasherCert:             cfg.SlasherCert,
 		stateGen:                cfg.StateGen,
 		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
 		connectedRPCClients:     make(map[net.Addr]bool),
@@ -213,8 +208,7 @@ func (s *Service) Start() {
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
-			log.Errorf("Could not load TLS keys: %s", err)
-			s.credentialError = err
+			log.WithError(err).Fatal("Could not load TLS keys")
 		}
 		opts = append(opts, grpc.Creds(creds))
 	} else {
@@ -281,8 +275,27 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
+	beaconChainServerV1 := &beaconv1.Server{
+		Ctx:                 s.ctx,
+		BeaconDB:            s.beaconDB,
+		AttestationsPool:    s.attestationsPool,
+		SlashingsPool:       s.slashingsPool,
+		ChainInfoFetcher:    s.chainInfoFetcher,
+		ChainStartFetcher:   s.chainStartFetcher,
+		DepositFetcher:      s.depositFetcher,
+		BlockFetcher:        s.powChainService,
+		CanonicalStateChan:  s.canonicalStateChan,
+		GenesisTimeFetcher:  s.genesisTimeFetcher,
+		StateNotifier:       s.stateNotifier,
+		BlockNotifier:       s.blockNotifier,
+		AttestationNotifier: s.operationNotifier,
+		Broadcaster:         s.p2p,
+		StateGen:            s.stateGen,
+		SyncChecker:         s.syncService,
+	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	if s.enableDebugRPCEndpoints {
 		log.Info("Enabled debug RPC endpoints")
 		debugServer := &debug.Server{
@@ -309,57 +322,12 @@ func (s *Service) Start() {
 	}()
 }
 
-func (s *Service) startSlasherClient() {
-	var dialOpt grpc.DialOption
-	if s.slasherCert != "" {
-		creds, err := credentials.NewClientTLSFromFile(s.slasherCert, "")
-		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
-			s.slasherCredentialError = err
-		}
-		dialOpt = grpc.WithTransportCredentials(creds)
-	} else {
-		dialOpt = grpc.WithInsecure()
-		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
-	}
-	slasherOpts := []grpc.DialOption{
-		dialOpt,
-		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
-		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
-			grpc_opentracing.StreamClientInterceptor(),
-			grpc_prometheus.StreamClientInterceptor,
-		)),
-		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
-			grpc_opentracing.UnaryClientInterceptor(),
-			grpc_prometheus.UnaryClientInterceptor,
-		)),
-	}
-	conn, err := grpc.DialContext(s.ctx, s.slasherProvider, slasherOpts...)
-	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", s.slasherProvider, err)
-		return
-	}
-	if conn.GetState() != connectivity.Ready {
-		log.Errorf("Slasher status is %s, please verify slasher is up", conn.GetState())
-		return
-	}
-
-	log.Info("Successfully started hash slinging slasher©️ gRPC connection")
-	s.slasherConn = conn
-	s.slasherClient = slashpb.NewSlasherClient(s.slasherConn)
-}
-
 // Stop the service.
 func (s *Service) Stop() error {
 	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
 		log.Debug("Initiated graceful stop of gRPC server")
-	}
-	if s.slasherConn != nil {
-		if err := s.slasherConn.Close(); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -368,9 +336,6 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	if s.credentialError != nil {
 		return s.credentialError
-	}
-	if s.slasherCredentialError != nil {
-		return s.slasherCredentialError
 	}
 	return nil
 }

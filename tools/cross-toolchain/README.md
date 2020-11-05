@@ -16,7 +16,7 @@ This toolchain suite describes cross compile configuration with a Dockerfile wit
 | target  | linux_amd64 | linux_arm64 | osx_amd64 | windows_amd64 |
 |----------|-------------------|------------------|-----------------|-----------------------|
 | `//beacon-chain` | :heavy_check_mark:  docker-sandbox and RBE, libkafka supported locally only | :heavy_check_mark:  docker-sandbox and RBE, no libkafka support | :heavy_check_mark:  docker-sandbox, no libkafka support | :heavy_check_mark:  docker-sandbox, no libkafka support |
-| `//validator`| :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark: docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :x:  Doesn't work. [#5008](https://github.com/prysmaticlabs/prysm/issues/5008) |
+| `//validator`| :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark: docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :heavy_check_mark: |
 
 The configurations above are enforced via pull request presubmit checks.
 

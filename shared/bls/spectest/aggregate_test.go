@@ -8,7 +8,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -35,7 +35,7 @@ func testAggregateYaml(t *testing.T) {
 			require.NoError(t, err)
 			test := &AggregateTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))
-			var sigs []iface.Signature
+			var sigs []common.Signature
 			for _, s := range test.Input {
 				sigBytes, err := hex.DecodeString(s[2:])
 				require.NoError(t, err)

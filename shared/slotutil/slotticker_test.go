@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var _ = Ticker(&SlotTicker{})
+var _ Ticker = (*SlotTicker)(nil)
 
 func TestSlotTicker(t *testing.T) {
 	ticker := &SlotTicker{

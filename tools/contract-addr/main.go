@@ -30,7 +30,7 @@ func main() {
 
 type handler struct{}
 
-func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h *handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	dat, err := ioutil.ReadFile(*address)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -1,25 +1,35 @@
-// +build darwin,amd64 windows,amd64 linux,amd64,!blst_enabled linux,arm64,!blst_enabled
+// +build darwin windows !blst_enabled
 
 package blst
 
-import "github.com/prysmaticlabs/prysm/shared/bls/iface"
+import (
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
+)
+
+// This stub file exists until build issues can be resolved for darwin and windows.
+const err = "blst is only supported on linux with blst_enabled gotag"
 
 // SecretKey -- stub
 type SecretKey struct{}
 
 // PublicKey -- stub
-func (s SecretKey) PublicKey() iface.PublicKey {
-	panic("blst is only supported on linux amd64")
+func (s SecretKey) PublicKey() common.PublicKey {
+	panic(err)
 }
 
 // Sign -- stub
-func (s SecretKey) Sign(msg []byte) iface.Signature {
-	panic("blst is only supported on linux amd64")
+func (s SecretKey) Sign(_ []byte) common.Signature {
+	panic(err)
 }
 
 // Marshal -- stub
 func (s SecretKey) Marshal() []byte {
-	panic("blst is only supported on linux amd64")
+	panic(err)
+}
+
+// IsZero -- stub
+func (s SecretKey) IsZero() bool {
+	panic(err)
 }
 
 // PublicKey -- stub
@@ -27,88 +37,93 @@ type PublicKey struct{}
 
 // Marshal -- stub
 func (p PublicKey) Marshal() []byte {
-	panic("blst is only supported on linux amd64")
+	panic(err)
 }
 
 // Copy -- stub
-func (p PublicKey) Copy() iface.PublicKey {
-	panic("blst is only supported on linux amd64")
+func (p PublicKey) Copy() common.PublicKey {
+	panic(err)
 }
 
 // Aggregate -- stub
-func (p PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
-	panic("blst is only supported on linux amd64")
+func (p PublicKey) Aggregate(_ common.PublicKey) common.PublicKey {
+	panic(err)
+}
+
+// IsInfinite -- stub
+func (s PublicKey) IsInfinite() bool {
+	panic(err)
 }
 
 // Signature -- stub
 type Signature struct{}
 
 // Verify -- stub
-func (s Signature) Verify(pubKey iface.PublicKey, msg []byte) bool {
-	panic("blst is only supported on linux amd64")
+func (s Signature) Verify(_ common.PublicKey, _ []byte) bool {
+	panic(err)
 }
 
 // AggregateVerify -- stub
-func (s Signature) AggregateVerify(pubKeys []iface.PublicKey, msgs [][32]byte) bool {
-	panic("blst is only supported on linux amd64")
+func (s Signature) AggregateVerify(_ []common.PublicKey, _ [][32]byte) bool {
+	panic(err)
 }
 
 // FastAggregateVerify -- stub
-func (s Signature) FastAggregateVerify(pubKeys []iface.PublicKey, msg [32]byte) bool {
-	panic("blst is only supported on linux amd64")
+func (s Signature) FastAggregateVerify(_ []common.PublicKey, _ [32]byte) bool {
+	panic(err)
 }
 
 // Marshal -- stub
 func (s Signature) Marshal() []byte {
-	panic("blst is only supported on linux amd64")
+	panic(err)
 }
 
 // Copy -- stub
-func (s Signature) Copy() iface.Signature {
-	panic("blst is only supported on linux amd64")
+func (s Signature) Copy() common.Signature {
+	panic(err)
 }
 
 // SecretKeyFromBytes -- stub
-func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {
-	panic("blst is only supported on linux amd64")
+func SecretKeyFromBytes(_ []byte) (SecretKey, error) {
+	panic(err)
 }
 
 // PublicKeyFromBytes -- stub
-func PublicKeyFromBytes(pubKey []byte) (PublicKey, error) {
-	panic("blst is only supported on linux amd64")
+func PublicKeyFromBytes(_ []byte) (PublicKey, error) {
+	panic(err)
 }
 
 // SignatureFromBytes -- stub
-func SignatureFromBytes(sig []byte) (Signature, error) {
-	panic("blst is only supported on linux amd64")
+func SignatureFromBytes(_ []byte) (Signature, error) {
+	panic(err)
 }
 
 // AggregatePublicKeys -- stub
-func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
-	panic("blst is only supported on linux amd64")
+func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
+	panic(err)
 }
 
 // AggregateSignatures -- stub
-func AggregateSignatures(sigs []iface.Signature) iface.Signature {
-	panic("blst is only supported on linux amd64")
+func AggregateSignatures(_ []common.Signature) common.Signature {
+	panic(err)
 }
 
 // VerifyMultipleSignatures -- stub
-func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
-	panic("blst is only supported on linux amd64")
+func VerifyMultipleSignatures(_ [][]byte, _ [][32]byte, _ []common.PublicKey) (bool, error) {
+	panic(err)
 }
 
 // NewAggregateSignature -- stub
-func NewAggregateSignature() iface.Signature {
-	panic("blst is only supported on linux amd64")
+func NewAggregateSignature() common.Signature {
+	panic(err)
 }
 
 // RandKey -- stub
-func RandKey() iface.SecretKey {
-	panic("blst is only supported on linux amd64")
+func RandKey() (common.SecretKey, error) {
+	panic(err)
 }
 
 // VerifyCompressed -- stub
-func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
-	panic("blst is only supported on linux amd64")
+func VerifyCompressed(_, _, _ []byte) bool {
+	panic(err)
 }

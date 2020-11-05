@@ -67,9 +67,11 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	a := &ethpb.AggregateAttestationAndProof{
 		Aggregate: &ethpb.Attestation{
-			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
+			Signature:       priv.Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data: &ethpb.AttestationData{
 				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -111,9 +113,11 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
 	a := &ethpb.AggregateAttestationAndProof{
 		Aggregate: &ethpb.Attestation{
-			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
+			Signature:       priv.Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data: &ethpb.AttestationData{
 				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -207,6 +211,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
 				Epoch: 0,
 			}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),

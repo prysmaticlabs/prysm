@@ -203,6 +203,36 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	}
 }
 
+func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
+	// Initialize test with 256 validators, each slot and each index gets 4 validators.
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		// First 2 epochs only half validators are activated.
+		var activationEpoch uint64
+		if i >= len(validators)/2 {
+			activationEpoch = 3
+		}
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: activationEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+	_, proposerIndxs, err := CommitteeAssignments(state, CurrentEpoch(state))
+	require.NoError(t, err)
+	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
+
+	_, proposerIndxs, err = CommitteeAssignments(state, CurrentEpoch(state)+1)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(proposerIndxs), "wanted empty proposer index set")
+}
+
 func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
@@ -630,7 +660,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 }
 
 func TestUpdateProposerIndicesInCache_CouldNotGetActiveIndices(t *testing.T) {
-	err := UpdateProposerIndicesInCache(&beaconstate.BeaconState{}, 1)
+	err := UpdateProposerIndicesInCache(&beaconstate.BeaconState{}, 2)
 	want := "nil inner state"
 	require.ErrorContains(t, want, err)
 }

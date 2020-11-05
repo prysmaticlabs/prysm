@@ -45,6 +45,21 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot, "Expected DB to keep object the same")
 }
 
+func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
+	pubkey := [48]byte{3}
+	db := setupDB(t, [][48]byte{pubkey})
+
+	slot := uint64(2)
+	emptySlot := uint64(120)
+	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
+	require.NoError(t, err, "Saving proposal history failed: %v")
+	signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], emptySlot)
+	require.NoError(t, err, "Failed to get proposal history")
+
+	require.NotNil(t, signingRoot)
+	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), signingRoot, "Expected DB to keep object the same")
+}
+
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 	pubkey := [48]byte{0}
 	tests := []struct {
@@ -162,7 +177,7 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 		err = db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], helpers.SlotToEpoch(slot), slotBitlist)
 		require.NoError(t, err)
 	}
-	err := db.ImportProposalHistory(ctx)
+	err := db.MigrateV2ProposalFormat(ctx)
 	require.NoError(t, err)
 
 	for slot := uint64(0); slot <= lastIndex; slot++ {
@@ -176,4 +191,35 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), root)
 	}
+}
+
+func TestShouldImportProposals(t *testing.T) {
+	pubkey := [48]byte{3}
+	db := setupDB(t, nil)
+	//ctx := context.Background()
+
+	shouldImport, err := db.shouldImportProposals()
+	require.NoError(t, err)
+	require.Equal(t, false, shouldImport, "Empty bucket should not be imported")
+	err = db.OldUpdatePublicKeysBuckets([][48]byte{pubkey})
+	require.NoError(t, err)
+	shouldImport, err = db.shouldImportProposals()
+	require.NoError(t, err)
+	require.Equal(t, true, shouldImport, "Bucket with content should be imported")
+}
+
+func TestStore_UpdateProposalsProtectionDb(t *testing.T) {
+	pubkey := [48]byte{3}
+	db := setupDB(t, [][48]byte{pubkey})
+	ctx := context.Background()
+	err := db.OldUpdatePublicKeysBuckets([][48]byte{pubkey})
+	require.NoError(t, err)
+	shouldImport, err := db.shouldImportProposals()
+	require.NoError(t, err)
+	require.Equal(t, true, shouldImport, "Bucket with content should be imported")
+	err = db.MigrateV2ProposalsProtectionDb(ctx)
+	require.NoError(t, err)
+	shouldImport, err = db.shouldImportProposals()
+	require.NoError(t, err)
+	require.Equal(t, false, shouldImport, "Proposals should not be re-imported")
 }

@@ -37,7 +37,7 @@ var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to
 //
 // This method ensures that all blocks from the current finalized epoch are considered "final" while
 // maintaining only canonical and finalized blocks older than the current finalized epoch.
-func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
+func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateFinalizedBlockRoots")
 	defer span.End()
 
@@ -56,7 +56,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 		}
 	}
 
-	blockRoots, err := kv.BlockRoots(ctx, filters.NewFilter().
+	blockRoots, err := s.BlockRoots(ctx, filters.NewFilter().
 		SetStartEpoch(previousFinalizedCheckpoint.Epoch).
 		SetEndEpoch(checkpoint.Epoch+1),
 	)
@@ -78,7 +78,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			break
 		}
 
-		signedBlock, err := kv.Block(ctx, bytesutil.ToBytes32(root))
+		signedBlock, err := s.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
@@ -129,7 +129,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Upsert blocks from the current finalized epoch.
-	roots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))
+	roots, err := s.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
@@ -159,12 +159,12 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 // A beacon block root contained exists in this index if it is considered finalized and canonical.
 // Note: beacon blocks from the latest finalized epoch return true, whether or not they are
 // considered canonical in the "head view" of the beacon node.
-func (kv *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
+func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
 	var exists bool
-	err := kv.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		exists = tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:]) != nil
 		// Check genesis block root.
 		if !exists {
@@ -182,12 +182,12 @@ func (kv *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool 
 // FinalizedChildBlock returns the child block of a provided finalized block. If
 // no finalized block or its respective child block exists we return with a nil
 // block.
-func (kv *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
+func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
 	var blk *ethpb.SignedBeaconBlock
-	err := kv.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		blkBytes := tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:])
 		if blkBytes == nil {
 			return nil

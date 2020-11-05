@@ -64,7 +64,7 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 // ValidatorRoot describes a method from which the hash tree root
 // of a validator is returned.
 func ValidatorRoot(hasher htrutils.HashFn, validator *ethpb.Validator) ([32]byte, error) {
-	fieldRoots := [][32]byte{}
+	var fieldRoots [][32]byte
 	if validator != nil {
 		pubkey := bytesutil.ToBytes48(validator.PublicKey)
 		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)

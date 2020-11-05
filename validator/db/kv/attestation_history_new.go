@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
@@ -20,13 +21,6 @@ const (
 	historySize            = targetSize + sourceSize + signingRootSize
 	minimalSize            = latestEpochWrittenSize
 )
-
-// AttestationHistoryNew stores the historical attestation data needed
-// for protection of validators.
-type AttestationHistoryNew struct {
-	TargetToSource     map[uint64]*HistoryData
-	LatestEpochWritten uint64
-}
 
 // HistoryData stores the needed data to confirm if an attestation is slashable
 // or repeated.
@@ -82,7 +76,7 @@ func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*His
 
 	history.Source = bytesutil.FromBytes8(hd[cursor : cursor+sourceSize])
 	sr := make([]byte, 32)
-	copy(hd[cursor+sourceSize:cursor+historySize], sr)
+	copy(sr, hd[cursor+sourceSize:cursor+historySize])
 	history.SigningRoot = sr
 	return history, nil
 }
@@ -149,4 +143,93 @@ func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, his
 		return nil
 	})
 	return err
+}
+
+// MigrateV2AttestationProtection import old attestation format data into the new attestation format
+func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.MigrateV2AttestationProtection")
+	defer span.End()
+	var allKeys [][48]byte
+
+	if err := store.db.View(func(tx *bolt.Tx) error {
+		attestationsBucket := tx.Bucket(historicAttestationsBucket)
+		if err := attestationsBucket.ForEach(func(pubKey, _ []byte) error {
+			var pubKeyCopy [48]byte
+			copy(pubKeyCopy[:], pubKey)
+			allKeys = append(allKeys, pubKeyCopy)
+			return nil
+		}); err != nil {
+			return errors.Wrapf(err, "could not retrieve attestations for source in %s", store.databasePath)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+	allKeys = removeDuplicateKeys(allKeys)
+	attMap, err := store.AttestationHistoryForPubKeys(ctx, allKeys)
+	if err != nil {
+		return errors.Wrapf(err, "could not retrieve data for public keys %v", allKeys)
+	}
+	dataMap := make(map[[48]byte]EncHistoryData)
+	for key, atts := range attMap {
+		dataMap[key] = newAttestationHistoryArray(atts.LatestEpochWritten)
+		dataMap[key], err = dataMap[key].setLatestEpochWritten(ctx, atts.LatestEpochWritten)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set latest epoch while migrating attestations to v2")
+		}
+		for target, source := range atts.TargetToSource {
+			dataMap[key], err = dataMap[key].setTargetData(ctx, target, &HistoryData{
+				Source:      source,
+				SigningRoot: []byte{1},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to set target data while migrating attestations to v2")
+			}
+		}
+	}
+	err = store.SaveAttestationHistoryNewForPubKeys(ctx, dataMap)
+	return err
+}
+
+// MigrateV2AttestationProtectionDb exports old attestation protection data
+// format to the new format and save the exported flag to database.
+func (store *Store) MigrateV2AttestationProtectionDb(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.MigrateV2AttestationProtectionDb")
+	defer span.End()
+	importAttestations, err := store.shouldMigrateAttestations()
+	if err != nil {
+		return errors.Wrap(err, "failed to analyze whether attestations should be imported")
+	}
+	if !importAttestations {
+		return nil
+	}
+	err = store.MigrateV2AttestationProtection(ctx)
+	if err != nil {
+		return errors.Wrap(err, "filed to import attestations")
+	}
+	err = store.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicAttestationsBucket)
+		if bucket != nil {
+			if err := bucket.Put([]byte(attestationExported), []byte{1}); err != nil {
+				return errors.Wrap(err, "failed to set migrated attestations flag in db")
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func (store *Store) shouldMigrateAttestations() (bool, error) {
+	var importAttestations bool
+	err := store.db.View(func(tx *bolt.Tx) error {
+		attestationBucket := tx.Bucket(historicAttestationsBucket)
+		if attestationBucket != nil && attestationBucket.Stats().KeyN != 0 {
+			if exported := attestationBucket.Get([]byte(attestationExported)); exported == nil {
+				importAttestations = true
+			}
+		}
+		return nil
+	})
+	return importAttestations, err
 }

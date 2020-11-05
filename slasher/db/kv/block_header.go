@@ -28,7 +28,7 @@ func unmarshalBlockHeader(ctx context.Context, enc []byte) (*ethpb.SignedBeaconB
 
 // BlockHeaders accepts an slot and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
-func (db *Store) BlockHeaders(ctx context.Context, slot uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
+func (db *Store) BlockHeaders(ctx context.Context, slot, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.BlockHeaders")
 	defer span.End()
 	var blockHeaders []*ethpb.SignedBeaconBlockHeader
@@ -48,7 +48,7 @@ func (db *Store) BlockHeaders(ctx context.Context, slot uint64, validatorID uint
 }
 
 // HasBlockHeader accepts a slot and validator id and returns true if the block header exists.
-func (db *Store) HasBlockHeader(ctx context.Context, slot uint64, validatorID uint64) bool {
+func (db *Store) HasBlockHeader(ctx context.Context, slot, validatorID uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.HasBlockHeader")
 	defer span.End()
 	prefix := encodeSlotValidatorID(slot, validatorID)
@@ -113,7 +113,7 @@ func (db *Store) DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.Signe
 }
 
 // PruneBlockHistory leaves only records younger then history size.
-func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
+func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpochAge uint64) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneBlockHistory")
 	defer span.End()
 	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)

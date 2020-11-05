@@ -8,5 +8,5 @@ var (
 	// Validator slashing protection from slashable attestations.
 	historicAttestationsBucket = []byte("attestation-history-bucket")
 	// New Validator slashing protection from slashable attestations.
-	newHistoricAttestationsBucket = []byte("attestation-history-bucket-new")
+	newHistoricAttestationsBucket = []byte("attestation-history-bucket-interchange")
 )

@@ -108,22 +108,22 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// This can happen sometimes when we receive the same log twice from the
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
-	index := binary.LittleEndian.Uint64(merkleTreeIndex)
-	if int64(index) <= s.lastReceivedMerkleIndex {
+	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex))
+	if index <= s.lastReceivedMerkleIndex {
 		return nil
 	}
 
-	if int64(index) != s.lastReceivedMerkleIndex+1 {
+	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
 		if s.requestingOldLogs {
 			return errors.New("received incorrect merkle index")
 		}
-		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
+		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, index-1); err != nil {
 			return errors.Wrap(err, "could not get correct merkle index")
 		}
 
 	}
-	s.lastReceivedMerkleIndex = int64(index)
+	s.lastReceivedMerkleIndex = index
 
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
@@ -162,7 +162,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	s.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
+	s.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
@@ -176,7 +176,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
+		s.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -253,12 +253,12 @@ func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 // updates the deposit trie with the data from each individual log.
 func (s *Service) processPastLogs(ctx context.Context) error {
 	currentBlockNum := s.latestEth1Data.LastRequestedBlock
-	deploymentBlock := int64(params.BeaconNetworkConfig().ContractDeploymentBlock)
+	deploymentBlock := params.BeaconNetworkConfig().ContractDeploymentBlock
 	// Start from the deployment block if our last requested block
 	// is behind it. This is as the deposit logs can only start from the
 	// block of the deployment of the deposit contract.
-	if uint64(deploymentBlock) > currentBlockNum {
-		currentBlockNum = uint64(deploymentBlock)
+	if deploymentBlock > currentBlockNum {
+		currentBlockNum = deploymentBlock
 	}
 	// To store all blocks.
 	headersMap := make(map[uint64]*gethTypes.Header)
@@ -346,15 +346,23 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
-	currentState, err := s.beaconDB.HeadState(ctx)
+
+	c, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head state")
+		return err
 	}
-
-	if currentState != nil && currentState.Eth1DepositIndex() > 0 {
-		s.depositCache.PrunePendingDeposits(ctx, int64(currentState.Eth1DepositIndex()))
+	fRoot := bytesutil.ToBytes32(c.Root)
+	// Return if no checkpoint exists yet.
+	if fRoot == params.BeaconConfig().ZeroHash {
+		return nil
 	}
-
+	fState, err := s.stateGen.StateByRoot(ctx, fRoot)
+	if err != nil {
+		return err
+	}
+	if fState != nil && fState.Eth1DepositIndex() > 0 {
+		s.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
+	}
 	return nil
 }
 
@@ -413,7 +421,7 @@ func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, want
 	return nil
 }
 
-func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBlk uint64) error {
+func (s *Service) processBlksInRange(ctx context.Context, startBlk, endBlk uint64) error {
 	for i := startBlk; i <= endBlk; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
@@ -452,8 +460,7 @@ func (s *Service) checkHeaderForChainstart(header *gethTypes.Header) {
 	s.checkForChainstart(header.Hash(), header.Number, header.Time)
 }
 
-func (s *Service) checkHeaderRange(start uint64, end uint64,
-	headersMap map[uint64]*gethTypes.Header,
+func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*gethTypes.Header,
 	requestHeaders func(uint64, uint64) error) error {
 	for i := start; i <= end; i++ {
 		if !s.chainStartData.Chainstarted {

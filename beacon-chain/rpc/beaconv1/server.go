@@ -29,12 +29,10 @@ type Server struct {
 	BeaconDB            db.ReadOnlyDatabase
 	Ctx                 context.Context
 	ChainStartFetcher   powchain.ChainStartFetcher
-	HeadFetcher         blockchain.HeadFetcher
-	FinalizationFetcher blockchain.FinalizationFetcher
+	ChainInfoFetcher    blockchain.ChainInfoFetcher
 	DepositFetcher      depositcache.DepositFetcher
 	BlockFetcher        powchain.POWBlockFetcher
 	GenesisTimeFetcher  blockchain.TimeFetcher
-	GenesisFetcher      blockchain.GenesisFetcher
 	BlockReceiver       blockchain.BlockReceiver
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier

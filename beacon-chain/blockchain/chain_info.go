@@ -163,7 +163,7 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 		return s.headState(ctx), nil
 	}
 
-	return s.beaconDB.HeadState(ctx)
+	return s.stateGen.StateByRoot(ctx, s.headRoot())
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
@@ -255,9 +255,6 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 		return true, nil
 	}
 
-	// If the block has not been finalized, the block must be recent. Check recent canonical roots
-	// mapping which uses proto array fork choice.
-	s.recentCanonicalBlocksLock.RLock()
-	defer s.recentCanonicalBlocksLock.RUnlock()
-	return s.recentCanonicalBlocks[blockRoot], nil
+	// If the block has not been finalized, check fork choice store to see if the block is canonical
+	return s.forkChoiceStore.IsCanonical(blockRoot), nil
 }

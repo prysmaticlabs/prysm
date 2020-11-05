@@ -47,14 +47,14 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
 	s.validatePendingAtts(ctx, s.chain.CurrentSlot())
 
-	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
 	s.pendingAttsLock.RLock()
+	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
 	for br := range s.blkRootToPendingAtts {
 		roots = append(roots, br)
 	}
 	s.pendingAttsLock.RUnlock()
 
-	pendingRoots := [][32]byte{}
+	var pendingRoots [][32]byte
 	randGen := rand.NewGenerator()
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()

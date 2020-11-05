@@ -50,17 +50,17 @@ type FinalizedDeposits struct {
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
 	// Beacon chain deposits in memory.
-	pendingDeposits    []*dbpb.DepositContainer
-	deposits           []*dbpb.DepositContainer
-	finalizedDeposits  *FinalizedDeposits
-	depositsLock       sync.RWMutex
-	chainStartDeposits []*ethpb.Deposit
-	chainStartPubkeys  map[string]bool
+	pendingDeposits       []*dbpb.DepositContainer
+	deposits              []*dbpb.DepositContainer
+	finalizedDeposits     *FinalizedDeposits
+	depositsLock          sync.RWMutex
+	chainStartPubkeys     map[string]bool
+	chainStartPubkeysLock sync.RWMutex
 }
 
 // New instantiates a new deposit cache
 func New() (*DepositCache, error) {
-	finalizedDepositsTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	finalizedDepositsTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +68,10 @@ func New() (*DepositCache, error) {
 	// finalizedDeposits.MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
 	// Inserting the first item into the trie will set the value of the index to 0.
 	return &DepositCache{
-		pendingDeposits:    []*dbpb.DepositContainer{},
-		deposits:           []*dbpb.DepositContainer{},
-		finalizedDeposits:  &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
-		chainStartPubkeys:  make(map[string]bool),
-		chainStartDeposits: make([]*ethpb.Deposit, 0),
+		pendingDeposits:   []*dbpb.DepositContainer{},
+		deposits:          []*dbpb.DepositContainer{},
+		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
+		chainStartPubkeys: make(map[string]bool),
 	}, nil
 }
 
@@ -119,7 +118,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	defer dc.depositsLock.Unlock()
 
 	depositTrie := dc.finalizedDeposits.Deposits
-	insertIndex := dc.finalizedDeposits.MerkleTrieIndex + 1
+	insertIndex := int(dc.finalizedDeposits.MerkleTrieIndex + 1)
 	for _, d := range dc.deposits {
 		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
 			continue
@@ -132,7 +131,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return
 		}
-		depositTrie.Insert(depHash[:], int(insertIndex))
+		depositTrie.Insert(depHash[:], insertIndex)
 		insertIndex++
 	}
 
@@ -156,6 +155,8 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.Deposi
 func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.MarkPubkeyForChainstart")
 	defer span.End()
+	dc.chainStartPubkeysLock.Lock()
+	defer dc.chainStartPubkeysLock.Unlock()
 	dc.chainStartPubkeys[pubkey] = true
 }
 
@@ -163,6 +164,8 @@ func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey stri
 func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) bool {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PubkeyInChainstart")
 	defer span.End()
+	dc.chainStartPubkeysLock.RLock()
+	defer dc.chainStartPubkeysLock.RUnlock()
 	if dc.chainStartPubkeys != nil {
 		return dc.chainStartPubkeys[pubkey]
 	}
@@ -257,4 +260,29 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.
 	}
 
 	return deposits
+}
+
+// PruneProofs removes proofs from all deposits whose index is equal or less than untilDepositIndex.
+func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64) error {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.PruneProofs")
+	defer span.End()
+	dc.depositsLock.Lock()
+	defer dc.depositsLock.Unlock()
+
+	if untilDepositIndex > int64(len(dc.deposits)) {
+		untilDepositIndex = int64(len(dc.deposits) - 1)
+	}
+
+	for i := untilDepositIndex; i >= 0; i-- {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		// Finding a nil proof means that all proofs up to this deposit have been already pruned.
+		if dc.deposits[i].Deposit.Proof == nil {
+			break
+		}
+		dc.deposits[i].Deposit.Proof = nil
+	}
+
+	return nil
 }

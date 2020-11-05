@@ -20,9 +20,9 @@ type platform struct {
 
 var (
 	// execShellOutput has execShellOutputFunc as the default but can be changed for testing purposes.
-	execShellOutput func(ctx context.Context, command string, args ...string) (string, error) = execShellOutputFunc
-	runtimeOS                                                                                 = runtime.GOOS
-	runtimeArch                                                                               = runtime.GOARCH
+	execShellOutput = execShellOutputFunc
+	runtimeOS       = runtime.GOOS
+	runtimeArch     = runtime.GOARCH
 )
 
 // execShellOutputFunc passes a command and args to exec.CommandContext and returns the result as a string

@@ -68,14 +68,30 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				if err != nil {
 					return err
 				}
-				missingState, err := s.StateByRoot(ctx, missingRoot)
-				if err != nil {
-					return err
-				}
 				aRoot = missingRoot
-				aState = missingState
+				// There's no need to generate the state if the state already exists on the DB.
+				// We can skip saving the state.
+				if !s.beaconDB.HasState(ctx, aRoot) {
+					aState, err = s.StateByRoot(ctx, missingRoot)
+					if err != nil {
+						return err
+					}
+				}
 			}
+
 			if s.beaconDB.HasState(ctx, aRoot) {
+				// Remove hot state DB root to prevent it gets deleted later when we turn hot state save DB mode off.
+				s.saveHotStateDB.lock.Lock()
+				roots := s.saveHotStateDB.savedStateRoots
+				for i := 0; i < len(roots); i++ {
+					if aRoot == roots[i] {
+						s.saveHotStateDB.savedStateRoots = append(roots[:i], roots[i+1:]...)
+						// There shouldn't be duplicated roots in `savedStateRoots`.
+						// Break here is ok.
+						break
+					}
+				}
+				s.saveHotStateDB.lock.Unlock()
 				continue
 			}
 

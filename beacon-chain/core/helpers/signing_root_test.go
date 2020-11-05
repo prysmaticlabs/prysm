@@ -63,9 +63,9 @@ func TestFuzzverifySigningRoot_10000(t *testing.T) {
 	pubkey := [48]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}
-	p := []byte{}
-	s := []byte{}
-	d := []byte{}
+	var p []byte
+	var s []byte
+	var d []byte
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(&pubkey)

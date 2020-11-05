@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"bytes"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -29,7 +31,7 @@ func IsActiveValidatorUsingTrie(validator *stateTrie.ReadOnlyValidator, epoch ui
 	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
 }
 
-func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch uint64) bool {
+func checkValidatorActiveStatus(activationEpoch, exitEpoch, epoch uint64) bool {
 	return activationEpoch <= epoch && epoch < exitEpoch
 }
 
@@ -42,7 +44,7 @@ func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch 
 //  Check if ``validator`` is slashable.
 //  """
 //  return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
-func IsSlashableValidator(activationEpoch uint64, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func IsSlashableValidator(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
 	return checkValidatorSlashable(activationEpoch, withdrawableEpoch, slashed, epoch)
 }
 
@@ -51,7 +53,7 @@ func IsSlashableValidatorUsingTrie(val *stateTrie.ReadOnlyValidator, epoch uint6
 	return checkValidatorSlashable(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), epoch)
 }
 
-func checkValidatorSlashable(activationEpoch uint64, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func checkValidatorSlashable(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
 	active := activationEpoch <= epoch
 	beforeWithdrawable := epoch < withdrawableEpoch
 	return beforeWithdrawable && active && !slashed
@@ -175,26 +177,35 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
-	// The cache uses the block root of the previous epoch's last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
+	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
 	// For simplicity, the node will skip caching of genesis epoch.
-	if e > params.BeaconConfig().GenesisEpoch {
-		s, err := EndSlot(PrevEpoch(state))
+	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+		wantedEpoch := PrevEpoch(state)
+		if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
+			wantedEpoch -= params.BeaconConfig().MinSeedLookahead
+		}
+		s, err := EndSlot(wantedEpoch)
 		if err != nil {
 			return 0, err
 		}
-		r, err := BlockRootAtSlot(state, s)
+		r, err := StateRootAtSlot(state, s)
 		if err != nil {
 			return 0, err
 		}
-		proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
-		if err != nil {
-			return 0, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if proposerIndices != nil {
-			return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
-		}
-		if err := UpdateProposerIndicesInCache(state, e); err != nil {
-			return 0, errors.Wrap(err, "could not update committee cache")
+		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
+			if err != nil {
+				return 0, errors.Wrap(err, "could not interface with committee cache")
+			}
+			if proposerIndices != nil {
+				if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+					return 0, errors.Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
+				}
+				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+			}
+			if err := UpdateProposerIndicesInCache(state, e); err != nil {
+				return 0, errors.Wrap(err, "could not update committee cache")
+			}
 		}
 	}
 
@@ -313,7 +324,7 @@ func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidato
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
-func isEligibileForActivationQueue(activationEligibilityEpoch uint64, effectiveBalance uint64) bool {
+func isEligibileForActivationQueue(activationEligibilityEpoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
@@ -346,7 +357,7 @@ func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *s
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*
-func isEligibleForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
+func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch uint64) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }

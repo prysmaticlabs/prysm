@@ -101,7 +101,7 @@ func GenerateFullBlock(
 	}
 
 	var err error
-	pSlashings := []*ethpb.ProposerSlashing{}
+	var pSlashings []*ethpb.ProposerSlashing
 	numToGen := conf.NumProposerSlashings
 	if numToGen > 0 {
 		pSlashings, err = generateProposerSlashings(bState, privs, numToGen)
@@ -111,7 +111,7 @@ func GenerateFullBlock(
 	}
 
 	numToGen = conf.NumAttesterSlashings
-	aSlashings := []*ethpb.AttesterSlashing{}
+	var aSlashings []*ethpb.AttesterSlashing
 	if numToGen > 0 {
 		aSlashings, err = generateAttesterSlashings(bState, privs, numToGen)
 		if err != nil {
@@ -120,7 +120,7 @@ func GenerateFullBlock(
 	}
 
 	numToGen = conf.NumAttestations
-	atts := []*ethpb.Attestation{}
+	var atts []*ethpb.Attestation
 	if numToGen > 0 {
 		atts, err = GenerateAttestations(bState, privs, numToGen, slot, false)
 		if err != nil {
@@ -129,7 +129,8 @@ func GenerateFullBlock(
 	}
 
 	numToGen = conf.NumDeposits
-	newDeposits, eth1Data := []*ethpb.Deposit{}, bState.Eth1Data()
+	var newDeposits []*ethpb.Deposit
+	eth1Data := bState.Eth1Data()
 	if numToGen > 0 {
 		newDeposits, eth1Data, err = generateDepositsAndEth1Data(bState, numToGen)
 		if err != nil {
@@ -138,7 +139,7 @@ func GenerateFullBlock(
 	}
 
 	numToGen = conf.NumVoluntaryExits
-	exits := []*ethpb.SignedVoluntaryExit{}
+	var exits []*ethpb.SignedVoluntaryExit
 	if numToGen > 0 {
 		exits, err = generateVoluntaryExits(bState, privs, numToGen)
 		if err != nil {
@@ -353,9 +354,9 @@ func generateAttesterSlashings(
 // for the same data with their aggregation bits split uniformly.
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
-func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen uint64, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
+func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
 	currentEpoch := helpers.SlotToEpoch(slot)
-	attestations := []*ethpb.Attestation{}
+	var attestations []*ethpb.Attestation
 	generateHeadState := false
 	bState = bState.Copy()
 	if slot > bState.Slot() {
@@ -461,7 +462,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 		bitsPerAtt := committeeSize / uint64(attsPerCommittee)
 		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
 			aggregationBits := bitfield.NewBitlist(committeeSize)
-			sigs := []bls.Signature{}
+			var sigs []bls.Signature
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
 				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:]))

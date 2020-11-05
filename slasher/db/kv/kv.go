@@ -19,22 +19,25 @@ var databaseFileName = "slasher.db"
 // Store defines an implementation of the slasher Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db               *bolt.DB
-	databasePath     string
-	spanCache        *cache.EpochSpansCache
-	flatSpanCache    *cache.EpochFlatSpansCache
-	spanCacheEnabled bool
+	highestAttCacheEnabled  bool
+	spanCacheEnabled        bool
+	highestAttestationCache *cache.HighestAttestationCache
+	flatSpanCache           *cache.EpochFlatSpansCache
+	db                      *bolt.DB
+	databasePath            string
 }
 
 // Config options for the slasher db.
 type Config struct {
 	// SpanCacheSize determines the span map cache size.
-	SpanCacheSize int
+	SpanCacheSize               int
+	HighestAttestationCacheSize int
 }
 
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
 	db.flatSpanCache.Purge()
+	db.highestAttestationCache.Purge()
 	return db.db.Close()
 }
 
@@ -90,23 +93,21 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
-		if err == bolt.ErrTimeout {
+		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err
 	}
 	kv := &Store{db: boltDB, databasePath: datafile}
 	kv.EnableSpanCache(true)
-	spanCache, err := cache.NewEpochSpansCache(cfg.SpanCacheSize, persistSpanMapsOnEviction(kv))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create new cache")
-	}
-	kv.spanCache = spanCache
+	kv.EnableHighestAttestationCache(true)
 	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistFlatSpanMapsOnEviction(kv))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new flat cache")
 	}
 	kv.flatSpanCache = flatSpanCache
+	highestAttCache, err := cache.NewHighestAttestationCache(cfg.HighestAttestationCacheSize, persistHighestAttestationCacheOnEviction(kv))
+	kv.highestAttestationCache = highestAttCache
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
@@ -121,6 +122,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 			validatorsMinMaxSpanBucketNew,
 			slashingBucket,
 			chainDataBucket,
+			highestAttestationBucket,
 		)
 	}); err != nil {
 		return nil, err

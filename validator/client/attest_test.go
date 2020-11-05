@@ -12,8 +12,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -23,38 +23,42 @@ import (
 
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Could not fetch validator assignment")
 }
 
 func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	validator, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 0,
 			Committee:      make([]uint64, 0),
 			ValidatorIndex: 0,
 		}}}
-	validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 0, pubKey)
 	require.LogsContain(t, hook, "Empty committee")
 }
 
 func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
 			Committee:      make([]uint64, 111),
 			ValidatorIndex: 0,
@@ -76,24 +80,23 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Could not submit attestation to beacon node")
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	hook := logTest.NewGlobal()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -125,7 +128,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBitfield.SetBitAt(4, true)
@@ -142,7 +145,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
-	sig, err := validator.keyManager.Sign(context.Background(), validatorPubKey, root)
+	sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
+		PublicKey:   validatorKey.PublicKey().Marshal(),
+		SigningRoot: root[:],
+	})
 	require.NoError(t, err)
 	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
@@ -154,19 +160,16 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 }
 
 func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -194,25 +197,22 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&ethpb.AttestResponse{AttestationDataRoot: make([]byte, 32)}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, failedPreAttSignLocalErr)
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -241,25 +241,22 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, failedPreAttSignLocalErr)
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
-	config := &featureconfig.Flags{
-		LocalProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
 	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	validatorIndex := uint64(7)
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -288,7 +285,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreAttSignLocalErr)
 
 	m.validatorClient.EXPECT().GetAttestationData(
@@ -300,14 +297,16 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 1},
 	}, nil)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, failedPreAttSignLocalErr)
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.genesisTime = uint64(timeutils.Now().Unix())
 	m.validatorClient.EXPECT().GetDuties(
 		gomock.Any(), // ctx
@@ -326,12 +325,12 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */).Times(0)
 
 	timer := time.NewTimer(1 * time.Second)
-	go validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
+	go validator.SubmitAttestation(context.Background(), 0, pubKey)
 	<-timer.C
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
 	var wg sync.WaitGroup
@@ -341,9 +340,11 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(timeutils.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -370,17 +371,19 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(),
 	).Return(&ethpb.AttestResponse{}, nil).Times(1)
 
-	validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 0, pubKey)
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
-	validator, m, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	validatorIndex := uint64(2)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -407,7 +410,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, pubKey)
 
 	assert.Equal(t, 2, len(generatedAttestation.AggregationBits))
 }

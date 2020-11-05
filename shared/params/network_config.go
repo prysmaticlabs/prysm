@@ -6,11 +6,6 @@ import (
 	"github.com/mohae/deepcopy"
 )
 
-func init() {
-	// Using medalla as the default configuration for now.
-	UseMedallaNetworkConfig()
-}
-
 // NetworkConfig defines the spec based network parameters.
 type NetworkConfig struct {
 	GossipMaxSize                     uint64        `yaml:"GOSSIP_MAX_SIZE"`                       // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
@@ -23,6 +18,8 @@ type NetworkConfig struct {
 	TtfbTimeout                       time.Duration `yaml:"TTFB_TIMEOUT"`                          // TtfbTimeout is the maximum time to wait for first byte of request response (time-to-first-byte).
 	RespTimeout                       time.Duration `yaml:"RESP_TIMEOUT"`                          // RespTimeout is the maximum time for complete response transfer.
 	MaximumGossipClockDisparity       time.Duration `yaml:"MAXIMUM_GOSSIP_CLOCK_DISPARITY"`        // MaximumGossipClockDisparity is the maximum milliseconds of clock disparity assumed between honest nodes.
+	MessageDomainInvalidSnappy        [4]byte       `yaml:"MESSAGE_DOMAIN_INVALID_SNAPPY"`         // MessageDomainInvalidSnappy is the 4-byte domain for gossip message-id isolation of invalid snappy messages.
+	MessageDomainValidSnappy          [4]byte       `yaml:"MESSAGE_DOMAIN_VALID_SNAPPY"`           // MessageDomainValidSnappy is the 4-byte domain for gossip message-id isolation of valid snappy messages.
 
 	// DiscoveryV5 Config
 	ETH2Key      string // ETH2Key is the ENR key of the eth2 object in an enr.

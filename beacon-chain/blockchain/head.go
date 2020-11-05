@@ -11,7 +11,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +23,7 @@ type head struct {
 	slot  uint64                   // current head slot.
 	root  [32]byte                 // current head root.
 	block *ethpb.SignedBeaconBlock // current head block.
-	state *state.BeaconState       // current head state.
+	state *stateTrie.BeaconState   // current head state.
 }
 
 // Determined the head from the fork choice service and saves its new data
@@ -52,12 +51,24 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	if headStartRoot == params.BeaconConfig().ZeroHash {
 		headStartRoot = s.genesisRoot
 	}
-	headRoot, err := s.forkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
-	if err != nil {
-		return err
+
+	// In order to process head, fork choice store requires justified info.
+	// If the fork choice store is missing justified block info, a node should
+	// re-initiate fork choice store using the latest justified info.
+	// This recovers a fatal condition and should not happen in run time.
+	if !s.forkChoiceStore.HasNode(headStartRoot) {
+		jb, err := s.beaconDB.Block(ctx, headStartRoot)
+		if err != nil {
+			return err
+		}
+		s.forkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block, headStartRoot, f, j); err != nil {
+			return err
+		}
 	}
 
-	if err := s.updateRecentCanonicalBlocks(ctx, headRoot); err != nil {
+	headRoot, err := s.forkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
+	if err != nil {
 		return err
 	}
 
@@ -136,7 +147,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte, hs *state.BeaconState) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte, hs *stateTrie.BeaconState) error {
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
@@ -154,7 +165,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
+func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *stateTrie.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -170,7 +181,7 @@ func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
+func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlock, state *stateTrie.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -235,34 +246,6 @@ func (s *Service) HasHeadState() bool {
 // This is the lock free version.
 func (s *Service) hasHeadState() bool {
 	return s.head != nil && s.head.state != nil
-}
-
-// This updates recent canonical block mapping. It uses input head root and retrieves
-// all the canonical block roots that are ancestor of the input head block root.
-func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.updateRecentCanonicalBlocks")
-	defer span.End()
-
-	s.recentCanonicalBlocksLock.Lock()
-	defer s.recentCanonicalBlocksLock.Unlock()
-
-	s.recentCanonicalBlocks = make(map[[32]byte]bool)
-	s.recentCanonicalBlocks[headRoot] = true
-	nodes := s.forkChoiceStore.Nodes()
-	node := s.forkChoiceStore.Node(headRoot)
-	if node == nil {
-		return nil
-	}
-
-	for node.Parent() != protoarray.NonExistentNode {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		node = nodes[node.Parent()]
-		s.recentCanonicalBlocks[node.Root()] = true
-	}
-
-	return nil
 }
 
 // This caches justified state balances to be used for fork choice.

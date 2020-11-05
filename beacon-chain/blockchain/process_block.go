@@ -84,9 +84,16 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return err
 	}
 
-	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
+	set, postState, err := state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
+	}
+	valid, err := set.Verify()
+	if err != nil {
+		return errors.Wrap(err, "could not batch verify signature")
+	}
+	if !valid {
+		return errors.New("signature in block failed to verify")
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
@@ -125,12 +132,22 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err != nil {
 			return errors.Wrap(err, "could not fetch finalized state")
 		}
-		s.depositCache.InsertFinalizedDeposits(ctx, int64(finalizedState.Eth1Data().DepositCount-1))
+		// We update the cache up to the last deposit index in the finalized block's state.
+		// We can be confident that these deposits will be included in some block
+		// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
+		eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+		s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+		if featureconfig.Get().EnablePruningDepositProofs {
+			// Deposit proofs are only used during state transition and can be safely removed to save space.
+			if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+				return errors.Wrap(err, "could not prune deposit proofs")
+			}
+		}
 	}
 
 	defer reportAttestationInclusion(b)
 
-	return s.handleEpochBoundary(postState)
+	return s.handleEpochBoundary(ctx, postState)
 }
 
 // onBlockInitialSyncStateTransition is called when an initial sync block is received.
@@ -165,12 +182,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return nil
 	}
 
-	var postState *stateTrie.BeaconState
-	if featureconfig.Get().InitSyncNoVerify {
-		postState, err = state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
-	} else {
-		postState, err = state.ExecuteStateTransition(ctx, preState, signed)
-	}
+	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
@@ -204,7 +216,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		}
 	}
 
-	return s.handleEpochBoundary(postState)
+	return s.handleEpochBoundary(ctx, postState)
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock,
@@ -249,7 +261,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		// Save potential boundary states.
 		if helpers.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
-			if err := s.handleEpochBoundary(preState); err != nil {
+			if err := s.handleEpochBoundary(ctx, preState); err != nil {
 				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
 			}
 		}
@@ -284,7 +296,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 // handles a block after the block's batch has been verified, where we can save blocks
 // their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb.SignedBeaconBlock,
-	blockRoot [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	b := signed.Block
 
 	s.saveInitSyncBlock(blockRoot, signed)
@@ -317,9 +329,11 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 }
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(postState *stateTrie.BeaconState) error {
+func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.BeaconState) error {
 	if postState.Slot() >= s.nextEpochBoundarySlot {
-		reportEpochMetrics(postState)
+		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
+			return err
+		}
 		var err error
 		s.nextEpochBoundarySlot, err = helpers.StartSlot(helpers.NextEpoch(postState))
 		if err != nil {
@@ -358,7 +372,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 }
 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock,
-	root [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}

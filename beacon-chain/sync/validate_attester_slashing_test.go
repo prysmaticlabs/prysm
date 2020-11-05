@@ -101,12 +101,11 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationAccept
@@ -137,12 +136,11 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
@@ -164,12 +162,12 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err := p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept

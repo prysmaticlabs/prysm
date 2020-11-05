@@ -43,7 +43,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
 	bootnodeENR := components.StartBootnode(t)
 	components.StartBeaconNodes(t, config, bootnodeENR)
-	components.StartValidatorClients(t, config, keystorePath)
+	components.StartValidatorClients(t, config)
 	defer helpers.LogOutput(t, config)
 	if config.UsePprof {
 		defer func() {
@@ -80,7 +80,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		require.NoError(t, err, "Failed to dial")
 		conns[i] = conn
 		defer func() {
-			if err := conn.Close(); err != nil {
+			if err = conn.Close(); err != nil {
 				t.Log(err)
 			}
 		}()

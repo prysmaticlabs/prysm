@@ -156,7 +156,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
-		if err == errWrongForkDigestVersion {
+		if errors.Is(err, errWrongForkDigestVersion) {
 			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
 			}

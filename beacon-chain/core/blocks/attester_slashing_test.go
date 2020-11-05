@@ -2,7 +2,6 @@ package blocks_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -57,7 +56,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			},
 		},
 	}
-	registry := []*ethpb.Validator{}
+	var registry []*ethpb.Validator
 	currentSlot := uint64(0)
 
 	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
@@ -71,13 +70,12 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	want := fmt.Sprint("attestations are not slashable")
 	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b)
-	assert.ErrorContains(t, want, err)
+	assert.ErrorContains(t, "attestations are not slashable", err)
 }
 
 func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T) {
-	registry := []*ethpb.Validator{}
+	var registry []*ethpb.Validator
 	currentSlot := uint64(0)
 
 	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
@@ -116,9 +114,8 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		},
 	}
 
-	want := fmt.Sprint("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE")
 	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b)
-	assert.ErrorContains(t, want, err)
+	assert.ErrorContains(t, "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE", err)
 }
 
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {

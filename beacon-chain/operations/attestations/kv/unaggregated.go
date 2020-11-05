@@ -28,9 +28,10 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
+	att = stateTrie.CopyAttestation(att) // Copied.
 	p.unAggregateAttLock.Lock()
 	defer p.unAggregateAttLock.Unlock()
-	p.unAggregatedAtt[r] = stateTrie.CopyAttestation(att) // Copied.
+	p.unAggregatedAtt[r] = att
 
 	return nil
 }
@@ -66,7 +67,7 @@ func (p *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 
 // UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
-func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
 	p.unAggregateAttLock.RLock()

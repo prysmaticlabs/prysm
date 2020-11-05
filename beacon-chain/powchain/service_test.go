@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -27,10 +29,10 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var _ = ChainStartFetcher(&Service{})
-var _ = ChainInfoFetcher(&Service{})
-var _ = POWBlockFetcher(&Service{})
-var _ = Chain(&Service{})
+var _ ChainStartFetcher = (*Service)(nil)
+var _ ChainInfoFetcher = (*Service)(nil)
+var _ POWBlockFetcher = (*Service)(nil)
+var _ Chain = (*Service)(nil)
 
 type goodLogger struct {
 	backend *backends.SimulatedBackend
@@ -74,7 +76,7 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
-func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error) {
+func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
@@ -91,7 +93,7 @@ func (g *goodFetcher) HeaderByHash(ctx context.Context, hash common.Hash) (*geth
 
 }
 
-func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethTypes.Header, error) {
 	if g.backend == nil {
 		return &gethTypes.Header{
 			Number: big.NewInt(15),
@@ -110,7 +112,7 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 	return header, nil
 }
 
-func (g *goodFetcher) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
+func (g *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
 	return nil, nil
 }
 
@@ -407,6 +409,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
 
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	for i := 0; i < 30; i++ {
 		testAcc.Backend.Commit()
@@ -419,4 +422,32 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	web3Service.cancel()
 	assert.LogsContain(t, hook, "Currently waiting for chainstart")
+}
+
+func TestInitDepositCache_OK(t *testing.T) {
+	ctrs := []*protodb.DepositContainer{
+		{Index: 0, Eth1BlockHeight: 2, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}},
+		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
+		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
+	}
+	beaconDB, _ := dbutil.SetupDB(t)
+	s := &Service{
+		chainStartData: &protodb.ChainStartData{Chainstarted: false},
+		beaconDB:       beaconDB,
+	}
+	var err error
+	s.depositCache, err = depositcache.New()
+	require.NoError(t, err)
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+
+	require.Equal(t, 0, len(s.depositCache.PendingContainers(context.Background(), nil)))
+
+	blockRootA := [32]byte{'a'}
+
+	emptyState := testutil.NewBeaconState()
+	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
+	require.NoError(t, s.beaconDB.SaveState(context.Background(), emptyState, blockRootA))
+	s.chainStartData.Chainstarted = true
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+	require.Equal(t, 3, len(s.depositCache.PendingContainers(context.Background(), nil)))
 }

@@ -8,16 +8,15 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 const (
-	// WalletDefaultDirName for accounts-v2.
+	// WalletDefaultDirName for accounts.
 	WalletDefaultDirName = "prysm-wallet-v2"
+	// DefaultGatewayHost for the validator client.
+	DefaultGatewayHost = "127.0.0.1"
 )
-
-var log = logrus.WithField("prefix", "flags")
 
 var (
 	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
@@ -105,7 +104,7 @@ var (
 	GRPCGatewayHost = &cli.StringFlag{
 		Name:  "grpc-gateway-host",
 		Usage: "The host on which the gateway server runs on",
-		Value: "127.0.0.1",
+		Value: DefaultGatewayHost,
 	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.
 	GRPCGatewayPort = &cli.IntFlag{
@@ -118,24 +117,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200",
-	}
-	// KeyManager specifies the key manager to use.
-	KeyManager = &cli.StringFlag{
-		Name:  "keymanager",
-		Usage: "The keymanger to use (unencrypted, interop, keystore, wallet)",
-		Value: "",
-	}
-	// KeyManagerOpts specifies the key manager options.
-	KeyManagerOpts = &cli.StringFlag{
-		Name:  "keymanageropts",
-		Usage: "The options for the keymanger, either a JSON string or path to same",
-		Value: "",
-	}
-	// KeystorePathFlag defines the location of the keystore directory for a validator's account.
-	KeystorePathFlag = &cli.StringFlag{
-		Name:  "keystore-path",
-		Usage: "Path to the desired keystore directory",
+		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200",
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
@@ -143,34 +125,7 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8081,
 	}
-	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
-	PasswordFlag = &cli.StringFlag{
-		Name:  "password",
-		Usage: "String value of the password for your validator private keys",
-	}
-	// SourceDirectories defines the locations of the source validator databases while managing validators.
-	SourceDirectories = &cli.StringFlag{
-		Name:  "source-dirs",
-		Usage: "The directory of source validator databases",
-	}
-	// SourceDirectory defines the location of the source validator database while managing validators.
-	SourceDirectory = &cli.StringFlag{
-		Name:  "source-dir",
-		Usage: "The directory of the source validator database",
-	}
-	// TargetDirectory defines the location of the target validator database while managing validators.
-	TargetDirectory = &cli.StringFlag{
-		Name:  "target-dir",
-		Usage: "The directory of the target validator database",
-	}
-	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
-	// alternative from launching the validator client from decrypting a keystore directory.
-	UnencryptedKeysFlag = &cli.StringFlag{
-		Name:  "unencrypted-keys",
-		Usage: "Filepath to a JSON file of unencrypted validator keys for easier launching of the validator client",
-		Value: "",
-	}
-	// WalletDirFlag defines the path to a wallet directory for Prysm accounts-v2.
+	// WalletDirFlag defines the path to a wallet directory for Prysm accounts.
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
@@ -186,6 +141,16 @@ var (
 		Name:  "wallet-password-file",
 		Usage: "Path to a plain-text, .txt file containing your wallet password",
 	}
+	// Mnemonic25thWordFileFlag defines a path to a file containing a "25th" word mnemonic passphrase for advanced users.
+	Mnemonic25thWordFileFlag = &cli.StringFlag{
+		Name:  "mnemonic-25th-word-file",
+		Usage: "(Advanced) Path to a plain-text, .txt file containing a 25th word passphrase for your mnemonic for HD wallets",
+	}
+	// SkipMnemonic25thWordCheckFlag allows for skipping a check for mnemonic 25th word passphrases for HD wallets.
+	SkipMnemonic25thWordCheckFlag = &cli.StringFlag{
+		Name:  "skip-mnemonic-25th-word-check",
+		Usage: "Allows for skipping the check for a mnemonic 25th word passphrase for HD wallets",
+	}
 	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
 	ImportPrivateKeyFileFlag = &cli.StringFlag{
 		Name:  "import-private-key-file",
@@ -196,14 +161,20 @@ var (
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
 	}
-	// ShowDepositDataFlag for accounts-v2.
+	// ShowDepositDataFlag for accounts.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",
-		Usage: "Display raw eth1 tx deposit data for validator accounts-v2",
+		Usage: "Display raw eth1 tx deposit data for validator accounts",
+		Value: false,
+	}
+	// ShowPrivateKeysFlag for accounts.
+	ShowPrivateKeysFlag = &cli.BoolFlag{
+		Name:  "show-private-keys",
+		Usage: "Display the private keys for validator accounts",
 		Value: false,
 	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
-	NumAccountsFlag = &cli.Int64Flag{
+	NumAccountsFlag = &cli.IntFlag{
 		Name:  "num-accounts",
 		Usage: "Number of accounts to generate for derived wallets",
 		Value: 1,
@@ -277,7 +248,7 @@ var (
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",
-		Usage: "Kind of keymanager, either direct, derived, or remote, specified during wallet creation",
+		Usage: "Kind of keymanager, either imported, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
 	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.
@@ -293,32 +264,6 @@ var (
 		Value: false,
 	}
 )
-
-// Deprecated flags list.
-const deprecatedUsage = "DEPRECATED. DO NOT USE."
-
-var (
-	// DeprecatedPasswordsDirFlag is a deprecated flag.
-	DeprecatedPasswordsDirFlag = &cli.StringFlag{
-		Name:   "passwords-dir",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-)
-
-// DeprecatedFlags is a slice holding all of the validator client's deprecated flags.
-var DeprecatedFlags = []cli.Flag{
-	DeprecatedPasswordsDirFlag,
-}
-
-// ComplainOnDeprecatedFlags logs out a error log if a deprecated flag is used, letting the user know it will be removed soon.
-func ComplainOnDeprecatedFlags(ctx *cli.Context) {
-	for _, f := range DeprecatedFlags {
-		if ctx.IsSet(f.Names()[0]) {
-			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
-		}
-	}
-}
 
 // DefaultValidatorDir returns OS-specific default validator directory.
 func DefaultValidatorDir() string {

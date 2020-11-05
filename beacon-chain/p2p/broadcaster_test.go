@@ -9,10 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -21,9 +17,11 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -46,8 +44,10 @@ func TestService_Broadcast(t *testing.T) {
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 
-	msg := &testpb.TestSimpleMessage{
-		Bar: 55,
+	msg := &pb.Fork{
+		Epoch:           55,
+		CurrentVersion:  []byte("fooo"),
+		PreviousVersion: []byte("barr"),
 	}
 
 	topic := "/eth2/%x/testing"
@@ -75,7 +75,7 @@ func TestService_Broadcast(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &testpb.TestSimpleMessage{}
+		result := &pb.Fork{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)
@@ -294,11 +294,6 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 			}
 		}
 	}()
-
-	f := featureconfig.Get()
-	f.EnableAttBroadcastDiscoveryAttempts = true
-	rst := featureconfig.InitWithReset(f)
-	defer rst()
 
 	ps1, err := pubsub.NewFloodSub(context.Background(), hosts[0],
 		pubsub.WithMessageSigning(false),

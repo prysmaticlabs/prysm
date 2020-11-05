@@ -41,7 +41,7 @@ func writeResponse(w http.ResponseWriter, r *http.Request, response generatedRes
 			return fmt.Errorf("unexpected data: %v", response.Data)
 		}
 		if _, err := w.Write(buf.Bytes()); err != nil {
-			return fmt.Errorf("could not write response body: %v", err)
+			return fmt.Errorf("could not write response body: %w", err)
 		}
 	case contentTypeJSON:
 		w.Header().Set("Content-Type", contentTypeJSON)

@@ -45,7 +45,7 @@ func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([
 // and return the root.
 // Note that merkleize on a single chunk is simply that chunk, i.e. the identity
 // when the number of chunks is one.
-func BitwiseMerkleize(hasher HashFn, chunks [][]byte, count uint64, limit uint64) ([32]byte, error) {
+func BitwiseMerkleize(hasher HashFn, chunks [][]byte, count, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
@@ -57,7 +57,7 @@ func BitwiseMerkleize(hasher HashFn, chunks [][]byte, count uint64, limit uint64
 }
 
 // BitwiseMerkleizeArrays is used when a set of 32-byte root chunks are provided.
-func BitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count uint64, limit uint64) ([32]byte, error) {
+func BitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
@@ -86,12 +86,12 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 		return serializedItems, nil
 	}
 	// We flatten the list in order to pack its items into byte chunks correctly.
-	orderedItems := []byte{}
+	var orderedItems []byte
 	for _, item := range serializedItems {
 		orderedItems = append(orderedItems, item...)
 	}
 	numItems := len(orderedItems)
-	chunks := [][]byte{}
+	var chunks [][]byte
 	for i := 0; i < numItems; i += bytesPerChunk {
 		j := i + bytesPerChunk
 		// We create our upper bound index of the chunk, if it is greater than numItems,

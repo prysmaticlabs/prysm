@@ -3,8 +3,6 @@
 package depositutil
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 // DepositInput for a given key. This input data can be used to when making a
@@ -34,11 +31,7 @@ import (
 //   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96]) along with a deposit of amount Gwei.
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(
-	depositKey bls.SecretKey,
-	withdrawalKey bls.SecretKey,
-	amountInGwei uint64,
-) (*ethpb.Deposit_Data, [32]byte, error) {
+func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
 	di := &ethpb.Deposit_Data{
 		PublicKey:             depositKey.PublicKey().Marshal(),
 		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
@@ -119,10 +112,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 
 // GenerateDepositTransaction uses the provided validating key and withdrawal key to
 // create a transaction object for the deposit contract.
-func GenerateDepositTransaction(
-	validatingKey bls.SecretKey,
-	withdrawalKey bls.SecretKey,
-) (*types.Transaction, *ethpb.Deposit_Data, error) {
+func GenerateDepositTransaction(validatingKey, withdrawalKey bls.SecretKey) (*types.Transaction, *ethpb.Deposit_Data, error) {
 	depositData, depositRoot, err := DepositInput(
 		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
 	)
@@ -146,20 +136,4 @@ func GenerateDepositTransaction(
 		return nil, nil, err
 	}
 	return tx, depositData, nil
-}
-
-// LogDepositTransaction outputs a formatted transaction data to the terminal.
-func LogDepositTransaction(log *logrus.Entry, tx *types.Transaction) {
-	log.Info(
-		"Copy + paste the deposit data below when using the " +
-			"eth1 deposit contract")
-	fmt.Printf(`
-========================Deposit Data===============================
-
-%#x
-
-===================================================================`, tx.Data())
-	fmt.Printf(`
-***Enter the above deposit data into step 3 on https://prylabs.net/participate***
-`)
 }

@@ -43,8 +43,7 @@ func GetEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *EpochTicker 
 func (s *EpochTicker) start(
 	genesisTime time.Time,
 	secondsPerEpoch uint64,
-	since func(time.Time) time.Duration,
-	until func(time.Time) time.Duration,
+	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
 
 	d := time.Duration(secondsPerEpoch) * time.Second

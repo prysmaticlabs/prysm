@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -14,7 +15,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -44,14 +44,12 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
 	}
 	if res != nil {
-		if featureconfig.Get().ReduceAttesterStateCopy {
-			res.CommitteeIndex = req.CommitteeIndex
-		}
+		res.CommitteeIndex = req.CommitteeIndex
 		return res, nil
 	}
 
 	if err := vs.AttestationCache.MarkInProgress(req); err != nil {
-		if err == cache.ErrAlreadyInProgress {
+		if errors.Is(err, cache.ErrAlreadyInProgress) {
 			res, err := vs.AttestationCache.Get(ctx, req)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
@@ -59,9 +57,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 			if res == nil {
 				return nil, status.Error(codes.DataLoss, "A request was in progress and resolved to nil")
 			}
-			if featureconfig.Get().ReduceAttesterStateCopy {
-				res.CommitteeIndex = req.CommitteeIndex
-			}
+			res.CommitteeIndex = req.CommitteeIndex
 			return res, nil
 		}
 		return nil, status.Errorf(codes.Internal, "Could not mark attestation as in-progress: %v", err)

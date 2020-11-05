@@ -35,7 +35,7 @@ var (
 // TODO(#5040): Remove lookback and handle min spans properly.
 const epochLookback = 128
 
-var _ = iface.SpanDetector(&SpanDetector{})
+var _ iface.SpanDetector = (*SpanDetector)(nil)
 
 // SpanDetector defines a struct which can detect slashable
 // attestation offenses by tracking validator min-max
@@ -162,10 +162,7 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	if err := s.updateMinSpan(ctx, att); err != nil {
 		return err
 	}
-	if err := s.updateMaxSpan(ctx, att); err != nil {
-		return err
-	}
-	return nil
+	return s.updateMaxSpan(ctx, att)
 }
 
 // saveSigBytes saves the first 2 bytes of the signature for the att we're updating the spans to.
