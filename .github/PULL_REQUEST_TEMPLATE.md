@@ -1,8 +1,8 @@
 <!-- Thanks for sending a PR! Before submitting:
 
-1. If this is your first PR, please read CONTRIBUTING.md and sign the CLA
-   first. We cannot review code without a signed CLA.
-2. Please file an issue *first*. All features and most bug fixes should have
+1. If this is your first PR, check out our contribution guide here https://docs.prylabs.network/docs/contribute/contribution-guidelines
+   You will then need to sign our Contributor License Agreement (CLA), which will show up as a comment from a bot in this pull request after you open it. We cannot review code without a signed CLA.
+2. Please file an associated tracking issue if this pull request is non-trivial and requires context for our team to understand. All features and most bug fixes should have
    an associated issue with a design discussed and decided upon. Small bug
    fixes and documentation improvements don't need issues.
 3. New features and bug fixes must have tests. Documentation may need to
