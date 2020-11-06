@@ -340,6 +340,10 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 	err = s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		if err := bkt.ForEach(func(k, v []byte) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
 			finalized := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
 			slot := bytesutil.BytesToUint64BigEndian(k)
 			mod := slot % slotsPerArchivedPoint
