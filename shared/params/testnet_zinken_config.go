@@ -30,5 +30,6 @@ func ZinkenConfig() *BeaconChainConfig {
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x03}
 	cfg.NetworkName = "zinken"
 	cfg.MinGenesisActiveValidatorCount = 1024
+	cfg.SecondsPerETH1Block = 14
 	return cfg
 }
