@@ -339,7 +339,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 
 	err = s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateSlotIndicesBucket)
-		if err := bkt.ForEach(func(k, v []byte) error {
+		return bkt.ForEach(func(k, v []byte) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
@@ -352,10 +352,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
 			}
 			return nil
-		}); err != nil {
-			return err
-		}
-		return nil
+		})
 	})
 
 	log.WithField("count", len(deletedRoots)).Info("Cleaning up dirty states")
