@@ -232,7 +232,8 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	db := setupDB(t)
 
 	bRoots := make([][32]byte, 0)
-	for i := uint64(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
+	slotsPerArchivedPoint := uint64(128)
+	for i := uint64(1); i <= slotsPerArchivedPoint; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
@@ -245,10 +246,10 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 		require.NoError(t, db.SaveState(context.Background(), st, r))
 	}
 
-	require.NoError(t, db.CleanUpDirtyStates(context.Background(), params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, db.CleanUpDirtyStates(context.Background(), slotsPerArchivedPoint))
 
 	for i, root := range bRoots {
-		if uint64(i) > params.BeaconConfig().SlotsPerEpoch/2-1 {
+		if uint64(i) >= slotsPerArchivedPoint-slotsPerArchivedPoint/3 {
 			require.Equal(t, true, db.HasState(context.Background(), root))
 		} else {
 			require.Equal(t, false, db.HasState(context.Background(), root))
