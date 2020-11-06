@@ -331,6 +331,10 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[strin
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
+	if slotsPerArchivedPoint <= params.BeaconConfig().SlotsPerEpoch/2 {
+		return errors.New("slots per archived point can't less or equal to half epoch length")
+	}
+
 	f, err := s.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return err
