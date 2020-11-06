@@ -155,7 +155,10 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 
 go_rules_dependencies()
 
-go_register_toolchains(nogo = "@//:nogo", go_version="1.15.3")
+go_register_toolchains(
+    go_version = "1.15.3",
+    nogo = "@//:nogo",
+)
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
