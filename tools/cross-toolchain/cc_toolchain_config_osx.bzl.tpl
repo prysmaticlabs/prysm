@@ -10,6 +10,7 @@ load(
     "tool_path",
     "with_feature_set",
 )
+
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config.bzl",
     ALL_COMPILE_ACTIONS = "all_compile_actions",
@@ -136,10 +137,10 @@ def _impl(ctx):
                             "-lc++",
                             "-lc++abi",
                             "-F" + sdkroot + "System/Library/Frameworks/",
-                            "-L" + sdkroot + "usr/lib",
+                            "-L"+ sdkroot + "usr/lib",
                             "-undefined",
                             "dynamic_lookup",
-                        ],
+                            ],
                     ),
                 ],
             ),
