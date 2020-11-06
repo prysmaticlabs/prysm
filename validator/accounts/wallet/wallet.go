@@ -315,8 +315,14 @@ func (w *Wallet) InitializeKeymanager(
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
 func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) error {
 	accountPath := filepath.Join(w.accountsPath, filePath)
-	if err := fileutil.MkdirAll(accountPath); err != nil {
-		return errors.Wrapf(err, "could not create path: %s", accountPath)
+	hasDir, err := fileutil.HasDir(accountPath)
+	if err != nil {
+		return err
+	}
+	if !hasDir {
+		if err := fileutil.MkdirAll(accountPath); err != nil {
+			return errors.Wrapf(err, "could not create path: %s", accountPath)
+		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
 	if err := fileutil.WriteFile(fullPath, data); err != nil {
@@ -332,8 +338,14 @@ func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, d
 // ReadFileAtPath within the wallet directory given the desired path and filename.
 func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([]byte, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
-	if err := fileutil.MkdirAll(accountPath); err != nil {
-		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
+	hasDir, err := fileutil.HasDir(accountPath)
+	if err != nil {
+		return nil, err
+	}
+	if !hasDir {
+		if err := fileutil.MkdirAll(accountPath); err != nil {
+			return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
+		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
 	matches, err := filepath.Glob(fullPath)
