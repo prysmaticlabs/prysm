@@ -88,7 +88,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 
 	go func() {
 		if err := s.beaconDB.CleanUpDirtyStates(ctx, s.slotsPerArchivedPoint); err != nil {
-			log.Errorf("Could not clean up dirty states: %v", err)
+			log.WithError(err).Error("Could not clean up dirty states")
 		}
 	}()
 
