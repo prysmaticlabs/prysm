@@ -10,7 +10,6 @@ load(
     "tool_path",
     "with_feature_set",
 )
-
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config.bzl",
     ALL_COMPILE_ACTIONS = "all_compile_actions",
@@ -131,15 +130,15 @@ def _impl(ctx):
                     flag_group(
                         flags = [
                             "-v",
-                            #"-lm",
+                            "-lm",
                             "-no-canonical-prefixes",
                             "-fuse-ld=lld",
                             "-lc++",
-                            #"-lc++abi",
+                            "-lc++abi",
                             "-F" + sdkroot + "System/Library/Frameworks/",
-                            "-L"+ sdkroot + "usr/lib",
-                            #"-undefined dynamic_lookup",
-                            "-I/usr/x86_64-apple-darwin/osxcross/SDK/MacOSX10.15.sdk/usr/include/",
+                            "-L" + sdkroot + "usr/lib",
+                            "-undefined",
+                            "dynamic_lookup",
                         ],
                     ),
                 ],
