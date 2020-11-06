@@ -133,7 +133,6 @@ def _impl(ctx):
                             "-v",
                             "-lm",
                             "-no-canonical-prefixes",
-                            "-fuse-ld=lld",
                             "-lc++",
                             "-lc++abi",
                             "-F" + sdkroot + "System/Library/Frameworks/",
