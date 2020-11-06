@@ -357,6 +357,9 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	log.WithField("count", len(deletedRoots)).Info("Cleaning up dirty states")
 	if err := s.DeleteStates(ctx, deletedRoots); err != nil {
