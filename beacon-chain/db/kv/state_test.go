@@ -228,12 +228,6 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()))
 }
 
-func TestStore_CleanUpDirtyStates_InvalidInput(t *testing.T) {
-	db := setupDB(t)
-	require.ErrorContains(t, "slots per archived point can't less or equal to half epoch length",
-		db.CleanUpDirtyStates(context.Background(), params.BeaconConfig().SlotsPerEpoch/2))
-}
-
 func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	db := setupDB(t)
 
