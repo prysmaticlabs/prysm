@@ -4,7 +4,6 @@ load(":cc_toolchain_config_osx.bzl", "osx_cc_toolchain_config")
 load(":cc_toolchain_config_linux_arm64.bzl", "arm64_cc_toolchain_config")
 load(":cc_toolchain_config_windows.bzl", "windows_cc_toolchain_config")
 
-
 cc_toolchain_suite(
     name = "multiarch_toolchain",
     toolchains = {
