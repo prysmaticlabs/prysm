@@ -76,54 +76,54 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	assert.ErrorContains(t, wanted, validateIndexInCommittee(ctx, s, att, 1000))
 }
 
-func TestVerifySelection_NotAnAggregator(t *testing.T) {
-	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
-	validators := uint64(2048)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
-
-	sig := privKeys[0].Sign([]byte{'A'})
-	data := &ethpb.AttestationData{
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
-
-	wanted := "validator is not an aggregator for slot"
-	assert.ErrorContains(t, wanted, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
-}
-
-func TestVerifySelection_BadSignature(t *testing.T) {
-	ctx := context.Background()
-	validators := uint64(256)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
-
-	sig := privKeys[0].Sign([]byte{'A'})
-	data := &ethpb.AttestationData{
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
-
-	wanted := "signature did not verify"
-	assert.ErrorContains(t, wanted, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
-}
-
-func TestVerifySelection_CanVerify(t *testing.T) {
-	ctx := context.Background()
-	validators := uint64(256)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
-
-	data := &ethpb.AttestationData{
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
-	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[0])
-	require.NoError(t, err)
-	require.NoError(t, validateSelection(ctx, beaconState, data, 0, sig))
-}
+//func TestVerifySelection_NotAnAggregator(t *testing.T) {
+//	ctx := context.Background()
+//	params.UseMinimalConfig()
+//	defer params.UseMainnetConfig()
+//	validators := uint64(2048)
+//	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+//
+//	sig := privKeys[0].Sign([]byte{'A'})
+//	data := &ethpb.AttestationData{
+//		BeaconBlockRoot: make([]byte, 32),
+//		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+//		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+//	}
+//
+//	wanted := "validator is not an aggregator for slot"
+//	assert.ErrorContains(t, wanted, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
+//}
+//
+//func TestVerifySelection_BadSignature(t *testing.T) {
+//	ctx := context.Background()
+//	validators := uint64(256)
+//	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+//
+//	sig := privKeys[0].Sign([]byte{'A'})
+//	data := &ethpb.AttestationData{
+//		BeaconBlockRoot: make([]byte, 32),
+//		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+//		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+//	}
+//
+//	wanted := "signature did not verify"
+//	assert.ErrorContains(t, wanted, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
+//}
+//
+//func TestVerifySelection_CanVerify(t *testing.T) {
+//	ctx := context.Background()
+//	validators := uint64(256)
+//	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+//
+//	data := &ethpb.AttestationData{
+//		BeaconBlockRoot: make([]byte, 32),
+//		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+//		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+//	}
+//	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[0])
+//	require.NoError(t, err)
+//	require.NoError(t, validateSelection(ctx, beaconState, data, 0, sig))
+//}
 
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db, _ := dbtest.SetupDB(t)
@@ -413,6 +413,97 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 
 	assert.Equal(t, pubsub.ValidationAccept, r.validateAggregateAndProof(context.Background(), "", msg), "Validated status is false")
 	assert.NotNil(t, msg.ValidatorData, "Did not set validator data")
+}
+
+func BenchmarkValidateAggregateAndProof(b *testing.B) {
+	db, _ := dbtest.SetupDB(b)
+	var testing *testing.T
+	p := p2ptest.NewTestP2P(testing)
+
+	validators := uint64(256)
+	beaconState, privKeys := testutil.DeterministicGenesisState(b, validators)
+
+	blk := testutil.NewBeaconBlock()
+	require.NoError(b, db.SaveBlock(context.Background(), blk))
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(b, err)
+	s := testutil.NewBeaconState()
+	require.NoError(b, db.SaveState(context.Background(), s, root))
+
+	aggBits := bitfield.NewBitlist(3)
+	aggBits.SetBitAt(0, true)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: root[:],
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
+		},
+		AggregationBits: aggBits,
+	}
+
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	assert.NoError(b, err)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	assert.NoError(b, err)
+	attesterDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	assert.NoError(b, err)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, attesterDomain)
+	assert.NoError(b, err)
+	sigs := make([]bls.Signature, len(attestingIndices))
+	for i, indice := range attestingIndices {
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sigs[i] = sig
+	}
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()
+	ai := committee[0]
+	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
+	require.NoError(b, err)
+	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
+		SelectionProof:  sig,
+		Aggregate:       att,
+		AggregatorIndex: ai,
+	}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+	signedAggregateAndProof.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, signedAggregateAndProof.Message, params.BeaconConfig().DomainAggregateAndProof, privKeys[ai])
+	require.NoError(b, err)
+
+	require.NoError(b, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
+	c, err := lru.New(10)
+	require.NoError(b, err)
+	r := &Service{
+		p2p:         p,
+		db:          db,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Now(),
+			State:            beaconState,
+			ValidAttestation: true,
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  att.Data.BeaconBlockRoot,
+			}},
+		attPool:              attestations.NewPool(),
+		seenAttestationCache: c,
+		stateSummaryCache:    cache.NewStateSummaryCache(),
+	}
+	err = r.initCaches()
+	require.NoError(b, err)
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
+	require.NoError(b, err)
+
+	//topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
+	//msg := &pubsub.Message{
+	//	Message: &pubsubpb.Message{
+	//		Data:  buf.Bytes(),
+	//		Topic: &topic,
+	//	},
+	//}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		require.Equal(b, pubsub.ValidationAccept, r.validateAggregatedAtt(context.Background(), signedAggregateAndProof))
+	}
 }
 
 func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
