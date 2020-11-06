@@ -28,7 +28,7 @@ def _impl(ctx):
     target_cpu = "x86_64"
     osxcross = install + "osxcross/"
     osxcross_binprefix = osxcross + "bin/x86_64-apple-darwin19-"
-    sdkroot = osxcross + "SDK/MacOSX10.12.sdk/"
+    sdkroot = osxcross + "SDK/MacOSX10.15.sdk/"
     cross_system_include_dirs = [
         "/usr/lib/clang/10.0.0/include",
         osxcross + "include",
