@@ -53,6 +53,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 
 func TestIPV6Support(t *testing.T) {
 	key, err := gethCrypto.GenerateKey()
+	require.NoError(t, err)
 	db, err := enode.OpenDB("")
 	if err != nil {
 		log.Error("could not open node's peer database")

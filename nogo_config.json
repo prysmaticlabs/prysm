@@ -67,22 +67,6 @@
       "proto/.*": "Excluding protobuf objects for now"
     }
   },
-  "roughtime": {
-    "only_files": {
-      "beacon-chain/.*": "",
-      "shared/.*": "",
-      "validator/.*": ""
-    },
-    "exclude_files": {
-      ".*/.*_test\\.go": "Tests are OK to use time.Now()",
-      "shared/version/version\\.go": "Used for printing build time",
-      "shared/roughtime/roughtime\\.go": "Required to bootstrap roughtime",
-      "beacon-chain/blockchain/testing/*": "Test-only package",
-      "beacon-chain/p2p/sender\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
-      "beacon-chain/sync/deadlines\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
-      "shared/grpcutils/grpcutils\\.go": "Uses time.Now() for gRPC duration logging"
-    }
-  },
   "errcheck": {
     "exclude_files": {
       "external/.*": "Third party code",
@@ -102,6 +86,7 @@
     "only_files": {
       "beacon-chain/.*": "",
       "shared/.*": "",
+      "slasher/.*": "",
       "validator/.*": ""
     },
     "exclude_files": {
@@ -129,6 +114,23 @@
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
       "tools/analyzers/nop/testdata/no_op.go": "Analyzer testdata has to break rules"
+    }
+  },
+  "slicedirect": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code",
+      "tools/analyzers/slicedirect/testdata/slice.go": "Analyzer testdata has to break rules"
+    }
+  },
+  "ineffassign": {
+    "only_files": {
+      "beacon-chain/.*": "",
+      "shared/.*": "",
+      "slasher/.*": "",
+      "validator/.*": ""
+    },
+    "exclude_files": {
     }
   }
 }

@@ -15,8 +15,8 @@ Evaluators have 3 parts, the name for it's test name, a `policy` which declares 
 * Minimal Config Slashing Test - 2 beacon nodes, 256 validators, tests attester and proposer slashing
 
 ## Instructions
-If you wish to run all the E2E tests, you can run them through bazel with:
+If you wish to run all the minimal spec E2E tests, you can run them through bazel with:
 
 ```
-bazel test //endtoend:go_default_test --test_output=streamed --test_arg=-test.v --nocache_test_results
+bazel test //endtoend:go_default_test --define=ssz=minimal --test_output=streamed --test_arg=-test.v --nocache_test_results
 ```

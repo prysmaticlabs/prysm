@@ -39,14 +39,7 @@ type server struct {
 	clientLock sync.Mutex
 }
 
-func newServer(
-	db *db,
-	rpcAddr string,
-	depositContractAddr string,
-	funderPK string,
-	validatorDepositAmount string,
-	beaconRPCAddr string,
-) *server {
+func newServer(db *db, rpcAddr, depositContractAddr, funderPK, validatorDepositAmount, beaconRPCAddr string) *server {
 	rpcClient, err := rpc.Dial(rpcAddr)
 	if err != nil {
 		panic(err)
@@ -81,7 +74,7 @@ func newServer(
 	}
 }
 
-func (s *server) makeDeposit(pubkey []byte, withdrawalCredentials []byte, signature []byte, depositRoot [32]byte) (*types.Transaction, error) {
+func (s *server) makeDeposit(pubkey, withdrawalCredentials, signature []byte, depositRoot [32]byte) (*types.Transaction, error) {
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
@@ -230,7 +223,7 @@ func (s *server) checkDepositTxs(ctx context.Context, txMap map[*keystore.Key]*t
 	pks := make([][]byte, 0, len(txMap))
 	for k, tx := range txMap {
 		receipt, err := s.client.TransactionReceipt(ctx, tx.Hash())
-		if err == ethereum.NotFound {
+		if errors.Is(err, ethereum.NotFound) {
 			// tx still not processed yet.
 			continue
 		}

@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"context"
-	"strings"
+	"fmt"
 	"testing"
 	"time"
 
@@ -20,10 +20,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -55,7 +55,7 @@ func TestStore_OnBlock(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
 	require.NoError(t, service.beaconDB.SaveState(ctx, st.Copy(), randomParentRoot))
 	randomParentRoot2 := roots[1]
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2[:]}))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2}))
 	require.NoError(t, service.beaconDB.SaveState(ctx, st.Copy(), bytesutil.ToBytes32(randomParentRoot2)))
 
 	tests := []struct {
@@ -147,8 +147,8 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	bState := st.Copy()
 
-	blks := []*ethpb.SignedBeaconBlock{}
-	blkRoots := [][32]byte{}
+	var blks []*ethpb.SignedBeaconBlock
+	var blkRoots [][32]byte
 	var firstState *stateTrie.BeaconState
 	for i := 1; i < 10; i++ {
 		b, err := testutil.GenerateFullBlock(bState, keys, testutil.DefaultBlockGenConfig(), uint64(i))
@@ -320,7 +320,6 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	st := testutil.NewBeaconState()
-	service.initSyncState[r] = st.Copy()
 	require.NoError(t, db.SaveState(ctx, st.Copy(), r))
 
 	// Could update
@@ -372,6 +371,46 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[4])), "Didn't save node")
 	assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[6])), "Didn't save node")
 	assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])), "Didn't save node")
+}
+
+func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: make([]byte, 32)}
+
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	require.NoError(t, db.SaveBlock(ctx, genesis))
+	validGenesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	st := testutil.NewBeaconState()
+
+	require.NoError(t, service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
+	roots, err := blockTree1(db, validGenesisRoot[:])
+	require.NoError(t, err)
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 9
+	block.Block.ParentRoot = roots[8]
+
+	err = service.fillInForkChoiceMissingBlocks(
+		context.Background(), block.Block, beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
+	require.NoError(t, err)
+
+	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
+	assert.Equal(t, 5, len(service.forkChoiceStore.Nodes()), "Miss match nodes")
+	// Ensure all roots and their respective blocks exist.
+	wantedRoots := [][]byte{roots[0], roots[3], roots[4], roots[6], roots[8]}
+	for i, rt := range wantedRoots {
+		assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(rt)), fmt.Sprintf("Didn't save node: %d", i))
+		assert.Equal(t, true, service.beaconDB.HasBlock(context.Background(), bytesutil.ToBytes32(rt)))
+	}
 }
 
 func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
@@ -512,10 +551,19 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 }
 
 func TestCurrentSlot_HandlesOverflow(t *testing.T) {
-	svc := Service{genesisTime: roughtime.Now().Add(1 * time.Hour)}
+	svc := Service{genesisTime: timeutils.Now().Add(1 * time.Hour)}
 
 	slot := svc.CurrentSlot()
 	require.Equal(t, uint64(0), slot, "Unexpected slot")
+}
+func TestAncestorByDB_CtxErr(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	service, err := NewService(ctx, &Config{})
+	require.NoError(t, err)
+
+	cancel()
+	_, err = service.ancestorByDB(ctx, [32]byte{}, 0)
+	require.ErrorContains(t, "context canceled", err)
 }
 
 func TestAncestor_HandleSkipSlot(t *testing.T) {
@@ -559,6 +607,82 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	r, err = service.ancestor(context.Background(), r200[:], 50)
 	require.NoError(t, err)
 	if bytesutil.ToBytes32(r) != r1 {
+		t.Error("Did not get correct root")
+	}
+}
+
+func TestAncestor_CanUseForkchoice(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b100 := testutil.NewBeaconBlock()
+	b100.Block.Slot = 100
+	b100.Block.ParentRoot = r1[:]
+	r100, err := b100.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b200 := testutil.NewBeaconBlock()
+	b200.Block.Slot = 200
+	b200.Block.ParentRoot = r100[:]
+	r200, err := b200.Block.HashTreeRoot()
+	require.NoError(t, err)
+	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
+		beaconBlock := testutil.NewBeaconBlock()
+		beaconBlock.Block.Slot = b.Block.Slot
+		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), [32]byte{}, 0, 0)) // Saves blocks to fork choice store.
+	}
+
+	r, err := service.ancestor(context.Background(), r200[:], 150)
+	require.NoError(t, err)
+	if bytesutil.ToBytes32(r) != r100 {
+		t.Error("Did not get correct root")
+	}
+}
+
+func TestAncestor_CanUseDB(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b100 := testutil.NewBeaconBlock()
+	b100.Block.Slot = 100
+	b100.Block.ParentRoot = r1[:]
+	r100, err := b100.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b200 := testutil.NewBeaconBlock()
+	b200.Block.Slot = 200
+	b200.Block.ParentRoot = r100[:]
+	r200, err := b200.Block.HashTreeRoot()
+	require.NoError(t, err)
+	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
+		beaconBlock := testutil.NewBeaconBlock()
+		beaconBlock.Block.Slot = b.Block.Slot
+		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
+		require.NoError(t, db.SaveBlock(context.Background(), beaconBlock)) // Saves blocks to DB.
+	}
+
+	require.NoError(t, service.forkChoiceStore.ProcessBlock(context.Background(), 200, r200, r200, [32]byte{}, 0, 0))
+
+	r, err := service.ancestor(context.Background(), r200[:], 150)
+	require.NoError(t, err)
+	if bytesutil.ToBytes32(r) != r100 {
 		t.Error("Did not get correct root")
 	}
 }
@@ -675,18 +799,16 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		finalizedSlot uint64
 	}
 	tests := []struct {
-		name        string
-		args        args
-		shouldError bool
-		err         string
+		name      string
+		args      args
+		wantedErr string
 	}{
 		{
 			name: "could not get finalized block in block service cache",
 			args: args{
 				finalizedRoot: [32]byte{'a'},
 			},
-			shouldError: true,
-			err:         "nil finalized block",
+			wantedErr: "nil finalized block",
 		},
 		{
 			name: "could not get finalized block root in DB",
@@ -694,8 +816,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r,
 				parentRoot:    [32]byte{'a'},
 			},
-			shouldError: true,
-			err:         "could not get finalized block root",
+			wantedErr: "could not get finalized block root",
 		},
 		{
 			name: "is not descendant",
@@ -703,8 +824,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r1,
 				parentRoot:    r,
 			},
-			shouldError: true,
-			err:         "is not a descendent of the current finalized block slot",
+			wantedErr: "is not a descendent of the current finalized block slot",
 		},
 		{
 			name: "is descendant",
@@ -712,22 +832,19 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r,
 				parentRoot:    r,
 			},
-			shouldError: false,
 		},
 	}
-	for _, test := range tests {
+	for _, tt := range tests {
 		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(db, sc), ForkChoiceStore: protoarray.New(0, 0, [32]byte{})})
 		require.NoError(t, err)
 		service.finalizedCheckpt = &ethpb.Checkpoint{
-			Root: test.args.finalizedRoot[:],
+			Root: tt.args.finalizedRoot[:],
 		}
-		err = service.VerifyBlkDescendant(ctx, test.args.parentRoot)
-		if test.shouldError {
-			if err == nil || !strings.Contains(err.Error(), test.err) {
-				t.Error("Did not get wanted error")
-			}
+		err = service.VerifyBlkDescendant(ctx, tt.args.parentRoot)
+		if tt.wantedErr != "" {
+			assert.ErrorContains(t, tt.wantedErr, err)
 		} else if err != nil {
-			t.Error(err)
+			assert.NoError(t, err)
 		}
 	}
 }
@@ -759,4 +876,16 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	cp, err := service.beaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
+}
+
+func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	s := testutil.NewBeaconState()
+	require.NoError(t, s.SetSlot(1))
+	service.head = &head{}
+	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
 }

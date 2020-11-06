@@ -76,8 +76,8 @@ type Config struct {
 	HistoricalDetection   bool
 }
 
-// NewDetectionService instantiation.
-func NewDetectionService(ctx context.Context, cfg *Config) *Service {
+// NewService instantiation.
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
@@ -196,6 +196,10 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				}
 			}
 			ds.submitAttesterSlashings(ctx, slashings)
+
+			if err := ds.UpdateHighestAttestation(ctx, att); err != nil {
+				log.WithError(err).Errorf("Could not update highest attestation")
+			}
 		}
 		latestStoredHead = &ethpb.ChainHead{HeadEpoch: epoch}
 		if err := ds.slasherDB.SaveChainHead(ctx, latestStoredHead); err != nil {

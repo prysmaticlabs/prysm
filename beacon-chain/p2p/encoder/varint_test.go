@@ -22,7 +22,7 @@ func TestReadVarint_ExceedsMaxLength(t *testing.T) {
 	fByte := byte(1 << 7)
 	// Terminating byte.
 	tByte := byte(1 << 6)
-	header := []byte{}
+	var header []byte
 	for i := 0; i < 9; i++ {
 		header = append(header, fByte)
 	}

@@ -10,5 +10,8 @@ import (
 func TestMain(m *testing.M) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableSSZCache: true})
 	defer resetCfg()
-	os.Exit(m.Run())
+	code := m.Run()
+	// os.Exit will prevent defer from being called
+	resetCfg()
+	os.Exit(code)
 }

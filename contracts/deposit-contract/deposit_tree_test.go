@@ -17,7 +17,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	testAcc, err := depositcontract.Setup()
 	require.NoError(t, err)
 
-	localTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	localTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
@@ -55,7 +55,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	testAcc, err := depositcontract.Setup()
 	require.NoError(t, err)
 
-	localTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	localTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})

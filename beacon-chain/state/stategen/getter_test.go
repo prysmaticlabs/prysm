@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -331,6 +332,34 @@ func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	assert.Equal(t, slot, loadedState.Slot(), "Did not correctly load state")
 }
 
+func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	genesisBlockRoot := bytesutil.ToBytes32(nil)
+	require.NoError(t, db.SaveState(ctx, genesis, genesisBlockRoot))
+	stateRoot, err := genesis.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlkRoot))
+
+	b1, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, b1))
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r1[:]}))
+	service.hotStateCache.Put(bytesutil.ToBytes32(b1.Block.ParentRoot), genesis)
+
+	loadedState, err := service.loadStateBySlot(ctx, 2)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(2), loadedState.Slot(), "Did not correctly load state")
+}
+
 func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
@@ -407,4 +436,61 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	lastState, err := service.lastAncestorState(ctx, r3)
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
+}
+
+func TestState_HasState(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	s := testutil.NewBeaconState()
+	rHit1 := [32]byte{1}
+	rHit2 := [32]byte{2}
+	rMiss := [32]byte{3}
+	service.hotStateCache.Put(rHit1, s)
+	require.NoError(t, service.epochBoundaryStateCache.put(rHit2, s))
+
+	b := testutil.NewBeaconBlock()
+	rHit3, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveState(ctx, s, rHit3))
+	tt := []struct {
+		root [32]byte
+		want bool
+	}{
+		{rHit1, true},
+		{rHit2, true},
+		{rMiss, false},
+		{rHit3, true},
+	}
+	for _, tc := range tt {
+		got, err := service.HasState(ctx, tc.root)
+		require.NoError(t, err)
+		require.Equal(t, tc.want, got)
+	}
+}
+
+func TestState_HasStateInCache(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+	s := testutil.NewBeaconState()
+	rHit1 := [32]byte{1}
+	rHit2 := [32]byte{2}
+	rMiss := [32]byte{3}
+	service.hotStateCache.Put(rHit1, s)
+	require.NoError(t, service.epochBoundaryStateCache.put(rHit2, s))
+
+	tt := []struct {
+		root [32]byte
+		want bool
+	}{
+		{rHit1, true},
+		{rHit2, true},
+		{rMiss, false},
+	}
+	for _, tc := range tt {
+		got, err := service.HasStateInCache(ctx, tc.root)
+		require.NoError(t, err)
+		require.Equal(t, tc.want, got)
+	}
 }

@@ -32,7 +32,7 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		// Find maximum non-overlapping coverage.
 		maxCover, err := NewMaxCover(unaggregated)
 		if err != nil {
-			if err == aggregation.ErrBitsDifferentLen {
+			if errors.Is(err, aggregation.ErrBitsDifferentLen) {
 				return atts, nil
 			}
 			return aggregated.merge(unaggregated), err

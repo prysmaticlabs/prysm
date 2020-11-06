@@ -1,11 +1,16 @@
 package cmd
 
 import (
+	"flag"
+	"os"
+	"os/user"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/urfave/cli/v2"
 )
 
 func TestEnterPassword(t *testing.T) {
@@ -73,4 +78,35 @@ func TestEnterPassword(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExpandWeb3EndpointIfFile(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	HTTPWeb3ProviderFlag := &cli.StringFlag{Name: "http-web3provider", Value: ""}
+	set.String(HTTPWeb3ProviderFlag.Name, "", "")
+	context := cli.NewContext(&app, set, nil)
+
+	// with nothing set
+	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
+	require.Equal(t, "", context.String(HTTPWeb3ProviderFlag.Name))
+
+	// with url scheme
+	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "http://localhost:8545"))
+	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
+	require.Equal(t, "http://localhost:8545", context.String(HTTPWeb3ProviderFlag.Name))
+
+	// relative user home path
+	usr, err := user.Current()
+	require.NoError(t, err)
+	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "~/relative/path.ipc"))
+	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
+	require.Equal(t, usr.HomeDir+"/relative/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
+
+	// current dir path
+	curentdir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "./path.ipc"))
+	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
+	require.Equal(t, curentdir+"/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
 }

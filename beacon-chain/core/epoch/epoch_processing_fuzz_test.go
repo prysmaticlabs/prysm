@@ -18,5 +18,6 @@ func TestFuzzFinalUpdates_10000(t *testing.T) {
 		s, err := beaconstate.InitializeFromProtoUnsafe(base)
 		require.NoError(t, err)
 		_, err = ProcessFinalUpdates(s)
+		_ = err
 	}
 }

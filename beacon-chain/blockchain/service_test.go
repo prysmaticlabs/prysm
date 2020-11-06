@@ -67,7 +67,7 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 	return nil
 }
 
-var _ = p2p.Broadcaster(&mockBroadcaster{})
+var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummaryCache) *Service {
 	endpoint := "http://127.0.0.1"
@@ -101,7 +101,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	cfg := &Config{
@@ -156,6 +156,32 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	require.LogsContain(t, hook, "data already exists")
 }
 
+func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db, sc := testDB.SetupDB(t)
+
+	chainService := setupBeaconChain(t, db, sc)
+
+	genesisBlk := testutil.NewBeaconBlock()
+	blkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
+	s := testutil.NewBeaconState()
+	require.NoError(t, db.SaveState(ctx, s, blkRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}))
+
+	// Test the start function.
+	chainService.Start()
+
+	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
+
+	// The context should have been canceled.
+	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
+	require.LogsContain(t, hook, "data already exists")
+}
+
 func TestChainService_InitializeBeaconChain(t *testing.T) {
 	helpers.ClearCache()
 	db, sc := testDB.SetupDB(t)
@@ -178,6 +204,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    make([]byte, 32),
 	})
+	require.NoError(t, err)
 	genState, err = b.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)
 
@@ -191,7 +218,9 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if headBlk == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
-	if bc.headRoot() == params.BeaconConfig().ZeroHash {
+	r, err := bc.HeadRoot(ctx)
+	require.NoError(t, err)
+	if bytesutil.ToBytes32(r) == params.BeaconConfig().ZeroHash {
 		t.Error("Canonical root for slot 0 can't be zeros after initialize beacon chain")
 	}
 }
@@ -261,6 +290,37 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 		t.Error("head slot incorrect")
 	}
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+}
+
+func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
+	db, sc := testDB.SetupDB(t)
+	ctx := context.Background()
+
+	genesis := testutil.NewBeaconBlock()
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, db.SaveBlock(ctx, genesis))
+
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
+	headBlock := testutil.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot
+	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headState := testutil.NewBeaconState()
+	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, headState, headRoot))
+	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
+	require.NoError(t, db.SaveBlock(ctx, headBlock))
+	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
+	require.NoError(t, c.initializeChainInfo(ctx))
+	s, err := c.HeadState(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	assert.DeepEqual(t, genesis, c.head.block)
 }
 
 func TestChainService_SaveHeadNoDB(t *testing.T) {

@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"errors"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -13,10 +12,6 @@ import (
 )
 
 var (
-	// ErrNotCheckpointState will be returned when a cache object is not a pointer to
-	// a CheckpointState struct.
-	ErrNotCheckpointState = errors.New("object is not a state by check point struct")
-
 	// maxCheckpointStateSize defines the max number of entries check point to state cache can contain.
 	// Choosing 10 to account for multiple forks, this allows 5 forks per epoch boundary with 2 epochs
 	// window to accept attestation based on latest spec.

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -23,8 +22,8 @@ func (e Exporter) ClearDB() error {
 }
 
 // Backup -- passthrough.
-func (e Exporter) Backup(ctx context.Context) error {
-	return e.db.Backup(ctx)
+func (e Exporter) Backup(ctx context.Context, outputDir string) error {
+	return e.db.Backup(ctx, outputDir)
 }
 
 // Block -- passthrough.
@@ -38,7 +37,7 @@ func (e Exporter) HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 }
 
 // Blocks -- passthrough.
-func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error) {
+func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, [][32]byte, error) {
 	return e.db.Blocks(ctx, f)
 }
 
@@ -60,11 +59,6 @@ func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconS
 // StateSummary -- passthrough.
 func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	return e.db.StateSummary(ctx, blockRoot)
-}
-
-// HeadState -- passthrough.
-func (e Exporter) HeadState(ctx context.Context) (*state.BeaconState, error) {
-	return e.db.HeadState(ctx)
 }
 
 // GenesisState -- passthrough.
@@ -123,7 +117,7 @@ func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) err
 }
 
 // GenesisBlock -- passthrough.
-func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+func (e Exporter) GenesisBlock(ctx context.Context) (*eth.SignedBeaconBlock, error) {
 	return e.db.GenesisBlock(ctx)
 }
 
@@ -207,6 +201,11 @@ func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	return e.db.IsFinalizedBlock(ctx, blockRoot)
 }
 
+// FinalizedChildBlock -- passthrough.
+func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
+	return e.db.FinalizedChildBlock(ctx, blockRoot)
+}
+
 // PowchainData -- passthrough
 func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
 	return e.db.PowchainData(ctx)
@@ -233,7 +232,7 @@ func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
 }
 
 // HighestSlotBlocksBelow -- passthrough
-func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, error) {
 	return e.db.HighestSlotBlocksBelow(ctx, slot)
 }
 
@@ -245,11 +244,6 @@ func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*s
 // LastArchivedSlot -- passthrough
 func (e Exporter) LastArchivedSlot(ctx context.Context) (uint64, error) {
 	return e.db.LastArchivedSlot(ctx)
-}
-
-// HistoricalStatesDeleted -- passthrough
-func (e Exporter) HistoricalStatesDeleted(ctx context.Context) error {
-	return e.db.HistoricalStatesDeleted(ctx)
 }
 
 // RunMigrations -- passthrough

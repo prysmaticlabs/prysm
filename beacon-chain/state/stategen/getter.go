@@ -13,10 +13,7 @@ import (
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	if s.hotStateCache.Has(blockRoot) {
-		return true, nil
-	}
-	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	has, err := s.HasStateInCache(ctx, blockRoot)
 	if err != nil {
 		return false, err
 	}
@@ -24,6 +21,18 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) 
 		return true, nil
 	}
 	return s.beaconDB.HasState(ctx, blockRoot), nil
+}
+
+// HasStateInCache returns true if the state exists in cache.
+func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	if s.hotStateCache.Has(blockRoot) {
+		return true, nil
+	}
+	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return false, err
+	}
+	return has, nil
 }
 
 // StateByRoot retrieves the state using input block root.
@@ -35,12 +44,6 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
-
-	// Short cut if the cachedState is already in the DB.
-	if s.beaconDB.HasState(ctx, blockRoot) {
-		return s.beaconDB.State(ctx, blockRoot)
-	}
-
 	return s.loadStateByRoot(ctx, blockRoot)
 }
 
@@ -169,6 +172,11 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 		return cachedInfo.state, nil
 	}
 
+	// Short cut if the cachedState is already in the DB.
+	if s.beaconDB.HasState(ctx, blockRoot) {
+		return s.beaconDB.State(ctx, blockRoot)
+	}
+
 	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state summary")
@@ -207,6 +215,9 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 
 	// Gather last saved state, that is where node starts to replay the blocks.
 	startState, err := s.lastSavedState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
 
 	// Gather the last saved block root and the slot number.
 	lastValidRoot, lastValidSlot, err := s.lastSavedBlock(ctx, slot)
@@ -220,7 +231,18 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 		return nil, err
 	}
 
-	return s.ReplayBlocks(ctx, startState, replayBlks, slot)
+	// If there's no blocks to replay, a node doesn't need to recalculate the start state.
+	// A node can simply advance the slots on the last saved state.
+	if len(replayBlks) == 0 {
+		return s.ReplayBlocks(ctx, startState, replayBlks, slot)
+	}
+
+	pRoot := bytesutil.ToBytes32(replayBlks[0].Block.ParentRoot)
+	replayStartState, err := s.loadStateByRoot(ctx, pRoot)
+	if err != nil {
+		return nil, err
+	}
+	return s.ReplayBlocks(ctx, replayStartState, replayBlks, slot)
 }
 
 // This returns the highest available ancestor state of the input block root.

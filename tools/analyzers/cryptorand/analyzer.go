@@ -1,3 +1,5 @@
+// Package cryptorand implements a static analyzer to ensure that the crypto/rand package is used
+// for randomness throughout the codebase.
 package cryptorand
 
 import (

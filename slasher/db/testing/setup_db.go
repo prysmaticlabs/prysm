@@ -3,13 +3,12 @@
 package testing
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	slasherDB "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
@@ -17,10 +16,7 @@ import (
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.
 func SetupSlasherDB(t testing.TB, spanCacheEnabled bool) *kv.Store {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		t.Fatalf("Could not generate random file path: %v", err)
-	}
+	randPath := rand.NewDeterministicGenerator().Int()
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)

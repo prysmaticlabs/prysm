@@ -69,7 +69,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200",
+		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200",
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
@@ -82,7 +82,7 @@ var (
 	ContractDeploymentBlock = &cli.IntFlag{
 		Name:  "contract-deployment-block",
 		Usage: "The eth1 block in which the deposit contract was deployed.",
-		Value: 2844925,
+		Value: 11184524,
 	}
 	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.
 	SetGCPercent = &cli.IntFlag{
@@ -90,9 +90,9 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// UnsafeSync starts the beacon node from the previously saved head state and syncs from there.
-	UnsafeSync = &cli.BoolFlag{
-		Name:  "unsafe-sync",
+	// HeadSync starts the beacon node from the previously saved head state and syncs from there.
+	HeadSync = &cli.BoolFlag{
+		Name:  "head-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
@@ -151,5 +151,15 @@ var (
 		Usage: "Input in `block_root:epoch_number` format. This guarantee that syncing leads to the given Weak Subjectivity Checkpoint being in the canonical chain. " +
 			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
 		Value: "",
+	}
+	// EnableBackupWebhookFlag for users to trigger db backups via an HTTP webhook.
+	EnableBackupWebhookFlag = &cli.BoolFlag{
+		Name:  "enable-db-backup-webhook",
+		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
+	}
+	// BackupWebhookOutputDir to customize the output directory for db backups.
+	BackupWebhookOutputDir = &cli.StringFlag{
+		Name:  "db-backup-output-dir",
+		Usage: "Output directory for db backups",
 	}
 )

@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -47,15 +47,16 @@ func setupCliContext(
 	return cli.NewContext(&app, set, nil)
 }
 
-func createRandomKeystore(t testing.TB, password string) (*v2keymanager.Keystore, bls.SecretKey) {
+func createRandomKeystore(t testing.TB, password string) (*keymanager.Keystore, bls.SecretKey) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	pubKey := validatingKey.PublicKey().Marshal()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
-	return &v2keymanager.Keystore{
+	return &keymanager.Keystore{
 		Crypto:  cryptoFields,
 		Pubkey:  fmt.Sprintf("%x", pubKey),
 		ID:      id.String(),
@@ -110,15 +111,16 @@ func TestDecrypt(t *testing.T) {
 
 	// We capture the results of stdout to check the public key and private keys
 	// were both printed to stdout.
-	assert.Equal(t, strings.Contains(stringOutput, keystore.Pubkey), true)
-	assert.Equal(t, strings.Contains(stringOutput, fmt.Sprintf("%#x", privKey.Marshal())), true)
+	assert.Equal(t, true, strings.Contains(stringOutput, keystore.Pubkey))
+	assert.Equal(t, true, strings.Contains(stringOutput, fmt.Sprintf("%#x", privKey.Marshal())))
 }
 
 func TestEncrypt(t *testing.T) {
 	keystoresDir := setupRandomDir(t)
 	password := "secretPassw0rd$1999"
 	keystoreFilePath := filepath.Join(keystoresDir, "keystore.json")
-	privKey := bls.RandKey()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
 
 	cliCtx := setupCliContext(t, &cliConfig{
 		outputPath: keystoreFilePath,
@@ -143,9 +145,6 @@ func TestEncrypt(t *testing.T) {
 	stringOutput := string(out)
 
 	// We capture the results of stdout to check the public key was printed to stdout.
-	assert.Equal(
-		t,
-		strings.Contains(stringOutput, fmt.Sprintf("%x", privKey.PublicKey().Marshal())),
-		true,
-	)
+	res := strings.Contains(stringOutput, fmt.Sprintf("%x", privKey.PublicKey().Marshal()))
+	assert.Equal(t, true, res)
 }

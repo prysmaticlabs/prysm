@@ -42,12 +42,10 @@ func TestSubnetIDsCache_RoundTrip(t *testing.T) {
 }
 
 func TestSubnetIDsCache_PersistentCommitteeRoundtrip(t *testing.T) {
-	pubkeySet := [][48]byte{}
 	c := newSubnetIDs()
 
 	for i := 0; i < 20; i++ {
 		pubkey := [48]byte{byte(i)}
-		pubkeySet = append(pubkeySet, pubkey)
 		c.AddPersistentCommittee(pubkey[:], []uint64{uint64(i)}, 0)
 	}
 

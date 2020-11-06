@@ -51,7 +51,7 @@ func NewMaxCoverCandidate(key int, bits *bitfield.Bitlist) *MaxCoverCandidate {
 
 // Cover calculates solution to Maximum k-Cover problem in O(knm), where
 // n is number of candidates and m is a length of bitlist in each candidate.
-func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool, allowDuplicates bool) (*Aggregation, error) {
+func (mc *MaxCoverProblem) Cover(k int, allowOverlaps, allowDuplicates bool) (*Aggregation, error) {
 	if len(mc.Candidates) == 0 {
 		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
 	}

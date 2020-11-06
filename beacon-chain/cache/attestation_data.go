@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -99,10 +98,7 @@ func (c *AttestationCache) Get(ctx context.Context, req *ethpb.AttestationDataRe
 
 	if exists && item != nil && item.(*attestationReqResWrapper).res != nil {
 		attestationCacheHit.Inc()
-		if featureconfig.Get().ReduceAttesterStateCopy {
-			return state.CopyAttestationData(item.(*attestationReqResWrapper).res), nil
-		}
-		return item.(*attestationReqResWrapper).res, nil
+		return state.CopyAttestationData(item.(*attestationReqResWrapper).res), nil
 	}
 	attestationCacheMiss.Inc()
 	return nil, nil
@@ -138,7 +134,7 @@ func (c *AttestationCache) MarkNotInProgress(req *ethpb.AttestationDataRequest) 
 }
 
 // Put the response in the cache.
-func (c *AttestationCache) Put(ctx context.Context, req *ethpb.AttestationDataRequest, res *ethpb.AttestationData) error {
+func (c *AttestationCache) Put(_ context.Context, req *ethpb.AttestationDataRequest, res *ethpb.AttestationData) error {
 	data := &attestationReqResWrapper{
 		req,
 		res,
@@ -167,10 +163,7 @@ func wrapperToKey(i interface{}) (string, error) {
 }
 
 func reqToKey(req *ethpb.AttestationDataRequest) (string, error) {
-	if featureconfig.Get().ReduceAttesterStateCopy {
-		return fmt.Sprintf("%d", req.Slot), nil
-	}
-	return fmt.Sprintf("%d-%d", req.CommitteeIndex, req.Slot), nil
+	return fmt.Sprintf("%d", req.Slot), nil
 }
 
 type attestationReqResWrapper struct {

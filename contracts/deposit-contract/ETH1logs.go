@@ -8,24 +8,17 @@ import (
 )
 
 // UnpackDepositLogData unpacks the data from a deposit log using the ABI decoder.
-func UnpackDepositLogData(data []byte) (pubkey []byte, withdrawalCredentials []byte, amount []byte,
-	signature []byte, index []byte, err error) {
+func UnpackDepositLogData(data []byte) (pubkey, withdrawalCredentials, amount, signature, index []byte, err error) {
 	reader := bytes.NewReader([]byte(DepositContractABI))
 	contractAbi, err := abi.JSON(reader)
 	if err != nil {
 		return nil, nil, nil, nil, nil, errors.Wrap(err, "unable to generate contract abi")
 	}
 
-	unpackedLogs := []interface{}{
-		&pubkey,
-		&withdrawalCredentials,
-		&amount,
-		&signature,
-		&index,
-	}
-	if err := contractAbi.Unpack(&unpackedLogs, "DepositEvent", data); err != nil {
+	unpackedLogs, err := contractAbi.Unpack("DepositEvent", data)
+	if err != nil {
 		return nil, nil, nil, nil, nil, errors.Wrap(err, "unable to unpack logs")
 	}
 
-	return pubkey, withdrawalCredentials, amount, signature, index, nil
+	return unpackedLogs[0].([]byte), unpackedLogs[1].([]byte), unpackedLogs[2].([]byte), unpackedLogs[3].([]byte), unpackedLogs[4].([]byte), nil
 }

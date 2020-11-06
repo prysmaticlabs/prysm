@@ -178,8 +178,7 @@ func TestProcessAttestations(t *testing.T) {
 	for i := 0; i < len(pVals); i++ {
 		pVals[i] = &precompute.Validator{CurrentEpochEffectiveBalance: 100}
 	}
-	pBal := &precompute.Balance{}
-	pVals, pBal, err = precompute.ProcessAttestations(context.Background(), beaconState, pVals, pBal)
+	pVals, _, err = precompute.ProcessAttestations(context.Background(), beaconState, pVals, &precompute.Balance{})
 	require.NoError(t, err)
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)

@@ -2,19 +2,15 @@ package kv
 
 import (
 	"context"
-	"flag"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/urfave/cli/v2"
 )
 
 func TestChainHead(t *testing.T) {
-	app := &cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t)
 	ctx := context.Background()
 
 	tests := []struct {

@@ -115,7 +115,7 @@ func VerifyAttesterSlashing(ctx context.Context, beaconState *stateTrie.BeaconSt
 //        # Surround vote
 //        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
 //    )
-func IsSlashableAttestationData(data1 *ethpb.AttestationData, data2 *ethpb.AttestationData) bool {
+func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	if data1 == nil || data2 == nil || data1.Target == nil || data2.Target == nil || data1.Source == nil || data2.Source == nil {
 		return false
 	}

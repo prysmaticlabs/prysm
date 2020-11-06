@@ -4,4 +4,4 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 )
 
-var _ = pb.PrivateKeyServiceServer(&server{})
+var _ pb.PrivateKeyServiceServer = (*server)(nil)

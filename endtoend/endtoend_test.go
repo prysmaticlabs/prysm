@@ -43,7 +43,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	go components.SendAndMineDeposits(t, keystorePath, minGenesisActiveCount, 0)
 	bootnodeENR := components.StartBootnode(t)
 	components.StartBeaconNodes(t, config, bootnodeENR)
-	components.StartValidatorClients(t, config, keystorePath)
+	components.StartValidatorClients(t, config)
 	defer helpers.LogOutput(t, config)
 	if config.UsePprof {
 		defer func() {
@@ -58,7 +58,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	require.NoError(t, err)
 	t.Run("chain started", func(t *testing.T) {
-		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"), "Chain did not start")
+		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started in sync service"), "Chain did not start")
 	})
 
 	// Failing early in case chain doesn't start.
@@ -80,7 +80,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		require.NoError(t, err, "Failed to dial")
 		conns[i] = conn
 		defer func() {
-			if err := conn.Close(); err != nil {
+			if err = conn.Close(); err != nil {
 				t.Log(err)
 			}
 		}()

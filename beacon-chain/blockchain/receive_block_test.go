@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_ReceiveBlock(t *testing.T) {
@@ -139,6 +141,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			gBlk, err := s.beaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 			gRoot, err := gBlk.Block.HashTreeRoot()
+			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -179,6 +182,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	gBlk, err := s.beaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -261,6 +265,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 			require.NoError(t, err)
 
 			gRoot, err := gBlk.Block.HashTreeRoot()
+			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -341,6 +346,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 
 			gRoot, err := gBlk.Block.HashTreeRoot()
+			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -358,7 +364,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{})
+	s, err := NewService(context.Background(), &Config{StateNotifier: &blockchainTesting.MockStateNotifier{}})
 	require.NoError(t, err)
 	r := [32]byte{'a'}
 	if s.HasInitSyncBlock(r) {
@@ -368,4 +374,42 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 	if !s.HasInitSyncBlock(r) {
 		t.Error("Should have block")
 	}
+}
+
+func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
+	db, stateSummaryCache := testDB.SetupDB(t)
+	hook := logTest.NewGlobal()
+	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	require.NoError(t, err)
+	st := params.BeaconConfig().SlotsPerEpoch * uint64(epochsSinceFinalitySaveHotStateDB)
+	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	s.finalizedCheckpt = &ethpb.Checkpoint{}
+
+	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
+	assert.LogsContain(t, hook, "Entering mode to save hot states in DB")
+}
+
+func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
+	db, stateSummaryCache := testDB.SetupDB(t)
+	hook := logTest.NewGlobal()
+	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	require.NoError(t, err)
+	s.finalizedCheckpt = &ethpb.Checkpoint{}
+	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
+	s.genesisTime = time.Now()
+
+	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
+	assert.LogsContain(t, hook, "Exiting mode to save hot states in DB")
+}
+
+func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
+	db, stateSummaryCache := testDB.SetupDB(t)
+	hook := logTest.NewGlobal()
+	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	require.NoError(t, err)
+	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 10000000}
+	s.genesisTime = time.Now()
+
+	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
+	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
 }

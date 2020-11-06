@@ -37,37 +37,48 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() {
+	cleanup := func() {
 		if err := file.Close(); err != nil {
 			log.Fatal(err)
 		}
-	}()
+	}
+	defer cleanup()
 
 	var ctnr *keygen.UnencryptedKeysContainer
 	if *random {
-		ctnr = generateRandomKeys(*numKeys)
+		ctnr, err = generateRandomKeys(*numKeys)
+		if err != nil {
+			// log.Fatal will prevent defer from being called
+			cleanup()
+			log.Fatal(err)
+		}
 	} else {
 		ctnr = generateUnencryptedKeys(*startIndex)
 	}
 	if err := keygen.SaveUnencryptedKeysToFile(file, ctnr); err != nil {
+		// log.Fatal will prevent defer from being called
+		cleanup()
 		log.Fatal(err)
 	}
 }
 
-func generateRandomKeys(num int) *keygen.UnencryptedKeysContainer {
+func generateRandomKeys(num int) (*keygen.UnencryptedKeysContainer, error) {
 	ctnr := &keygen.UnencryptedKeysContainer{
 		Keys: make([]*keygen.UnencryptedKeys, num),
 	}
 
 	for i := 0; i < num; i++ {
-		sk := bls.RandKey()
+		sk, err := bls.RandKey()
+		if err != nil {
+			return nil, err
+		}
 		ctnr.Keys[i] = &keygen.UnencryptedKeys{
 			ValidatorKey:  sk.Marshal(),
 			WithdrawalKey: sk.Marshal(),
 		}
 	}
 
-	return ctnr
+	return ctnr, nil
 }
 
 func generateUnencryptedKeys(startIndex uint64) *keygen.UnencryptedKeysContainer {

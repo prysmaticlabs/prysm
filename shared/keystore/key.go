@@ -152,7 +152,10 @@ func NewKeyFromBLS(blsKey bls.SecretKey) (*Key, error) {
 
 // NewKey generates a new random key.
 func NewKey() (*Key, error) {
-	secretKey := bls.RandKey()
+	secretKey, err := bls.RandKey()
+	if err != nil {
+		return nil, err
+	}
 	return NewKeyFromBLS(secretKey)
 }
 
@@ -161,10 +164,7 @@ func storeNewRandomKey(ks keyStore, password string) error {
 	if err != nil {
 		return err
 	}
-	if err := ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, password); err != nil {
-		return err
-	}
-	return nil
+	return ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, password)
 }
 
 func writeKeyFile(file string, content []byte) error {

@@ -30,6 +30,6 @@ func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized 
 		"block":          fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
 		"epoch":          helpers.SlotToEpoch(block.Slot),
 		"finalizedEpoch": finalized.Epoch,
-		"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root[:])[:8]),
+		"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
 	}).Info("Synced new block")
 }

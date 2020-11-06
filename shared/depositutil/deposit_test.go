@@ -15,8 +15,10 @@ import (
 )
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
-	k1 := bls.RandKey()
-	k2 := bls.RandKey()
+	k1, err := bls.RandKey()
+	require.NoError(t, err)
+	k2, err := bls.RandKey()
+	require.NoError(t, err)
 
 	result, _, err := depositutil.DepositInput(k1, k2, 0)
 	require.NoError(t, err)
@@ -32,7 +34,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		nil, /*genesisValidatorsRoot*/
 	)
 	require.NoError(t, err)
-	root, err := (&pb.SigningData{ObjectRoot: sr[:], Domain: domain[:]}).HashTreeRoot()
+	root, err := (&pb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, true, sig.Verify(k1.PublicKey(), root[:]))
 }

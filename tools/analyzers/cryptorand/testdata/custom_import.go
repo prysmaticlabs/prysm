@@ -7,17 +7,19 @@ import (
 )
 
 func UseRandNewCustomImport() {
-	randGenerator := mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+	source := mathRand.NewSource(time.Now().UnixNano()) // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
+	randGenerator := mathRand.New(source)               // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
 	start := uint64(randGenerator.Intn(32))
 	_ = start
 
-	randGenerator = mathRand.New(mathRand.NewSource(time.Now().UnixNano()))
+	source = mathRand.NewSource(time.Now().UnixNano()) // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
+	randGenerator = mathRand.New(source)               // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
 }
 
 func UseWithoutSeeCustomImportd() {
-	assignedIndex := mathRand.Intn(128)
+	assignedIndex := mathRand.Intn(128) // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
 	_ = assignedIndex
-	foobar.Shuffle(10, func(i, j int) {
+	foobar.Shuffle(10, func(i, j int) { // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
 
 	})
 }

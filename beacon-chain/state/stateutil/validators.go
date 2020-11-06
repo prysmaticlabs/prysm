@@ -64,7 +64,7 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 // ValidatorRoot describes a method from which the hash tree root
 // of a validator is returned.
 func ValidatorRoot(hasher htrutils.HashFn, validator *ethpb.Validator) ([32]byte, error) {
-	fieldRoots := [][32]byte{}
+	var fieldRoots [][32]byte
 	if validator != nil {
 		pubkey := bytesutil.ToBytes48(validator.PublicKey)
 		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
@@ -210,19 +210,14 @@ func (h *stateRootHasher) validatorRoot(hasher htrutils.HashFn, validator *ethpb
 		} else {
 			slashBuf[0] = uint8(0)
 		}
-		fieldRoots = append(fieldRoots, slashBuf)
-
-		// Activation eligibility epoch.
-		fieldRoots = append(fieldRoots, activationEligibilityBuf)
-
-		// Activation epoch.
-		fieldRoots = append(fieldRoots, activationBuf)
-
-		// Exit epoch.
-		fieldRoots = append(fieldRoots, exitBuf)
-
-		// Withdrawable epoch.
-		fieldRoots = append(fieldRoots, withdrawalBuf)
+		fieldRoots = append(
+			fieldRoots,
+			slashBuf,
+			activationEligibilityBuf,
+			activationBuf,
+			exitBuf,
+			withdrawalBuf,
+		)
 	}
 
 	valRoot, err := htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))

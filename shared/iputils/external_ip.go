@@ -65,7 +65,7 @@ func retrieveIPAddrs() ([]net.IP, error) {
 	if err != nil {
 		return nil, err
 	}
-	ipAddrs := []net.IP{}
+	var ipAddrs []net.IP
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagUp == 0 {
 			continue // interface down

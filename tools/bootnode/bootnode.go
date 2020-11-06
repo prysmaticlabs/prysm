@@ -22,7 +22,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
+	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
@@ -44,15 +45,17 @@ import (
 )
 
 var (
-	debug            = flag.Bool("debug", false, "Enable debug logging")
-	logFileName      = flag.String("log-file", "", "Specify log filename, relative or absolute")
-	privateKey       = flag.String("private", "", "Private key to use for peer ID")
-	discv5port       = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
-	metricsPort      = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP       = flag.String("external-ip", "", "External IP for the bootnode")
-	disableKad       = flag.Bool("disable-kad", false, "Disables the bootnode from running kademlia dht")
-	log              = logrus.WithField("prefix", "bootnode")
-	discv5PeersCount = promauto.NewGauge(prometheus.GaugeOpts{
+	debug                = flag.Bool("debug", false, "Enable debug logging")
+	logFileName          = flag.String("log-file", "", "Specify log filename, relative or absolute")
+	privateKey           = flag.String("private", "", "Private key to use for peer ID")
+	discv5port           = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
+	metricsPort          = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP           = flag.String("external-ip", "", "External IP for the bootnode")
+	forkVersion          = flag.String("fork-version", "", "Fork Version that the bootnode uses")
+	genesisValidatorRoot = flag.String("genesis-root", "", "Genesis Validator Root the beacon node uses")
+	seedNode             = flag.String("seed-node", "", "External node to connect to")
+	log                  = logrus.WithField("prefix", "bootnode")
+	discv5PeersCount     = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bootstrap_node_discv5_peers",
 		Help: "The current number of discv5 peers of the bootstrap node",
 	})
@@ -90,7 +93,15 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	ipAddr, err := iputils.ExternalIPv4()
+	if *seedNode != "" {
+		log.Debugf("Adding seed node %s", *seedNode)
+		node, err := enode.Parse(enode.ValidSchemes, *seedNode)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cfg.Bootnodes = []*enode.Node{node}
+	}
+	ipAddr, err := iputils.ExternalIP()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,10 +109,6 @@ func main() {
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
-
-	if !*disableKad {
-		log.Warn("--disable-kad is now deprecated, kademlia has been removed from the bootnode")
-	}
 
 	handler := &handler{
 		listener: listener,
@@ -127,11 +134,23 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
 	}
+	var bindIP net.IP
+	var networkVersion string
+	switch {
+	case ip.To16() != nil && ip.To4() == nil:
+		bindIP = net.IPv6zero
+		networkVersion = "udp6"
+	case ip.To4() != nil:
+		bindIP = net.IPv4zero
+		networkVersion = "udp4"
+	default:
+		log.Fatalf("Valid ip address not provided instead %s was provided", ipAddr)
+	}
 	udpAddr := &net.UDPAddr{
-		IP:   ip,
+		IP:   bindIP,
 		Port: port,
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -147,7 +166,7 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	return network
 }
 
-func (h *handler) httpHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	write := func(w io.Writer, b []byte) {
 		if _, err := w.Write(b); err != nil {
@@ -175,14 +194,35 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	if *externalIP == "" {
 		external = ipAddr
 	}
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
+	fVersion := params.BeaconConfig().GenesisForkVersion
+	if *forkVersion != "" {
+		fVersion, err = hex.DecodeString(*forkVersion)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not retrieve fork version")
+		}
+		if len(fVersion) != 4 {
+			return nil, errors.Errorf("Invalid fork version size expected %d but got %d", 4, len(fVersion))
+		}
+	}
+	genRoot := params.BeaconConfig().ZeroHash
+	if *genesisValidatorRoot != "" {
+		retRoot, err := hex.DecodeString(*genesisValidatorRoot)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not retrieve genesis validator root")
+		}
+		if len(retRoot) != 32 {
+			return nil, errors.Errorf("Invalid root size, expected 32 but got %d", len(retRoot))
+		}
+		genRoot = bytesutil.ToBytes32(retRoot)
+	}
+	digest, err := helpers.ComputeForkDigest(fVersion, genRoot[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not compute fork digest")
 	}
 
 	forkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
-		NextForkVersion:   params.BeaconConfig().GenesisForkVersion,
+		NextForkVersion:   fVersion,
 		NextForkEpoch:     params.BeaconConfig().FarFutureEpoch,
 	}
 	forkEntry, err := forkID.MarshalSSZ()
@@ -210,14 +250,14 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
+		privKey = (*ecdsa.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey))
 
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey)))
+		privKey = (*ecdsa.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey))
 		log.Warning("No private key was provided. Using default/random private key")
 		b, err := privInterfaceKey.Raw()
 		if err != nil {
@@ -225,6 +265,7 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		}
 		log.Debugf("Private key %x", b)
 	}
+	privKey.Curve = gcrypto.S256()
 
 	return privKey
 }

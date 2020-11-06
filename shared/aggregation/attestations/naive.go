@@ -46,7 +46,6 @@ func NaiveAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestatio
 			} else if b.AggregationBits.Contains(a.AggregationBits) {
 				// if a is fully contained in b, then a can be removed.
 				atts = append(atts[:i], atts[i+1:]...)
-				i--
 				break // Stop the inner loop, advance a.
 			}
 		}

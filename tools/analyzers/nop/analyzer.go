@@ -1,3 +1,4 @@
+// Package nop implements a static analyzer to ensure that code does not contain no-op instructions.
 package nop
 
 import (

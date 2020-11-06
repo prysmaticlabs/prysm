@@ -10,10 +10,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	scorers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -22,13 +23,13 @@ import (
 func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
 	f.Lock()
 	defer f.Unlock()
-	if lock, ok := f.peerLocks[pid]; ok {
-		lock.accessed = roughtime.Now()
+	if lock, ok := f.peerLocks[pid]; ok && lock != nil {
+		lock.accessed = timeutils.Now()
 		return lock
 	}
 	f.peerLocks[pid] = &peerLock{
 		Mutex:    sync.Mutex{},
-		accessed: roughtime.Now(),
+		accessed: timeutils.Now(),
 	}
 	return f.peerLocks[pid]
 }
@@ -74,10 +75,10 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 		}
 		var peers []peer.ID
 		if f.mode == modeStopOnFinalizedEpoch {
-			headEpoch := f.finalizationFetcher.FinalizedCheckpt().Epoch
+			headEpoch := f.chain.FinalizedCheckpt().Epoch
 			_, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		} else {
-			headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+			headEpoch := helpers.SlotToEpoch(f.chain.HeadSlot())
 			_, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
 		}
 		if len(peers) >= required {
@@ -90,11 +91,16 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 	}
 }
 
-// filterPeers returns transformed list of peers,
-// weight ordered or randomized, constrained if necessary (only percentage of peers returned).
-func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+// filterPeers returns transformed list of peers, weight ordered or randomized, constrained
+// if necessary (when only percentage of peers returned).
+// When peer scorer is enabled, fallbacks filterScoredPeers.
+func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) []peer.ID {
+	if featureconfig.Get().EnablePeerScorer {
+		return f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
+	}
+
 	if len(peers) == 0 {
-		return peers, nil
+		return peers
 	}
 
 	// Shuffle peers to prevent a bad peer from
@@ -117,18 +123,17 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([
 		return cap1 > cap2
 	})
 
-	return peers, nil
+	return peers
 }
 
-// filterScoredPeers returns transformed list of peers,
-// weight sorted by scores and capacity remaining. List can be constrained using peersPercentage,
-// where only percentage of peers are returned.
-func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+// filterScoredPeers returns transformed list of peers, weight sorted by scores and capacity remaining.
+// List can be further constrained using peersPercentage, where only percentage of peers are returned.
+func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) []peer.ID {
 	ctx, span := trace.StartSpan(ctx, "initialsync.filterScoredPeers")
 	defer span.End()
 
 	if len(peers) == 0 {
-		return peers, nil
+		return peers
 	}
 
 	// Sort peers using both block provider score and, custom, capacity based score (see
@@ -148,9 +153,8 @@ func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, 
 		overallScore := blockProviderScore*(1.0-f.capacityWeight) + capScore*f.capacityWeight
 		return math.Round(overallScore*scorers.ScoreRoundingFactor) / scorers.ScoreRoundingFactor
 	})
-	peers = trimPeers(peers, peersPercentage)
 
-	return peers, nil
+	return trimPeers(peers, peersPercentage)
 }
 
 // trimPeers limits peer list, returning only specified percentage of peers.

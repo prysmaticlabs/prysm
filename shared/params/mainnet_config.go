@@ -27,12 +27,14 @@ var mainnetNetworkConfig = &NetworkConfig{
 	TtfbTimeout:                       5 * time.Second,
 	RespTimeout:                       10 * time.Second,
 	MaximumGossipClockDisparity:       500 * time.Millisecond,
+	MessageDomainInvalidSnappy:        [4]byte{00, 00, 00, 00},
+	MessageDomainValidSnappy:          [4]byte{01, 00, 00, 00},
 	ETH2Key:                           "eth2",
 	AttSubnetKey:                      "attnets",
-	ContractDeploymentBlock:           0,
-	DepositContractAddress:            "0x", // To be updated once the mainnet contract is deployed.
-	ChainID:                           1,    // Chain ID of eth1 mainnet.
-	NetworkID:                         1,    // Network ID of eth1 mainnet.
+	ContractDeploymentBlock:           11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
+	DepositContractAddress:            "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+	ChainID:                           1, // Chain ID of eth1 mainnet.
+	NetworkID:                         1, // Network ID of eth1 mainnet.
 	BootstrapNodes:                    []string{},
 }
 
@@ -51,7 +53,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
 	MinGenesisActiveValidatorCount: 16384,
-	MinGenesisTime:                 0, // Zero until a proper time is decided.
+	MinGenesisTime:                 1606824000, // Dec 1, 2020, 12pm UTC.
 	TargetAggregatorsPerCommittee:  16,
 	HysteresisQuotient:             4,
 	HysteresisDownwardMultiplier:   1,
@@ -80,7 +82,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
 	SafeSlotsToUpdateJustified:       8,
-	SecondsPerETH1Block:              14,
+	SecondsPerETH1Block:              13,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -89,11 +91,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ValidatorRegistryLimit:    1099511627776,
 
 	// Reward and penalty quotients constants.
-	BaseRewardFactor:            64,
-	WhistleBlowerRewardQuotient: 512,
-	ProposerRewardQuotient:      8,
-	InactivityPenaltyQuotient:   1 << 24,
-	MinSlashingPenaltyQuotient:  32,
+	BaseRewardFactor:               64,
+	WhistleBlowerRewardQuotient:    512,
+	ProposerRewardQuotient:         8,
+	InactivityPenaltyQuotient:      1 << 24,
+	MinSlashingPenaltyQuotient:     32,
+	ProportionalSlashingMultiplier: 3,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,

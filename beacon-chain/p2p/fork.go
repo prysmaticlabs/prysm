@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,7 +22,14 @@ var eth2ENRKey = params.BeaconNetworkConfig().ETH2Key
 // ForkDigest returns the current fork digest of
 // the node.
 func (s *Service) forkDigest() ([4]byte, error) {
-	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
+	if s.currentForkDigest != [4]byte{} {
+		return s.currentForkDigest, nil
+	}
+	fd, err := p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
+	if err != nil {
+		s.currentForkDigest = fd
+	}
+	return fd, err
 }
 
 // Compares fork ENRs between an incoming peer's record and our node's
@@ -87,8 +94,8 @@ func addForkEntry(
 	}
 	currentSlot := helpers.SlotsSince(genesisTime)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
-	if roughtime.Now().Before(genesisTime) {
-		currentSlot, currentEpoch = 0, 0
+	if timeutils.Now().Before(genesisTime) {
+		currentEpoch = 0
 	}
 	fork, err := p2putils.Fork(currentEpoch)
 	if err != nil {

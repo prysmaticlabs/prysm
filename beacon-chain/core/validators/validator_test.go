@@ -155,7 +155,6 @@ func TestActivatedValidatorIndices(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
 						ActivationEpoch: 0,
@@ -178,7 +177,6 @@ func TestActivatedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
 						ActivationEpoch: helpers.ActivationExitEpoch(10),
@@ -189,7 +187,6 @@ func TestActivatedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
 						ActivationEpoch: 0,
@@ -215,7 +212,6 @@ func TestSlashedValidatorIndices(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
@@ -235,7 +231,6 @@ func TestSlashedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
@@ -246,7 +241,6 @@ func TestSlashedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
@@ -272,7 +266,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -295,7 +288,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -308,7 +300,6 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,

@@ -2,15 +2,15 @@ package spectest
 
 import (
 	"encoding/hex"
+	"errors"
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -36,13 +36,18 @@ func testAggregateVerifyYaml(t *testing.T) {
 			require.NoError(t, err)
 			test := &AggregateVerifyTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))
-			pubkeys := make([]iface.PublicKey, 0, len(test.Input.Pubkeys))
+			pubkeys := make([]common.PublicKey, 0, len(test.Input.Pubkeys))
 			msgs := make([][32]byte, 0, len(test.Input.Messages))
 			for _, pubKey := range test.Input.Pubkeys {
 				pkBytes, err := hex.DecodeString(pubKey[2:])
 				require.NoError(t, err)
 				pk, err := bls.PublicKeyFromBytes(pkBytes)
-				require.NoError(t, err)
+				if err != nil {
+					if test.Output == false && errors.Is(err, common.ErrInfinitePubKey) {
+						return
+					}
+					t.Fatalf("cannot unmarshal pubkey: %v", err)
+				}
 				pubkeys = append(pubkeys, pk)
 			}
 			for _, msg := range test.Input.Messages {

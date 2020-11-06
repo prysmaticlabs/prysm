@@ -191,9 +191,16 @@ func TestVerifyProposerSlashing(t *testing.T) {
 		slashing    *ethpb.ProposerSlashing
 	}
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 2)
+	beaconState, sks := testutil.DeterministicGenesisState(t, 2)
 	currentSlot := uint64(0)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
+	rand1, err := bls.RandKey()
+	require.NoError(t, err)
+	sig1 := rand1.Sign([]byte("foo")).Marshal()
+
+	rand2, err := bls.RandKey()
+	require.NoError(t, err)
+	sig2 := rand2.Sign([]byte("bar")).Marshal()
 
 	tests := []struct {
 		name    string
@@ -201,19 +208,25 @@ func TestVerifyProposerSlashing(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "same header, no signatures",
+			name: "same header, same slot as state",
 			args: args{
 				slashing: &ethpb.ProposerSlashing{
 					Header_1: &ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
-							Slot:          0,
+							Slot:          currentSlot,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
+							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
 					},
 					Header_2: &ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
-							Slot:          0,
+							Slot:          currentSlot,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
+							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
 					},
 				},
@@ -229,25 +242,71 @@ func TestVerifyProposerSlashing(t *testing.T) {
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          0,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
+							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
-						Signature: bls.RandKey().Sign([]byte("foo")).Marshal(),
+						Signature: sig1,
 					},
 					Header_2: &ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          0,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
+							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
-						Signature: bls.RandKey().Sign([]byte("bar")).Marshal(),
+						Signature: sig2,
 					},
 				},
 				beaconState: beaconState,
 			},
 			wantErr: "expected slashing headers to differ",
 		},
+		{
+			name: "slashing in future epoch",
+			args: args{
+				slashing: &ethpb.ProposerSlashing{
+					Header_1: &ethpb.SignedBeaconBlockHeader{
+						Header: &ethpb.BeaconBlockHeader{
+							ProposerIndex: 1,
+							Slot:          65,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
+							ParentRoot:    bytesutil.PadTo([]byte("foo"), 32),
+						},
+					},
+					Header_2: &ethpb.SignedBeaconBlockHeader{
+						Header: &ethpb.BeaconBlockHeader{
+							ProposerIndex: 1,
+							Slot:          65,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
+							ParentRoot:    bytesutil.PadTo([]byte("bar"), 32),
+						},
+					},
+				},
+				beaconState: beaconState,
+			},
+			wantErr: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.ResetCache()
+			sk := sks[tt.args.slashing.Header_1.Header.ProposerIndex]
+			d, err := helpers.Domain(tt.args.beaconState.Fork(), helpers.SlotToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
+			require.NoError(t, err)
+			if tt.args.slashing.Header_1.Signature == nil {
+				sr, err := helpers.ComputeSigningRoot(tt.args.slashing.Header_1.Header, d)
+				require.NoError(t, err)
+				tt.args.slashing.Header_1.Signature = sk.Sign(sr[:]).Marshal()
+			}
+			if tt.args.slashing.Header_2.Signature == nil {
+				sr, err := helpers.ComputeSigningRoot(tt.args.slashing.Header_2.Header, d)
+				require.NoError(t, err)
+				tt.args.slashing.Header_2.Signature = sk.Sign(sr[:]).Marshal()
+			}
 			if err := blocks.VerifyProposerSlashing(tt.args.beaconState, tt.args.slashing); (err != nil || tt.wantErr != "") && err.Error() != tt.wantErr {
 				t.Errorf("VerifyProposerSlashing() error = %v, wantErr %v", err, tt.wantErr)
 			}

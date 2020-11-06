@@ -46,9 +46,9 @@ type Config struct {
 	GrpcHeadersFlag            string
 }
 
-// NewSlashingProtectionService creates a new validator service for the service
+// NewService creates a new validator service for the service
 // registry.
-func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                ctx,

@@ -2,46 +2,22 @@ package sync
 
 import (
 	"context"
-	"io"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
-func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
+func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.p2p.Send(ctx, blockRoots, p2p.RPCBlocksByRootTopic, id)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := helpers.FullClose(stream); err != nil {
-			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
-		}
-	}()
-	for i := 0; i < len(blockRoots); i++ {
-		isFirstChunk := i == 0
-		blk, err := ReadChunkedBlock(stream, s.p2p, isFirstChunk)
-		if err == io.EOF {
-			break
-		}
-		// Exit if peer sends more than max request blocks.
-		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
-			break
-		}
-		if err != nil {
-			log.WithError(err).Debug("Unable to retrieve block from stream")
-			return err
-		}
-
+	_, err := SendBeaconBlocksByRootRequest(ctx, s.p2p, id, blockRoots, func(blk *ethpb.SignedBeaconBlock) error {
 		blkRoot, err := blk.Block.HashTreeRoot()
 		if err != nil {
 			return err
@@ -49,9 +25,9 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		s.pendingQueueLock.Lock()
 		s.insertBlockToPendingQueue(blk.Block.Slot, blk, blkRoot)
 		s.pendingQueueLock.Unlock()
-
-	}
-	return nil
+		return nil
+	})
+	return err
 }
 
 // beaconBlocksRootRPCHandler looks up the request blocks from the database from the given block roots.
@@ -66,10 +42,11 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_root")
 
-	blockRoots, ok := msg.([][32]byte)
+	rawMsg, ok := msg.(*types.BeaconBlockByRootsReq)
 	if !ok {
-		return errors.New("message is not type [][32]byte")
+		return errors.New("message is not type BeaconBlockByRootsReq")
 	}
+	blockRoots := *rawMsg
 	if err := s.rateLimiter.validateRequest(stream, uint64(len(blockRoots))); err != nil {
 		return err
 	}

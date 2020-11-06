@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"path/filepath"
@@ -20,12 +19,12 @@ type epochProposals struct {
 }
 
 type pubKeyProposals struct {
-	PubKey    []byte
+	PubKey    [48]byte
 	Proposals []epochProposals
 }
 
 type pubKeyAttestations struct {
-	PubKey       []byte
+	PubKey       [48]byte
 	Attestations []byte
 }
 
@@ -54,13 +53,13 @@ func Split(ctx context.Context, sourceStore *Store, targetDirectory string) erro
 	return createSplitTargetStores(targetDirectory, allProposals, allAttestations)
 }
 
-func getPubKeyProposals(pubKey []byte, proposalsBucket *bolt.Bucket) (*pubKeyProposals, error) {
+func getPubKeyProposals(pubKey [48]byte, proposalsBucket *bolt.Bucket) (*pubKeyProposals, error) {
 	pubKeyProposals := pubKeyProposals{
 		PubKey:    pubKey,
 		Proposals: []epochProposals{},
 	}
 
-	pubKeyBucket := proposalsBucket.Bucket(pubKey)
+	pubKeyBucket := proposalsBucket.Bucket(pubKey[:])
 	if pubKeyBucket == nil {
 		return &pubKeyProposals, nil
 	}
@@ -102,9 +101,9 @@ func createMergeTargetStore(
 	}
 
 	err = newStore.update(func(tx *bolt.Tx) error {
-		allProposalsBucket := tx.Bucket(historicProposalsBucket)
+		allProposalsBucket := tx.Bucket(newhistoricProposalsBucket)
 		for _, pubKeyProposals := range allProposals {
-			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey)
+			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey[:])
 			if err != nil {
 				return err
 			}
@@ -147,7 +146,7 @@ func createSplitTargetStores(
 	}()
 
 	for _, pubKeyProposals := range allProposals {
-		dirName := hex.EncodeToString(pubKeyProposals.PubKey)[:12]
+		dirName := hex.EncodeToString(pubKeyProposals.PubKey[:])[:12]
 		path := filepath.Join(targetDirectory, dirName)
 		newStore, err := NewKVStore(path, [][48]byte{})
 		if err != nil {
@@ -156,8 +155,8 @@ func createSplitTargetStores(
 		storesToClose = append(storesToClose, newStore)
 
 		if err := newStore.update(func(tx *bolt.Tx) error {
-			allProposalsBucket := tx.Bucket(historicProposalsBucket)
-			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey)
+			allProposalsBucket := tx.Bucket(newhistoricProposalsBucket)
+			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey[:])
 			if err != nil {
 				return err
 			}
@@ -167,7 +166,7 @@ func createSplitTargetStores(
 
 			attestationsBucket := tx.Bucket(historicAttestationsBucket)
 			for _, pubKeyAttestations := range allAttestations {
-				if string(pubKeyAttestations.PubKey) == string(pubKeyProposals.PubKey) {
+				if string(pubKeyAttestations.PubKey[:]) == string(pubKeyProposals.PubKey[:]) {
 					if err := addAttestations(attestationsBucket, pubKeyAttestations); err != nil {
 						return err
 					}
@@ -185,13 +184,13 @@ func createSplitTargetStores(
 	for _, pubKeyAttestations := range allAttestations {
 		var hasMatchingProposals = false
 		for _, pubKeyProposals := range allProposals {
-			if string(pubKeyAttestations.PubKey) == string(pubKeyProposals.PubKey) {
+			if string(pubKeyAttestations.PubKey[:]) == string(pubKeyProposals.PubKey[:]) {
 				hasMatchingProposals = true
 				break
 			}
 		}
 		if !hasMatchingProposals {
-			dirName := hex.EncodeToString(pubKeyAttestations.PubKey)[:12]
+			dirName := hex.EncodeToString(pubKeyAttestations.PubKey[:])[:12]
 			path := filepath.Join(targetDirectory, dirName)
 			newStore, err := NewKVStore(path, [][48]byte{})
 			if err != nil {
@@ -201,11 +200,7 @@ func createSplitTargetStores(
 
 			if err := newStore.update(func(tx *bolt.Tx) error {
 				attestationsBucket := tx.Bucket(historicAttestationsBucket)
-				if err := addAttestations(attestationsBucket, pubKeyAttestations); err != nil {
-					return err
-				}
-
-				return nil
+				return addAttestations(attestationsBucket, pubKeyAttestations)
 			}); err != nil {
 				return err
 			}
@@ -222,13 +217,13 @@ func getAllProposalsAndAllAttestations(stores []*Store) ([]pubKeyProposals, []pu
 	for _, store := range stores {
 		// Storing keys upfront will allow using several short transactions (one for every key)
 		// instead of one long-running transaction for all keys.
-		var allKeys [][]byte
+		var allKeys [][48]byte
 
 		if err := store.db.View(func(tx *bolt.Tx) error {
-			proposalsBucket := tx.Bucket(historicProposalsBucket)
+			proposalsBucket := tx.Bucket(newhistoricProposalsBucket)
 			if err := proposalsBucket.ForEach(func(pubKey, _ []byte) error {
-				pubKeyCopy := make([]byte, len(pubKey))
-				copy(pubKeyCopy, pubKey)
+				var pubKeyCopy [48]byte
+				copy(pubKeyCopy[:], pubKey)
 				allKeys = append(allKeys, pubKeyCopy)
 				return nil
 			}); err != nil {
@@ -237,8 +232,8 @@ func getAllProposalsAndAllAttestations(stores []*Store) ([]pubKeyProposals, []pu
 
 			attestationsBucket := tx.Bucket(historicAttestationsBucket)
 			if err := attestationsBucket.ForEach(func(pubKey, _ []byte) error {
-				pubKeyCopy := make([]byte, len(pubKey))
-				copy(pubKeyCopy, pubKey)
+				var pubKeyCopy [48]byte
+				copy(pubKeyCopy[:], pubKey)
 				allKeys = append(allKeys, pubKeyCopy)
 				return nil
 			}); err != nil {
@@ -254,7 +249,7 @@ func getAllProposalsAndAllAttestations(stores []*Store) ([]pubKeyProposals, []pu
 
 		for _, pubKey := range allKeys {
 			if err := store.db.View(func(tx *bolt.Tx) error {
-				proposalsBucket := tx.Bucket(historicProposalsBucket)
+				proposalsBucket := tx.Bucket(newhistoricProposalsBucket)
 				pubKeyProposals, err := getPubKeyProposals(pubKey, proposalsBucket)
 				if err != nil {
 					return err
@@ -262,7 +257,7 @@ func getAllProposalsAndAllAttestations(stores []*Store) ([]pubKeyProposals, []pu
 				allProposals = append(allProposals, *pubKeyProposals)
 
 				attestationsBucket := tx.Bucket(historicAttestationsBucket)
-				v := attestationsBucket.Get(pubKey)
+				v := attestationsBucket.Get(pubKey[:])
 				if v != nil {
 					attestations := pubKeyAttestations{
 						PubKey:       pubKey,
@@ -300,7 +295,7 @@ func addEpochProposals(bucket *bolt.Bucket, proposals []epochProposals) error {
 }
 
 func addAttestations(bucket *bolt.Bucket, attestations pubKeyAttestations) error {
-	if err := bucket.Put(attestations.PubKey, attestations.Attestations); err != nil {
+	if err := bucket.Put(attestations.PubKey[:], attestations.Attestations); err != nil {
 		return errors.Wrapf(
 			err,
 			"could not add public key attestations for public key %x",
@@ -309,13 +304,13 @@ func addAttestations(bucket *bolt.Bucket, attestations pubKeyAttestations) error
 	return nil
 }
 
-func removeDuplicateKeys(keys [][]byte) [][]byte {
+func removeDuplicateKeys(keys [][48]byte) [][48]byte {
 	last := 0
 
 next:
 	for _, k1 := range keys {
 		for _, k2 := range keys[:last] {
-			if bytes.Equal(k1, k2) {
+			if k1 == k2 {
 				continue next
 			}
 		}

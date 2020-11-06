@@ -3,9 +3,16 @@ package ethereum.validator.accounts.v2;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
 
 service Wallet {
-    rpc CreateWallet(CreateWalletRequest) returns (WalletResponse) {
+    rpc HasWallet(google.protobuf.Empty) returns (HasWalletResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/wallet/exists"
+        };
+    }
+    rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/create",
             body: "*"
@@ -27,18 +34,30 @@ service Wallet {
             get: "/v2/validator/mnemonic/generate"
         };
     }
+    rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/keystores/import",
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
-    rpc CreateAccount(google.protobuf.Empty) returns (CreateAccountResponse) {
+    rpc CreateAccount(CreateAccountRequest) returns (DepositDataResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/accounts/create",
+            post: "/v2/validator/wallet/accounts/create",
             body: "*"
         };
     }
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/accounts"
+        };
+    }
+    rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/password/edit",
+            body: "*"
         };
     }
 }
@@ -64,17 +83,24 @@ service Auth {
             body: "*"
         };
     }
+    rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/logout",
+            body: "*"
+        };
+    }
+}
+
+// Type of key manager for the wallet, either direct, derived, or remote.
+enum KeymanagerKind {
+    DERIVED = 0;
+    IMPORTED = 1;
+    REMOTE = 2;
 }
 
 message CreateWalletRequest {
     // Path on disk where the wallet will be stored.
     string wallet_path = 1;
-    // Type of key manager for the wallet, either direct, derived, or remote.
-    enum KeymanagerKind {
-        DERIVED = 0;
-        DIRECT = 1;
-        REMOTE = 2;
-    }
     KeymanagerKind keymanager = 2;
 
     // Password for the wallet.
@@ -83,19 +109,20 @@ message CreateWalletRequest {
     string mnemonic = 4;
     // Number of accounts.
     uint64 num_accounts = 5;
-    // JSON-encoded keystore files to import during wallet creation.
-    repeated string keystores_imported = 6;
-    // Password to unlock imported keystore files.
-    string keystores_password = 7;
 
     // Remote address such as host.example.com:4000 for a gRPC remote signer server.
-    string remote_addr = 8;
+    string remote_addr = 6;
     // Path to client.crt for secure TLS connections to a remote signer server.
-    string remote_crt_path = 9;
+    string remote_crt_path = 7;
     // Path to client.key for secure TLS connections to a remote signer server.
-    string remote_key_path = 10;
+    string remote_key_path = 8;
     // Path to ca.crt for secure TLS connections to a remote signer server.
-    string remote_ca_crt_path = 11;
+    string remote_ca_crt_path = 9;
+}
+
+message CreateWalletResponse {
+    WalletResponse wallet = 1;
+    DepositDataResponse accounts_created = 2;
 }
 
 message EditWalletConfigRequest {
@@ -112,25 +139,40 @@ message GenerateMnemonicResponse {
 message WalletResponse {
     string wallet_path = 1;
 
+    KeymanagerKind keymanager_kind = 2;
+
     // Key manager configs, this is meant to be some what generic.
     // It'll later be encoded with json to represent in front end UI.
-    message KeymanagerConfig {
-        map<string, string> configs = 1;
-    }
-    KeymanagerConfig keymanager_config = 2;
-}
-
-message CreateAccountResponse {
-    Account account = 1;
+    map<string, string> keymanager_config = 3;
 }
 
 message ListAccountsRequest {
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
+
+    // The maximum number of accounts to return in the response.
+    // This field is optional.
+    int32 page_size = 2;
+
+    // A pagination token returned from a previous call to `ListAccounts`
+    // that indicates where this listing should continue from.
+    // This field is optional.
+    string page_token = 3;
+
+    // Whether to return all available accounts in a single response.
+    bool all = 4;
 }
 
 message ListAccountsResponse {
     repeated Account accounts = 1;
+
+    // A pagination token returned from a previous call to `ListAccounts`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count matching the request.
+    int32 total_size = 3;
 }
 
 message Account {
@@ -153,6 +195,7 @@ message AccountRequest {
 
 message AuthRequest {
     string password = 1;
+    string wallet_dir = 2;
 }
 
 message AuthResponse {
@@ -173,4 +216,57 @@ message NodeConnectionResponse {
     uint64 genesis_time = 4;
     // Address of the validator deposit contract in the eth1 chain.
     bytes deposit_contract_address = 5;
+}
+
+message ChangePasswordRequest {
+    string current_password = 1;
+    string password = 2;
+    string password_confirmation = 3;
+}
+
+message HasWalletResponse {
+    // Whether or not the user has a wallet on disk.
+    bool wallet_exists = 1;
+}
+
+message ImportKeystoresRequest {
+    // JSON-encoded keystore files to import during wallet creation.
+    repeated string keystores_imported = 1;
+
+    // Password to unlock imported keystore files.
+    string keystores_password = 2;
+}
+
+message ImportKeystoresResponse {
+    repeated bytes imported_public_keys = 1;
+}
+
+message CreateAccountRequest {
+    uint64 num_accounts = 1;
+}
+
+message DepositMessage {
+    bytes pubkey = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+    bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    uint64 amount = 3;
+}
+
+message DepositDataResponse {
+    // The deposit data for each created account
+    // represented as a list in the same format as
+    // the deposit_data.json file from the eth2.0-deposit-cli.
+    repeated DepositData deposit_data_list = 1;
+    message DepositData {
+        map<string, string> data = 1;
+    }
+}
+
+message DeleteAccountsRequest {
+    // List of public keys to delete.
+    repeated bytes public_keys = 1;
+}
+
+message DeleteAccountsResponse {
+    // List of public keys successfully deleted.
+    repeated bytes deleted_keys = 1;
 }

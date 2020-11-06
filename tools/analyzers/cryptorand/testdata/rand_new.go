@@ -7,14 +7,16 @@ import (
 )
 
 func UseRandNew() {
-	randGenerator := mathRand.New(rand.NewSource(time.Now().UnixNano()))
+	source := rand.NewSource(time.Now().UnixNano()) // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
+	randGenerator := mathRand.New(source)           // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
 	start := uint64(randGenerator.Intn(32))
 	_ = start
 
-	randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
+	source = rand.NewSource(time.Now().UnixNano()) // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
+	randGenerator = rand.New(source)               // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
 }
 
 func UseWithoutSeed() {
-	assignedIndex := rand.Intn(128)
+	assignedIndex := rand.Intn(128) // want "crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand"
 	_ = assignedIndex
 }

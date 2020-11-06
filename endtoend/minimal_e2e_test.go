@@ -50,6 +50,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.DepositedValidatorsAreActive,
 			ev.ProposeVoluntaryExit,
 			ev.ValidatorHasExited,
+			ev.ValidatorsVoteWithTheMajority,
 			ev.ColdStateCheckpoint,
 		},
 	}

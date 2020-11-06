@@ -25,7 +25,7 @@ func (s *Service) CurrentSlot() uint64 {
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
 func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkChoice.getBlockPreState")
+	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
 	// Verify incoming block has a valid pre state.
@@ -56,7 +56,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) error {
-	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
+	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
 	parentRoot := bytesutil.ToBytes32(b.ParentRoot)
@@ -87,7 +87,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 // VerifyBlkDescendant validates input block root is a descendant of the
 // current finalized block root.
 func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "forkChoice.VerifyBlkDescendant")
+	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyBlkDescendant")
 	defer span.End()
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
 	finalizedBlkSigned, err := s.beaconDB.Block(ctx, fRoot)
@@ -255,19 +255,44 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 //        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
 //        return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "forkChoice.ancestor")
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
+	defer span.End()
+
+	r := bytesutil.ToBytes32(root)
+	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
+	// This is most optimal outcome.
+	ar, err := s.ancestorByForkChoiceStore(ctx, r, slot)
+	if err != nil {
+		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
+		// This is the second line of defense for retrieving ancestor root.
+		ar, err = s.ancestorByDB(ctx, r, slot)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ar, nil
+}
+
+// This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
+func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByForkChoiceStore")
+	defer span.End()
+
+	if !s.forkChoiceStore.HasParent(r) {
+		return nil, errors.New("could not find root in fork choice store")
+	}
+	return s.forkChoiceStore.AncestorRoot(ctx, r, slot)
+}
+
+// This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
 	defer span.End()
 
 	// Stop recursive ancestry lookup if context is cancelled.
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
-	}
-
-	r := bytesutil.ToBytes32(root)
-	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
-	// This is most optimal outcome.
-	if s.forkChoiceStore.HasParent(r) {
-		return s.forkChoiceStore.AncestorRoot(ctx, r, slot)
 	}
 
 	signed, err := s.beaconDB.Block(ctx, r)
@@ -284,10 +309,10 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	}
 	b := signed.Block
 	if b.Slot == slot || b.Slot < slot {
-		return root, nil
+		return r[:], nil
 	}
 
-	return s.ancestor(ctx, b.ParentRoot, slot)
+	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot), slot)
 }
 
 // This updates justified check point in store, if the new justified is later than stored justified or
@@ -310,10 +335,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	if !attestationutil.CheckPointIsEqual(s.justifiedCheckpt, state.CurrentJustifiedCheckpoint()) {
 		if state.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-				return err
-			}
-			return nil
+			return s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
@@ -339,8 +361,9 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock,
-	fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+	pendingRoots := make([][32]byte, 0)
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
 	slot := blk.Slot
@@ -358,6 +381,8 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		}
 
 		pendingNodes = append(pendingNodes, b.Block)
+		copiedRoot := parentRoot
+		pendingRoots = append(pendingRoots, copiedRoot)
 		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
 		slot = b.Block.Slot
 		higherThanFinalized = slot > fSlot
@@ -367,11 +392,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	// Lower slots should be at the end of the list.
 	for i := len(pendingNodes) - 1; i >= 0; i-- {
 		b := pendingNodes[i]
-		r, err := b.HashTreeRoot()
-		if err != nil {
-			return err
-		}
-
+		r := pendingRoots[i]
 		if err := s.forkChoiceStore.ProcessBlock(ctx,
 			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot), bytesutil.ToBytes32(b.Body.Graffiti),
 			jCheckpoint.Epoch,

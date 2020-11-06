@@ -333,6 +333,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		})
 	}
 	state, err := state.InitializeFromProto(base)
+	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(state)
 	newState, err := epoch.ProcessRegistryUpdates(state)
 	require.NoError(t, err)
@@ -418,7 +419,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 }
 
-func buildState(t testing.TB, slot uint64, validatorCount uint64) *state.BeaconState {
+func buildState(t testing.TB, slot, validatorCount uint64) *state.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{

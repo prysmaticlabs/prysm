@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"math/big"
-	"sort"
 	"testing"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -30,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -281,7 +279,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
-	req.Block.Body.RandaoReveal = randaoReveal[:]
+	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
@@ -439,10 +437,10 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -574,10 +572,10 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -671,10 +669,10 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -767,10 +765,10 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -861,10 +859,10 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -897,8 +895,6 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 
 func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	ctx := context.Background()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableFinalizedDepositsCache: true})
-	defer resetCfg()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOW.POWChain{
@@ -973,10 +969,10 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(finalizedDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -1056,10 +1052,10 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 				}},
 		},
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range deps {
@@ -1114,7 +1110,7 @@ func TestProposer_Eth1Data(t *testing.T) {
 
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}))
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	ps := &Server{
@@ -1155,10 +1151,10 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 				}},
 		},
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range deps {
@@ -1249,9 +1245,9 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 				WithdrawalCredentials: make([]byte, 32),
 			}},
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root())
 
@@ -1686,9 +1682,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("second")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 
 	t.Run("only one block at earliest valid time - choose this block", func(t *testing.T) {
@@ -1718,9 +1712,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("earliest")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 
 	t.Run("vote on last block before range - choose next block", func(t *testing.T) {
@@ -1755,9 +1747,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "first")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 
 	t.Run("no deposits - choose chain start eth1data", func(t *testing.T) {
@@ -1768,7 +1758,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			BlockHash: []byte("eth1data"),
 		}
 
-		depositCache, err := depositcache.NewDepositCache()
+		depositCache, err := depositcache.New()
 		require.NoError(t, err)
 
 		beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -1795,13 +1785,11 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("eth1data")
-		if bytes.Compare(hash, expectedHash) != 0 {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
 	})
 }
 
-func TestProposer_FilterAttestation_OK(t *testing.T) {
+func TestProposer_FilterAttestation(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -1810,8 +1798,8 @@ func TestProposer_FilterAttestation_OK(t *testing.T) {
 	genesis := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), genesis), "Could not save genesis block")
 
-	numDeposits := uint64(64)
-	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
+	numValidators := uint64(64)
+	state, privKeys := testutil.DeterministicGenesisState(t, numValidators)
 	require.NoError(t, state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
 	assert.NoError(t, state.SetSlot(1))
 
@@ -1826,59 +1814,96 @@ func TestProposer_FilterAttestation_OK(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
-	atts := make([]*ethpb.Attestation, 10)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				CommitteeIndex:  uint64(i),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				BeaconBlockRoot: make([]byte, 32),
+	tests := []struct {
+		name         string
+		wantedErr    string
+		inputAtts    func() []*ethpb.Attestation
+		expectedAtts func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation
+	}{
+		{
+			name: "nil attestations",
+			inputAtts: func() []*ethpb.Attestation {
+				return nil
 			},
-			Signature: make([]byte, 96),
-		}
-	}
-	received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
-	require.NoError(t, err)
-	if len(received) > 0 {
-		t.Error("Invalid attestations were filtered")
-	}
-
-	for i := 0; i < len(atts); i++ {
-		aggBits := bitfield.NewBitlist(2)
-		aggBits.SetBitAt(0, true)
-		atts[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				CommitteeIndex:  uint64(i),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
-				BeaconBlockRoot: make([]byte, 32),
+			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
+				return []*ethpb.Attestation{}
 			},
-			AggregationBits: aggBits,
-			Signature:       make([]byte, 96),
-		}
-		committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
-		assert.NoError(t, err)
-		attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
-		assert.NoError(t, err)
-		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
-		require.NoError(t, err)
-		sigs := make([]bls.Signature, len(attestingIndices))
-		zeroSig := [96]byte{}
-		atts[i].Signature = zeroSig[:]
+		},
+		{
+			name: "invalid attestations",
+			inputAtts: func() []*ethpb.Attestation {
+				atts := make([]*ethpb.Attestation, 10)
+				for i := 0; i < len(atts); i++ {
+					atts[i] = &ethpb.Attestation{
+						Data: &ethpb.AttestationData{
+							CommitteeIndex:  uint64(i),
+							Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+							Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+							BeaconBlockRoot: make([]byte, 32),
+						},
+						Signature: make([]byte, 96),
+					}
+				}
+				return atts
+			},
+			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
+				return []*ethpb.Attestation{}
+			},
+		},
+		{
+			name: "filter aggregates ok",
+			inputAtts: func() []*ethpb.Attestation {
+				atts := make([]*ethpb.Attestation, 10)
+				for i := 0; i < len(atts); i++ {
+					atts[i] = &ethpb.Attestation{
+						Data: &ethpb.AttestationData{
+							CommitteeIndex:  uint64(i),
+							Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+							Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+							BeaconBlockRoot: make([]byte, 32),
+						},
+						AggregationBits: bitfield.Bitlist{0b00000110},
+						Signature:       make([]byte, 96),
+					}
+					committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					assert.NoError(t, err)
+					attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
+					assert.NoError(t, err)
+					domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+					require.NoError(t, err)
+					sigs := make([]bls.Signature, len(attestingIndices))
+					zeroSig := [96]byte{}
+					atts[i].Signature = zeroSig[:]
 
-		for i, indice := range attestingIndices {
-			hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
-			require.NoError(t, err)
-			sig := privKeys[indice].Sign(hashTreeRoot[:])
-			sigs[i] = sig
-		}
-		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+					for i, indice := range attestingIndices {
+						hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
+						require.NoError(t, err)
+						sig := privKeys[indice].Sign(hashTreeRoot[:])
+						sigs[i] = sig
+					}
+					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()
+				}
+				return atts
+			},
+			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
+				return []*ethpb.Attestation{inputAtts[0]}
+			},
+		},
 	}
 
-	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(received), "Did not filter correctly")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			atts := tt.inputAtts()
+			received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+				assert.Equal(t, nil, received)
+			} else {
+				assert.NoError(t, err)
+				assert.DeepEqual(t, tt.expectedAtts(atts), received)
+			}
+		})
+	}
 }
 
 func Benchmark_Eth1Data(b *testing.B) {
@@ -1916,7 +1941,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 		},
 	}
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(b, err)
 
 	for i, dp := range deposits {
@@ -2024,10 +2049,10 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -2062,8 +2087,9 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	s := &Server{
 		AttPool: attestations.NewPool(),
 	}
-
-	sig := bls.RandKey().Sign([]byte("foo")).Marshal()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := priv.Sign([]byte("foo")).Marshal()
 	aggregatedAtts := []*ethpb.Attestation{{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
 	unaggregatedAtts := []*ethpb.Attestation{{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
 
@@ -2080,23 +2106,23 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 }
 
 func TestProposer_SortProfitableAtts(t *testing.T) {
-	atts := []*ethpb.Attestation{
+	atts := proposerAtts([]*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
 		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
 		{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
 		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11110000}},
 		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
 		{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
-	}
-	sort.Sort(profitableAtts{atts: atts})
-	want := []*ethpb.Attestation{
+	})
+	want := proposerAtts([]*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11110000}},
 		{Data: &ethpb.AttestationData{Slot: 4, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
 		{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
 		{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
 		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11100000}},
 		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11000000}},
-	}
+	})
+	atts = atts.sortByProfitability()
 	require.DeepEqual(t, want, atts)
 }
 

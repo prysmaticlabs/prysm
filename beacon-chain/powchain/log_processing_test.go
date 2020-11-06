@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"testing"
 	"time"
@@ -26,15 +25,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
-}
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -43,7 +36,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	beaconDB, _ := testDB.SetupDB(t)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -107,7 +100,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := testDB.SetupDB(t)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -158,7 +151,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	require.NoError(t, err)
 
 	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
-	require.Equal(t, int(2), len(pendingDeposits), "Unexpected number of deposits")
+	require.Equal(t, 2, len(pendingDeposits), "Unexpected number of deposits")
 
 	hook.Reset()
 }
@@ -178,8 +171,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	testAcc.Backend.Commit()
-
-	require.NoError(t, web3Service.initDataFromContract(), "Could not init from contract")
 
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
@@ -217,7 +208,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := testDB.SetupDB(t)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -288,7 +279,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := testDB.SetupDB(t)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -356,11 +347,9 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	// Receive the chain started event.
 	for started := false; !started; {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.ChainStarted {
-				started = true
-			}
+		event := <-stateChannel
+		if event.Type == statefeed.ChainStarted {
+			started = true
 		}
 	}
 
@@ -377,7 +366,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	kvStore, _ := testDB.SetupDB(t)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -451,11 +440,9 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	// Receive the chain started event.
 	for started := false; !started; {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.ChainStarted {
-				started = true
-			}
+		event := <-stateChannel
+		if event.Type == statefeed.ChainStarted {
+			started = true
 		}
 	}
 
@@ -472,7 +459,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB, _ := testDB.SetupDB(t)
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -537,7 +524,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	web3Service.preGenesisState = genSt
 	require.NoError(t, web3Service.preGenesisState.SetEth1Data(&ethpb.Eth1Data{}))
 	web3Service.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	web3Service.depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	web3Service.depositTrie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
@@ -624,7 +611,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 }
 
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
-	depositCache, err := depositcache.NewDepositCache()
+	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{

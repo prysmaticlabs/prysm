@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ProcessProposerSlashings is one of the operations performed
@@ -36,7 +37,7 @@ import (
 //
 //    slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
-	ctx context.Context,
+	_ context.Context,
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
@@ -86,7 +87,7 @@ func VerifyProposerSlashing(
 	if err != nil {
 		return err
 	}
-	if !helpers.IsSlashableValidatorUsingTrie(proposer, helpers.SlotToEpoch(beaconState.Slot())) {
+	if !helpers.IsSlashableValidatorUsingTrie(proposer, helpers.CurrentEpoch(beaconState)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey())
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
@@ -96,6 +97,5 @@ func VerifyProposerSlashing(
 			return errors.Wrap(err, "could not verify beacon block header")
 		}
 	}
-
 	return nil
 }

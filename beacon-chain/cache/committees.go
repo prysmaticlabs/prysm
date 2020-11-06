@@ -12,5 +12,4 @@ type Committees struct {
 	Seed            [32]byte
 	ShuffledIndices []uint64
 	SortedIndices   []uint64
-	ProposerIndices []uint64
 }

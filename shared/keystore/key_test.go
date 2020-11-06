@@ -13,7 +13,8 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	testID := uuid.NewRandom()
-	blsKey := bls.RandKey()
+	blsKey, err := bls.RandKey()
+	require.NoError(t, err)
 
 	key := &Key{
 		ID:        testID,
@@ -36,7 +37,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 func TestStoreRandomKey(t *testing.T) {
 	tempDir, teardown := setupTempKeystoreDir(t)
 	defer teardown()
-	ks := &Store{
+	ks := &Keystore{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,

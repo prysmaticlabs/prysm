@@ -37,7 +37,7 @@ func (h *HasherFunc) Hash(a []byte) [32]byte {
 }
 
 // Combi appends the two inputs and hashes them.
-func (h *HasherFunc) Combi(a [32]byte, b [32]byte) [32]byte {
+func (h *HasherFunc) Combi(a, b [32]byte) [32]byte {
 	copy(h.b[:32], a[:])
 	copy(h.b[32:], b[:])
 	return h.Hash(h.b[:])

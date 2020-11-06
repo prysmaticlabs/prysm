@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
-var _ = iface.SpanDetector(&MockSpanDetector{})
+var _ iface.SpanDetector = (*MockSpanDetector)(nil)
 
 // MockSpanDetector defines a struct which can detect slashable
 // attestation offenses by tracking validator min-max
@@ -21,7 +21,7 @@ type MockSpanDetector struct{}
 // If the target epoch is greater than 12, it will "detect" a surrounding vote for target epoch - 1.
 // Lastly, if it has a target epoch less than 6, it will "detect" a double vote for the target epoch.
 func (s *MockSpanDetector) DetectSlashingsForAttestation(
-	ctx context.Context,
+	_ context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*types.DetectionResult, error) {
 	var detections []*types.DetectionResult
@@ -58,21 +58,21 @@ func (s *MockSpanDetector) DetectSlashingsForAttestation(
 
 // SpanForEpochByValidator returns the specific min-max span for a
 // validator index in a given epoch.
-func (s *MockSpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) (types.Span, error) {
+func (s *MockSpanDetector) SpanForEpochByValidator(_ context.Context, _, _ uint64) (types.Span, error) {
 	return types.Span{MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{}, HasAttested: false}, nil
 }
 
 // ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
-func (s *MockSpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64]types.Span {
+func (s *MockSpanDetector) ValidatorSpansByEpoch(_ context.Context, _ uint64) map[uint64]types.Span {
 	return make(map[uint64]types.Span)
 }
 
 // DeleteValidatorSpansByEpoch mocks the delete spans by epoch function.
-func (s *MockSpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
+func (s *MockSpanDetector) DeleteValidatorSpansByEpoch(_ context.Context, _, _ uint64) error {
 	return nil
 }
 
 // UpdateSpans is a mock for updating the spans for a given attestation..
-func (s *MockSpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
+func (s *MockSpanDetector) UpdateSpans(_ context.Context, _ *ethpb.IndexedAttestation) error {
 	return nil
 }

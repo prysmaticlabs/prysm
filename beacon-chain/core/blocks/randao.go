@@ -26,7 +26,7 @@ import (
 //    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
 //    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func ProcessRandao(
-	ctx context.Context,
+	_ context.Context,
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
@@ -39,7 +39,7 @@ func ProcessRandao(
 	if err != nil {
 		return nil, err
 	}
-	if err := verifySignature(buf, proposerPub[:], body.RandaoReveal, domain); err != nil {
+	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 

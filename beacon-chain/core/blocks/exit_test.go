@@ -171,10 +171,12 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	err = state.SetSlot(state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, err)
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+
 	val, err := state.ValidatorAtIndex(0)
 	require.NoError(t, err)
-	val.PublicKey = priv.PublicKey().Marshal()[:]
+	val.PublicKey = priv.PublicKey().Marshal()
 	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
 	exits[0].Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)

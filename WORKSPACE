@@ -161,6 +161,10 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
+load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
+
+go_embed_data_dependencies()
+
 load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
 
 gometalinter_dependencies()
@@ -215,8 +219,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9e09ada15c5f494388ecdb3ab49f4554d9ed53ce904cd21c42c350e6d7b2f323",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.2/general.tar.gz",
+    sha256 = "6b3498001de98c477aa2c256beffc20a85ce1b12b8e0f8e88502a5c3a18c01de",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0-rc.0/general.tar.gz",
 )
 
 http_archive(
@@ -231,8 +235,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "5fc930e200af7682a176d6025db56cec79807112bb860dca2e1e91fb160312de",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.2/minimal.tar.gz",
+    sha256 = "72c2f561db879ddcdf729fef93d10e0f9162b4cf3a697c513ef8935b93f6165a",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.3/minimal.tar.gz",
 )
 
 http_archive(
@@ -247,8 +251,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "fbab14605a0178ef4c8f7efea0de275a22b815a8d3245099f0f5525f7a33faf8",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.2/mainnet.tar.gz",
+    sha256 = "63eca02503692a0b6a2d7b70118e0dd62dff094153a3a542af6dbea721841b0d",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.3/mainnet.tar.gz",
 )
 
 http_archive(
@@ -334,6 +338,21 @@ go_binary(
     """,
     strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
+)
+
+http_archive(
+    name = "prysm_web_ui",
+    build_file_content = """
+filegroup(
+    name = "site",
+    srcs = glob(["**/*"]),
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "6bb16ff0dc9348090cc31a9ea453643d32b617e66ac6e7bb38985d530070631b",
+    urls = [
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/0.0.2-alpha/prysm-web-ui.tar.gz",
+    ],
 )
 
 load("//:deps.bzl", "prysm_deps")

@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -67,12 +68,11 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -109,12 +109,11 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -171,12 +170,11 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -235,12 +233,11 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -275,12 +272,11 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -308,6 +304,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	r := &Service{
 		p2p:                 p,
 		db:                  db,
+		chainStarted:        abool.New(),
 		initialSync:         &mockSync.Sync{IsSyncing: false},
 		chain:               chainService,
 		blockNotifier:       chainService.BlockNotifier(),
@@ -320,12 +317,11 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -369,12 +365,11 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -428,12 +423,11 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
@@ -476,12 +470,11 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, b)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(b)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(b)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -495,10 +488,8 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	require.NoError(t, err)
 	m = &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(b)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -558,12 +549,11 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	assert.Equal(t, pubsub.ValidationReject, r.validateBeaconBlockPubSub(ctx, "", m), "Wrong validation result returned")
@@ -623,12 +613,11 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
@@ -648,10 +637,8 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	require.NoError(t, err)
 	m = &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 
@@ -695,6 +682,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	// valid block
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	genesisTime := time.Now()
 	c, err := lru.New(10)
@@ -726,12 +714,11 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
+			Data:  buf.Bytes(),
+			Topic: &topic,
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept

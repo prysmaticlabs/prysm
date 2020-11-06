@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-var _ = shared.Service(&Gateway{})
+var _ shared.Service = (*Gateway)(nil)
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward
 // it to the beacon-chain gRPC server.

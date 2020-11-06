@@ -3,7 +3,7 @@ package helpers
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // EpochTicker is a special ticker for timing epoch changes.
@@ -36,15 +36,14 @@ func GetEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *EpochTicker 
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime, secondsPerEpoch, roughtime.Since, roughtime.Until, time.After)
+	ticker.start(genesisTime, secondsPerEpoch, timeutils.Since, timeutils.Until, time.After)
 	return ticker
 }
 
 func (s *EpochTicker) start(
 	genesisTime time.Time,
 	secondsPerEpoch uint64,
-	since func(time.Time) time.Duration,
-	until func(time.Time) time.Duration,
+	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
 
 	d := time.Duration(secondsPerEpoch) * time.Second
