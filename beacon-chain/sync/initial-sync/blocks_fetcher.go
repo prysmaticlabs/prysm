@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -39,6 +40,9 @@ const (
 	// peerFilterCapacityWeight defines how peer's capacity affects peer's score. Provided as
 	// percentage, i.e. 0.3 means capacity will determine 30% of peer's score.
 	peerFilterCapacityWeight = 0.2
+	// backtrackingMaxHops how many hops (during search for common ancestor in backtracking) to do
+	// before giving up.
+	backtrackingMaxHops = 128
 )
 
 var (
@@ -47,6 +51,7 @@ var (
 	errSlotIsTooHigh         = errors.New("slot is higher than the finalized slot")
 	errBlockAlreadyProcessed = errors.New("block is already processed")
 	errParentDoesNotExist    = errors.New("beacon node doesn't have a parent in db with root")
+	errNoPeersWithAltBlocks  = errors.New("no peers with alternative blocks found")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
@@ -276,25 +281,21 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
-	var blocks []*eth.SignedBeaconBlock
-	peers, err := f.filterPeers(ctx, peers, peersPercentagePerRequest)
-	if err != nil {
-		return blocks, "", err
-	}
+	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: start,
 		Count:     count,
 		Step:      1,
 	}
 	for i := 0; i < len(peers); i++ {
-		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
+		if blocks, err := f.requestBlocks(ctx, req, peers[i]); err == nil {
 			if featureconfig.Get().EnablePeerScorer {
 				f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
 			}
 			return blocks, peers[i], err
 		}
 	}
-	return blocks, "", errNoPeersAvailable
+	return nil, "", errNoPeersAvailable
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
@@ -325,6 +326,34 @@ func (f *blocksFetcher) requestBlocks(
 	l.Unlock()
 
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.p2p, pid, req, nil)
+}
+
+// requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.
+func (f *blocksFetcher) requestBlocksByRoot(
+	ctx context.Context,
+	req *p2pTypes.BeaconBlockByRootsReq,
+	pid peer.ID,
+) ([]*eth.SignedBeaconBlock, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	l := f.getPeerLock(pid)
+	l.Lock()
+	log.WithFields(logrus.Fields{
+		"peer":     pid,
+		"numRoots": len(*req),
+		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
+	}).Debug("Requesting blocks (by roots)")
+	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
+		if err := f.waitForBandwidth(pid); err != nil {
+			return nil, err
+		}
+	}
+	f.rateLimiter.Add(pid.String(), int64(len(*req)))
+	l.Unlock()
+
+	return prysmsync.SendBeaconBlocksByRootRequest(ctx, f.p2p, pid, req, nil)
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.

@@ -94,13 +94,13 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 // filterPeers returns transformed list of peers, weight ordered or randomized, constrained
 // if necessary (when only percentage of peers returned).
 // When peer scorer is enabled, fallbacks filterScoredPeers.
-func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) []peer.ID {
 	if featureconfig.Get().EnablePeerScorer {
 		return f.filterScoredPeers(ctx, peers, peersPercentagePerRequest)
 	}
 
 	if len(peers) == 0 {
-		return peers, nil
+		return peers
 	}
 
 	// Shuffle peers to prevent a bad peer from
@@ -123,17 +123,17 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersP
 		return cap1 > cap2
 	})
 
-	return peers, nil
+	return peers
 }
 
 // filterScoredPeers returns transformed list of peers, weight sorted by scores and capacity remaining.
 // List can be further constrained using peersPercentage, where only percentage of peers are returned.
-func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
+func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) []peer.ID {
 	ctx, span := trace.StartSpan(ctx, "initialsync.filterScoredPeers")
 	defer span.End()
 
 	if len(peers) == 0 {
-		return peers, nil
+		return peers
 	}
 
 	// Sort peers using both block provider score and, custom, capacity based score (see
@@ -153,9 +153,8 @@ func (f *blocksFetcher) filterScoredPeers(ctx context.Context, peers []peer.ID, 
 		overallScore := blockProviderScore*(1.0-f.capacityWeight) + capScore*f.capacityWeight
 		return math.Round(overallScore*scorers.ScoreRoundingFactor) / scorers.ScoreRoundingFactor
 	})
-	peers = trimPeers(peers, peersPercentage)
 
-	return peers, nil
+	return trimPeers(peers, peersPercentage)
 }
 
 // trimPeers limits peer list, returning only specified percentage of peers.
