@@ -22,6 +22,10 @@ const (
 	pollingInterval = 200 * time.Millisecond
 	// staleEpochTimeout is an period after which epoch's state is considered stale.
 	staleEpochTimeout = 1 * time.Second
+	// skippedMachineTimeout is a period after which skipped machine is considered as stuck
+	// and is reset (if machine is the last one, then all machines are reset and search for
+	// skipped slot or backtracking takes place).
+	skippedMachineTimeout = 10 * staleEpochTimeout
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
@@ -382,7 +386,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		// Only the highest epoch with skipped state can trigger extension.
 		if !m.isLast() {
 			// When a state machine stays in skipped state for too long - reset it.
-			if time.Since(m.updated) > 10*staleEpochTimeout {
+			if time.Since(m.updated) > skippedMachineTimeout {
 				return stateNew, nil
 			}
 			return m.state, nil
