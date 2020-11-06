@@ -14,10 +14,10 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -462,7 +462,7 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 	wanted := &ethpb.Validators{
 		ValidatorList: make([]*ethpb.Validators_ValidatorContainer, 0),
@@ -528,7 +528,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	b := testutil.NewBeaconBlock()
@@ -595,7 +595,7 @@ func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	b := testutil.NewBeaconBlock()
@@ -639,7 +639,7 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 				Epoch: 0,
 			},
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
@@ -705,7 +705,7 @@ func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	pubKeysWanted := make([][]byte, len(pubkeyIndicesWanted))
@@ -741,7 +741,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	tests := []struct {
@@ -878,7 +878,7 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -922,7 +922,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{}
@@ -973,7 +973,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 			// We are in epoch 30
 			Genesis: time.Now().Add(time.Duration(-1*int64(30*secondsPerEpoch)) * time.Second),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{
@@ -1040,7 +1040,7 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{
@@ -1393,7 +1393,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 			State: headState,
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	wanted := "Cannot retrieve information about an epoch"
@@ -1424,7 +1424,7 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now().Add(time.Duration(-1*int64(slots)) * time.Second),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, kv.NewStateSummaryCache()),
 	}
 
 	wanted := "Could not get state: unknown state"

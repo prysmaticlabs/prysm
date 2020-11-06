@@ -18,9 +18,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -65,7 +65,7 @@ type BeaconNode struct {
 	lock              sync.RWMutex
 	stop              chan struct{} // Channel to wait for termination notifications.
 	db                db.Database
-	stateSummaryCache *cache.StateSummaryCache
+	stateSummaryCache *kv.StateSummaryCache
 	attestationPool   attestations.Pool
 	exitPool          *voluntaryexits.Pool
 	slashingsPool     *slashings.Pool
@@ -163,7 +163,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		attestationPool:   attestations.NewPool(),
 		exitPool:          voluntaryexits.NewPool(),
 		slashingsPool:     slashings.NewPool(),
-		stateSummaryCache: cache.NewStateSummaryCache(),
+		stateSummaryCache: kv.NewStateSummaryCache(),
 	}
 
 	if err := beacon.startDB(cliCtx); err != nil {

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -40,7 +39,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	service := stategen.New(db, cache.NewStateSummaryCache())
+	service := stategen.New(db, NewStateSummaryCache())
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
 	newState, err := service.ReplayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
@@ -69,7 +68,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	service := stategen.New(db, cache.NewStateSummaryCache())
+	service := stategen.New(db, NewStateSummaryCache())
 	targetSlot := beaconState.Slot()
 	newState, err := service.ReplayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
@@ -99,7 +98,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	service := stategen.New(db, cache.NewStateSummaryCache())
+	service := stategen.New(db, NewStateSummaryCache())
 	targetSlot := beaconState.Slot()
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = beaconState.Slot() - 1

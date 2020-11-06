@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -45,9 +44,9 @@ type Store struct {
 	databasePath            string
 	blockCache              *ristretto.Cache
 	validatorIndexCache     *ristretto.Cache
-	stateSummaryCache       *cache.StateSummaryCache
+	stateSummaryCache       *StateSummaryCache
 	slotsPerArchivedPoint   uint64
-	hotStateCache           *HotStateCache
+	hotStateCache           *hotStateCache
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
@@ -75,7 +74,7 @@ type finalizedInfo struct {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
+func NewKVStore(dirPath string, stateSummaryCache *StateSummaryCache) (*Store, error) {
 	if err := os.MkdirAll(dirPath, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return nil, err
 	}
@@ -112,7 +111,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 		blockCache:              blockCache,
 		validatorIndexCache:     validatorCache,
 		stateSummaryCache:       stateSummaryCache,
-		hotStateCache:           NewHotStateCache(),
+		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		epochBoundaryStateCache: newBoundaryStateCache(),

@@ -13,8 +13,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -154,7 +154,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		attPool:              attestations.NewPool(),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 		chain:                &mock.ChainService{},
 	}
 	err = r.initCaches()
@@ -224,7 +224,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -394,7 +394,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -483,7 +483,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -587,7 +587,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -675,7 +675,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)

@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 )
 
 // A basic tool to extract genesis.ssz from existing beaconchain.db.
@@ -21,7 +21,7 @@ func main() {
 
 	fmt.Printf("Reading db at %s and writing ssz output to %s.\n", os.Args[1], os.Args[2])
 
-	d, err := db.NewDB(os.Args[1], cache.NewStateSummaryCache())
+	d, err := db.NewDB(os.Args[1], kv.NewStateSummaryCache())
 	if err != nil {
 		panic(err)
 	}

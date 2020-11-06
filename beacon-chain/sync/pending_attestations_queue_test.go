@@ -10,8 +10,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -44,7 +44,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 
 	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}}
@@ -64,7 +64,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		chain:                &mock.ChainService{Genesis: timeutils.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 
 	priv, err := bls.RandKey()
@@ -110,7 +110,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 		chain:                &mock.ChainService{Genesis: timeutils.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 
 	priv, err := bls.RandKey()
@@ -216,7 +216,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 			}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
+		stateSummaryCache:    kv.NewStateSummaryCache(),
 	}
 
 	sb = testutil.NewBeaconBlock()

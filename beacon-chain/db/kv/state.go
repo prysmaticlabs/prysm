@@ -44,7 +44,7 @@ func (s *Store) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	defer s.hotStateCache.Delete(blockRoot)
 
 	if s.hotStateCache.Has(blockRoot) {
-		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
+		return s.hotStateCache.getWithoutCopy(blockRoot), nil
 	}
 
 	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)

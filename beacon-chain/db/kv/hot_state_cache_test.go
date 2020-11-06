@@ -11,7 +11,7 @@ import (
 )
 
 func TestHotStateCache_RoundTrip(t *testing.T) {
-	c := kv.NewHotStateCache()
+	c := kv.newHotStateCache()
 	root := [32]byte{'A'}
 	state := c.Get(root)
 	assert.Equal(t, (*stateTrie.BeaconState)(nil), state)

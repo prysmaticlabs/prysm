@@ -8,7 +8,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -16,13 +15,13 @@ import (
 )
 
 // SetupDB instantiates and returns database backed by key value store.
-func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
+func SetupDB(t testing.TB) (db.Database, *kv.StateSummaryCache) {
 	randPath := rand.NewDeterministicGenerator().Int()
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("failed to remove directory: %v", err)
 	}
-	sc := cache.NewStateSummaryCache()
+	sc := kv.NewStateSummaryCache()
 	s, err := kv.NewKVStore(p, sc)
 	if err != nil {
 		t.Fatal(err)

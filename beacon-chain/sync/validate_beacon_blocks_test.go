@@ -13,9 +13,9 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -100,7 +100,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		chain:             chainService,
 		seenBlockCache:    c,
 		badBlockCache:     c2,
-		stateSummaryCache: cache.NewStateSummaryCache(),
+		stateSummaryCache: kv.NewStateSummaryCache(),
 		blockNotifier:     chainService.BlockNotifier(),
 	}
 
@@ -416,7 +416,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   cache.NewStateSummaryCache(),
+		stateSummaryCache:   kv.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)

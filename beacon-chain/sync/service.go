@@ -15,13 +15,13 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -57,7 +57,7 @@ type Config struct {
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
-	StateSummaryCache   *cache.StateSummaryCache
+	StateSummaryCache   *kv.StateSummaryCache
 }
 
 // This defines the interface for interacting with block chain service
@@ -107,7 +107,7 @@ type Service struct {
 	seenAttesterSlashingCache *lru.Cache
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
-	stateSummaryCache         *cache.StateSummaryCache
+	stateSummaryCache         *kv.StateSummaryCache
 }
 
 // NewService initializes new regular sync service.
