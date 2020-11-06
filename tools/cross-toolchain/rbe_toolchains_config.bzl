@@ -3,7 +3,7 @@ load("@prysm//tools/cross-toolchain:configs/versions.bzl", _generated_toolchain_
 
 _PRYSM_BUILD_IMAGE_REGISTRY = "gcr.io"
 _PRYSM_BUILD_IMAGE_REPOSITORY = "prysmaticlabs/rbe-worker"
-_PRYSM_BUILD_IMAGE_DIGEST = "sha256:eace84ad82b443a87d9a134411c2d879eac859b4d1346d12375b2cadd0409622"
+_PRYSM_BUILD_IMAGE_DIGEST = "sha256:d5fa14154811dff0886e4c808dc15f18c4bb8545a1ef3c53805a0db13564bdad"
 _PRYSM_BUILD_IMAGE_JAVA_HOME = "/usr/lib/jvm/java-8-openjdk-amd64"
 _CONFIGS_OUTPUT_BASE = "tools/cross-toolchain/configs"
 
