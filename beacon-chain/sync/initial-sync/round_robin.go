@@ -44,7 +44,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	defer state.SkipSlotCache.Enable()
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
-	s.lastProcessedSlot = s.chain.HeadSlot()
 	highestFinalizedSlot, err := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	if err != nil {
 		return err
@@ -216,11 +215,7 @@ func (s *Service) processBlock(
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("%w: %#x", errParentDoesNotExist, blk.Block.ParentRoot)
 	}
-	if err := blockReceiver(ctx, blk, blkRoot); err != nil {
-		return err
-	}
-	s.lastProcessedSlot = blk.Block.Slot
-	return nil
+	return blockReceiver(ctx, blk, blkRoot)
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
@@ -233,7 +228,8 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	if err != nil {
 		return err
 	}
-	for s.lastProcessedSlot >= firstBlock.Block.Slot && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
+	headSlot := s.chain.HeadSlot()
+	for headSlot >= firstBlock.Block.Slot && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
 		if len(blks) == 1 {
 			return errors.New("no good blocks in batch")
 		}
@@ -263,12 +259,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 		blockRoots[i] = blkRoot
 	}
-	if err := bFunc(ctx, blks, blockRoots); err != nil {
-		return err
-	}
-	lastBlk := blks[len(blks)-1]
-	s.lastProcessedSlot = lastBlk.Block.Slot
-	return nil
+	return bFunc(ctx, blks, blockRoots)
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
@@ -288,7 +279,11 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
 func (s *Service) isProcessedBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blkRoot [32]byte) bool {
-	if blk.Block.Slot <= s.lastProcessedSlot && (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
+	finalizedSlot, err := helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch)
+	if err != nil {
+		return false
+	}
+	if blk.Block.Slot <= finalizedSlot || (s.db.HasBlock(ctx, blkRoot) || s.chain.HasInitSyncBlock(blkRoot)) {
 		return true
 	}
 	return false
