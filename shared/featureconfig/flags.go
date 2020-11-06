@@ -95,11 +95,16 @@ var (
 		Usage: "Disables pruning deposit proofs when they are no longer needed." +
 			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
+	enableSyncBacktracking = &cli.BoolFlag{
+		Name:  "enable-sync-backtracking",
+		Usage: "Enable experimental fork exploration backtracking algorithm",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enablePeerScorer,
+	enableSyncBacktracking,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -151,6 +156,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enablePeerScorer,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
+	enableSyncBacktracking,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
