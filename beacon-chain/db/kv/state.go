@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -327,11 +328,16 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[strin
 //   (e.g. archived_interval=2048, states with slots after 1365).
 //   This is to tolerate skip slots. Not every state lays on the boundary.
 // 3.) state with current finalized root
+// 4.) Unfinalized States
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
 
 	f, err := s.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+	finalizedSlot, err := helpers.StartSlot(f.Epoch)
 	if err != nil {
 		return err
 	}
@@ -344,11 +350,13 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 				return ctx.Err()
 			}
 
-			finalized := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
+			finalizedChkpt := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
 			slot := bytesutil.BytesToUint64BigEndian(k)
 			mod := slot % slotsPerArchivedPoint
-			// The following conditions cover 1, 2, and 3 above.
-			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalized {
+			nonFinalized := slot > finalizedSlot
+
+			// The following conditions cover 1, 2, 3 and 4 above.
+			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalizedChkpt && !nonFinalized {
 				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
 			}
 			return nil
