@@ -132,35 +132,34 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationReject
 	}
 
-	// Verify selection proof reflects to the right validator and signature is valid.
-	selectionSet, err := validateSelection(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof)
+	// Verify selection proof reflects to the right validator.
+	selectionSigSet, err := validateSelectionIndex(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof)
 	if err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
 		return pubsub.ValidationIgnore
 	}
 
-	// Verify the aggregator's signature is valid.
-	aggregatorSet, err := validateAggregatorSignature(bs, signed)
+	// Verify selection signature, aggregator signature and attestation signature are valid.
+	// We use batch verify here to save compute.
+	aggregatorSigSet, err := aggSigSet(bs, signed)
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
+		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not get aggregator sig set %d", signed.Message.AggregatorIndex))
 		return pubsub.ValidationIgnore
 	}
-
 	attSigSet, err := blocks.AttestationSignatureSet(ctx, bs, []*ethpb.Attestation{signed.Message.Aggregate})
 	if err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
 		return pubsub.ValidationIgnore
 	}
-
 	set := bls.NewSet()
-	set.Join(selectionSet).Join(aggregatorSet).Join(attSigSet)
+	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
 	valid, err := set.Verify()
 	if err != nil {
 		traceutil.AnnotateError(span, errors.Errorf("Could not join signature set"))
 		return pubsub.ValidationIgnore
 	}
 	if !valid {
-		traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signatures"))
+		traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
 		return pubsub.ValidationReject
 	}
 
@@ -225,10 +224,10 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 	return nil
 }
 
-// This validates selection proof by validating it's from the correct validator index of the slot and selection
-// proof is a valid signature.
-func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) (*bls.SignatureSet, error) {
-	_, span := trace.StartSpan(ctx, "sync.validateSelection")
+// This validates selection proof by validating it's from the correct validator index of the slot.
+// It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
+func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) (*bls.SignatureSet, error) {
+	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
 	committee, err := helpers.BeaconCommitteeFromState(bs, data.Slot, data.CommitteeIndex)
@@ -270,8 +269,8 @@ func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *eth
 	}, nil
 }
 
-// This verifies aggregator signature over the signed aggregate and proof object.
-func validateAggregatorSignature(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
+// This returns aggregator signature set which can be used to batch verify.
+func aggSigSet(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
 	v, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
 	if err != nil {
 		return nil, err

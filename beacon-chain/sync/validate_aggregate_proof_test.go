@@ -76,54 +76,24 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	assert.ErrorContains(t, wanted, validateIndexInCommittee(ctx, s, att, 1000))
 }
 
-//func TestVerifySelection_NotAnAggregator(t *testing.T) {
-//	ctx := context.Background()
-//	params.UseMinimalConfig()
-//	defer params.UseMainnetConfig()
-//	validators := uint64(2048)
-//	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
-//
-//	sig := privKeys[0].Sign([]byte{'A'})
-//	data := &ethpb.AttestationData{
-//		BeaconBlockRoot: make([]byte, 32),
-//		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-//		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-//	}
-//
-//	wanted := "validator is not an aggregator for slot"
-//	assert.ErrorContains(t, wanted, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
-//}
-//
-//func TestVerifySelection_BadSignature(t *testing.T) {
-//	ctx := context.Background()
-//	validators := uint64(256)
-//	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
-//
-//	sig := privKeys[0].Sign([]byte{'A'})
-//	data := &ethpb.AttestationData{
-//		BeaconBlockRoot: make([]byte, 32),
-//		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-//		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-//	}
-//
-//	wanted := "signature did not verify"
-//	assert.ErrorContains(t, wanted, validateSelection(ctx, beaconState, data, 0, sig.Marshal()))
-//}
-//
-//func TestVerifySelection_CanVerify(t *testing.T) {
-//	ctx := context.Background()
-//	validators := uint64(256)
-//	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
-//
-//	data := &ethpb.AttestationData{
-//		BeaconBlockRoot: make([]byte, 32),
-//		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-//		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-//	}
-//	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, data.Slot, params.BeaconConfig().DomainSelectionProof, privKeys[0])
-//	require.NoError(t, err)
-//	require.NoError(t, validateSelection(ctx, beaconState, data, 0, sig))
-//}
+func TestVerifySelection_NotAnAggregator(t *testing.T) {
+	ctx := context.Background()
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+	validators := uint64(2048)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+
+	sig := privKeys[0].Sign([]byte{'A'})
+	data := &ethpb.AttestationData{
+		BeaconBlockRoot: make([]byte, 32),
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+	}
+
+	_, err := validateSelectionIndex(ctx, beaconState, data, 0, sig.Marshal())
+	wanted := "validator is not an aggregator for slot"
+	assert.ErrorContains(t, wanted, err)
+}
 
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db, _ := dbtest.SetupDB(t)
