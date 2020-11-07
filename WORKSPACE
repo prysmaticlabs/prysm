@@ -271,9 +271,9 @@ buildifier_dependencies()
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "4059c61f27eb1b06c4ee979546a238be792df0a4",
+    commit = "fde7cf7358ec7cd69e8db9be4f1fa6a5c431386a",  # v3.13.0
     remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1558721209 -0700",
+    shallow_since = "1597443653 -0700",
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
