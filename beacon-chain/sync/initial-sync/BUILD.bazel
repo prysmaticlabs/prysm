@@ -8,6 +8,7 @@ go_library(
         "blocks_fetcher_peers.go",
         "blocks_fetcher_utils.go",
         "blocks_queue.go",
+        "blocks_queue_utils.go",
         "fsm.go",
         "log.go",
         "round_robin.go",
