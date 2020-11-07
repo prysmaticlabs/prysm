@@ -328,7 +328,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[strin
 //   (e.g. archived_interval=2048, states with slots after 1365).
 //   This is to tolerate skip slots. Not every state lays on the boundary.
 // 3.) state with current finalized root
-// 4.) Unfinalized States
+// 4.) unfinalized States
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
