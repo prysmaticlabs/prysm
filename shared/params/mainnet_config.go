@@ -82,7 +82,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
-	SecondsPerETH1Block:              14,
+	SecondsPerETH1Block:              13,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
