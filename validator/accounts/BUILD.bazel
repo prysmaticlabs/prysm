@@ -4,6 +4,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "accounts.go",
+        "accounts_activation.go",
         "accounts_backup.go",
         "accounts_create.go",
         "accounts_delete.go",
