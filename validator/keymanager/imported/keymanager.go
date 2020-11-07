@@ -100,6 +100,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err := k.initializeAccountKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to initialize account store")
 	}
+	// Is this deprecated code that can be removed?
 	if k.opts.Version != "2" {
 		if err := k.rewriteAccountsKeystore(ctx); err != nil {
 			return nil, errors.Wrap(err, "failed to write accounts keystore")
