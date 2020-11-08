@@ -105,6 +105,34 @@ this command outputs a deposit data string which is required to become a validat
 			},
 		},
 		{
+			Name:        "enable",
+			Description: "Enable the selected accounts from a users wallet.",
+			Flags: cmd.WrapFlags([]cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.EnablePublicKeysFlag,
+				featureconfig.AltonaTestnet,
+				featureconfig.OnyxTestnet,
+				featureconfig.MedallaTestnet,
+				featureconfig.SpadinaTestnet,
+				featureconfig.ZinkenTestnet,
+				cmd.AcceptTosFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := EnableAccountCli(cliCtx); err != nil {
+					log.Fatalf("Could not enable account: %v", err)
+				}
+				return nil
+			},
+		},
+		{
 			Name:        "list",
 			Description: "Lists all validator accounts in a user's wallet directory",
 			Flags: cmd.WrapFlags([]cli.Flag{

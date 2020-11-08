@@ -44,8 +44,9 @@ const (
 
 // KeymanagerOpts for a imported keymanager.
 type KeymanagerOpts struct {
-	EIPVersion string `json:"direct_eip_version"`
-	Version    string `json:"direct_version"`
+	EIPVersion         string   `json:"direct_eip_version"`
+	Version            string   `json:"direct_version"`
+	DisabledPublicKeys [][]byte `json:"disabled_public_keys"`
 }
 
 // Keymanager implementation for imported keystores utilizing EIP-2335.
@@ -66,8 +67,9 @@ type AccountStore struct {
 // DefaultKeymanagerOpts for a imported keymanager implementation.
 func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{
-		EIPVersion: eipVersion,
-		Version:    "2",
+		EIPVersion:         eipVersion,
+		Version:            "2",
+		DisabledPublicKeys: [][]byte{},
 	}
 }
 
@@ -262,15 +264,24 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 	return nil
 }
 
-// FetchValidatingPublicKeys fetches the list of public keys from the imported account keystores.
+// FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
 	lock.RLock()
 	keys := orderedPublicKeys
-	result := make([][48]byte, len(keys))
-	copy(result, keys)
+	disabledPublicKeys := dr.KeymanagerOpts().DisabledPublicKeys
+	result := make([][48]byte, 0)
+	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
+	for _, pk := range disabledPublicKeys {
+		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
+	}
+	for _, pk := range keys {
+		if _, ok := existingDisabledPubKeys[pk]; !ok {
+			result = append(result, pk)
+		}
+	}
 	lock.RUnlock()
 	return result, nil
 }
@@ -284,12 +295,19 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
+	disabledPublicKeys := dr.KeymanagerOpts().DisabledPublicKeys
+	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
+	for _, pk := range disabledPublicKeys {
+		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
+	}
 	for i, pk := range pubKeys {
-		seckey, ok := secretKeysCache[pk]
-		if !ok {
-			return nil, errors.New("Could not fetch private key")
+		if _, ok := existingDisabledPubKeys[pk]; !ok {
+			seckey, ok := secretKeysCache[pk]
+			if !ok {
+				return nil, errors.New("Could not fetch private key")
+			}
+			privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
 		}
-		privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
 	}
 	return privKeys, nil
 }
