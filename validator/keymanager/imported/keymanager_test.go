@@ -28,6 +28,7 @@ func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	dr := &Keymanager{
 		wallet:        wallet,
 		accountsStore: &AccountStore{},
+		opts:          DefaultKeymanagerOpts(),
 	}
 	numAccounts := 5
 	ctx := context.Background()
