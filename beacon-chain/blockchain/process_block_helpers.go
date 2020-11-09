@@ -364,6 +364,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+	pendingRoots := make([][32]byte, 0)
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
 	slot := blk.Slot
@@ -381,6 +382,8 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		}
 
 		pendingNodes = append(pendingNodes, b.Block)
+		copiedRoot := parentRoot
+		pendingRoots = append(pendingRoots, copiedRoot)
 		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
 		slot = b.Block.Slot
 		higherThanFinalized = slot > fSlot
@@ -390,11 +393,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	// Lower slots should be at the end of the list.
 	for i := len(pendingNodes) - 1; i >= 0; i-- {
 		b := pendingNodes[i]
-		r, err := b.HashTreeRoot()
-		if err != nil {
-			return err
-		}
-
+		r := pendingRoots[i]
 		if err := s.forkChoiceStore.ProcessBlock(ctx,
 			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot), bytesutil.ToBytes32(b.Body.Graffiti),
 			jCheckpoint.Epoch,

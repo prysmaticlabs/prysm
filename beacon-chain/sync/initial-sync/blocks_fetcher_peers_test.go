@@ -182,12 +182,11 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				pids = append(pids, pid.ID)
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
-			got, err := fetcher.filterPeers(context.Background(), pids, tt.args.peersPercentage)
-			require.NoError(t, err)
+			pids = fetcher.filterPeers(context.Background(), pids, tt.args.peersPercentage)
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
-			sort.SliceStable(got, func(i, j int) bool {
+			sort.SliceStable(pids, func(i, j int) bool {
 				cap1 := fetcher.rateLimiter.Remaining(pids[i].String())
 				cap2 := fetcher.rateLimiter.Remaining(pids[j].String())
 				if cap1 == cap2 {
@@ -195,7 +194,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				}
 				return i < j
 			})
-			assert.DeepEqual(t, tt.want, got)
+			assert.DeepEqual(t, tt.want, pids)
 		})
 	}
 }
@@ -346,7 +345,7 @@ func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 			var filteredPIDs []peer.ID
 			var err error
 			for i := 0; i < 1000; i++ {
-				filteredPIDs, err = fetcher.filterPeers(context.Background(), peerIDs, tt.args.peersPercentage)
+				filteredPIDs = fetcher.filterPeers(context.Background(), peerIDs, tt.args.peersPercentage)
 				if len(filteredPIDs) <= 1 {
 					break
 				}

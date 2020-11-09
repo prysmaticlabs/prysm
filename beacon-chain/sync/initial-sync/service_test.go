@@ -299,7 +299,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			wg.Done()
 		}()
 
-		if testutil.WaitTimeout(wg, time.Second*3) {
+		if testutil.WaitTimeout(wg, time.Second*5) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")

@@ -178,3 +178,20 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
+
+func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
+	v := &FakeValidator{}
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), allValidatorsAreExitedCtxKey, true))
+	hook := logTest.NewGlobal()
+
+	slot := uint64(55)
+	ticker := make(chan uint64)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+
+		cancel()
+	}()
+	run(ctx, v)
+	assert.LogsContain(t, hook, "All validators are exited")
+}

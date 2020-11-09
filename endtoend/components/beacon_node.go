@@ -68,7 +68,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 		t.Fatalf("Failed to start beacon node: %v", err)
 	}
 
-	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
+	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
 }

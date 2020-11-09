@@ -87,9 +87,6 @@ func run(ctx context.Context, v Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 
-	// We initially assume not all validators are exited
-	allExited := false
-
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
@@ -101,15 +98,12 @@ func run(ctx context.Context, v Validator) {
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
-			if allExited {
-				log.Info("All validators are exited, no more work to perform...")
-				continue
-			}
-			allExited, err = v.AllValidatorsAreExited(ctx)
+			allExited, err := v.AllValidatorsAreExited(ctx)
 			if err != nil {
 				log.WithError(err).Error("Could not check if validators are exited")
 			}
 			if allExited {
+				log.Info("All validators are exited, no more work to perform...")
 				continue
 			}
 

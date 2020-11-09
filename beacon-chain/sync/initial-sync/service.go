@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -44,17 +43,16 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	chain             blockchainService
-	p2p               p2p.P2P
-	db                db.ReadOnlyDatabase
-	synced            bool
-	chainStarted      bool
-	stateNotifier     statefeed.Notifier
-	counter           *ratecounter.RateCounter
-	lastProcessedSlot types.Slot
-	genesisChan       chan time.Time
+	ctx           context.Context
+	cancel        context.CancelFunc
+	chain         blockchainService
+	p2p           p2p.P2P
+	db            db.ReadOnlyDatabase
+	synced        bool
+	chainStarted  bool
+	stateNotifier statefeed.Notifier
+	counter       *ratecounter.RateCounter
+	genesisChan   chan time.Time
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
