@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 // A basic tool to extract genesis.ssz from existing beaconchain.db.
@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err := ioutil.WriteFile(os.Args[2], b, 0644); err != nil {
+	if err := fileutil.WriteFile(os.Args[2], b); err != nil {
 		panic(err)
 	}
 	fmt.Println("done")
