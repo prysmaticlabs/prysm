@@ -155,7 +155,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
 		pubsub.WithPeerScore(peerScoringParams()),
-		pubsub.WithPeerScoreInspect(peerInspector, time.Minute),
+		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithSubscriptionFilter(s),
 	}
 	// Set the pubsub global parameters that we require.

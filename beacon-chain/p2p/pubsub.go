@@ -2,12 +2,11 @@ package p2p
 
 import (
 	"context"
-	"encoding/base64"
 	"strings"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/golang/snappy"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -83,56 +82,22 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	return topicHandle.Subscribe(opts...)
 }
 
-func peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
+func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 	for id, snap := range peerMap {
-		log.Debugf("Peer id %s with score %f and behaviour penalty %f", id.String(), snap.Score,
-			snap.BehaviourPenalty)
-		for t, p := range snap.Topics {
-			log.Debugf("peer %s with topic %s and first deliveires %f , invalid deliveries %f, "+
-				"mesh deliveries %f and time in mesh %d ms ", id.String(), t, p.FirstMessageDeliveries,
-				p.InvalidMessageDeliveries, p.MeshMessageDeliveries, p.TimeInMesh.Milliseconds())
+		ag, err := s.Host().Peerstore().Get(id, "AgentVersion")
+		st, ok := ag.(string)
+		if err != nil || !ok {
+			continue
 		}
-	}
-}
-
-func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
-	thresholds := &pubsub.PeerScoreThresholds{
-		GossipThreshold:             -4000,
-		PublishThreshold:            -8000,
-		GraylistThreshold:           -16000,
-		AcceptPXThreshold:           100,
-		OpportunisticGraftThreshold: 5,
-	}
-	scoreParams := &pubsub.PeerScoreParams{
-		Topics:        make(map[string]*pubsub.TopicScoreParams),
-		TopicScoreCap: 32.72,
-		AppSpecificScore: func(p peer.ID) float64 {
-			return 0
-		},
-		AppSpecificWeight:           1,
-		IPColocationFactorWeight:    -35.11,
-		IPColocationFactorThreshold: 10,
-		IPColocationFactorWhitelist: nil,
-		BehaviourPenaltyWeight:      -15.92,
-		BehaviourPenaltyThreshold:   6,
-		BehaviourPenaltyDecay:       0.9857,
-		DecayInterval:               1 * oneSlotDuration(),
-		DecayToZero:                 0.1,
-		RetainScore:                 100 * oneEpochDuration(),
-	}
-	return scoreParams, thresholds
-}
-
-func topicScoreParams(topic string) *pubsub.TopicScoreParams {
-	switch true {
-	case strings.Contains(topic, "beacon_block"):
-		return defaultBlockTopicParams()
-	case strings.Contains(topic, "beacon_aggregate_and_proof"):
-		return defaultAggregateTopicParams()
-	case strings.Contains(topic, "beacon_attestation"):
-		return defaultAggregateSubnetTopicParams()
-	default:
-		return nil
+		if snap.Score < 0 && (strings.Contains(st, "beta.0") || strings.Contains(st, "beta.1")) {
+			log.Debugf("Peer id %s with score %f and behaviour penalty %f", id.String(), snap.Score,
+				snap.BehaviourPenalty)
+			for t, p := range snap.Topics {
+				log.Debugf("peer %s with topic %s and first deliveires %f , invalid deliveries %f, "+
+					"mesh deliveries %f and time in mesh %d ms ", id.String(), t, p.FirstMessageDeliveries,
+					p.InvalidMessageDeliveries, p.MeshMessageDeliveries, p.TimeInMesh.Milliseconds())
+			}
+		}
 	}
 }
 
@@ -164,78 +129,4 @@ func setPubSubParameters() {
 	pubsub.GossipSubHeartbeatInterval = 700 * time.Millisecond
 	pubsub.GossipSubHistoryLength = 6
 	pubsub.GossipSubHistoryGossip = 3
-}
-
-func defaultBlockTopicParams() *pubsub.TopicScoreParams {
-	return &pubsub.TopicScoreParams{
-		TopicWeight:                     0.5,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
-		FirstMessageDeliveriesWeight:    1,
-		FirstMessageDeliveriesDecay:     0.9928,
-		FirstMessageDeliveriesCap:       23,
-		MeshMessageDeliveriesWeight:     -0.717,
-		MeshMessageDeliveriesDecay:      0.9928,
-		MeshMessageDeliveriesCap:        139,
-		MeshMessageDeliveriesThreshold:  14,
-		MeshMessageDeliveriesWindow:     2 * time.Second,
-		MeshMessageDeliveriesActivation: 4 * oneEpochDuration(),
-		MeshFailurePenaltyWeight:        -0.717,
-		MeshFailurePenaltyDecay:         0.9928,
-		InvalidMessageDeliveriesWeight:  -140.4475,
-		InvalidMessageDeliveriesDecay:   0.9971,
-	}
-}
-
-func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
-	return &pubsub.TopicScoreParams{
-		TopicWeight:                     0.5,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
-		FirstMessageDeliveriesWeight:    0.128,
-		FirstMessageDeliveriesDecay:     0.866,
-		FirstMessageDeliveriesCap:       179,
-		MeshMessageDeliveriesWeight:     -0.064,
-		MeshMessageDeliveriesDecay:      0.866,
-		MeshMessageDeliveriesCap:        1075,
-		MeshMessageDeliveriesThreshold:  47,
-		MeshMessageDeliveriesWindow:     2 * time.Second,
-		MeshMessageDeliveriesActivation: 32 * oneSlotDuration(),
-		MeshFailurePenaltyWeight:        -0.064,
-		MeshFailurePenaltyDecay:         0.866,
-		InvalidMessageDeliveriesWeight:  -140.4475,
-		InvalidMessageDeliveriesDecay:   0.9971,
-	}
-}
-
-func defaultAggregateSubnetTopicParams() *pubsub.TopicScoreParams {
-	return &pubsub.TopicScoreParams{
-		TopicWeight:                     0.015264,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
-		FirstMessageDeliveriesWeight:    0.955,
-		FirstMessageDeliveriesDecay:     0.866,
-		FirstMessageDeliveriesCap:       24,
-		MeshMessageDeliveriesWeight:     -37.55,
-		MeshMessageDeliveriesDecay:      0.96477,
-		MeshMessageDeliveriesCap:        553,
-		MeshMessageDeliveriesThreshold:  11,
-		MeshMessageDeliveriesWindow:     2 * time.Second,
-		MeshMessageDeliveriesActivation: 17 * oneSlotDuration(),
-		MeshFailurePenaltyWeight:        -37.55,
-		MeshFailurePenaltyDecay:         0.9647,
-		InvalidMessageDeliveriesWeight:  -4544,
-		InvalidMessageDeliveriesDecay:   0.9971,
-	}
-}
-
-func oneSlotDuration() time.Duration {
-	return time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
-}
-
-func oneEpochDuration() time.Duration {
-	return time.Duration(params.BeaconConfig().SlotsPerEpoch) * oneSlotDuration()
 }

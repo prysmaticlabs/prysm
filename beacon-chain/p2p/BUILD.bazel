@@ -12,6 +12,7 @@ go_library(
         "discovery.go",
         "doc.go",
         "fork.go",
+        "gossip_scoring_params.go",
         "gossip_topic_mappings.go",
         "handshake.go",
         "info.go",
