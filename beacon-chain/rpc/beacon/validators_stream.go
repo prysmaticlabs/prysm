@@ -297,7 +297,7 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 }
 
 // generateValidatorInfo generates the validator info for a public key.
-func (is *infostream) generateValidatorInfo(pubKey []byte, validator *state.ReadOnlyValidator, headState *state.BeaconState, epoch uint64) (*ethpb.ValidatorInfo, error) {
+func (is *infostream) generateValidatorInfo(pubKey []byte, validator state.ReadOnlyValidator, headState *state.BeaconState, epoch uint64) (*ethpb.ValidatorInfo, error) {
 	info := &ethpb.ValidatorInfo{
 		PublicKey: pubKey,
 		Epoch:     epoch,
@@ -384,8 +384,8 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 	numAttestingValidators := uint64(0)
 	pendingValidators := make([]uint64, 0, headState.NumValidators())
 
-	err := headState.ReadFromEveryValidator(func(idx int, val *state.ReadOnlyValidator) error {
-		if val == nil {
+	err := headState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+		if val.IsNil() {
 			return errors.New("nil validator in state")
 		}
 		if helpers.IsEligibleForActivationUsingTrie(headState, val) {
@@ -470,10 +470,10 @@ func (s indicesSorter) Less(i, j int) bool {
 	return s.indices[i] < s.indices[j]
 }
 
-func (is *infostream) calculateStatusAndTransition(validator *state.ReadOnlyValidator, currentEpoch uint64) (ethpb.ValidatorStatus, uint64) {
+func (is *infostream) calculateStatusAndTransition(validator state.ReadOnlyValidator, currentEpoch uint64) (ethpb.ValidatorStatus, uint64) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
-	if validator == nil {
+	if validator.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0
 	}
 
