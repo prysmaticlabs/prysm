@@ -17,8 +17,11 @@ import (
 // Doc explaining the tool.
 const Doc = "Tool to enforce usage of Prysm's internal file-writing utils instead of os.MkdirAll or ioutil.WriteFile"
 
-var errUnsafePackage = errors.New(
-	"os and ioutil dir and file writing functions are not permissions-safe, use shared/fileutil",
+var (
+	errUnsafePackage = errors.New(
+		"os and ioutil dir and file writing functions are not permissions-safe, use shared/fileutil",
+	)
+	disallowedFns = []string{"MkdirAll", "WriteFile"}
 )
 
 // Analyzer runs static analysis.
@@ -42,7 +45,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	aliases := make(map[string]string)
-	disallowedFns := []string{"MkdirAll", "WriteFile"}
 
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		switch stmt := node.(type) {
@@ -54,31 +56,31 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			pkg := stmt.Path.Value
 			if pkg == "\"os\"" {
 				if stmt.Name != nil {
-					aliases[stmt.Name.Name] = stmt.Path.Value
+					aliases[stmt.Name.Name] = pkg
 				} else {
-					aliases["os"] = stmt.Path.Value
+					aliases["os"] = pkg
 				}
 			}
 			if pkg == "\"io/ioutil\"" {
 				if stmt.Name != nil {
-					aliases[stmt.Name.Name] = stmt.Path.Value
+					aliases[stmt.Name.Name] = pkg
 				} else {
-					aliases["ioutil"] = stmt.Path.Value
+					aliases["ioutil"] = pkg
 				}
 			}
 		case *ast.CallExpr:
 			// Check if any of disallowed functions have been used.
-			for pkg, path := range aliases {
+			for alias, pkg := range aliases {
 				for _, fn := range disallowedFns {
-					if isPkgDot(stmt.Fun, pkg, fn) {
+					if isPkgDot(stmt.Fun, alias, fn) {
 						pass.Reportf(
 							node.Pos(),
 							fmt.Sprintf(
 								"%v: %s.%s() (from %s)",
 								errUnsafePackage,
-								pkg,
+								alias,
 								fn,
-								path,
+								pkg,
 							),
 						)
 					}

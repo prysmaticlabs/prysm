@@ -48,7 +48,7 @@ func TestPathExpansion(t *testing.T) {
 	}
 }
 
-func TestMkdirAll(t *testing.T) {
+func TestMkdirAll_AlreadyExists_WrongPermissions(t *testing.T) {
 	dirName := testutil.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
@@ -56,10 +56,32 @@ func TestMkdirAll(t *testing.T) {
 		assert.NoError(t, os.RemoveAll(dirName))
 	}()
 	err = fileutil.MkdirAll(dirName)
-	assert.ErrorContains(t, "already exists with wrong permissions", err)
+	assert.ErrorContains(t, "already exists without proper 0700 permissions", err)
 }
 
-func TestWriteFile(t *testing.T) {
+func TestMkdirAll_AlreadyExists_OK(t *testing.T) {
+	dirName := testutil.TempDir() + "somedir"
+	err := os.MkdirAll(dirName, params.BeaconIoConfig().ReadWriteExecutePermissions)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(dirName))
+	}()
+	assert.NoError(t, fileutil.MkdirAll(dirName))
+}
+
+func TestMkdirAll_OK(t *testing.T) {
+	dirName := testutil.TempDir() + "somedir"
+	defer func() {
+		assert.NoError(t, os.RemoveAll(dirName))
+	}()
+	err := fileutil.MkdirAll(dirName)
+	assert.NoError(t, err)
+	exists, err := fileutil.HasDir(dirName)
+	require.NoError(t, err)
+	assert.Equal(t, true, exists)
+}
+
+func TestWriteFile_AlreadyExists_WrongPermissions(t *testing.T) {
 	dirName := testutil.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
@@ -69,7 +91,32 @@ func TestWriteFile(t *testing.T) {
 	someFileName := filepath.Join(dirName, "somefile.txt")
 	require.NoError(t, ioutil.WriteFile(someFileName, []byte("hi"), os.ModePerm))
 	err = fileutil.WriteFile(someFileName, []byte("hi"))
-	assert.ErrorContains(t, "already exists with wrong permissions", err)
+	assert.ErrorContains(t, "already exists without proper 0600 permissions", err)
+}
+
+func TestWriteFile_AlreadyExists_OK(t *testing.T) {
+	dirName := testutil.TempDir() + "somedir"
+	err := os.MkdirAll(dirName, os.ModePerm)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(dirName))
+	}()
+	someFileName := filepath.Join(dirName, "somefile.txt")
+	require.NoError(t, ioutil.WriteFile(someFileName, []byte("hi"), params.BeaconIoConfig().ReadWritePermissions))
+	assert.NoError(t, fileutil.WriteFile(someFileName, []byte("hi")))
+}
+
+func TestWriteFile_OK(t *testing.T) {
+	dirName := testutil.TempDir() + "somedir"
+	err := os.MkdirAll(dirName, os.ModePerm)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(dirName))
+	}()
+	someFileName := filepath.Join(dirName, "somefile.txt")
+	require.NoError(t, fileutil.WriteFile(someFileName, []byte("hi")))
+	exists := fileutil.FileExists(someFileName)
+	assert.Equal(t, true, exists)
 }
 
 func TestCopyFile(t *testing.T) {

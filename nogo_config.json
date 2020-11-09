@@ -134,8 +134,10 @@
     "exclude_files": {
     }
   },
-  "writefile": {
+  "properpermissions": {
     "only_files": {
+      "beacon-chain/.*": "",
+      "slasher/.*": "",
       "shared/.*": "",
       "validator/.*": ""
     },
