@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 	"testing"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestBlocksFetcher_InitStartStop(t *testing.T) {
@@ -545,6 +547,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
 	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), false)
 
+	hook := logTest.NewGlobal()
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go func() {
@@ -581,6 +584,8 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	case <-ch:
 		// p3 responded w/o waiting for rate limiter's lock (on which p2 spins).
 	}
+	// Make sure that p2 has been rate limited.
+	require.LogsContain(t, hook, fmt.Sprintf("msg=\"Slowing down for rate limit\" peer=%s", p2.PeerID()))
 }
 
 func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T) {
@@ -633,7 +638,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "not in a consecutive order",
@@ -657,7 +662,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "same slot number",
@@ -681,7 +686,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "slot is too low",
@@ -709,7 +714,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}
 				}
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
@@ -740,7 +745,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}
 				}
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
@@ -790,7 +795,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 	}
 

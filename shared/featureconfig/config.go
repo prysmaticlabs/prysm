@@ -50,6 +50,7 @@ type Flags struct {
 	EnableEth1DataMajorityVote bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer           bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnablePruningDepositProofs bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
+	EnableSyncBacktracking     bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -133,10 +134,8 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UseZinkenNetworkConfig()
 		cfg.ZinkenTestnet = true
 	} else {
-		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
+		log.Warn("Running on ETH2 Mainnet")
+		params.UseMainnetConfig()
 	}
 }
 
@@ -188,6 +187,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disablePruningDepositProofs.Name) {
 		log.Warn("Disabling pruning deposit proofs")
 		cfg.EnablePruningDepositProofs = false
+	}
+	if ctx.Bool(enableSyncBacktracking.Name) {
+		log.Warn("Enabling init-sync backtracking algorithm")
+		cfg.EnableSyncBacktracking = true
 	}
 	Init(cfg)
 }

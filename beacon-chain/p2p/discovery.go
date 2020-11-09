@@ -227,7 +227,8 @@ func (s *Service) startDiscoveryV5(
 // 2) Peer has a valid IP and TCP port set in their enr.
 // 3) Peer hasn't been marked as 'bad'
 // 4) Peer is not currently active or connected.
-// 5) Peer's fork digest in their ENR matches that of
+// 5) Peer is ready to receive incoming connections.
+// 6) Peer's fork digest in their ENR matches that of
 // 	  our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
 	// ignore nodes with no ip address stored.
@@ -253,6 +254,9 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 		return false
 	}
 	if s.host.Network().Connectedness(peerData.ID) == network.Connected {
+		return false
+	}
+	if !s.peers.IsReadyToDial(peerData.ID) {
 		return false
 	}
 	nodeENR := node.Record()
