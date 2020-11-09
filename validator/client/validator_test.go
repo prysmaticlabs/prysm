@@ -401,6 +401,40 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	require.LogsContain(t, hook, "Validator activated")
 }
 
+func TestWaitForActivation_Exiting(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+	}
+	v := validator{
+		validatorClient: client,
+		keyManager:      km,
+		genesisTime:     1,
+	}
+	resp := generateMockStatusResponse([][]byte{pubKey[:]})
+	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_EXITING
+	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&ethpb.ValidatorActivationRequest{
+			PublicKeys: [][]byte{pubKey[:]},
+		},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		resp,
+		nil,
+	)
+	require.NoError(t, v.WaitForActivation(context.Background()))
+}
+
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
