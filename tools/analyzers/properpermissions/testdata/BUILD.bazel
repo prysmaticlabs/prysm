@@ -6,6 +6,6 @@ go_library(
         "custom_imports.go",
         "regular_imports.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/writefile/testdata",
+    importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/properpermissions/testdata",
     visibility = ["//visibility:public"],
 )

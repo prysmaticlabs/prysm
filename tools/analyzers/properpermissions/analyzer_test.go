@@ -1,4 +1,4 @@
-package writefile
+package properpermissions
 
 import (
 	"testing"

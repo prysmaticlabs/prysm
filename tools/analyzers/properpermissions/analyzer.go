@@ -1,7 +1,8 @@
-// Package writefile implements a static analyzer to ensure that Prysm does not
+// Package properpermissions implements a static analyzer to ensure that Prysm does not
 // use ioutil.MkdirAll or os.WriteFile as they are unsafe when it comes to guaranteeing
-// file permissions and not overriding existing permissions.
-package writefile
+// file permissions and not overriding existing permissions. Instead, users are warned
+// to utilize shared/fileutil as the canonical solution.
+package properpermissions
 
 import (
 	"errors"
@@ -22,7 +23,7 @@ var errUnsafePackage = errors.New(
 
 // Analyzer runs static analysis.
 var Analyzer = &analysis.Analyzer{
-	Name:     "writefile",
+	Name:     "properpermissions",
 	Doc:      Doc,
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 	Run:      run,
