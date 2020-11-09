@@ -330,7 +330,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[s
 //   This is to tolerate skip slots. Not every state lays on the boundary.
 // 3.) state with current finalized root
 // 4.) unfinalized States
-func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
+func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
 
@@ -352,7 +352,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 			}
 
 			finalizedChkpt := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
-			slot := bytesutil.BytesToUint64BigEndian(k)
+			slot := types.Slot(bytesutil.BytesToUint64BigEndian(k))
 			mod := slot % slotsPerArchivedPoint
 			nonFinalized := slot > finalizedSlot
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	basetypes "github.com/farazdagi/prysm-shared-types"
 	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -46,7 +47,7 @@ func SendBeaconBlocksByRangeRequest(
 		}
 		return nil
 	}
-	var prevSlot uint64
+	var prevSlot basetypes.Slot
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, p2pProvider, isFirstChunk)
@@ -62,12 +63,12 @@ func SendBeaconBlocksByRangeRequest(
 			return nil, ErrInvalidFetchedData
 		}
 		// Returned blocks MUST be in the slot range [start_slot, start_slot + count * step).
-		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
+		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot.Add(req.Count*req.Step) {
 			return nil, ErrInvalidFetchedData
 		}
 		// Returned blocks, where they exist, MUST be sent in a consecutive order.
 		// Consecutive blocks MUST have values in `step` increments (slots may be skipped in between).
-		if !isFirstChunk && (prevSlot >= blk.Block.Slot || (blk.Block.Slot-prevSlot)%req.Step != 0) {
+		if !isFirstChunk && (prevSlot >= blk.Block.Slot || blk.Block.Slot.SubSlot(prevSlot).Mod(req.Step) != 0) {
 			return nil, ErrInvalidFetchedData
 		}
 		prevSlot = blk.Block.Slot

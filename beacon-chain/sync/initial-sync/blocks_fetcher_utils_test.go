@@ -151,7 +151,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 
 	// Chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
 	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
-	finalizedSlot := uint64(63)
+	finalizedSlot := types.Slot(63)
 	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
@@ -193,7 +193,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	pidInd := 0
 	for i := uint64(1); i < uint64(len(chain1)); i += blockBatchLimit {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
-			StartSlot: i,
+			StartSlot: types.Slot(i),
 			Step:      1,
 			Count:     blockBatchLimit,
 		}
@@ -409,7 +409,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 	p2p := p2pt.NewTestP2P(t)
 
 	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
-	finalizedSlot := uint64(63)
+	finalizedSlot := types.Slot(63)
 	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
 
 	genesisBlock := knownBlocks[0]
@@ -468,16 +468,16 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 		name               string
 		syncMode           syncMode
 		peers              []*peerData
-		ourFinalizedEpoch  uint64
-		ourHeadSlot        uint64
-		expectedHeadEpoch  uint64
-		targetEpoch        uint64
+		ourFinalizedEpoch  types.Epoch
+		ourHeadSlot        types.Slot
+		expectedHeadEpoch  types.Epoch
+		targetEpoch        types.Epoch
 		targetEpochSupport int
 	}{
 		{
 			name:               "ignore lower epoch peers in best finalized",
 			syncMode:           modeStopOnFinalizedEpoch,
-			ourHeadSlot:        5 * params.BeaconConfig().SlotsPerEpoch,
+			ourHeadSlot:        params.BeaconConfig().SlotsPerEpoch.Mul(5),
 			expectedHeadEpoch:  4,
 			ourFinalizedEpoch:  4,
 			targetEpoch:        10,
@@ -498,7 +498,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 		{
 			name:               "resolve ties in best finalized",
 			syncMode:           modeStopOnFinalizedEpoch,
-			ourHeadSlot:        5 * params.BeaconConfig().SlotsPerEpoch,
+			ourHeadSlot:        params.BeaconConfig().SlotsPerEpoch.Mul(5),
 			expectedHeadEpoch:  4,
 			ourFinalizedEpoch:  4,
 			targetEpoch:        10,
@@ -520,7 +520,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 		{
 			name:               "best non-finalized",
 			syncMode:           modeNonConstrained,
-			ourHeadSlot:        5 * params.BeaconConfig().SlotsPerEpoch,
+			ourHeadSlot:        params.BeaconConfig().SlotsPerEpoch.Mul(5),
 			expectedHeadEpoch:  5,
 			ourFinalizedEpoch:  4,
 			targetEpoch:        20,
@@ -543,7 +543,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc, p2p, _ := initializeTestServices(t, []uint64{}, tt.peers)
+			mc, p2p, _ := initializeTestServices(t, []types.Slot{}, tt.peers)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			fetcher := newBlocksFetcher(
@@ -566,7 +566,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 			assert.Equal(t, tt.targetEpochSupport, len(peers), "Unexpected number of peers supporting target epoch")
 
 			// Best finalized and non-finalized slots.
-			finalizedSlot := tt.targetEpoch * params.BeaconConfig().SlotsPerEpoch
+			finalizedSlot := params.BeaconConfig().SlotsPerEpoch.MulEpoch(tt.targetEpoch)
 			if tt.syncMode == modeStopOnFinalizedEpoch {
 				assert.Equal(t, finalizedSlot, fetcher.bestFinalizedSlot(), "Unexpected finalized slot")
 			} else {

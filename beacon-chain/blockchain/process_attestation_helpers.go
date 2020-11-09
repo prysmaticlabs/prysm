@@ -23,7 +23,7 @@ import (
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
-	epochKey := strconv.FormatUint(c.Epoch, 10 /* base 10 */)
+	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
 	lock := mputil.NewMultilock(string(c.Root) + epochKey)
 	lock.Lock()
 	defer lock.Unlock()

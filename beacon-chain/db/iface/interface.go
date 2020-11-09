@@ -86,7 +86,7 @@ type NoHeadAccessDatabase interface {
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 
-	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error
+	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }
 
 // HeadAccessDatabase defines a struct with access to reading chain head data.

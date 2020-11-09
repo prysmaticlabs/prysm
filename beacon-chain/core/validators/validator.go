@@ -5,8 +5,6 @@
 package validators
 
 import (
-	"fmt"
-
 	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"

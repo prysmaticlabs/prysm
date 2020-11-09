@@ -7,6 +7,7 @@ import (
 	"io"
 	"testing"
 
+	types "github.com/farazdagi/prysm-shared-types"
 	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -43,7 +44,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 	parentRoot := genesisBlkRoot
 	for i := 0; i < 255; i++ {
 		blk := testutil.NewBeaconBlock()
-		blk.Block.Slot = uint64(i)
+		blk.Block.Slot = types.Slot(i)
 		blk.Block.ParentRoot = parentRoot[:]
 		knownBlocks = append(knownBlocks, blk)
 		parentRoot, err = blk.Block.HashTreeRoot()
@@ -59,7 +60,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			req := &pb.BeaconBlocksByRangeRequest{}
 			assert.NoError(t, p2pProvider.Encoding().DecodeWithMaxLength(stream, req))
 
-			for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 				if processor != nil {
 					if processorErr := processor(knownBlocks[i]); processorErr != nil {
 						if errors.Is(processorErr, io.EOF) {
@@ -74,7 +75,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 						return
 					}
 				}
-				if i >= uint64(len(knownBlocks)) {
+				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
 				err = WriteChunk(stream, p2pProvider.Encoding(), knownBlocks[i])
