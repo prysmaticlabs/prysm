@@ -74,7 +74,8 @@
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
       ".*/testmain\\.go": "Test runner generated code",
-      "proto/.*": "Generated protobuf related code"
+      "proto/.*": "Generated protobuf related code",
+      "tools/analyzers/properpermissions/testdata/.*": "Analyzer breaks rules"
     }
   },
   "featureconfig": {
@@ -131,6 +132,18 @@
       "validator/.*": ""
     },
     "exclude_files": {
+    }
+  },
+  "properpermissions": {
+    "only_files": {
+      "beacon-chain/.*": "",
+      "slasher/.*": "",
+      "shared/.*": "",
+      "validator/.*": ""
+    },
+    "exclude_files": {
+      ".*_test\\.go": "Tests are ok",
+      "shared/fileutil/fileutil.go": "Package which defines the proper rules"
     }
   }
 }
