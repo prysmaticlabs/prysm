@@ -213,7 +213,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedPreAttSignLocalErr)
+	require.LogsContain(t, hook, failedAttLocalProtectionErr)
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
@@ -265,7 +265,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedPreAttSignLocalErr)
+	require.LogsContain(t, hook, failedAttLocalProtectionErr)
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
@@ -308,7 +308,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreAttSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedAttLocalProtectionErr)
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -320,7 +320,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedPreAttSignLocalErr)
+	require.LogsContain(t, hook, failedAttLocalProtectionErr)
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {

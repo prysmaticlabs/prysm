@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
-var failedPreAttSignLocalErr = "attempted to make slashable attestation, rejected by local slashing protection"
+var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
 var failedPreAttSignExternalErr = "attempted to make slashable attestation, rejected by external slasher service"
 var failedPostAttSignExternalErr = "external slasher service detected a submitted slashable attestation"
 
@@ -31,7 +31,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		return errors.New(failedPreAttSignLocalErr)
+		return errors.New(failedAttLocalProtectionErr)
 	} else if !ok {
 		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
 	}
@@ -57,7 +57,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			}
-			return errors.New(failedPreAttSignLocalErr)
+			return errors.New(failedAttLocalProtectionErr)
 		}
 		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, signingRoot)
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory

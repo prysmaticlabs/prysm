@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 
@@ -203,6 +204,7 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	passThrough := 0
+	slashable := 0
 	var wg sync.WaitGroup
 	for i := uint64(0); i < 100; i++ {
 
@@ -216,6 +218,9 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 			if err == nil {
 				passThrough++
 			} else {
+				if strings.Contains(err.Error(), failedAttLocalProtectionErr) {
+					slashable++
+				}
 				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
 				t.Logf("attestation target epoch %d", att.Data.Target.Epoch)
 			}
@@ -223,8 +228,8 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 		}(i)
 	}
 	wg.Wait()
-	require.Equal(t, 1, passThrough)
-
+	require.Equal(t, 1, passThrough, "Expecting only one attestations to go through and all others to be found to be slashable")
+	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
 }
 
 func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
@@ -249,6 +254,7 @@ func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	passThrough := 0
+	slashable := 0
 	var wg sync.WaitGroup
 	for i := uint64(0); i < 100; i++ {
 
@@ -262,6 +268,9 @@ func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
 			if err == nil {
 				passThrough++
 			} else {
+				if strings.Contains(err.Error(), failedAttLocalProtectionErr) {
+					slashable++
+				}
 				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
 				t.Logf("signing root %d", att.Data.Target.Epoch)
 			}
@@ -269,7 +278,8 @@ func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-	require.Equal(t, 1, passThrough)
+	require.Equal(t, 1, passThrough, "Expecting only one attestations to go through and all others to be found to be slashable")
+	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
 
 }
 
