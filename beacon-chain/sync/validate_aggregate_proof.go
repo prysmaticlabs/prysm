@@ -136,7 +136,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	selectionSigSet, err := validateSelectionIndex(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof)
 	if err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationReject
 	}
 
 	// Verify selection signature, aggregator signature and attestation signature are valid.
