@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -178,6 +179,47 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	if !isNewAttSlashable(ctx, history, newAttSource, newAttTarget, sr2) {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
+}
+
+func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
+	ctx := context.Background()
+	// Mark an attestation spanning epochs 0 to 3.
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: []byte("great block"),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  []byte("good source"),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 11,
+				Root:  []byte("good target"),
+			},
+		},
+	}
+	sr := [32]byte{1}
+	v, _, validatorKey, finish := setup(t)
+	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	passThrough := 0
+	var wg sync.WaitGroup
+	for i := uint64(0); i < 10; i++ {
+		att.Data.Source.Epoch = i
+		wg.Add(1)
+		go func(a *ethpb.IndexedAttestation) {
+			err := v.postAttSignUpdate(ctx, a, pubKey, sr)
+			if err == nil {
+				passThrough++
+			}
+			wg.Done()
+		}(att)
+	}
+	wg.Wait()
+	require.Equal(t, 1, passThrough)
 }
 
 func TestAttestationHistory_Prunes(t *testing.T) {

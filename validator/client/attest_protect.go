@@ -50,14 +50,20 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	v.attesterHistoryByPubKeyLock.Lock()
+	defer v.attesterHistoryByPubKeyLock.Unlock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if ok {
+		if isNewAttSlashable(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, signingRoot) {
+			if v.emitAccountMetrics {
+				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return errors.New(failedPreAttSignLocalErr)
+		}
 		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, signingRoot)
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory
 	} else {
 		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
 	}
-	v.attesterHistoryByPubKeyLock.Unlock()
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
