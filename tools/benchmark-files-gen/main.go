@@ -9,6 +9,7 @@ import (
 	"path"
 
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -44,7 +45,7 @@ func main() {
 		}
 	}
 
-	if err := os.MkdirAll(*outputDir, os.ModePerm); err != nil {
+	if err := fileutil.MkdirAll(*outputDir); err != nil {
 		log.Fatal(err)
 	}
 
@@ -77,7 +78,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes, 0644)
+	return fileutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes)
 }
 
 func generateMarshalledFullStateAndBlock() error {
@@ -150,7 +151,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.BState1EpochFileName), beaconBytes, 0644); err != nil {
+	if err := fileutil.WriteFile(path.Join(*outputDir, benchutil.BState1EpochFileName), beaconBytes); err != nil {
 		return err
 	}
 
@@ -165,7 +166,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	return ioutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes, 0644)
+	return fileutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes)
 }
 
 func generate2FullEpochState() error {
@@ -200,7 +201,7 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	return ioutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes, 0644)
+	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes)
 }
 
 func genesisBeaconState() (*stateTrie.BeaconState, error) {
