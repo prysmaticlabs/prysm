@@ -20,6 +20,11 @@ var (
 		Name:  "medalla",
 		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
 	}
+	// ToledoTestnet flag for the multiclient eth2 testnet.
+	ToledoTestnet = &cli.BoolFlag{
+		Name:  "toledo",
+		Usage: "This defines the flag through which we can run on the Toledo Multiclient Testnet",
+	}
 	// SpadinaTestnet flag for the multiclient eth2 testnet.
 	SpadinaTestnet = &cli.BoolFlag{
 		Name:  "spadina",
@@ -114,6 +119,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	MedallaTestnet,
+	ToledoTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
 	Mainnet,
@@ -127,6 +133,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	MedallaTestnet,
+	ToledoTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
 	Mainnet,
@@ -148,6 +155,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	AltonaTestnet,
 	OnyxTestnet,
 	MedallaTestnet,
+	ToledoTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
 	Mainnet,
