@@ -429,13 +429,13 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 func TestFuzzVerifyExit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ve := &eth.SignedVoluntaryExit{}
-	val := &stateTrie.ReadOnlyValidator{}
+	val := stateTrie.ReadOnlyValidator{}
 	fork := &pb.Fork{}
 	var slot uint64
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(ve)
-		fuzzer.Fuzz(val)
+		fuzzer.Fuzz(&val)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
 		err := VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])

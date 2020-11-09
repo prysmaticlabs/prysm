@@ -31,5 +31,6 @@ func SpadinaConfig() *BeaconChainConfig {
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x00, 0x02}
 	cfg.NetworkName = "Spadina"
 	cfg.MinGenesisActiveValidatorCount = 1024
+	cfg.SecondsPerETH1Block = 14
 	return cfg
 }
