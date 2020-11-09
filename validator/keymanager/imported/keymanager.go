@@ -282,7 +282,8 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		existingDisabledPubKeys[pk] = true
 	}
 	for _, pk := range keys {
-		if _, ok := existingDisabledPubKeys[string(pk[:])]; !ok {
+		pkToHexStr := fmt.Sprintf("%#x", pk)
+		if _, ok := existingDisabledPubKeys[pkToHexStr]; !ok {
 			result = append(result, pk)
 		}
 	}
