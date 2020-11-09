@@ -181,9 +181,8 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	}
 }
 
-func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
+func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T) {
 	ctx := context.Background()
-	// Mark an attestation spanning epochs 0 to 3.
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
@@ -191,35 +190,87 @@ func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
 			CommitteeIndex:  2,
 			BeaconBlockRoot: []byte("great block"),
 			Source: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  []byte("good source"),
+				Root: []byte("good source"),
 			},
 			Target: &ethpb.Checkpoint{
-				Epoch: 11,
-				Root:  []byte("good target"),
+				Root: []byte("good target"),
 			},
 		},
 	}
-	sr := [32]byte{1}
+
 	v, _, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	passThrough := 0
 	var wg sync.WaitGroup
-	for i := uint64(0); i < 10; i++ {
-		att.Data.Source.Epoch = i
+	for i := uint64(0); i < 100; i++ {
+
 		wg.Add(1)
-		go func(a *ethpb.IndexedAttestation) {
-			err := v.postAttSignUpdate(ctx, a, pubKey, sr)
+		//Test surround and surrounded attestations.
+		go func(i uint64) {
+			sr := [32]byte{1}
+			att.Data.Source.Epoch = 110 - i
+			att.Data.Target.Epoch = 111 + i
+			err := v.postAttSignUpdate(ctx, att, pubKey, sr)
 			if err == nil {
 				passThrough++
+			} else {
+				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
+				t.Logf("attestation target epoch %d", att.Data.Target.Epoch)
 			}
 			wg.Done()
-		}(att)
+		}(i)
 	}
 	wg.Wait()
 	require.Equal(t, 1, passThrough)
+
+}
+
+func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
+	ctx := context.Background()
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: []byte("great block"),
+			Source: &ethpb.Checkpoint{
+				Root: []byte("good source"),
+			},
+			Target: &ethpb.Checkpoint{
+				Root: []byte("good target"),
+			},
+		},
+	}
+
+	v, _, validatorKey, finish := setup(t)
+	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	passThrough := 0
+	var wg sync.WaitGroup
+	for i := uint64(0); i < 100; i++ {
+
+		wg.Add(1)
+		//Test double attestations.
+		go func(i uint64) {
+			sr := [32]byte{byte(i)}
+			att.Data.Source.Epoch = 110 - i
+			att.Data.Target.Epoch = 111
+			err := v.postAttSignUpdate(ctx, att, pubKey, sr)
+			if err == nil {
+				passThrough++
+			} else {
+				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
+				t.Logf("signing root %d", att.Data.Target.Epoch)
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	require.Equal(t, 1, passThrough)
+
 }
 
 func TestAttestationHistory_Prunes(t *testing.T) {
