@@ -309,7 +309,8 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 		existingDisabledPubKeys[pk] = true
 	}
 	for i, pk := range pubKeys {
-		if _, ok := existingDisabledPubKeys[string(pk[:])]; !ok {
+		pkToHexStr := fmt.Sprintf("%#x", pk)
+		if _, ok := existingDisabledPubKeys[pkToHexStr]; !ok {
 			seckey, ok := secretKeysCache[pk]
 			if !ok {
 				return nil, errors.New("Could not fetch private key")
