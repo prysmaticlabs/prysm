@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -20,33 +20,46 @@ type bls12SecretKey struct {
 }
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
-func RandKey() iface.SecretKey {
+func RandKey() (common.SecretKey, error) {
 	// Generate 32 bytes of randomness
 	var ikm [32]byte
 	_, err := rand.NewGenerator().Read(ikm[:])
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &bls12SecretKey{blst.KeyGen(ikm[:])}
+	// Defensive check, that we have not generated a secret key,
+	secKey := &bls12SecretKey{blst.KeyGen(ikm[:])}
+	if secKey.IsZero() {
+		return nil, common.ErrZeroKey
+	}
+	return secKey, nil
 }
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
-func SecretKeyFromBytes(privKey []byte) (iface.SecretKey, error) {
+func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 	if len(privKey) != params.BeaconConfig().BLSSecretKeyLength {
 		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretKeyLength)
 	}
-
 	secKey := new(blst.SecretKey).Deserialize(privKey)
 	if secKey == nil {
 		return nil, errors.New("could not unmarshal bytes into secret key")
 	}
-
-	return &bls12SecretKey{p: secKey}, nil
+	wrappedKey := &bls12SecretKey{p: secKey}
+	if wrappedKey.IsZero() {
+		return nil, common.ErrZeroKey
+	}
+	return wrappedKey, nil
 }
 
 // PublicKey obtains the public key corresponding to the BLS secret key.
-func (s *bls12SecretKey) PublicKey() iface.PublicKey {
+func (s *bls12SecretKey) PublicKey() common.PublicKey {
 	return &PublicKey{p: new(blstPublicKey).From(s.p)}
+}
+
+// IsZero checks if the secret key is a zero key.
+func (s *bls12SecretKey) IsZero() bool {
+	zeroKey := new(blst.SecretKey)
+	return s.p.Equals(zeroKey)
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
@@ -57,7 +70,7 @@ func (s *bls12SecretKey) PublicKey() iface.PublicKey {
 //
 // In ETH2.0 specification:
 // def Sign(SK: int, message: Bytes) -> BLSSignature
-func (s *bls12SecretKey) Sign(msg []byte) iface.Signature {
+func (s *bls12SecretKey) Sign(msg []byte) common.Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}

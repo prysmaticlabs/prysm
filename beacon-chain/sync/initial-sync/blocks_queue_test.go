@@ -5,11 +5,18 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -25,17 +32,15 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher:         mc,
-		finalizationFetcher: mc,
-		p2p:                 p2p,
+		chain: mc,
+		p2p:   p2p,
 	})
 
 	t.Run("stop without start", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
@@ -45,8 +50,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -56,8 +60,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -69,8 +72,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -94,8 +96,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -108,8 +109,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -121,8 +121,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.NoError(t, queue.start())
@@ -138,15 +137,13 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 			{blocks: makeSequence(500, 628), finalizedEpoch: 16, headSlot: 600},
 		}, p.Peers())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p,
+			chain: mc,
+			p2p:   p,
 		})
 		// Mode 1: stop on finalized.
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 			startSlot:           128,
 		})
@@ -154,8 +151,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		// Mode 2: unconstrained.
 		queue = newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 			startSlot:           128,
 			mode:                modeNonConstrained,
@@ -276,20 +272,18 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			defer cancel()
 
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-				headFetcher:         mc,
-				finalizationFetcher: mc,
-				p2p:                 p2p,
+				chain: mc,
+				p2p:   p2p,
 			})
 			queue := newBlocksQueue(ctx, &blocksQueueConfig{
 				blocksFetcher:       fetcher,
-				headFetcher:         mc,
-				finalizationFetcher: mc,
+				chain:               mc,
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
 			processBlock := func(block *eth.SignedBeaconBlock) error {
 				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block.ParentRoot)) {
-					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
+					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block.ParentRoot)
 				}
 				root, err := block.Block.HashTreeRoot()
 				if err != nil {
@@ -310,16 +304,17 @@ func TestBlocksQueue_Loop(t *testing.T) {
 
 			assert.NoError(t, queue.stop())
 
-			if queue.headFetcher.HeadSlot() < tt.highestExpectedSlot {
+			if queue.chain.HeadSlot() < tt.highestExpectedSlot {
 				t.Errorf("Not enough slots synced, want: %v, got: %v",
-					len(tt.expectedBlockSlots), queue.headFetcher.HeadSlot())
+					len(tt.expectedBlockSlots), queue.chain.HeadSlot())
 			}
 			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
 			var receivedBlockSlots []uint64
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 			}
-			missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			missing := sliceutil.NotUint64(
+				sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
@@ -334,17 +329,15 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher:         mc,
-		finalizationFetcher: mc,
-		p2p:                 p2p,
+		chain: mc,
+		p2p:   p2p,
 	})
 
 	t.Run("expired context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onScheduleEvent(ctx)
@@ -359,8 +352,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	t.Run("invalid input state", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -380,8 +372,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	t.Run("slot is too high", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -397,8 +388,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	t.Run("fetcher fails scheduling", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		// Cancel to make fetcher spit error when trying to schedule next FSM.
@@ -415,8 +405,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	t.Run("schedule next fetch ok", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onScheduleEvent(ctx)
@@ -435,17 +424,15 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher:         mc,
-		finalizationFetcher: mc,
-		p2p:                 p2p,
+		chain: mc,
+		p2p:   p2p,
 	})
 
 	t.Run("expired context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onDataReceivedEvent(ctx)
@@ -460,8 +447,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	t.Run("invalid input state", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -481,8 +467,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	t.Run("invalid input param", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -497,8 +482,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	t.Run("slot is too high do nothing", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -516,8 +500,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	t.Run("slot is too high force re-request on previous epoch", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -542,8 +525,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	t.Run("invalid data returned", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -554,9 +536,9 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			state: stateScheduled,
 		}, &fetchRequestResponse{
 			pid: "abc",
-			err: errInvalidFetchedData,
+			err: beaconsync.ErrInvalidFetchedData,
 		})
-		assert.ErrorContains(t, errInvalidFetchedData.Error(), err)
+		assert.ErrorContains(t, beaconsync.ErrInvalidFetchedData.Error(), err)
 		assert.Equal(t, stateScheduled, updatedState)
 		assert.LogsContain(t, hook, "msg=\"Peer is penalized for invalid blocks\" pid=ZiCa")
 	})
@@ -564,8 +546,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	t.Run("transition ok", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -597,17 +578,15 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher:         mc,
-		finalizationFetcher: mc,
-		p2p:                 p2p,
+		chain: mc,
+		p2p:   p2p,
 	})
 
 	t.Run("expired context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -622,8 +601,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 	t.Run("invalid input state", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -643,8 +621,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 	t.Run("no blocks to send", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -659,14 +636,12 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 
 	t.Run("send from the first machine", func(t *testing.T) {
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p2p,
+			chain: mc,
+			p2p:   p2p,
 		})
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		queue.smm.addStateMachine(256)
@@ -686,14 +661,12 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 
 	t.Run("previous machines are not processed - do not send", func(t *testing.T) {
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p2p,
+			chain: mc,
+			p2p:   p2p,
 		})
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		queue.smm.addStateMachine(128)
@@ -719,14 +692,12 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 
 	t.Run("previous machines are processed - send", func(t *testing.T) {
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p2p,
+			chain: mc,
+			p2p:   p2p,
 		})
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		queue.smm.addStateMachine(256)
@@ -752,17 +723,15 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher:         mc,
-		finalizationFetcher: mc,
-		p2p:                 p2p,
+		chain: mc,
+		p2p:   p2p,
 	})
 
 	t.Run("expired context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onProcessSkippedEvent(ctx)
@@ -777,8 +746,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	t.Run("invalid input state", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -798,14 +766,13 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	t.Run("not the last machine - do nothing", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
 		queue.smm.addStateMachine(256)
 		// Machine is not skipped for too long. Do not mark as new just yet.
-		queue.smm.machines[256].updated = timeutils.Now().Add(-3 * staleEpochTimeout)
+		queue.smm.machines[256].updated = timeutils.Now().Add(-1 * (skippedMachineTimeout / 2))
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateScheduled
@@ -818,14 +785,13 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	t.Run("not the last machine - reset", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
 		queue.smm.addStateMachine(256)
 		// Machine is skipped for too long. Reset.
-		queue.smm.machines[256].updated = timeutils.Now().Add(-5 * staleEpochTimeout)
+		queue.smm.machines[256].updated = timeutils.Now().Add(-1 * skippedMachineTimeout)
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateScheduled
@@ -838,8 +804,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	t.Run("not all machines are skipped", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -858,8 +823,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	t.Run("not enough peers", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -888,18 +852,16 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			{blocks: makeSequence(1, 160), finalizedEpoch: 5, headSlot: 128},
 		}, p.Peers())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p,
+			chain: mc,
+			p2p:   p,
 		})
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
-		startSlot := queue.headFetcher.HeadSlot()
+		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
 		for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -917,19 +879,17 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			{blocks: makeSequence(500, 628), finalizedEpoch: 16, headSlot: 600},
 		}, p.Peers())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p,
+			chain: mc,
+			p2p:   p,
 		})
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		assert.Equal(t, blockBatchLimit, queue.highestExpectedSlot)
 
-		startSlot := queue.headFetcher.HeadSlot()
+		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
 		var machineSlots []uint64
 		for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
@@ -940,7 +900,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			_, ok := queue.smm.findStateMachine(slot)
 			assert.Equal(t, true, ok)
 		}
-		// Update head slot, so that machines are re-arranges starging from the next slot i.e.
+		// Update head slot, so that machines are re-arranged starting from the next slot i.e.
 		// there's no point to reset machines for some slot that has already been processed.
 		updatedSlot := uint64(100)
 		defer func() {
@@ -969,20 +929,18 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			{blocks: makeSequence(500, 628), finalizedEpoch: 16, headSlot: 600},
 		}, p.Peers())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p,
+			chain: mc,
+			p2p:   p,
 		})
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		queue.mode = modeNonConstrained
 		assert.Equal(t, blockBatchLimit, queue.highestExpectedSlot)
 
-		startSlot := queue.headFetcher.HeadSlot()
+		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
 		var machineSlots []uint64
 		for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
@@ -993,7 +951,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			_, ok := queue.smm.findStateMachine(slot)
 			assert.Equal(t, true, ok)
 		}
-		// Update head slot, so that machines are re-arranges starging from the next slot i.e.
+		// Update head slot, so that machines are re-arranged starting from the next slot i.e.
 		// there's no point to reset machines for some slot that has already been processed.
 		updatedSlot := uint64(100)
 		require.NoError(t, mc.State.SetSlot(updatedSlot))
@@ -1021,17 +979,15 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		headFetcher:         mc,
-		finalizationFetcher: mc,
-		p2p:                 p2p,
+		chain: mc,
+		p2p:   p2p,
 	})
 
 	t.Run("expired context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
@@ -1046,8 +1002,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	t.Run("invalid input state", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 
@@ -1067,8 +1022,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	t.Run("process non stale machine", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
@@ -1084,8 +1038,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	t.Run("process stale machine", func(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
-			headFetcher:         mc,
-			finalizationFetcher: mc,
+			chain:               mc,
 			highestExpectedSlot: blockBatchLimit,
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
@@ -1096,5 +1049,209 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		// State should change, as machine is stale.
 		assert.NoError(t, err)
 		assert.Equal(t, stateSkipped, updatedState)
+	})
+}
+
+func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		EnableSyncBacktracking: true,
+	})
+	defer resetCfg()
+
+	beaconDB, _ := dbtest.SetupDB(t)
+	p2p := p2pt.NewTestP2P(t)
+
+	// The chain1 contains 250 blocks and is a dead end.
+	// The chain2 contains 296 blocks, with fork started at slot 128 of chain1.
+	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
+	forkedSlot := uint64(201)
+	chain2 := extendBlockSequence(t, chain1[:forkedSlot], 100)
+	finalizedSlot := uint64(63)
+	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+
+	genesisBlock := chain1[0]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesisBlock))
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: finalizedEpoch,
+			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			chain: mc,
+			p2p:   p2p,
+			db:    beaconDB,
+		},
+	)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+
+	queue := newBlocksQueue(ctx, &blocksQueueConfig{
+		blocksFetcher:       fetcher,
+		chain:               mc,
+		highestExpectedSlot: uint64(len(chain2) - 1),
+		mode:                modeNonConstrained,
+	})
+
+	// Populate database with blocks from unfavourable fork i.e. branch that leads to dead end.
+	for _, blk := range chain1[1:] {
+		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+		// Save block only if parent root is already in database or cache.
+		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
+			require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+			require.NoError(t, st.SetSlot(blk.Block.Slot))
+		}
+	}
+	require.Equal(t, uint64(len(chain1)-1), mc.HeadSlot())
+	hook := logTest.NewGlobal()
+
+	t.Run("unfavourable fork and no alternative branches", func(t *testing.T) {
+		defer hook.Reset()
+		// Reset all machines.
+		require.NoError(t, queue.smm.removeAllStateMachines())
+
+		// Add peer that will advertise high non-finalized slot, but will not be able to support
+		// its claims with actual blocks.
+		emptyPeer := connectPeerHavingBlocks(t, p2p, chain1, finalizedSlot, p2p.Peers())
+		defer func() {
+			p2p.Peers().SetConnectionState(emptyPeer, peers.PeerDisconnected)
+		}()
+		chainState, err := p2p.Peers().ChainState(emptyPeer)
+		require.NoError(t, err)
+		chainState.HeadSlot = 500
+		p2p.Peers().SetChainState(emptyPeer, chainState)
+
+		startSlot := mc.HeadSlot() + 1
+		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		machineSlots := make([]uint64, 0)
+		for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+			queue.smm.addStateMachine(i).setState(stateSkipped)
+			machineSlots = append(machineSlots, i)
+		}
+		for _, slot := range machineSlots {
+			_, ok := queue.smm.findStateMachine(slot)
+			assert.Equal(t, true, ok)
+		}
+		// Since counter for stale epochs hasn't exceeded threshold, backtracking is not triggered.
+		handlerFn := queue.onProcessSkippedEvent(ctx)
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		updatedState, err := handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
+		assert.LogsDoNotContain(t, hook, "Searching for alternative blocks")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found for peer")
+		hook.Reset()
+
+		// The last machine got removed (it was for non-skipped slot, which fails).
+		queue.smm.addStateMachine(machineSlots[len(machineSlots)-1])
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		for _, slot := range machineSlots {
+			fsm, ok := queue.smm.findStateMachine(slot)
+			require.Equal(t, true, ok)
+			fsm.setState(stateSkipped)
+		}
+
+		// Update counter, and trigger backtracking.
+		queue.staleEpochs[helpers.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		handlerFn = queue.onProcessSkippedEvent(ctx)
+		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
+		assert.LogsContain(t, hook, "Searching for alternative blocks")
+		assert.LogsContain(t, hook, "No alternative blocks found for peer")
+	})
+
+	t.Run("unfavourable fork and alternative branches exist", func(t *testing.T) {
+		defer hook.Reset()
+		// Reset all machines.
+		require.NoError(t, queue.smm.removeAllStateMachines())
+
+		// Add peer that will advertise high non-finalized slot, but will not be able to support
+		// its claims with actual blocks.
+		forkedPeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
+		startSlot := mc.HeadSlot() + 1
+		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		machineSlots := make([]uint64, 0)
+		for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+			queue.smm.addStateMachine(i).setState(stateSkipped)
+			machineSlots = append(machineSlots, i)
+		}
+		for _, slot := range machineSlots {
+			_, ok := queue.smm.findStateMachine(slot)
+			assert.Equal(t, true, ok)
+		}
+		// Since counter for stale epochs hasn't exceeded threshold, backtracking is not triggered.
+		handlerFn := queue.onProcessSkippedEvent(ctx)
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		updatedState, err := handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.Equal(t, lookaheadSteps-1, len(queue.smm.machines))
+		assert.LogsDoNotContain(t, hook, "Searching for alternative blocks")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found for peer")
+		hook.Reset()
+
+		// The last machine got removed (it was for non-skipped slot, which fails).
+		queue.smm.addStateMachine(machineSlots[len(machineSlots)-1])
+		assert.Equal(t, lookaheadSteps, len(queue.smm.machines))
+		for _, slot := range machineSlots {
+			fsm, ok := queue.smm.findStateMachine(slot)
+			require.Equal(t, true, ok)
+			fsm.setState(stateSkipped)
+		}
+
+		// Update counter, and trigger backtracking.
+		queue.staleEpochs[helpers.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		handlerFn = queue.onProcessSkippedEvent(ctx)
+		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
+		require.NoError(t, err)
+		assert.Equal(t, stateSkipped, updatedState)
+		assert.LogsContain(t, hook, "Searching for alternative blocks")
+		assert.LogsDoNotContain(t, hook, "No alternative blocks found for peer")
+		require.Equal(t, lookaheadSteps, len(queue.smm.machines))
+
+		// Alternative fork should start on slot 201, make sure that the first machine contains all
+		// required forked data, including data on and after slot 201.
+		forkedEpochStartSlot, err := helpers.StartSlot(helpers.SlotToEpoch(forkedSlot))
+		require.NoError(t, err)
+		firstFSM, ok := queue.smm.findStateMachine(forkedEpochStartSlot + 1)
+		require.Equal(t, true, ok)
+		require.Equal(t, stateDataParsed, firstFSM.state)
+		require.Equal(t, forkedPeer, firstFSM.pid)
+		require.Equal(t, 64, len(firstFSM.blocks))
+		require.Equal(t, forkedEpochStartSlot+1, firstFSM.blocks[0].Block.Slot)
+
+		// Assert that forked data from chain2 is available (within 64 fetched blocks).
+		for i, blk := range chain2[forkedEpochStartSlot+1:] {
+			if i >= len(firstFSM.blocks) {
+				break
+			}
+			rootFromFSM, err := firstFSM.blocks[i].Block.HashTreeRoot()
+			require.NoError(t, err)
+			blkRoot, err := blk.Block.HashTreeRoot()
+			require.NoError(t, err)
+			assert.Equal(t, blkRoot, rootFromFSM)
+		}
+
+		// Assert that machines are in the expected state.
+		startSlot = forkedEpochStartSlot + 1 + uint64(len(firstFSM.blocks))
+		for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
+			fsm, ok := queue.smm.findStateMachine(i)
+			require.Equal(t, true, ok)
+			assert.Equal(t, stateSkipped, fsm.state)
+		}
 	})
 }

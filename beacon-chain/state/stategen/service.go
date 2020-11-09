@@ -5,11 +5,13 @@ package stategen
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -67,20 +69,32 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
-	lastArchivedRoot := s.beaconDB.LastArchivedRoot(ctx)
-	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
+	c, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	// Resume as genesis state if there's no last archived state.
-	if lastArchivedState == nil {
+	fRoot := bytesutil.ToBytes32(c.Root)
+	// Resume as genesis state if last finalized root is zero hashes.
+	if fRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.GenesisState(ctx)
 	}
+	fState, err := s.StateByRoot(ctx, fRoot)
+	if err != nil {
+		return nil, err
+	}
+	if fState == nil {
+		return nil, errors.New("finalized state not found in disk")
+	}
 
-	s.finalizedInfo = &finalizedInfo{slot: lastArchivedState.Slot(), root: lastArchivedRoot, state: lastArchivedState.Copy()}
+	go func() {
+		if err := s.beaconDB.CleanUpDirtyStates(ctx, s.slotsPerArchivedPoint); err != nil {
+			log.WithError(err).Error("Could not clean up dirty states")
+		}
+	}()
 
-	return lastArchivedState, nil
+	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+
+	return fState, nil
 }
 
 // SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.

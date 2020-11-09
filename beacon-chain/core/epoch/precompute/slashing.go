@@ -26,18 +26,20 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) err
 	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, pBal.ActiveCurrentEpoch)
 	epochToWithdraw := currentEpoch + exitLength/2
 
-	vs := state.ValidatorsReadOnly()
 	var hasSlashing bool
 	// Iterate through validator list in state, stop until a validator satisfies slashing condition of current epoch.
-	for _, v := range vs {
-		if v == nil {
+	err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if val == nil {
 			return errors.New("nil validator in state")
 		}
-		correctEpoch := epochToWithdraw == v.WithdrawableEpoch()
-		if v.Slashed() && correctEpoch {
+		correctEpoch := epochToWithdraw == val.WithdrawableEpoch()
+		if val.Slashed() && correctEpoch {
 			hasSlashing = true
-			break
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 	// Exit early if there's no meaningful slashing to process.
 	if !hasSlashing {

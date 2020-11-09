@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -13,11 +14,18 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
+	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
+	// allowing us to behave smarter in terms of how this function is used concurrently.
+	epochKey := strconv.FormatUint(c.Epoch, 10 /* base 10 */)
+	lock := mputil.NewMultilock(string(c.Root) + epochKey)
+	lock.Lock()
+	defer lock.Unlock()
 	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
@@ -47,7 +55,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return baseState, nil
 	}
 
-	has, err := s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root))
+	// To avoid sharing the same state across checkpoint state cache and hot state cache,
+	// we don't add the state to check point cache.
+	has, err := s.stateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, err
 	}

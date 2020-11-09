@@ -10,3 +10,7 @@ enabled = true
 [[analyzers]]
 name = "test-coverage"
 enabled = true
+
+[[analyzers]]
+name = "shell"
+enabled = true
