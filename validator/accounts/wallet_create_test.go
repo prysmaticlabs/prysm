@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -107,7 +108,7 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
 	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
 	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwordFile")
-	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
+	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	t.Cleanup(func() {

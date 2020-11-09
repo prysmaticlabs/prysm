@@ -244,7 +244,7 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	validatorBalance := validator.EffectiveBalance()
 
-	if validator == nil {
+	if validator.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
 	if currentEpoch < validator.ActivationEligibilityEpoch() {

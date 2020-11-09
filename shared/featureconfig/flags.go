@@ -30,6 +30,12 @@ var (
 		Name:  "zinken",
 		Usage: "This defines the flag through which we can run on the Zinken Multiclient Testnet",
 	}
+	// Mainnet flag for easier tooling, no-op
+	Mainnet = &cli.BoolFlag{
+		Value: true,
+		Name:  "mainnet",
+		Usage: "Run on Ethereum 2.0 Main Net. This is the default and can be omitted.",
+	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
@@ -89,11 +95,16 @@ var (
 		Usage: "Disables pruning deposit proofs when they are no longer needed." +
 			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
+	enableSyncBacktracking = &cli.BoolFlag{
+		Name:  "enable-sync-backtracking",
+		Usage: "Enable experimental fork exploration backtracking algorithm",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enablePeerScorer,
+	enableSyncBacktracking,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -105,6 +116,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
+	Mainnet,
 	disableAccountsV2,
 	enableBlst,
 }...)
@@ -117,6 +129,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
+	Mainnet,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
@@ -137,11 +150,13 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	MedallaTestnet,
 	SpadinaTestnet,
 	ZinkenTestnet,
+	Mainnet,
 	enableBlst,
 	disableEth1DataMajorityVote,
 	enablePeerScorer,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
+	enableSyncBacktracking,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
