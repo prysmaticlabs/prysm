@@ -58,7 +58,6 @@ go_test(
     deps = [
         "//beacon-chain/core/feed/state:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",

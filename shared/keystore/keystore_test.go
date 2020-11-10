@@ -2,9 +2,6 @@ package keystore
 
 import (
 	"bytes"
-	"crypto/rand"
-	"fmt"
-	"math/big"
 	"os"
 	"path"
 	"testing"
@@ -12,14 +9,12 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStoreAndGetKey(t *testing.T) {
-	tempDir, teardown := setupTempKeystoreDir(t)
-	defer teardown()
+	tempDir := path.Join(t.TempDir(), "keystore", "file")
 	ks := &Keystore{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
@@ -36,8 +31,7 @@ func TestStoreAndGetKey(t *testing.T) {
 }
 
 func TestStoreAndGetKeys(t *testing.T) {
-	tempDir, teardown := setupTempKeystoreDir(t)
-	defer teardown()
+	tempDir := path.Join(t.TempDir(), "keystore")
 	ks := &Keystore{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
@@ -82,8 +76,7 @@ func TestEncryptDecryptKey(t *testing.T) {
 }
 
 func TestGetSymlinkedKeys(t *testing.T) {
-	tempDir, teardown := setupTempKeystoreDir(t)
-	defer teardown()
+	tempDir := path.Join(t.TempDir(), "keystore")
 	ks := &Keystore{
 		scryptN: LightScryptN,
 		scryptP: LightScryptP,
@@ -98,16 +91,5 @@ func TestGetSymlinkedKeys(t *testing.T) {
 	assert.Equal(t, 1, len(decryptedKeys))
 	for _, s := range decryptedKeys {
 		require.Equal(t, true, bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()))
-	}
-}
-
-// setupTempKeystoreDir creates temporary directory for storing keystore files.
-func setupTempKeystoreDir(t *testing.T) (string, func()) {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err)
-	tempDir := path.Join(testutil.TempDir(), fmt.Sprintf("%d", randPath), "keystore")
-
-	return tempDir, func() {
-		assert.NoError(t, os.RemoveAll(tempDir))
 	}
 }
