@@ -36,9 +36,8 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 }
 
 func TestStoreRandomKey(t *testing.T) {
-	tempDir := path.Join(t.TempDir(), "keystore")
 	ks := &Keystore{
-		keysDirPath: tempDir,
+		keysDirPath: path.Join(t.TempDir(), "keystore"),
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
 	}

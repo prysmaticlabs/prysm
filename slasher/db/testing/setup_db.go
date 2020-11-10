@@ -11,9 +11,8 @@ import (
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.
 func SetupSlasherDB(t testing.TB, spanCacheEnabled bool) *kv.Store {
-	p := t.TempDir()
 	cfg := &kv.Config{}
-	db, err := slasherDB.NewDB(p, cfg)
+	db, err := slasherDB.NewDB(t.TempDir(), cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}

@@ -9,8 +9,7 @@ import (
 
 // SetupDB instantiates and returns a DB instance for the validator client.
 func SetupDB(t testing.TB, pubkeys [][48]byte) db.Database {
-	p := t.TempDir()
-	db, err := kv.NewKVStore(p, pubkeys)
+	db, err := kv.NewKVStore(t.TempDir(), pubkeys)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
