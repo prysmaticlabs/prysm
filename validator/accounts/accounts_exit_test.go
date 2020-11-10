@@ -2,9 +2,6 @@ package accounts
 
 import (
 	"bytes"
-	"crypto/rand"
-	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -50,10 +46,8 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		Return(&ethpb.ProposeExitResponse{}, nil)
 
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
-	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
+	keysDir := filepath.Join(t.TempDir(), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
 
 	// Create keystore file in the keys directory we can then import from in our wallet.
@@ -72,7 +66,7 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		// Flag required for ExitAccounts to work.
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
-	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanager.Imported,
