@@ -148,7 +148,12 @@ func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 		if err != nil {
 			return err
 		}
-		e.Result.(*gethTypes.Header).Number = num
+		h, err := r.Backend.HeaderByNumber(context.Background(), num)
+		if err != nil {
+			return err
+		}
+		*e.Result.(*gethTypes.Header) = *h
+
 	}
 	return nil
 }
