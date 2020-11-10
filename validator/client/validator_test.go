@@ -1052,6 +1052,7 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 
 	// If AllValidatorsAreExited does not create the expected request, this test will fail
 	v := validator{keyManager: &mockKeymanager{keysMap: keysMap}, validatorClient: client}
-	_, err = v.AllValidatorsAreExited(context.Background())
+	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
+	assert.Equal(t, false, exited)
 }
