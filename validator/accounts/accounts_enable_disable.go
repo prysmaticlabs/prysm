@@ -2,7 +2,6 @@ package accounts
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -118,24 +117,21 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("not a imported keymanager")
 		}
-		disabledPublicKeysStr := strings.Split(km.KeymanagerOpts().DisabledPublicKeys, ",")
-		disabledPublicKeys := make([][48]byte, len(disabledPublicKeysStr))
-		for i, dpk := range disabledPublicKeysStr {
-			pkToByte, err := hex.DecodeString(strings.TrimSpace(dpk)[2:])
-			if err != nil {
-				return err
-			}
-			disabledPublicKeys[i] = bytesutil.ToBytes48(pkToByte)
-		}
+		disabledPublicKeys := km.KeymanagerOpts().DisabledPublicKeys
 		if len(disabledPublicKeys) == 0 {
 			return errors.New("No accounts are disabled.")
 		}
+		disabledPublicKeys48 := make([][48]byte, len(disabledPublicKeys))
+		for i := range disabledPublicKeys {
+			disabledPublicKeys48[i] = bytesutil.ToBytes48(disabledPublicKeys[i])
+		}
+
 		// Allow the user to interactively select the accounts to enable or optionally
 		// provide them via cli flags as a string of comma-separated, hex strings.
 		filteredPubKeys, err := filterPublicKeysFromUserInput(
 			cliCtx,
 			flags.EnablePublicKeysFlag,
-			disabledPublicKeys,
+			disabledPublicKeys48,
 			prompt.SelectAccountsEnablePromptText,
 		)
 		if err != nil {
@@ -163,7 +159,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 				}
 			} else {
 				promptText := "Are you sure you want to enable %d accounts? (%s) Y/N"
-				if len(filteredPubKeys) == len(disabledPublicKeys) {
+				if len(filteredPubKeys) == len(disabledPublicKeys48) {
 					promptText = fmt.Sprintf("Are you sure you want to enable all accounts? Y/N (%s)", au.BrightGreen(allAccountStr))
 				} else {
 					promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
@@ -209,23 +205,16 @@ func DisableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 			log.Info("Disabling accounts...")
 		}
 		updatedOpts := km.KeymanagerOpts()
-		disabledPublicKeys := strings.Split(updatedOpts.DisabledPublicKeys, ",")
-		updatedDisabledPubKeys := make([]string, 0)
-		existingDisabledPubKeys := make(map[string]bool, len(updatedOpts.DisabledPublicKeys))
-		for i, pk := range disabledPublicKeys {
-			if pk != "" {
-				disabledPublicKeys[i] = strings.TrimSpace(pk)
-				updatedDisabledPubKeys = append(updatedDisabledPubKeys, disabledPublicKeys[i])
-				existingDisabledPubKeys[pk] = true
-			}
+		// updatedDisabledPubKeys := make([][48]byte, 0)
+		existingDisabledPubKeys := make(map[[48]byte]bool, len(updatedOpts.DisabledPublicKeys))
+		for _, pk := range updatedOpts.DisabledPublicKeys {
+			existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
 		}
 		for _, pk := range cfg.DisablePublicKeys {
-			pkToStr := fmt.Sprintf("%#x", pk)
-			if _, ok := existingDisabledPubKeys[pkToStr]; !ok {
-				updatedDisabledPubKeys = append(updatedDisabledPubKeys, pkToStr)
+			if _, ok := existingDisabledPubKeys[bytesutil.ToBytes48(pk)]; !ok {
+				updatedOpts.DisabledPublicKeys = append(updatedOpts.DisabledPublicKeys, pk)
 			}
 		}
-		updatedOpts.DisabledPublicKeys = strings.Join(updatedDisabledPubKeys, ",")
 		keymanagerConfig, err := imported.MarshalOptionsFile(ctx, updatedOpts)
 		if err != nil {
 			return errors.Wrap(err, "could not marshal keymanager config file")
@@ -257,22 +246,17 @@ func EnableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 			log.Info("Enabling accounts...")
 		}
 		updatedOpts := km.KeymanagerOpts()
-		disabledPublicKeys := strings.Split(updatedOpts.DisabledPublicKeys, ",")
-		for i := range disabledPublicKeys {
-			disabledPublicKeys[i] = strings.TrimSpace(disabledPublicKeys[i])
-		}
-		updatedDisabledPubKeys := make([]string, 0)
-		set := make(map[string]bool, len(cfg.EnablePublicKeys))
+		updatedDisabledPubKeys := make([][]byte, 0)
+		setEnablePubKeys := make(map[[48]byte]bool, len(cfg.EnablePublicKeys))
 		for _, pk := range cfg.EnablePublicKeys {
-			pkToStr := fmt.Sprintf("%#x", pk)
-			set[pkToStr] = true
+			setEnablePubKeys[bytesutil.ToBytes48(pk)] = true
 		}
-		for _, pk := range disabledPublicKeys {
-			if _, ok := set[pk]; !ok {
+		for _, pk := range updatedOpts.DisabledPublicKeys {
+			if _, ok := setEnablePubKeys[bytesutil.ToBytes48(pk)]; !ok {
 				updatedDisabledPubKeys = append(updatedDisabledPubKeys, pk)
 			}
 		}
-		updatedOpts.DisabledPublicKeys = strings.Join(updatedDisabledPubKeys, ",")
+		updatedOpts.DisabledPublicKeys = updatedDisabledPubKeys
 		keymanagerConfig, err := imported.MarshalOptionsFile(ctx, updatedOpts)
 		if err != nil {
 			return errors.Wrap(err, "could not marshal keymanager config file")

@@ -44,10 +44,9 @@ const (
 
 // KeymanagerOpts for a imported keymanager.
 type KeymanagerOpts struct {
-	EIPVersion string `json:"direct_eip_version"`
-	Version    string `json:"direct_version"`
-	// Comma separated hexstrings
-	DisabledPublicKeys string `json:"disabled_public_keys"`
+	EIPVersion         string   `json:"direct_eip_version"`
+	Version            string   `json:"direct_version"`
+	DisabledPublicKeys [][]byte `json:"disabled_public_keys"`
 }
 
 // Keymanager implementation for imported keystores utilizing EIP-2335.
@@ -70,7 +69,7 @@ func DefaultKeymanagerOpts() *KeymanagerOpts {
 	return &KeymanagerOpts{
 		EIPVersion:         eipVersion,
 		Version:            "2",
-		DisabledPublicKeys: "",
+		DisabledPublicKeys: [][]byte{},
 	}
 }
 
@@ -272,18 +271,14 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 	lock.RLock()
 	keys := orderedPublicKeys
-	disabledPublicKeys := strings.Split(dr.KeymanagerOpts().DisabledPublicKeys, ",")
-	for i := range disabledPublicKeys {
-		disabledPublicKeys[i] = strings.TrimSpace(disabledPublicKeys[i])
-	}
+	disabledPublicKeys := dr.KeymanagerOpts().DisabledPublicKeys
 	result := make([][48]byte, 0)
-	existingDisabledPubKeys := make(map[string]bool, len(disabledPublicKeys))
+	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
 	for _, pk := range disabledPublicKeys {
-		existingDisabledPubKeys[pk] = true
+		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
 	}
 	for _, pk := range keys {
-		pkToHexStr := fmt.Sprintf("%#x", pk)
-		if _, ok := existingDisabledPubKeys[pkToHexStr]; !ok {
+		if _, ok := existingDisabledPubKeys[pk]; !ok {
 			result = append(result, pk)
 		}
 	}
@@ -300,17 +295,13 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
-	disabledPublicKeys := strings.Split(dr.KeymanagerOpts().DisabledPublicKeys, ",")
-	for i := range disabledPublicKeys {
-		disabledPublicKeys[i] = strings.TrimSpace(disabledPublicKeys[i])
-	}
-	existingDisabledPubKeys := make(map[string]bool, len(disabledPublicKeys))
+	disabledPublicKeys := dr.KeymanagerOpts().DisabledPublicKeys
+	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
 	for _, pk := range disabledPublicKeys {
-		existingDisabledPubKeys[pk] = true
+		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
 	}
 	for i, pk := range pubKeys {
-		pkToHexStr := fmt.Sprintf("%#x", pk)
-		if _, ok := existingDisabledPubKeys[pkToHexStr]; !ok {
+		if _, ok := existingDisabledPubKeys[pk]; !ok {
 			seckey, ok := secretKeysCache[pk]
 			if !ok {
 				return nil, errors.New("Could not fetch private key")
