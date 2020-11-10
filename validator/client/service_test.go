@@ -23,10 +23,7 @@ func TestMain(m *testing.M) {
 		}
 	}
 	defer cleanup()
-	code := m.Run()
-	// os.Exit will prevent defer from being called
-	cleanup()
-	os.Exit(code)
+	m.Run()
 }
 
 func TestStop_CancelsContext(t *testing.T) {

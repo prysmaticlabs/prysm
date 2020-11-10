@@ -57,7 +57,7 @@ go_test(
         "checkpoint_state_test.go",
         "committee_fuzz_test.go",
         "committee_test.go",
-        "feature_flag_test.go",
+        "cache_test.go",
         "hot_state_cache_test.go",
         "skip_slot_cache_test.go",
         "subnet_ids_test.go",
