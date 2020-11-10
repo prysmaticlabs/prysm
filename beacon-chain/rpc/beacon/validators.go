@@ -496,6 +496,8 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, err
 	}
+	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
+	// This ensures that we don't miss previous attestations when input requested epochs.
 	startSlot += params.BeaconConfig().SlotsPerEpoch - 1
 	state, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
