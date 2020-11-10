@@ -20,16 +20,10 @@ go_binary(
 
 go_image(
     name = "image",
-    srcs = ["main.go"],
     base = "//tools:go_image",
-    goarch = "amd64",
-    goos = "linux",
-    importpath = "github.com/prysmaticlabs/prysm/tools/contract-addr",
-    pure = "on",
-    race = "off",
+    binary = ":contract-addr",
     tags = ["manual"],
     visibility = ["//visibility:private"],
-    deps = ["//shared/maxprocs:go_default_library"],
 )
 
 container_bundle(

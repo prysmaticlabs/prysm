@@ -2,8 +2,6 @@ package rpc
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"golang.org/x/crypto/bcrypt"
@@ -54,7 +51,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 		return nil, status.Error(codes.FailedPrecondition, "Could not check if wallet directory exists")
 	}
 	if !hasDir {
-		if err := os.MkdirAll(walletDir, os.ModePerm); err != nil {
+		if err := fileutil.MkdirAll(walletDir); err != nil {
 			return nil, status.Errorf(codes.Internal, "could not write directory %s to disk: %v", walletDir, err)
 		}
 	}
@@ -151,7 +148,7 @@ func (s *Server) SaveHashedPassword(password string) error {
 		return errors.Wrap(err, "could not generate hashed password")
 	}
 	hashFilePath := filepath.Join(s.walletDir, HashedRPCPassword)
-	return ioutil.WriteFile(hashFilePath, hashedPassword, params.BeaconIoConfig().ReadWritePermissions)
+	return fileutil.WriteFile(hashFilePath, hashedPassword)
 }
 
 // Interval in which we should check if a user has not yet used the RPC Signup endpoint
