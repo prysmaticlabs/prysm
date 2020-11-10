@@ -71,7 +71,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	sig, err := v.signAtt(ctx, pubKey, data)
+	sig, signingRoot, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
@@ -106,7 +106,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 
 	indexedAtt.Signature = sig
-	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey); err != nil {
+	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey, signingRoot); err != nil {
 		log.WithFields(logrus.Fields{
 			"sourceEpoch": indexedAtt.Data.Source.Epoch,
 			"targetEpoch": indexedAtt.Data.Target.Epoch,
@@ -161,16 +161,11 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
 }
 
-// Given validator's public key, this returns the signature of an attestation data.
-func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, error) {
-	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester[:])
+// Given validator's public key, this function returns the signature of an attestation data and its signing root.
+func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, [32]byte, error) {
+	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
 	if err != nil {
-		return nil, err
-	}
-
-	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
-	if err != nil {
-		return nil, err
+		return nil, [32]byte{}, err
 	}
 
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
@@ -180,10 +175,22 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		Object:          &validatorpb.SignRequest_AttestationData{AttestationData: data},
 	})
 	if err != nil {
-		return nil, err
+		return nil, [32]byte{}, err
 	}
 
-	return sig.Marshal(), nil
+	return sig.Marshal(), root, nil
+}
+
+func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {
+	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester[:])
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	return domain, root, nil
 }
 
 // For logging, this saves the last submitted attester index to its attestation data. The purpose of this
