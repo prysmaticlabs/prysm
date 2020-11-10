@@ -96,7 +96,7 @@ func main() {
 			log.Printf("Could not ssz marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := ioutil.WriteFile(*sszOutputFile, encodedState, 0644); err != nil {
+		if err := fileutil.WriteFile(*sszOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}
@@ -108,7 +108,7 @@ func main() {
 			log.Printf("Could not yaml marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := ioutil.WriteFile(*yamlOutputFile, encodedState, 0644); err != nil {
+		if err := fileutil.WriteFile(*yamlOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}
@@ -120,7 +120,7 @@ func main() {
 			log.Printf("Could not json marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := ioutil.WriteFile(*jsonOutputFile, encodedState, 0644); err != nil {
+		if err := fileutil.WriteFile(*jsonOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}

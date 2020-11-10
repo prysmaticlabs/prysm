@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -120,23 +121,6 @@ func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
-	return s.DeleteStates(ctx, [][32]byte{blockRoot})
-}
-
-// DeleteStates by block roots.
-//
-// Note: bkt.Delete(key) uses a binary search to find the item in the database. Iterating with a
-// cursor is faster when there are a large set of keys to delete. This method is O(n) deletion where
-// n is the number of keys in the database. The alternative of calling  bkt.Delete on each key to
-// delete would be O(m*log(n)) which would be much slower given a large set of keys to delete.
-func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
-	defer span.End()
-
-	rootMap := make(map[[32]byte]bool, len(blockRoots))
-	for _, blockRoot := range blockRoots {
-		rootMap[blockRoot] = true
-	}
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -154,32 +138,36 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 		blockBkt := tx.Bucket(blocksBucket)
 		headBlkRoot := blockBkt.Get(headBlockRootKey)
 		bkt = tx.Bucket(stateBucket)
-		c := bkt.Cursor()
-
-		for blockRoot, _ := c.First(); blockRoot != nil; blockRoot, _ = c.Next() {
-			if !rootMap[bytesutil.ToBytes32(blockRoot)] {
-				continue
-			}
-			// Safe guard against deleting genesis, finalized, head state.
-			if bytes.Equal(blockRoot, checkpoint.Root) || bytes.Equal(blockRoot, genesisBlockRoot) || bytes.Equal(blockRoot, headBlkRoot) {
-				return errors.New("cannot delete genesis, finalized, or head state")
-			}
-
-			slot, err := slotByBlockRoot(ctx, tx, blockRoot)
-			if err != nil {
-				return err
-			}
-			indicesByBucket := createStateIndicesFromStateSlot(ctx, slot)
-			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot, tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
-			}
-
-			if err := c.Delete(); err != nil {
-				return err
-			}
+		// Safe guard against deleting genesis, finalized, head state.
+		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+			return errors.New("cannot delete genesis, finalized, or head state")
 		}
-		return nil
+
+		slot, err := slotByBlockRoot(ctx, tx, blockRoot[:])
+		if err != nil {
+			return err
+		}
+		indicesByBucket := createStateIndicesFromStateSlot(ctx, slot)
+		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
+			return errors.Wrap(err, "could not delete root for DB indices")
+		}
+
+		return bkt.Delete(blockRoot[:])
 	})
+}
+
+// DeleteStates by block roots.
+func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
+	defer span.End()
+
+	for _, r := range blockRoots {
+		if err := s.DeleteState(ctx, r); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // creates state from marshaled proto state bytes.
@@ -327,11 +315,16 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot uint64) map[strin
 //   (e.g. archived_interval=2048, states with slots after 1365).
 //   This is to tolerate skip slots. Not every state lays on the boundary.
 // 3.) state with current finalized root
+// 4.) unfinalized States
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
 
 	f, err := s.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+	finalizedSlot, err := helpers.StartSlot(f.Epoch)
 	if err != nil {
 		return err
 	}
@@ -344,11 +337,13 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 				return ctx.Err()
 			}
 
-			finalized := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
+			finalizedChkpt := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
 			slot := bytesutil.BytesToUint64BigEndian(k)
 			mod := slot % slotsPerArchivedPoint
-			// The following conditions cover 1, 2, and 3 above.
-			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalized {
+			nonFinalized := slot > finalizedSlot
+
+			// The following conditions cover 1, 2, 3 and 4 above.
+			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalizedChkpt && !nonFinalized {
 				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
 			}
 			return nil
@@ -356,6 +351,11 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ui
 	})
 	if err != nil {
 		return err
+	}
+
+	// Length of to be deleted roots is 0. Nothing to do.
+	if len(deletedRoots) == 0 {
+		return nil
 	}
 
 	log.WithField("count", len(deletedRoots)).Info("Cleaning up dirty states")
