@@ -1015,3 +1015,43 @@ func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
 }
+
+// TestAllValidatorsAreExited_CorrectRequest is a regression test that checks if the request contains the correct keys
+func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	// Create two different public keys
+	pubKey0 := [48]byte{6,7,8,9}
+	pubKey1 := [48]byte{1,2,3,4}
+	// This is the request expected from AllValidatorsAreExited()
+	request := &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: [][]byte{
+			pubKey0[:],
+			pubKey1[:],
+		},
+	}
+	statuses := []*ethpb.ValidatorStatusResponse{
+		{Status: ethpb.ValidatorStatus_ACTIVE},
+		{Status: ethpb.ValidatorStatus_EXITED},
+	}
+
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(), // ctx
+		request,      // request
+	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
+
+	keysMap := make(map[[48]byte]bls.SecretKey)
+	// secretKey below is just filler and is used multiple times
+	secretKeyBytes := [32]byte{1}
+	secretKey, err := bls.SecretKeyFromBytes(secretKeyBytes[:])
+	require.NoError(t, err)
+	keysMap[pubKey0] = secretKey
+	keysMap[pubKey1] = secretKey
+
+	// If AllValidatorsAreExited does not create the expected request, this test will fail
+	v := validator{keyManager: &mockKeymanager{keysMap: keysMap}, validatorClient: client}
+	_, err = v.AllValidatorsAreExited(context.Background())
+	require.NoError(t, err)
+}
