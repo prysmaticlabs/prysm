@@ -2,7 +2,6 @@ package kv
 
 import (
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -22,7 +21,6 @@ func setupDB(t testing.TB) *Store {
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, db.Close(), "Failed to close database")
-		require.NoError(t, os.RemoveAll(db.DatabasePath()), "Failed to remove directory")
 	})
 	return db
 }
@@ -33,7 +31,6 @@ func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, db.Close(), "Failed to close database")
-		require.NoError(t, os.RemoveAll(db.DatabasePath()), "Failed to remove directory")
 	})
 	return db
 }
