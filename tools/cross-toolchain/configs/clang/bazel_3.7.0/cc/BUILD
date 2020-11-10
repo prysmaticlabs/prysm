@@ -65,6 +65,7 @@ cc_toolchain(
     compiler_files = ":compiler_deps",
     dwp_files = ":empty",
     linker_files = ":compiler_deps",
+    module_map = ":module.modulemap",
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,

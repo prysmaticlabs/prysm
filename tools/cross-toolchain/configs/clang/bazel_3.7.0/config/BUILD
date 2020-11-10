@@ -29,7 +29,7 @@ toolchain(
         "@bazel_tools//platforms:linux",
         "@bazel_tools//platforms:x86_64",
     ],
-    toolchain = "//tools/cross-toolchain/configs/clang/bazel_3.2.0/cc:cc-compiler-k8",
+    toolchain = "//tools/cross-toolchain/configs/clang/bazel_3.7.0/cc:cc-compiler-k8",
     toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
 )
 
@@ -41,7 +41,7 @@ platform(
         "@bazel_tools//tools/cpp:clang",
     ],
     exec_properties = {
-        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:0175024b0968eee56a50d4d813c4b2fc68dca90e7ecc453cdae6e82e112b845d",
+        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:d5fa14154811dff0886e4c808dc15f18c4bb8545a1ef3c53805a0db13564bdad",
         "OSFamily": "Linux",
     },
 )
