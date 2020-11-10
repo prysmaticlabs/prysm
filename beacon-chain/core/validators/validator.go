@@ -45,7 +45,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 		return state, nil
 	}
 	var exitEpochs []uint64
-	err = state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	err = state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
@@ -66,7 +66,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := uint64(0)
-	err = state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	err = state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
 		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}

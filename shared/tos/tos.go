@@ -2,15 +2,12 @@ package tos
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -66,10 +63,10 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 
 // saveTosAccepted creates a file when Tos accepted.
 func saveTosAccepted(ctx *cli.Context) {
-	if err := os.MkdirAll(ctx.String(cmd.DataDirFlag.Name), params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+	if err := fileutil.MkdirAll(ctx.String(cmd.DataDirFlag.Name)); err != nil {
 		log.WithError(err).Warnf("error creating directory: %s", ctx.String(cmd.DataDirFlag.Name))
 	}
-	err := ioutil.WriteFile(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""), 0644)
+	err := fileutil.WriteFile(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""))
 	if err != nil {
 		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name, filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename))
 	}
