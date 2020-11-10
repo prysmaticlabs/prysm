@@ -102,8 +102,8 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		return err
 	}
 	log.WithField("publicKeys", allAccountStr).Warn(
-		"Attempted to delete accounts. IMPORTANT: please run validator accounts list to ensure" +
-			"the public keys are indeed deleted. If they are still there, please file an issue" +
+		"Attempted to delete accounts. IMPORTANT: please run `validator accounts list` to ensure " +
+			"the public keys are indeed deleted. If they are still there, please file an issue at " +
 			"https://github.com/prysmaticlabs/prysm/issues/new")
 	return nil
 }
