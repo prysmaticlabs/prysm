@@ -19,21 +19,52 @@ load(
 )
 
 def _impl(ctx):
-    toolchain_identifier = "osxcross"
+    toolchain_identifier = "clang-linux-cross"
     compiler = "clang"
-    abi_version = "darwin_x86_64"
-    abi_libc_version = "darwin_x86_64"
-    install = "/usr/x86_64-apple-darwin/"
-    clang_version = "10.0.0"
-    target_libc = "macosx"
-    target_cpu = "x86_64"
-    osxcross = install + "osxcross/"
-    osxcross_binprefix = osxcross + "bin/x86_64-apple-darwin19-"
-    sdkroot = osxcross + "SDK/MacOSX10.15.sdk/"
-    cross_system_include_dirs = [
-        "/usr/lib/clang/10.0.0/include",
-        osxcross + "include",
-        sdkroot + "usr/include",
+    abi_version = "clang"
+    abi_libc_version = "glibc_unknown"
+    target_libc = "glibc_unknown"
+    target_cpu = ctx.attr.target.split("-")[0]
+
+    if (target_cpu == "aarch64"):
+        sysroot = "/usr/aarch64-linux-gnu"
+        include_path_prefix = sysroot
+    elif (target_cpu == "x86_64"):
+        sysroot = "/"
+        include_path_prefix = "/usr"
+    else:
+        fail("Unreachable")
+
+    if (target_cpu == "aarch64"):
+        cross_system_include_dirs = [
+            include_path_prefix + "/include/c++/v1",
+            include_path_prefix + "/lib/clang/10.0.0/include",
+        ]
+    else:
+        cross_system_include_dirs = [
+            include_path_prefix + "/include/c++/v1",
+            include_path_prefix + "/lib/clang/10.0.0/include",
+            include_path_prefix + "/include/x86_64-linux-gnu",
+        ]
+
+    cross_system_include_dirs += [
+        include_path_prefix + "/include/",
+        include_path_prefix + "/include/linux",
+        include_path_prefix + "/include/asm",
+        include_path_prefix + "/include/asm-generic",
+    ]
+
+    if (target_cpu == "aarch64"):
+        cross_system_lib_dirs = [
+            "/usr/" + ctx.attr.target + "/lib",
+        ]
+    else:
+        cross_system_lib_dirs = [
+            "/usr/lib/x86_64-linux-gnu/",
+        ]
+
+    cross_system_lib_dirs += [
+        "/usr/lib/gcc/x86_64-linux-gnu/8",
     ]
 
     opt_feature = feature(name = "opt")
@@ -52,7 +83,6 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            "-stdlib=libc++",
                             "-no-canonical-prefixes",
                             "-Wno-builtin-macro-redefined",
                             "-D__DATE__=\"redacted\"",
@@ -79,8 +109,7 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            "-mlinker-version=400",
-                            "-B " + osxcross + "bin",
+                            "--target=" + ctx.attr.target,
                             "-nostdinc",
                             "-U_FORTIFY_SOURCE",
                             "-fstack-protector",
@@ -121,6 +150,15 @@ def _impl(ctx):
         ],
     )
 
+    additional_link_flags = [
+        "-l:libc++.a",
+        "-l:libc++abi.a",
+        "-l:libunwind.a",
+        "-lpthread",
+        "-ldl",
+        "-rtlib=compiler-rt",
+    ]
+
     default_link_flags_feature = feature(
         name = "default_link_flags",
         enabled = True,
@@ -129,19 +167,22 @@ def _impl(ctx):
                 actions = ALL_LINK_ACTIONS,
                 flag_groups = [
                     flag_group(
-                        flags = [
-                            "-v",
+                        flags = additional_link_flags + [
+                            "--target=" + ctx.attr.target,
                             "-lm",
                             "-no-canonical-prefixes",
-                            "-lc++",
-                            "-lc++abi",
-                            "-F" + sdkroot + "System/Library/Frameworks/",
-                            "-L"+ sdkroot + "usr/lib",
-                            "-undefined",
-                            "dynamic_lookup",
-                            ],
+                            "-fuse-ld=lld",
+                            "-Wl,--build-id=md5",
+                            "-Wl,--hash-style=gnu",
+                            "-Wl,-z,relro,-z,now",
+                        ] + ["-L" + d for d in cross_system_lib_dirs],
                     ),
                 ],
+            ),
+            flag_set(
+                actions = ALL_LINK_ACTIONS,
+                flag_groups = [flag_group(flags = ["-Wl,--gc-sections"])],
+                with_features = [with_feature_set(features = ["opt"])],
             ),
         ],
     )
@@ -168,6 +209,22 @@ def _impl(ctx):
                         expand_if_available = "user_compile_flags",
                         flags = ["%{user_compile_flags}"],
                         iterate_over = "user_compile_flags",
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    sysroot_feature = feature(
+        name = "sysroot",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = ALL_COMPILE_ACTIONS + ALL_LINK_ACTIONS,
+                flag_groups = [
+                    flag_group(
+                        expand_if_available = "sysroot",
+                        flags = ["--sysroot=%{sysroot}"],
                     ),
                 ],
             ),
@@ -205,19 +262,21 @@ def _impl(ctx):
         default_compile_flags_feature,
         objcopy_embed_flags_feature,
         user_compile_flags_feature,
+        sysroot_feature,
         coverage_feature,
     ]
 
     tool_paths = [
-        tool_path(name = "ld", path = osxcross_binprefix + "ld"),
-        tool_path(name = "cpp", path = osxcross + "bin/o64-clang++"),
-        tool_path(name = "dwp", path = "/usr/bin/dwp"),
-        tool_path(name = "gcov", path = "/usr/bin/gcov"),
-        tool_path(name = "nm", path = osxcross_binprefix + "nm"),
-        tool_path(name = "objdump", path = osxcross_binprefix + "ObjectDump"),
-        tool_path(name = "strip", path = osxcross_binprefix + "strip"),
-        tool_path(name = "gcc", path = osxcross + "bin/o64-clang"),
-        tool_path(name = "ar", path = osxcross_binprefix + "libtool"),
+        tool_path(name = "ld", path = "/usr/bin/ld.lld"),
+        tool_path(name = "cpp", path = "/usr/bin/clang-cpp"),
+        tool_path(name = "dwp", path = "/usr/bin/llvm-dwp"),
+        tool_path(name = "gcov", path = "/usr/bin/llvm-profdata"),
+        tool_path(name = "nm", path = "/usr/bin/llvm-nm"),
+        tool_path(name = "objcopy", path = "/usr/bin/llvm-objcopy"),
+        tool_path(name = "objdump", path = "/usr/bin/llvm-objdump"),
+        tool_path(name = "strip", path = "/usr/bin/strip"),
+        tool_path(name = "gcc", path = "/usr/bin/clang"),
+        tool_path(name = "ar", path = "/usr/bin/llvm-ar"),
     ]
 
     return cc_common.create_cc_toolchain_config_info(
@@ -225,6 +284,7 @@ def _impl(ctx):
         features = features,
         abi_version = abi_version,
         abi_libc_version = abi_libc_version,
+        builtin_sysroot = sysroot,
         compiler = compiler,
         cxx_builtin_include_directories = cross_system_include_dirs,
         host_system_name = "x86_64-unknown-linux-gnu",
@@ -235,7 +295,7 @@ def _impl(ctx):
         toolchain_identifier = toolchain_identifier,
     )
 
-osx_cc_toolchain_config = rule(
+arm64_cc_toolchain_config = rule(
     implementation = _impl,
     attrs = {
         "target": attr.string(mandatory = True),
