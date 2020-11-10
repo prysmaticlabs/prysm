@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	os.Exit(m.Run())
+	m.Run()
 }
 
 // Test that slasher node can close.
