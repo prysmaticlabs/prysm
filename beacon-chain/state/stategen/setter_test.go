@@ -182,7 +182,11 @@ func TestEnableSaveHotStateToDB_Disabled(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 	service.saveHotStateDB.enabled = true
-	service.saveHotStateDB.savedStateRoots = [][32]byte{{'a'}}
+	b := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, b))
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.saveHotStateDB.savedStateRoots = [][32]byte{r}
 	require.NoError(t, service.DisableSaveHotStateToDB(ctx))
 	require.LogsContain(t, hook, "Exiting mode to save hot states in DB")
 	require.Equal(t, false, service.saveHotStateDB.enabled)
