@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "accounts.go",
-        "accounts_activation.go",
+        "accounts_enable_disable.go",
         "accounts_backup.go",
         "accounts_create.go",
         "accounts_delete.go",

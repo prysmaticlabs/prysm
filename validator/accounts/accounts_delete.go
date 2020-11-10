@@ -87,10 +87,10 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	if err := DeleteAccount(cliCtx.Context, &AccountConfig{
-		Wallet:     w,
-		Keymanager: keymanager,
-		PublicKeys: rawPublicKeys,
+	if err := DeleteAccount(cliCtx.Context, &AccountsConfig{
+		Wallet:           w,
+		Keymanager:       keymanager,
+		DeletePublicKeys: rawPublicKeys,
 	}); err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 }
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(ctx context.Context, cfg *AccountConfig) error {
+func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
@@ -108,12 +108,12 @@ func DeleteAccount(ctx context.Context, cfg *AccountConfig) error {
 		if !ok {
 			return errors.New("not a imported keymanager")
 		}
-		if len(cfg.PublicKeys) == 1 {
+		if len(cfg.DeletePublicKeys) == 1 {
 			log.Info("Deleting account...")
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		if err := km.DeleteAccounts(ctx, cfg.PublicKeys); err != nil {
+		if err := km.DeleteAccounts(ctx, cfg.DeletePublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	case keymanager.Derived:

@@ -5,9 +5,11 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
-// AccountConfig specifies parameters to run to delete, enable, disable accounts.
-type AccountConfig struct {
-	Wallet     *wallet.Wallet
-	Keymanager keymanager.IKeymanager
-	PublicKeys [][]byte
+// AccountsConfig specifies parameters to run to delete, enable, disable accounts.
+type AccountsConfig struct {
+	Wallet            *wallet.Wallet
+	Keymanager        keymanager.IKeymanager
+	DisablePublicKeys [][]byte
+	EnablePublicKeys  [][]byte
+	DeletePublicKeys  [][]byte
 }
