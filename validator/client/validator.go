@@ -331,7 +331,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 					"activationEpoch": status.Status.ActivationEpoch,
 				}).Info("Waiting for activation")
 			}
-		case ethpb.ValidatorStatus_ACTIVE:
+		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
@@ -597,7 +597,8 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	}
 	var publicKeys [][]byte
 	for _, key := range validatingKeys {
-		publicKeys = append(publicKeys, key[:])
+		copyKey := key
+		publicKeys = append(publicKeys, copyKey[:])
 	}
 	request := &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: publicKeys,

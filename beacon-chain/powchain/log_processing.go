@@ -346,15 +346,23 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
-	currentState, err := s.beaconDB.HeadState(ctx)
+
+	c, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head state")
+		return err
 	}
-
-	if currentState != nil && currentState.Eth1DepositIndex() > 0 {
-		s.depositCache.PrunePendingDeposits(ctx, int64(currentState.Eth1DepositIndex()))
+	fRoot := bytesutil.ToBytes32(c.Root)
+	// Return if no checkpoint exists yet.
+	if fRoot == params.BeaconConfig().ZeroHash {
+		return nil
 	}
-
+	fState, err := s.stateGen.StateByRoot(ctx, fRoot)
+	if err != nil {
+		return err
+	}
+	if fState != nil && fState.Eth1DepositIndex() > 0 {
+		s.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
+	}
 	return nil
 }
 

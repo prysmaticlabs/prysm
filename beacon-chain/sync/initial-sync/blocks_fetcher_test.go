@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 	"testing"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestBlocksFetcher_InitStartStop(t *testing.T) {
@@ -35,9 +37,8 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 	fetcher := newBlocksFetcher(
 		ctx,
 		&blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p2p,
+			chain: mc,
+			p2p:   p2p,
 		},
 	)
 
@@ -60,9 +61,8 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 		fetcher := newBlocksFetcher(
 			context.Background(),
 			&blocksFetcherConfig{
-				headFetcher:         mc,
-				finalizationFetcher: mc,
-				p2p:                 p2p,
+				chain: mc,
+				p2p:   p2p,
 			})
 		require.NoError(t, fetcher.start())
 		fetcher.stop()
@@ -74,13 +74,26 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 		fetcher := newBlocksFetcher(
 			ctx,
 			&blocksFetcherConfig{
-				headFetcher:         mc,
-				finalizationFetcher: mc,
-				p2p:                 p2p,
+				chain: mc,
+				p2p:   p2p,
 			})
 		require.NoError(t, fetcher.start())
 		cancel()
 		fetcher.stop()
+	})
+
+	t.Run("peer filter capacity weight", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		fetcher := newBlocksFetcher(
+			ctx,
+			&blocksFetcherConfig{
+				chain:                    mc,
+				p2p:                      p2p,
+				peerFilterCapacityWeight: 2,
+			})
+		require.NoError(t, fetcher.start())
+		assert.Equal(t, peerFilterCapacityWeight, fetcher.capacityWeight)
 	})
 }
 
@@ -268,9 +281,8 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-				headFetcher:         mc,
-				finalizationFetcher: mc,
-				p2p:                 p,
+				chain: mc,
+				p2p:   p,
 			})
 			require.NoError(t, fetcher.start())
 
@@ -358,12 +370,23 @@ func TestBlocksFetcher_scheduleRequest(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher: nil,
-			p2p:         nil,
-		})
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{})
 		cancel()
 		assert.ErrorContains(t, "context canceled", fetcher.scheduleRequest(ctx, 1, blockBatchLimit))
+	})
+
+	t.Run("unblock on context cancellation", func(t *testing.T) {
+		fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
+		for i := 0; i < maxPendingRequests; i++ {
+			assert.NoError(t, fetcher.scheduleRequest(context.Background(), 1, blockBatchLimit))
+		}
+
+		// Will block on next request (and wait until requests are either processed or context is closed).
+		go func() {
+			fetcher.cancel()
+		}()
+		assert.ErrorContains(t, errFetcherCtxIsDone.Error(),
+			fetcher.scheduleRequest(context.Background(), 1, blockBatchLimit))
 	})
 }
 func TestBlocksFetcher_handleRequest(t *testing.T) {
@@ -392,9 +415,8 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p2p,
+			chain: mc,
+			p2p:   p2p,
 		})
 
 		cancel()
@@ -406,9 +428,8 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			headFetcher:         mc,
-			finalizationFetcher: mc,
-			p2p:                 p2p,
+			chain: mc,
+			p2p:   p2p,
 		})
 
 		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -477,9 +498,8 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 	fetcher := newBlocksFetcher(
 		ctx,
 		&blocksFetcherConfig{
-			finalizationFetcher: mc,
-			headFetcher:         mc,
-			p2p:                 p2p,
+			chain: mc,
+			p2p:   p2p,
 		})
 
 	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
@@ -527,6 +547,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
 	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), false)
 
+	hook := logTest.NewGlobal()
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go func() {
@@ -563,6 +584,8 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	case <-ch:
 		// p3 responded w/o waiting for rate limiter's lock (on which p2 spins).
 	}
+	// Make sure that p2 has been rate limited.
+	require.LogsContain(t, hook, fmt.Sprintf("msg=\"Slowing down for rate limit\" peer=%s", p2.PeerID()))
 }
 
 func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T) {
@@ -615,7 +638,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "not in a consecutive order",
@@ -639,7 +662,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "same slot number",
@@ -663,7 +686,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "slot is too low",
@@ -691,7 +714,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}
 				}
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
@@ -722,7 +745,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}
 				}
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
@@ -772,7 +795,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			validate: func(req *p2ppb.BeaconBlocksByRangeRequest, blocks []*eth.SignedBeaconBlock) {
 				assert.Equal(t, 0, len(blocks))
 			},
-			wantedErr: errInvalidFetchedData.Error(),
+			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 	}
 

@@ -140,6 +140,9 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 				if err != pubsub.ErrSubscriptionCancelled { // Only log a warning on unexpected errors.
 					log.WithError(err).Warn("Subscription next failed")
 				}
+				// Cancel subscription in the event of an error, as we are
+				// now exiting topic event loop.
+				sub.Cancel()
 				return
 			}
 
@@ -169,7 +172,7 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 			return pubsub.ValidationReject
 		}
 		// Ignore any messages received before chainstart.
-		if !s.chainStarted {
+		if s.chainStarted.IsNotSet() {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 			return pubsub.ValidationIgnore
 		}
@@ -201,7 +204,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 				ticker.Done()
 				return
 			case <-ticker.C():
-				if s.chainStarted && s.initialSync.Syncing() {
+				if s.chainStarted.IsSet() && s.initialSync.Syncing() {
 					continue
 				}
 				// Check every slot that there are enough peers
@@ -251,7 +254,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 				ticker.Done()
 				return
 			case currentSlot := <-ticker.C():
-				if s.chainStarted && s.initialSync.Syncing() {
+				if s.chainStarted.IsSet() && s.initialSync.Syncing() {
 					continue
 				}
 

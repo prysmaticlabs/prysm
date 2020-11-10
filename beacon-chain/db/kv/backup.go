@@ -3,7 +3,6 @@ package kv
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 
 	"github.com/pkg/errors"
@@ -40,7 +39,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 		return errors.New("no head block")
 	}
 	// Ensure the backups directory exists.
-	if err := os.MkdirAll(backupsDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+	if err := fileutil.MkdirAll(backupsDir); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))

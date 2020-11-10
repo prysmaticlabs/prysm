@@ -132,7 +132,8 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 }
 
 func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
-	sk := bls.RandKey()
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
 			PublicKey:             sk.PublicKey().Marshal(),
@@ -266,6 +267,74 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	}
 	if len(newState.Balances()) != 1 {
 		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances()))
+	}
+	if newState.Balances()[0] != 0 {
+		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances()[0])
+	}
+}
+
+func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
+	testutil.ResetCache()
+	dep, _, err := testutil.DeterministicDepositsAndKeys(100)
+	require.NoError(t, err)
+	defer func() {
+		testutil.ResetCache()
+	}()
+	dep[0].Data.Signature = make([]byte, 96)
+	trie, _, err := testutil.DepositTrieFromDeposits(dep)
+	require.NoError(t, err)
+
+	for i := range dep {
+		proof, err := trie.MerkleProof(i)
+		require.NoError(t, err)
+		dep[i].Proof = proof
+	}
+	root := trie.Root()
+	eth1Data := &ethpb.Eth1Data{
+		DepositRoot:  root[:],
+		DepositCount: 1,
+	}
+	registry := []*ethpb.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	newState, err := blocks.ProcessPreGenesisDeposits(context.Background(), beaconState, dep)
+	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
+
+	_, ok := newState.ValidatorIndexByPubkey(bytesutil.ToBytes48(dep[0].Data.PublicKey))
+	require.Equal(t, false, ok, "bad pubkey should not exist in state")
+
+	for i := 1; i < newState.NumValidators(); i++ {
+		val, err := newState.ValidatorAtIndex(uint64(i))
+		require.NoError(t, err)
+		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.EffectiveBalance, "unequal effective balance")
+		require.Equal(t, uint64(0), val.ActivationEpoch)
+		require.Equal(t, uint64(0), val.ActivationEligibilityEpoch)
+	}
+	if newState.Eth1DepositIndex() != 100 {
+		t.Errorf(
+			"Expected Eth1DepositIndex to be increased by 99 after processing an invalid deposit, received change: %v",
+			newState.Eth1DepositIndex(),
+		)
+	}
+	if len(newState.Validators()) != 100 {
+		t.Errorf("Expected validator list to have length 100, received: %v", len(newState.Validators()))
+	}
+	if len(newState.Balances()) != 100 {
+		t.Errorf("Expected validator balances list to have length 100, received: %v", len(newState.Balances()))
 	}
 	if newState.Balances()[0] != 0 {
 		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances()[0])

@@ -51,10 +51,86 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	conns := p1.BHost.Network().ConnsToPeer(p1.BHost.ID())
+	conns := p1.BHost.Network().ConnsToPeer(p2.BHost.ID())
 	if len(conns) > 0 {
 		t.Error("Peer is still not disconnected despite sending a goodbye message")
 	}
+}
+
+func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p3 := p2ptest.NewTestP2P(t)
+
+	p1.Connect(p2)
+	p1.Connect(p3)
+	assert.Equal(t, 2, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+
+	// Set up a head state in the database with data we expect.
+	d, _ := db.SetupDB(t)
+	r := &Service{
+		db:          d,
+		p2p:         p1,
+		rateLimiter: newRateLimiter(p1),
+	}
+
+	// Setup streams
+	pcl := protocol.ID("/testing")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		expectResetStream(t, stream)
+	})
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
+	require.NoError(t, err)
+	failureCode := codeClientShutdown
+
+	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	conns := p1.BHost.Network().ConnsToPeer(p2.BHost.ID())
+	if len(conns) > 0 {
+		t.Error("Peer is still not disconnected despite sending a goodbye message")
+	}
+	valTime, err := p1.Peers().NextValidTime(p2.BHost.ID())
+	require.NoError(t, err)
+	expectedTime := time.Now().Add(backOffTime[failureCode])
+	diff := expectedTime.Sub(valTime)
+	// Add a little bit of allowance
+	require.Equal(t, true, diff.Seconds() <= 1)
+
+	wg.Add(1)
+	p3.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		expectResetStream(t, stream)
+	})
+
+	stream2, err := p1.BHost.NewStream(context.Background(), p3.BHost.ID(), pcl)
+	require.NoError(t, err)
+	failureCode = codeBanned
+
+	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream2))
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	conns = p1.BHost.Network().ConnsToPeer(p3.BHost.ID())
+	if len(conns) > 0 {
+		t.Error("Peer is still not disconnected despite sending a goodbye message")
+	}
+	valTime, err = p1.Peers().NextValidTime(p3.BHost.ID())
+	require.NoError(t, err)
+	expectedTime = time.Now().Add(backOffTime[failureCode])
+	diff = expectedTime.Sub(valTime)
+	// Add a little bit of allowance
+	require.Equal(t, true, diff.Seconds() <= 1)
 }
 
 func TestSendGoodbye_SendsMessage(t *testing.T) {
