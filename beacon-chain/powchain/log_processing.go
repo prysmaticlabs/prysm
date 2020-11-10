@@ -287,10 +287,6 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return err
 	}
 	for currentBlockNum < latestFollowHeight {
-		// stop requesting, if we have all the logs
-		if logCount == uint64(s.lastReceivedMerkleIndex+1) {
-			break
-		}
 		start := currentBlockNum
 		end := currentBlockNum + eth1HeaderReqLimit
 		// Appropriately bound the request, as we do not
