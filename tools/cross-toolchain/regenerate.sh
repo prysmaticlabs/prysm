@@ -9,4 +9,3 @@ cp -vf "${RBE_AUTOCONF_ROOT}/tools/cross-toolchain/empty.bzl" "${RBE_AUTOCONF_RO
 
 # Bazel query is the right command so bazel won't fail itself.
 bazel query "@rbe_ubuntu_clang_gen//..."
-bazel query "@rbe_ubuntu_gcc_gen//..."

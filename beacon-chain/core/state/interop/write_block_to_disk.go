@@ -2,12 +2,12 @@ package interop
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
@@ -27,7 +27,7 @@ func WriteBlockToDisk(block *ethpb.SignedBeaconBlock, failed bool) {
 		log.WithError(err).Error("Failed to ssz encode block")
 		return
 	}
-	if err := ioutil.WriteFile(fp, enc, 0664); err != nil {
+	if err := fileutil.WriteFile(fp, enc); err != nil {
 		log.WithError(err).Error("Failed to write to disk")
 	}
 }
