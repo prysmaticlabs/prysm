@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -416,6 +417,52 @@ func TestPeerConnectionStatuses(t *testing.T) {
 	assert.Equal(t, numPeersInactive, len(p.Inactive()), "Unexpected number of inactive peers")
 	numPeersAll := numPeersActive + numPeersInactive
 	assert.Equal(t, numPeersAll, len(p.All()), "Unexpected number of peers")
+}
+
+func TestPeerValidTime(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
+
+	numPeersConnected := 6
+	for i := 0; i < numPeersConnected; i++ {
+		addPeer(t, p, peers.PeerConnected)
+	}
+
+	allPeers := p.All()
+
+	// Add for 1st peer
+	p.SetNextValidTime(allPeers[0], time.Now().Add(-1*time.Second))
+	p.SetNextValidTime(allPeers[1], time.Now().Add(1*time.Second))
+	p.SetNextValidTime(allPeers[2], time.Now().Add(10*time.Second))
+
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[0]))
+	assert.Equal(t, false, p.IsReadyToDial(allPeers[1]))
+	assert.Equal(t, false, p.IsReadyToDial(allPeers[2]))
+
+	nextVal, err := p.NextValidTime(allPeers[3])
+	require.NoError(t, err)
+	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[3]))
+
+	nextVal, err = p.NextValidTime(allPeers[4])
+	require.NoError(t, err)
+	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[4]))
+
+	nextVal, err = p.NextValidTime(allPeers[5])
+	require.NoError(t, err)
+	assert.Equal(t, true, nextVal.IsZero())
+	assert.Equal(t, true, p.IsReadyToDial(allPeers[5]))
+
+	// Now confirm the states
+	assert.Equal(t, numPeersConnected, len(p.Connected()), "Unexpected number of connected peers")
 }
 
 func TestPrune(t *testing.T) {
