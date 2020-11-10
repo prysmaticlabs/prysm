@@ -454,6 +454,109 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	hook.Reset()
 }
 
+func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
+	hook := logTest.NewGlobal()
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	kvStore, _ := testDB.SetupDB(t)
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        kvStore,
+		DepositCache:    depositCache,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	require.NoError(t, err)
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
+	web3Service.httpLogger = testAcc.Backend
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.latestEth1Data.LastRequestedBlock = 0
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
+	params.SetupTestConfigCleanup(t)
+	bConfig := params.MinimalSpecConfig()
+	bConfig.SecondsPerETH1Block = 10
+	params.OverrideBeaconConfig(bConfig)
+	nConfig := params.BeaconNetworkConfig()
+	nConfig.ContractDeploymentBlock = 0
+	params.OverrideBeaconNetworkConfig(nConfig)
+
+	testAcc.Backend.Commit()
+
+	totalNumOfDeposits := depositsReqForChainStart + 30
+
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	require.NoError(t, err)
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	require.NoError(t, err)
+	depositOffset := 5
+
+	// 64 Validators are used as size required for beacon-chain to start. This number
+	// is defined in the deposit contract as the number required for the testnet. The actual number
+	// is 2**14
+	for i := 0; i < totalNumOfDeposits; i++ {
+		data := deposits[i].Data
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.GasLimit = 1000000
+		_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[i])
+		require.NoError(t, err, "Could not deposit to deposit contract")
+		// pack 8 deposits into a block with an offset of
+		// 5
+		if (i+1)%8 == depositOffset {
+			testAcc.Backend.Commit()
+		}
+	}
+	// Forward the chain to 'mine' blocks without logs
+	for i := uint64(0); i < 1500; i++ {
+		testAcc.Backend.Commit()
+	}
+	wantedGenesisTime := testAcc.Backend.Blockchain().CurrentBlock().Time()
+
+	// Forward the chain to account for the follow distance
+	for i := uint64(0); i < params.BeaconConfig().Eth1FollowDistance; i++ {
+		testAcc.Backend.Commit()
+	}
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
+
+	// Set the genesis time 500 blocks ahead of the last
+	// deposit log.
+	bConfig = params.MinimalSpecConfig()
+	bConfig.MinGenesisTime = wantedGenesisTime - 10
+	params.OverrideBeaconConfig(bConfig)
+
+	// Set up our subscriber now to listen for the chain started event.
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	err = web3Service.processPastLogs(context.Background())
+	require.NoError(t, err)
+
+	cachedDeposits := web3Service.ChainStartDeposits()
+	require.Equal(t, totalNumOfDeposits, len(cachedDeposits), "Did not cache the chain start deposits correctly")
+
+	// Receive the chain started event.
+	for started := false; !started; {
+		event := <-stateChannel
+		if event.Type == statefeed.ChainStarted {
+			started = true
+		}
+	}
+
+	require.LogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
+	require.LogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
+	require.LogsDoNotContain(t, hook, "Invalid timestamp from log")
+	require.LogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
+
+	hook.Reset()
+}
+
 func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
