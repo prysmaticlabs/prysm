@@ -22,24 +22,10 @@ go_library(
 
 go_image(
     name = "image",
-    srcs = ["relaynode.go"],
     base = "//tools:go_image",
-    goarch = "amd64",
-    goos = "linux",
-    importpath = "github.com/prysmaticlabs/prysm/tools/relaynode",
-    pure = "on",
-    race = "off",
+    binary = ":relaynode",
     tags = ["manual"],
     visibility = ["//visibility:private"],
-    deps = [
-        "//shared/version:go_default_library",
-        "@com_github_ipfs_go_log//:go_default_library",
-        "@com_github_libp2p_go_libp2p//:go_default_library",
-        "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
-        "@com_github_libp2p_go_libp2p_crypto//:go_default_library",
-        "@com_github_multiformats_go_multiaddr//:go_default_library",
-        "//shared/maxprocs:go_default_library",
-    ],
 )
 
 go_binary(
