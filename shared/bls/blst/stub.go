@@ -1,4 +1,4 @@
-// +build darwin windows !blst_enabled
+// +build windows !blst_enabled
 
 package blst
 
