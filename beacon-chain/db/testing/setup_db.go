@@ -12,9 +12,8 @@ import (
 
 // SetupDB instantiates and returns database backed by key value store.
 func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
-	p := t.TempDir()
 	sc := cache.NewStateSummaryCache()
-	s, err := kv.NewKVStore(p, sc)
+	s, err := kv.NewKVStore(t.TempDir(), sc)
 	if err != nil {
 		t.Fatal(err)
 	}
