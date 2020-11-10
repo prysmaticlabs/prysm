@@ -33,6 +33,19 @@ var _ Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
+func genMockKeymanger(numKeys int) *mockKeymanager {
+	km := make(map[[48]byte]bls.SecretKey, numKeys)
+	for i := 0; i < numKeys; i++ {
+		k, err := bls.RandKey()
+		if err != nil {
+			panic(err)
+		}
+		km[bytesutil.ToBytes48(k.PublicKey().Marshal())] = k
+	}
+
+	return &mockKeymanager{keysMap: km}
+}
+
 type mockKeymanager struct {
 	lock    sync.RWMutex
 	keysMap map[[48]byte]bls.SecretKey
@@ -989,7 +1002,7 @@ func TestAllValidatorsAreExited_AllExited(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: &mockKeymanager{}, validatorClient: client}
+	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, true, exited)
@@ -1010,7 +1023,37 @@ func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: &mockKeymanager{}, validatorClient: client}
+	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	exited, err := v.AllValidatorsAreExited(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, false, exited)
+}
+
+func TestAllValidatorsAreExited_PartialResult(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	statuses := []*ethpb.ValidatorStatusResponse{
+		{Status: ethpb.ValidatorStatus_EXITED},
+	}
+
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(), // ctx
+		gomock.Any(), // request
+	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
+
+	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	exited, err := v.AllValidatorsAreExited(context.Background())
+	require.ErrorContains(t, "number of status responses did not match number of requested keys", err)
+	assert.Equal(t, false, exited)
+}
+
+func TestAllValidatorsAreExited_NoKeys(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	v := validator{keyManager: genMockKeymanger(0), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)

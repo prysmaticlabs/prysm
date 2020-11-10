@@ -595,6 +595,9 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not fetch validating keys")
 	}
+	if len(validatingKeys) == 0 {
+		return false, nil
+	}
 	var publicKeys [][]byte
 	for _, key := range validatingKeys {
 		copyKey := key
@@ -606,6 +609,9 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	response, err := v.validatorClient.MultipleValidatorStatus(ctx, request)
 	if err != nil {
 		return false, err
+	}
+	if len(response.Statuses) != len(request.PublicKeys) {
+		return false, errors.New("number of status responses did not match number of requested keys")
 	}
 	for _, status := range response.Statuses {
 		if status.Status != ethpb.ValidatorStatus_EXITED {
