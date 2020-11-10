@@ -35,7 +35,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will backup accounts to.
 	backupDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "backupDir")
-	require.NoError(t, os.MkdirAll(backupDir, os.ModePerm))
+	require.NoError(t, os.MkdirAll(backupDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(backupDir), "Failed to remove directory")
 	})
@@ -148,11 +148,11 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
 	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
+	require.NoError(t, os.MkdirAll(keysDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 
 	// Write a directory where we will backup accounts to.
 	backupDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "backupDir")
-	require.NoError(t, os.MkdirAll(backupDir, os.ModePerm))
+	require.NoError(t, os.MkdirAll(backupDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
 		require.NoError(t, os.RemoveAll(backupDir), "Failed to remove directory")
