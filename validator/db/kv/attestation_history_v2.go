@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -42,19 +43,48 @@ func (hd EncHistoryData) assertSize() error {
 	return nil
 }
 
-func newAttestationHistoryArray(target uint64) EncHistoryData {
-	enc := make(EncHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
+func (h *HistoryData) IsEmpty() bool {
+	if h == (*HistoryData)(nil) {
+		return true
+	}
+	if h.Source == params.BeaconConfig().FarFutureEpoch {
+		return true
+	}
+	return false
+}
+
+func emptyHistoryData() *HistoryData {
+	h := &HistoryData{Source: params.BeaconConfig().FarFutureEpoch, SigningRoot: bytesutil.PadTo([]byte{}, 32)}
+	return h
+}
+
+// NewAttestationHistoryArray creates a new encapsulated attestation history byte array
+// sized by the latest epoch written.
+func NewAttestationHistoryArray(target uint64) EncHistoryData {
+	relativeTarget := target % params.BeaconConfig().WeakSubjectivityPeriod
+	historyDataSize := (relativeTarget + 1) * historySize
+	arraySize := latestEpochWrittenSize + historyDataSize
+	en := make(EncHistoryData, arraySize)
+	enc := en
+	ctx := context.Background()
+	var err error
+	for i := uint64(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
+		enc, err = enc.SetTargetData(ctx, i, emptyHistoryData())
+		if err != nil {
+			log.WithError(err).Error("Failed to set empty target data")
+		}
+	}
 	return enc
 }
 
-func (hd EncHistoryData) getLatestEpochWritten(ctx context.Context) (uint64, error) {
+func (hd EncHistoryData) GetLatestEpochWritten(ctx context.Context) (uint64, error) {
 	if err := hd.assertSize(); err != nil {
 		return 0, err
 	}
 	return bytesutil.FromBytes8(hd[:latestEpochWrittenSize]), nil
 }
 
-func (hd EncHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (EncHistoryData, error) {
+func (hd EncHistoryData) SetLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -62,7 +92,7 @@ func (hd EncHistoryData) setLatestEpochWritten(ctx context.Context, latestEpochW
 	return hd, nil
 }
 
-func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
+func (hd EncHistoryData) GetTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -70,10 +100,9 @@ func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*His
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
 	if uint64(len(hd)) < cursor+historySize {
-		return nil, fmt.Errorf("encapsulated data size: %d is smaller then the requested target location: %d", len(hd), cursor+historySize)
+		return nil, nil
 	}
 	history := &HistoryData{}
-
 	history.Source = bytesutil.FromBytes8(hd[cursor : cursor+sourceSize])
 	sr := make([]byte, 32)
 	copy(sr, hd[cursor+sourceSize:cursor+historySize])
@@ -81,13 +110,14 @@ func (hd EncHistoryData) getTargetData(ctx context.Context, target uint64) (*His
 	return history, nil
 }
 
-func (hd EncHistoryData) setTargetData(ctx context.Context, target uint64, historyData *HistoryData) (EncHistoryData, error) {
+func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, historyData *HistoryData) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
 	// Cursor for the location to write target epoch to.
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
+
 	if uint64(len(hd)) < cursor+historySize {
 		ext := make([]byte, cursor+historySize-uint64(len(hd)))
 		hd = append(hd, ext...)
@@ -97,9 +127,9 @@ func (hd EncHistoryData) setTargetData(ctx context.Context, target uint64, histo
 	return hd, nil
 }
 
-// AttestationHistoryNewForPubKeys accepts an array of validator public keys and returns a mapping of corresponding attestation history.
-func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeys")
+// AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
+func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeysV2")
 	defer span.End()
 
 	if len(publicKeys) == 0 {
@@ -112,25 +142,27 @@ func (store *Store) AttestationHistoryNewForPubKeys(ctx context.Context, publicK
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		for _, key := range publicKeys {
 			enc := bucket.Get(key[:])
-			var attestationHistory []byte
+			var attestationHistory EncHistoryData
 			if len(enc) == 0 {
-				attestationHistory = newAttestationHistoryArray(0)
+				attestationHistory = NewAttestationHistoryArray(0)
 			} else {
 				attestationHistory = enc
-				if err != nil {
-					return err
-				}
 			}
 			attestationHistoryForVals[key] = attestationHistory
 		}
 		return nil
 	})
+	for pk, ah := range attestationHistoryForVals {
+		ehd := make(EncHistoryData, len(ah))
+		copy(ehd, ah)
+		attestationHistoryForVals[pk] = ehd
+	}
 	return attestationHistoryForVals, err
 }
 
-// SaveAttestationHistoryNewForPubKeys saves the attestation histories for the requested validator public keys.
-func (store *Store) SaveAttestationHistoryNewForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]EncHistoryData) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeys")
+// SaveAttestationHistoryForPubKeysV2 saves the attestation histories for the requested validator public keys.
+func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]EncHistoryData) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeysV2")
 	defer span.End()
 
 	err := store.update(func(tx *bolt.Tx) error {
@@ -173,13 +205,13 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 	}
 	dataMap := make(map[[48]byte]EncHistoryData)
 	for key, atts := range attMap {
-		dataMap[key] = newAttestationHistoryArray(atts.LatestEpochWritten)
-		dataMap[key], err = dataMap[key].setLatestEpochWritten(ctx, atts.LatestEpochWritten)
+		dataMap[key] = NewAttestationHistoryArray(atts.LatestEpochWritten)
+		dataMap[key], err = dataMap[key].SetLatestEpochWritten(ctx, atts.LatestEpochWritten)
 		if err != nil {
 			return errors.Wrapf(err, "failed to set latest epoch while migrating attestations to v2")
 		}
 		for target, source := range atts.TargetToSource {
-			dataMap[key], err = dataMap[key].setTargetData(ctx, target, &HistoryData{
+			dataMap[key], err = dataMap[key].SetTargetData(ctx, target, &HistoryData{
 				Source:      source,
 				SigningRoot: []byte{1},
 			})
@@ -188,7 +220,7 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 			}
 		}
 	}
-	err = store.SaveAttestationHistoryNewForPubKeys(ctx, dataMap)
+	err = store.SaveAttestationHistoryForPubKeysV2(ctx, dataMap)
 	return err
 }
 
@@ -204,6 +236,7 @@ func (store *Store) MigrateV2AttestationProtectionDb(ctx context.Context) error 
 	if !importAttestations {
 		return nil
 	}
+	log.Info("Starting proposals protection db migration to v2...")
 	err = store.MigrateV2AttestationProtection(ctx)
 	if err != nil {
 		return errors.Wrap(err, "filed to import attestations")
@@ -217,6 +250,7 @@ func (store *Store) MigrateV2AttestationProtectionDb(ctx context.Context) error 
 		}
 		return nil
 	})
+	log.Info("Finished proposals protection db migration to v2")
 	return err
 }
 

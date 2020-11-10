@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -69,11 +68,8 @@ func TestMain(m *testing.M) {
 	defer func() {
 		flags.Init(resetFlags)
 	}()
-	code := m.Run()
-	// os.Exit will prevent defer from being called
-	resetCfg()
-	flags.Init(resetFlags)
-	os.Exit(code)
+
+	m.Run()
 }
 
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
