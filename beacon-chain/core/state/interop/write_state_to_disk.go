@@ -2,12 +2,12 @@ package interop
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 // WriteStateToDisk as a state ssz. Writes to temp directory. Debug!
@@ -22,7 +22,7 @@ func WriteStateToDisk(state *stateTrie.BeaconState) {
 		log.WithError(err).Error("Failed to ssz encode state")
 		return
 	}
-	if err := ioutil.WriteFile(fp, enc, 0664); err != nil {
+	if err := fileutil.WriteFile(fp, enc); err != nil {
 		log.WithError(err).Error("Failed to write to disk")
 	}
 }

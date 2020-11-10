@@ -27,28 +27,14 @@ go_binary(
 
 go_image(
     name = "image",
-    srcs = ["main.go"],
     base = select({
         "//tools:base_image_alpine": "//tools:alpine_cc_image",
         "//tools:base_image_cc": "//tools:cc_image",
         "//conditions:default": "//tools:cc_image",
     }),
-    goarch = "amd64",
-    goos = "linux",
-    importpath = "github.com/prysmaticlabs/prysm/tools/genesis-state-gen",
-    pure = "off",
-    static = "off",  # Static enabled binary seems to cause issues with DNS lookup with cgo.
-    race = "off",
+    binary = ":genesis-state-gen",
     tags = ["manual"],
     visibility = ["//visibility:private"],
-    deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//shared/fileutil:go_default_library",
-        "//shared/interop:go_default_library",
-        "//shared/params:go_default_library",
-        "@com_github_ghodss_yaml//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-    ],
 )
 
 container_bundle(

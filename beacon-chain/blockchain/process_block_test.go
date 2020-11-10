@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -370,6 +371,46 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[4])), "Didn't save node")
 	assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[6])), "Didn't save node")
 	assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])), "Didn't save node")
+}
+
+func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: make([]byte, 32)}
+
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	require.NoError(t, db.SaveBlock(ctx, genesis))
+	validGenesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	st := testutil.NewBeaconState()
+
+	require.NoError(t, service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
+	roots, err := blockTree1(db, validGenesisRoot[:])
+	require.NoError(t, err)
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 9
+	block.Block.ParentRoot = roots[8]
+
+	err = service.fillInForkChoiceMissingBlocks(
+		context.Background(), block.Block, beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
+	require.NoError(t, err)
+
+	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
+	assert.Equal(t, 5, len(service.forkChoiceStore.Nodes()), "Miss match nodes")
+	// Ensure all roots and their respective blocks exist.
+	wantedRoots := [][]byte{roots[0], roots[3], roots[4], roots[6], roots[8]}
+	for i, rt := range wantedRoots {
+		assert.Equal(t, true, service.forkChoiceStore.HasNode(bytesutil.ToBytes32(rt)), fmt.Sprintf("Didn't save node: %d", i))
+		assert.Equal(t, true, service.beaconDB.HasBlock(context.Background(), bytesutil.ToBytes32(rt)))
+	}
 }
 
 func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {

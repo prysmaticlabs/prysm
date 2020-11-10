@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -131,21 +132,34 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationReject
 	}
 
-	// Verify selection proof reflects to the right validator and signature is valid.
-	if err := validateSelection(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof); err != nil {
+	// Verify selection proof reflects to the right validator.
+	selectionSigSet, err := validateSelectionIndex(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof)
+	if err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
 		return pubsub.ValidationReject
 	}
 
-	// Verify the aggregator's signature is valid.
-	if err := validateAggregatorSignature(bs, signed); err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
-		return pubsub.ValidationReject
+	// Verify selection signature, aggregator signature and attestation signature are valid.
+	// We use batch verify here to save compute.
+	aggregatorSigSet, err := aggSigSet(bs, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not get aggregator sig set %d", signed.Message.AggregatorIndex))
+		return pubsub.ValidationIgnore
 	}
-
-	// Verify aggregated attestation has a valid signature.
-	if err := blocks.VerifyAttestationSignature(ctx, bs, signed.Message.Aggregate); err != nil {
-		traceutil.AnnotateError(span, err)
+	attSigSet, err := blocks.AttestationSignatureSet(ctx, bs, []*ethpb.Attestation{signed.Message.Aggregate})
+	if err != nil {
+		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
+		return pubsub.ValidationIgnore
+	}
+	set := bls.NewSet()
+	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
+	valid, err := set.Verify()
+	if err != nil {
+		traceutil.AnnotateError(span, errors.Errorf("Could not join signature set"))
+		return pubsub.ValidationIgnore
+	}
+	if !valid {
+		traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
 		return pubsub.ValidationReject
 	}
 
@@ -210,32 +224,74 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 	return nil
 }
 
-// This validates selection proof by validating it's from the correct validator index of the slot and selection
-// proof is a valid signature.
-func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
-	_, span := trace.StartSpan(ctx, "sync.validateSelection")
+// This validates selection proof by validating it's from the correct validator index of the slot.
+// It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
+func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) (*bls.SignatureSet, error) {
+	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
 	committee, err := helpers.BeaconCommitteeFromState(bs, data.Slot, data.CommitteeIndex)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	aggregator, err := helpers.IsAggregator(uint64(len(committee)), proof)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !aggregator {
-		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
+		return nil, fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
 	domain := params.BeaconConfig().DomainSelectionProof
 	epoch := helpers.SlotToEpoch(data.Slot)
-	return helpers.ComputeDomainVerifySigningRoot(bs, validatorIndex, epoch, data.Slot, domain, proof)
+
+	v, err := bs.ValidatorAtIndex(validatorIndex)
+	if err != nil {
+		return nil, err
+	}
+	publicKey, err := bls.PublicKeyFromBytes(v.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := helpers.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorRoot())
+	if err != nil {
+		return nil, err
+	}
+	root, err := helpers.ComputeSigningRoot(data.Slot, d)
+	if err != nil {
+		return nil, err
+	}
+	return &bls.SignatureSet{
+		Signatures: [][]byte{proof},
+		PublicKeys: []bls.PublicKey{publicKey},
+		Messages:   [][32]byte{root},
+	}, nil
 }
 
-// This verifies aggregator signature over the signed aggregate and proof object.
-func validateAggregatorSignature(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) error {
-	return helpers.ComputeDomainVerifySigningRoot(s, a.Message.AggregatorIndex,
-		helpers.SlotToEpoch(a.Message.Aggregate.Data.Slot), a.Message, params.BeaconConfig().DomainAggregateAndProof, a.Signature)
+// This returns aggregator signature set which can be used to batch verify.
+func aggSigSet(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
+	v, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
+	if err != nil {
+		return nil, err
+	}
+	publicKey, err := bls.PublicKeyFromBytes(v.PublicKey)
+	if err != nil {
+		return nil, err
+	}
 
+	epoch := helpers.SlotToEpoch(a.Message.Aggregate.Data.Slot)
+	d, err := helpers.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
+	if err != nil {
+		return nil, err
+	}
+	root, err := helpers.ComputeSigningRoot(a.Message, d)
+	if err != nil {
+		return nil, err
+	}
+	return &bls.SignatureSet{
+		Signatures: [][]byte{a.Signature},
+		PublicKeys: []bls.PublicKey{publicKey},
+		Messages:   [][32]byte{root},
+	}, nil
 }

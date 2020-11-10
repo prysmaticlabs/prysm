@@ -8,7 +8,6 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared/fileutil:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/promptutil:go_default_library",
         "//validator/accounts/iface:go_default_library",
         "//validator/accounts/prompt:go_default_library",
@@ -28,8 +27,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["wallet_test.go"],
-    embed = [":go_default_library"],
     deps = [
+        ":go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

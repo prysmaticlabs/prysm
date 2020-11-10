@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
+	// DisableAccountMetricsFlag disables the prometheus metrics for validator accounts, default false.
 	DisableAccountMetricsFlag = &cli.BoolFlag{
 		Name: "disable-account-metrics",
 		Usage: "Disable prometheus metrics for validator accounts. Operators with high volumes " +
