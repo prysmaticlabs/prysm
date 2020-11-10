@@ -33,9 +33,12 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	mrand "math/rand"
+	"sync"
 )
 
-type source struct{}
+type source struct {
+	lock sync.RWMutex
+}
 
 var _ mrand.Source64 = (*source)(nil)
 
@@ -45,12 +48,16 @@ func (s *source) Seed(_ int64) {}
 // Int63 returns uniformly-distributed random (as in CSPRNG) int64 value within [0, 1<<63) range.
 // Panics if random generator reader cannot return data.
 func (s *source) Int63() int64 {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	return int64(s.Uint64() & ^uint64(1<<63))
 }
 
 // Uint64 returns uniformly-distributed random (as in CSPRNG) uint64 value within [0, 1<<64) range.
 // Panics if random generator reader cannot return data.
 func (s *source) Uint64() (val uint64) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	if err := binary.Read(rand.Reader, binary.BigEndian, &val); err != nil {
 		panic(err)
 	}
