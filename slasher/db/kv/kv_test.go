@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	os.Exit(m.Run())
+	m.Run()
 }
 
 func setupDB(t testing.TB) *Store {
