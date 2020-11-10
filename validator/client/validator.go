@@ -597,7 +597,8 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	}
 	var publicKeys [][]byte
 	for _, key := range validatingKeys {
-		publicKeys = append(publicKeys, key[:])
+		copyKey := key
+		publicKeys = append(publicKeys, copyKey[:])
 	}
 	request := &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: publicKeys,
