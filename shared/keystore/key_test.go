@@ -3,6 +3,7 @@ package keystore
 import (
 	"bytes"
 	"io/ioutil"
+	"path"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -35,8 +36,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 }
 
 func TestStoreRandomKey(t *testing.T) {
-	tempDir, teardown := setupTempKeystoreDir(t)
-	defer teardown()
+	tempDir := path.Join(t.TempDir(), "keystore")
 	ks := &Keystore{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
@@ -60,9 +60,7 @@ func TestNewKeyFromBLS(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	tempDir, teardown := setupTempKeystoreDir(t)
-	defer teardown()
-
+	tempDir := path.Join(t.TempDir(), "keystore", "file")
 	testKeystore := []byte{'t', 'e', 's', 't'}
 
 	err := writeKeyFile(tempDir, testKeystore)
