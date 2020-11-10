@@ -1023,8 +1023,8 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	// Create two different public keys
-	pubKey0 := [48]byte{1,2,3,4}
-	pubKey1 := [48]byte{6,7,8,9}
+	pubKey0 := [48]byte{1, 2, 3, 4}
+	pubKey1 := [48]byte{6, 7, 8, 9}
 	// This is the request expected from AllValidatorsAreExited()
 	request := &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: [][]byte{
