@@ -512,7 +512,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 		}
 	}
 	// Forward the chain to 'mine' blocks without logs
-	for i := uint64(0); i < 500; i++ {
+	for i := uint64(0); i < 1500; i++ {
 		testAcc.Backend.Commit()
 	}
 	wantedGenesisTime := testAcc.Backend.Blockchain().CurrentBlock().Time()
