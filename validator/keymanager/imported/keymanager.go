@@ -102,7 +102,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err := k.initializeAccountKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to initialize account store")
 	}
-	// Is this deprecated code that can be removed?
 	if k.opts.Version != "2" {
 		if err := k.rewriteAccountsKeystore(ctx); err != nil {
 			return nil, errors.Wrap(err, "failed to write accounts keystore")
@@ -282,6 +281,19 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 			result = append(result, pk)
 		}
 	}
+	lock.RUnlock()
+	return result, nil
+}
+
+// FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the imported account keystores.
+func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
+	defer span.End()
+
+	lock.RLock()
+	keys := orderedPublicKeys
+	result := make([][48]byte, len(keys))
+	copy(result, keys)
 	lock.RUnlock()
 	return result, nil
 }

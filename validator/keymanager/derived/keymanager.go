@@ -357,6 +357,11 @@ func (dr *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, 
 	return result, nil
 }
 
+// FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the keymanager.
+func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return dr.FetchValidatingPublicKeys(ctx)
+}
+
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
 func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
 	lock.RLock()

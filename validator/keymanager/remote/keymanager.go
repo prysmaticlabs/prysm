@@ -189,6 +189,11 @@ func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte,
 	return pubKeys, nil
 }
 
+// FetchAllValidatingPublicKeys fetches the list of all public keys, including disabled ones.
+func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return dr.FetchValidatingPublicKeys(ctx)
+}
+
 // Sign signs a message for a validator key via a gRPC request.
 func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	resp, err := k.client.Sign(ctx, req)
