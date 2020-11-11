@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -32,14 +32,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
-}
 
 type mockBeaconNode struct {
 	stateFeed *event.Feed
@@ -321,6 +315,81 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	assert.DeepEqual(t, genesis, c.head.block)
+}
+
+func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
+	resetFlags := flags.Get()
+	flags.Init(&flags.GlobalFlags{
+		HeadSync: true,
+	})
+	defer func() {
+		flags.Init(resetFlags)
+	}()
+
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
+	db, sc := testDB.SetupDB(t)
+	ctx := context.Background()
+
+	genesisBlock := testutil.NewBeaconBlock()
+	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, db.SaveBlock(ctx, genesisBlock))
+
+	finalizedBlock := testutil.NewBeaconBlock()
+	finalizedBlock.Block.Slot = finalizedSlot
+	finalizedBlock.Block.ParentRoot = genesisRoot[:]
+	finalizedRoot, err := finalizedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, finalizedBlock))
+
+	// Set head slot close to the finalization point, no head sync is triggered.
+	headBlock := testutil.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot + params.BeaconConfig().SlotsPerEpoch*5
+	headBlock.Block.ParentRoot = finalizedRoot[:]
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, headBlock))
+
+	headState := testutil.NewBeaconState()
+	require.NoError(t, headState.SetSlot(headBlock.Block.Slot))
+	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
+	require.NoError(t, db.SaveState(ctx, headState, finalizedRoot))
+	require.NoError(t, db.SaveState(ctx, headState, headRoot))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, headRoot))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
+		Epoch: helpers.SlotToEpoch(finalizedBlock.Block.Slot),
+		Root:  finalizedRoot[:],
+	}))
+
+	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
+
+	require.NoError(t, c.initializeChainInfo(ctx))
+	s, err := c.HeadState(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
+	assert.DeepEqual(t, finalizedBlock, c.head.block)
+
+	// Set head slot far beyond the finalization point, head sync should be triggered.
+	headBlock = testutil.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot + params.BeaconConfig().SlotsPerEpoch*headSyncMinEpochsAfterCheckpoint
+	headBlock.Block.ParentRoot = finalizedRoot[:]
+	headRoot, err = headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, headBlock))
+	require.NoError(t, db.SaveState(ctx, headState, headRoot))
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, headRoot))
+
+	require.NoError(t, c.initializeChainInfo(ctx))
+	s, err = c.HeadState(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
+	assert.DeepEqual(t, headBlock, c.head.block)
 }
 
 func TestChainService_SaveHeadNoDB(t *testing.T) {

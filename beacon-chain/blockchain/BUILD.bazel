@@ -77,6 +77,7 @@ go_test(
     name = "go_raceoff_test",
     size = "medium",
     srcs = [
+        "blockchain_test.go",
         "chain_info_test.go",
         "head_test.go",
         "info_test.go",

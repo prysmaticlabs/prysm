@@ -38,6 +38,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// headSyncMinEpochsAfterCheckpoint defines how many epochs should elapse after known finalization
+// checkpoint for head sync to be triggered.
+const headSyncMinEpochsAfterCheckpoint = 128
+
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
@@ -418,29 +422,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	s.genesisRoot = genesisBlkRoot
 
-	if flags.Get().HeadSync {
-		headBlock, err := s.beaconDB.HeadBlock(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head block")
-		}
-		headRoot, err := headBlock.Block.HashTreeRoot()
-		if err != nil {
-			return errors.Wrap(err, "could not hash head block")
-		}
-		finalizedState, err := s.stateGen.Resume(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized state from db")
-		}
-		log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
-			"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block.Slot)
-		headState, err := s.stateGen.StateByRoot(ctx, headRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head state")
-		}
-		s.setHead(headRoot, headBlock, headState)
-		return nil
-	}
-
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint from db")
@@ -456,6 +437,38 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedState, err = s.stateGen.Resume(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
+	}
+
+	if flags.Get().HeadSync {
+		headBlock, err := s.beaconDB.HeadBlock(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head block")
+		}
+		headEpoch := helpers.SlotToEpoch(headBlock.Block.Slot)
+		var epochsSinceFinality uint64
+		if headEpoch > finalized.Epoch {
+			epochsSinceFinality = headEpoch - finalized.Epoch
+		}
+		// Head sync when node is far enough beyond known finalized epoch,
+		// this becomes really useful during long period of non-finality.
+		if epochsSinceFinality >= headSyncMinEpochsAfterCheckpoint {
+			headRoot, err := headBlock.Block.HashTreeRoot()
+			if err != nil {
+				return errors.Wrap(err, "could not hash head block")
+			}
+			finalizedState, err := s.stateGen.Resume(ctx)
+			if err != nil {
+				return errors.Wrap(err, "could not get finalized state from db")
+			}
+			log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
+				"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block.Slot)
+			headState, err := s.stateGen.StateByRoot(ctx, headRoot)
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve head state")
+			}
+			s.setHead(headRoot, headBlock, headState)
+			return nil
+		}
 	}
 
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
