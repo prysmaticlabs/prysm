@@ -66,10 +66,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 	defer p.lock.Unlock()
 
 	// Prevent malformed messages from being inserted.
-	if exit == nil {
-		return
-	}
-	if exit.Exit == nil {
+	if exit == nil || exit.Exit == nil {
 		return
 	}
 
