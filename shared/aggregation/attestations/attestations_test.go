@@ -3,7 +3,6 @@ package attestations
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sort"
 	"testing"
 
@@ -26,10 +25,7 @@ func TestMain(m *testing.M) {
 		AttestationAggregationStrategy: string(MaxCoverAggregation),
 	})
 	defer resetCfg()
-	code := m.Run()
-	// os.Exit will prevent defer from being called
-	resetCfg()
-	os.Exit(code)
+	m.Run()
 }
 
 func TestAggregateAttestations_AggregatePair(t *testing.T) {

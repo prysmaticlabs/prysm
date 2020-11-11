@@ -20,7 +20,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -36,7 +35,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	ip, err := iputils.ExternalIPv4()
 	require.NoError(t, err, "Could not get ip")
 	ipAddr := net.ParseIP(ip)
-	temp := testutil.TempDir()
+	temp := t.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
 	require.NoError(t, os.Mkdir(tempPath, 0700))

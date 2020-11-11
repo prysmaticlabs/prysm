@@ -5,11 +5,11 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation_history.go",
-        "attestation_history_new.go",
+        "attestation_history_v2.go",
         "db.go",
         "manage.go",
-        "new_proposal_history.go",
         "proposal_history.go",
+        "proposal_history_v2.go",
         "schema.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
@@ -33,12 +33,12 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "attestation_history_new_test.go",
         "attestation_history_test.go",
+        "attestation_history_v2_test.go",
         "db_test.go",
         "manage_test.go",
-        "new_proposal_history_test.go",
         "proposal_history_test.go",
+        "proposal_history_v2_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -46,8 +46,6 @@ go_test(
         "//proto/slashing:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/rand:go_default_library",
-        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

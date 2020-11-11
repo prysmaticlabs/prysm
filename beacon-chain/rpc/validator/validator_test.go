@@ -2,7 +2,6 @@ package validator
 
 import (
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -14,11 +13,8 @@ func TestMain(m *testing.M) {
 	logrus.SetOutput(ioutil.Discard)
 	// Use minimal config to reduce test setup time.
 	prevConfig := params.BeaconConfig().Copy()
+	defer params.OverrideBeaconConfig(prevConfig)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
-	retVal := m.Run()
-
-	// Reset configuration.
-	params.OverrideBeaconConfig(prevConfig)
-	os.Exit(retVal)
+	m.Run()
 }

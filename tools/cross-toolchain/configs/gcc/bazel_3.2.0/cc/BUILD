@@ -59,8 +59,6 @@ cc_toolchain_suite(
 
 cc_toolchain(
     name = "cc-compiler-k8",
-    toolchain_identifier = "local",
-    toolchain_config = ":local",
     all_files = ":compiler_deps",
     ar_files = ":compiler_deps",
     as_files = ":compiler_deps",
@@ -70,18 +68,26 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
+    toolchain_config = ":local",
+    toolchain_identifier = "local",
 )
 
 cc_toolchain_config(
     name = "local",
-    cpu = "k8",
-    compiler = "gcc",
-    toolchain_identifier = "local",
-    host_system_name = "local",
-    target_system_name = "local",
-    target_libc = "local",
-    abi_version = "local",
     abi_libc_version = "local",
+    abi_version = "local",
+    compile_flags = [
+        "-U_FORTIFY_SOURCE",
+        "-fstack-protector",
+        "-Wall",
+        "-Wunused-but-set-parameter",
+        "-Wno-free-nonheap-object",
+        "-fno-omit-frame-pointer",
+    ],
+    compiler = "gcc",
+    coverage_compile_flags = ["--coverage"],
+    coverage_link_flags = ["--coverage"],
+    cpu = "k8",
     cxx_builtin_include_directories = [
         "/usr/lib/gcc/x86_64-linux-gnu/8/include",
         "/usr/local/include",
@@ -92,6 +98,31 @@ cc_toolchain_config(
         "/usr/include/x86_64-linux-gnu/c++/8",
         "/usr/include/c++/8/backward",
     ],
+    cxx_flags = ["-std=c++0x"],
+    dbg_compile_flags = ["-g"],
+    host_system_name = "local",
+    link_flags = [
+        "-fuse-ld=gold",
+        "-Wl,-no-as-needed",
+        "-Wl,-z,relro,-z,now",
+        "-B/usr/bin",
+        "-pass-exit-codes",
+        "-lm",
+        "-static-libgcc",
+    ],
+    link_libs = ["-l:libstdc++.a"],
+    opt_compile_flags = [
+        "-g0",
+        "-O2",
+        "-D_FORTIFY_SOURCE=1",
+        "-DNDEBUG",
+        "-ffunction-sections",
+        "-fdata-sections",
+    ],
+    opt_link_flags = ["-Wl,--gc-sections"],
+    supports_start_end_lib = True,
+    target_libc = "local",
+    target_system_name = "local",
     tool_paths = {
         "ar": "/usr/bin/ar",
         "ld": "/usr/bin/ld",
@@ -104,35 +135,7 @@ cc_toolchain_config(
         "objdump": "/usr/bin/objdump",
         "strip": "/usr/bin/strip",
     },
-    compile_flags = [
-        "-U_FORTIFY_SOURCE",
-        "-fstack-protector",
-        "-Wall",
-        "-Wunused-but-set-parameter",
-        "-Wno-free-nonheap-object",
-        "-fno-omit-frame-pointer",
-    ],
-    opt_compile_flags = [
-        "-g0",
-        "-O2",
-        "-D_FORTIFY_SOURCE=1",
-        "-DNDEBUG",
-        "-ffunction-sections",
-        "-fdata-sections",
-    ],
-    dbg_compile_flags = ["-g"],
-    cxx_flags = ["-std=c++0x"],
-    link_flags = [
-        "-fuse-ld=gold",
-        "-Wl,-no-as-needed",
-        "-Wl,-z,relro,-z,now",
-        "-B/usr/bin",
-        "-pass-exit-codes",
-        "-lm",
-        "-static-libgcc",
-    ],
-    link_libs = ["-l:libstdc++.a"],
-    opt_link_flags = ["-Wl,--gc-sections"],
+    toolchain_identifier = "local",
     unfiltered_compile_flags = [
         "-fno-canonical-system-headers",
         "-Wno-builtin-macro-redefined",
@@ -140,16 +143,11 @@ cc_toolchain_config(
         "-D__TIMESTAMP__=\"redacted\"",
         "-D__TIME__=\"redacted\"",
     ],
-    coverage_compile_flags = ["--coverage"],
-    coverage_link_flags = ["--coverage"],
-    supports_start_end_lib = True,
 )
 
 # Android tooling requires a default toolchain for the armeabi-v7a cpu.
 cc_toolchain(
     name = "cc-compiler-armeabi-v7a",
-    toolchain_identifier = "stub_armeabi-v7a",
-    toolchain_config = ":stub_armeabi-v7a",
     all_files = ":empty",
     ar_files = ":empty",
     as_files = ":empty",
@@ -159,6 +157,8 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
+    toolchain_config = ":stub_armeabi-v7a",
+    toolchain_identifier = "stub_armeabi-v7a",
 )
 
 armeabi_cc_toolchain_config(name = "stub_armeabi-v7a")

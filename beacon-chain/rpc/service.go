@@ -95,6 +95,7 @@ type Service struct {
 	stateGen                *stategen.State
 	connectedRPCClients     map[net.Addr]bool
 	clientConnectionLock    sync.Mutex
+	maxMsgSize              int
 }
 
 // Config options for the beacon node RPC server.
@@ -129,6 +130,7 @@ type Config struct {
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
+	MaxMsgSize              int
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -171,6 +173,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateGen:                cfg.StateGen,
 		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
 		connectedRPCClients:     make(map[net.Addr]bool),
+		maxMsgSize:              cfg.MaxMsgSize,
 	}
 }
 
@@ -202,6 +205,7 @@ func (s *Service) Start() {
 			grpc_opentracing.UnaryServerInterceptor(),
 			s.validatorUnaryConnectionInterceptor,
 		)),
+		grpc.MaxRecvMsgSize(s.maxMsgSize),
 	}
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	if s.withCert != "" && s.withKey != "" {
