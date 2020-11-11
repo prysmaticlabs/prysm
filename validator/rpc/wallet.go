@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
-	"runtime"
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -204,10 +203,8 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	if err := json.Unmarshal(encoded, kmOpts); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
 	}
-	var config map[string]string
-	if err := json.Unmarshal(encoded, &config); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
-	}
+	config := kmOpts.ConvertToConfig()
+
 	return &pb.WalletResponse{
 		WalletPath:       s.walletDir,
 		KeymanagerKind:   keymanagerKind,
