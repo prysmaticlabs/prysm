@@ -28,6 +28,30 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		want   []*ethpb.SignedVoluntaryExit
 	}{
 		{
+			name: "Prevent inserting nil exit",
+			fields: fields{
+				pending:   make([]*ethpb.SignedVoluntaryExit, 0),
+				seenExits: make(map[uint64]bool),
+			},
+			args: args{
+				exit: nil,
+			},
+			want: []*ethpb.SignedVoluntaryExit{},
+		},
+		{
+			name: "Prevent inserting malformed exit",
+			fields: fields{
+				pending:   make([]*ethpb.SignedVoluntaryExit, 0),
+				seenExits: make(map[uint64]bool),
+			},
+			args: args{
+				exit: &ethpb.SignedVoluntaryExit{
+					Exit: nil,
+				},
+			},
+			want: []*ethpb.SignedVoluntaryExit{},
+		},
+		{
 			name: "Empty list",
 			fields: fields{
 				pending:   make([]*ethpb.SignedVoluntaryExit, 0),
