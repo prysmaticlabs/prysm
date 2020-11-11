@@ -218,7 +218,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	// committee index 1
 	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.p2p.Encoding().ProtocolSuffix()
 	require.NoError(t, r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator))
-	subscriptions[1], err = r.p2p.SubscribeToTopic(fullTopic, nil)
+	subscriptions[1], err = r.p2p.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	// committee index 2
