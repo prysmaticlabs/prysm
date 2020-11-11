@@ -73,7 +73,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 		return
 	}
 
-	// Prevent any sort of duplicate exit from being seenExits.
+	// Prevent any sort of duplicate exit from being inserted.
 	if p.seenExits[exit.Exit.ValidatorIndex] {
 		return
 	}
