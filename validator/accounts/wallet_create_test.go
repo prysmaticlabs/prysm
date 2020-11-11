@@ -49,6 +49,7 @@ type testWalletConfig struct {
 	backupDir               string
 	keysDir                 string
 	deletePublicKeys        string
+	enablePublicKeys        string
 	disablePublicKeys       string
 	voluntaryExitPublicKeys string
 	backupPublicKeys        string
@@ -72,6 +73,7 @@ func setupWalletCtx(
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
 	set.String(flags.DisablePublicKeysFlag.Name, cfg.disablePublicKeys, "")
+	set.String(flags.EnablePublicKeysFlag.Name, cfg.enablePublicKeys, "")
 	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
 	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
 	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
@@ -91,6 +93,8 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.DisablePublicKeysFlag.Name, cfg.disablePublicKeys))
+	assert.NoError(tb, set.Set(flags.EnablePublicKeysFlag.Name, cfg.enablePublicKeys))
 	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
 	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))

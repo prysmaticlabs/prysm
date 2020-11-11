@@ -65,6 +65,7 @@ go_test(
     srcs = [
         "accounts_backup_test.go",
         "accounts_create_test.go",
+        "accounts_enable_disable_test.go",
         "accounts_delete_test.go",
         "accounts_exit_test.go",
         "accounts_import_test.go",
