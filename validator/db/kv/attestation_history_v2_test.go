@@ -167,6 +167,32 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, setAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
+
+func TestAttestationHistoryForPubKey_OK(t *testing.T) {
+	ctx := context.Background()
+	pubkeys := [][48]byte{{30}}
+	db := setupDB(t, pubkeys)
+
+	_, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
+	require.NoError(t, err)
+
+	history := NewAttestationHistoryArray(53999)
+
+	history, err = history.SetTargetData(ctx,
+		10,
+		&HistoryData{
+			Source:      uint64(1),
+			SigningRoot: []byte{1, 2, 3},
+		})
+	require.NoError(t, err)
+
+	err = db.SaveAttestationHistoryForPubKeyV2(context.Background(), pubkeys[0], history)
+	require.NoError(t, err)
+	historyForPubKeys, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
+	require.NoError(t, err)
+	require.DeepEqual(t, history, historyForPubKeys[pubkeys[0]], "Expected attestation history epoch bits to be empty")
+}
+
 func TestStore_ImportOldAttestationFormatBadSourceFormat(t *testing.T) {
 	ctx := context.Background()
 	pubKeys := [][48]byte{{3}, {4}}

@@ -819,6 +819,35 @@ func TestSaveProtections_OK(t *testing.T) {
 	require.DeepEqual(t, history2, savedHistories[pubKey2], "Unexpected retrieved history")
 }
 
+func TestSaveProtection_OK(t *testing.T) {
+	pubKey1 := [48]byte{1}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	db := dbTest.SetupDB(t, [][48]byte{pubKey1})
+	ctx := context.Background()
+
+	cleanHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
+	require.NoError(t, err)
+	v := validator{
+		db:                      db,
+		validatorClient:         client,
+		attesterHistoryByPubKey: cleanHistories,
+	}
+
+	history1 := cleanHistories[pubKey1]
+	history1 = markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
+
+	cleanHistories[pubKey1] = history1
+
+	v.attesterHistoryByPubKey = cleanHistories
+	require.NoError(t, v.SaveProtection(context.Background(), pubKey1), "Could not update assignments")
+	savedHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
+	require.NoError(t, err)
+
+	require.DeepEqual(t, history1, savedHistories[pubKey1], "Unexpected retrieved history")
+}
+
 func TestRolesAt_OK(t *testing.T) {
 	v, m, validatorKey, finish := setup(t)
 	defer finish()

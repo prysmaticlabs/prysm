@@ -122,6 +122,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		}
 		return
 	}
+	if err := v.SaveProtection(ctx, pubKey); err != nil {
+		log.WithError(err).Error("Could not save validator: %#x protection", pubKey)
+	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")

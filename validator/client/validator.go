@@ -552,6 +552,21 @@ func (v *validator) SaveProtections(ctx context.Context) error {
 	return nil
 }
 
+// SaveProtection saves the attestation information currently in validator state.
+func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
+	v.attesterHistoryByPubKeyLock.RLock()
+
+	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
+		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
+	}
+	v.attesterHistoryByPubKeyLock.RUnlock()
+	v.attesterHistoryByPubKeyLock.Lock()
+	delete(v.attesterHistoryByPubKey, pubKey)
+	v.attesterHistoryByPubKeyLock.Unlock()
+
+	return nil
+}
+
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey [48]byte) (bool, error) {
