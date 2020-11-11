@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -173,28 +172,6 @@ func (opts *KeymanagerOpts) String() string {
 		return ""
 	}
 	return b.String()
-}
-
-// Convert KeymanagerOpts struct to a map[string]string
-func (opts *KeymanagerOpts) ConvertToConfig() map[string]string {
-	val := reflect.ValueOf(opts).Elem()
-	var config = make(map[string]string, val.NumField())
-	for i := 0; i < val.NumField(); i++ {
-		f := val.Type().Field(i)
-		v := val.Field(i)
-		jsonName := strings.Split(f.Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
-
-		if keys, ok := v.Interface().([][]byte); ok {
-			str := make([]string, len(keys))
-			for i, key := range keys {
-				str[i] = fmt.Sprintf("%q", key)
-			}
-			config[jsonName] = strings.Join(str, ",")
-		} else {
-			config[jsonName] = fmt.Sprint(v)
-		}
-	}
-	return config
 }
 
 // SubscribeAccountChanges creates an event subscription for a channel

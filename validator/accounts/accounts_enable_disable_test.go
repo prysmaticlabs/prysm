@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -25,7 +24,7 @@ func TestDisableAccounts_Noninteractive(t *testing.T) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
-	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
+	keysDir := filepath.Join(t.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
 
 	// Create 3 keystore files in the keys directory we can then
@@ -80,7 +79,7 @@ func TestEnableAccounts_Noninteractive(t *testing.T) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
-	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
+	keysDir := filepath.Join(t.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
 
 	// Create 3 keystore files in the keys directory we can then
