@@ -50,12 +50,10 @@ type FinalizedDeposits struct {
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*dbpb.DepositContainer
-	deposits              []*dbpb.DepositContainer
-	finalizedDeposits     *FinalizedDeposits
-	depositsLock          sync.RWMutex
-	chainStartPubkeys     map[string]bool
-	chainStartPubkeysLock sync.RWMutex
+	pendingDeposits   []*dbpb.DepositContainer
+	deposits          []*dbpb.DepositContainer
+	finalizedDeposits *FinalizedDeposits
+	depositsLock      sync.RWMutex
 }
 
 // New instantiates a new deposit cache
@@ -71,7 +69,6 @@ func New() (*DepositCache, error) {
 		pendingDeposits:   []*dbpb.DepositContainer{},
 		deposits:          []*dbpb.DepositContainer{},
 		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
-		chainStartPubkeys: make(map[string]bool),
 	}, nil
 }
 
@@ -149,28 +146,6 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.Deposi
 	defer dc.depositsLock.RUnlock()
 
 	return dc.deposits
-}
-
-// MarkPubkeyForChainstart sets the pubkey deposit status to true.
-func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.MarkPubkeyForChainstart")
-	defer span.End()
-	dc.chainStartPubkeysLock.Lock()
-	defer dc.chainStartPubkeysLock.Unlock()
-	dc.chainStartPubkeys[pubkey] = true
-}
-
-// PubkeyInChainstart returns bool for whether the pubkey passed in has deposited.
-func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) bool {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.PubkeyInChainstart")
-	defer span.End()
-	dc.chainStartPubkeysLock.RLock()
-	defer dc.chainStartPubkeysLock.RUnlock()
-	if dc.chainStartPubkeys != nil {
-		return dc.chainStartPubkeys[pubkey]
-	}
-	dc.chainStartPubkeys = make(map[string]bool)
-	return false
 }
 
 // AllDeposits returns a list of historical deposits until the given block number
