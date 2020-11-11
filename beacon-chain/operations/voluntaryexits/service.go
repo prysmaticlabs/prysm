@@ -12,7 +12,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Pool implements a struct to maintain pending and recently seenExits voluntary exits. This pool
+// Pool implements a struct to maintain pending and seen voluntary exits. This pool
 // is used by proposers to insert into new blocks.
 type Pool struct {
 	lock      sync.RWMutex
@@ -58,7 +58,7 @@ func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64, noLimit
 }
 
 // InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
-// has been seenExits recently, or the validator is already exited.
+// or the validator is already exited.
 func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.BeaconState, exit *ethpb.SignedVoluntaryExit) {
 	ctx, span := trace.StartSpan(ctx, "exitPool.InsertVoluntaryExit")
 	defer span.End()
@@ -91,8 +91,9 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 	})
 }
 
-// MarkIncluded is used when an exit has been seenExits in a beacon block. Every block seen by this
-// node should call this method to include the exit.
+// MarkIncluded is used when an exit has been included in a beacon block. Every block seen by this
+// node should call this method to include the exit. This will remove the exit from
+// the pending exits slice.
 func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
