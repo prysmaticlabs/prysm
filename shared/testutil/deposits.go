@@ -184,10 +184,11 @@ func DeterministicDepositTrie(size int) (*trieutil.SparseMerkleTrie, [][32]byte,
 		return nil, [][32]byte{}, errors.New("trie cache is empty, generate deposits at an earlier point")
 	}
 
-	return DepositTrie(trie, size)
+	return DepositTrieSubset(trie, size)
 }
 
-func DepositTrie(sparseTrie *trieutil.SparseMerkleTrie, size int) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
+// DepositTrieSubset takes in a full tree and the desired size and returns a subset of the deposit trie.
+func DepositTrieSubset(sparseTrie *trieutil.SparseMerkleTrie, size int) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
 	if sparseTrie == nil {
 		return nil, [][32]byte{}, errors.New("trie is empty")
 	}

@@ -110,7 +110,7 @@ func TestDepositsWithBalance_MatchesDeterministic(t *testing.T) {
 	}
 	deposits, depositTrie, err := DepositsWithBalance(balances)
 	require.NoError(t, err)
-	_, depositDataRoots, err := DepositTrie(depositTrie, entries)
+	_, depositDataRoots, err := DepositTrieSubset(depositTrie, entries)
 	require.NoError(t, err)
 
 	determDeposits, _, err := DeterministicDepositsAndKeys(uint64(entries))
@@ -138,7 +138,7 @@ func TestSetupInitialDeposits_1024Entries_PartialDeposits(t *testing.T) {
 	}
 	deposits, depositTrie, err := DepositsWithBalance(balances)
 	require.NoError(t, err)
-	_, depositDataRoots, err := DepositTrie(depositTrie, entries)
+	_, depositDataRoots, err := DepositTrieSubset(depositTrie, entries)
 	require.NoError(t, err)
 
 	if len(deposits) != entries {
@@ -176,7 +176,7 @@ func TestSetupInitialDeposits_1024Entries_PartialDeposits(t *testing.T) {
 	}
 	deposits, depositTrie, err = DepositsWithBalance(balances)
 	require.NoError(t, err)
-	_, depositDataRoots, err = DepositTrie(depositTrie, entries)
+	_, depositDataRoots, err = DepositTrieSubset(depositTrie, entries)
 	require.NoError(t, err)
 	if len(deposits) != entries {
 		t.Fatalf("incorrect number of deposits returned, wanted %d but received %d", entries, len(deposits))
