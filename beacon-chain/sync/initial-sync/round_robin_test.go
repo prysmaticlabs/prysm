@@ -8,6 +8,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -293,8 +294,8 @@ func TestService_roundRobinSync(t *testing.T) {
 				chain:        mc,
 				p2p:          p,
 				db:           beaconDB,
-				synced:       false,
-				chainStarted: true,
+				synced:       abool.New(),
+				chainStarted: abool.NewBool(true),
 			}
 			assert.NoError(t, s.roundRobinSync(makeGenesisTime(tt.currentSlot)))
 			if s.chain.HeadSlot() < tt.currentSlot {
@@ -524,8 +525,8 @@ func TestService_blockProviderScoring(t *testing.T) {
 		chain:        mc,
 		p2p:          p,
 		db:           beaconDB,
-		synced:       false,
-		chainStarted: true,
+		synced:       abool.New(),
+		chainStarted: abool.NewBool(true),
 	}
 	scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
 	expectedBlockSlots := makeSequence(1, 160)

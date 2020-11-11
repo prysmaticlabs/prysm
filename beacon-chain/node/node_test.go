@@ -1,18 +1,15 @@
 package node
 
 import (
-	"crypto/rand"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -26,8 +23,7 @@ var _ statefeed.Notifier = (*BeaconNode)(nil)
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	tmp := fmt.Sprintf("%s/datadirtest2", testutil.TempDir())
-	require.NoError(t, os.RemoveAll(tmp))
+	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -49,11 +45,8 @@ func TestNodeClose_OK(t *testing.T) {
 }
 
 func TestBootStrapNodeFile(t *testing.T) {
-	file, err := ioutil.TempFile(testutil.TempDir(), "bootstrapFile")
+	file, err := ioutil.TempFile(t.TempDir(), "bootstrapFile")
 	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, os.Remove(file.Name()))
-	}()
 
 	sampleNode0 := "- enr:-Ku4QMKVC_MowDsmEa20d5uGjrChI0h8_KsKXDmgVQbIbngZV0i" +
 		"dV6_RL7fEtZGo-kTNZ5o7_EJI_vCPJ6scrhwX0Z4Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD" +
@@ -74,10 +67,7 @@ func TestBootStrapNodeFile(t *testing.T) {
 func TestClearDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random number for file path")
-	tmp := filepath.Join(testutil.TempDir(), fmt.Sprintf("datadirtest%d", randPath))
-	require.NoError(t, os.RemoveAll(tmp))
+	tmp := filepath.Join(t.TempDir(), "datadirtest")
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -85,7 +75,7 @@ func TestClearDB(t *testing.T) {
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
 
 	context := cli.NewContext(&app, set, nil)
-	_, err = NewBeaconNode(context)
+	_, err := NewBeaconNode(context)
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, "Removing database")
