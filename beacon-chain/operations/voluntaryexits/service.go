@@ -48,10 +48,10 @@ func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64, noLimit
 		}
 		if v, err := state.ValidatorAtIndexReadOnly(e.Exit.ValidatorIndex); err == nil && v.ExitEpoch() == params.BeaconConfig().FarFutureEpoch {
 			pending = append(pending, e)
+			if uint64(len(pending)) == maxExits {
+				break
+			}
 		}
-	}
-	if uint64(len(pending)) > maxExits {
-		pending = pending[:maxExits]
 	}
 	return pending
 }
