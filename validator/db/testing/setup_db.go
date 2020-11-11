@@ -1,24 +1,15 @@
 package testing
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
 // SetupDB instantiates and returns a DB instance for the validator client.
 func SetupDB(t testing.TB, pubkeys [][48]byte) db.Database {
-	randPath := rand.NewDeterministicGenerator().Int()
-	p := filepath.Join(TempDir(), fmt.Sprintf("/%d", randPath))
-	if err := os.RemoveAll(p); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
-	db, err := kv.NewKVStore(p, pubkeys)
+	db, err := kv.NewKVStore(t.TempDir(), pubkeys)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
@@ -31,15 +22,4 @@ func SetupDB(t testing.TB, pubkeys [][48]byte) db.Database {
 		}
 	})
 	return db
-}
-
-// TempDir returns a directory path for temporary test storage.
-func TempDir() string {
-	d := os.Getenv("TEST_TMPDIR")
-
-	// If the test is not run via bazel, the environment var won't be set.
-	if d == "" {
-		return os.TempDir()
-	}
-	return d
 }
