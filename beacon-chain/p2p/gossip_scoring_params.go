@@ -45,7 +45,7 @@ func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) 
 }
 
 func topicScoreParams(topic string) *pubsub.TopicScoreParams {
-	switch true {
+	switch {
 	case strings.Contains(topic, "beacon_block"):
 		return defaultBlockTopicParams()
 	case strings.Contains(topic, "beacon_aggregate_and_proof"):
