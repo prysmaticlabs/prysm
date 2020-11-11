@@ -13,6 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// ValidatorAlreadyExitedMsg defines a message saying that a validator has already exited.
+var ValidatorAlreadyExitedMsg = "has already submitted an exit, which will take place at epoch"
+
 // ValidatorCannotExitYetMsg defines a message saying that a validator cannot exit
 // because it has not been active long enough.
 var ValidatorCannotExitYetMsg = "validator has not been active long enough to exit"
@@ -166,7 +169,7 @@ func verifyExitConditions(validator stateTrie.ReadOnlyValidator, currentSlot uin
 	}
 	// Verify the validator has not yet submitted an exit.
 	if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator with index %d has already submitted an exit, which will take place at epoch: %v", exit.ValidatorIndex, validator.ExitEpoch())
+		return fmt.Errorf("validator with index %d %s: %v", exit.ValidatorIndex, ValidatorAlreadyExitedMsg, validator.ExitEpoch())
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
