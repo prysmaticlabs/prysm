@@ -10,14 +10,13 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPool_InsertVoluntaryExit(t *testing.T) {
 	type fields struct {
-		pending  []*ethpb.SignedVoluntaryExit
-		included map[uint64]bool
+		pending   []*ethpb.SignedVoluntaryExit
+		seenExits map[uint64]bool
 	}
 	type args struct {
 		exit *ethpb.SignedVoluntaryExit
@@ -31,8 +30,8 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		{
 			name: "Empty list",
 			fields: fields{
-				pending:  make([]*ethpb.SignedVoluntaryExit, 0),
-				included: make(map[uint64]bool),
+				pending:   make([]*ethpb.SignedVoluntaryExit, 0),
+				seenExits: make(map[uint64]bool),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -62,7 +61,9 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 						},
 					},
 				},
-				included: make(map[uint64]bool),
+				seenExits: map[uint64]bool{
+					1: true,
+				},
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -82,7 +83,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			},
 		},
 		{
-			name: "Duplicate exit with lower epoch",
+			name: "Duplicate validator index",
 			fields: fields{
 				pending: []*ethpb.SignedVoluntaryExit{
 					{
@@ -92,12 +93,14 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 						},
 					},
 				},
-				included: make(map[uint64]bool),
+				seenExits: map[uint64]bool{
+					1: true,
+				},
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
 					Exit: &ethpb.VoluntaryExit{
-						Epoch:          10,
+						Epoch:          20,
 						ValidatorIndex: 1,
 					},
 				},
@@ -105,7 +108,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			want: []*ethpb.SignedVoluntaryExit{
 				{
 					Exit: &ethpb.VoluntaryExit{
-						Epoch:          10,
+						Epoch:          12,
 						ValidatorIndex: 1,
 					},
 				},
@@ -114,8 +117,8 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		{
 			name: "Exit for already exited validator",
 			fields: fields{
-				pending:  []*ethpb.SignedVoluntaryExit{},
-				included: make(map[uint64]bool),
+				pending:   []*ethpb.SignedVoluntaryExit{},
+				seenExits: make(map[uint64]bool),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -144,7 +147,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 						},
 					},
 				},
-				included: make(map[uint64]bool),
+				seenExits: make(map[uint64]bool),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -176,10 +179,10 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			},
 		},
 		{
-			name: "Already included",
+			name: "Already seenExits",
 			fields: fields{
 				pending: make([]*ethpb.SignedVoluntaryExit, 0),
-				included: map[uint64]bool{
+				seenExits: map[uint64]bool{
 					1: true,
 				},
 			},
@@ -212,8 +215,8 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{
-				pending:  tt.fields.pending,
-				included: tt.fields.included,
+				pending:   tt.fields.pending,
+				seenExits: tt.fields.seenExits,
 			}
 			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
 			require.NoError(t, err)
@@ -245,32 +248,6 @@ func TestPool_MarkIncluded(t *testing.T) {
 		want   fields
 	}{
 		{
-			name: "Included, does not exist in pending",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-					},
-				},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
-				},
-			},
-			want: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-					},
-				},
-				included: map[uint64]bool{
-					3: true,
-				},
-			},
-		},
-		{
 			name: "Removes from pending list",
 			fields: fields{
 				pending: []*ethpb.SignedVoluntaryExit{
@@ -283,9 +260,6 @@ func TestPool_MarkIncluded(t *testing.T) {
 					{
 						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
 					},
-				},
-				included: map[uint64]bool{
-					0: true,
 				},
 			},
 			args: args{
@@ -302,18 +276,14 @@ func TestPool_MarkIncluded(t *testing.T) {
 						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
 					},
 				},
-				included: map[uint64]bool{
-					0: true,
-					2: true,
-				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{
-				pending:  tt.fields.pending,
-				included: tt.fields.included,
+				pending:   tt.fields.pending,
+				seenExits: tt.fields.included,
 			}
 			p.MarkIncluded(tt.args.exit)
 			if len(p.pending) != len(tt.want.pending) {
@@ -324,7 +294,6 @@ func TestPool_MarkIncluded(t *testing.T) {
 					t.Errorf("Pending exit at index %d does not match expected. Got=%v wanted=%v", i, p.pending[i], tt.want.pending[i])
 				}
 			}
-			assert.DeepEqual(t, tt.want.included, p.included)
 		})
 	}
 }
