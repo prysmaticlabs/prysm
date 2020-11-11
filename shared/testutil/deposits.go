@@ -100,10 +100,24 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trieutil.SparseM
 	}
 
 	numDeposits := uint64(len(balances))
-	// Fetch enough keys for all deposits, since this function is uncached.
-	secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(0, numDeposits+1)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not create deterministic keys: ")
+	numExisting := uint64(len(cachedDeposits))
+	numRequired := numDeposits - uint64(len(cachedDeposits))
+
+	var secretKeys []bls.SecretKey
+	var publicKeys []bls.PublicKey
+	if numExisting >= numDeposits+1 {
+		secretKeys = append(secretKeys, privKeys[:numDeposits+1]...)
+		publicKeys = publicKeysFromSecrets(secretKeys)
+	} else {
+		secretKeys = append(secretKeys, privKeys[:numExisting]...)
+		publicKeys = publicKeysFromSecrets(secretKeys)
+		// Fetch enough keys for all deposits, since this function is uncached.
+		newSecretKeys, newPublicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create deterministic keys: ")
+		}
+		secretKeys = append(secretKeys, newSecretKeys...)
+		publicKeys = append(publicKeys, newPublicKeys...)
 	}
 
 	deposits := make([]*ethpb.Deposit, numDeposits)
@@ -127,7 +141,7 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trieutil.SparseM
 		sparseTrie.Insert(hashedDeposit[:], int(i))
 	}
 
-	depositTrie, _, err := DepositTrie(sparseTrie, int(numDeposits))
+	depositTrie, _, err := DepositTrieSubset(sparseTrie, int(numDeposits))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
 	}
@@ -356,4 +370,12 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 	}
 
 	return requestedDeposits, privKeys[0:numDeposits], nil
+}
+
+func publicKeysFromSecrets(secretKeys []bls.SecretKey) []bls.PublicKey {
+	publicKeys := make([]bls.PublicKey, len(secretKeys))
+	for i, secretKey := range secretKeys {
+		publicKeys[i] = secretKey.PublicKey()
+	}
+	return publicKeys
 }

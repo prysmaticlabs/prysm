@@ -126,7 +126,42 @@ func TestDepositsWithBalance_MatchesDeterministic(t *testing.T) {
 			t.Errorf("Expected deposit root %d to match", i)
 		}
 	}
+}
 
+func TestDepositsWithBalance_MatchesDeterministic_Cached(t *testing.T) {
+	entries := 32
+	ResetCache()
+	// Cache half of the deposit cache.
+	_, _, err := DeterministicDepositsAndKeys(uint64(entries))
+	require.NoError(t, err)
+	_, _, err = DeterministicDepositTrie(entries)
+	require.NoError(t, err)
+
+	// Generate balanced deposits with half cache.
+	entries = 64
+	balances := make([]uint64, entries)
+	for i := 0; i < entries; i++ {
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	deposits, depositTrie, err := DepositsWithBalance(balances)
+	require.NoError(t, err)
+	_, depositDataRoots, err := DepositTrieSubset(depositTrie, entries)
+	require.NoError(t, err)
+
+	// Get 64 standard deposits.
+	determDeposits, _, err := DeterministicDepositsAndKeys(uint64(entries))
+	require.NoError(t, err)
+	_, determDepositDataRoots, err := DeterministicDepositTrie(entries)
+	require.NoError(t, err)
+
+	for i := 0; i < entries; i++ {
+		if !proto.Equal(deposits[i], determDeposits[i]) {
+			t.Errorf("Expected deposit %d to match", i)
+		}
+		if !bytes.Equal(depositDataRoots[i][:], determDepositDataRoots[i][:]) {
+			t.Errorf("Expected deposit root %d to match", i)
+		}
+	}
 }
 
 func TestSetupInitialDeposits_1024Entries_PartialDeposits(t *testing.T) {
