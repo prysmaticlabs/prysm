@@ -14,6 +14,7 @@ import (
 const beaconBlockWeight = 0.8
 const aggregateWeight = 0.5
 const attestationTotalWeight = 1
+const decayToZero = 0.01
 
 func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
 	thresholds := &pubsub.PeerScoreThresholds{
@@ -37,7 +38,7 @@ func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) 
 		BehaviourPenaltyThreshold:   6,
 		BehaviourPenaltyDecay:       scoreDecay(10 * oneEpochDuration()),
 		DecayInterval:               1 * oneSlotDuration(),
-		DecayToZero:                 0.01,
+		DecayToZero:                 decayToZero,
 		RetainScore:                 100 * oneEpochDuration(),
 	}
 	return scoreParams, thresholds
@@ -60,6 +61,8 @@ func topicScoreParams(topic string) *pubsub.TopicScoreParams {
 // https://gist.github.com/blacktemplar/5c1862cb3f0e32a1a7fb0b25e79e6e2c
 
 func defaultBlockTopicParams() *pubsub.TopicScoreParams {
+	decayEpoch := time.Duration(5)
+	blocksPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     beaconBlockWeight,
 		TimeInMeshWeight:                0.0324,
@@ -69,19 +72,20 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 		FirstMessageDeliveriesDecay:     scoreDecay(20 * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       23,
 		MeshMessageDeliveriesWeight:     -0.717,
-		MeshMessageDeliveriesDecay:      scoreDecay(5 * oneEpochDuration()),
-		MeshMessageDeliveriesCap:        139,
-		MeshMessageDeliveriesThreshold:  14,
+		MeshMessageDeliveriesDecay:      scoreDecay(decayEpoch * oneEpochDuration()),
+		MeshMessageDeliveriesCap:        float64(blocksPerEpoch * uint64(decayEpoch)),
+		MeshMessageDeliveriesThreshold:  float64(blocksPerEpoch*uint64(decayEpoch)) / 10,
 		MeshMessageDeliveriesWindow:     2 * time.Second,
 		MeshMessageDeliveriesActivation: 4 * oneEpochDuration(),
 		MeshFailurePenaltyWeight:        -0.717,
-		MeshFailurePenaltyDecay:         scoreDecay(5 * oneEpochDuration()),
+		MeshFailurePenaltyDecay:         scoreDecay(decayEpoch * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -140.4475,
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
 	}
 }
 
 func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
+	aggPerEpoch := aggregatorsPerSlot() * params.BeaconConfig().SlotsPerEpoch
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     aggregateWeight,
 		TimeInMeshWeight:                0.0324,
@@ -92,8 +96,8 @@ func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
 		FirstMessageDeliveriesCap:       179,
 		MeshMessageDeliveriesWeight:     -0.064,
 		MeshMessageDeliveriesDecay:      scoreDecay(1 * oneEpochDuration()),
-		MeshMessageDeliveriesCap:        1075,
-		MeshMessageDeliveriesThreshold:  47,
+		MeshMessageDeliveriesCap:        float64(aggPerEpoch),
+		MeshMessageDeliveriesThreshold:  float64(aggPerEpoch / 50),
 		MeshMessageDeliveriesWindow:     2 * time.Second,
 		MeshMessageDeliveriesActivation: 32 * oneSlotDuration(),
 		MeshFailurePenaltyWeight:        -0.064,
@@ -106,6 +110,7 @@ func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
 func defaultAggregateSubnetTopicParams() *pubsub.TopicScoreParams {
 	topicWeight := attestationTotalWeight / float64(params.BeaconNetworkConfig().AttestationSubnetCount)
 	subnetWeight := activeValidators() / params.BeaconNetworkConfig().AttestationSubnetCount
+	minimumWeight := subnetWeight / 50
 	numPerSlot := time.Duration(subnetWeight / params.BeaconConfig().SlotsPerEpoch)
 	comsPerSlot := committeeCountPerSlot()
 	exceedsThreshold := comsPerSlot >= 2*params.BeaconNetworkConfig().AttestationSubnetCount/params.BeaconConfig().SlotsPerEpoch
@@ -125,8 +130,8 @@ func defaultAggregateSubnetTopicParams() *pubsub.TopicScoreParams {
 		FirstMessageDeliveriesCap:       24,
 		MeshMessageDeliveriesWeight:     -37.55,
 		MeshMessageDeliveriesDecay:      scoreDecay(meshDecay * oneEpochDuration()),
-		MeshMessageDeliveriesCap:        553,
-		MeshMessageDeliveriesThreshold:  11,
+		MeshMessageDeliveriesCap:        float64(subnetWeight),
+		MeshMessageDeliveriesThreshold:  float64(minimumWeight),
 		MeshMessageDeliveriesWindow:     2 * time.Second,
 		MeshMessageDeliveriesActivation: 17 * oneSlotDuration(),
 		MeshFailurePenaltyWeight:        -37.55,
@@ -144,19 +149,13 @@ func oneEpochDuration() time.Duration {
 	return time.Duration(params.BeaconConfig().SlotsPerEpoch) * oneSlotDuration()
 }
 
-func maxPositiveScore() float64 {
-	maxMeshScore := 10
-	maxFirstDeliveryScore := 40
-	maxMeshDeliveryScore := 10
-
-	return float64(maxMeshScore+maxMeshDeliveryScore+maxFirstDeliveryScore) * (aggregateWeight + attestationTotalWeight + beaconBlockWeight)
-}
-
 func scoreDecay(totalDurationDecay time.Duration) float64 {
 	numOfTimes := totalDurationDecay / oneSlotDuration()
-	return math.Pow(0.01, 1/float64(numOfTimes))
+	return math.Pow(decayToZero, 1/float64(numOfTimes))
 }
 
+// Default to the min-genesis for the current moment, as p2p service
+// has no access to the chain service.
 func activeValidators() uint64 {
 	return params.BeaconConfig().MinGenesisActiveValidatorCount
 }
