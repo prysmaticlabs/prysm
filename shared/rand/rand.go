@@ -47,8 +47,6 @@ func (s *source) Seed(_ int64) {}
 // Int63 returns uniformly-distributed random (as in CSPRNG) int64 value within [0, 1<<63) range.
 // Panics if random generator reader cannot return data.
 func (s *source) Int63() int64 {
-	lock.RLock()
-	defer lock.RUnlock()
 	return int64(s.Uint64() & ^uint64(1<<63))
 }
 
