@@ -368,9 +368,9 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 
 func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
-	fTrie.Lock()
-	defer fTrie.Unlock()
-	if fTrie.refs > 1 {
+	if fTrie.Refs() > 1 {
+		fTrie.Lock()
+		defer fTrie.Unlock()
 		fTrie.MinusRef()
 		newTrie := fTrie.CopyTrie()
 		b.stateFieldLeaves[index] = newTrie
