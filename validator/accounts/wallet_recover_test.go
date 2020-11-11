@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -28,18 +27,12 @@ type recoverCfgStruct struct {
 }
 
 func setupRecoverCfg(t *testing.T) *recoverCfgStruct {
-	testDir := testutil.TempDir()
+	testDir := t.TempDir()
 	walletDir := filepath.Join(testDir, walletDirName)
 	passwordFilePath := filepath.Join(testDir, passwordFileName)
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	mnemonicFilePath := filepath.Join(testDir, mnemonicFileName)
 	require.NoError(t, ioutil.WriteFile(mnemonicFilePath, []byte(mnemonic), os.ModePerm))
-
-	t.Cleanup(func() {
-		assert.NoError(t, os.RemoveAll(walletDir))
-		assert.NoError(t, os.Remove(passwordFilePath))
-		assert.NoError(t, os.Remove(mnemonicFilePath))
-	})
 
 	return &recoverCfgStruct{
 		walletDir:        walletDir,

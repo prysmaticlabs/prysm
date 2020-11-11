@@ -143,6 +143,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	if v.emitAccountMetrics {
 		ValidatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
+		ValidatorAttestedSlotsGaugeVec.WithLabelValues(fmtKey).Set(float64(slot))
 	}
 }
 

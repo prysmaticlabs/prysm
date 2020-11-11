@@ -320,7 +320,7 @@ func TestService_markSynced(t *testing.T) {
 	assert.Equal(t, false, s.synced)
 	assert.Equal(t, true, s.Syncing())
 	assert.NoError(t, s.Status())
-	s.chainStarted = true
+	s.chainStarted.Set()
 	assert.ErrorContains(t, "syncing", s.Status())
 
 	expectedGenesisTime := time.Unix(358544700, 0)
