@@ -74,7 +74,8 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 	}
 
 	// Prevent any sort of duplicate exit from being inserted.
-	if p.seenExits[exit.Exit.ValidatorIndex] {
+	existsInPending, _ := existsInList(p.pending, exit.Exit.ValidatorIndex)
+	if p.seenExits[exit.Exit.ValidatorIndex] || existsInPending {
 		return
 	}
 
@@ -89,6 +90,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 	sort.Slice(p.pending, func(i, j int) bool {
 		return p.pending[i].Exit.ValidatorIndex < p.pending[j].Exit.ValidatorIndex
 	})
+	p.seenExits[exit.Exit.ValidatorIndex] = true
 }
 
 // MarkIncluded is used when an exit has been included in a beacon block. Every block seen by this
@@ -97,12 +99,20 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	searchingFor := exit.Exit.ValidatorIndex
-	i := sort.Search(len(p.pending), func(j int) bool {
-		return p.pending[j].Exit.ValidatorIndex >= searchingFor
-	})
-	if i < len(p.pending) && p.pending[i].Exit.ValidatorIndex == searchingFor {
-		// Exit we want is present at p.pending[i], so we remove it.
-		p.pending = append(p.pending[:i], p.pending[i+1:]...)
+	exists, index := existsInList(p.pending, exit.Exit.ValidatorIndex)
+	if exists {
+		// Exit we want is present at p.pending[index], so we remove it.
+		p.pending = append(p.pending[:index], p.pending[index+1:]...)
 	}
+}
+
+// Binary search to check if the index exists in the list of pending exits.
+func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor uint64) (bool, int) {
+	i := sort.Search(len(pending), func(j int) bool {
+		return pending[j].Exit.ValidatorIndex >= searchingFor
+	})
+	if i < len(pending) && pending[i].Exit.ValidatorIndex == searchingFor {
+		return true, i
+	}
+	return false, -1
 }
