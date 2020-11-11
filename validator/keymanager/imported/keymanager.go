@@ -194,7 +194,7 @@ func (opts *KeymanagerOpts) ConvertToConfig() map[string]string {
 			for i, key := range keys {
 				str[i] = fmt.Sprintf("%q", key)
 			}
-			config[jsonName] = strings.Join(str[:], ",")
+			config[jsonName] = strings.Join(str, ",")
 		} else {
 			config[jsonName] = fmt.Sprint(v)
 		}

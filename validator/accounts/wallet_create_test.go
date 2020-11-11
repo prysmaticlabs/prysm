@@ -49,6 +49,7 @@ type testWalletConfig struct {
 	backupDir               string
 	keysDir                 string
 	deletePublicKeys        string
+	disablePublicKeys       string
 	voluntaryExitPublicKeys string
 	backupPublicKeys        string
 	backupPasswordFile      string
@@ -70,6 +71,7 @@ func setupWalletCtx(
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.DisablePublicKeysFlag.Name, cfg.disablePublicKeys, "")
 	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
 	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
 	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
