@@ -139,7 +139,7 @@ func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
 		},
 	}
 
-	want := "validator has already submitted an exit, which will take place at epoch: 10"
+	want := "validator with index 0 has already submitted an exit, which will take place at epoch: 10"
 	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
 	assert.ErrorContains(t, want, err)
 }
