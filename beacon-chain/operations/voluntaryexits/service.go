@@ -70,9 +70,19 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 		return
 	}
 
-	// Prevent any sort of duplicate exit from being inserted.
-	existsInPending, _ := existsInList(p.pending, exit.Exit.ValidatorIndex)
-	if p.seenExits[exit.Exit.ValidatorIndex] || existsInPending {
+	// Prevent any sort of duplicate exits from being inserted.
+	if p.seenExits[exit.Exit.ValidatorIndex] {
+		return
+	}
+	existsInPending, index := existsInList(p.pending, exit.Exit.ValidatorIndex)
+
+	// If the item exists in the pending list and includes a more favorable, earlier
+	// exit epoch, we replace it in the pending list. If it exists but the prior condition is false,
+	// we simply return.
+	if existsInPending {
+		if exit.Exit.Epoch < p.pending[index].Exit.Epoch {
+			p.pending[index] = exit
+		}
 		return
 	}
 

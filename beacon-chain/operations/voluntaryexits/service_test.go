@@ -169,6 +169,36 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			},
 		},
 		{
+			name: "Duplicate received with more favorable exit epoch",
+			fields: fields{
+				pending: []*ethpb.SignedVoluntaryExit{
+					{
+						Exit: &ethpb.VoluntaryExit{
+							Epoch:          12,
+							ValidatorIndex: 1,
+						},
+					},
+				},
+				seenExits: make(map[uint64]bool),
+			},
+			args: args{
+				exit: &ethpb.SignedVoluntaryExit{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          4,
+						ValidatorIndex: 1,
+					},
+				},
+			},
+			want: []*ethpb.SignedVoluntaryExit{
+				{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          4,
+						ValidatorIndex: 1,
+					},
+				},
+			},
+		},
+		{
 			name: "Exit for already exited validator",
 			fields: fields{
 				pending:   []*ethpb.SignedVoluntaryExit{},

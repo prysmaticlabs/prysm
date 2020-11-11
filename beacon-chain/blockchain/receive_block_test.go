@@ -78,7 +78,6 @@ func TestService_ReceiveBlock(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			name: "updates exit pool",
 			args: args{
