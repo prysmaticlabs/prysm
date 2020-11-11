@@ -1,17 +1,14 @@
 package node
 
 import (
-	"crypto/rand"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -22,15 +19,14 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	os.Exit(m.Run())
+	m.Run()
 }
 
 // Test that slasher node can close.
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	tmp := fmt.Sprintf("%s/datadirtest2", testutil.TempDir())
-	require.NoError(t, os.RemoveAll(tmp))
+	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -52,10 +48,7 @@ func TestNodeClose_OK(t *testing.T) {
 func TestClearDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random number for file path")
-	tmp := filepath.Join(testutil.TempDir(), fmt.Sprintf("datadirtest%d", randPath))
-	require.NoError(t, os.RemoveAll(tmp))
+	tmp := filepath.Join(t.TempDir(), "datadirtest")
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)

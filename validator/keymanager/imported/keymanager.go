@@ -100,11 +100,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err := k.initializeAccountKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to initialize account store")
 	}
-	if k.opts.Version != "2" {
-		if err := k.rewriteAccountsKeystore(ctx); err != nil {
-			return nil, errors.Wrap(err, "failed to write accounts keystore")
-		}
-	}
 
 	// We begin a goroutine to listen for file changes to our
 	// all-accounts.keystore.json file in the wallet directory.
@@ -309,22 +304,6 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("no signing key found in keys cache")
 	}
 	return secretKey.Sign(req.SigningRoot), nil
-}
-
-func (dr *Keymanager) rewriteAccountsKeystore(ctx context.Context) error {
-	newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
-	if err != nil {
-		return err
-	}
-	// Write the encoded keystore.
-	encoded, err := json.MarshalIndent(newStore, "", "\t")
-	if err != nil {
-		return err
-	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
-		return errors.Wrap(err, "could not write keystore file for accounts")
-	}
-	return nil
 }
 
 func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
