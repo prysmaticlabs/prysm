@@ -3,15 +3,12 @@ package kv
 import (
 	"context"
 	"encoding/hex"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
 )
@@ -50,10 +47,7 @@ func TestMerge(t *testing.T) {
 		Attestations: mergedAttestations,
 	}
 
-	targetDirectory := testutil.TempDir() + "/target"
-	t.Cleanup(func() {
-		assert.NoError(t, os.RemoveAll(targetDirectory), "Could not remove target directory")
-	})
+	targetDirectory := t.TempDir() + "/target"
 
 	err = Merge(context.Background(), []*Store{firstStore, secondStore}, targetDirectory)
 	require.NoError(t, err, "Merging failed")
@@ -77,10 +71,7 @@ func TestSplit(t *testing.T) {
 	storeHistory2, err := prepareStore(sourceStore, [][48]byte{pubKey2})
 	require.NoError(t, err)
 
-	targetDirectory := testutil.TempDir() + "/target"
-	t.Cleanup(func() {
-		assert.NoError(t, os.RemoveAll(targetDirectory), "Could not remove target directory")
-	})
+	targetDirectory := t.TempDir() + "/target"
 
 	require.NoError(t, Split(context.Background(), sourceStore, targetDirectory), "Splitting failed")
 
@@ -126,10 +117,7 @@ func TestSplit_AttestationsWithoutMatchingProposalsAreSplit(t *testing.T) {
 	attestationHistory, err := prepareStoreAttestations(sourceStore, [][48]byte{pubKey1, pubKey2})
 	require.NoError(t, err)
 
-	targetDirectory := testutil.TempDir() + "/target"
-	t.Cleanup(func() {
-		assert.NoError(t, os.RemoveAll(targetDirectory), "Could not remove target directory")
-	})
+	targetDirectory := t.TempDir() + "/target"
 
 	require.NoError(t, Split(context.Background(), sourceStore, targetDirectory), "Splitting failed")
 

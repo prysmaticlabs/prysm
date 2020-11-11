@@ -2,9 +2,6 @@ package rpc
 
 import (
 	"context"
-	"crypto/rand"
-	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +11,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -24,13 +20,8 @@ import (
 )
 
 func setupWalletDir(t testing.TB) string {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
+	walletDir := filepath.Join(t.TempDir(), "wallet")
 	require.NoError(t, os.MkdirAll(walletDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-	})
 	return walletDir
 }
 

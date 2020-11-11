@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"net"
-	"os"
 	"testing"
 
 	gethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -14,17 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestPrivateKeyLoading(t *testing.T) {
-	file, err := ioutil.TempFile(testutil.TempDir(), "key")
+	file, err := ioutil.TempFile(t.TempDir(), "key")
 	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, os.Remove(file.Name()))
-	}()
 	key, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	require.NoError(t, err, "Could not generate key")
 	raw, err := key.Raw()
