@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
+	"runtime"
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -198,6 +199,10 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	encoded, err := ioutil.ReadAll(f)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not parse keymanager config: %v", err)
+	}
+	kmOpts := &imported.KeymanagerOpts{}
+	if err := json.Unmarshal(encoded, kmOpts); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
 	}
 	var config map[string]string
 	if err := json.Unmarshal(encoded, &config); err != nil {

@@ -79,6 +79,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	dr := &Keymanager{
 		wallet:        wallet,
 		accountsStore: &AccountStore{},
+		opts:          DefaultKeymanagerOpts(),
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -112,6 +113,7 @@ func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	dr := &Keymanager{
 		wallet:        wallet,
 		accountsStore: &AccountStore{},
+		opts:          DefaultKeymanagerOpts(),
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -147,6 +149,7 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 	dr := &Keymanager{
 		wallet:        wallet,
 		accountsStore: &AccountStore{},
+		opts:          DefaultKeymanagerOpts(),
 	}
 
 	// First, generate accounts and their keystore.json files.

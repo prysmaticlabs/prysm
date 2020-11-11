@@ -98,7 +98,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := DisableAccountCli(cliCtx); err != nil {
+				if err := DisableAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not disable account: %v", err)
 				}
 				return nil
@@ -126,7 +126,7 @@ this command outputs a deposit data string which is required to become a validat
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := EnableAccountCli(cliCtx); err != nil {
+				if err := EnableAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not enable account: %v", err)
 				}
 				return nil
