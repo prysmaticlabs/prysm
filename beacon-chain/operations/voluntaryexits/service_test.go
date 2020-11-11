@@ -15,8 +15,7 @@ import (
 
 func TestPool_InsertVoluntaryExit(t *testing.T) {
 	type fields struct {
-		pending   []*ethpb.SignedVoluntaryExit
-		seenExits map[uint64]bool
+		pending []*ethpb.SignedVoluntaryExit
 	}
 	type args struct {
 		exit *ethpb.SignedVoluntaryExit
@@ -30,8 +29,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		{
 			name: "Prevent inserting nil exit",
 			fields: fields{
-				pending:   make([]*ethpb.SignedVoluntaryExit, 0),
-				seenExits: make(map[uint64]bool),
+				pending: make([]*ethpb.SignedVoluntaryExit, 0),
 			},
 			args: args{
 				exit: nil,
@@ -41,8 +39,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		{
 			name: "Prevent inserting malformed exit",
 			fields: fields{
-				pending:   make([]*ethpb.SignedVoluntaryExit, 0),
-				seenExits: make(map[uint64]bool),
+				pending: make([]*ethpb.SignedVoluntaryExit, 0),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -54,8 +51,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		{
 			name: "Empty list",
 			fields: fields{
-				pending:   make([]*ethpb.SignedVoluntaryExit, 0),
-				seenExits: make(map[uint64]bool),
+				pending: make([]*ethpb.SignedVoluntaryExit, 0),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -85,9 +81,6 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 						},
 					},
 				},
-				seenExits: map[uint64]bool{
-					1: true,
-				},
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -107,7 +100,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			},
 		},
 		{
-			name: "Duplicate exit not in map but found in pending list",
+			name: "Duplicate exit in pending list",
 			fields: fields{
 				pending: []*ethpb.SignedVoluntaryExit{
 					{
@@ -117,7 +110,6 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 						},
 					},
 				},
-				seenExits: make(map[uint64]bool),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -146,9 +138,6 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 							ValidatorIndex: 1,
 						},
 					},
-				},
-				seenExits: map[uint64]bool{
-					1: true,
 				},
 			},
 			args: args{
@@ -179,7 +168,6 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 						},
 					},
 				},
-				seenExits: make(map[uint64]bool),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -201,8 +189,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		{
 			name: "Exit for already exited validator",
 			fields: fields{
-				pending:   []*ethpb.SignedVoluntaryExit{},
-				seenExits: make(map[uint64]bool),
+				pending: []*ethpb.SignedVoluntaryExit{},
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -231,7 +218,6 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 						},
 					},
 				},
-				seenExits: make(map[uint64]bool),
 			},
 			args: args{
 				exit: &ethpb.SignedVoluntaryExit{
@@ -262,24 +248,6 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "Already seenExits",
-			fields: fields{
-				pending: make([]*ethpb.SignedVoluntaryExit, 0),
-				seenExits: map[uint64]bool{
-					1: true,
-				},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{},
-		},
 	}
 	ctx := context.Background()
 	validators := []*ethpb.Validator{
@@ -299,8 +267,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{
-				pending:   tt.fields.pending,
-				seenExits: tt.fields.seenExits,
+				pending: tt.fields.pending,
 			}
 			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
 			require.NoError(t, err)
@@ -366,8 +333,7 @@ func TestPool_MarkIncluded(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{
-				pending:   tt.fields.pending,
-				seenExits: tt.fields.included,
+				pending: tt.fields.pending,
 			}
 			p.MarkIncluded(tt.args.exit)
 			if len(p.pending) != len(tt.want.pending) {

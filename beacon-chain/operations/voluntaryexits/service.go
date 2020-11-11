@@ -15,17 +15,15 @@ import (
 // Pool implements a struct to maintain pending and seen voluntary exits. This pool
 // is used by proposers to insert into new blocks.
 type Pool struct {
-	lock      sync.RWMutex
-	pending   []*ethpb.SignedVoluntaryExit
-	seenExits map[uint64]bool
+	lock    sync.RWMutex
+	pending []*ethpb.SignedVoluntaryExit
 }
 
 // NewPool accepts a head fetcher (for reading the validator set) and returns an initialized
 // voluntary exit pool.
 func NewPool() *Pool {
 	return &Pool{
-		pending:   make([]*ethpb.SignedVoluntaryExit, 0),
-		seenExits: make(map[uint64]bool),
+		pending: make([]*ethpb.SignedVoluntaryExit, 0),
 	}
 }
 
@@ -70,12 +68,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 		return
 	}
 
-	// Prevent any sort of duplicate exits from being inserted.
-	if p.seenExits[exit.Exit.ValidatorIndex] {
-		return
-	}
 	existsInPending, index := existsInList(p.pending, exit.Exit.ValidatorIndex)
-
 	// If the item exists in the pending list and includes a more favorable, earlier
 	// exit epoch, we replace it in the pending list. If it exists but the prior condition is false,
 	// we simply return.
@@ -97,7 +90,6 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 	sort.Slice(p.pending, func(i, j int) bool {
 		return p.pending[i].Exit.ValidatorIndex < p.pending[j].Exit.ValidatorIndex
 	})
-	p.seenExits[exit.Exit.ValidatorIndex] = true
 }
 
 // MarkIncluded is used when an exit has been included in a beacon block. Every block seen by this
