@@ -552,7 +552,7 @@ func (v *validator) SaveProtections(ctx context.Context) error {
 	return nil
 }
 
-// ResetAttesterProtectionData initialize protection data.
+// ResetAttesterProtectionData reset validators protection data.
 func (v *validator) ResetAttesterProtectionData() {
 	v.attesterHistoryByPubKeyLock.Lock()
 	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
