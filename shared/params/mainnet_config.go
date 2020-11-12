@@ -43,7 +43,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	GenesisDelay:             172800, // 2 days
+	GenesisDelay:             604800, // 1 week.
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
