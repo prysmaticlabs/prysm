@@ -468,6 +468,10 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			}
 			s.setHead(headRoot, headBlock, headState)
 			return nil
+		} else {
+			log.Warnf("Finalized checkpoint at slot %d is too close to the current head slot, "+
+				"resetting head from the checkpoint ('--%s' flag is ignored).",
+				finalizedState.Slot(), flags.HeadSync.Name)
 		}
 	}
 

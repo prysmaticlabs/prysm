@@ -326,6 +326,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 		flags.Init(resetFlags)
 	}()
 
+	hook := logTest.NewGlobal()
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	db, sc := testDB.SetupDB(t)
 	ctx := context.Background()
@@ -372,6 +373,8 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
 	assert.DeepEqual(t, finalizedBlock, c.head.block)
+	assert.LogsContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
+	assert.LogsDoNotContain(t, hook, "Regenerating state from the last checkpoint at slot")
 
 	// Set head slot far beyond the finalization point, head sync should be triggered.
 	headBlock = testutil.NewBeaconBlock()
@@ -383,6 +386,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, headRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, headRoot))
 
+	hook.Reset()
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err = c.HeadState(ctx)
 	require.NoError(t, err)
@@ -390,6 +394,8 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
 	assert.DeepEqual(t, headBlock, c.head.block)
+	assert.LogsContain(t, hook, "Regenerating state from the last checkpoint at slot 225")
+	assert.LogsDoNotContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
 }
 
 func TestChainService_SaveHeadNoDB(t *testing.T) {
