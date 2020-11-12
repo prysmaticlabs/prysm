@@ -10,7 +10,7 @@ import (
 )
 
 // stateTestWrapper is a wrapper for the real State struct. The wrapper is meant to be used in testing instead
-// of the real StateBase implementation.
+// of the real implementation.
 type stateTestWrapper struct {
 	State
 }
