@@ -38,7 +38,8 @@ func (p *FakeP2P) AddConnectionHandler(_ func(ctx context.Context, id peer.ID) e
 }
 
 // AddDisconnectionHandler -- fake.
-func (p *FakeP2P) AddDisconnectionHandler(_ func(ctx context.Context, id peer.ID) error) {
+func (p *FakeP2P) AddDisconnectionHandler(_ func(ctx context.Context, id peer.ID) error,
+	_ func(ctx context.Context, id peer.ID) error) {
 }
 
 // AddPingMethod -- fake.
