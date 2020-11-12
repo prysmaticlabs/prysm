@@ -38,6 +38,7 @@ type Flags struct {
 	SpadinaTestnet bool // SpadinaTestnet defines the flag through which we can enable the node to run on the Spadina testnet.
 	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
 	ToledoTestnet  bool // ToledoTestnet defines the flag through which we can enable the node to run on the Toledo testnet.
+	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
 	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
@@ -139,6 +140,11 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UseToledoConfig()
 		params.UseToledoNetworkConfig()
 		cfg.ToledoTestnet = true
+	} else if ctx.Bool(PyrmontTestnet.Name) {
+		log.Warn("Running on Pyrmont Testnet")
+		params.UsePyrmontConfig()
+		params.UsePyrmontNetworkConfig()
+		cfg.PyrmontTestnet = true
 	} else {
 		log.Warn("Running on ETH2 Mainnet")
 		params.UseMainnetConfig()
