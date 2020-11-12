@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
@@ -1472,13 +1473,13 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 		AggregationBits: bitfield.NewBitlist(2),
 	}}
 	headState := testutil.NewBeaconState()
-	require.NoError(t, headState.SetSlot(1))
+	require.NoError(t, headState.SetSlot(2*params.BeaconConfig().SlotsPerEpoch-1))
 	require.NoError(t, headState.SetValidators(validators))
 	require.NoError(t, headState.SetBalances(balances))
+	require.NoError(t, headState.SetCurrentEpochAttestations(atts))
 	require.NoError(t, headState.SetPreviousEpochAttestations(atts))
 
 	b := testutil.NewBeaconBlock()
-	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, db.SaveBlock(ctx, b))
 	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
@@ -1493,11 +1494,11 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 		HeadFetcher: m,
 		StateGen:    stategen.New(db, sc),
 		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: time.Now(),
+			Genesis: timeutils.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot)) * time.Second),
 		},
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
