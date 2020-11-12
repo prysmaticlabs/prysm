@@ -45,6 +45,6 @@ type Server struct {
 	ChainStartChan              chan time.Time
 	ReceivedAttestationsBuffer  chan *ethpb.Attestation
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
-	StateGen                    stategen.StateBase
+	StateGen                    *stategen.State
 	SyncChecker                 sync.Checker
 }

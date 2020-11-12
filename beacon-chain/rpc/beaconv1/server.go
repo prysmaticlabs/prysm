@@ -42,6 +42,6 @@ type Server struct {
 	SlashingsPool       *slashings.Pool
 	CanonicalStateChan  chan *pbp2p.BeaconState
 	ChainStartChan      chan time.Time
-	StateGen            stategen.StateBase
+	StateGen            *stategen.State
 	SyncChecker         sync.Checker
 }

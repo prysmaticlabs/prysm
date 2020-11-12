@@ -26,7 +26,7 @@ import (
 type Server struct {
 	BeaconDB           db.NoHeadAccessDatabase
 	GenesisTimeFetcher blockchain.TimeFetcher
-	StateGen           stategen.StateBase
+	StateGen           *stategen.State
 	HeadFetcher        blockchain.HeadFetcher
 	PeerManager        p2p.PeerManager
 	PeersFetcher       p2p.PeersProvider
