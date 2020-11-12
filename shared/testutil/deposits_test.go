@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -94,6 +96,158 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	require.NoError(t, err)
 	if !bytes.Equal(deposits[1023].Data.Signature, sigAt1023B) {
 		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt1023B, deposits[1023].Data.Signature)
+	}
+}
+
+func TestDepositsWithBalance_MatchesDeterministic(t *testing.T) {
+	entries := 64
+	ResetCache()
+	balances := make([]uint64, entries)
+	for i := 0; i < entries; i++ {
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	deposits, depositTrie, err := DepositsWithBalance(balances)
+	require.NoError(t, err)
+	_, depositDataRoots, err := DepositTrieSubset(depositTrie, entries)
+	require.NoError(t, err)
+
+	determDeposits, _, err := DeterministicDepositsAndKeys(uint64(entries))
+	require.NoError(t, err)
+	_, determDepositDataRoots, err := DeterministicDepositTrie(entries)
+	require.NoError(t, err)
+
+	for i := 0; i < entries; i++ {
+		if !proto.Equal(deposits[i], determDeposits[i]) {
+			t.Errorf("Expected deposit %d to match", i)
+		}
+		if !bytes.Equal(depositDataRoots[i][:], determDepositDataRoots[i][:]) {
+			t.Errorf("Expected deposit root %d to match", i)
+		}
+	}
+}
+
+func TestDepositsWithBalance_MatchesDeterministic_Cached(t *testing.T) {
+	entries := 32
+	ResetCache()
+	// Cache half of the deposit cache.
+	_, _, err := DeterministicDepositsAndKeys(uint64(entries))
+	require.NoError(t, err)
+	_, _, err = DeterministicDepositTrie(entries)
+	require.NoError(t, err)
+
+	// Generate balanced deposits with half cache.
+	entries = 64
+	balances := make([]uint64, entries)
+	for i := 0; i < entries; i++ {
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	deposits, depositTrie, err := DepositsWithBalance(balances)
+	require.NoError(t, err)
+	_, depositDataRoots, err := DepositTrieSubset(depositTrie, entries)
+	require.NoError(t, err)
+
+	// Get 64 standard deposits.
+	determDeposits, _, err := DeterministicDepositsAndKeys(uint64(entries))
+	require.NoError(t, err)
+	_, determDepositDataRoots, err := DeterministicDepositTrie(entries)
+	require.NoError(t, err)
+
+	for i := 0; i < entries; i++ {
+		if !proto.Equal(deposits[i], determDeposits[i]) {
+			t.Errorf("Expected deposit %d to match", i)
+		}
+		if !bytes.Equal(depositDataRoots[i][:], determDepositDataRoots[i][:]) {
+			t.Errorf("Expected deposit root %d to match", i)
+		}
+	}
+}
+
+func TestSetupInitialDeposits_1024Entries_PartialDeposits(t *testing.T) {
+	entries := 1
+	ResetCache()
+	balances := make([]uint64, entries)
+	for i := 0; i < entries; i++ {
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance / 2
+	}
+	deposits, depositTrie, err := DepositsWithBalance(balances)
+	require.NoError(t, err)
+	_, depositDataRoots, err := DepositTrieSubset(depositTrie, entries)
+	require.NoError(t, err)
+
+	if len(deposits) != entries {
+		t.Fatalf("incorrect number of deposits returned, wanted %d but received %d", entries, len(deposits))
+	}
+	expectedPublicKeyAt0 := []byte{0xa9, 0x9a, 0x76, 0xed, 0x77, 0x96, 0xf7, 0xbe, 0x22, 0xd5, 0xb7, 0xe8, 0x5d, 0xee, 0xb7, 0xc5, 0x67, 0x7e, 0x88, 0xe5, 0x11, 0xe0, 0xb3, 0x37, 0x61, 0x8f, 0x8c, 0x4e, 0xb6, 0x13, 0x49, 0xb4, 0xbf, 0x2d, 0x15, 0x3f, 0x64, 0x9f, 0x7b, 0x53, 0x35, 0x9f, 0xe8, 0xb9, 0x4a, 0x38, 0xe4, 0x4c}
+	if !bytes.Equal(deposits[0].Data.PublicKey, expectedPublicKeyAt0) {
+		t.Fatalf("incorrect public key, wanted %x but received %x", expectedPublicKeyAt0, deposits[0].Data.PublicKey)
+	}
+	expectedWithdrawalCredentialsAt0 := []byte{0x00, 0xec, 0x7e, 0xf7, 0x78, 0x0c, 0x9d, 0x15, 0x15, 0x97, 0x92, 0x40, 0x36, 0x26, 0x2d, 0xd2, 0x8d, 0xc6, 0x0e, 0x12, 0x28, 0xf4, 0xda, 0x6f, 0xec, 0xf9, 0xd4, 0x02, 0xcb, 0x3f, 0x35, 0x94}
+	if !bytes.Equal(deposits[0].Data.WithdrawalCredentials, expectedWithdrawalCredentialsAt0) {
+		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt0, deposits[0].Data.WithdrawalCredentials)
+	}
+	dRootAt0 := []byte("0d3a77b90f83b44d16d0ebbb8b9af4baa048de31b18ef78f9ef9a2250ab91762")
+	dRootAt0B := make([]byte, hex.DecodedLen(len(dRootAt0)))
+	_, err = hex.Decode(dRootAt0B, dRootAt0)
+	require.NoError(t, err)
+	if !bytes.Equal(depositDataRoots[0][:], dRootAt0B) {
+		t.Fatalf("incorrect deposit data root, wanted %#x but received %#x", dRootAt0B, depositDataRoots[0])
+	}
+
+	sigAt0 := []byte("a32b88e4821fcf0e5ff52a023db91be0e67bb30a5d6e6e7ffd252edc8518290b7d9de71108e8733b91946e489284757b023a3e0125adf34558e63e6e6dc757407b7f2e9fe163a2e65ab1e8ed41309a528aa2d935d405506cb9bc2f6dce62059b")
+	sigAt0B := make([]byte, hex.DecodedLen(len(sigAt0)))
+	_, err = hex.Decode(sigAt0B, sigAt0)
+	require.NoError(t, err)
+	if !bytes.Equal(deposits[0].Data.Signature, sigAt0B) {
+		t.Fatalf("incorrect signature, wanted %#x but received %#x", sigAt0B, deposits[0].Data.Signature)
+	}
+
+	entries = 1024
+	ResetCache()
+	balances = make([]uint64, entries)
+	for i := 0; i < entries; i++ {
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance / 2
+	}
+	deposits, depositTrie, err = DepositsWithBalance(balances)
+	require.NoError(t, err)
+	_, depositDataRoots, err = DepositTrieSubset(depositTrie, entries)
+	require.NoError(t, err)
+	if len(deposits) != entries {
+		t.Fatalf("incorrect number of deposits returned, wanted %d but received %d", entries, len(deposits))
+	}
+	// Ensure 0  has not changed
+	if !bytes.Equal(deposits[0].Data.PublicKey, expectedPublicKeyAt0) {
+		t.Fatalf("incorrect public key, wanted %x but received %x", expectedPublicKeyAt0, deposits[0].Data.PublicKey)
+	}
+	if !bytes.Equal(deposits[0].Data.WithdrawalCredentials, expectedWithdrawalCredentialsAt0) {
+		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt0, deposits[0].Data.WithdrawalCredentials)
+	}
+	if !bytes.Equal(depositDataRoots[0][:], dRootAt0B) {
+		t.Fatalf("incorrect deposit data root, wanted %x but received %x", dRootAt0B, depositDataRoots[0])
+	}
+	if !bytes.Equal(deposits[0].Data.Signature, sigAt0B) {
+		t.Fatalf("incorrect signature, wanted %x but received %x", sigAt0B, deposits[0].Data.Signature)
+	}
+	expectedPublicKeyAt1023 := []byte{0x81, 0x2b, 0x93, 0x5e, 0xc8, 0x4b, 0x0e, 0x9a, 0x83, 0x95, 0x55, 0xaf, 0x33, 0x60, 0xca, 0xfb, 0x83, 0x1b, 0xd6, 0x12, 0xcf, 0xa2, 0x2e, 0x25, 0xea, 0xb0, 0x3c, 0xf5, 0xfd, 0xb0, 0x2a, 0xf5, 0x2b, 0xa4, 0x01, 0x7a, 0xee, 0xa8, 0x8a, 0x2f, 0x62, 0x2c, 0x78, 0x6e, 0x7f, 0x47, 0x6f, 0x4b}
+	if !bytes.Equal(deposits[1023].Data.PublicKey, expectedPublicKeyAt1023) {
+		t.Fatalf("incorrect public key, wanted %x but received %x", expectedPublicKeyAt1023, deposits[1023].Data.PublicKey)
+	}
+	expectedWithdrawalCredentialsAt1023 := []byte{0x00, 0x23, 0xd5, 0x76, 0xbc, 0x6c, 0x15, 0xdb, 0xc4, 0x34, 0x70, 0x1f, 0x3f, 0x41, 0xfd, 0x3e, 0x67, 0x59, 0xd2, 0xea, 0x7c, 0xdc, 0x64, 0x71, 0x0e, 0xe2, 0x8d, 0xde, 0xf7, 0xd2, 0xda, 0x28}
+	if !bytes.Equal(deposits[1023].Data.WithdrawalCredentials, expectedWithdrawalCredentialsAt1023) {
+		t.Fatalf("incorrect withdrawal credentials, wanted %x but received %x", expectedWithdrawalCredentialsAt1023, deposits[1023].Data.WithdrawalCredentials)
+	}
+	dRootAt1023 := []byte("5888e3a132ccaed752da8bc5430eddc5ae60b139ccb39f4459d1d5d6ed12c3c1")
+	dRootAt1023B := make([]byte, hex.DecodedLen(len(dRootAt1023)))
+	_, err = hex.Decode(dRootAt1023B, dRootAt1023)
+	require.NoError(t, err)
+	if !bytes.Equal(depositDataRoots[1023][:], dRootAt1023B) {
+		t.Fatalf("incorrect deposit data root, wanted %#x but received %#x", dRootAt1023B, depositDataRoots[1023])
+	}
+	sigAt1023 := []byte("a99cb9d7f8cca3a9407e48615ba265cf04c2bdbd630721367a54adb0d4b426cf78b5e13ad8ec21c6b3c59ac0316f2f2d15f308a12cbd71353272f0fe3c3c7d115b26cdb2cf08c22ace29c318419c9b6e62c163e640a4d0f4c4fb0f216b207980")
+	sigAt1023B := make([]byte, hex.DecodedLen(len(sigAt1023)))
+	_, err = hex.Decode(sigAt1023B, sigAt1023)
+	require.NoError(t, err)
+	if !bytes.Equal(deposits[1023].Data.Signature, sigAt1023B) {
+		t.Fatalf("incorrect signature, wanted %#x but received %#x", sigAt1023B, deposits[1023].Data.Signature)
 	}
 }
 

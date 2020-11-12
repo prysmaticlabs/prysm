@@ -17,6 +17,7 @@ go_library(
         "//shared/bls/common:go_default_library",
         "//shared/bls/herumi:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 
