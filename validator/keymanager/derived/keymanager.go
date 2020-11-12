@@ -23,11 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived/v1derivation"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
 	types "github.com/wealdtech/go-eth2-types/v2"
-	v2derivation "github.com/wealdtech/go-eth2-util"
+	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -489,10 +488,7 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 }
 
 func (dr *Keymanager) deriveKey(path string) (*types.BLSPrivateKey, error) {
-	if dr.opts.DerivedVersion == "2" {
-		return v2derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
-	}
-	return v1derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
+	return util.PrivateKeyFromSeedAndPath(dr.seed, path)
 }
 
 func checkEncodedKeyFile(
