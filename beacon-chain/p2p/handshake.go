@@ -93,7 +93,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 						"direction":   conn.Stat().Direction,
 						"multiAddr":   peerMultiaddrString(conn),
 						"activePeers": len(s.peers.Active()),
-					}).Info("Peer connected")
+					}).Debug("Peer connected")
 				}
 
 				// Do not perform handshake on inbound dials.
@@ -168,7 +168,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 				// Only log disconnections if we were fully connected.
 				if priorState == peers.PeerConnected {
-					log.WithField("activePeers", len(s.peers.Active())).Info("Peer disconnected")
+					log.WithField("activePeers", len(s.peers.Active())).Debug("Peer disconnected")
 				}
 			}()
 		},
