@@ -1,8 +1,6 @@
 package scorers
 
 import (
-	"context"
-
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -14,7 +12,6 @@ var _ Scorer = (*PeerStatusScorer)(nil)
 // PeerStatusScorer represents scorer that evaluates peers based on their statuses.
 // Peer statuses are updated by regularly polling peers (see sync/rpc_status.go).
 type PeerStatusScorer struct {
-	ctx    context.Context
 	config *PeerStatusScorerConfig
 	store  *peerdata.Store
 }
@@ -22,17 +19,15 @@ type PeerStatusScorer struct {
 // PeerStatusScorerConfig holds configuration parameters for peer status scoring service.
 type PeerStatusScorerConfig struct{}
 
-// newPeerStatusScorer creates new peer status scoringt service.
-func newPeerStatusScorer(ctx context.Context, store *peerdata.Store, config *PeerStatusScorerConfig) *PeerStatusScorer {
+// newPeerStatusScorer creates new peer status scoring service.
+func newPeerStatusScorer(store *peerdata.Store, config *PeerStatusScorerConfig) *PeerStatusScorer {
 	if config == nil {
 		config = &PeerStatusScorerConfig{}
 	}
-	scorer := &PeerStatusScorer{
-		ctx:    ctx,
+	return &PeerStatusScorer{
 		config: config,
 		store:  store,
 	}
-	return scorer
 }
 
 // Score returns calculated peer score.

@@ -1,7 +1,6 @@
 package scorers
 
 import (
-	"context"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -20,7 +19,6 @@ var _ Scorer = (*BadResponsesScorer)(nil)
 
 // BadResponsesScorer represents bad responses scoring service.
 type BadResponsesScorer struct {
-	ctx    context.Context
 	config *BadResponsesScorerConfig
 	store  *peerdata.Store
 }
@@ -34,13 +32,11 @@ type BadResponsesScorerConfig struct {
 }
 
 // newBadResponsesScorer creates new bad responses scoring service.
-func newBadResponsesScorer(
-	ctx context.Context, store *peerdata.Store, config *BadResponsesScorerConfig) *BadResponsesScorer {
+func newBadResponsesScorer(store *peerdata.Store, config *BadResponsesScorerConfig) *BadResponsesScorer {
 	if config == nil {
 		config = &BadResponsesScorerConfig{}
 	}
 	scorer := &BadResponsesScorer{
-		ctx:    ctx,
 		config: config,
 		store:  store,
 	}
@@ -70,7 +66,7 @@ func (s *BadResponsesScorer) score(pid peer.ID) float64 {
 	if peerData.BadResponses > 0 {
 		score = float64(peerData.BadResponses) / float64(s.config.Threshold)
 		// Since score represents a penalty, negate it.
-		score = score * -1
+		score *= -1
 	}
 	return score
 }

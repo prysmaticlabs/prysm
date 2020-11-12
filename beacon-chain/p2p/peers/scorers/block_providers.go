@@ -64,13 +64,11 @@ type BlockProviderScorerConfig struct {
 }
 
 // newBlockProviderScorer creates block provider scoring service.
-func newBlockProviderScorer(
-	ctx context.Context, store *peerdata.Store, config *BlockProviderScorerConfig) *BlockProviderScorer {
+func newBlockProviderScorer(store *peerdata.Store, config *BlockProviderScorerConfig) *BlockProviderScorer {
 	if config == nil {
 		config = &BlockProviderScorerConfig{}
 	}
 	scorer := &BlockProviderScorer{
-		ctx:    ctx,
 		config: config,
 		store:  store,
 	}
@@ -182,7 +180,7 @@ func (s *BlockProviderScorer) processedBlocks(pid peer.ID) uint64 {
 // Block provider scorer cannot guarantee that lower score of a peer is indeed a sign of a bad peer.
 // Therefore this scorer never marks peers as bad, and relies on scores to probabilistically sort
 // out low-scorers (see WeightSorted method).
-func (s *BlockProviderScorer) IsBadPeer(pid peer.ID) bool {
+func (s *BlockProviderScorer) IsBadPeer(_ peer.ID) bool {
 	return false
 }
 
