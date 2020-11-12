@@ -366,7 +366,7 @@ func UnslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to look up validator")
 		}
-		if v != nil && v.Slashed() {
+		if !v.IsNil() && v.Slashed() {
 			setIndices = append(setIndices[:i], setIndices[i+1:]...)
 		}
 	}
