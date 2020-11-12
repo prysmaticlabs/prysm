@@ -57,5 +57,6 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )
