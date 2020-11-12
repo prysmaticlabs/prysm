@@ -8,6 +8,7 @@ import (
 	"errors"
 	"sync"
 
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -17,6 +18,26 @@ import (
 )
 
 var defaultHotStateDBInterval uint64 = 128 // slots
+
+// StateBase --
+type StateBase interface {
+	Resume(ctx context.Context) (*state.BeaconState, error)
+	SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState)
+	MigrateToCold(ctx context.Context, fRoot [32]byte) error
+	ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*eth.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error)
+	LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error)
+	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
+	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
+	StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
+	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
+	StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error)
+	StateSummaryExists(ctx context.Context, blockRoot [32]byte) bool
+	SaveState(ctx context.Context, root [32]byte, state *state.BeaconState) error
+	ForceCheckpoint(ctx context.Context, root []byte) error
+	SaveStateSummary(_ context.Context, blk *eth.SignedBeaconBlock, blockRoot [32]byte)
+	EnableSaveHotStateToDB(_ context.Context)
+	DisableSaveHotStateToDB(ctx context.Context) error
+}
 
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
@@ -50,7 +71,7 @@ type finalizedInfo struct {
 }
 
 // New returns a new state management object.
-func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
+func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) StateBase {
 	return &State{
 		beaconDB:                db,
 		hotStateCache:           cache.NewHotStateCache(),

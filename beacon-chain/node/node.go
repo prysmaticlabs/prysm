@@ -75,7 +75,7 @@ type BeaconNode struct {
 	blockFeed         *event.Feed
 	opFeed            *event.Feed
 	forkChoiceStore   forkchoice.ForkChoicer
-	stateGen          *stategen.State
+	stateGen          stategen.StateBase
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers

@@ -147,7 +147,7 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
-	stateGen                *stategen.State
+	stateGen                stategen.StateBase
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -157,7 +157,7 @@ type Web3ServiceConfig struct {
 	BeaconDB        db.HeadAccessDatabase
 	DepositCache    *depositcache.DepositCache
 	StateNotifier   statefeed.Notifier
-	StateGen        *stategen.State
+	StateGen        stategen.StateBase
 }
 
 // NewService sets up a new instance with an ethclient when

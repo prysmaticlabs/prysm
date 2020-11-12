@@ -59,7 +59,7 @@ type Config struct {
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
 	StateSummaryCache   *cache.StateSummaryCache
-	StateGen            *stategen.State
+	StateGen            stategen.StateBase
 }
 
 // This defines the interface for interacting with block chain service
@@ -110,7 +110,7 @@ type Service struct {
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
 	stateSummaryCache         *cache.StateSummaryCache
-	stateGen                  *stategen.State
+	stateGen                  stategen.StateBase
 }
 
 // NewService initializes new regular sync service.

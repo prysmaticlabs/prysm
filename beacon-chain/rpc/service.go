@@ -92,7 +92,7 @@ type Service struct {
 	stateNotifier           statefeed.Notifier
 	blockNotifier           blockfeed.Notifier
 	operationNotifier       opfeed.Notifier
-	stateGen                *stategen.State
+	stateGen                stategen.StateBase
 	connectedRPCClients     map[net.Addr]bool
 	clientConnectionLock    sync.Mutex
 	maxMsgSize              int
@@ -129,7 +129,7 @@ type Config struct {
 	StateNotifier           statefeed.Notifier
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
-	StateGen                *stategen.State
+	StateGen                stategen.StateBase
 	MaxMsgSize              int
 }
 

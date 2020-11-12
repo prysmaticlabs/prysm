@@ -65,7 +65,7 @@ type Service struct {
 	nextEpochBoundarySlot uint64
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
-	stateGen              *stategen.State
+	stateGen              stategen.StateBase
 	opsService            *attestations.Service
 	initSyncBlocks        map[[32]byte]*ethpb.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
@@ -90,7 +90,7 @@ type Config struct {
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
-	StateGen          *stategen.State
+	StateGen          stategen.StateBase
 	WspBlockRoot      []byte
 	WspEpoch          uint64
 }
