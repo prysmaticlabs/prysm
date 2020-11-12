@@ -40,7 +40,8 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	service := New(db, cache.NewStateSummaryCache())
+	service, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
 	newState, err := service.ReplayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
@@ -69,7 +70,8 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	service := New(db, cache.NewStateSummaryCache())
+	service, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 	targetSlot := beaconState.Slot()
 	newState, err := service.ReplayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
@@ -99,7 +101,8 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	service := New(db, cache.NewStateSummaryCache())
+	service, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 	targetSlot := beaconState.Slot()
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = beaconState.Slot() - 1
@@ -111,9 +114,8 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 func TestLoadBlocks_FirstBranch(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB: db,
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 
 	roots, savedBlocks, err := tree1(db, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
@@ -140,9 +142,8 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 func TestLoadBlocks_SecondBranch(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB: db,
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 
 	roots, savedBlocks, err := tree1(db, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
@@ -167,9 +168,8 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 func TestLoadBlocks_ThirdBranch(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB: db,
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 
 	roots, savedBlocks, err := tree1(db, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
@@ -196,9 +196,8 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 func TestLoadBlocks_SameSlots(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB: db,
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 
 	roots, savedBlocks, err := tree2(db, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
@@ -223,9 +222,8 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 func TestLoadBlocks_SameEndSlots(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB: db,
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 
 	roots, savedBlocks, err := tree3(db, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
@@ -249,9 +247,8 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB: db,
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 
 	roots, savedBlocks, err := tree4(db, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
@@ -274,9 +271,8 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 func TestLoadBlocks_BadStart(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB: db,
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 
 	roots, _, err := tree1(db, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
@@ -287,10 +283,9 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 func TestLastSavedBlock_Genesis(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB:      db,
-		finalizedInfo: &finalizedInfo{slot: 128},
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
+	s.finalizedInfo = &finalizedInfo{slot: 128}
 
 	gBlk := testutil.NewBeaconBlock()
 	gRoot, err := gBlk.Block.HashTreeRoot()
@@ -307,10 +302,9 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 func TestLastSavedBlock_CanGet(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB:      db,
-		finalizedInfo: &finalizedInfo{slot: 128},
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
+	s.finalizedInfo = &finalizedInfo{slot: 128}
 
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = s.finalizedInfo.slot + 5
@@ -333,10 +327,9 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB:      db,
-		finalizedInfo: &finalizedInfo{slot: 128},
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
+	s.finalizedInfo = &finalizedInfo{slot: 128}
 
 	root, slot, err := s.lastSavedBlock(ctx, s.finalizedInfo.slot+1)
 	require.NoError(t, err)
@@ -348,10 +341,9 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 func TestLastSavedState_Genesis(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB:      db,
-		finalizedInfo: &finalizedInfo{slot: 128},
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
+	s.finalizedInfo = &finalizedInfo{slot: 128}
 
 	gBlk := testutil.NewBeaconBlock()
 	gState := testutil.NewBeaconState()
@@ -369,10 +361,9 @@ func TestLastSavedState_Genesis(t *testing.T) {
 func TestLastSavedState_CanGet(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB:      db,
-		finalizedInfo: &finalizedInfo{slot: 128},
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
+	s.finalizedInfo = &finalizedInfo{slot: 128}
 
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = s.finalizedInfo.slot + 5
@@ -400,16 +391,15 @@ func TestLastSavedState_CanGet(t *testing.T) {
 func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	s := &State{
-		beaconDB:      db,
-		finalizedInfo: &finalizedInfo{slot: 128},
-	}
+	s, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
+	s.finalizedInfo = &finalizedInfo{slot: 128}
 
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 127
 	require.NoError(t, s.beaconDB.SaveBlock(ctx, b1))
 
-	_, err := s.lastSavedState(ctx, s.finalizedInfo.slot+1)
+	_, err = s.lastSavedState(ctx, s.finalizedInfo.slot+1)
 	assert.ErrorContains(t, errUnknownState.Error(), err)
 }
 

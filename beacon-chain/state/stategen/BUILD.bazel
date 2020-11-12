@@ -13,6 +13,7 @@ go_library(
         "replay.go",
         "service.go",
         "setter.go",
+        "state_test_wrapper.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen",
     visibility = [

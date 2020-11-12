@@ -8,6 +8,7 @@ import (
 	"errors"
 	"sync"
 
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -17,6 +18,7 @@ import (
 )
 
 var defaultHotStateDBInterval uint64 = 128 // slots
+var errInvalidRange = errors.New("start slot and end slot are not a valid range")
 
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
@@ -28,6 +30,7 @@ type State struct {
 	stateSummaryCache       *cache.StateSummaryCache
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
+	LoadBlocks              func(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error)
 }
 
 // This tracks the config in the event of long non-finality,
@@ -51,7 +54,7 @@ type finalizedInfo struct {
 
 // New returns a new state management object.
 func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
-	return &State{
+	s := &State{
 		beaconDB:                db,
 		hotStateCache:           cache.NewHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
@@ -62,6 +65,62 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 			duration: defaultHotStateDBInterval,
 		},
 	}
+	s.LoadBlocks = loadBlocks(s)
+	/*s.LoadBlocks = func(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error) {
+		// Nothing to load for invalid range.
+		if endSlot < startSlot {
+			return nil, errInvalidRange
+		}
+		filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+		blocks, blockRoots, err := s.beaconDB.Blocks(ctx, filter)
+		if err != nil {
+			return nil, err
+		}
+		// The retrieved blocks and block roots have to be in the same length given same filter.
+		if len(blocks) != len(blockRoots) {
+			return nil, errors.New("length of blocks and roots don't match")
+		}
+		// Return early if there's no block given the input.
+		length := len(blocks)
+		if length == 0 {
+			return nil, nil
+		}
+
+		// The last retrieved block root has to match input end block root.
+		// Covers the edge case if there's multiple blocks on the same end slot,
+		// the end root may not be the last index in `blockRoots`.
+		for length >= 3 && blocks[length-1].Block.Slot == blocks[length-2].Block.Slot && blockRoots[length-1] != endBlockRoot {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			length--
+			if blockRoots[length-2] == endBlockRoot {
+				length--
+				break
+			}
+		}
+
+		if blockRoots[length-1] != endBlockRoot {
+			return nil, errors.New("end block roots don't match")
+		}
+
+		filteredBlocks := []*eth.SignedBeaconBlock{blocks[length-1]}
+		// Starting from second to last index because the last block is already in the filtered block list.
+		for i := length - 2; i >= 0; i-- {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			b := filteredBlocks[len(filteredBlocks)-1]
+			if bytesutil.ToBytes32(b.Block.ParentRoot) != blockRoots[i] {
+				continue
+			}
+			filteredBlocks = append(filteredBlocks, blocks[i])
+		}
+
+		return filteredBlocks, nil
+	}*/
+
+	return s
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.

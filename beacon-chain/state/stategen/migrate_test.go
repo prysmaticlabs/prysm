@@ -16,7 +16,9 @@ import (
 func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	ctx := context.Background()
 	db, c := testDB.SetupDB(t)
-	service := New(db, c)
+	service, err := newStateTestWrapper(db, c)
+	require.NoError(t, err)
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
@@ -34,9 +36,10 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
+	service, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 	service.slotsPerArchivedPoint = 1
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
@@ -64,9 +67,10 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
+	service, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 	service.slotsPerArchivedPoint = 1
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
@@ -101,9 +105,10 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-
-	service := New(db, cache.NewStateSummaryCache())
+	service, err := newStateTestWrapper(db, cache.NewStateSummaryCache())
+	require.NoError(t, err)
 	service.slotsPerArchivedPoint = 1
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))

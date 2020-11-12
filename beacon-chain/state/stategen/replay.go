@@ -50,60 +50,62 @@ func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, 
 	return state, nil
 }
 
-// LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
-// The Blocks are returned in slot-descending order.
-func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
-	// Nothing to load for invalid range.
-	if endSlot < startSlot {
-		return nil, errors.New("Start slot and end slot are not a valid range")
-	}
-	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	blocks, blockRoots, err := s.beaconDB.Blocks(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	// The retrieved blocks and block roots have to be in the same length given same filter.
-	if len(blocks) != len(blockRoots) {
-		return nil, errors.New("length of blocks and roots don't match")
-	}
-	// Return early if there's no block given the input.
-	length := len(blocks)
-	if length == 0 {
-		return nil, nil
-	}
-
-	// The last retrieved block root has to match input end block root.
-	// Covers the edge case if there's multiple blocks on the same end slot,
-	// the end root may not be the last index in `blockRoots`.
-	for length >= 3 && blocks[length-1].Block.Slot == blocks[length-2].Block.Slot && blockRoots[length-1] != endBlockRoot {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
+// loadBlocks returns a function which loads the blocks between start slot and end slot
+// by recursively fetching from end block root. The Blocks are returned in slot-descending order.
+func loadBlocks(s *State) func(context.Context, uint64, uint64, [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+	return func(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+		// Nothing to load for invalid range.
+		if endSlot < startSlot {
+			return nil, errors.New("Start slot and end slot are not a valid range")
 		}
-		length--
-		if blockRoots[length-2] == endBlockRoot {
+		filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+		blocks, blockRoots, err := s.beaconDB.Blocks(ctx, filter)
+		if err != nil {
+			return nil, err
+		}
+		// The retrieved blocks and block roots have to be in the same length given same filter.
+		if len(blocks) != len(blockRoots) {
+			return nil, errors.New("length of blocks and roots don't match")
+		}
+		// Return early if there's no block given the input.
+		length := len(blocks)
+		if length == 0 {
+			return nil, nil
+		}
+
+		// The last retrieved block root has to match input end block root.
+		// Covers the edge case if there's multiple blocks on the same end slot,
+		// the end root may not be the last index in `blockRoots`.
+		for length >= 3 && blocks[length-1].Block.Slot == blocks[length-2].Block.Slot && blockRoots[length-1] != endBlockRoot {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			length--
-			break
+			if blockRoots[length-2] == endBlockRoot {
+				length--
+				break
+			}
 		}
-	}
 
-	if blockRoots[length-1] != endBlockRoot {
-		return nil, errors.New("end block roots don't match")
-	}
-
-	filteredBlocks := []*ethpb.SignedBeaconBlock{blocks[length-1]}
-	// Starting from second to last index because the last block is already in the filtered block list.
-	for i := length - 2; i >= 0; i-- {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
+		if blockRoots[length-1] != endBlockRoot {
+			return nil, errors.New("end block roots don't match")
 		}
-		b := filteredBlocks[len(filteredBlocks)-1]
-		if bytesutil.ToBytes32(b.Block.ParentRoot) != blockRoots[i] {
-			continue
-		}
-		filteredBlocks = append(filteredBlocks, blocks[i])
-	}
 
-	return filteredBlocks, nil
+		filteredBlocks := []*ethpb.SignedBeaconBlock{blocks[length-1]}
+		// Starting from second to last index because the last block is already in the filtered block list.
+		for i := length - 2; i >= 0; i-- {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			b := filteredBlocks[len(filteredBlocks)-1]
+			if bytesutil.ToBytes32(b.Block.ParentRoot) != blockRoots[i] {
+				continue
+			}
+			filteredBlocks = append(filteredBlocks, blocks[i])
+		}
+
+		return filteredBlocks, nil
+	}
 }
 
 // executeStateTransitionStateGen applies state transition on input historical state and block for state gen usages.
