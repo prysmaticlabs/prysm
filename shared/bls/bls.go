@@ -4,6 +4,9 @@
 package bls
 
 import (
+	"math/big"
+
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
@@ -16,6 +19,22 @@ func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {
 		return blst.SecretKeyFromBytes(privKey)
 	}
 	return herumi.SecretKeyFromBytes(privKey)
+}
+
+// SecretKeyFromBigNum takes in a big number string and creates a BLS private key.
+func SecretKeyFromBigNum(s string) (SecretKey, error) {
+	num := new(big.Int)
+	num, ok := num.SetString(s, 10)
+	if !ok {
+		return nil, errors.New("could not set big int from string")
+	}
+	bts := num.Bytes()
+	// Pad key at the start with zero bytes to make it into a 32 byte key.
+	if len(bts) < 32 {
+		emptyBytes := make([]byte, 32-len(bts))
+		bts = append(emptyBytes, bts...)
+	}
+	return SecretKeyFromBytes(bts)
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
