@@ -92,16 +92,16 @@ func BlockSignatureSet(beaconState *stateTrie.BeaconState, block *ethpb.SignedBe
 // from a block and its corresponding state.
 func RandaoSignatureSet(beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
-) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
+) (*bls.SignatureSet, error) {
 	buf, proposerPub, domain, err := randaoSigningData(beaconState)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	set, err := retrieveSignatureSet(buf, proposerPub, body.RandaoReveal, domain)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return set, beaconState, nil
+	return set, nil
 }
 
 // retrieves the randao related signing data from the state.
