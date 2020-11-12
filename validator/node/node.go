@@ -219,8 +219,8 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	} else {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
 		if !fileutil.FileExists(dataFile) {
-			log.Warnf("\nSlashing protection file %s is missing.\n"+
-				"If you changed your wallet dir or data dir please copy \"validator.db\" file into the new path.\n"+
+			log.Warnf("Slashing protection file %s is missing.\n"+
+				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
 				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
 		}
 	}
