@@ -3,7 +3,7 @@ package scorers
 import (
 	"context"
 	"math"
-	"reflect"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -13,15 +13,6 @@ import (
 // ScoreRoundingFactor defines how many digits to keep in decimal part.
 // This parameter is used in math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor.
 const ScoreRoundingFactor = 10000
-
-const (
-	scorerBadResponses  scorerID = "*scorers.BadResponsesScorer"
-	scorerBlockProvider scorerID = "*scorers.BlockProviderScorer"
-	scorerPeerStatus    scorerID = "*scorers.PeerStatusScorer"
-)
-
-// scorerID is used to distinguish between different scorers.
-type scorerID string
 
 // Scorer defines minimum set of methods every peer scorer must expose.
 type Scorer interface {
@@ -33,11 +24,17 @@ type Scorer interface {
 
 // Service manages peer scorers that are used to calculate overall peer score.
 type Service struct {
-	ctx         context.Context
-	store       *peerdata.Store
-	scorers     map[scorerID]Scorer
-	weights     map[scorerID]float64
+	store   *peerdata.Store
+	scorers struct {
+		badResponsesScorer  *BadResponsesScorer
+		blockProviderScorer *BlockProviderScorer
+		peerStatusScorer    *PeerStatusScorer
+	}
+	weights     map[Scorer]float64
 	totalWeight float64
+	quit        chan struct{}
+	running     bool
+	runningLock sync.Mutex
 }
 
 // Config holds configuration parameters for scoring service.
@@ -50,38 +47,40 @@ type Config struct {
 // NewService provides fully initialized peer scoring service.
 func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Service {
 	s := &Service{
-		ctx:     ctx,
 		store:   store,
-		scorers: make(map[scorerID]Scorer),
-		weights: make(map[scorerID]float64),
+		weights: make(map[Scorer]float64),
 	}
+
 	// Register scorers.
-	s.registerScorer(newBadResponsesScorer(ctx, store, config.BadResponsesScorerConfig), 1.0)
-	s.registerScorer(newBlockProviderScorer(ctx, store, config.BlockProviderScorerConfig), 1.0)
-	s.registerScorer(newPeerStatusScorer(ctx, store, config.PeerStatusScorerConfig), 0.0)
+	s.scorers.badResponsesScorer = newBadResponsesScorer(store, config.BadResponsesScorerConfig)
+	s.setScorerWeight(s.scorers.badResponsesScorer, 1.0)
+	s.scorers.blockProviderScorer = newBlockProviderScorer(store, config.BlockProviderScorerConfig)
+	s.setScorerWeight(s.scorers.blockProviderScorer, 1.0)
+	s.scorers.peerStatusScorer = newPeerStatusScorer(store, config.PeerStatusScorerConfig)
+	s.setScorerWeight(s.scorers.peerStatusScorer, 0.0)
 
 	// Start background tasks.
-	go s.loop(s.ctx)
+	go s.loop(ctx)
 
 	return s
 }
 
 // BadResponsesScorer exposes bad responses scoring service.
 func (s *Service) BadResponsesScorer() *BadResponsesScorer {
-	return s.scorers[scorerBadResponses].(*BadResponsesScorer)
+	return s.scorers.badResponsesScorer
 }
 
 // BlockProviderScorer exposes block provider scoring service.
 func (s *Service) BlockProviderScorer() *BlockProviderScorer {
-	return s.scorers[scorerBlockProvider].(*BlockProviderScorer)
+	return s.scorers.blockProviderScorer
 }
 
 // PeerStatusScorer exposes peer chain status scoring service.
 func (s *Service) PeerStatusScorer() *PeerStatusScorer {
-	return s.scorers[scorerPeerStatus].(*PeerStatusScorer)
+	return s.scorers.peerStatusScorer
 }
 
-// Count returns number of scorers that can affect score (have non-zero weight).
+// ActiveScorersCount returns number of scorers that can affect score (have non-zero weight).
 func (s *Service) ActiveScorersCount() int {
 	cnt := 0
 	for _, w := range s.weights {
@@ -101,8 +100,9 @@ func (s *Service) Score(pid peer.ID) float64 {
 	if _, ok := s.store.PeerData(pid); !ok {
 		return 0
 	}
-	score += s.BadResponsesScorer().score(pid) * s.scorerWeightFactor(scorerBadResponses)
-	score += s.BlockProviderScorer().score(pid) * s.scorerWeightFactor(scorerBlockProvider)
+	score += s.scorers.badResponsesScorer.score(pid) * s.scorerWeight(s.scorers.badResponsesScorer)
+	score += s.scorers.blockProviderScorer.score(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
+	score += s.scorers.peerStatusScorer.score(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
@@ -125,15 +125,13 @@ func (s *Service) loop(ctx context.Context) {
 	}
 }
 
-// registerScorer adds scorer to map of known scorers.
-func (s *Service) registerScorer(scorer Scorer, weight float64) {
-	key := scorerID(reflect.TypeOf(scorer).String())
-	s.scorers[key] = scorer
-	s.weights[key] = weight
-	s.totalWeight += s.weights[key]
+// setScorerWeight adds scorer to map of known scorers.
+func (s *Service) setScorerWeight(scorer Scorer, weight float64) {
+	s.weights[scorer] = weight
+	s.totalWeight += s.weights[scorer]
 }
 
-// scorerWeightFactor calculates contribution percentage of a given scorer in total score.
-func (s *Service) scorerWeightFactor(id scorerID) float64 {
-	return s.weights[id] / s.totalWeight
+// scorerWeight calculates contribution percentage of a given scorer in total score.
+func (s *Service) scorerWeight(scorer Scorer) float64 {
+	return s.weights[scorer] / s.totalWeight
 }
