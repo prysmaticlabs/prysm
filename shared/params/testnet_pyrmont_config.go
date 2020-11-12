@@ -25,7 +25,7 @@ func UsePyrmontConfig() {
 // Pyrmont testnet.
 func PyrmontConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
-	cfg.MinGenesisTime = 1605009600
+	cfg.MinGenesisTime = 1605700800
 	cfg.NetworkName = "pyrmont"
 	cfg.SecondsPerETH1Block = 14
 	return cfg
