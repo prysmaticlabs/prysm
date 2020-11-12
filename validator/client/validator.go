@@ -552,6 +552,13 @@ func (v *validator) SaveProtections(ctx context.Context) error {
 	return nil
 }
 
+// DeleteProtectionData initialize protection data.
+func (v *validator) DeleteProtectionData() {
+	v.attesterHistoryByPubKeyLock.Lock()
+	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
+	v.attesterHistoryByPubKeyLock.Unlock()
+}
+
 // SaveProtection saves the attestation information currently in validator state.
 func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
 	v.attesterHistoryByPubKeyLock.RLock()
@@ -560,10 +567,6 @@ func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
 		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
 	}
 	v.attesterHistoryByPubKeyLock.RUnlock()
-	v.attesterHistoryByPubKeyLock.Lock()
-	delete(v.attesterHistoryByPubKey, pubKey)
-	v.attesterHistoryByPubKeyLock.Unlock()
-
 	return nil
 }
 
