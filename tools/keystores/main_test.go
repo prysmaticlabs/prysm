@@ -1,12 +1,10 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -66,13 +63,8 @@ func createRandomKeystore(t testing.TB, password string) (*keymanager.Keystore, 
 }
 
 func setupRandomDir(t testing.TB) string {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err)
-	randDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	randDir := t.TempDir()
 	require.NoError(t, os.MkdirAll(randDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(randDir), "Failed to remove directory")
-	})
 	return randDir
 }
 

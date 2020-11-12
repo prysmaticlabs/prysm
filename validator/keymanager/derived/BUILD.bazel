@@ -42,6 +42,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "backup_test.go",
+        "eip_test.go",
         "keymanager_test.go",
         "mnemonic_test.go",
     ],

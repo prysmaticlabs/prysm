@@ -1,4 +1,4 @@
-package proposals
+package blockchain
 
 import (
 	"io/ioutil"

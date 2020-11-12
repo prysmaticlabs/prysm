@@ -7,7 +7,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -60,19 +62,19 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
-	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, db, sc)
+	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
+	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c.justifiedCheckpt = cp
-
 	assert.Equal(t, cp.Epoch, c.CurrentJustifiedCheckpt().Epoch, "Unexpected justified epoch")
 }
 
 func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 
+	c := setupBeaconChain(t, db, sc)
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db, sc)
 	c.justifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.CurrentJustifiedCheckpt().Root)
@@ -83,6 +85,7 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, db, sc)
+	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	c.prevJustifiedCheckpt = cp
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
@@ -112,6 +115,21 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, [32]byte{'A'}, bytesutil.ToBytes32(r))
+}
+
+func TestHeadRoot_UseDB(t *testing.T) {
+	db, _ := testDB.SetupDB(t)
+	c := &Service{beaconDB: db}
+	c.head = &head{root: params.BeaconConfig().ZeroHash}
+	b := testutil.NewBeaconBlock()
+	br, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), b))
+	require.NoError(t, db.SaveStateSummary(context.Background(), &pb.StateSummary{Root: br[:]}))
+	require.NoError(t, db.SaveHeadBlockRoot(context.Background(), br))
+	r, err := c.HeadRoot(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, br, bytesutil.ToBytes32(r))
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
@@ -149,6 +167,17 @@ func TestCurrentFork_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
+	if !proto.Equal(c.CurrentFork(), f) {
+		t.Error("Received incorrect fork version")
+	}
+}
+
+func TestCurrentFork_NilHeadSTate(t *testing.T) {
+	f := &pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+	}
+	c := &Service{}
 	if !proto.Equal(c.CurrentFork(), f) {
 		t.Error("Received incorrect fork version")
 	}
@@ -200,4 +229,55 @@ func TestIsCanonical_Ok(t *testing.T) {
 	can, err = c.IsCanonical(ctx, [32]byte{'a'})
 	require.NoError(t, err)
 	assert.Equal(t, false, can)
+}
+
+func TestService_HeadValidatorsIndices(t *testing.T) {
+	s, _ := testutil.DeterministicGenesisState(t, 10)
+	c := &Service{}
+
+	c.head = &head{}
+	indices, err := c.HeadValidatorsIndices(context.Background(), 0)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(indices))
+
+	c.head = &head{state: s}
+	indices, err = c.HeadValidatorsIndices(context.Background(), 0)
+	require.NoError(t, err)
+	require.Equal(t, 10, len(indices))
+}
+
+func TestService_HeadSeed(t *testing.T) {
+	s, _ := testutil.DeterministicGenesisState(t, 1)
+	c := &Service{}
+	seed, err := helpers.Seed(s, 0, params.BeaconConfig().DomainBeaconAttester)
+	require.NoError(t, err)
+
+	c.head = &head{}
+	root, err := c.HeadSeed(context.Background(), 0)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{}, root)
+
+	c.head = &head{state: s}
+	root, err = c.HeadSeed(context.Background(), 0)
+	require.NoError(t, err)
+	require.DeepEqual(t, seed, root)
+}
+
+func TestService_HeadGenesisValidatorRoot(t *testing.T) {
+	s, _ := testutil.DeterministicGenesisState(t, 1)
+	c := &Service{}
+
+	c.head = &head{}
+	root := c.HeadGenesisValidatorRoot()
+	require.Equal(t, [32]byte{}, root)
+
+	c.head = &head{state: s}
+	root = c.HeadGenesisValidatorRoot()
+	require.DeepEqual(t, root[:], s.GenesisValidatorRoot())
+}
+
+func TestService_ProtoArrayStore(t *testing.T) {
+	c := &Service{forkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	p := c.ProtoArrayStore()
+	require.Equal(t, 0, int(p.FinalizedEpoch()))
 }

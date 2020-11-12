@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
@@ -234,7 +233,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	forkEntry := enr.WithEntry(eth2ENRKey, enc)
 	// In epoch 1 of current time, the fork version should be
 	// {0, 0, 0, 1} according to the configuration override above.
-	temp := testutil.TempDir()
+	temp := t.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
 	require.NoError(t, os.Mkdir(tempPath, 0700))
@@ -260,7 +259,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 }
 
 func TestAddForkEntry_Genesis(t *testing.T) {
-	temp := testutil.TempDir()
+	temp := t.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
 	require.NoError(t, os.Mkdir(tempPath, 0700))
