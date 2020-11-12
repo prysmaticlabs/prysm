@@ -552,8 +552,8 @@ func (v *validator) SaveProtections(ctx context.Context) error {
 	return nil
 }
 
-// DeleteProtectionData initialize protection data.
-func (v *validator) DeleteProtectionData() {
+// ResetAttesterProtectionData initialize protection data.
+func (v *validator) ResetAttesterProtectionData() {
 	v.attesterHistoryByPubKeyLock.Lock()
 	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
 	v.attesterHistoryByPubKeyLock.Unlock()

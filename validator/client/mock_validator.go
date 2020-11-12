@@ -132,8 +132,8 @@ func (fv *FakeValidator) SaveProtections(_ context.Context) error {
 	return nil
 }
 
-// DeleteProtectionData for mocking.
-func (fv *FakeValidator) DeleteProtectionData() {
+// ResetAttesterProtectionData for mocking.
+func (fv *FakeValidator) ResetAttesterProtectionData() {
 	fv.DeleteProtectionCalled = true
 }
 
