@@ -3,7 +3,6 @@ package scorers
 import (
 	"context"
 	"math"
-	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -32,9 +31,6 @@ type Service struct {
 	}
 	weights     map[Scorer]float64
 	totalWeight float64
-	quit        chan struct{}
-	running     bool
-	runningLock sync.Mutex
 }
 
 // Config holds configuration parameters for scoring service.
