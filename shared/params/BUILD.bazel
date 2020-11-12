@@ -14,6 +14,7 @@ go_library(
         "testnet_e2e_config.go",
         "testnet_medalla_config.go",
         "testnet_onyx_config.go",
+        "testnet_pyrmont_config.go",
         "testnet_spadina_config.go",
         "testnet_toledo_config.go",
         "testnet_zinken_config.go",
