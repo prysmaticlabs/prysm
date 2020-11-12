@@ -84,6 +84,45 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
 	numAccounts := 10
+	wantedPubKeys := make([][48]byte, 0)
+	for i := 0; i < numAccounts; i++ {
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
+		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
+		if i == 0 {
+			// Manually disable the first public key by adding it to the keymanager options
+			dr.opts.DisabledPublicKeys = append(dr.opts.DisabledPublicKeys, pubKey[:])
+		} else {
+			wantedPubKeys = append(wantedPubKeys, pubKey)
+		}
+		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pubKey[:])
+		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, privKey.Marshal())
+	}
+	require.NoError(t, dr.initializeKeysCachesFromKeystore())
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, numAccounts-1, len(publicKeys))
+	// FetchValidatingPublicKeys is also used in generating the output of account list
+	// therefore the results must be in the same order as the order in which the accounts were derived
+	for i, key := range wantedPubKeys {
+		assert.Equal(t, key, publicKeys[i])
+	}
+}
+
+func TestImportedKeymanager_FetchAllValidatingPublicKeys(t *testing.T) {
+	password := "secretPassw0rd$1999"
+	wallet := &mock.Wallet{
+		Files:          make(map[string]map[string][]byte),
+		WalletPassword: password,
+	}
+	dr := &Keymanager{
+		wallet:        wallet,
+		accountsStore: &AccountStore{},
+		opts:          DefaultKeymanagerOpts(),
+	}
+	// First, generate accounts and their keystore.json files.
+	ctx := context.Background()
+	numAccounts := 10
 	wantedPubKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		privKey, err := bls.RandKey()
@@ -94,10 +133,10 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, privKey.Marshal())
 	}
 	require.NoError(t, dr.initializeKeysCachesFromKeystore())
-	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	publicKeys, err := dr.FetchAllValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, numAccounts, len(publicKeys))
-	// FetchValidatingPublicKeys is also used in generating the output of account list
+	// FetchAllValidatingPublicKeys is also used in generating the output of account list
 	// therefore the results must be in the same order as the order in which the accounts were derived
 	for i, key := range wantedPubKeys {
 		assert.Equal(t, key, publicKeys[i])
