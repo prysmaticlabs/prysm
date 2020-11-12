@@ -11,10 +11,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const beaconBlockWeight = 0.8
-const aggregateWeight = 0.5
-const attestationTotalWeight = 1
-const decayToZero = 0.01
+const (
+	// beaconBlockWeight specifies the scoring weight that we apply to
+	// our beacon block topic.
+	beaconBlockWeight = 0.8
+	// aggregateWeight specifies the scoring weight that we apply to
+	// our aggregate topic.
+	aggregateWeight = 0.5
+	// attestationTotalWeight specifies the scoring weight that we apply to
+	// our attestation subnet topic.
+	attestationTotalWeight = 1
+	// decayToZero specifies the terminal value that we will use when decaying
+	// a value.
+	decayToZero = 0.01
+)
 
 func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
 	thresholds := &pubsub.PeerScoreThresholds{
