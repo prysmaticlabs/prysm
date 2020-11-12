@@ -2,6 +2,7 @@ package helpers_test
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -100,6 +101,11 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 			slot:        1,
 			stateSlot:   params.BeaconConfig().SlotsPerHistoricalRoot + 2,
 			expectedErr: "slot 1 out of bounds",
+		},
+		{
+			slot:        math.MaxUint64 - 5,
+			stateSlot:   0, // Doesn't matter
+			expectedErr: "slot overflows uint64",
 		},
 	}
 	for _, tt := range tests {
