@@ -7,8 +7,6 @@ go_test(
     srcs = ["node_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/accounts/wallet:go_default_library",

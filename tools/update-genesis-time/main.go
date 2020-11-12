@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -36,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not ssz marshal the beacon state: %v", err)
 	}
-	if err := ioutil.WriteFile(*inputSSZState, encodedState, 0644); err != nil {
+	if err := fileutil.WriteFile(*inputSSZState, encodedState); err != nil {
 		log.Fatalf("Could not write encoded beacon state to file: %v", err)
 	}
 	log.Printf("Done writing to %s", *inputSSZState)

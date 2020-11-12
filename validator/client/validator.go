@@ -20,7 +20,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -30,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
@@ -64,7 +64,7 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
-	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
+	attesterHistoryByPubKey            map[[48]byte]kv.EncHistoryData
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
@@ -331,7 +331,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 					"activationEpoch": status.Status.ActivationEpoch,
 				}).Info("Waiting for activation")
 			}
-		case ethpb.ValidatorStatus_ACTIVE:
+		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
@@ -528,7 +528,7 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 		}
 		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
 	}
-	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeys(ctx, attestingPubKeys)
+	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
@@ -541,12 +541,12 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 // SaveProtections saves the attestation information currently in validator state.
 func (v *validator) SaveProtections(ctx context.Context) error {
 	v.attesterHistoryByPubKeyLock.RLock()
-	if err := v.db.SaveAttestationHistoryForPubKeys(ctx, v.attesterHistoryByPubKey); err != nil {
+	if err := v.db.SaveAttestationHistoryForPubKeysV2(ctx, v.attesterHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attester history to DB")
 	}
 	v.attesterHistoryByPubKeyLock.RUnlock()
 	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]*slashpb.AttestationHistory)
+	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
 	v.attesterHistoryByPubKeyLock.Unlock()
 
 	return nil
@@ -595,9 +595,13 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not fetch validating keys")
 	}
+	if len(validatingKeys) == 0 {
+		return false, nil
+	}
 	var publicKeys [][]byte
 	for _, key := range validatingKeys {
-		publicKeys = append(publicKeys, key[:])
+		copyKey := key
+		publicKeys = append(publicKeys, copyKey[:])
 	}
 	request := &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: publicKeys,
@@ -605,6 +609,9 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	response, err := v.validatorClient.MultipleValidatorStatus(ctx, request)
 	if err != nil {
 		return false, err
+	}
+	if len(response.Statuses) != len(request.PublicKeys) {
+		return false, errors.New("number of status responses did not match number of requested keys")
 	}
 	for _, status := range response.Statuses {
 		if status.Status != ethpb.ValidatorStatus_EXITED {

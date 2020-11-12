@@ -2,32 +2,16 @@ package client
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ shared.Service = (*ValidatorService)(nil)
-
-func TestMain(m *testing.M) {
-	dir := testutil.TempDir() + "/keystore1"
-	cleanup := func() {
-		if err := os.RemoveAll(dir); err != nil {
-			log.WithError(err).Debug("Cannot remove keystore folder")
-		}
-	}
-	defer cleanup()
-	code := m.Run()
-	// os.Exit will prevent defer from being called
-	cleanup()
-	os.Exit(code)
-}
 
 func TestStop_CancelsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

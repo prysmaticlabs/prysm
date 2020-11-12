@@ -2,7 +2,6 @@ package peers_test
 
 import (
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -27,9 +26,5 @@ func TestMain(m *testing.M) {
 	defer func() {
 		flags.Init(resetFlags)
 	}()
-	code := m.Run()
-	// os.Exit will prevent defer from being called
-	resetCfg()
-	flags.Init(resetFlags)
-	os.Exit(code)
+	m.Run()
 }

@@ -10,7 +10,6 @@ go_library(
         "helpers.go",
         "spectest.go",
         "state.go",
-        "tempdir.go",
         "wait_timeout.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
@@ -58,5 +57,6 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )

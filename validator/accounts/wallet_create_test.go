@@ -2,19 +2,16 @@ package accounts
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -100,21 +97,12 @@ func setupWalletCtx(
 }
 
 func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
-	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
-	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwordFile")
-	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
+	walletDir := filepath.Join(t.TempDir(), "wallet")
+	passwordsDir := filepath.Join(t.TempDir(), "passwords")
+	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
+	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	})
 	return walletDir, passwordsDir, passwordFilePath
 }
 
