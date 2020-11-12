@@ -28,7 +28,8 @@ func peerMultiaddrString(conn network.Conn) string {
 // AddConnectionHandler adds a callback function which handles the connection with a
 // newly added peer. It performs a handshake with that peer by sending a hello request
 // and validating the response from the peer.
-func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error) {
+func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error,
+	goodByeFunc func(ctx context.Context, id peer.ID) error) {
 	// Peer map and lock to keep track of current connection attempts.
 	peerMap := make(map[peer.ID]bool)
 	peerLock := new(sync.Mutex)
@@ -61,8 +62,11 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 			remotePeer := conn.RemotePeer()
 			disconnectFromPeer := func() {
 				s.peers.SetConnectionState(remotePeer, peers.PeerDisconnecting)
-				if err := s.Disconnect(remotePeer); err != nil {
-					log.WithError(err).Error("Unable to disconnect from peer")
+				// Only attempt a goodbye if we are still connected to the peer.
+				if s.host.Network().Connectedness(remotePeer) == network.Connected {
+					if err := goodByeFunc(context.TODO(), remotePeer); err != nil {
+						log.WithError(err).Error("Unable to disconnect from peer")
+					}
 				}
 				s.peers.SetConnectionState(remotePeer, peers.PeerDisconnected)
 			}
@@ -81,6 +85,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					return
 				}
 				s.peers.Add(nil /* ENR */, remotePeer, conn.RemoteMultiaddr(), conn.Stat().Direction)
+				// Defensive check in the event we still get a bad peer.
 				if s.peers.IsBad(remotePeer) {
 					log.WithField("reason", "bad peer").Trace("Ignoring connection request")
 					disconnectFromPeer()

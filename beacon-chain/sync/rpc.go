@@ -73,7 +73,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// Check before hand that peer is valid.
 		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			closeStream(stream, log)
-			if err := s.sendGoodByeAndDisconnect(ctx, codeGenericError, stream.Conn().RemotePeer()); err != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, codeBanned, stream.Conn().RemotePeer()); err != nil {
 				log.Debugf("Could not disconnect from peer: %v", err)
 			}
 			return

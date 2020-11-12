@@ -219,6 +219,9 @@ func TestPeerDenyList(t *testing.T) {
 func TestService_InterceptAddrDial_Allow(t *testing.T) {
 	s := &Service{
 		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			ScorerParams: &scorers.Config{},
+		}),
 	}
 	var err error
 	cidr := "212.67.89.112/16"

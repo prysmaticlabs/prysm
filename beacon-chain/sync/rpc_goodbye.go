@@ -84,6 +84,12 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	return s.p2p.Disconnect(stream.Conn().RemotePeer())
 }
 
+// A custom goodbye method that is used by our connection handler, in the
+// event we receive bad peers.
+func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
+	return s.sendGoodByeAndDisconnect(ctx, codeGenericError, id)
+}
+
 func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.SSZUint64, id peer.ID) error {
 	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
 		log.WithFields(logrus.Fields{
