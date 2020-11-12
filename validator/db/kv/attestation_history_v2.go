@@ -177,6 +177,17 @@ func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, hist
 	return err
 }
 
+// SaveAttestationHistoryForPubKeyV2 saves the attestation history for the requested validator public key.
+func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history EncHistoryData) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
+	defer span.End()
+	err := store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		return bucket.Put(pubKey[:], history)
+	})
+	return err
+}
+
 // MigrateV2AttestationProtection import old attestation format data into the new attestation format
 func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.MigrateV2AttestationProtection")
