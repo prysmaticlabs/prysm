@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -213,6 +215,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 		if err := clearDB(dataDir, forceClearFlag); err != nil {
 			return err
+		}
+	} else {
+		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+		if !fileutil.FileExists(dataFile) {
+			log.Warnf("Slashing protection file %s is missing.\n"+
+				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
+				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
