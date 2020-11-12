@@ -11,6 +11,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -65,8 +66,8 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 			duration: defaultHotStateDBInterval,
 		},
 	}
-	s.LoadBlocks = loadBlocks(s)
-	/*s.LoadBlocks = func(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error) {
+	// s.LoadBlocks = loadBlocks(s)
+	s.LoadBlocks = func(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error) {
 		// Nothing to load for invalid range.
 		if endSlot < startSlot {
 			return nil, errInvalidRange
@@ -118,7 +119,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		}
 
 		return filteredBlocks, nil
-	}*/
+	}
 
 	return s
 }
