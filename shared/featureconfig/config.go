@@ -144,7 +144,7 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		log.Warn("Running on Pyrmont Testnet")
 		params.UsePyrmontConfig()
 		params.UsePyrmontNetworkConfig()
-		cfg.ToledoTestnet = true
+		cfg.PyrmontTestnet = true
 	} else {
 		log.Warn("Running on ETH2 Mainnet")
 		params.UseMainnetConfig()
