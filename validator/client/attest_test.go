@@ -212,9 +212,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{AttestationDataRoot: make([]byte, 32)}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	t.Log("first SubmitAttestation")
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	t.Log("second SubmitAttestation")
 	require.LogsContain(t, hook, failedAttLocalProtectionErr)
 }
 
