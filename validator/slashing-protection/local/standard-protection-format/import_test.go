@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/db/iface/interchange"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
@@ -23,7 +22,7 @@ func TestStore_ImportInterchangeData(t *testing.T) {
 	db := kv.setupDB(t, pk)
 	att, pro := createProtectionData(t)
 	ctx := context.Background()
-	var pif interchange.PlainDataInterchangeFormat
+	var pif PlainDataInterchangeFormat
 	pif.Metadata.GenesisValidatorsRoot = hex.EncodeToString(bytesutil.PadTo([]byte{32}, 32))
 	pif.Metadata.InterchangeFormatVersion = "5"
 	for i := 0; i < numValidators; i++ {

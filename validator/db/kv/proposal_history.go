@@ -15,6 +15,10 @@ import (
 
 // ProposalHistoryForPubkey for a validator public key.
 type ProposalHistoryForPubkey struct {
+	Proposals []Proposal
+}
+
+type Proposal struct {
 	Slot        uint64   `json:"slot"`
 	SigningRoot [32]byte `json:"signing_root"`
 }

@@ -1,8 +1,8 @@
 package interchangeformat
 
-// PlainDataInterchangeFormat string representation of the data interchange
-// format of validator slashing protection db data.
-type EIPSlashingInterchangeFormat struct {
+// EIPSlashingProtectionFormat string representation of a standard
+// format for representing validator slashing protection db data.
+type EIPSlashingProtectionFormat struct {
 	Metadata struct {
 		InterchangeFormatVersion string `json:"interchange_format_version"`
 		GenesisValidatorsRoot    string `json:"genesis_validators_root"`
@@ -10,14 +10,14 @@ type EIPSlashingInterchangeFormat struct {
 	Data []Data `json:"data"`
 }
 
-// Data field for the interchange format.
+// Data field for the standard slashing protection format.
 type Data struct {
-	Pubkey             string              `json:"pubkey"`
-	SignedBlocks       []SignedBlock       `json:"signed_blocks"`
-	SignedAttestations []SignedAttestation `json:"signed_attestations"`
+	Pubkey             string               `json:"pubkey"`
+	SignedBlocks       []*SignedBlock       `json:"signed_blocks"`
+	SignedAttestations []*SignedAttestation `json:"signed_attestations"`
 }
 
-// SignedAttestation in the interchange format file, including
+// SignedAttestation in the standard slashing protection format file, including
 // a source epoch, target epoch, and an optional signing root.
 type SignedAttestation struct {
 	SourceEpoch string `json:"source_epoch"`
@@ -25,7 +25,7 @@ type SignedAttestation struct {
 	SigningRoot string `json:"signing_root,omitempty"`
 }
 
-// SignedBlock in the interchange format, including a slot
+// SignedBlock in the standard slashing protection format, including a slot
 // and an optional signing root.
 type SignedBlock struct {
 	Slot        string `json:"slot"`
