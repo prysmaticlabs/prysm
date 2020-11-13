@@ -26,11 +26,15 @@ func (s *Service) InterceptPeerDial(_ peer.ID) (allow bool) {
 
 // InterceptAddrDial tests whether we're permitted to dial the specified
 // multiaddr for the given peer.
-func (s *Service) InterceptAddrDial(_ peer.ID, m multiaddr.Multiaddr) (allow bool) {
+func (s *Service) InterceptAddrDial(pid peer.ID, m multiaddr.Multiaddr) (allow bool) {
+	// Disallow bad peers from dialing in.
+	if s.peers.IsBad(pid) {
+		return false
+	}
 	return filterConnections(s.addrFilter, m)
 }
 
-// InterceptAccept tests whether an incipient inbound connection is allowed.
+// InterceptAccept checks whether the incidental inbound connection is allowed.
 func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 	if !s.validateDial(n.RemoteMultiaddr()) {
 		// Allow other go-routines to run in the event
@@ -40,7 +44,6 @@ func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 			"reason": "exceeded dial limit"}).Trace("Not accepting inbound dial from ip address")
 		return false
 	}
-
 	if s.isPeerAtLimit() {
 		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
 			"reason": "at peer limit"}).Trace("Not accepting inbound dial")
