@@ -58,7 +58,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchAllValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -204,7 +204,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 	if len(keystoresToBackup) == 0 {
 		return errors.New("nothing to backup")
 	}
-	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+	if err := fileutil.MkdirAll(outputDir); err != nil {
 		return errors.Wrapf(err, "could not create directory at path: %s", outputDir)
 	}
 	// Marshal and zip all keystore files together and write the zip file

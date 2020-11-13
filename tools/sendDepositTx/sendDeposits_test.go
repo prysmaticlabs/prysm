@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 
@@ -26,7 +25,7 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	os.Exit(m.Run())
+	m.Run()
 }
 
 func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,

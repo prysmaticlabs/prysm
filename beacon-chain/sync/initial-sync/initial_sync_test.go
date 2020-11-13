@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -68,11 +68,8 @@ func TestMain(m *testing.M) {
 	defer func() {
 		flags.Init(resetFlags)
 	}()
-	code := m.Run()
-	// os.Exit will prevent defer from being called
-	resetCfg()
-	flags.Init(resetFlags)
-	os.Exit(code)
+
+	m.Run()
 }
 
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
@@ -232,6 +229,101 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		FinalizedEpoch: datum.finalizedEpoch,
 		HeadRoot:       bytesutil.PadTo([]byte("head_root"), 32),
 		HeadSlot:       datum.headSlot,
+	})
+
+	return p.PeerID()
+}
+
+// extendBlockSequence extends block chain sequentially (creating genesis block, if necessary).
+func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int) []*eth.SignedBeaconBlock {
+	// Start from the original sequence.
+	outSeq := make([]*eth.SignedBeaconBlock, len(inSeq)+size)
+	copy(outSeq, inSeq)
+
+	// See if genesis block needs to be created.
+	startSlot := len(inSeq)
+	if len(inSeq) == 0 {
+		outSeq[0] = testutil.NewBeaconBlock()
+		outSeq[0].Block.StateRoot = testutil.Random32Bytes(t)
+		startSlot++
+		outSeq = append(outSeq, nil)
+	}
+
+	// Extend block chain sequentially.
+	for slot := startSlot; slot < len(outSeq); slot++ {
+		outSeq[slot] = testutil.NewBeaconBlock()
+		outSeq[slot].Block.Slot = uint64(slot)
+		parentRoot, err := outSeq[slot-1].Block.HashTreeRoot()
+		require.NoError(t, err)
+		outSeq[slot].Block.ParentRoot = parentRoot[:]
+		// Make sure that blocks having the same slot number, produce different hashes.
+		// That way different branches/forks will have different blocks for the same slots.
+		outSeq[slot].Block.StateRoot = testutil.Random32Bytes(t)
+	}
+
+	return outSeq
+}
+
+// connectPeerHavingBlocks connect host with a peer having provided blocks.
+func connectPeerHavingBlocks(
+	t *testing.T, host *p2pt.TestP2P, blocks []*eth.SignedBeaconBlock, finalizedSlot uint64,
+	peerStatus *peers.Status,
+) peer.ID {
+	p := p2pt.NewTestP2P(t)
+
+	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy", func(stream network.Stream) {
+		defer func() {
+			assert.NoError(t, stream.Close())
+		}()
+
+		req := &p2ppb.BeaconBlocksByRangeRequest{}
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+
+		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+			if i >= uint64(len(blocks)) {
+				break
+			}
+			require.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), blocks[i]))
+		}
+	})
+
+	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy", func(stream network.Stream) {
+		defer func() {
+			assert.NoError(t, stream.Close())
+		}()
+
+		req := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+		if len(*req) == 0 {
+			return
+		}
+		for _, expectedRoot := range *req {
+			for _, blk := range blocks {
+				if root, err := blk.Block.HashTreeRoot(); err == nil && expectedRoot == root {
+					log.Printf("Found blocks_by_root: %#x for slot: %v", root, blk.Block.Slot)
+					_, err := stream.Write([]byte{0x00})
+					assert.NoError(t, err, "Failed to write to stream")
+					_, err = p.Encoding().EncodeWithMaxLength(stream, blk)
+					assert.NoError(t, err, "Could not send response back")
+				}
+			}
+		}
+	})
+
+	p.Connect(host)
+
+	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+	headRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
+	peerStatus.SetConnectionState(p.PeerID(), peers.PeerConnected)
+	peerStatus.SetChainState(p.PeerID(), &p2ppb.Status{
+		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
+		FinalizedEpoch: finalizedEpoch,
+		HeadRoot:       headRoot[:],
+		HeadSlot:       blocks[len(blocks)-1].Block.Slot,
 	})
 
 	return p.PeerID()

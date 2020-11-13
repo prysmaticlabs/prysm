@@ -60,9 +60,12 @@ func emptyHistoryData() *HistoryData {
 
 // NewAttestationHistoryArray creates a new encapsulated attestation history byte array
 // sized by the latest epoch written.
-func NewAttestationHistoryArray(target uint64) *EncHistoryData {
-	en := make(EncHistoryData, latestEpochWrittenSize+(target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize+historySize)
-	enc := &en
+func NewAttestationHistoryArray(target uint64) EncHistoryData {
+	relativeTarget := target % params.BeaconConfig().WeakSubjectivityPeriod
+	historyDataSize := (relativeTarget + 1) * historySize
+	arraySize := latestEpochWrittenSize + historyDataSize
+	en := make(EncHistoryData, arraySize)
+	enc := en
 	ctx := context.Background()
 	var err error
 	for i := uint64(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
@@ -81,7 +84,7 @@ func (hd EncHistoryData) GetLatestEpochWritten(ctx context.Context) (uint64, err
 	return bytesutil.FromBytes8(hd[:latestEpochWrittenSize]), nil
 }
 
-func (hd *EncHistoryData) SetLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (*EncHistoryData, error) {
+func (hd EncHistoryData) SetLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -108,16 +111,17 @@ func (hd EncHistoryData) GetTargetData(ctx context.Context, target uint64) (*His
 	return history, nil
 }
 
-func (hd *EncHistoryData) SetTargetData(ctx context.Context, target uint64, historyData *HistoryData) (*EncHistoryData, error) {
+func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, historyData *HistoryData) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
 	// Cursor for the location to write target epoch to.
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
-	if uint64(len(*hd)) < cursor+historySize {
-		ext := make([]byte, cursor+historySize-uint64(len(*hd)))
-		*hd = append(*hd, ext...)
+
+	if uint64(len(hd)) < cursor+historySize {
+		ext := make([]byte, cursor+historySize-uint64(len(hd)))
+		hd = append(hd, ext...)
 	}
 	h := *hd
 	copy(h[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
@@ -126,7 +130,7 @@ func (hd *EncHistoryData) SetTargetData(ctx context.Context, target uint64, hist
 }
 
 // AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
-func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*EncHistoryData, error) {
+func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeysV2")
 	defer span.End()
 
@@ -140,29 +144,26 @@ func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKe
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		for _, key := range publicKeys {
 			enc := bucket.Get(key[:])
-			var attestationHistory *EncHistoryData
+			var attestationHistory EncHistoryData
 			if len(enc) == 0 {
 				attestationHistory = NewAttestationHistoryArray(0)
 			} else {
-				attestationHistory = (*EncHistoryData)(&enc)
-				if err != nil {
-					return err
-				}
+				attestationHistory = enc
 			}
 			attestationHistoryForVals[key] = attestationHistory
 		}
 		return nil
 	})
 	for pk, ah := range attestationHistoryForVals {
-		ehd := make(EncHistoryData, len(*ah))
-		copy(ehd, *ah)
-		attestationHistoryForVals[pk] = &ehd
+		ehd := make(EncHistoryData, len(ah))
+		copy(ehd, ah)
+		attestationHistoryForVals[pk] = ehd
 	}
 	return attestationHistoryForVals, err
 }
 
 // SaveAttestationHistoryForPubKeysV2 saves the attestation histories for the requested validator public keys.
-func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]*EncHistoryData) error {
+func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]EncHistoryData) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeysV2")
 	defer span.End()
 
@@ -174,6 +175,17 @@ func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, hist
 			}
 		}
 		return nil
+	})
+	return err
+}
+
+// SaveAttestationHistoryForPubKeyV2 saves the attestation history for the requested validator public key.
+func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history EncHistoryData) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
+	defer span.End()
+	err := store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		return bucket.Put(pubKey[:], history)
 	})
 	return err
 }

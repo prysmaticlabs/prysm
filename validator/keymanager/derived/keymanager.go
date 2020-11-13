@@ -23,11 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived/v1derivation"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
 	types "github.com/wealdtech/go-eth2-types/v2"
-	v2derivation "github.com/wealdtech/go-eth2-util"
+	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -357,6 +356,11 @@ func (dr *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, 
 	return result, nil
 }
 
+// FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the keymanager.
+func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return dr.FetchValidatingPublicKeys(ctx)
+}
+
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
 func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
 	lock.RLock()
@@ -489,10 +493,7 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 }
 
 func (dr *Keymanager) deriveKey(path string) (*types.BLSPrivateKey, error) {
-	if dr.opts.DerivedVersion == "2" {
-		return v2derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
-	}
-	return v1derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
+	return util.PrivateKeyFromSeedAndPath(dr.seed, path)
 }
 
 func checkEncodedKeyFile(

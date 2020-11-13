@@ -32,8 +32,7 @@ type UnencryptedKeys struct {
 }
 
 func main() {
-	// Using Medalla as the default configuration.
-	params.UseMedallaConfig()
+	params.UsePyrmontConfig()
 
 	flag.Parse()
 

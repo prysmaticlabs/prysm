@@ -64,7 +64,7 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
-	attesterHistoryByPubKey            map[[48]byte]*kv.EncHistoryData
+	attesterHistoryByPubKey            map[[48]byte]kv.EncHistoryData
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
@@ -331,7 +331,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 					"activationEpoch": status.Status.ActivationEpoch,
 				}).Info("Waiting for activation")
 			}
-		case ethpb.ValidatorStatus_ACTIVE:
+		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
@@ -477,7 +477,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
-// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
+// validator is known to not have a roles at the slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
 	rolesAt := make(map[[48]byte][]ValidatorRole)
@@ -546,9 +546,27 @@ func (v *validator) SaveProtections(ctx context.Context) error {
 	}
 	v.attesterHistoryByPubKeyLock.RUnlock()
 	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]*kv.EncHistoryData)
+	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
 	v.attesterHistoryByPubKeyLock.Unlock()
 
+	return nil
+}
+
+// ResetAttesterProtectionData reset validators protection data.
+func (v *validator) ResetAttesterProtectionData() {
+	v.attesterHistoryByPubKeyLock.Lock()
+	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
+	v.attesterHistoryByPubKeyLock.Unlock()
+}
+
+// SaveProtection saves the attestation information currently in validator state.
+func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
+	v.attesterHistoryByPubKeyLock.RLock()
+
+	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
+		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
+	}
+	v.attesterHistoryByPubKeyLock.RUnlock()
 	return nil
 }
 
@@ -595,9 +613,13 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not fetch validating keys")
 	}
+	if len(validatingKeys) == 0 {
+		return false, nil
+	}
 	var publicKeys [][]byte
 	for _, key := range validatingKeys {
-		publicKeys = append(publicKeys, key[:])
+		copyKey := key
+		publicKeys = append(publicKeys, copyKey[:])
 	}
 	request := &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: publicKeys,
@@ -605,6 +627,9 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	response, err := v.validatorClient.MultipleValidatorStatus(ctx, request)
 	if err != nil {
 		return false, err
+	}
+	if len(response.Statuses) != len(request.PublicKeys) {
+		return false, errors.New("number of status responses did not match number of requested keys")
 	}
 	for _, status := range response.Statuses {
 		if status.Status != ethpb.ValidatorStatus_EXITED {

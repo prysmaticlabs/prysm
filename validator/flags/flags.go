@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
+	// DisableAccountMetricsFlag disables the prometheus metrics for validator accounts, default false.
 	DisableAccountMetricsFlag = &cli.BoolFlag{
 		Name: "disable-account-metrics",
 		Usage: "Disable prometheus metrics for validator accounts. Operators with high volumes " +
@@ -184,6 +184,20 @@ var (
 	DeletePublicKeysFlag = &cli.StringFlag{
 		Name:  "delete-public-keys",
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to delete",
+		Value: "",
+	}
+	// DisablePublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to disable for their wallet.
+	DisablePublicKeysFlag = &cli.StringFlag{
+		Name:  "disable-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to disable",
+		Value: "",
+	}
+	// EnablePublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to enable for their wallet.
+	EnablePublicKeysFlag = &cli.StringFlag{
+		Name:  "enable-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to enable",
 		Value: "",
 	}
 	// BackupPublicKeysFlag defines a comma-separated list of hex string public keys

@@ -9,7 +9,6 @@ go_library(
     deps = [
         "//shared/bls:go_default_library",
         "//shared/fileutil:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/promptutil:go_default_library",
         "//validator/keymanager:go_default_library",
         "@com_github_google_uuid//:go_default_library",
@@ -33,7 +32,6 @@ go_test(
     deps = [
         "//shared/bls:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//validator/keymanager:go_default_library",

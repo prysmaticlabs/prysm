@@ -57,31 +57,10 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 
 		// Create the new deposits and add them to the trie.
 		for i := uint64(0); i < numRequired; i++ {
-			withdrawalCreds := hashutil.Hash(publicKeys[i+1].Marshal())
-			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
-
-			depositData := &ethpb.Deposit_Data{
-				PublicKey:             publicKeys[i].Marshal(),
-				Amount:                params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawalCredentials: withdrawalCreds[:],
-			}
-
-			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			balance := params.BeaconConfig().MaxEffectiveBalance
+			deposit, err := signedDeposit(secretKeys[i], publicKeys[i].Marshal(), publicKeys[i+1].Marshal(), balance)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "could not compute domain")
-			}
-			root, err := ssz.SigningRoot(depositData)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
-			}
-			sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
-			if err != nil {
-				return nil, nil, err
-			}
-			depositData.Signature = secretKeys[i].Sign(sigRoot[:]).Marshal()
-
-			deposit := &ethpb.Deposit{
-				Data: depositData,
+				return nil, nil, errors.Wrap(err, "could not create signed deposit")
 			}
 			cachedDeposits = append(cachedDeposits, deposit)
 
@@ -110,16 +89,127 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 	return requestedDeposits, privKeys[0:numDeposits], nil
 }
 
+// DepositsWithBalance generates N amount of deposits with the balances taken from the passed in balances array.
+// If an empty array is passed,
+func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trieutil.SparseMerkleTrie, error) {
+	var err error
+
+	sparseTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create new trie")
+	}
+
+	numDeposits := uint64(len(balances))
+	numExisting := uint64(len(cachedDeposits))
+	numRequired := numDeposits - uint64(len(cachedDeposits))
+
+	var secretKeys []bls.SecretKey
+	var publicKeys []bls.PublicKey
+	if numExisting >= numDeposits+1 {
+		secretKeys = append(secretKeys, privKeys[:numDeposits+1]...)
+		publicKeys = publicKeysFromSecrets(secretKeys)
+	} else {
+		secretKeys = append(secretKeys, privKeys[:numExisting]...)
+		publicKeys = publicKeysFromSecrets(secretKeys)
+		// Fetch enough keys for all deposits, since this function is uncached.
+		newSecretKeys, newPublicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create deterministic keys: ")
+		}
+		secretKeys = append(secretKeys, newSecretKeys...)
+		publicKeys = append(publicKeys, newPublicKeys...)
+	}
+
+	deposits := make([]*ethpb.Deposit, numDeposits)
+	// Create the new deposits and add them to the trie.
+	for i := uint64(0); i < numDeposits; i++ {
+		balance := params.BeaconConfig().MaxEffectiveBalance
+		if len(balances) == int(numDeposits) {
+			balance = balances[i]
+		}
+		deposit, err := signedDeposit(secretKeys[i], publicKeys[i].Marshal(), publicKeys[i+1].Marshal(), balance)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create signed deposit")
+		}
+		deposits[i] = deposit
+
+		hashedDeposit, err := deposit.Data.HashTreeRoot()
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
+		}
+
+		sparseTrie.Insert(hashedDeposit[:], int(i))
+	}
+
+	depositTrie, _, err := DepositTrieSubset(sparseTrie, int(numDeposits))
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
+	}
+	for i := range deposits {
+		proof, err := depositTrie.MerkleProof(i)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create merkle proof")
+		}
+		deposits[i].Proof = proof
+	}
+
+	return deposits, sparseTrie, nil
+}
+
+func signedDeposit(
+	secretKey bls.SecretKey,
+	publicKey []byte,
+	withdrawalKey []byte,
+	balance uint64,
+) (*ethpb.Deposit, error) {
+	withdrawalCreds := hashutil.Hash(withdrawalKey)
+	withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+	depositData := &ethpb.Deposit_Data{
+		PublicKey:             publicKey,
+		Amount:                balance,
+		WithdrawalCredentials: withdrawalCreds[:],
+	}
+
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute domain")
+	}
+	root, err := ssz.SigningRoot(depositData)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get signing root of deposit data")
+	}
+
+	sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	depositData.Signature = secretKey.Sign(sigRoot[:]).Marshal()
+
+	deposit := &ethpb.Deposit{
+		Data: depositData,
+	}
+	return deposit, nil
+}
+
 // DeterministicDepositTrie returns a merkle trie of the requested size from the
 // deterministic deposits.
 func DeterministicDepositTrie(size int) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
-	items := trie.Items()
-	if size > len(items) {
-		return nil, [][32]byte{}, errors.New("requested a larger tree than amount of deposits")
-	}
-
 	if trie == nil {
 		return nil, [][32]byte{}, errors.New("trie cache is empty, generate deposits at an earlier point")
+	}
+
+	return DepositTrieSubset(trie, size)
+}
+
+// DepositTrieSubset takes in a full tree and the desired size and returns a subset of the deposit trie.
+func DepositTrieSubset(sparseTrie *trieutil.SparseMerkleTrie, size int) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
+	if sparseTrie == nil {
+		return nil, [][32]byte{}, errors.New("trie is empty")
+	}
+
+	items := sparseTrie.Items()
+	if size > len(items) {
+		return nil, [][32]byte{}, errors.New("requested a larger tree than amount of deposits")
 	}
 
 	items = items[:size]
@@ -132,7 +222,6 @@ func DeterministicDepositTrie(size int) (*trieutil.SparseMerkleTrie, [][32]byte,
 	for i, dep := range items {
 		roots[i] = bytesutil.ToBytes32(dep)
 	}
-
 	return depositTrie, roots, nil
 }
 
@@ -281,4 +370,12 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 	}
 
 	return requestedDeposits, privKeys[0:numDeposits], nil
+}
+
+func publicKeysFromSecrets(secretKeys []bls.SecretKey) []bls.PublicKey {
+	publicKeys := make([]bls.PublicKey, len(secretKeys))
+	for i, secretKey := range secretKeys {
+		publicKeys[i] = secretKey.PublicKey()
+	}
+	return publicKeys
 }

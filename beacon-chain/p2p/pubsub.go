@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -71,7 +73,22 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	if err != nil {
 		return nil, err
 	}
+	if featureconfig.Get().EnablePeerScorer {
+		scoringParams := topicScoreParams(topic)
+		if scoringParams != nil {
+			if err = topicHandle.SetScoreParams(scoringParams); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return topicHandle.Subscribe(opts...)
+}
+
+// peerInspector will scrape all the relevant scoring data and add it to our
+// peer handler.
+// TODO(#6043): Add hooks to add in peer inspector to our global peer handler.
+func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
+	// no-op
 }
 
 // Content addressable ID function.
@@ -98,8 +115,10 @@ func msgIDFunction(pmsg *pubsub_pb.Message) string {
 }
 
 func setPubSubParameters() {
+	heartBeatInterval := 700 * time.Millisecond
 	pubsub.GossipSubDlo = 5
-	pubsub.GossipSubHeartbeatInterval = 700 * time.Millisecond
+	pubsub.GossipSubHeartbeatInterval = heartBeatInterval
 	pubsub.GossipSubHistoryLength = 6
 	pubsub.GossipSubHistoryGossip = 3
+	pubsub.TimeCacheDuration = 550 * heartBeatInterval
 }

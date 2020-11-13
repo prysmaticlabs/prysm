@@ -469,7 +469,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	currentSlot := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
 	var requestedEpoch uint64
@@ -492,10 +492,18 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	// Get current slot state for current epoch attestations.
-	state, err := bs.StateGen.StateBySlot(ctx, currentSlot)
+	startSlot, err := helpers.StartSlot(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
+	// This ensures that we don't miss previous attestations when input requested epochs.
+	startSlot += params.BeaconConfig().SlotsPerEpoch - 1
+	state, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
+
 	v, b, err := precompute.New(ctx, state)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
@@ -507,36 +515,21 @@ func (bs *Server) GetValidatorParticipation(
 
 	p := &ethpb.ValidatorParticipationResponse{
 		Epoch:     requestedEpoch,
-		Finalized: requestedEpoch <= state.FinalizedCheckpointEpoch(),
+		Finalized: requestedEpoch <= bs.FinalizationFetcher.FinalizedCheckpt().Epoch,
 		Participation: &ethpb.ValidatorParticipation{
 			// TODO(7130): Remove these three deprecated fields.
-			CurrentEpochActiveGwei:          b.ActiveCurrentEpoch,
-			CurrentEpochAttestingGwei:       b.CurrentEpochAttested,
-			CurrentEpochTargetAttestingGwei: b.CurrentEpochTargetAttested,
+			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
+			VotedEther:                       b.PrevEpochTargetAttested,
+			EligibleEther:                    b.ActivePrevEpoch,
+			CurrentEpochActiveGwei:           b.ActiveCurrentEpoch,
+			CurrentEpochAttestingGwei:        b.CurrentEpochAttested,
+			CurrentEpochTargetAttestingGwei:  b.CurrentEpochTargetAttested,
+			PreviousEpochActiveGwei:          b.ActivePrevEpoch,
+			PreviousEpochAttestingGwei:       b.PrevEpochAttested,
+			PreviousEpochTargetAttestingGwei: b.PrevEpochTargetAttested,
+			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
 		},
 	}
-
-	// Get head state for previous epoch attestations.
-	state, err = bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
-	}
-	v, b, err = precompute.New(ctx, state)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
-	}
-	_, b, err = precompute.ProcessAttestations(ctx, state, v, b)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
-	}
-
-	p.Participation.GlobalParticipationRate = float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch)
-	p.Participation.VotedEther = b.PrevEpochTargetAttested
-	p.Participation.EligibleEther = b.ActivePrevEpoch
-	p.Participation.PreviousEpochActiveGwei = b.ActivePrevEpoch
-	p.Participation.PreviousEpochAttestingGwei = b.PrevEpochAttested
-	p.Participation.PreviousEpochTargetAttestingGwei = b.PrevEpochTargetAttested
-	p.Participation.PreviousEpochHeadAttestingGwei = b.PrevEpochHeadAttested
 
 	return p, nil
 }

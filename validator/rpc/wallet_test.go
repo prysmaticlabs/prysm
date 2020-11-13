@@ -208,10 +208,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedConfig := imported.DefaultKeymanagerOpts()
-	enc, err := json.Marshal(expectedConfig)
-	require.NoError(t, err)
-	var jsonMap map[string]string
-	require.NoError(t, json.Unmarshal(enc, &jsonMap))
+	jsonMap := KmOptsToConfig(expectedConfig)
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
 		WalletPath:       localWalletDir,
 		KeymanagerKind:   pb.KeymanagerKind_IMPORTED,

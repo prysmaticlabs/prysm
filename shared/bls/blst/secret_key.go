@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64
+// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
 // +build blst_enabled
 
 package blst

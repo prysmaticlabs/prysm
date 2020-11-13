@@ -14,7 +14,7 @@ import (
 )
 
 // ValidatorAlreadyExitedMsg defines a message saying that a validator has already exited.
-var ValidatorAlreadyExitedMsg = "validator has already submitted an exit, which will take place at epoch"
+var ValidatorAlreadyExitedMsg = "has already submitted an exit, which will take place at epoch"
 
 // ValidatorCannotExitYetMsg defines a message saying that a validator cannot exit
 // because it has not been active long enough.
@@ -125,7 +125,7 @@ func ProcessVoluntaryExitsNoVerifySignature(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExitAndSignature(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
+func VerifyExitAndSignature(validator stateTrie.ReadOnlyValidator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}
@@ -161,7 +161,7 @@ func VerifyExitAndSignature(validator *stateTrie.ReadOnlyValidator, currentSlot 
 //    assert get_current_epoch(state) >= exit.epoch
 //    # Verify the validator has been active long enough
 //    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
-func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, exit *ethpb.VoluntaryExit) error {
+func verifyExitConditions(validator stateTrie.ReadOnlyValidator, currentSlot uint64, exit *ethpb.VoluntaryExit) error {
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
@@ -169,7 +169,7 @@ func verifyExitConditions(validator *stateTrie.ReadOnlyValidator, currentSlot ui
 	}
 	// Verify the validator has not yet submitted an exit.
 	if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("%s: %v", ValidatorAlreadyExitedMsg, validator.ExitEpoch())
+		return fmt.Errorf("validator with index %d %s: %v", exit.ValidatorIndex, ValidatorAlreadyExitedMsg, validator.ExitEpoch())
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {

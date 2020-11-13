@@ -1,4 +1,4 @@
-// +build darwin windows !blst_enabled
+// +build  !blst_enabled
 
 package blst
 
@@ -6,8 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
 )
 
-// This stub file exists until build issues can be resolved for darwin and windows.
-const err = "blst is only supported on linux with blst_enabled gotag"
+// This stub file exists until build issues can be resolved for libfuzz.
+const err = "blst is only supported on linux,darwin,windows with blst_enabled gotag"
 
 // SecretKey -- stub
 type SecretKey struct{}

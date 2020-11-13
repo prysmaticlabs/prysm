@@ -33,7 +33,7 @@ func (p *FakeP2P) Encoding() encoder.NetworkEncoding {
 }
 
 // AddConnectionHandler -- fake.
-func (p *FakeP2P) AddConnectionHandler(_ func(ctx context.Context, id peer.ID) error) {
+func (p *FakeP2P) AddConnectionHandler(_, _ func(ctx context.Context, id peer.ID) error) {
 
 }
 

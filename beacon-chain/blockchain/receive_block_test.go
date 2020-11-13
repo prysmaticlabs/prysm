@@ -78,7 +78,6 @@ func TestService_ReceiveBlock(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			name: "updates exit pool",
 			args: args{
@@ -93,14 +92,13 @@ func TestService_ReceiveBlock(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, s *Service) {
-				var n int
-				for i := uint64(0); int(i) < genesis.NumValidators(); i++ {
-					if s.exitPool.HasBeenIncluded(i) {
-						n++
-					}
-				}
-				if n != 3 {
-					t.Errorf("Did not mark the correct number of exits. Got %d but wanted %d", n, 3)
+				pending := s.exitPool.PendingExits(genesis, 1, true /* no limit */)
+				if len(pending) != 0 {
+					t.Errorf(
+						"Did not mark the correct number of exits. Got %d pending but wanted %d",
+						len(pending),
+						0,
+					)
 				}
 			},
 		},

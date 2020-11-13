@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
@@ -209,7 +208,7 @@ func encrypt(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not json marshal keystore")
 	}
-	if err := ioutil.WriteFile(fullPath, encodedFile, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	if err := fileutil.WriteFile(fullPath, encodedFile); err != nil {
 		return errors.Wrapf(err, "could not write file at path: %s", fullPath)
 	}
 	fmt.Printf(

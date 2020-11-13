@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
@@ -43,17 +44,16 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	chain             blockchainService
-	p2p               p2p.P2P
-	db                db.ReadOnlyDatabase
-	synced            bool
-	chainStarted      bool
-	stateNotifier     statefeed.Notifier
-	counter           *ratecounter.RateCounter
-	lastProcessedSlot uint64
-	genesisChan       chan time.Time
+	ctx           context.Context
+	cancel        context.CancelFunc
+	chain         blockchainService
+	p2p           p2p.P2P
+	db            db.ReadOnlyDatabase
+	synced        *abool.AtomicBool
+	chainStarted  *abool.AtomicBool
+	stateNotifier statefeed.Notifier
+	counter       *ratecounter.RateCounter
+	genesisChan   chan time.Time
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
@@ -66,6 +66,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chain:         cfg.Chain,
 		p2p:           cfg.P2P,
 		db:            cfg.DB,
+		synced:        abool.New(),
+		chainStarted:  abool.New(),
 		stateNotifier: cfg.StateNotifier,
 		counter:       ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:   make(chan time.Time),
@@ -98,7 +100,7 @@ func (s *Service) Start() {
 		s.markSynced(genesis)
 		return
 	}
-	s.chainStarted = true
+	s.chainStarted.Set()
 	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
@@ -125,7 +127,7 @@ func (s *Service) Stop() error {
 
 // Status of initial sync.
 func (s *Service) Status() error {
-	if !s.synced && s.chainStarted {
+	if s.synced.IsNotSet() && s.chainStarted.IsSet() {
 		return errors.New("syncing")
 	}
 	return nil
@@ -133,7 +135,7 @@ func (s *Service) Status() error {
 
 // Syncing returns true if initial sync is still running.
 func (s *Service) Syncing() bool {
-	return !s.synced
+	return s.synced.IsNotSet()
 }
 
 // Resync allows a node to start syncing again if it has fallen
@@ -145,8 +147,8 @@ func (s *Service) Resync() error {
 	}
 
 	// Set it to false since we are syncing again.
-	s.synced = false
-	defer func() { s.synced = true }() // Reset it at the end of the method.
+	s.synced.UnSet()
+	defer func() { s.synced.Set() }() // Reset it at the end of the method.
 	genesis := time.Unix(int64(headState.GenesisTime()), 0)
 
 	s.waitForMinimumPeers()
@@ -212,7 +214,7 @@ func (s *Service) waitForStateInitialization() {
 
 // markSynced marks node as synced and notifies feed listeners.
 func (s *Service) markSynced(genesis time.Time) {
-	s.synced = true
+	s.synced.Set()
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Synced,
 		Data: &statefeed.SyncedData{
