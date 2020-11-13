@@ -1,4 +1,4 @@
-package kv
+package interchangeformat
 
 import (
 	"context"
@@ -13,13 +13,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/iface/interchange"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
 var numValidators = 2
 
 func TestStore_ImportInterchangeData(t *testing.T) {
 	pk := createKeys(t)
-	db := setupDB(t, pk)
+	db := kv.setupDB(t, pk)
 	att, pro := createProtectionData(t)
 	ctx := context.Background()
 	var pif interchange.PlainDataInterchangeFormat
@@ -76,8 +77,8 @@ func createKeys(t *testing.T) [][48]byte {
 	return pubKeys
 }
 
-func createProtectionData(t *testing.T) ([]*EncHistoryData, []map[uint64][32]byte) {
-	attData := make([]*EncHistoryData, numValidators)
+func createProtectionData(t *testing.T) ([]*kv.EncHistoryData, []map[uint64][32]byte) {
+	attData := make([]*kv.EncHistoryData, numValidators)
 	proposalData := make([]map[uint64][32]byte, numValidators)
 	gen := rand.NewGenerator()
 	ctx := context.Background()
@@ -85,9 +86,9 @@ func createProtectionData(t *testing.T) ([]*EncHistoryData, []map[uint64][32]byt
 		var err error
 		proposalData[v] = make(map[uint64][32]byte)
 		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 100)
-		hd := NewAttestationHistoryArray(uint64(latestTarget))
+		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
 		for i := 1; i < latestTarget; i += 2 {
-			historyData := &HistoryData{Source: uint64(gen.Intn(100000)), SigningRoot: bytesutil.PadTo([]byte{byte(i)}, 32)}
+			historyData := &kv.HistoryData{Source: uint64(gen.Intn(100000)), SigningRoot: bytesutil.PadTo([]byte{byte(i)}, 32)}
 			hd, err = hd.SetTargetData(ctx, uint64(i), historyData)
 			require.NoError(t, err)
 			proposalData[v][uint64(i)] = [32]byte{byte(i)}

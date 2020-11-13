@@ -13,6 +13,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ProposalHistoryForPubkey for a validator public key.
+type ProposalHistoryForPubkey struct {
+	Slot        uint64   `json:"slot"`
+	SigningRoot [32]byte `json:"signing_root"`
+}
+
 // ProposalHistoryForEpoch accepts a validator public key and returns the corresponding proposal history.
 // Returns nil if there is no proposal history for the validator.
 func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error) {
