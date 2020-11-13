@@ -18,6 +18,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// DisableAccountsCli disables via CLI the accounts that the user requests to be disabled from the wallet
 func DisableAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound
@@ -96,6 +97,7 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 	return nil
 }
 
+// EnableAccountsCli enables via CLI the accounts that the user requests to be enabled from the wallet
 func EnableAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound
@@ -189,7 +191,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	}
 }
 
-// DisableAccount disable the accounts that the user requests to be disabled from the wallet
+// DisableAccount disables the accounts that the user requests to be disabled from the wallet
 func DisableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
@@ -230,7 +232,7 @@ func DisableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 	return nil
 }
 
-// EnableAccounts enable the accounts that the user requests to be enabled from the wallet
+// EnableAccounts enables the accounts that the user requests to be enabled from the wallet
 func EnableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
