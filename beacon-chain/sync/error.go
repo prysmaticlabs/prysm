@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 const genericError = "internal service error"
@@ -104,4 +105,10 @@ func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEnc
 // only returns true for errors that are valid (no resets or expectedEOF errors).
 func isValidStreamError(err error) bool {
 	return err != nil && !errors.Is(err, mux.ErrReset) && !errors.Is(err, helpers.ErrExpectedEOF)
+}
+
+func closeStream(stream network.Stream, log *logrus.Entry) {
+	if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
+		log.WithError(err).Debug("Failed to reset stream")
+	}
 }
