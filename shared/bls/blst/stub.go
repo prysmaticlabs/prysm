@@ -1,4 +1,4 @@
-// +build windows !blst_enabled
+// +build  !blst_enabled
 
 package blst
 
