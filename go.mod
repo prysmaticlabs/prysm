@@ -21,7 +21,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20200826142241-3a913c5a1313
+	github.com/ferranbt/fastssz v0.0.0-20201020132831-68dc48984fd3
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
@@ -76,7 +76,6 @@ require (
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.1
 	github.com/minio/sha256-simd v0.1.1
-	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/multiformats/go-multiaddr-net v0.2.0
@@ -105,8 +104,8 @@ require (
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/go-bytesutil v1.1.1
-	github.com/wealdtech/go-eth2-types/v2 v2.5.0
-	github.com/wealdtech/go-eth2-util v1.6.0
+	github.com/wealdtech/go-eth2-types/v2 v2.5.1
+	github.com/wealdtech/go-eth2-util v1.6.2
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.1
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
@@ -127,6 +126,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877
 	google.golang.org/grpc v1.33.1
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
 	gopkg.in/yaml.v2 v2.3.0
