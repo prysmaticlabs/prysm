@@ -225,6 +225,12 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 		return nil, errors.Wrap(err, "could not get last valid block for hot state using slot")
 	}
 
+	// In the event where last valid block slot is less than current state slot,
+	// we can just process start state up to input slot.
+	if lastValidSlot >= startState.Slot() {
+		return processSlotsStateGen(ctx, startState, slot)
+	}
+
 	// Load and replay blocks to get the intermediate state.
 	replayBlks, err := s.LoadBlocks(ctx, startState.Slot()+1, lastValidSlot, lastValidRoot)
 	if err != nil {
