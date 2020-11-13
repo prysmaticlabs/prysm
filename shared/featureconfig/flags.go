@@ -5,21 +5,6 @@ import (
 )
 
 var (
-	// AltonaTestnet flag for the multiclient eth2 testnet configuration.
-	AltonaTestnet = &cli.BoolFlag{
-		Name:  "altona",
-		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
-	}
-	// OnyxTestnet flag for the Prysmatic Labs single-client testnet configuration.
-	OnyxTestnet = &cli.BoolFlag{
-		Name:  "onyx",
-		Usage: "This defines the flag through which we can run on the Onyx Prysm Testnet",
-	}
-	// MedallaTestnet flag for the multiclient eth2 testnet.
-	MedallaTestnet = &cli.BoolFlag{
-		Name:  "medalla",
-		Usage: "This defines the flag through which we can run on the Medalla Multiclient Testnet",
-	}
 	// ToledoTestnet flag for the multiclient eth2 testnet.
 	ToledoTestnet = &cli.BoolFlag{
 		Name:  "toledo",
@@ -29,16 +14,6 @@ var (
 	PyrmontTestnet = &cli.BoolFlag{
 		Name:  "pyrmont",
 		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
-	}
-	// SpadinaTestnet flag for the multiclient eth2 testnet.
-	SpadinaTestnet = &cli.BoolFlag{
-		Name:  "spadina",
-		Usage: "This defines the flag through which we can run on the Spadina Multiclient Testnet",
-	}
-	// ZinkenTestnet flag for the multiclient eth2 testnet.
-	ZinkenTestnet = &cli.BoolFlag{
-		Name:  "zinken",
-		Usage: "This defines the flag through which we can run on the Zinken Multiclient Testnet",
 	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
@@ -120,12 +95,7 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
 	waitForSyncedFlag,
-	AltonaTestnet,
-	OnyxTestnet,
-	MedallaTestnet,
 	ToledoTestnet,
-	SpadinaTestnet,
-	ZinkenTestnet,
 	PyrmontTestnet,
 	Mainnet,
 	disableAccountsV2,
@@ -135,12 +105,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
-	AltonaTestnet,
-	OnyxTestnet,
-	MedallaTestnet,
 	ToledoTestnet,
-	SpadinaTestnet,
-	ZinkenTestnet,
 	PyrmontTestnet,
 	Mainnet,
 }...)
@@ -158,12 +123,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	AltonaTestnet,
-	OnyxTestnet,
-	MedallaTestnet,
 	ToledoTestnet,
-	SpadinaTestnet,
-	ZinkenTestnet,
 	PyrmontTestnet,
 	Mainnet,
 	enableBlst,
