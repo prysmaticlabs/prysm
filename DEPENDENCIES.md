@@ -61,7 +61,7 @@ Example:
 
 ```bash
 go get github.com/prysmaticlabs/example@v1.2.3
-bazel run //:gazelle -- update-repos -from_file=go.mod -to_macro=deps.bzl%prysm_deps
+bazel run //:gazelle -- update-repos -from_file=go.mod -to_macro=deps.bzl%prysm_deps -prune=true
 ```
 
 The deps.bzl file should have been updated with the dependency and any transitive dependencies. 
