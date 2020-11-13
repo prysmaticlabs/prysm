@@ -101,9 +101,6 @@ func TestDerivationFromSeed(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.name == "Case 1" || tt.name == "Case 2" {
-				t.Skip("Skipping due to https://github.com/wealdtech/go-eth2-util/issues/2")
-			}
 			seedBytes, err := hex.DecodeString(tt.fields.seed)
 			require.NoError(t, err)
 			km := &Keymanager{
