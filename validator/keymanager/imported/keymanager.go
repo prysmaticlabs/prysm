@@ -113,6 +113,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		accountsChangedFeed: new(event.Feed),
+		opts:                DefaultKeymanagerOpts(),
 	}
 	if numValidatorKeys == 0 {
 		return k, nil
