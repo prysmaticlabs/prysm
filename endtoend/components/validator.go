@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -83,7 +84,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 }
 
 // SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
-func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset int) {
+func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset int, partial bool) {
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +96,7 @@ func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset); err != nil {
+	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset, partial); err != nil {
 		t.Fatal(err)
 	}
 	mineKey, err := keystore.DecryptKey(keystoreBytes, "" /*password*/)
@@ -108,13 +109,11 @@ func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset
 }
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
-func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int) error {
+func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num int, offset int, partial bool) error {
 	txOps, err := bind.NewTransactor(bytes.NewReader(keystoreBytes), "" /*password*/)
 	if err != nil {
 		return err
 	}
-	depositInGwei := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
-	txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
 	txOps.GasLimit = depositGasLimit
 	nonce, err := web3.PendingNonceAt(context.Background(), txOps.From)
 	if err != nil {
@@ -127,19 +126,37 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int)
 		return err
 	}
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(num + offset))
+	balances := make([]uint64, num+offset)
+	for i := 0; i < len(balances); i++ {
+		if i < len(balances)/2 && partial {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance / 2
+		} else {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+	}
+	deposits, trie, err := testutil.DepositsWithBalance(balances)
 	if err != nil {
 		return err
 	}
-	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
-	if err != nil {
-		return err
+	allDeposits := deposits
+	allRoots := trie.Items()
+	allBalances := balances
+	if partial {
+		deposits2, trie2, err := testutil.DepositsWithBalance(balances)
+		if err != nil {
+			return err
+		}
+		allDeposits = append(deposits, deposits2[:len(balances)/2]...)
+		allRoots = append(trie.Items(), trie2.Items()[:len(balances)/2]...)
+		allBalances = append(balances, balances[:len(balances)/2]...)
 	}
-	for index, dd := range deposits {
+	for index, dd := range allDeposits {
 		if index < offset {
 			continue
 		}
-		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
+		depositInGwei := big.NewInt(int64(allBalances[index]))
+		txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
+		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, bytesutil.ToBytes32(allRoots[index]))
 		if err != nil {
 			return errors.Wrap(err, "unable to send transaction to contract")
 		}
