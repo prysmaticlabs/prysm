@@ -161,9 +161,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
 	}
-	if ctx.Bool(enableBlst.Name) {
-		log.Warn("Enabling new BLS library blst")
-		cfg.EnableBlst = true
+	cfg.EnableBlst = true
+	if ctx.Bool(disableBlst.Name) {
+		log.Warn("Disabling new BLS library blst")
+		cfg.EnableBlst = false
 	}
 	cfg.EnablePruningDepositProofs = true
 	if ctx.Bool(disablePruningDepositProofs.Name) {
