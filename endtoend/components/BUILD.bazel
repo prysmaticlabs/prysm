@@ -16,6 +16,7 @@ go_library(
         "//endtoend/helpers:go_default_library",
         "//endtoend/params:go_default_library",
         "//endtoend/types:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
