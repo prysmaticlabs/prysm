@@ -10,8 +10,10 @@ import (
 
 // IKeymanager defines a general keymanager interface for Prysm wallets.
 type IKeymanager interface {
-	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
+	// FetchValidatingKeys fetches the list of active public keys that should be used to validate with.
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
+	// FetchAllValidatingKeys fetches the list of all public keys, including disabled ones.
+	FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
 	// Sign signs a message using a validator key.
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
