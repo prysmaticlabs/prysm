@@ -88,9 +88,8 @@ func (hd EncHistoryData) SetLatestEpochWritten(ctx context.Context, latestEpochW
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
-	h := *hd
-	copy(h[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten))
-	return &h, nil
+	copy(hd[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten))
+	return hd, nil
 }
 
 func (hd EncHistoryData) GetTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
@@ -123,10 +122,9 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 		ext := make([]byte, cursor+historySize-uint64(len(hd)))
 		hd = append(hd, ext...)
 	}
-	h := *hd
-	copy(h[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
-	copy(h[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
-	return &h, nil
+	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
+	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
+	return hd, nil
 }
 
 // AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
@@ -135,11 +133,11 @@ func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKe
 	defer span.End()
 
 	if len(publicKeys) == 0 {
-		return make(map[[48]byte]*EncHistoryData), nil
+		return make(map[[48]byte]EncHistoryData), nil
 	}
 
 	var err error
-	attestationHistoryForVals := make(map[[48]byte]*EncHistoryData)
+	attestationHistoryForVals := make(map[[48]byte]EncHistoryData)
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		for _, key := range publicKeys {
@@ -170,7 +168,7 @@ func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, hist
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		for pubKey, encodedHistory := range historyByPubKeys {
-			if err := bucket.Put(pubKey[:], *encodedHistory); err != nil {
+			if err := bucket.Put(pubKey[:], encodedHistory); err != nil {
 				return err
 			}
 		}
@@ -216,7 +214,7 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not retrieve data for public keys %v", allKeys)
 	}
-	dataMap := make(map[[48]byte]*EncHistoryData)
+	dataMap := make(map[[48]byte]EncHistoryData)
 	for key, atts := range attMap {
 		dataMap[key] = NewAttestationHistoryArray(atts.LatestEpochWritten)
 		dataMap[key], err = dataMap[key].SetLatestEpochWritten(ctx, atts.LatestEpochWritten)

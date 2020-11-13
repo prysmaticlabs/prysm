@@ -68,11 +68,11 @@ func TestSetTargetData(t *testing.T) {
 	ctx := context.Background()
 	type testStruct struct {
 		name        string
-		enc         *EncHistoryData
+		enc         EncHistoryData
 		target      uint64
 		source      uint64
 		signingRoot []byte
-		expected    *EncHistoryData
+		expected    EncHistoryData
 		error       string
 	}
 	tests := []testStruct{
