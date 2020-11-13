@@ -693,8 +693,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:8DS7uDmUkGF6UKNU1HivEsjrTusxLPb05KUr/D8ONWQ=",
-        version = "v0.0.0-20200826142241-3a913c5a1313",
+        sum = "h1:FnpkCo1TAj/eq0ETLPhAplYYB4KlFQy3kVb8cLludAc=",
+        version = "v0.0.0-20201020132831-68dc48984fd3",
     )
 
     go_repository(
@@ -3044,14 +3044,14 @@ def prysm_deps():
             "gazelle:resolve go github.com/prysmaticlabs/go-ssz @com_github_prysmaticlabs_go_ssz//:go_default_library",
         ],
         importpath = "github.com/wealdtech/go-eth2-types/v2",
-        sum = "h1:L8sl3yoICAbn3134CBLNUt0o5h2voe0Es2KD5O9r8YQ=",
-        version = "v2.5.0",
+        sum = "h1:59VZuwgqRaTjBu3b3CCaxG05XTmANtuTKA8hy3C6IFQ=",
+        version = "v2.5.1",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_util",
         importpath = "github.com/wealdtech/go-eth2-util",
-        sum = "h1:l2OR0SqfYdEnb1I1Ggnk0w+B9/LA5aHdQ2KK2FPnGkY=",
-        version = "v1.6.0",
+        sum = "h1:Gk7xVTG/bY1IUw/8wxOf97DuPbLTGGoZ0k5dNayudhk=",
+        version = "v1.6.2",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet",

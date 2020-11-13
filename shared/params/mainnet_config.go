@@ -43,7 +43,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	GenesisDelay:             172800, // 2 days
+	GenesisDelay:             604800, // 1 week.
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -75,12 +75,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,
-	EpochsPerEth1VotingPeriod:        32,
+	EpochsPerEth1VotingPeriod:        64,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
 	ShardCommitteePeriod:             256,
 	MinEpochsToInactivityPenalty:     4,
-	Eth1FollowDistance:               1024,
+	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
 	SecondsPerETH1Block:              13,
 
@@ -94,9 +94,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BaseRewardFactor:               64,
 	WhistleBlowerRewardQuotient:    512,
 	ProposerRewardQuotient:         8,
-	InactivityPenaltyQuotient:      1 << 24,
-	MinSlashingPenaltyQuotient:     32,
-	ProportionalSlashingMultiplier: 3,
+	InactivityPenaltyQuotient:      67108864,
+	MinSlashingPenaltyQuotient:     128,
+	ProportionalSlashingMultiplier: 1,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
