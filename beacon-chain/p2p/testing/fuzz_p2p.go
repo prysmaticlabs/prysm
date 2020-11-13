@@ -33,13 +33,13 @@ func (p *FakeP2P) Encoding() encoder.NetworkEncoding {
 }
 
 // AddConnectionHandler -- fake.
-func (p *FakeP2P) AddConnectionHandler(_ func(ctx context.Context, id peer.ID) error) {
+func (p *FakeP2P) AddConnectionHandler(_ func(ctx context.Context, id peer.ID) error,
+	_ func(ctx context.Context, id peer.ID) error) {
 
 }
 
 // AddDisconnectionHandler -- fake.
-func (p *FakeP2P) AddDisconnectionHandler(_ func(ctx context.Context, id peer.ID) error,
-	_ func(ctx context.Context, id peer.ID) error) {
+func (p *FakeP2P) AddDisconnectionHandler(_ func(ctx context.Context, id peer.ID) error) {
 }
 
 // AddPingMethod -- fake.
