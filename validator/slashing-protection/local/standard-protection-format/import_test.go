@@ -1,6 +1,7 @@
 package interchangeformat
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -13,13 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
 var numValidators = 2
 
 func TestStore_ImportInterchangeData(t *testing.T) {
-	pk := createKeys(t)
-	db := kv.setupDB(t, pk)
+	publicKeys := createRandomPubKeys(t)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
 	att, pro := createProtectionData(t)
 	ctx := context.Background()
 	var pif PlainDataInterchangeFormat
@@ -51,7 +53,8 @@ func TestStore_ImportInterchangeData(t *testing.T) {
 	}
 	blob, err := json.Marshal(pif)
 	require.NoError(t, err)
-	err = db.ImportInterchangeData(ctx, blob)
+	buf := bytes.NewBuffer(blob)
+	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 	resAtt, err := db.AttestationHistoryForPubKeysV2(ctx, pk)
 	require.NoError(t, err)
@@ -64,16 +67,6 @@ func TestStore_ImportInterchangeData(t *testing.T) {
 		}
 	}
 
-}
-
-func createKeys(t *testing.T) [][48]byte {
-	pubKeys := make([][48]byte, numValidators)
-	for i := 0; i < numValidators; i++ {
-		randKey, err := bls.RandKey()
-		require.NoError(t, err)
-		copy(pubKeys[i][:], randKey.PublicKey().Marshal())
-	}
-	return pubKeys
 }
 
 func createProtectionData(t *testing.T) ([]*kv.EncHistoryData, []map[uint64][32]byte) {
@@ -96,4 +89,14 @@ func createProtectionData(t *testing.T) ([]*kv.EncHistoryData, []map[uint64][32]
 		attData[v] = hd
 	}
 	return attData, proposalData
+}
+
+func createRandomPubKeys(t *testing.T) [][48]byte {
+	pubKeys := make([][48]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		randKey, err := bls.RandKey()
+		require.NoError(t, err)
+		copy(pubKeys[i][:], randKey.PublicKey().Marshal())
+	}
+	return pubKeys
 }
