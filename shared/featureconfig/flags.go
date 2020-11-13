@@ -55,9 +55,9 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "max_cover",
 	}
-	enableBlst = &cli.BoolFlag{
-		Name:  "blst",
-		Usage: "Enable new BLS library, blst, from Supranational",
+	disableBlst = &cli.BoolFlag{
+		Name:  "disable-blst",
+		Usage: "Disables the new BLS library, blst, from Supranational",
 	}
 	disableEth1DataMajorityVote = &cli.BoolFlag{
 		Name:  "disable-eth1-data-majority-vote",
@@ -99,7 +99,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	PyrmontTestnet,
 	Mainnet,
 	disableAccountsV2,
-	enableBlst,
+	disableBlst,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -126,7 +126,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	ToledoTestnet,
 	PyrmontTestnet,
 	Mainnet,
-	enableBlst,
+	disableBlst,
 	disableEth1DataMajorityVote,
 	enablePeerScorer,
 	checkPtInfoCache,
