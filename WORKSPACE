@@ -89,10 +89,10 @@ http_archive(
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
     ],
-    sha256 = "d1ffd055969c8f8d431e2d439813e42326961d0942bdf734d2c95dc30c369566",
+    sha256 = "207fad3e6689135c5d8713e5a17ba9d1290238f47b9ba545b63d9303406209c6",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.5/rules_go-v0.24.5.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.5/rules_go-v0.24.5.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
     ],
 )
 
@@ -156,7 +156,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.15.3",
+    go_version = "1.15.5",
     nogo = "@//:nogo",
 )
 
@@ -222,8 +222,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "6b3498001de98c477aa2c256beffc20a85ce1b12b8e0f8e88502a5c3a18c01de",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0-rc.0/general.tar.gz",
+    sha256 = "ef5396e4b13995da9776eeb5ae346a2de90970c28da3c4f0dcaa4ab9f0ad1f93",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0/general.tar.gz",
 )
 
 http_archive(
@@ -238,8 +238,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "72c2f561db879ddcdf729fef93d10e0f9162b4cf3a697c513ef8935b93f6165a",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.3/minimal.tar.gz",
+    sha256 = "170551b441e7d54b73248372ad9ce8cb6c148810b5f1364637117a63f4f1c085",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0/minimal.tar.gz",
 )
 
 http_archive(
@@ -254,8 +254,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "63eca02503692a0b6a2d7b70118e0dd62dff094153a3a542af6dbea721841b0d",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.3/mainnet.tar.gz",
+    sha256 = "b541a9979b4703fa5ee5d2182b0b5313c38efc54ae7eaec2eef793230a52ec83",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0/mainnet.tar.gz",
 )
 
 http_archive(

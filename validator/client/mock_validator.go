@@ -28,6 +28,7 @@ type FakeValidator struct {
 	ProposeBlockCalled                bool
 	LogValidatorGainsAndLossesCalled  bool
 	SaveProtectionsCalled             bool
+	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
 	ProposeBlockArg1                  uint64
 	AttestToBlockHeadArg1             uint64
@@ -129,6 +130,11 @@ func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ uint64)
 func (fv *FakeValidator) SaveProtections(_ context.Context) error {
 	fv.SaveProtectionsCalled = true
 	return nil
+}
+
+// ResetAttesterProtectionData for mocking.
+func (fv *FakeValidator) ResetAttesterProtectionData() {
+	fv.DeleteProtectionCalled = true
 }
 
 // RolesAt for mocking.
