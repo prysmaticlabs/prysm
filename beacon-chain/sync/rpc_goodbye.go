@@ -56,10 +56,6 @@ var backOffTime = map[types.SSZUint64]time.Duration{
 	codeGenericError: 2 * time.Minute,
 }
 
-// Add a short delay to allow the stream to flush before resetting it.
-// There is still a chance that the peer won't receive the message.
-const flushDelay = 50 * time.Millisecond
-
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
