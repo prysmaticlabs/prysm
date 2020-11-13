@@ -50,11 +50,8 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	effBalanceLowCount := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
-	for i, item := range validators.ValidatorList {
-		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
-			effBalanceLowCount++
-		}
-		if valExited && item.Index == exitedIndice && uint64(i) > params.BeaconConfig().MinGenesisActiveValidatorCount {
+	for _, item := range validators.ValidatorList {
+		if valExited && item.Index == exitedIndice {
 			continue
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
