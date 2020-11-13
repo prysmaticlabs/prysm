@@ -38,6 +38,32 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 	return signingRoot, err
 }
 
+// SaveProposalHistoryForPubKeysV2 saves the proposal histories for the provided validator public keys.
+func (store *Store) SaveProposalHistoryForPubKeysV2(
+	ctx context.Context,
+	historyByPubKeys map[[48]byte]ProposalHistoryForPubkey,
+) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForPubKeysV2")
+	defer span.End()
+
+	err := store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newhistoricProposalsBucket)
+		for pubKey, history := range historyByPubKeys {
+			valBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
+			if err != nil {
+				return fmt.Errorf("could not create bucket for public key %#x", pubKey)
+			}
+			for _, proposal := range history.Proposals {
+				if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(proposal.Slot), proposal.SigningRoot[:]); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	return err
+}
+
 // SaveProposalHistoryForSlot saves the proposal history for the requested validator public key.
 func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
