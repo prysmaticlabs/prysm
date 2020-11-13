@@ -145,7 +145,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
 		}
 		allAccountStr := strings.Join(formattedPubKeys, ", ")
-		if !cliCtx.IsSet(flags.DisablePublicKeysFlag.Name) {
+		if !cliCtx.IsSet(flags.EnablePublicKeysFlag.Name) {
 			if len(filteredPubKeys) == 1 {
 				promptText := "Are you sure you want to enable 1 account? (%s) Y/N"
 				resp, err := promptutil.ValidatePrompt(
