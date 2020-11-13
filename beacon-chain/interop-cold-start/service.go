@@ -203,12 +203,8 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
-	pubKeys := make([][48]byte, 0, genesisState.NumValidators())
-	indices := make([]uint64, 0, genesisState.NumValidators())
 	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
-		pubKeys = append(pubKeys, pk)
-		indices = append(indices, i)
 		s.chainStartDeposits[i] = &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{
 				PublicKey: pk[:],
