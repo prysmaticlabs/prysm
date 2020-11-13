@@ -7,11 +7,11 @@ type EIPSlashingProtectionFormat struct {
 		InterchangeFormatVersion string `json:"interchange_format_version"`
 		GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 	} `json:"metadata"`
-	Data []Data `json:"data"`
+	Data []*ProtectionData `json:"data"`
 }
 
-// Data field for the standard slashing protection format.
-type Data struct {
+// ProtectionData field for the standard slashing protection format.
+type ProtectionData struct {
 	Pubkey             string               `json:"pubkey"`
 	SignedBlocks       []*SignedBlock       `json:"signed_blocks"`
 	SignedAttestations []*SignedAttestation `json:"signed_attestations"`
