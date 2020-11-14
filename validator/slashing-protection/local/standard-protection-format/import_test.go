@@ -13,12 +13,72 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
 const numValidators = 10
+
+func TestStore_ImportInterchangeData_BadJSON(t *testing.T) {
+	ctx := context.Background()
+	publicKeys := createRandomPubKeys(t)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	buf := bytes.NewBuffer([]byte("helloworld"))
+	err := ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	require.ErrorContains(t, "could not unmarshal slashing protection JSON file", err)
+}
+
+func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
+	ctx := context.Background()
+	publicKeys := createRandomPubKeys(t)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t)
+	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
+
+	// We replace a slot of one of the blocks with junk data.
+	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
+
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(standardProtectionFormat)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database and check that
+	// we obtain an error during the import process.
+	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	assert.NotNil(t, err)
+
+	// Next, we attempt to retrieve the attesting and proposals histories from our database and
+	// verify those indeed match the originally generated mock histories.
+	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
+	require.NoError(t, err)
+	for i := 0; i < numValidators; i++ {
+		defaultAttestingHistory := kv.NewAttestationHistoryArray(0)
+		require.DeepEqual(
+			t,
+			defaultAttestingHistory,
+			receivedAttestingHistory[publicKeys[i]],
+			"Imported attestation protection history is different than the empty default",
+		)
+		proposals := proposalHistory[i].Proposals
+		for _, proposal := range proposals {
+			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
+			require.NoError(t, err)
+			require.DeepEqual(
+				t,
+				params.BeaconConfig().ZeroHash[:],
+				receivedProposalSigningRoot,
+				"Imported proposal signing root is different than the empty default",
+			)
+		}
+	}
+}
 
 func TestStore_ImportInterchangeData_OK(t *testing.T) {
 	ctx := context.Background()
@@ -48,7 +108,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 			t,
 			attestingHistory[i],
 			receivedAttestingHistory[publicKeys[i]],
-			"Imported attestation protection history is different than the generated ones",
+			"We should have stored any attesting history",
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {

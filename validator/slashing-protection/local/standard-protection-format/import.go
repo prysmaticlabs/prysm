@@ -118,7 +118,6 @@ func parseSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*k
 			return nil, err
 		}
 	}
-	fmt.Println("Highest epoch written", highestEpochWritten)
 	attestingHistory, err = attestingHistory.SetLatestEpochWritten(ctx, highestEpochWritten)
 	if err != nil {
 		return nil, err
