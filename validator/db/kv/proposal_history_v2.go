@@ -54,7 +54,7 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 				return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 			}
 			for _, proposal := range history.Proposals {
-				if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(proposal.Slot), proposal.SigningRoot[:]); err != nil {
+				if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(proposal.Slot), proposal.SigningRoot); err != nil {
 					return err
 				}
 			}

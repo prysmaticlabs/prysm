@@ -80,7 +80,7 @@ func parseSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.Pr
 		}
 		proposals[i] = kv.Proposal{
 			Slot:        slot,
-			SigningRoot: signingRoot,
+			SigningRoot: signingRoot[:],
 		}
 	}
 	return &kv.ProposalHistoryForPubkey{
@@ -118,6 +118,7 @@ func parseSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*k
 			return nil, err
 		}
 	}
+	fmt.Println("Highest epoch written", highestEpochWritten)
 	attestingHistory, err = attestingHistory.SetLatestEpochWritten(ctx, highestEpochWritten)
 	if err != nil {
 		return nil, err

@@ -19,8 +19,8 @@ type ProposalHistoryForPubkey struct {
 }
 
 type Proposal struct {
-	Slot        uint64   `json:"slot"`
-	SigningRoot [32]byte `json:"signing_root"`
+	Slot        uint64 `json:"slot"`
+	SigningRoot []byte `json:"signing_root"`
 }
 
 // ProposalHistoryForEpoch accepts a validator public key and returns the corresponding proposal history.

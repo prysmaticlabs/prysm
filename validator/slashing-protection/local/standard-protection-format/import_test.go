@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strconv"
 	"testing"
 
@@ -19,7 +18,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
-const numValidators = 1
+const numValidators = 10
 
 func TestStore_ImportInterchangeData_OK(t *testing.T) {
 	ctx := context.Background()
@@ -42,24 +41,23 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
 	// verify those indeed match the originally generated mock histories.
-	_, err = validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
+	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
 	require.NoError(t, err)
 	for i := 0; i < numValidators; i++ {
-		//require.DeepEqual(
-		//	t,
-		//	attestingHistory[i],
-		//	importedAttestingHistory[publicKeys[i]],
-		//	"Imported attestation protection history is different than the generated ones",
-		//)
-		proposals := sortableProposals(proposalHistory[i].Proposals)
-		sort.Sort(proposals)
+		require.DeepEqual(
+			t,
+			attestingHistory[i],
+			receivedAttestingHistory[publicKeys[i]],
+			"Imported attestation protection history is different than the generated ones",
+		)
+		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			expectedSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
+			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
-				proposal.SigningRoot[:],
-				expectedSigningRoot,
+				receivedProposalSigningRoot,
+				proposal.SigningRoot,
 				"Imported proposals are different then the generated ones",
 			)
 		}
@@ -69,8 +67,8 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 func mockSlashingProtectionJSON(
 	t *testing.T,
 	publicKeys [][48]byte,
-	attestingHistories []*kv.EncHistoryData,
-	proposalHistories []*kv.ProposalHistoryForPubkey,
+	attestingHistories []kv.EncHistoryData,
+	proposalHistories []kv.ProposalHistoryForPubkey,
 ) *EIPSlashingProtectionFormat {
 	standardProtectionFormat := &EIPSlashingProtectionFormat{}
 	standardProtectionFormat.Metadata.GenesisValidatorsRoot = hex.EncodeToString(bytesutil.PadTo([]byte{32}, 32))
@@ -88,18 +86,16 @@ func mockSlashingProtectionJSON(
 			data.SignedAttestations = append(data.SignedAttestations, &SignedAttestation{
 				TargetEpoch: strconv.FormatUint(target, 10),
 				SourceEpoch: strconv.FormatUint(hd.Source, 10),
-				SigningRoot: hex.EncodeToString(hd.SigningRoot)},
-			)
-			proposalIndex := target
-			if proposalIndex == highestEpochWritten {
-				proposalIndex = uint64(len(proposalHistories[i].Proposals) - 1)
+				SigningRoot: hex.EncodeToString(hd.SigningRoot),
+			})
+		}
+		for target := uint64(0); target < highestEpochWritten; target++ {
+			proposal := proposalHistories[i].Proposals[target]
+			block := &SignedBlock{
+				Slot:        strconv.FormatUint(proposal.Slot, 10),
+				SigningRoot: hex.EncodeToString(proposal.SigningRoot),
 			}
-			sr := proposalHistories[i].Proposals[proposalIndex].SigningRoot
-			fmt.Printf("Val %d Creating proposal with %#x and slot %d\n", i, sr, target)
-			data.SignedBlocks = append(data.SignedBlocks, &SignedBlock{
-				Slot:        strconv.FormatUint(target, 10),
-				SigningRoot: hex.EncodeToString(sr[:])},
-			)
+			data.SignedBlocks = append(data.SignedBlocks, block)
 
 		}
 		standardProtectionFormat.Data = append(standardProtectionFormat.Data, data)
@@ -107,9 +103,9 @@ func mockSlashingProtectionJSON(
 	return standardProtectionFormat
 }
 
-func mockAttestingAndProposalHistories(t *testing.T) ([]*kv.EncHistoryData, []*kv.ProposalHistoryForPubkey) {
-	attData := make([]*kv.EncHistoryData, numValidators)
-	proposalData := make([]*kv.ProposalHistoryForPubkey, numValidators)
+func mockAttestingAndProposalHistories(t *testing.T) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey) {
+	attData := make([]kv.EncHistoryData, numValidators)
+	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
 	ctx := context.Background()
 	for v := 0; v < numValidators; v++ {
@@ -118,21 +114,28 @@ func mockAttestingAndProposalHistories(t *testing.T) ([]*kv.EncHistoryData, []*k
 		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
 		proposals := make([]kv.Proposal, 0)
 		for i := 1; i < latestTarget; i++ {
-			historyData := &kv.HistoryData{Source: uint64(gen.Intn(100000)), SigningRoot: bytesutil.PadTo([]byte{byte(i)}, 32)}
+			signingRoot := [32]byte{}
+			signingRootStr := fmt.Sprintf("%d", i)
+			copy(signingRoot[:], signingRootStr)
+			historyData := &kv.HistoryData{
+				Source:      uint64(gen.Intn(100000)),
+				SigningRoot: signingRoot[:],
+			}
 			hd, err = hd.SetTargetData(ctx, uint64(i), historyData)
 			require.NoError(t, err)
-			proposalSigningRoot := [32]byte{}
+		}
+		for i := 1; i <= latestTarget; i++ {
+			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
-			copy(proposalSigningRoot[:], signingRootStr)
-
+			copy(signingRoot[:], signingRootStr)
 			proposals = append(proposals, kv.Proposal{
 				Slot:        uint64(i),
-				SigningRoot: proposalSigningRoot,
+				SigningRoot: signingRoot[:],
 			})
 		}
-		proposalData[v] = &kv.ProposalHistoryForPubkey{Proposals: proposals}
+		proposalData[v] = kv.ProposalHistoryForPubkey{Proposals: proposals}
 		hd, err = hd.SetLatestEpochWritten(ctx, uint64(latestTarget))
-		attData[v] = &hd
+		attData[v] = hd
 	}
 	return attData, proposalData
 }
