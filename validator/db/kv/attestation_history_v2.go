@@ -144,7 +144,6 @@ func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKe
 			enc := bucket.Get(key[:])
 			var attestationHistory EncHistoryData
 			if len(enc) == 0 {
-				fmt.Println("hit 0 case")
 				attestationHistory = NewAttestationHistoryArray(0)
 			} else {
 				attestationHistory = enc

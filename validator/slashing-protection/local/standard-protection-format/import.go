@@ -18,7 +18,7 @@ import (
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
 // by eth2 validators and imports its data into Prysm's internal representation of slashing
 // protection in the validator client's database. For more information, see the EIP document here:
-// https://ethereum-magicians.org/t/eip-3076-validator-client-interchange-format-slashing-protection/4883.
+// https://eips.ethereum.org/EIPS/eip-3076.
 func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, r io.Reader) error {
 	encodedJSON, err := ioutil.ReadAll(r)
 	if err != nil {
