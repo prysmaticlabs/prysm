@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -33,13 +34,13 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for _, validatorData := range interchangeJSON.Data {
 		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
 		}
 		// Parse and transform the signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
 		attestingHistory, err := parseSignedAttestations(ctx, validatorData.SignedAttestations)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
 		attestingHistoryByPubKey[pubKey] = *attestingHistory
 
@@ -47,7 +48,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		// file into the internal Prysm representation of proposal history.
 		proposalHistory, err := parseSignedBlocks(ctx, validatorData.SignedBlocks)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "could not parse signed blocks in JSON file for key %#x", pubKey)
 		}
 		proposalHistoryByPubKey[pubKey] = *proposalHistory
 	}
@@ -56,10 +57,10 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
 	if err = validatorDB.SaveProposalHistoryForPubKeysV2(ctx, proposalHistoryByPubKey); err != nil {
-		return err
+		return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 	}
 	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
-		return err
+		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
 	return nil
 }
@@ -69,13 +70,13 @@ func parseSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.Pr
 	for i, proposal := range signedBlocks {
 		slot, err := uint64FromString(proposal.Slot)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%d is not a valid slot: %v", slot, err)
 		}
 		var signingRoot [32]byte
 		if proposal.SigningRoot != "" {
 			signingRoot, err = rootFromHex(proposal.SigningRoot)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
 		}
 		proposals[i] = kv.Proposal{
@@ -95,32 +96,32 @@ func parseSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*k
 	for _, attestation := range atts {
 		target, err := uint64FromString(attestation.TargetEpoch)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%d is not a valid epoch: %v", target, err)
 		}
 		if target > highestEpochWritten {
 			highestEpochWritten = target
 		}
 		source, err := uint64FromString(attestation.SourceEpoch)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%d is not a valid epoch: %v", source, err)
 		}
 		var signingRoot [32]byte
 		if attestation.SigningRoot != "" {
 			signingRoot, err = rootFromHex(attestation.SigningRoot)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
 		}
 		attestingHistory, err = attestingHistory.SetTargetData(
 			ctx, target, &kv.HistoryData{Source: source, SigningRoot: signingRoot[:]},
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not set target data for attesting history")
 		}
 	}
 	attestingHistory, err = attestingHistory.SetLatestEpochWritten(ctx, highestEpochWritten)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not set latest epoch written")
 	}
 	return &attestingHistory, nil
 }
@@ -130,7 +131,7 @@ func uint64FromString(str string) (uint64, error) {
 }
 
 func pubKeyFromHex(str string) ([48]byte, error) {
-	pubKeyBytes, err := hex.DecodeString(str)
+	pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
 		return [48]byte{}, err
 	}
@@ -143,7 +144,7 @@ func pubKeyFromHex(str string) ([48]byte, error) {
 }
 
 func rootFromHex(str string) ([32]byte, error) {
-	rootHexBytes, err := hex.DecodeString(str)
+	rootHexBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
 		return [32]byte{}, err
 	}
