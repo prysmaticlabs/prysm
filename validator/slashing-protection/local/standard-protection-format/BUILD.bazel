@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "format.go",
+        "helpers.go",
         "import.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format",
@@ -18,13 +19,17 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["import_test.go"],
+    srcs = [
+        "helpers_test.go",
+        "import_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
+        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/db/testing:go_default_library",
