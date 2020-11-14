@@ -118,7 +118,7 @@ type Service struct {
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
-	c := gcache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
+	c := gcache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second) // Expiration time set to one epoch.
 
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
