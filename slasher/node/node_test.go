@@ -16,10 +16,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	run := func() int {
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetOutput(ioutil.Discard)
 
-	m.Run()
+		return m.Run()
+	}
+	os.Exit(run())
 }
 
 // Test that slasher node can close.
