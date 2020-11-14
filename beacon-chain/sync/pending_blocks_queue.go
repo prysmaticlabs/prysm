@@ -317,6 +317,7 @@ func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBl
 	return nil
 }
 
+// This returns signed beacon blocks given input key from slotToPendingBlocks.
 func (s *Service) pendingBlocksInCache(slot uint64) []*ethpb.SignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
@@ -330,6 +331,7 @@ func (s *Service) pendingBlocksInCache(slot uint64) []*ethpb.SignedBeaconBlock {
 	return blks
 }
 
+// This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
 	if b == nil || b.Block == nil {
 		return errors.New("nil block")
@@ -341,11 +343,13 @@ func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
 	return s.slotToPendingBlocks.Add(k, blks, gcache.DefaultExpiration)
 }
 
+// This converts input string to slot number in uint64.
 func cacheKeyToSlot(s string) uint64 {
 	b := []byte(s)
 	return bytesutil.BytesToUint64BigEndian(b)
 }
 
+// This converts input slot number to a key to be used for slotToPendingBlocks cache.
 func slotToCacheKey(s uint64) string {
 	b := bytesutil.Uint64ToBytesBigEndian(s)
 	return string(b)
