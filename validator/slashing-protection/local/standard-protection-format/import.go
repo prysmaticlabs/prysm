@@ -73,6 +73,7 @@ func parseSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.Pr
 			return nil, fmt.Errorf("%d is not a valid slot: %v", slot, err)
 		}
 		var signingRoot [32]byte
+		// Signing roots are optional in the standard JSON file.
 		if proposal.SigningRoot != "" {
 			signingRoot, err = rootFromHex(proposal.SigningRoot)
 			if err != nil {
@@ -98,6 +99,7 @@ func parseSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*k
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid epoch: %v", target, err)
 		}
+		// Keep track of the highest epoch written from the imported JSON.
 		if target > highestEpochWritten {
 			highestEpochWritten = target
 		}
@@ -106,6 +108,7 @@ func parseSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*k
 			return nil, fmt.Errorf("%d is not a valid epoch: %v", source, err)
 		}
 		var signingRoot [32]byte
+		// Signing roots are optional in the standard JSON file.
 		if attestation.SigningRoot != "" {
 			signingRoot, err = rootFromHex(attestation.SigningRoot)
 			if err != nil {
