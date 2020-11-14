@@ -2,6 +2,7 @@ package kv
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -9,10 +10,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	run := func() int {
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetOutput(ioutil.Discard)
 
-	m.Run()
+		return m.Run()
+	}
+	os.Exit(run())
 }
 
 func setupDB(t testing.TB) *Store {
