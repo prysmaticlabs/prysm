@@ -227,6 +227,9 @@ func (s *Service) validatePendingSlots() error {
 	oldBlockRoots := make(map[[32]byte]bool)
 
 	finalizedEpoch := s.chain.FinalizedCheckpt().Epoch
+	if s.slotToPendingBlocks == nil {
+		return errors.New("slotToPendingBlocks cache can't be nil")
+	}
 	items := s.slotToPendingBlocks.Items()
 	for k := range items {
 		slot := cacheKeyToSlot(k)
@@ -328,6 +331,10 @@ func (s *Service) pendingBlocksInCache(slot uint64) []*ethpb.SignedBeaconBlock {
 }
 
 func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
+	if b == nil || b.Block == nil {
+		return errors.New("nil block")
+	}
+
 	blks := s.pendingBlocksInCache(b.Block.Slot)
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block.Slot)
