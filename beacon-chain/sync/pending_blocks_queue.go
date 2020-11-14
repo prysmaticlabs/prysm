@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 
+	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -63,7 +64,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
 		s.pendingQueueLock.RLock()
-		bs := s.slotToPendingBlocks[slot]
+		bs := s.pendingBlocksInCache(slot)
 		// Skip if there's no block in the queue.
 		if len(bs) == 0 {
 			s.pendingQueueLock.RUnlock()
@@ -99,7 +100,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				}
 				// Remove block from queue.
 				s.pendingQueueLock.Lock()
-				s.deleteBlockFromPendingQueue(slot, b, blkRoot)
+				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+					return err
+				}
 				s.pendingQueueLock.Unlock()
 				span.End()
 				continue
@@ -137,7 +140,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			s.pendingQueueLock.Lock()
-			s.deleteBlockFromPendingQueue(slot, b, blkRoot)
+			if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+				return err
+			}
 			s.pendingQueueLock.Unlock()
 
 			log.WithFields(logrus.Fields{
@@ -200,8 +205,11 @@ func (s *Service) sortedPendingSlots() []uint64 {
 	s.pendingQueueLock.RLock()
 	defer s.pendingQueueLock.RUnlock()
 
-	slots := make([]uint64, 0, len(s.slotToPendingBlocks))
-	for slot := range s.slotToPendingBlocks {
+	items := s.slotToPendingBlocks.Items()
+
+	slots := make([]uint64, 0, len(items))
+	for k := range items {
+		slot := cacheKeyToSlot(k)
 		slots = append(slots, slot)
 	}
 	sort.Slice(slots, func(i, j int) bool {
@@ -219,7 +227,10 @@ func (s *Service) validatePendingSlots() error {
 	oldBlockRoots := make(map[[32]byte]bool)
 
 	finalizedEpoch := s.chain.FinalizedCheckpt().Epoch
-	for slot, blks := range s.slotToPendingBlocks {
+	items := s.slotToPendingBlocks.Items()
+	for k := range items {
+		slot := cacheKeyToSlot(k)
+		blks := s.pendingBlocksInCache(slot)
 		for _, b := range blks {
 			epoch := helpers.SlotToEpoch(slot)
 			// remove all descendant blocks of old blocks
@@ -229,7 +240,9 @@ func (s *Service) validatePendingSlots() error {
 					return err
 				}
 				oldBlockRoots[root] = true
-				s.deleteBlockFromPendingQueue(slot, b, root)
+				if err := s.deleteBlockFromPendingQueue(slot, b, root); err != nil {
+					return err
+				}
 				continue
 			}
 			// don't process old blocks
@@ -239,7 +252,9 @@ func (s *Service) validatePendingSlots() error {
 					return err
 				}
 				oldBlockRoots[blkRoot] = true
-				s.deleteBlockFromPendingQueue(slot, b, blkRoot)
+				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -249,19 +264,20 @@ func (s *Service) validatePendingSlots() error {
 func (s *Service) clearPendingSlots() {
 	s.pendingQueueLock.Lock()
 	defer s.pendingQueueLock.Unlock()
-	s.slotToPendingBlocks = make(map[uint64][]*ethpb.SignedBeaconBlock)
+	s.slotToPendingBlocks.Flush()
 	s.seenPendingBlocks = make(map[[32]byte]bool)
 }
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) {
+func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
-	blks, ok := s.slotToPendingBlocks[slot]
-	if !ok {
-		return
+	blks := s.pendingBlocksInCache(slot)
+	if len(blks) == 0 {
+		return nil
 	}
+
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
 		if ssz.DeepEqual(blk, b) {
@@ -270,28 +286,60 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 		newBlks = append(newBlks, blk)
 	}
 	if len(newBlks) == 0 {
-		delete(s.slotToPendingBlocks, slot)
-		return
+		s.slotToPendingBlocks.Delete(slotToCacheKey(slot))
+		return nil
 	}
-	s.slotToPendingBlocks[slot] = newBlks
+
+	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, gcache.DefaultExpiration); err != nil {
+		return err
+	}
 	delete(s.seenPendingBlocks, r)
+	return nil
 }
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) {
+func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
-		return
+		return nil
 	}
 
-	_, ok := s.slotToPendingBlocks[slot]
-	if ok {
-		blks := s.slotToPendingBlocks[slot]
-		s.slotToPendingBlocks[slot] = append(blks, b)
-	} else {
-		s.slotToPendingBlocks[slot] = []*ethpb.SignedBeaconBlock{b}
+	if err := s.addPendingBlockToCache(b); err != nil {
+		return err
 	}
+
 	s.seenPendingBlocks[r] = true
+	return nil
+}
+
+func (s *Service) pendingBlocksInCache(slot uint64) []*ethpb.SignedBeaconBlock {
+	k := slotToCacheKey(slot)
+	value, ok := s.slotToPendingBlocks.Get(k)
+	if !ok {
+		return []*ethpb.SignedBeaconBlock{}
+	}
+	blks, ok := value.([]*ethpb.SignedBeaconBlock)
+	if !ok {
+		return []*ethpb.SignedBeaconBlock{}
+	}
+	return blks
+}
+
+func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
+	blks := s.pendingBlocksInCache(b.Block.Slot)
+	blks = append(blks, b)
+	k := slotToCacheKey(b.Block.Slot)
+	return s.slotToPendingBlocks.Add(k, blks, gcache.DefaultExpiration)
+}
+
+func cacheKeyToSlot(s string) uint64 {
+	b := []byte(s)
+	return bytesutil.BytesToUint64BigEndian(b)
+}
+
+func slotToCacheKey(s uint64) string {
+	b := bytesutil.Uint64ToBytesBigEndian(s)
+	return string(b)
 }

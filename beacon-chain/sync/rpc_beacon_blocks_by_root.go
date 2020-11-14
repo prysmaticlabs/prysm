@@ -23,7 +23,9 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			return err
 		}
 		s.pendingQueueLock.Lock()
-		s.insertBlockToPendingQueue(blk.Block.Slot, blk, blkRoot)
+		if err := s.insertBlockToPendingQueue(blk.Block.Slot, blk, blkRoot); err != nil {
+			return err
+		}
 		s.pendingQueueLock.Unlock()
 		return nil
 	})

@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -30,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -85,7 +87,7 @@ type Service struct {
 	exitPool                  *voluntaryexits.Pool
 	slashingPool              *slashings.Pool
 	chain                     blockchainService
-	slotToPendingBlocks       map[uint64][]*ethpb.SignedBeaconBlock
+	slotToPendingBlocks       *gcache.Cache
 	seenPendingBlocks         map[[32]byte]bool
 	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	pendingAttsLock           sync.RWMutex
@@ -115,6 +117,9 @@ type Service struct {
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, cfg *Config) *Service {
+	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	c := gcache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
+
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
@@ -129,7 +134,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
 		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
