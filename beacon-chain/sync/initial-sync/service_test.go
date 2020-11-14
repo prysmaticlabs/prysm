@@ -316,8 +316,8 @@ func TestService_markSynced(t *testing.T) {
 		StateNotifier: mc.StateNotifier(),
 	})
 	require.NotNil(t, s)
-	assert.Equal(t, false, s.chainStarted)
-	assert.Equal(t, false, s.synced)
+	assert.Equal(t, false, s.chainStarted.IsSet())
+	assert.Equal(t, false, s.synced.IsSet())
 	assert.Equal(t, true, s.Syncing())
 	assert.NoError(t, s.Status())
 	s.chainStarted.Set()
