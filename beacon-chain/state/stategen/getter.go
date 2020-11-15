@@ -219,18 +219,13 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 		return nil, err
 	}
 
-	// In the event where start state is greater or equal to requested slot,
-	// we should just return the start state.
-	if startState.Slot() >= slot {
-		return startState, nil
-	}
-
 	// Gather the last saved block root and the slot number.
 	lastValidRoot, lastValidSlot, err := s.lastSavedBlock(ctx, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get last valid block for hot state using slot")
 	}
 
+	// This is an impossible scenario.
 	// In the event where current state slot is greater or equal to last valid block slot,
 	// we should just process state up to input slot.
 	if startState.Slot() >= lastValidSlot {
