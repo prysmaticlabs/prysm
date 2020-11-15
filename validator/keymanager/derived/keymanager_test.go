@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -31,19 +32,14 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 		AccountPasswords: make(map[string]string),
 		WalletPassword:   "secretPassw0rd$1999",
 	}
-	km, err := KeymanagerForPhrase(ctx, &SetupConfig{
-		Opts:                DefaultKeymanagerOpts(),
-		Wallet:              wallet,
-		SkipMnemonicConfirm: true,
-		Mnemonic:            sampleMnemonic,
-		Mnemonic25thWord:    "",
+	km, err := NewKeymanager(ctx, &SetupConfig{
+		Opts:   DefaultKeymanagerOpts(),
+		Wallet: wallet,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	for i := 0; i < numAccounts; i++ {
-		_, _, err = km.CreateAccount(ctx)
-		require.NoError(t, err)
-	}
+	err = km.RecoverAccountsFromMnemonic(ctx, sampleMnemonic, "mnemonicpass", numAccounts)
+	require.NoError(t, err)
 	without25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	wallet = &mock.Wallet{
@@ -51,18 +47,13 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 		AccountPasswords: make(map[string]string),
 		WalletPassword:   "secretPassw0rd$1999",
 	}
-	km, err = KeymanagerForPhrase(ctx, &SetupConfig{
-		Opts:                DefaultKeymanagerOpts(),
-		Wallet:              wallet,
-		SkipMnemonicConfirm: true,
-		Mnemonic:            sampleMnemonic,
-		Mnemonic25thWord:    "mnemonicpass",
+	km, err = NewKeymanager(ctx, &SetupConfig{
+		Opts:   DefaultKeymanagerOpts(),
+		Wallet: wallet,
 	})
 	require.NoError(t, err)
-	for i := 0; i < numAccounts; i++ {
-		_, _, err = km.CreateAccount(ctx)
-		require.NoError(t, err)
-	}
+	// No mnemonic passphrase this time.
+	err = km.RecoverAccountsFromMnemonic(ctx, sampleMnemonic, "", numAccounts)
 	with25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	for i, k := range with25thWord {
@@ -78,28 +69,12 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	require.Equal(t, n, len(mnemonicEntropy))
 	mnemonic, err := bip39.NewMnemonic(mnemonicEntropy)
 	require.NoError(t, err)
-	walletSeed := bip39.NewSeed(mnemonic, "")
-	encryptor := keystorev4.New()
-	password := "Passwz0rdz2020%"
-	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
-	require.NoError(t, err)
-	id, err := uuid.NewRandom()
-	require.NoError(t, err)
-	cfg := &SeedConfig{
-		Crypto:      cryptoFields,
-		ID:          id.String(),
-		NextAccount: 0,
-		Version:     encryptor.Version(),
-		Name:        encryptor.Name(),
-	}
+	wanted := bip39.NewSeed(mnemonic, "")
 
-	// Ensure we can decrypt the newly recovered config.
-	decryptor := keystorev4.New()
-	seed, err := decryptor.Decrypt(cfg.Crypto, password)
-	assert.NoError(t, err)
-
-	// Ensure the decrypted seed matches the old wallet seed and the new wallet seed.
-	assert.DeepEqual(t, walletSeed, seed)
+	got, err := seedFromMnemonic(mnemonic, "" /* no passphrase */)
+	require.NoError(t, err)
+	// Ensure the derived seed matches.
+	assert.DeepEqual(t, wanted, got)
 }
 
 func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
@@ -172,44 +147,6 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	require.Equal(t, numAccounts, len(privateKeys))
 
 	// FetchValidatingPrivateKeys is also used in generating the output of account list
-	// therefore the results must be in the same order as the order in which the accounts were derived
-	for i, key := range wantedPrivateKeys {
-		assert.Equal(t, key, privateKeys[i])
-	}
-}
-
-func TestDerivedKeymanager_FetchWithdrawalPrivateKeys(t *testing.T) {
-	wallet := &mock.Wallet{
-		Files:            make(map[string]map[string][]byte),
-		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
-	}
-	dr := &Keymanager{
-		wallet: wallet,
-		seedCfg: &SeedConfig{
-			NextAccount: 0,
-		},
-		seed: make([]byte, 32),
-		opts: DefaultKeymanagerOpts(),
-	}
-	require.NoError(t, dr.initializeKeysCachesFromSeed())
-	// First, generate accounts and their keystore.json files.
-	ctx := context.Background()
-	numAccounts := 20
-	wantedPrivateKeys := make([][32]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		_, _, err := dr.CreateAccount(ctx)
-		require.NoError(t, err)
-		withdrawalKeyPath := fmt.Sprintf(WithdrawalKeyDerivationPathTemplate, i)
-		withdrawalKey, err := util.PrivateKeyFromSeedAndPath(dr.seed, withdrawalKeyPath)
-		require.NoError(t, err)
-		wantedPrivateKeys[i] = bytesutil.ToBytes32(withdrawalKey.Marshal())
-	}
-	privateKeys, err := dr.FetchWithdrawalPrivateKeys(ctx)
-	require.NoError(t, err)
-	require.Equal(t, numAccounts, len(privateKeys))
-
-	// FetchWithdrawalPrivateKeys is also used in generating the output of account list
 	// therefore the results must be in the same order as the order in which the accounts were derived
 	for i, key := range wantedPrivateKeys {
 		assert.Equal(t, key, privateKeys[i])
