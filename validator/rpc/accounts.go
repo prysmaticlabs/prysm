@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,7 +26,7 @@ func (s *Server) CreateAccount(ctx context.Context, req *pb.CreateAccountRequest
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
-	km, ok := s.keymanager.(*derived.Keymanager)
+	km, ok := s.keymanager.(*deprecatedderived.Keymanager)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Only HD wallets can create accounts")
 	}
@@ -64,7 +64,7 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 			AccountName:         petnames.DeterministicName(keys[i][:], "-"),
 		}
 		if s.wallet.KeymanagerKind() == keymanager.Derived {
-			accs[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
+			accs[i].DerivationPath = fmt.Sprintf(deprecatedderived.ValidatingKeyDerivationPathTemplate, i)
 		}
 	}
 	if req.All {

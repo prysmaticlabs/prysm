@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
@@ -53,7 +54,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
+			return errors.Wrap(err, "could not list validator accounts with deprecatedderived keymanager")
 		}
 	case keymanager.Remote:
 		km, ok := km.(*remote.Keymanager)
@@ -132,7 +133,7 @@ func listDerivedKeymanagerAccounts(
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
-	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("deprecatedderived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.KeymanagerOpts().DerivedPathStructure).Bold())
 	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
 	if err != nil {
@@ -144,22 +145,6 @@ func listDerivedKeymanagerAccounts(
 		if err != nil {
 			return errors.Wrap(err, "could not fetch validating private keys")
 		}
-	}
-	withdrawalPublicKeys, err := keymanager.FetchWithdrawalPublicKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not fetch validating public keys")
-	}
-	var withdrawalPrivateKeys [][32]byte
-	if showPrivateKeys {
-		withdrawalPrivateKeys, err = keymanager.FetchWithdrawalPrivateKeys(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not fetch withdrawal private keys")
-		}
-	}
-	nextAccountNumber := keymanager.NextAccountNumber()
-	currentAccountNumber := nextAccountNumber
-	if nextAccountNumber > 0 {
-		currentAccountNumber--
 	}
 	accountNames, err := keymanager.ValidatingAccountNames(ctx)
 	if err != nil {
@@ -173,39 +158,18 @@ func listDerivedKeymanagerAccounts(
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(accountNames))
 	}
-	for i := uint64(0); i <= currentAccountNumber; i++ {
+	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
-		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
+		validatingKeyPath := fmt.Sprintf(deprecatedderived.ValidatingKeyDerivationPathTemplate, i)
 
 		// Retrieve the withdrawal key account metadata.
 		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
-		if showPrivateKeys {
-			fmt.Printf("%s %#x\n", au.BrightRed("[withdrawal private key]").Bold(), withdrawalPrivateKeys[i])
-		}
-		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
-
 		// Retrieve the validating key account metadata.
 		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
-		if showPrivateKeys {
+		if showPrivateKeys && validatingPrivateKeys != nil {
 			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), validatingPrivateKeys[i])
 		}
 		fmt.Printf("%s %s\n", au.BrightCyan("[derivation path]").Bold(), validatingKeyPath)
-
-		if !showDepositData {
-			continue
-		}
-		enc, err := keymanager.DepositDataForAccount(i)
-		if err != nil {
-			return errors.Wrapf(err, "could not deposit data for account: %s", accountNames[i])
-		}
-		fmt.Printf(`
-======================Eth1 Deposit Transaction Data=====================
-
-%#x
-
-===================================================================`, enc)
 		fmt.Println(" ")
 	}
 	return nil

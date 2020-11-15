@@ -173,10 +173,10 @@ var (
 		Usage: "Display the private keys for validator accounts",
 		Value: false,
 	}
-	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
+	// NumAccountsFlag defines the amount of accounts to generate for deprecatedderived wallets.
 	NumAccountsFlag = &cli.IntFlag{
 		Name:  "num-accounts",
-		Usage: "Number of accounts to generate for derived wallets",
+		Usage: "Number of accounts to generate for deprecatedderived wallets",
 		Value: 1,
 	}
 	// DeletePublicKeysFlag defines a comma-separated list of hex string public keys
@@ -262,7 +262,7 @@ var (
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",
-		Usage: "Kind of keymanager, either imported, derived, or remote, specified during wallet creation",
+		Usage: "Kind of keymanager, either imported, deprecatedderived, or remote, specified during wallet creation",
 		Value: "",
 	}
 	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.

@@ -47,7 +47,7 @@ func (s *Server) HasWallet(_ context.Context, _ *ptypes.Empty) (*pb.HasWalletRes
 }
 
 // CreateWallet via an API request, allowing a user to save a new
-// derived, imported, or remote wallet.
+// deprecatedderived, imported, or remote wallet.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	if strings.TrimSpace(req.WalletPath) != "" {

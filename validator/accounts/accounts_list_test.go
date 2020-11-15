@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -229,10 +229,10 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	keymanager, err := derived.NewKeymanager(
+	keymanager, err := deprecatedderived.NewKeymanager(
 		cliCtx.Context,
-		&derived.SetupConfig{
-			Opts:                derived.DefaultKeymanagerOpts(),
+		&deprecatedderived.SetupConfig{
+			Opts:                deprecatedderived.DefaultKeymanagerOpts(),
 			Wallet:              w,
 			SkipMnemonicConfirm: true,
 		},
@@ -268,7 +268,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) derived, (HD) hierarchical-deterministic
+		(keymanager kind) deprecatedderived, (HD) hierarchical-deterministic
 		(derivation format) m / purpose / coin_type / account_index / withdrawal_key / validating_key
 		Showing 2 validator accounts
 

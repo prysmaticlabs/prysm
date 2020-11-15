@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
@@ -69,23 +69,21 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	switch w.KeymanagerKind() {
 	case keymanager.Imported:
 		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with imported keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
-			"Successfully created wallet with on-disk keymanager configuration. " +
-				"Make a new validator account with ./prysm.sh validator accounts create",
+			"Successfully created wallet with ability to import keystores",
 		)
 	case keymanager.Derived:
 		if err = createDerivedKeymanagerWallet(ctx, w, cfg.SkipMnemonicConfirm, cfg.Mnemonic25thWord); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with derived keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
-			"Successfully created HD wallet and saved configuration to disk. " +
-				"Make a new validator account with ./prysm.sh validator accounts create",
+			"Successfully created HD wallet from mnemonic and regenerated accounts",
 		)
 	case keymanager.Remote:
 		if err = createRemoteKeymanagerWallet(ctx, w, cfg.RemoteKeymanagerOpts); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with remote keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
@@ -187,7 +185,7 @@ func createDerivedKeymanagerWallet(
 	skipMnemonicConfirm bool,
 	mnemonicPassphrase string,
 ) error {
-	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
+	keymanagerConfig, err := deprecatedderived.MarshalOptionsFile(ctx, deprecatedderived.DefaultKeymanagerOpts())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}

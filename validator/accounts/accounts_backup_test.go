@@ -40,7 +40,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// We initialize a wallet with a derived keymanager.
+	// We initialize a wallet with a deprecatedderived keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:          walletDir,

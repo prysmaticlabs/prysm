@@ -10,16 +10,6 @@ import (
 
 const confirmationText = "Confirm you have written down the recovery words somewhere safe (offline) [y|Y]"
 
-// SeedPhraseFactory defines a struct which
-// can generate new seed phrases in human-readable
-// format from a source of entropy in raw bytes. It
-// also provides methods for verifying a user has successfully
-// acknowledged the mnemonic phrase and written it down offline.
-type SeedPhraseFactory interface {
-	Generate(data []byte) (string, error)
-	ConfirmAcknowledgement(phrase string) error
-}
-
 // EnglishMnemonicGenerator implements methods for creating
 // mnemonic seed phrases in english using a given
 // source of entropy such as a private key.

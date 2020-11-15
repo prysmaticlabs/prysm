@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/urfave/cli/v2"
 )
@@ -106,13 +106,13 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not backup accounts for imported keymanager")
 		}
 	case keymanager.Derived:
-		km, ok := km.(*derived.Keymanager)
+		km, ok := km.(*deprecatedderived.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
 		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for derived keymanager")
+			return errors.Wrap(err, "could not backup accounts for deprecatedderived keymanager")
 		}
 	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")

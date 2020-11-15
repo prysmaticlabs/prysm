@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
@@ -27,7 +27,7 @@ import (
 var log = logrus.WithField("prefix", "wallet")
 
 const (
-	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
+	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, deprecatedderived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// DirectoryPermissions for directories created under the wallet path.
 	DirectoryPermissions = os.ModePerm
@@ -78,7 +78,7 @@ type Config struct {
 // Wallet is a primitive in Prysm's account management which
 // has the capability of creating new accounts, reading existing accounts,
 // and providing secure access to eth2 secrets depending on an
-// associated keymanager (either imported, derived, or remote signing enabled).
+// associated keymanager (either imported, deprecatedderived, or remote signing enabled).
 type Wallet struct {
 	walletDir      string
 	accountsPath   string
@@ -114,7 +114,7 @@ func Exists(walletDir string) (bool, error) {
 	return dirExists && isValid, nil
 }
 
-// IsValid checks if a folder contains a single key directory such as `derived`, `remote` or `imported`.
+// IsValid checks if a folder contains a single key directory such as `deprecatedderived`, `remote` or `imported`.
 // Returns true if one of those subdirectories exist, false otherwise.
 func IsValid(walletDir string) (bool, error) {
 	expanded, err := fileutil.ExpandPath(walletDir)
@@ -147,7 +147,7 @@ func IsValid(walletDir string) (bool, error) {
 	// Count how many wallet types we have in the directory
 	numWalletTypes := 0
 	for _, name := range names {
-		// Nil error means input name is `derived`, `remote` or `imported`
+		// Nil error means input name is `deprecatedderived`, `remote` or `imported`
 		_, err = keymanager.ParseKind(name)
 		if err == nil {
 			numWalletTypes++
@@ -281,18 +281,18 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not initialize imported keymanager")
 		}
 	case keymanager.Derived:
-		opts, err := derived.UnmarshalOptionsFile(configFile)
+		opts, err := deprecatedderived.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		km, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
+		km, err = deprecatedderived.NewKeymanager(ctx, &deprecatedderived.SetupConfig{
 			Opts:                opts,
 			Wallet:              w,
 			SkipMnemonicConfirm: cfg.SkipMnemonicConfirm,
 			Mnemonic25thWord:    cfg.Mnemonic25thWord,
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize derived keymanager")
+			return nil, errors.Wrap(err, "could not initialize deprecatedderived keymanager")
 		}
 	case keymanager.Remote:
 		opts, err := remote.UnmarshalOptionsFile(configFile)
@@ -432,7 +432,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) 
 // ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
 // within the wallet path.
 func (w *Wallet) ReadEncryptedSeedFromDisk(_ context.Context) (io.ReadCloser, error) {
-	configFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
+	configFilePath := filepath.Join(w.accountsPath, deprecatedderived.EncryptedSeedFileName)
 	if !fileutil.FileExists(configFilePath) {
 		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
 	}
@@ -442,7 +442,7 @@ func (w *Wallet) ReadEncryptedSeedFromDisk(_ context.Context) (io.ReadCloser, er
 // WriteEncryptedSeedToDisk writes the encrypted wallet seed configuration
 // within the wallet path.
 func (w *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) error {
-	seedFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
+	seedFilePath := filepath.Join(w.accountsPath, deprecatedderived.EncryptedSeedFileName)
 	// Write the config file to disk.
 	if err := fileutil.WriteFile(seedFilePath, encoded); err != nil {
 		return errors.Wrapf(err, "could not write %s", seedFilePath)
@@ -473,7 +473,7 @@ func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error
 			return keymanagerKind, nil
 		}
 	}
-	return 0, errors.New("no keymanager folder, 'imported', 'remote', nor 'derived' found in wallet path")
+	return 0, errors.New("no keymanager folder, 'imported', 'remote', nor 'deprecatedderived' found in wallet path")
 }
 
 func inputPassword(

@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/urfave/cli/v2"
 )
@@ -120,7 +121,19 @@ func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	case keymanager.Derived:
-		return errors.New("cannot delete accounts for a derived keymanager")
+		km, ok := cfg.Keymanager.(*derived.Keymanager)
+		if !ok {
+			return errors.New("not a derived keymanager")
+		}
+		if len(cfg.DeletePublicKeys) == 1 {
+			log.Info("Deleting account...")
+		} else {
+			log.Info("Deleting accounts...")
+		}
+		_ = km
+		//if err := km.DeleteAccounts(ctx, cfg.DeletePublicKeys); err != nil {
+		//	return errors.Wrap(err, "could not delete accounts")
+		//}
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}

@@ -102,46 +102,6 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	assert.DeepEqual(t, walletSeed, seed)
 }
 
-func TestDerivedKeymanager_CreateAccount(t *testing.T) {
-	hook := logTest.NewGlobal()
-	wallet := &mock.Wallet{
-		Files:            make(map[string]map[string][]byte),
-		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
-	}
-	seed := make([]byte, 32)
-	copy(seed, "hello world")
-	dr := &Keymanager{
-		wallet: wallet,
-		seed:   seed,
-		seedCfg: &SeedConfig{
-			NextAccount: 0,
-		},
-		opts: DefaultKeymanagerOpts(),
-	}
-	require.NoError(t, dr.initializeKeysCachesFromSeed())
-	ctx := context.Background()
-	_, _, err := dr.CreateAccount(ctx)
-	require.NoError(t, err)
-
-	// Assert the new value for next account increased and also
-	// check the config file was updated on disk with this new value.
-	assert.Equal(t, uint64(1), dr.seedCfg.NextAccount, "Wrong value for next account")
-	encryptedSeedFile, err := wallet.ReadEncryptedSeedFromDisk(ctx)
-	require.NoError(t, err)
-	enc, err := ioutil.ReadAll(encryptedSeedFile)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, encryptedSeedFile.Close())
-	}()
-	seedConfig := &SeedConfig{}
-	require.NoError(t, json.Unmarshal(enc, seedConfig))
-	assert.Equal(t, uint64(1), seedConfig.NextAccount, "Wrong value for next account")
-
-	// Ensure the new account information is displayed to stdout.
-	require.LogsContain(t, hook, "Successfully created new validator account")
-}
-
 func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),

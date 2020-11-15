@@ -1,9 +1,13 @@
 package accounts
 
 import (
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
+
+var log = logrus.WithField("prefix", "accounts")
 
 // AccountsConfig specifies parameters to run to delete, enable, disable accounts.
 type AccountsConfig struct {
