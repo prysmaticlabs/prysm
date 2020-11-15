@@ -48,7 +48,7 @@ func main() {
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
 
-	params.UsePyrmontConfig()
+	params.UseMedallaConfig()
 
 	app := cli.App{}
 	app.Name = "sendDepositTx"

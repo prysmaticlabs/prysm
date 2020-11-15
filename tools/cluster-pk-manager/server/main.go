@@ -29,7 +29,8 @@ var (
 )
 
 func main() {
-	params.UsePyrmontConfig()
+	// Using Medalla as the default configuration.
+	params.UseMedallaConfig()
 
 	flag.Parse()
 	if *verbose {

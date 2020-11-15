@@ -67,7 +67,7 @@ type handler struct {
 
 func main() {
 	// Using Medalla as the default configuration.
-	params.UsePyrmontConfig()
+	params.UseMedallaConfig()
 
 	flag.Parse()
 
