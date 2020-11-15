@@ -232,9 +232,8 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	keymanager, err := derived.NewKeymanager(
 		cliCtx.Context,
 		&derived.SetupConfig{
-			Opts:                derived.DefaultKeymanagerOpts(),
-			Wallet:              w,
-			SkipMnemonicConfirm: true,
+			Opts:   derived.DefaultKeymanagerOpts(),
+			Wallet: w,
 		},
 	)
 	require.NoError(t, err)
@@ -358,27 +357,6 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keyString := fmt.Sprintf("%#x", key)
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Validating Private Key %s not found on line number %d", keyString, lineNumber)
-	}
-
-	// Get withdrawal private keys and require the correct count
-	withdrawalPrivKeys, err := keymanager.FetchWithdrawalPrivateKeys(cliCtx.Context)
-	require.NoError(t, err)
-	require.Equal(t, numAccounts, len(pubKeys))
-
-	// Assert that withdrawal private keys are printed on the correct lines
-	for i, key := range withdrawalPrivKeys {
-		lineNumber := prologLength + accountLength*i + withdrawalPrivateKeyOffset
-		keyString := fmt.Sprintf("%#x", key)
-		keyFound := strings.Contains(lines[lineNumber], keyString)
-		assert.Equal(t, true, keyFound, "Withdrawal Private Key %s not found on line number %d", keyString, lineNumber)
-	}
-
-	// Assert that deposit data are printed on the correct lines
-	for i, deposit := range depositDataForAccounts {
-		lineNumber := prologLength + accountLength*i + depositOffset
-		depositString := fmt.Sprintf("%#x", deposit)
-		depositFound := strings.Contains(lines[lineNumber], depositString)
-		assert.Equal(t, true, depositFound, "Deposit data %s not found on line number %d", depositString, lineNumber)
 	}
 }
 

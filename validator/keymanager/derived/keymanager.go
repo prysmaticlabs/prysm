@@ -11,6 +11,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/sirupsen/logrus"
 	util "github.com/wealdtech/go-eth2-util"
@@ -127,6 +128,15 @@ func (dr *Keymanager) RecoverAccountsFromMnemonic(
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}
 	return dr.importedKM.ImportKeypairs(ctx, privKeys, pubKeys)
+}
+
+// ExtractKeystores retrieves the secret keys for specified public keys
+// in the function input, encrypts them using the specified password,
+// and returns their respective EIP-2335 keystores.
+func (dr *Keymanager) ExtractKeystores(
+	ctx context.Context, publicKeys []bls.PublicKey, password string,
+) ([]*keymanager.Keystore, error) {
+	return dr.importedKM.ExtractKeystores(ctx, publicKeys, password)
 }
 
 // ValidatingAccountNames for the derived keymanager.

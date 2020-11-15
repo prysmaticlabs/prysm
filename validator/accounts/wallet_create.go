@@ -9,7 +9,6 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -75,7 +74,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with ability to import keystores",
 		)
 	case keymanager.Derived:
-		if err = createDerivedKeymanagerWallet(ctx, w, cfg.SkipMnemonicConfirm, cfg.Mnemonic25thWord); err != nil {
+		if err = createDerivedKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
@@ -182,22 +181,19 @@ func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) 
 func createDerivedKeymanagerWallet(
 	ctx context.Context,
 	wallet *wallet.Wallet,
-	skipMnemonicConfirm bool,
-	mnemonicPassphrase string,
 ) error {
-	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
-	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
+	if wallet == nil {
+		return errors.New("nil wallet")
 	}
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
+	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
+	if err != nil {
+		return errors.Wrap(err, "could not marshal keymanager config file")
+	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
-	_, err = wallet.InitializeKeymanager(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
 	}
 	return nil
 }
