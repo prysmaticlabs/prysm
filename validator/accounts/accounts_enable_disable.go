@@ -182,7 +182,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 		}); err != nil {
 			return err
 		}
-		log.WithField("publicKeys", allAccountStr).Info("Accounts are enabled. PLEASE RESTART YOUR VALIDATOR NODE for those updates to take effect")
+		log.WithField("publicKeys", allAccountStr).Info("Accounts are enabled. Please restart your validator node for those updates to take effect")
 		return nil
 	case keymanager.Derived:
 		return errors.New("cannot enable accounts for a derived keymanager")
