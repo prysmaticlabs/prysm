@@ -472,8 +472,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		CommitteeIds: subscribeCommitteeIDs,
 		IsAggregator: subscribeIsAggregator,
 	})
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
@@ -637,6 +640,38 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+// OneValidatorActive informs if at least one validator is ACTIVE.
+func (v *validator) OneValidatorActive(ctx context.Context) (bool, error) {
+	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "could not fetch validating keys")
+	}
+	if len(validatingKeys) == 0 {
+		return false, nil
+	}
+	var publicKeys [][]byte
+	for _, key := range validatingKeys {
+		copyKey := key
+		publicKeys = append(publicKeys, copyKey[:])
+	}
+	request := &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: publicKeys,
+	}
+	response, err := v.validatorClient.MultipleValidatorStatus(ctx, request)
+	if err != nil {
+		return false, err
+	}
+	if len(response.Statuses) != len(request.PublicKeys) {
+		return false, errors.New("number of status responses did not match number of requested keys")
+	}
+	for _, status := range response.Statuses {
+		if status.Status == ethpb.ValidatorStatus_ACTIVE {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

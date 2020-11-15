@@ -92,6 +92,77 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 	}
 }
 
+// Listen for changes to the keymanageropts.json file in our wallet
+// to observe disabled/enabled keys. This uses the fsnotify
+// library to listen for file-system changes and debounces these events to
+// ensure we can handle thousands of events fired in a short time-span.
+func (dr *Keymanager) listenForConfigOptsChanges(ctx context.Context) {
+	configOptsPath := filepath.Join(dr.wallet.AccountsDir(), keymanager.KeymanagerConfigFileName)
+	if !fileutil.FileExists(configOptsPath) {
+		return
+	}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.WithError(err).Error("Could not initialize file watcher")
+		return
+	}
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			log.WithError(err).Error("Could not close file watcher")
+		}
+	}()
+	if err := watcher.Add(configOptsPath); err != nil {
+		log.WithError(err).Errorf("Could not add file %s to file watcher", configOptsPath)
+		return
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	fileChangesChan := make(chan interface{}, 100)
+	defer close(fileChangesChan)
+
+	// We debounce events sent over the file changes channel by an interval
+	// to ensure we are not overwhelmed by a ton of events fired over the channel in
+	// a short span of time.
+	go asyncutil.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
+		ev, ok := event.(fsnotify.Event)
+		if !ok {
+			log.Errorf("Type %T is not a valid file system event", event)
+			return
+		}
+		fileBytes, err := ioutil.ReadFile(ev.Name)
+		if err != nil {
+			log.WithError(err).Errorf("Could not read file at path: %s", ev.Name)
+			return
+		}
+		kmOpts := &KeymanagerOpts{}
+		if err := json.Unmarshal(fileBytes, kmOpts); err != nil {
+			log.WithError(
+				err,
+			).Errorf("Could not read keymanageropts.json file at path: %s", ev.Name)
+			return
+		}
+		if err := dr.reloadDisabledAccountsFromConfig(kmOpts); err != nil {
+			log.WithError(
+				err,
+			).Errorf("Could not reload disable accounts from config at path %s", ev.Name)
+		}
+	})
+	for {
+		select {
+		case event := <-watcher.Events:
+			// If a file was modified, we attempt to read that file
+			// and parse it into our accounts store.
+			if event.Op&fsnotify.Write == fsnotify.Write {
+				fileChangesChan <- event
+			}
+		case err := <-watcher.Errors:
+			log.WithError(err).Errorf("Could not watch for file changes for: %s", configOptsPath)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 // Replaces the accounts store struct in the imported keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
 func (dr *Keymanager) reloadAccountsFromKeystore(keystore *keymanager.Keystore) error {
@@ -118,6 +189,32 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *keymanager.Keystore) 
 		return err
 	}
 	log.Info("Reloaded validator keys into keymanager")
+	dr.accountsChangedFeed.Send(pubKeys)
+	return nil
+}
+
+// Refresh the accounts store struct in the imported keymanager by filtering
+// disabled accounts from the keymanageropts.json config file
+func (dr *Keymanager) reloadDisabledAccountsFromConfig(kmOpts *KeymanagerOpts) error {
+	dpk := kmOpts.DisabledPublicKeys
+	isDisabledPubKeys := make(map[[48]byte]bool, len(dpk))
+	for _, pk := range dpk {
+		isDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
+	}
+	for i, pubKey := range dr.accountsStore.PublicKeys {
+		if _, ok := isDisabledPubKeys[bytesutil.ToBytes48(pubKey)]; ok {
+			dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:i], dr.accountsStore.PrivateKeys[i+1:]...)
+			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:i], dr.accountsStore.PublicKeys[i+1:]...)
+		}
+	}
+	if err := dr.initializeKeysCachesFromKeystore(); err != nil {
+		return err
+	}
+	pubKeys := make([][48]byte, len(dr.accountsStore.PublicKeys))
+	for i, pk := range dr.accountsStore.PublicKeys {
+		pubKeys[i] = bytesutil.ToBytes48(pk)
+	}
+	log.Info("Reloaded validator keys with disabled public keys into keymanager")
 	dr.accountsChangedFeed.Send(pubKeys)
 	return nil
 }

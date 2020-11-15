@@ -39,6 +39,7 @@ type Validator interface {
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
+	OneValidatorActive(ctx context.Context) (bool, error)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -104,6 +105,14 @@ func run(ctx context.Context, v Validator) {
 			}
 			if allExited {
 				log.Info("All validators are exited, no more work to perform...")
+				continue
+			}
+			oneActive, err := v.OneValidatorActive(ctx)
+			if err != nil {
+				log.WithError(err).Error("Could not check if validators are active")
+			}
+			if !oneActive {
+				log.Info("No validators are active, no more work to perform...")
 				continue
 			}
 

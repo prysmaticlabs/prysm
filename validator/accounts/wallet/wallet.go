@@ -27,8 +27,6 @@ import (
 var log = logrus.WithField("prefix", "wallet")
 
 const (
-	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
-	KeymanagerConfigFileName = "keymanageropts.json"
 	// DirectoryPermissions for directories created under the wallet path.
 	DirectoryPermissions = os.ModePerm
 	// NewWalletPasswordPromptText for wallet creation.
@@ -384,7 +382,7 @@ func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (s
 // ReadKeymanagerConfigFromDisk opens a keymanager config file
 // for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser, error) {
-	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
+	configFilePath := filepath.Join(w.accountsPath, keymanager.KeymanagerConfigFileName)
 	if !fileutil.FileExists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
@@ -420,7 +418,7 @@ func (w *Wallet) UnlockWalletConfigFile() error {
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file
 // and writes it to the wallet path.
 func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) error {
-	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
+	configFilePath := filepath.Join(w.accountsPath, keymanager.KeymanagerConfigFileName)
 	// Write the config file to disk.
 	if err := fileutil.WriteFile(configFilePath, encoded); err != nil {
 		return errors.Wrapf(err, "could not write %s", configFilePath)

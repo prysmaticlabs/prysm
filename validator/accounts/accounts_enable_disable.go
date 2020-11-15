@@ -207,7 +207,6 @@ func DisableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 			log.Info("Disabling accounts...")
 		}
 		updatedOpts := km.KeymanagerOpts()
-		// updatedDisabledPubKeys := make([][48]byte, 0)
 		existingDisabledPubKeys := make(map[[48]byte]bool, len(updatedOpts.DisabledPublicKeys))
 		for _, pk := range updatedOpts.DisabledPublicKeys {
 			existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true

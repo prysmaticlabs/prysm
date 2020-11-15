@@ -214,19 +214,19 @@ func listDerivedKeymanagerAccounts(
 func listRemoteKeymanagerAccounts(
 	ctx context.Context,
 	w *wallet.Wallet,
-	keymanager keymanager.IKeymanager,
+	km keymanager.IKeymanager,
 	opts *remote.KeymanagerOpts,
 ) error {
 	au := aurora.NewAurora(true)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
 	fmt.Printf(
 		"(configuration file path) %s\n",
-		au.BrightGreen(filepath.Join(w.AccountsDir(), wallet.KeymanagerConfigFileName)).Bold(),
+		au.BrightGreen(filepath.Join(w.AccountsDir(), keymanager.KeymanagerConfigFileName)).Bold(),
 	)
 	fmt.Println(" ")
 	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
 	fmt.Println(opts)
-	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	validatingPubKeys, err := km.FetchAllValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}

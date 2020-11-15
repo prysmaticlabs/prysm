@@ -106,6 +106,8 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	// We begin a goroutine to listen for file changes to our
 	// all-accounts.keystore.json file in the wallet directory.
 	go k.listenForAccountChanges(ctx)
+	// Goroutine to listen for file changes to our keymanageropts.json file in the wallet idr
+	go k.listenForConfigOptsChanges(ctx)
 	return k, nil
 }
 

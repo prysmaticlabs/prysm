@@ -47,6 +47,7 @@ type FakeValidator struct {
 type ctxKey string
 
 var allValidatorsAreExitedCtxKey = ctxKey("exited")
+var oneValidatorActiveCtxKey = ctxKey("oneActive")
 
 // Done for mocking.
 func (fv *FakeValidator) Done() {
@@ -193,4 +194,12 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 		return false, nil
 	}
 	return ctx.Value(allValidatorsAreExitedCtxKey).(bool), nil
+}
+
+// OneValidatorActive for mocking
+func (fv *FakeValidator) OneValidatorActive(ctx context.Context) (bool, error) {
+	if ctx.Value(oneValidatorActiveCtxKey) == nil {
+		return true, nil
+	}
+	return ctx.Value(oneValidatorActiveCtxKey).(bool), nil
 }
