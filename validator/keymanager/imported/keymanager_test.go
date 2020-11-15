@@ -103,7 +103,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, numAccounts-1, len(publicKeys))
 	// FetchValidatingPublicKeys is also used in generating the output of account list
-	// therefore the results must be in the same order as the order in which the accounts were deprecatedderived
+	// therefore the results must be in the same order as the order in which the accounts were derived
 	for i, key := range wantedPubKeys {
 		assert.Equal(t, key, publicKeys[i])
 	}
@@ -137,7 +137,7 @@ func TestImportedKeymanager_FetchAllValidatingPublicKeys(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, numAccounts, len(publicKeys))
 	// FetchAllValidatingPublicKeys is also used in generating the output of account list
-	// therefore the results must be in the same order as the order in which the accounts were deprecatedderived
+	// therefore the results must be in the same order as the order in which the accounts were derived
 	for i, key := range wantedPubKeys {
 		assert.Equal(t, key, publicKeys[i])
 	}

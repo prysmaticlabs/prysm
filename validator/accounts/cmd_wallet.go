@@ -17,7 +17,7 @@ var WalletCommands = &cli.Command{
 		{
 			Name: "create",
 			Usage: "creates a new wallet with a desired type of keymanager: " +
-				"either on-disk (imported), deprecatedderived, or using remote credentials",
+				"either on-disk (imported), derived, or using remote credentials",
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.KeymanagerKindFlag,
@@ -75,7 +75,7 @@ var WalletCommands = &cli.Command{
 		},
 		{
 			Name:  "recover",
-			Usage: "uses a deprecatedderived wallet seed recovery phase to recreate an existing HD wallet",
+			Usage: "uses a derived wallet seed recovery phase to recreate an existing HD wallet",
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.MnemonicFileFlag,

@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 )
 
 var defaultWalletPath = filepath.Join(flags.DefaultValidatorDir(), flags.WalletDefaultDirName)
@@ -86,7 +86,7 @@ func TestServer_ListAccounts(t *testing.T) {
 	numAccounts := 50
 	keys := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		key, _, err := km.(*deprecatedderived.Keymanager).CreateAccount(ctx)
+		key, _, err := km.(*derived.Keymanager).CreateAccount(ctx)
 		require.NoError(t, err)
 		keys[i] = key
 	}

@@ -25,7 +25,7 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 	case keymanager.Imported:
 		return errors.New("not possible to edit imported keymanager configuration")
 	case keymanager.Derived:
-		return errors.New("deprecatedderived keymanager is not yet supported")
+		return errors.New("derived keymanager is not yet supported")
 	case keymanager.Remote:
 		enc, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 		if err != nil {

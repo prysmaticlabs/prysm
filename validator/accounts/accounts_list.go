@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
@@ -54,7 +53,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with deprecatedderived keymanager")
+			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
 	case keymanager.Remote:
 		km, ok := km.(*remote.Keymanager)
@@ -133,7 +132,7 @@ func listDerivedKeymanagerAccounts(
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
-	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("deprecatedderived, (HD) hierarchical-deterministic").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.KeymanagerOpts().DerivedPathStructure).Bold())
 	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
 	if err != nil {
@@ -160,7 +159,7 @@ func listDerivedKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		validatingKeyPath := fmt.Sprintf(deprecatedderived.ValidatingKeyDerivationPathTemplate, i)
+		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
 
 		// Retrieve the withdrawal key account metadata.
 		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())

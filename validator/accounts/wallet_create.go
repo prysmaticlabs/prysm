@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
@@ -185,7 +185,7 @@ func createDerivedKeymanagerWallet(
 	skipMnemonicConfirm bool,
 	mnemonicPassphrase string,
 ) error {
-	keymanagerConfig, err := deprecatedderived.MarshalOptionsFile(ctx, deprecatedderived.DefaultKeymanagerOpts())
+	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
 	if err != nil {
 		return errors.Wrap(err, "could not marshal keymanager config file")
 	}

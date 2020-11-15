@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	"github.com/urfave/cli/v2"
@@ -128,7 +128,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		KeymanagerKind: keymanager.Derived,
 		WalletPassword: cfg.WalletPassword,
 	})
-	keymanagerConfig, err := deprecatedderived.MarshalOptionsFile(ctx, deprecatedderived.DefaultKeymanagerOpts())
+	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not marshal keymanager config file")
 	}
@@ -138,8 +138,8 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 	if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return nil, nil, errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	km, err := deprecatedderived.KeymanagerForPhrase(ctx, &deprecatedderived.SetupConfig{
-		Opts:             deprecatedderived.DefaultKeymanagerOpts(),
+	km, err := derived.KeymanagerForPhrase(ctx, &derived.SetupConfig{
+		Opts:             derived.DefaultKeymanagerOpts(),
 		Wallet:           w,
 		Mnemonic:         cfg.Mnemonic,
 		Mnemonic25thWord: cfg.Mnemonic25thWord,

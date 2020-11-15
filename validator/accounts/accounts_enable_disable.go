@@ -185,7 +185,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 		log.WithField("publicKeys", allAccountStr).Info("Accounts enabled")
 		return nil
 	case keymanager.Derived:
-		return errors.New("cannot enable accounts for a deprecatedderived keymanager")
+		return errors.New("cannot enable accounts for a derived keymanager")
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", w.KeymanagerKind())
 	}
@@ -225,7 +225,7 @@ func DisableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 			return errors.Wrap(err, "could not write keymanager config to disk")
 		}
 	case keymanager.Derived:
-		return errors.New("cannot disable accounts for a deprecatedderived keymanager")
+		return errors.New("cannot disable accounts for a derived keymanager")
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}
@@ -267,7 +267,7 @@ func EnableAccounts(ctx context.Context, cfg *AccountsConfig) error {
 			return errors.Wrap(err, "could not write keymanager config to disk")
 		}
 	case keymanager.Derived:
-		return errors.New("cannot enable accounts for a deprecatedderived keymanager")
+		return errors.New("cannot enable accounts for a derived keymanager")
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
 	}

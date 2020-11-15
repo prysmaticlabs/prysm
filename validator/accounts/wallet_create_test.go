@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
@@ -202,11 +202,11 @@ func TestCreateWallet_Derived(t *testing.T) {
 	// We read the keymanager config for the newly created wallet.
 	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
-	cfg, err := deprecatedderived.UnmarshalOptionsFile(encoded)
+	cfg, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 
 	// We assert the created configuration was as desired.
-	assert.DeepEqual(t, deprecatedderived.DefaultKeymanagerOpts(), cfg)
+	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), cfg)
 }
 
 // TestCreateWallet_WalletAlreadyExists checks for expected error if trying to create a wallet when there is one already.
@@ -272,7 +272,7 @@ func TestCorrectPassphrase_Derived(t *testing.T) {
 	encodedSeedFile, err := ioutil.ReadAll(seedConfigFile)
 	require.Equal(t, nil, err, "could not read seed configuration file contents")
 
-	seedConfig := &deprecatedderived.SeedConfig{}
+	seedConfig := &derived.SeedConfig{}
 	err = json.Unmarshal(encodedSeedFile, seedConfig)
 	require.Equal(t, nil, err, "could not unmarshal seed configuration")
 

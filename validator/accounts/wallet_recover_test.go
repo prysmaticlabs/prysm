@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/deprecatedderived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/urfave/cli/v2"
 )
 
@@ -74,19 +74,19 @@ func TestRecoverDerivedWallet(t *testing.T) {
 
 	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
-	walletCfg, err := deprecatedderived.UnmarshalOptionsFile(encoded)
+	walletCfg, err := derived.UnmarshalOptionsFile(encoded)
 	assert.NoError(t, err)
 	// We assert the created configuration was as desired.
-	wantCfg := deprecatedderived.DefaultKeymanagerOpts()
+	wantCfg := derived.DefaultKeymanagerOpts()
 	assert.DeepEqual(t, wantCfg, walletCfg)
 
 	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, ok := keymanager.(*deprecatedderived.Keymanager)
+	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {
-		t.Fatal("not a deprecatedderived keymanager")
+		t.Fatal("not a derived keymanager")
 	}
 	names, err := km.ValidatingAccountNames(ctx)
 	assert.NoError(t, err)
