@@ -228,6 +228,9 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 	if cliCtx.IsSet(flags.NumAccountsFlag.Name) {
 		numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
+		if numAccounts <= 0 {
+			return 0, errors.New("must recover at least 1 account")
+		}
 		return numAccounts, nil
 	}
 	numAccounts, err := promptutil.DefaultAndValidatePrompt("Enter how many accounts you would like to recover", "0", promptutil.ValidateNumber)
@@ -237,6 +240,9 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 	numAccountsInt, err := strconv.Atoi(numAccounts)
 	if err != nil {
 		return 0, err
+	}
+	if numAccountsInt <= 0 {
+		return 0, errors.New("must recover at least 1 account")
 	}
 	return int64(numAccountsInt), nil
 }

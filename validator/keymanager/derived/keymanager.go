@@ -224,10 +224,11 @@ func (dr *Keymanager) NextAccountNumber() uint64 {
 	return dr.seedCfg.NextAccount
 }
 
-// WriteEncryptedSeedToWallet given a mnemonic phrase, is able to regenerate a wallet seed
-// encrypt it, and write it to the wallet's path.
-func (dr *Keymanager) WriteEncryptedSeedToWallet(
-	ctx context.Context, mnemonic, mnemonicPassphrase string,
+// WriteEncryptedKeystoresFromSeed given a mnemonic phrase, is able to regenerate N accounts
+// from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
+// to disk. Then, the mnemonic is never stored nor used by the validator.
+func (dr *Keymanager) WriteEncryptedKeystoresFromSeed(
+	ctx context.Context, mnemonic, mnemonicPassphrase string, numAccounts int,
 ) error {
 	seedConfig, err := seedFileFromMnemonic(mnemonic, dr.wallet.Password(), mnemonicPassphrase)
 	if err != nil {
