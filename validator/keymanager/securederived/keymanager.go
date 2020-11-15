@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"sync"
 
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -20,10 +19,7 @@ import (
 )
 
 var (
-	log               = logrus.WithField("prefix", "derived-keymanager")
-	lock              sync.RWMutex
-	orderedPublicKeys = make([][48]byte, 0)
-	secretKeysCache   = make(map[[48]byte]bls.SecretKey)
+	log = logrus.WithField("prefix", "derived-keymanager")
 )
 
 const (
@@ -46,17 +42,13 @@ type KeymanagerOpts struct {
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
-	Opts                *KeymanagerOpts
-	Wallet              iface.Wallet
-	SkipMnemonicConfirm bool
-	Mnemonic            string
-	Mnemonic25thWord    string // A '25th' word in the mnemonic, which is a user-defined passphrase.
+	Opts   *KeymanagerOpts
+	Wallet iface.Wallet
 }
 
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
 type Keymanager struct {
-	mnemonicGenerator SeedPhraseFactory
-	importedKM        *imported.Keymanager
+	importedKM *imported.Keymanager
 }
 
 // DefaultKeymanagerOpts for a derived keymanager implementation.
@@ -82,9 +74,6 @@ func NewKeymanager(
 	}
 	return &Keymanager{
 		importedKM: importedKM,
-		mnemonicGenerator: &EnglishMnemonicGenerator{
-			skipMnemonicConfirm: cfg.SkipMnemonicConfirm,
-		},
 	}, nil
 }
 
@@ -117,16 +106,10 @@ func (dr *Keymanager) KeymanagerOpts() *imported.KeymanagerOpts {
 	return dr.importedKM.KeymanagerOpts()
 }
 
-// NextAccountNumber managed by the derived keymanager.
-func (dr *Keymanager) NextAccountNumber() uint64 {
-	//return dr.seedCfg.NextAccount
-	return 0
-}
-
 // WriteEncryptedKeystoresFromSeed given a mnemonic phrase, is able to regenerate N accounts
 // from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
 // to disk. Then, the mnemonic is never stored nor used by the validator.
-func (dr *Keymanager) WriteEncryptedKeystoresFromSeed(
+func (dr *Keymanager) RecoverAccountsFromMnemonic(
 	ctx context.Context, mnemonic, mnemonicPassphrase string, numAccounts int,
 ) error {
 	seed, err := seedFromMnemonic(mnemonic, mnemonicPassphrase)
@@ -145,9 +128,7 @@ func (dr *Keymanager) WriteEncryptedKeystoresFromSeed(
 		privKeys[i] = privKey.Marshal()
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}
-	_ = privKeys
-	_ = pubKeys
-	return nil
+	return dr.importedKM.ImportKeypairs(ctx, privKeys, pubKeys)
 }
 
 // ValidatingAccountNames for the derived keymanager.
@@ -175,12 +156,9 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	return dr.importedKM.FetchValidatingPrivateKeys(ctx)
 }
 
-// Creates a new, encrypted seed using a password input
-// and persists its encrypted file metadata to disk under the wallet path.
-func initializeWalletSeedFile(
-	password string,
-	skipMnemonicConfirm bool,
+func GenerateAndConfirmMnemonic(
 	mnemonicPassphrase string,
+	skipMnemonicConfirm bool,
 ) error {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
