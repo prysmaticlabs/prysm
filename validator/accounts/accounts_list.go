@@ -113,7 +113,7 @@ func listImportedKeymanagerAccounts(
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
 		if existingDisabledPk[pubKeys[i]] {
-			fmt.Printf("%s | %s (%s)\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold(), au.BrightRed("disabled"))
+			fmt.Printf("%s | %s (%s)\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightRed(accountNames[i]).Bold(), au.BrightRed("disabled"))
 		} else {
 			fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		}
