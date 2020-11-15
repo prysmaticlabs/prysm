@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -45,7 +46,9 @@ func TestServer_CreateAccount(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,
@@ -71,7 +74,9 @@ func TestServer_ListAccounts(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,
@@ -129,7 +134,9 @@ func TestServer_ListAccounts(t *testing.T) {
 
 func Test_createAccountWithDepositData(t *testing.T) {
 	ctx := context.Background()
-	pubKey := bls.RandKey().PublicKey().Marshal()
+	secretKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := secretKey.PublicKey().Marshal()
 	m := &mockAccountCreator{
 		data: &ethpb.Deposit_Data{
 			PublicKey:             pubKey,
@@ -156,62 +163,4 @@ func Test_createAccountWithDepositData(t *testing.T) {
 	assert.DeepEqual(
 		t, rawResp.Data["fork_version"], fmt.Sprintf("%x", params.BeaconConfig().GenesisForkVersion),
 	)
-}
-
-func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
-	require.NoError(t, err)
-	ss := &Server{
-		wallet:     w,
-		keymanager: km,
-	}
-	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeys: make([][]byte, 1),
-	})
-	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
-}
-
-func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
-	ss := &Server{}
-	ctx := context.Background()
-	_, err := ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
-	assert.ErrorContains(t, "No public keys specified", err)
-	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeys: make([][]byte, 1),
-	})
-	assert.ErrorContains(t, "No wallet found", err)
-}
-
-func TestServer_DeleteAccounts_OK(t *testing.T) {
-	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
-	ctx := context.Background()
-	keys, err := ss.keymanager.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	require.Equal(t, len(pubKeys), len(keys))
-
-	// Next, we attempt to delete one of the keystores.
-	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeys: pubKeys[:1], // Delete the 0th public key
-	})
-	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
-	require.NoError(t, err)
-
-	// We expect one of the keys to have been deleted.
-	keys, err = ss.keymanager.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, len(pubKeys)-1, len(keys))
 }

@@ -20,10 +20,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	run := func() int {
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetOutput(ioutil.Discard)
 
-	os.Exit(m.Run())
+		return m.Run()
+	}
+	os.Exit(run())
 }
 
 func TestBootnode_OK(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -16,13 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/urfave/cli/v2"
 )
-
-// DeleteAccountConfig specifies parameters to run the delete account function.
-type DeleteAccountConfig struct {
-	Wallet     *wallet.Wallet
-	Keymanager keymanager.IKeymanager
-	PublicKeys [][]byte
-}
 
 // DeleteAccountCli deletes the accounts that the user requests to be deleted from the wallet.
 // This function uses the CLI to extract necessary values.
@@ -33,11 +27,13 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, false /* skip mnemonic confirm */)
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: false,
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err := keymanager.FetchAllValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}
@@ -91,19 +87,22 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	if err := DeleteAccount(cliCtx.Context, &DeleteAccountConfig{
-		Wallet:     w,
-		Keymanager: keymanager,
-		PublicKeys: rawPublicKeys,
+	if err := DeleteAccount(cliCtx.Context, &AccountsConfig{
+		Wallet:           w,
+		Keymanager:       keymanager,
+		DeletePublicKeys: rawPublicKeys,
 	}); err != nil {
 		return err
 	}
-	log.WithField("publicKeys", allAccountStr).Info("Accounts deleted")
+	log.WithField("publicKeys", allAccountStr).Warn(
+		"Attempted to delete accounts. IMPORTANT: please run `validator accounts list` to ensure " +
+			"the public keys are indeed deleted. If they are still there, please file an issue at " +
+			"https://github.com/prysmaticlabs/prysm/issues/new")
 	return nil
 }
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
+func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
@@ -112,12 +111,12 @@ func DeleteAccount(ctx context.Context, cfg *DeleteAccountConfig) error {
 		if !ok {
 			return errors.New("not a imported keymanager")
 		}
-		if len(cfg.PublicKeys) == 1 {
+		if len(cfg.DeletePublicKeys) == 1 {
 			log.Info("Deleting account...")
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		if err := km.DeleteAccounts(ctx, cfg.PublicKeys); err != nil {
+		if err := km.DeleteAccounts(ctx, cfg.DeletePublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	case keymanager.Derived:

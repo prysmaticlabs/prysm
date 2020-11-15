@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64
+// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
 // +build blst_enabled
 
 package blst
@@ -8,7 +8,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -26,7 +26,7 @@ type PublicKey struct {
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
-func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
+func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
@@ -36,19 +36,21 @@ func PublicKeyFromBytes(pubKey []byte) (iface.PublicKey, error) {
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy(), nil
 	}
-
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {
 		return nil, errors.New("could not unmarshal bytes into public key")
 	}
 	pubKeyObj := &PublicKey{p: p}
+	if pubKeyObj.IsInfinite() {
+		return nil, common.ErrInfinitePubKey
+	}
 	copiedKey := pubKeyObj.Copy()
 	pubkeyCache.Set(string(pubKey), copiedKey, 48)
 	return pubKeyObj, nil
 }
 
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
-func AggregatePublicKeys(pubs [][]byte) (iface.PublicKey, error) {
+func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
@@ -80,13 +82,19 @@ func (p *PublicKey) Marshal() []byte {
 }
 
 // Copy the public key to a new pointer reference.
-func (p *PublicKey) Copy() iface.PublicKey {
+func (p *PublicKey) Copy() common.PublicKey {
 	np := *p.p
 	return &PublicKey{p: &np}
 }
 
+// IsInfinite checks if the public key is infinite.
+func (p *PublicKey) IsInfinite() bool {
+	zeroKey := new(blstPublicKey)
+	return p.p.Equals(zeroKey)
+}
+
 // Aggregate two public keys.
-func (p *PublicKey) Aggregate(p2 iface.PublicKey) iface.PublicKey {
+func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 	if featureconfig.Get().SkipBLSVerify {
 		return p
 	}

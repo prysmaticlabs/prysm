@@ -9,16 +9,21 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// Use minimal config to reduce test setup time.
-	prevConfig := params.BeaconConfig().Copy()
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	flags.Init(&flags.GlobalFlags{
-		MinimumSyncPeers: 30,
-	})
+	run := func() int {
+		// Use minimal config to reduce test setup time.
+		prevConfig := params.BeaconConfig().Copy()
+		defer params.OverrideBeaconConfig(prevConfig)
+		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
-	retVal := m.Run()
+		resetFlags := flags.Get()
+		flags.Init(&flags.GlobalFlags{
+			MinimumSyncPeers: 30,
+		})
+		defer func() {
+			flags.Init(resetFlags)
+		}()
 
-	// Reset configuration.
-	params.OverrideBeaconConfig(prevConfig)
-	os.Exit(retVal)
+		return m.Run()
+	}
+	os.Exit(run())
 }

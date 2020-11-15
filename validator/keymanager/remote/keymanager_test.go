@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -150,7 +149,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.caCert != "" || test.clientCert != "" || test.clientKey != "" {
-				dir := fmt.Sprintf("%s/%s", testutil.TempDir(), test.name)
+				dir := fmt.Sprintf("%s/%s", t.TempDir(), test.name)
 				require.NoError(t, os.MkdirAll(dir, 0777))
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
@@ -225,7 +224,8 @@ func TestRemoteKeymanager_Sign(t *testing.T) {
 	}
 
 	// Expected signing success.
-	randKey := bls.RandKey()
+	randKey, err := bls.RandKey()
+	require.NoError(t, err)
 	data := []byte("hello-world")
 	sig := randKey.Sign(data)
 	m.EXPECT().Sign(

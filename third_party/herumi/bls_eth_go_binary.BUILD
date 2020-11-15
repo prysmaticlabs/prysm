@@ -96,7 +96,7 @@ cc_library(
             "bls/lib/android/armeabi-v7a/libbls384_256.a",
         ],
         "@io_bazel_rules_go//go/platform:linux_arm64": [
-            "bls/lib/android/arm64-v8a/libbls384_256.a",
+            "bls/lib/linux/arm64/libbls384_256.a",
         ],
         "@io_bazel_rules_go//go/platform:android_arm64": [
             "bls/lib/android/arm64-v8a/libbls384_256.a",
@@ -153,7 +153,7 @@ go_library(
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
     ],
     clinkopts = select({
-        "@io_bazel_rules_go//go/platform:linux": ["-Wl,--unresolved-symbols=ignore-all"],
+        "@prysm//fuzz:fuzzing_enabled": ["-Wl,--unresolved-symbols=ignore-all", "-fsanitize=address"],
         "//conditions:default": [],
     }),
 )

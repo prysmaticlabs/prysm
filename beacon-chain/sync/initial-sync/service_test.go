@@ -298,7 +298,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			wg.Done()
 		}()
 
-		if testutil.WaitTimeout(wg, time.Second*3) {
+		if testutil.WaitTimeout(wg, time.Second*5) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
@@ -316,11 +316,11 @@ func TestService_markSynced(t *testing.T) {
 		StateNotifier: mc.StateNotifier(),
 	})
 	require.NotNil(t, s)
-	assert.Equal(t, false, s.chainStarted)
-	assert.Equal(t, false, s.synced)
+	assert.Equal(t, false, s.chainStarted.IsSet())
+	assert.Equal(t, false, s.synced.IsSet())
 	assert.Equal(t, true, s.Syncing())
 	assert.NoError(t, s.Status())
-	s.chainStarted = true
+	s.chainStarted.Set()
 	assert.ErrorContains(t, "syncing", s.Status())
 
 	expectedGenesisTime := time.Unix(358544700, 0)

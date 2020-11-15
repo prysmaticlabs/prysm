@@ -16,10 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -29,13 +29,8 @@ import (
 func TestImport_Noninteractive(t *testing.T) {
 	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
+	keysDir := filepath.Join(t.TempDir(), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
-	})
 
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
@@ -79,7 +74,9 @@ func TestImport_Noninteractive(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, true)
+	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -90,13 +87,8 @@ func TestImport_Noninteractive(t *testing.T) {
 func TestImport_Noninteractive_RandomName(t *testing.T) {
 	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
+	keysDir := filepath.Join(t.TempDir(), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
-	})
 
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
@@ -140,7 +132,9 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, true)
+	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -151,13 +145,8 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 func TestImport_Noninteractive_Filepath(t *testing.T) {
 	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
+	keysDir := filepath.Join(t.TempDir(), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
-	})
 
 	_, keystorePath := createKeystore(t, keysDir)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
@@ -197,7 +186,9 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, true)
+	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -269,17 +260,13 @@ func TestImport_SortByDerivationPath(t *testing.T) {
 
 func Test_importPrivateKeyAsAccount(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	privKeyDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "privKeys")
+	privKeyDir := filepath.Join(t.TempDir(), "privKeys")
 	require.NoError(t, os.MkdirAll(privKeyDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(privKeyDir), "Failed to remove directory")
-	})
 	privKeyFileName := filepath.Join(privKeyDir, "privatekey.txt")
 
 	// We create a new private key and save it to a file on disk.
-	privKey := bls.RandKey()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
 	privKeyHex := fmt.Sprintf("%x", privKey.Marshal())
 	require.NoError(
 		t,
@@ -329,7 +316,8 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 
 // Returns the fullPath to the newly created keystore file.
 func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
@@ -353,7 +341,8 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 
 // Returns the fullPath to the newly created keystore file.
 func createRandomNameKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)

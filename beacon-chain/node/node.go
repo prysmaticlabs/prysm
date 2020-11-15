@@ -491,6 +491,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
 		StateNotifier:   b,
+		StateGen:        b.stateGen,
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
@@ -601,6 +602,7 @@ func (b *BeaconNode) registerRPCService() error {
 	key := b.cliCtx.String(flags.KeyFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
@@ -633,6 +635,7 @@ func (b *BeaconNode) registerRPCService() error {
 		OperationNotifier:       b,
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
+		MaxMsgSize:              maxMsgSize,
 	})
 
 	return b.services.RegisterService(rpcService)

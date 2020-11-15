@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -85,6 +86,61 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorInclusionDistancesGaugeVec used to keep track of validator inclusion distances by public key.
+	ValidatorInclusionDistancesGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "inclusion_distance",
+			Help:      "Inclusion distance of last attestation.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorAttestedSlotsGaugeVec used to keep track of validator attested slots by public key.
+	ValidatorAttestedSlotsGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "last_attested_slot",
+			Help:      "Last attested slot.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorCorrectlyVotedSourceGaugeVec used to keep track of validator's accuracy on voting source by public key.
+	ValidatorCorrectlyVotedSourceGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "correctly_voted_source",
+			Help:      "True if correctly voted source in last attestation.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorCorrectlyVotedTargetGaugeVec used to keep track of validator's accuracy on voting target by public key.
+	ValidatorCorrectlyVotedTargetGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "correctly_voted_target",
+			Help:      "True if correctly voted target in last attestation.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorCorrectlyVotedHeadGaugeVec used to keep track of validator's accuracy on voting head by public key.
+	ValidatorCorrectlyVotedHeadGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "correctly_voted_head",
+			Help:      "True if correctly voted head in last attestation.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
 	// ValidatorAttestSuccessVec used to count successful attestations.
 	ValidatorAttestSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -122,8 +178,8 @@ var (
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot <= params.BeaconConfig().SlotsPerEpoch {
-		// Do nothing unless we are at the start of the epoch, and not in the first epoch.
+	if !helpers.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
+		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
 	}
 	if !v.logValidatorBalances {
@@ -195,6 +251,23 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
+				ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[i]))
+				if resp.CorrectlyVotedSource[i] {
+					ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(1)
+				} else {
+					ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(0)
+				}
+				if resp.CorrectlyVotedTarget[i] {
+					ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(1)
+				} else {
+					ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(0)
+				}
+				if resp.CorrectlyVotedHead[i] {
+					ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(1)
+				} else {
+					ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(0)
+				}
+
 			}
 		}
 		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]

@@ -133,8 +133,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
 
-	var committeeIDs []uint64
-	var nextCommitteeIDs []uint64
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	for _, pubKey := range req.PublicKeys {
@@ -162,7 +160,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 				assignment.Committee = ca.Committee
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.CommitteeIndex = ca.CommitteeIndex
-				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
 			// Save the next epoch assignments.
 			ca, ok = nextCommitteeAssignments[idx]
@@ -170,7 +167,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 				nextAssignment.Committee = ca.Committee
 				nextAssignment.AttesterSlot = ca.AttesterSlot
 				nextAssignment.CommitteeIndex = ca.CommitteeIndex
-				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
 			}
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.

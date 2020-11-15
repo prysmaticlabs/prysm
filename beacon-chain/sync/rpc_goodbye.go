@@ -39,9 +39,22 @@ var goodByes = map[types.SSZUint64]string{
 	codeBanned:                "client banned this node",
 }
 
-// Add a short delay to allow the stream to flush before resetting it.
-// There is still a chance that the peer won't receive the message.
-const flushDelay = 50 * time.Millisecond
+var backOffTime = map[types.SSZUint64]time.Duration{
+	// Do not dial peers which are from a different/unverifiable
+	// network.
+	codeWrongNetwork:          24 * time.Hour,
+	codeUnableToVerifyNetwork: 24 * time.Hour,
+	// If local peer is banned, we back off for
+	// 2 hours to let the remote peer score us
+	// back up again.
+	codeBadScore:       2 * time.Hour,
+	codeBanned:         2 * time.Hour,
+	codeClientShutdown: 1 * time.Hour,
+	// Wait 5 minutes before dialing a peer who is
+	// 'full'
+	codeTooManyPeers: 5 * time.Minute,
+	codeGenericError: 2 * time.Minute,
+}
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
@@ -62,8 +75,15 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	s.rateLimiter.add(stream, 1)
 	log := log.WithField("Reason", goodbyeMessage(*m))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Peer has sent a goodbye message")
+	s.p2p.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(*m))
 	// closes all streams with the peer
 	return s.p2p.Disconnect(stream.Conn().RemotePeer())
+}
+
+// A custom goodbye method that is used by our connection handler, in the
+// event we receive bad peers.
+func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
+	return s.sendGoodByeAndDisconnect(ctx, codeGenericError, id)
 }
 
 func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.SSZUint64, id peer.ID) error {
@@ -100,4 +120,14 @@ func goodbyeMessage(num types.SSZUint64) string {
 		return reason
 	}
 	return fmt.Sprintf("unknown goodbye value of %d Received", num)
+}
+
+// determines which backoff time to use depending on the
+// goodbye code provided.
+func goodByeBackoff(num types.SSZUint64) time.Time {
+	duration, ok := backOffTime[num]
+	if !ok {
+		return time.Time{}
+	}
+	return time.Now().Add(duration)
 }

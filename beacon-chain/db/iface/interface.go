@@ -84,6 +84,8 @@ type NoHeadAccessDatabase interface {
 
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
+
+	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error
 }
 
 // HeadAccessDatabase defines a struct with access to reading chain head data.
@@ -93,8 +95,6 @@ type HeadAccessDatabase interface {
 	// Block related methods.
 	HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
-	// State related methods.
-	HeadState(ctx context.Context) (*state.BeaconState, error)
 }
 
 // Database interface with full access.

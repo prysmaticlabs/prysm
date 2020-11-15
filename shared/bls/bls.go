@@ -4,9 +4,12 @@
 package bls
 
 import (
+	"math/big"
+
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -16,6 +19,22 @@ func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {
 		return blst.SecretKeyFromBytes(privKey)
 	}
 	return herumi.SecretKeyFromBytes(privKey)
+}
+
+// SecretKeyFromBigNum takes in a big number string and creates a BLS private key.
+func SecretKeyFromBigNum(s string) (SecretKey, error) {
+	num := new(big.Int)
+	num, ok := num.SetString(s, 10)
+	if !ok {
+		return nil, errors.New("could not set big int from string")
+	}
+	bts := num.Bytes()
+	// Pad key at the start with zero bytes to make it into a 32 byte key.
+	if len(bts) < 32 {
+		emptyBytes := make([]byte, 32-len(bts))
+		bts = append(emptyBytes, bts...)
+	}
+	return SecretKeyFromBytes(bts)
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
@@ -43,7 +62,7 @@ func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
-func AggregateSignatures(sigs []iface.Signature) iface.Signature {
+func AggregateSignatures(sigs []common.Signature) common.Signature {
 	if featureconfig.Get().EnableBlst {
 		return blst.AggregateSignatures(sigs)
 	}
@@ -51,7 +70,7 @@ func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 }
 
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
-func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
+func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.PublicKey) (bool, error) {
 	if featureconfig.Get().EnableBlst {
 		return blst.VerifyMultipleSignatures(sigs, msgs, pubKeys)
 	}
@@ -69,7 +88,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []iface.Pu
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
-func NewAggregateSignature() iface.Signature {
+func NewAggregateSignature() common.Signature {
 	if featureconfig.Get().EnableBlst {
 		return blst.NewAggregateSignature()
 	}
@@ -77,7 +96,7 @@ func NewAggregateSignature() iface.Signature {
 }
 
 // RandKey creates a new private key using a random input.
-func RandKey() iface.SecretKey {
+func RandKey() (common.SecretKey, error) {
 	if featureconfig.Get().EnableBlst {
 		return blst.RandKey()
 	}

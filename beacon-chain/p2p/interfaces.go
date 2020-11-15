@@ -51,7 +51,8 @@ type PubSubTopicUser interface {
 
 // ConnectionHandler configures p2p to handle connections with a peer.
 type ConnectionHandler interface {
-	AddConnectionHandler(f func(ctx context.Context, id peer.ID) error)
+	AddConnectionHandler(f func(ctx context.Context, id peer.ID) error,
+		j func(ctx context.Context, id peer.ID) error)
 	AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error)
 	connmgr.ConnectionGater
 }

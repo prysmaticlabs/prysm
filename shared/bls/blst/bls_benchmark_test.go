@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64
+// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
 // +build blst_enabled
 
 package blst_test
@@ -7,11 +7,13 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func BenchmarkSignature_Verify(b *testing.B) {
-	sk := blst.RandKey()
+	sk, err := blst.RandKey()
+	require.NoError(b, err)
 
 	msg := []byte("Some msg")
 	sig := sk.Sign(msg)
@@ -27,12 +29,13 @@ func BenchmarkSignature_Verify(b *testing.B) {
 func BenchmarkSignature_AggregateVerify(b *testing.B) {
 	sigN := 128 // MAX_ATTESTATIONS per block.
 
-	var pks []iface.PublicKey
-	var sigs []iface.Signature
+	var pks []common.PublicKey
+	var sigs []common.Signature
 	var msgs [][32]byte
 	for i := 0; i < sigN; i++ {
 		msg := [32]byte{'s', 'i', 'g', 'n', 'e', 'd', byte(i)}
-		sk := blst.RandKey()
+		sk, err := blst.RandKey()
+		require.NoError(b, err)
 		sig := sk.Sign(msg[:])
 		pks = append(pks, sk.PublicKey())
 		sigs = append(sigs, sig)
@@ -50,7 +53,8 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 }
 
 func BenchmarkSecretKey_Marshal(b *testing.B) {
-	key := blst.RandKey()
+	key, err := blst.RandKey()
+	require.NoError(b, err)
 	d := key.Marshal()
 
 	b.ResetTimer()

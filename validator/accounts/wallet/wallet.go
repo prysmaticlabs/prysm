@@ -12,8 +12,8 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -235,7 +235,7 @@ func OpenWallet(_ context.Context, cfg *Config) (*Wallet, error) {
 
 // SaveWallet persists the wallet's directories to disk.
 func (w *Wallet) SaveWallet() error {
-	if err := os.MkdirAll(w.accountsPath, DirectoryPermissions); err != nil {
+	if err := fileutil.MkdirAll(w.accountsPath); err != nil {
 		return errors.Wrap(err, "could not create wallet directory")
 	}
 	return nil
@@ -260,7 +260,7 @@ func (w *Wallet) Password() string {
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) InitializeKeymanager(
 	ctx context.Context,
-	skipMnemonicConfirm bool,
+	cfg *iface.InitializeKeymanagerConfig,
 ) (keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
@@ -288,7 +288,8 @@ func (w *Wallet) InitializeKeymanager(
 		km, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
 			Opts:                opts,
 			Wallet:              w,
-			SkipMnemonicConfirm: skipMnemonicConfirm,
+			SkipMnemonicConfirm: cfg.SkipMnemonicConfirm,
+			Mnemonic25thWord:    cfg.Mnemonic25thWord,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
@@ -314,11 +315,17 @@ func (w *Wallet) InitializeKeymanager(
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
 func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) error {
 	accountPath := filepath.Join(w.accountsPath, filePath)
-	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
-		return errors.Wrapf(err, "could not create path: %s", accountPath)
+	hasDir, err := fileutil.HasDir(accountPath)
+	if err != nil {
+		return err
+	}
+	if !hasDir {
+		if err := fileutil.MkdirAll(accountPath); err != nil {
+			return errors.Wrapf(err, "could not create path: %s", accountPath)
+		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
-	if err := ioutil.WriteFile(fullPath, data, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	if err := fileutil.WriteFile(fullPath, data); err != nil {
 		return errors.Wrapf(err, "could not write %s", filePath)
 	}
 	log.WithFields(logrus.Fields{
@@ -331,8 +338,14 @@ func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, d
 // ReadFileAtPath within the wallet directory given the desired path and filename.
 func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([]byte, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
-	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
-		return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
+	hasDir, err := fileutil.HasDir(accountPath)
+	if err != nil {
+		return nil, err
+	}
+	if !hasDir {
+		if err := fileutil.MkdirAll(accountPath); err != nil {
+			return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
+		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
 	matches, err := filepath.Glob(fullPath)
@@ -353,7 +366,7 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([
 // with a regex pattern.
 func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (string, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
-	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
+	if err := fileutil.MkdirAll(accountPath); err != nil {
 		return "", errors.Wrapf(err, "could not create path: %s", accountPath)
 	}
 	fullPath := filepath.Join(accountPath, fileName)
@@ -409,7 +422,7 @@ func (w *Wallet) UnlockWalletConfigFile() error {
 func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) error {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
 	// Write the config file to disk.
-	if err := ioutil.WriteFile(configFilePath, encoded, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	if err := fileutil.WriteFile(configFilePath, encoded); err != nil {
 		return errors.Wrapf(err, "could not write %s", configFilePath)
 	}
 	log.WithField("configFilePath", configFilePath).Debug("Wrote keymanager config file to disk")
@@ -431,7 +444,7 @@ func (w *Wallet) ReadEncryptedSeedFromDisk(_ context.Context) (io.ReadCloser, er
 func (w *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) error {
 	seedFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
 	// Write the config file to disk.
-	if err := ioutil.WriteFile(seedFilePath, encoded, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+	if err := fileutil.WriteFile(seedFilePath, encoded); err != nil {
 		return errors.Wrapf(err, "could not write %s", seedFilePath)
 	}
 	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")

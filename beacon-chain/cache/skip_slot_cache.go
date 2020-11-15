@@ -30,7 +30,7 @@ type SkipSlotCache struct {
 	cache      *lru.Cache
 	lock       sync.RWMutex
 	disabled   bool // Allow for programmatic toggling of the cache, useful during initial sync.
-	inProgress map[uint64]bool
+	inProgress map[[32]byte]bool
 }
 
 // NewSkipSlotCache initializes the map and underlying cache.
@@ -41,7 +41,7 @@ func NewSkipSlotCache() *SkipSlotCache {
 	}
 	return &SkipSlotCache{
 		cache:      cache,
-		inProgress: make(map[uint64]bool),
+		inProgress: make(map[[32]byte]bool),
 	}
 }
 
@@ -57,7 +57,7 @@ func (c *SkipSlotCache) Disable() {
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.BeaconState, error) {
+func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "skipSlotCache.Get")
 	defer span.End()
 	if c.disabled {
@@ -77,7 +77,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 		}
 
 		c.lock.RLock()
-		if !c.inProgress[slot] {
+		if !c.inProgress[r] {
 			c.lock.RUnlock()
 			break
 		}
@@ -92,7 +92,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 	}
 	span.AddAttributes(trace.BoolAttribute("inProgress", inProgress))
 
-	item, exists := c.cache.Get(slot)
+	item, exists := c.cache.Get(r)
 
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
@@ -106,7 +106,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
-func (c *SkipSlotCache) MarkInProgress(slot uint64) error {
+func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
 	if c.disabled {
 		return nil
 	}
@@ -114,16 +114,16 @@ func (c *SkipSlotCache) MarkInProgress(slot uint64) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.inProgress[slot] {
+	if c.inProgress[r] {
 		return ErrAlreadyInProgress
 	}
-	c.inProgress[slot] = true
+	c.inProgress[r] = true
 	return nil
 }
 
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
-func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
+func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) error {
 	if c.disabled {
 		return nil
 	}
@@ -131,18 +131,18 @@ func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	delete(c.inProgress, slot)
+	delete(c.inProgress, r)
 	return nil
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(_ context.Context, slot uint64, state *stateTrie.BeaconState) error {
+func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state *stateTrie.BeaconState) error {
 	if c.disabled {
 		return nil
 	}
 
 	// Copy state so cached value is not mutated.
-	c.cache.Add(slot, state.Copy())
+	c.cache.Add(r, state.Copy())
 
 	return nil
 }

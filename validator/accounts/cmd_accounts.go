@@ -22,14 +22,13 @@ var AccountCommands = &cli.Command{
 specified input, capable of creating a imported, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
 			Flags: cmd.WrapFlags([]cli.Flag{
+				flags.Mnemonic25thWordFileFlag,
+				flags.SkipMnemonic25thWordCheckFlag,
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.NumAccountsFlag,
-				featureconfig.AltonaTestnet,
-				featureconfig.OnyxTestnet,
-				featureconfig.MedallaTestnet,
-				featureconfig.SpadinaTestnet,
-				featureconfig.ZinkenTestnet,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -53,11 +52,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.DeletePublicKeysFlag,
-				featureconfig.AltonaTestnet,
-				featureconfig.OnyxTestnet,
-				featureconfig.MedallaTestnet,
-				featureconfig.SpadinaTestnet,
-				featureconfig.ZinkenTestnet,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -75,6 +71,56 @@ this command outputs a deposit data string which is required to become a validat
 			},
 		},
 		{
+			Name:        "disable",
+			Description: "Disable the selected accounts from a users wallet.",
+			Flags: cmd.WrapFlags([]cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.DisablePublicKeysFlag,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
+				cmd.AcceptTosFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := DisableAccountsCli(cliCtx); err != nil {
+					log.Fatalf("Could not disable account: %v", err)
+				}
+				return nil
+			},
+		},
+		{
+			Name:        "enable",
+			Description: "Enable the selected accounts from a users wallet.",
+			Flags: cmd.WrapFlags([]cli.Flag{
+				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
+				flags.EnablePublicKeysFlag,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
+				cmd.AcceptTosFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				if err := EnableAccountsCli(cliCtx); err != nil {
+					log.Fatalf("Could not enable account: %v", err)
+				}
+				return nil
+			},
+		},
+		{
 			Name:        "list",
 			Description: "Lists all validator accounts in a user's wallet directory",
 			Flags: cmd.WrapFlags([]cli.Flag{
@@ -82,11 +128,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordFileFlag,
 				flags.ShowDepositDataFlag,
 				flags.ShowPrivateKeysFlag,
-				featureconfig.AltonaTestnet,
-				featureconfig.OnyxTestnet,
-				featureconfig.MedallaTestnet,
-				featureconfig.SpadinaTestnet,
-				featureconfig.ZinkenTestnet,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -115,11 +158,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupDirFlag,
 				flags.BackupPublicKeysFlag,
 				flags.BackupPasswordFile,
-				featureconfig.AltonaTestnet,
-				featureconfig.OnyxTestnet,
-				featureconfig.MedallaTestnet,
-				featureconfig.SpadinaTestnet,
-				featureconfig.ZinkenTestnet,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -145,11 +185,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
 				flags.ImportPrivateKeyFileFlag,
-				featureconfig.AltonaTestnet,
-				featureconfig.OnyxTestnet,
-				featureconfig.MedallaTestnet,
-				featureconfig.SpadinaTestnet,
-				featureconfig.ZinkenTestnet,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -180,11 +217,8 @@ this command outputs a deposit data string which is required to become a validat
 				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
-				featureconfig.AltonaTestnet,
-				featureconfig.OnyxTestnet,
-				featureconfig.MedallaTestnet,
-				featureconfig.SpadinaTestnet,
-				featureconfig.ZinkenTestnet,
+				featureconfig.ToledoTestnet,
+				featureconfig.PyrmontTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

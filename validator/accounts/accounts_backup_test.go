@@ -2,12 +2,9 @@ package accounts
 
 import (
 	"archive/zip"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"sort"
@@ -17,9 +14,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -30,18 +27,13 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	password := "Pa$sW0rD0__Fo0xPr"
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will backup accounts to.
-	backupDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "backupDir")
-	require.NoError(t, os.MkdirAll(backupDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(backupDir), "Failed to remove directory")
-	})
+	backupDir := filepath.Join(t.TempDir(), "backupDir")
+	require.NoError(t, os.MkdirAll(backupDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 
 	// Write a password for the accounts we wish to backup to a file.
 	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
-	err = ioutil.WriteFile(
+	err := ioutil.WriteFile(
 		backupPasswordFile,
 		[]byte("Passw0rdz4938%%"),
 		params.BeaconIoConfig().ReadWritePermissions,
@@ -76,7 +68,9 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 
 	km, err := w.InitializeKeymanager(
 		cliCtx.Context,
-		true, /* skip mnemonic confirm */
+		&iface.InitializeKeymanagerConfig{
+			SkipMnemonicConfirm: true,
+		},
 	)
 	require.NoError(t, err)
 
@@ -141,19 +135,13 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 
 func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
 	// Write a directory where we will import keys from.
-	keysDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
+	keysDir := filepath.Join(t.TempDir(), "keysDir")
+	require.NoError(t, os.MkdirAll(keysDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 
 	// Write a directory where we will backup accounts to.
-	backupDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "backupDir")
-	require.NoError(t, os.MkdirAll(backupDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(keysDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(backupDir), "Failed to remove directory")
-	})
+	backupDir := filepath.Join(t.TempDir(), "backupDir")
+	require.NoError(t, os.MkdirAll(backupDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 
 	// Create 2 keystore files in the keys directory we can then
 	// import from in our wallet.
@@ -165,7 +153,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 
 	// Write a password for the accounts we wish to backup to a file.
 	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
-	err = ioutil.WriteFile(
+	err := ioutil.WriteFile(
 		backupPasswordFile,
 		[]byte("Passw0rdz4938%%"),
 		params.BeaconIoConfig().ReadWritePermissions,

@@ -282,7 +282,10 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	}
 
 	highestSlot := state.Slot()
-	key := state.Slot()
+	key, err := cacheKey(ctx, state)
+	if err != nil {
+		return nil, err
+	}
 
 	// Restart from cached value, if one exists.
 	cachedState, err := SkipSlotCache.Get(ctx, key)
@@ -412,7 +415,7 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, state, err := b.RandaoSignatureSet(state, signed.Block.Body)
+	rSet, err := b.RandaoSignatureSet(state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")

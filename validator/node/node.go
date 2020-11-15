@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -104,6 +105,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := ValidatorClient.db.MigrateV2ProposalsProtectionDb(cliCtx.Context); err != nil {
 		return nil, err
 	}
+	if err := ValidatorClient.db.MigrateV2AttestationProtectionDb(cliCtx.Context); err != nil {
+		return nil, err
+	}
 	return ValidatorClient, nil
 }
 
@@ -159,7 +163,6 @@ func (s *ValidatorClient) Close() {
 func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
-	var accountsDir string
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
@@ -180,24 +183,28 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(
-			cliCtx.Context, false, /* skipMnemonicConfirm */
-		)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+			SkipMnemonicConfirm: false,
+		})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
 		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
-		accountsDir = s.wallet.AccountsDir()
 	}
-
-	dataDir := moveDb(cliCtx, accountsDir)
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if s.wallet != nil {
+		dataDir = s.wallet.AccountsDir()
+	}
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+	}
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
-		if dataDir == "" {
-			dataDir = cmd.DefaultDataDir()
+		if dataDir == "" && s.wallet != nil {
+			dataDir = s.wallet.AccountsDir()
 			if dataDir == "" {
 				log.Fatal(
 					"Could not determine your system's HOME path, please specify a --datadir you wish " +
@@ -208,6 +215,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 		if err := clearDB(dataDir, forceClearFlag); err != nil {
 			return err
+		}
+	} else {
+		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+		if !fileutil.FileExists(dataFile) {
+			log.Warnf("Slashing protection file %s is missing.\n"+
+				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
+				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
@@ -241,26 +255,6 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func moveDb(cliCtx *cli.Context, accountsDir string) string {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	if accountsDir != "" {
-		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		newDataFile := filepath.Join(accountsDir, kv.ProtectionDbFileName)
-		if fileutil.FileExists(dataFile) && !fileutil.FileExists(newDataFile) {
-			log.WithFields(logrus.Fields{
-				"oldDbPath": dataDir,
-				"walletDir": accountsDir,
-			}).Info("Moving validator protection db to wallet dir")
-			err := fileutil.CopyFile(dataFile, newDataFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		dataDir = accountsDir
-	}
-	return dataDir
-}
-
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
@@ -277,9 +271,9 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(
-			cliCtx.Context, false, /* skipMnemonicConfirm */
-		)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+			SkipMnemonicConfirm: false,
+		})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
@@ -287,10 +281,16 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
-
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if s.wallet != nil {
+		dataDir = s.wallet.AccountsDir()
+	}
+	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+	}
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+
 	if clearFlag || forceClearFlag {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
@@ -440,6 +440,12 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 
 func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	if gatewayHost != flags.DefaultGatewayHost {
+		log.WithField("web-host", gatewayHost).Warn(
+			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
+				"changing this parameter if you are exposing this host to the Internet!",
+		)
+	}
 	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)

@@ -139,7 +139,7 @@ func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
 		},
 	}
 
-	want := "validator has already submitted an exit, which will take place at epoch: 10"
+	want := "validator with index 0 has already submitted an exit, which will take place at epoch: 10"
 	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
 	assert.ErrorContains(t, want, err)
 }
@@ -171,7 +171,9 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	err = state.SetSlot(state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, err)
 
-	priv := bls.RandKey()
+	priv, err := bls.RandKey()
+	require.NoError(t, err)
+
 	val, err := state.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()

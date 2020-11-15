@@ -32,11 +32,8 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Testnet Flags.
-	AltonaTestnet  bool // AltonaTestnet defines the flag through which we can enable the node to run on the Altona testnet.
-	OnyxTestnet    bool // OnyxTestnet defines the flag through which we can enable the node to run on the Onyx testnet.
-	MedallaTestnet bool // MedallaTestnet defines the flag through which we can enable the node to run on the Medalla testnet.
-	SpadinaTestnet bool // SpadinaTestnet defines the flag through which we can enable the node to run on the Spadina testnet.
-	ZinkenTestnet  bool // ZinkenTestnet defines the flag through which we can enable the node to run on the Zinken testnet.
+	ToledoTestnet  bool // ToledoTestnet defines the flag through which we can enable the node to run on the Toledo testnet.
+	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
 	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
@@ -50,6 +47,7 @@ type Flags struct {
 	EnableEth1DataMajorityVote bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer           bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnablePruningDepositProofs bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
+	EnableSyncBacktracking     bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -107,36 +105,19 @@ func InitWithReset(c *Flags) func() {
 
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context, cfg *Flags) {
-	if ctx.Bool(AltonaTestnet.Name) {
-		log.Warn("Running on Altona Testnet")
-		params.UseAltonaConfig()
-		params.UseAltonaNetworkConfig()
-		cfg.AltonaTestnet = true
-	} else if ctx.Bool(OnyxTestnet.Name) {
-		log.Warn("Running on Onyx Testnet")
-		params.UseOnyxConfig()
-		params.UseOnyxNetworkConfig()
-		cfg.OnyxTestnet = true
-	} else if ctx.Bool(MedallaTestnet.Name) {
-		log.Warn("Running on Medalla Testnet")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
-	} else if ctx.Bool(SpadinaTestnet.Name) {
-		log.Warn("Running on Spadina Testnet")
-		params.UseSpadinaConfig()
-		params.UseSpadinaNetworkConfig()
-		cfg.SpadinaTestnet = true
-	} else if ctx.Bool(ZinkenTestnet.Name) {
-		log.Warn("Running on Zinken Testnet")
-		params.UseZinkenConfig()
-		params.UseZinkenNetworkConfig()
-		cfg.ZinkenTestnet = true
+	if ctx.Bool(ToledoTestnet.Name) {
+		log.Warn("Running on Toledo Testnet")
+		params.UseToledoConfig()
+		params.UseToledoNetworkConfig()
+		cfg.ToledoTestnet = true
+	} else if ctx.Bool(PyrmontTestnet.Name) {
+		log.Warn("Running on Pyrmont Testnet")
+		params.UsePyrmontConfig()
+		params.UsePyrmontNetworkConfig()
+		cfg.PyrmontTestnet = true
 	} else {
-		log.Warn("--<testnet> flag is not specified (default: Medalla), this will become required from next release! ")
-		params.UseMedallaConfig()
-		params.UseMedallaNetworkConfig()
-		cfg.MedallaTestnet = true
+		log.Warn("Running on ETH2 Mainnet")
+		params.UseMainnetConfig()
 	}
 }
 
@@ -180,14 +161,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
 	}
-	if ctx.Bool(enableBlst.Name) {
-		log.Warn("Enabling new BLS library blst")
-		cfg.EnableBlst = true
+	cfg.EnableBlst = true
+	if ctx.Bool(disableBlst.Name) {
+		log.Warn("Disabling new BLS library blst")
+		cfg.EnableBlst = false
 	}
 	cfg.EnablePruningDepositProofs = true
 	if ctx.Bool(disablePruningDepositProofs.Name) {
 		log.Warn("Disabling pruning deposit proofs")
 		cfg.EnablePruningDepositProofs = false
+	}
+	if ctx.Bool(enableSyncBacktracking.Name) {
+		log.Warn("Enabling init-sync backtracking algorithm")
+		cfg.EnableSyncBacktracking = true
 	}
 	Init(cfg)
 }

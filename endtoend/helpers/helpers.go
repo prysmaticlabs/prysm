@@ -133,9 +133,6 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 
 // WritePprofFiles writes the memory heap and cpu profile files to the test path.
 func WritePprofFiles(testDir string, index int) error {
-	if err := os.MkdirAll(filepath.Join(testDir), os.ModePerm); err != nil {
-		return err
-	}
 	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
 	filePath := filepath.Join(testDir, fmt.Sprintf(memoryHeapFileName, index))
 	if err := writeURLRespAtPath(url, filePath); err != nil {

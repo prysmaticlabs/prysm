@@ -5,8 +5,6 @@
 package validators
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -39,24 +37,22 @@ import (
 //    validator.exit_epoch = exit_queue_epoch
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie.BeaconState, error) {
-	readOnlyVals := state.ValidatorsReadOnly()
-	if idx >= uint64(len(readOnlyVals)) {
-		return nil, fmt.Errorf("validator idx %d is higher then validator count %d", idx, len(readOnlyVals))
-	}
-
 	validator, err := state.ValidatorAtIndex(idx)
 	if err != nil {
 		return nil, err
 	}
-
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state, nil
 	}
 	var exitEpochs []uint64
-	for _, val := range readOnlyVals {
+	err = state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(helpers.CurrentEpoch(state)))
 
@@ -70,10 +66,14 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := uint64(0)
-	for _, val := range readOnlyVals {
+	err = state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
 		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(state, helpers.CurrentEpoch(state))
 	if err != nil {

@@ -13,7 +13,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/bls:go_default_library",
-        "//shared/params:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/timeutils:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
         "@com_github_pborman_uuid//:go_default_library",
@@ -35,7 +35,6 @@ go_test(
     deps = [
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_pborman_uuid//:go_default_library",

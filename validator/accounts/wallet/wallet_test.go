@@ -1,22 +1,19 @@
 package wallet_test
 
 import (
-	"crypto/rand"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -90,31 +87,17 @@ func setupWalletCtx(
 }
 
 func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
-	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
-	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwordFile")
+	walletDir := filepath.Join(t.TempDir(), "wallet")
+	passwordsDir := filepath.Join(t.TempDir(), "passwords")
+	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
 	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
 	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	})
 	return walletDir, passwordsDir, passwordFilePath
 }
 
 func Test_Exists_RandomFiles(t *testing.T) {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	path := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(path), "Failed to remove directory")
-	})
+	path := filepath.Join(t.TempDir(), "wallet")
 
 	exists, err := wallet.Exists(path)
 	require.Equal(t, false, exists)
@@ -127,16 +110,11 @@ func Test_Exists_RandomFiles(t *testing.T) {
 }
 
 func Test_IsValid_RandomFiles(t *testing.T) {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	path := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
+	path := filepath.Join(t.TempDir(), "wallet")
 	valid, err := wallet.IsValid(path)
 	require.NoError(t, err)
 	require.Equal(t, false, valid)
 
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(path), "Failed to remove directory")
-	})
 	require.NoError(t, os.MkdirAll(path, params.BeaconIoConfig().ReadWriteExecutePermissions), "Failed to create directory")
 
 	valid, err = wallet.IsValid(path)
@@ -159,7 +137,7 @@ func Test_LockUnlockFile(t *testing.T) {
 		passwordsDir:        passwordsDir,
 		walletPasswordFile:  passwordFile,
 		accountPasswordFile: passwordFile,
-		keymanagerKind:      keymanager.Derived,
+		keymanagerKind:      keymanager.Imported,
 		numAccounts:         numAccounts,
 	})
 
@@ -174,7 +152,9 @@ func Test_LockUnlockFile(t *testing.T) {
 	})
 	require.NoError(t, err)
 	defer unlock(t, w)
-	_, err = w.InitializeKeymanager(cliCtx.Context, true)
+	_, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	assert.NoError(t, err)
 	err = w.LockWalletConfigFile(cliCtx.Context)

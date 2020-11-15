@@ -26,7 +26,6 @@ go_library(
         "//shared/rand:go_default_library",
         "//validator/accounts/iface:go_default_library",
         "//validator/keymanager:go_default_library",
-        "//validator/keymanager/derived/v1derivation:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -42,6 +41,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "backup_test.go",
+        "eip_test.go",
         "keymanager_test.go",
         "mnemonic_test.go",
     ],

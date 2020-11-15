@@ -20,16 +20,16 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		AttestationAggregationStrategy: string(MaxCoverAggregation),
-	})
-	defer resetCfg()
-	code := m.Run()
-	// os.Exit will prevent defer from being called
-	resetCfg()
-	os.Exit(code)
+	run := func() int {
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetOutput(ioutil.Discard)
+		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			AttestationAggregationStrategy: string(MaxCoverAggregation),
+		})
+		defer resetCfg()
+		return m.Run()
+	}
+	os.Exit(run())
 }
 
 func TestAggregateAttestations_AggregatePair(t *testing.T) {

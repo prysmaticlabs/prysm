@@ -50,6 +50,7 @@ go_library(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
         "//shared/timeutils:go_default_library",
@@ -76,6 +77,7 @@ go_test(
     name = "go_raceoff_test",
     size = "medium",
     srcs = [
+        "blockchain_test.go",
         "chain_info_test.go",
         "head_test.go",
         "info_test.go",

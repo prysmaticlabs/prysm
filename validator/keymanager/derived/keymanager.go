@@ -23,11 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived/v1derivation"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
 	types "github.com/wealdtech/go-eth2-types/v2"
-	v2derivation "github.com/wealdtech/go-eth2-util"
+	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -77,6 +76,7 @@ type SetupConfig struct {
 	Wallet              iface.Wallet
 	SkipMnemonicConfirm bool
 	Mnemonic            string
+	Mnemonic25thWord    string // A '25th' word in the mnemonic, which is a user-defined passphrase.
 }
 
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
@@ -112,7 +112,7 @@ func NewKeymanager(
 ) (*Keymanager, error) {
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
-	encodedSeedFile, err := checkEncodedKeyFile(ctx, cfg.Wallet, cfg.SkipMnemonicConfirm)
+	encodedSeedFile, err := checkEncodedKeyFile(ctx, cfg.Wallet, cfg.SkipMnemonicConfirm, cfg.Mnemonic25thWord)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func KeymanagerForPhrase(
 	// Check if the wallet seed file exists. If it does not, we initialize one
 	// by creating a new mnemonic and writing the encrypted file to disk.
 	var encodedSeedFile []byte
-	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.Wallet.Password())
+	seedConfig, err := seedFileFromMnemonic(cfg.Mnemonic, cfg.Wallet.Password(), cfg.Mnemonic25thWord)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 	}
@@ -226,8 +226,10 @@ func (dr *Keymanager) NextAccountNumber() uint64 {
 
 // WriteEncryptedSeedToWallet given a mnemonic phrase, is able to regenerate a wallet seed
 // encrypt it, and write it to the wallet's path.
-func (dr *Keymanager) WriteEncryptedSeedToWallet(ctx context.Context, mnemonic string) error {
-	seedConfig, err := seedFileFromMnemonic(mnemonic, dr.wallet.Password())
+func (dr *Keymanager) WriteEncryptedSeedToWallet(
+	ctx context.Context, mnemonic, mnemonicPassphrase string,
+) error {
+	seedConfig, err := seedFileFromMnemonic(mnemonic, dr.wallet.Password(), mnemonicPassphrase)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
 	}
@@ -352,6 +354,11 @@ func (dr *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, 
 	copy(result, keys)
 	lock.RUnlock()
 	return result, nil
+}
+
+// FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the keymanager.
+func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return dr.FetchValidatingPublicKeys(ctx)
 }
 
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
@@ -486,19 +493,17 @@ func (dr *Keymanager) initializeKeysCachesFromSeed() error {
 }
 
 func (dr *Keymanager) deriveKey(path string) (*types.BLSPrivateKey, error) {
-	if dr.opts.DerivedVersion == "2" {
-		return v2derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
-	}
-	return v1derivation.PrivateKeyFromSeedAndPath(dr.seed, path)
+	return util.PrivateKeyFromSeedAndPath(dr.seed, path)
 }
 
 func checkEncodedKeyFile(
 	ctx context.Context,
 	wallet iface.Wallet,
 	skipMnemonicConfirm bool,
+	mnemonicPassphrase string,
 ) ([]byte, error) {
 	if !fileutil.FileExists(filepath.Join(wallet.AccountsDir(), EncryptedSeedFileName)) {
-		seedConfig, err := initializeWalletSeedFile(wallet.Password(), skipMnemonicConfirm)
+		seedConfig, err := initializeWalletSeedFile(wallet.Password(), skipMnemonicConfirm, mnemonicPassphrase)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize new wallet seed file")
 		}
@@ -529,7 +534,11 @@ func checkEncodedKeyFile(
 
 // Creates a new, encrypted seed using a password input
 // and persists its encrypted file metadata to disk under the wallet path.
-func initializeWalletSeedFile(password string, skipMnemonicConfirm bool) (*SeedConfig, error) {
+func initializeWalletSeedFile(
+	password string,
+	skipMnemonicConfirm bool,
+	mnemonicPassphrase string,
+) (*SeedConfig, error) {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
 		return nil, errors.Wrap(err, "could not initialize mnemonic source of randomness")
@@ -544,7 +553,7 @@ func initializeWalletSeedFile(password string, skipMnemonicConfirm bool) (*SeedC
 	if err := m.ConfirmAcknowledgement(phrase); err != nil {
 		return nil, errors.Wrap(err, "could not confirm mnemonic acknowledgement")
 	}
-	walletSeed := bip39.NewSeed(phrase, "")
+	walletSeed := bip39.NewSeed(phrase, mnemonicPassphrase)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {
@@ -565,11 +574,11 @@ func initializeWalletSeedFile(password string, skipMnemonicConfirm bool) (*SeedC
 
 // Uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
-func seedFileFromMnemonic(mnemonic, password string) (*SeedConfig, error) {
+func seedFileFromMnemonic(mnemonic, password string, mnemonicPassphrase string) (*SeedConfig, error) {
 	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
 		return nil, bip39.ErrInvalidMnemonic
 	}
-	walletSeed := bip39.NewSeed(mnemonic, "")
+	walletSeed := bip39.NewSeed(mnemonic, mnemonicPassphrase)
 	encryptor := keystorev4.New()
 	cryptoFields, err := encryptor.Encrypt(walletSeed, password)
 	if err != nil {

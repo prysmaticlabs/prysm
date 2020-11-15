@@ -22,10 +22,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableBlst = &cli.BoolFlag{
+		Name:   "blst",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedEnablePruningDepositProofs,
 	deprecatedEnableEth1DataMajorityVote,
+	deprecatedEnableBlst,
 }

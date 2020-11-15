@@ -66,6 +66,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	s.saveHotStateDB.lock.Lock()
 	if s.saveHotStateDB.enabled && state.Slot()%duration == 0 {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
+			s.saveHotStateDB.lock.Unlock()
 			return err
 		}
 		s.saveHotStateDB.savedStateRoots = append(s.saveHotStateDB.savedStateRoots, blockRoot)

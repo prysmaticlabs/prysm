@@ -1,27 +1,34 @@
-// +build darwin windows !blst_enabled
+// +build  !blst_enabled
 
 package blst
 
-import "github.com/prysmaticlabs/prysm/shared/bls/iface"
+import (
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
+)
 
-// This stub file exists until build issues can be resolved for darwin and windows.
-const err = "blst is only supported on linux with blst_enabled gotag"
+// This stub file exists until build issues can be resolved for libfuzz.
+const err = "blst is only supported on linux,darwin,windows with blst_enabled gotag"
 
 // SecretKey -- stub
 type SecretKey struct{}
 
 // PublicKey -- stub
-func (s SecretKey) PublicKey() iface.PublicKey {
+func (s SecretKey) PublicKey() common.PublicKey {
 	panic(err)
 }
 
 // Sign -- stub
-func (s SecretKey) Sign(_ []byte) iface.Signature {
+func (s SecretKey) Sign(_ []byte) common.Signature {
 	panic(err)
 }
 
 // Marshal -- stub
 func (s SecretKey) Marshal() []byte {
+	panic(err)
+}
+
+// IsZero -- stub
+func (s SecretKey) IsZero() bool {
 	panic(err)
 }
 
@@ -34,12 +41,17 @@ func (p PublicKey) Marshal() []byte {
 }
 
 // Copy -- stub
-func (p PublicKey) Copy() iface.PublicKey {
+func (p PublicKey) Copy() common.PublicKey {
 	panic(err)
 }
 
 // Aggregate -- stub
-func (p PublicKey) Aggregate(_ iface.PublicKey) iface.PublicKey {
+func (p PublicKey) Aggregate(_ common.PublicKey) common.PublicKey {
+	panic(err)
+}
+
+// IsInfinite -- stub
+func (s PublicKey) IsInfinite() bool {
 	panic(err)
 }
 
@@ -47,17 +59,17 @@ func (p PublicKey) Aggregate(_ iface.PublicKey) iface.PublicKey {
 type Signature struct{}
 
 // Verify -- stub
-func (s Signature) Verify(_ iface.PublicKey, _ []byte) bool {
+func (s Signature) Verify(_ common.PublicKey, _ []byte) bool {
 	panic(err)
 }
 
 // AggregateVerify -- stub
-func (s Signature) AggregateVerify(_ []iface.PublicKey, _ [][32]byte) bool {
+func (s Signature) AggregateVerify(_ []common.PublicKey, _ [][32]byte) bool {
 	panic(err)
 }
 
 // FastAggregateVerify -- stub
-func (s Signature) FastAggregateVerify(_ []iface.PublicKey, _ [32]byte) bool {
+func (s Signature) FastAggregateVerify(_ []common.PublicKey, _ [32]byte) bool {
 	panic(err)
 }
 
@@ -67,7 +79,7 @@ func (s Signature) Marshal() []byte {
 }
 
 // Copy -- stub
-func (s Signature) Copy() iface.Signature {
+func (s Signature) Copy() common.Signature {
 	panic(err)
 }
 
@@ -92,22 +104,22 @@ func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
 }
 
 // AggregateSignatures -- stub
-func AggregateSignatures(_ []iface.Signature) iface.Signature {
+func AggregateSignatures(_ []common.Signature) common.Signature {
 	panic(err)
 }
 
 // VerifyMultipleSignatures -- stub
-func VerifyMultipleSignatures(_ [][]byte, _ [][32]byte, _ []iface.PublicKey) (bool, error) {
+func VerifyMultipleSignatures(_ [][]byte, _ [][32]byte, _ []common.PublicKey) (bool, error) {
 	panic(err)
 }
 
 // NewAggregateSignature -- stub
-func NewAggregateSignature() iface.Signature {
+func NewAggregateSignature() common.Signature {
 	panic(err)
 }
 
 // RandKey -- stub
-func RandKey() iface.SecretKey {
+func RandKey() (common.SecretKey, error) {
 	panic(err)
 }
 

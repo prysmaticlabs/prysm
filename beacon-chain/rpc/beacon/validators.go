@@ -469,7 +469,8 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
 	var requestedEpoch uint64
 	switch q := req.QueryFilter.(type) {
@@ -478,48 +479,43 @@ func (bs *Server) GetValidatorParticipation(
 	case *ethpb.GetValidatorParticipationRequest_Epoch:
 		requestedEpoch = q.Epoch
 	default:
-		// Prevent underflow and ensure participation is always queried for previous epoch.
-		if currentEpoch > 1 {
-			requestedEpoch = currentEpoch - 1
-		}
+		requestedEpoch = currentEpoch
 	}
 
-	if requestedEpoch >= currentEpoch {
+	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch until older than current epoch, current epoch %d, requesting %d",
+			"Cannot retrieve information about an epoch greater than current epoch, current epoch %d, requesting %d",
 			currentEpoch,
 			requestedEpoch,
 		)
 	}
-	// Calculate the end slot of the next epoch.
-	// Ex: requested epoch 1, this gets slot 95.
-	nextEpochEndSlot, err := helpers.StartSlot(requestedEpoch + 2)
+
+	// Get current slot state for current epoch attestations.
+	startSlot, err := helpers.StartSlot(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
-	nextEpochEndSlot--
-	requestedState, err := bs.StateGen.StateBySlot(ctx, nextEpochEndSlot)
+	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
+	// This ensures that we don't miss previous attestations when input requested epochs.
+	startSlot += params.BeaconConfig().SlotsPerEpoch - 1
+	state, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	v, b, err := precompute.New(ctx, requestedState)
+	v, b, err := precompute.New(ctx, state)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
 	}
-	_, b, err = precompute.ProcessAttestations(ctx, requestedState, v, b)
+	_, b, err = precompute.ProcessAttestations(ctx, state, v, b)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 	}
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
 
-	return &ethpb.ValidatorParticipationResponse{
+	p := &ethpb.ValidatorParticipationResponse{
 		Epoch:     requestedEpoch,
-		Finalized: requestedEpoch <= headState.FinalizedCheckpointEpoch(),
+		Finalized: requestedEpoch <= bs.FinalizationFetcher.FinalizedCheckpt().Epoch,
 		Participation: &ethpb.ValidatorParticipation{
 			// TODO(7130): Remove these three deprecated fields.
 			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
@@ -533,7 +529,9 @@ func (bs *Server) GetValidatorParticipation(
 			PreviousEpochTargetAttestingGwei: b.PrevEpochTargetAttested,
 			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
 		},
-	}, nil
+	}
+
+	return p, nil
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
@@ -806,13 +804,17 @@ func (bs *Server) GetIndividualVotes(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 	}
-	vals := requestedState.ValidatorsReadOnly()
 	for _, index := range filteredIndices {
 		if index >= uint64(len(v)) {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
 			continue
 		}
-		pb := vals[index].PublicKey()
+		val, err := requestedState.ValidatorAtIndexReadOnly(index)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve validator: %v", err)
+
+		}
+		pb := val.PublicKey()
 		votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{
 			Epoch:                            req.Epoch,
 			PublicKey:                        pb[:],

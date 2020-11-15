@@ -2,19 +2,16 @@ package accounts
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -48,6 +45,8 @@ type testWalletConfig struct {
 	backupDir               string
 	keysDir                 string
 	deletePublicKeys        string
+	enablePublicKeys        string
+	disablePublicKeys       string
 	voluntaryExitPublicKeys string
 	backupPublicKeys        string
 	backupPasswordFile      string
@@ -69,6 +68,8 @@ func setupWalletCtx(
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.DisablePublicKeysFlag.Name, cfg.disablePublicKeys, "")
+	set.String(flags.EnablePublicKeysFlag.Name, cfg.enablePublicKeys, "")
 	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
 	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
 	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
@@ -77,15 +78,19 @@ func setupWalletCtx(
 	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
+	set.Bool(flags.SkipMnemonic25thWordCheckFlag.Name, true, "")
 
 	if cfg.privateKeyFile != "" {
 		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
 		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
 	}
 	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(tb, set.Set(flags.SkipMnemonic25thWordCheckFlag.Name, "true"))
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.DisablePublicKeysFlag.Name, cfg.disablePublicKeys))
+	assert.NoError(tb, set.Set(flags.EnablePublicKeysFlag.Name, cfg.enablePublicKeys))
 	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
 	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
@@ -98,21 +103,12 @@ func setupWalletCtx(
 }
 
 func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random file path")
-	walletDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "wallet")
-	require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-	passwordsDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwords")
-	require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	passwordFileDir := filepath.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath), "passwordFile")
-	require.NoError(t, os.MkdirAll(passwordFileDir, os.ModePerm))
+	walletDir := filepath.Join(t.TempDir(), "wallet")
+	passwordsDir := filepath.Join(t.TempDir(), "passwords")
+	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
+	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(passwordFileDir), "Failed to remove directory")
-		require.NoError(t, os.RemoveAll(passwordsDir), "Failed to remove directory")
-	})
 	return walletDir, passwordsDir, passwordFilePath
 }
 

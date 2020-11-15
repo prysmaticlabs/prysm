@@ -43,16 +43,9 @@ go_binary(
 
 go_image(
     name = "image",
-    srcs = SRCS,
     base = "//tools:go_image",
-    goarch = "amd64",
-    goos = "linux",
-    importpath = IMPORT_PATH,
-    pure = "off",  # depends on cgo for go-ethereum crypto
-    race = "off",
-    static = "off",  # go-ethereum is bad about static
+    binary = ":faucet",
     tags = ["manual"],
-    deps = DEPS,
 )
 
 container_bundle(

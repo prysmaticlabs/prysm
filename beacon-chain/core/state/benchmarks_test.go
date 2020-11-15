@@ -16,19 +16,6 @@ import (
 
 var runAmount = 25
 
-func TestExecuteStateTransition_FullBlock(t *testing.T) {
-	benchutil.SetBenchmarkConfig()
-	beaconState, err := benchutil.PreGenState1Epoch()
-	require.NoError(t, err)
-	block, err := benchutil.PreGenFullBlock()
-	require.NoError(t, err)
-
-	oldSlot := beaconState.Slot()
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	require.NoError(t, err, "Failed to process block, benchmarks will fail")
-	require.NotEqual(t, oldSlot, beaconState.Slot(), "Expected slots to be different")
-}
-
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState1Epoch()

@@ -14,10 +14,12 @@ import (
 const (
 	// WalletDefaultDirName for accounts.
 	WalletDefaultDirName = "prysm-wallet-v2"
+	// DefaultGatewayHost for the validator client.
+	DefaultGatewayHost = "127.0.0.1"
 )
 
 var (
-	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
+	// DisableAccountMetricsFlag disables the prometheus metrics for validator accounts, default false.
 	DisableAccountMetricsFlag = &cli.BoolFlag{
 		Name: "disable-account-metrics",
 		Usage: "Disable prometheus metrics for validator accounts. Operators with high volumes " +
@@ -102,7 +104,7 @@ var (
 	GRPCGatewayHost = &cli.StringFlag{
 		Name:  "grpc-gateway-host",
 		Usage: "The host on which the gateway server runs on",
-		Value: "127.0.0.1",
+		Value: DefaultGatewayHost,
 	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.
 	GRPCGatewayPort = &cli.IntFlag{
@@ -139,6 +141,16 @@ var (
 		Name:  "wallet-password-file",
 		Usage: "Path to a plain-text, .txt file containing your wallet password",
 	}
+	// Mnemonic25thWordFileFlag defines a path to a file containing a "25th" word mnemonic passphrase for advanced users.
+	Mnemonic25thWordFileFlag = &cli.StringFlag{
+		Name:  "mnemonic-25th-word-file",
+		Usage: "(Advanced) Path to a plain-text, .txt file containing a 25th word passphrase for your mnemonic for HD wallets",
+	}
+	// SkipMnemonic25thWordCheckFlag allows for skipping a check for mnemonic 25th word passphrases for HD wallets.
+	SkipMnemonic25thWordCheckFlag = &cli.StringFlag{
+		Name:  "skip-mnemonic-25th-word-check",
+		Usage: "Allows for skipping the check for a mnemonic 25th word passphrase for HD wallets",
+	}
 	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
 	ImportPrivateKeyFileFlag = &cli.StringFlag{
 		Name:  "import-private-key-file",
@@ -172,6 +184,20 @@ var (
 	DeletePublicKeysFlag = &cli.StringFlag{
 		Name:  "delete-public-keys",
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to delete",
+		Value: "",
+	}
+	// DisablePublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to disable for their wallet.
+	DisablePublicKeysFlag = &cli.StringFlag{
+		Name:  "disable-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to disable",
+		Value: "",
+	}
+	// EnablePublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to enable for their wallet.
+	EnablePublicKeysFlag = &cli.StringFlag{
+		Name:  "enable-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to enable",
 		Value: "",
 	}
 	// BackupPublicKeysFlag defines a comma-separated list of hex string public keys

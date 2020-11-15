@@ -33,6 +33,10 @@ func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][
 	return m.publicKeys, nil
 }
 
+func (m *mockRemoteKeymanager) FetchAllValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+	return m.publicKeys, nil
+}
+
 func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
 }
@@ -41,7 +45,8 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
-	validatingKey := bls.RandKey()
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
 	pubKey := validatingKey.PublicKey().Marshal()
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)

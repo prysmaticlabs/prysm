@@ -1,17 +1,12 @@
 package node
 
 import (
-	"crypto/rand"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -25,9 +20,9 @@ import (
 func TestNode_Builds(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
-	dir := testutil.TempDir() + "/walletpath"
-	passwordDir := testutil.TempDir() + "/password"
+	set.String("datadir", t.TempDir()+"/datadir", "the node data directory")
+	dir := t.TempDir() + "/walletpath"
+	passwordDir := t.TempDir() + "/password"
 	require.NoError(t, os.MkdirAll(passwordDir, os.ModePerm))
 	passwordFile := filepath.Join(passwordDir, "password.txt")
 	walletPassword := "$$Passw0rdz2$$"
@@ -36,11 +31,6 @@ func TestNode_Builds(t *testing.T) {
 		[]byte(walletPassword),
 		os.ModePerm,
 	))
-	defer func() {
-		assert.NoError(t, os.RemoveAll(dir))
-		assert.NoError(t, os.RemoveAll(passwordDir))
-		assert.NoError(t, os.RemoveAll(testutil.TempDir()+"/datadir"))
-	}()
 	set.String("wallet-dir", dir, "path to wallet")
 	set.String("wallet-password-file", passwordFile, "path to wallet password")
 	set.String("keymanager-kind", "imported", "keymanager kind")
@@ -65,11 +55,7 @@ func TestNode_Builds(t *testing.T) {
 // TestClearDB tests clearing the database
 func TestClearDB(t *testing.T) {
 	hook := logTest.NewGlobal()
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err, "Could not generate random number for file path")
-	tmp := filepath.Join(testutil.TempDir(), fmt.Sprintf("datadirtest%d", randPath))
-	require.NoError(t, os.RemoveAll(tmp))
-	err = clearDB(tmp, true)
-	require.NoError(t, err)
+	tmp := filepath.Join(t.TempDir(), "datadirtest")
+	require.NoError(t, clearDB(tmp, true))
 	require.LogsContain(t, hook, "Removing database")
 }

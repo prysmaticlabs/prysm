@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -35,7 +36,9 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager:            km,
@@ -48,7 +51,8 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 	keystores := make([]string, numAccounts)
 	pubKeys := make([][]byte, len(keystores))
 	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 		id, err := uuid.NewRandom()
 		require.NoError(t, err)
@@ -71,7 +75,9 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		KeystoresPassword: strongPass,
 	})
 	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	return ss, pubKeys
 }
@@ -111,7 +117,8 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	encryptor := keystorev4.New()
 	keystores := make([]string, 3)
 	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 		id, err := uuid.NewRandom()
 		require.NoError(t, err)
@@ -191,7 +198,9 @@ func TestServer_WalletConfig(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	s.wallet = w
 	s.keymanager = km
@@ -199,10 +208,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedConfig := imported.DefaultKeymanagerOpts()
-	enc, err := json.Marshal(expectedConfig)
-	require.NoError(t, err)
-	var jsonMap map[string]string
-	require.NoError(t, json.Unmarshal(enc, &jsonMap))
+	jsonMap := KmOptsToConfig(expectedConfig)
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
 		WalletPath:       localWalletDir,
 		KeymanagerKind:   pb.KeymanagerKind_IMPORTED,
@@ -266,7 +272,9 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	ss := &Server{
 		wallet:     w,
@@ -290,7 +298,9 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager: km,
@@ -326,7 +336,9 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager:            km,
@@ -339,7 +351,8 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	keystores := make([]string, 3)
 	pubKeys := make([][]byte, 3)
 	for i := 0; i < len(keystores); i++ {
-		privKey := bls.RandKey()
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
 		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
 		id, err := uuid.NewRandom()
 		require.NoError(t, err)
@@ -373,7 +386,9 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		ImportedPublicKeys: pubKeys,
 	}, res)
 
-	km, err = w.InitializeKeymanager(ctx, true /* skip mnemonic confirm */)
+	km, err = w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
+		SkipMnemonicConfirm: true,
+	})
 	require.NoError(t, err)
 	keys, err = km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
