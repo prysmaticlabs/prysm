@@ -642,7 +642,7 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// OneValidatorActive informs if at least one validator is ACTIVE.
+// OneValidatorActive informs if at least one validator is ACTIVE or EXITING
 func (v *validator) OneValidatorActive(ctx context.Context) (bool, error) {
 	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -667,7 +667,7 @@ func (v *validator) OneValidatorActive(ctx context.Context) (bool, error) {
 		return false, errors.New("number of status responses did not match number of requested keys")
 	}
 	for _, status := range response.Statuses {
-		if status.Status == ethpb.ValidatorStatus_ACTIVE {
+		if status.Status == ethpb.ValidatorStatus_ACTIVE || status.Status == ethpb.ValidatorStatus_EXITING {
 			return true, nil
 		}
 	}
