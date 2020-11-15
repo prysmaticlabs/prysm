@@ -335,9 +335,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

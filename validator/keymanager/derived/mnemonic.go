@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -15,6 +19,27 @@ const confirmationText = "Confirm you have written down the recovery words somew
 // source of entropy such as a private key.
 type EnglishMnemonicGenerator struct {
 	skipMnemonicConfirm bool
+}
+
+func GenerateAndConfirmMnemonic(
+	mnemonicPassphrase string,
+	skipMnemonicConfirm bool,
+) error {
+	mnemonicRandomness := make([]byte, 32)
+	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
+		return errors.Wrap(err, "could not initialize mnemonic source of randomness")
+	}
+	m := &EnglishMnemonicGenerator{
+		skipMnemonicConfirm: skipMnemonicConfirm,
+	}
+	phrase, err := m.Generate(mnemonicRandomness)
+	if err != nil {
+		return errors.Wrap(err, "could not generate wallet seed")
+	}
+	if err := m.ConfirmAcknowledgement(phrase); err != nil {
+		return errors.Wrap(err, "could not confirm mnemonic acknowledgement")
+	}
+	return nil
 }
 
 // Generate a mnemonic seed phrase in english using a source of
@@ -47,4 +72,13 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 		log.Errorf("Could not confirm acknowledgement of prompt, please enter y")
 	}
 	return nil
+}
+
+//Uses the provided mnemonic seed phrase to generate the
+//appropriate seed file for recovering a derived wallets.
+func seedFromMnemonic(mnemonic, mnemonicPassphrase string) ([]byte, error) {
+	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
+		return nil, bip39.ErrInvalidMnemonic
+	}
+	return bip39.NewSeed(mnemonic, mnemonicPassphrase), nil
 }

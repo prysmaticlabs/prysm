@@ -83,9 +83,7 @@ func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, err
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
 
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: false,
-	})
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not initialize keymanager")
 	}

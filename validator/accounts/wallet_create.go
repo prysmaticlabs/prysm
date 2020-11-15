@@ -195,10 +195,7 @@ func createDerivedKeymanagerWallet(
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	_, err = wallet.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: skipMnemonicConfirm,
-		Mnemonic25thWord:    mnemonicPassphrase,
-	})
+	_, err = wallet.InitializeKeymanager(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

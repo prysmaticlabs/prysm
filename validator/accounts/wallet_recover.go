@@ -36,7 +36,7 @@ type RecoverWalletConfig struct {
 	WalletDir        string
 	WalletPassword   string
 	Mnemonic         string
-	NumAccounts      int64
+	NumAccounts      int
 	Mnemonic25thWord string
 }
 
@@ -100,7 +100,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	}
 	config.WalletDir = walletDir
 	config.WalletPassword = walletPassword
-	config.NumAccounts = numAccounts
+	config.NumAccounts = int(numAccounts)
 	_, _, err = RecoverWallet(cliCtx.Context, config)
 	if err != nil {
 		return err
@@ -138,39 +138,21 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 	if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
 		return nil, nil, errors.Wrap(err, "could not write keymanager config to disk")
 	}
-	km, err := derived.KeymanagerForPhrase(ctx, &derived.SetupConfig{
-		Opts:             derived.DefaultKeymanagerOpts(),
-		Wallet:           w,
-		Mnemonic:         cfg.Mnemonic,
-		Mnemonic25thWord: cfg.Mnemonic25thWord,
+	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
+		Opts:   derived.DefaultKeymanagerOpts(),
+		Wallet: w,
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not make keymanager for given phrase")
 	}
-	if err := km.WriteEncryptedSeedToWallet(ctx, cfg.Mnemonic, ""); err != nil {
+	if err := km.RecoverAccountsFromMnemonic(ctx, cfg.Mnemonic, cfg.Mnemonic25thWord, cfg.NumAccounts); err != nil {
 		return nil, nil, err
-	}
-	depositDataList := make([]*ethpb.Deposit_Data, cfg.NumAccounts)
-	if cfg.NumAccounts == 1 {
-		_, depositData, err := km.CreateAccount(ctx)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create account in wallet")
-		}
-		depositDataList[0] = depositData
-		return w, nil, nil
-	}
-	for i := int64(0); i < cfg.NumAccounts; i++ {
-		_, depositData, err := km.CreateAccount(ctx)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create account in wallet")
-		}
-		depositDataList[i] = depositData
 	}
 	log.WithField("wallet-path", w.AccountsDir()).Infof(
 		"Successfully recovered HD wallet with %d accounts. Please use accounts list to view details for your accounts",
 		cfg.NumAccounts,
 	)
-	return w, depositDataList, nil
+	return w, nil, nil
 }
 
 func inputMnemonic(cliCtx *cli.Context) (string, error) {

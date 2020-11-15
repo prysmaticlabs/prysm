@@ -183,9 +183,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-			SkipMnemonicConfirm: false,
-		})
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
@@ -271,9 +269,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-			SkipMnemonicConfirm: false,
-		})
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}

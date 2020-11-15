@@ -28,9 +28,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: false,
-	})
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

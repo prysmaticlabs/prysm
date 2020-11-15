@@ -210,11 +210,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		cleanup := sub.Unsubscribe
 		defer cleanup()
 		w := <-initializedChan
-		keyManager, err := w.InitializeKeymanager(
-			ctx, &iface.InitializeKeymanagerConfig{
-				SkipMnemonicConfirm: true,
-			},
-		)
+		keyManager, err := w.InitializeKeymanager(ctx)
 		if err != nil {
 			// log.Fatalf will prevent defer from being called
 			cleanup()

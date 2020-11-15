@@ -80,9 +80,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	wantCfg := derived.DefaultKeymanagerOpts()
 	assert.DeepEqual(t, wantCfg, walletCfg)
 
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	km, ok := keymanager.(*derived.Keymanager)
 	if !ok {

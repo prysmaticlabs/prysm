@@ -152,9 +152,7 @@ func Test_LockUnlockFile(t *testing.T) {
 	})
 	require.NoError(t, err)
 	defer unlock(t, w)
-	_, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	_, err = w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	assert.NoError(t, err)
 	err = w.LockWalletConfigFile(cliCtx.Context)

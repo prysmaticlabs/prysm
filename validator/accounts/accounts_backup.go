@@ -52,9 +52,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 			"remote wallets cannot backup accounts",
 		)
 	}
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: false,
-	})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

@@ -66,12 +66,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	km, err := w.InitializeKeymanager(
-		cliCtx.Context,
-		&iface.InitializeKeymanagerConfig{
-			SkipMnemonicConfirm: true,
-		},
-	)
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 
 	// Obtain the public keys of the accounts we created

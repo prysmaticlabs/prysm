@@ -46,9 +46,7 @@ func TestServer_CreateAccount(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,
@@ -74,9 +72,7 @@ func TestServer_ListAccounts(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	s := &Server{
 		keymanager:        km,

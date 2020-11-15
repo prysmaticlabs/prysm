@@ -100,9 +100,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
 
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return err
 	}

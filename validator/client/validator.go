@@ -100,11 +100,7 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	for {
 		select {
 		case w := <-walletChan:
-			keyManager, err := w.InitializeKeymanager(
-				ctx, &iface.InitializeKeymanagerConfig{
-					SkipMnemonicConfirm: true,
-				},
-			)
+			keyManager, err := w.InitializeKeymanager(ctx)
 			if err != nil {
 				return errors.Wrap(err, "could not read keymanager")
 			}

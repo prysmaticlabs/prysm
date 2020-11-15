@@ -10,11 +10,9 @@ import (
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/sirupsen/logrus"
-	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 )
 
@@ -154,34 +152,4 @@ func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]b
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
 func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
 	return dr.importedKM.FetchValidatingPrivateKeys(ctx)
-}
-
-func GenerateAndConfirmMnemonic(
-	mnemonicPassphrase string,
-	skipMnemonicConfirm bool,
-) error {
-	mnemonicRandomness := make([]byte, 32)
-	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
-		return errors.Wrap(err, "could not initialize mnemonic source of randomness")
-	}
-	m := &EnglishMnemonicGenerator{
-		skipMnemonicConfirm: skipMnemonicConfirm,
-	}
-	phrase, err := m.Generate(mnemonicRandomness)
-	if err != nil {
-		return errors.Wrap(err, "could not generate wallet seed")
-	}
-	if err := m.ConfirmAcknowledgement(phrase); err != nil {
-		return errors.Wrap(err, "could not confirm mnemonic acknowledgement")
-	}
-	return nil
-}
-
-//Uses the provided mnemonic seed phrase to generate the
-//appropriate seed file for recovering a derived wallets.
-func seedFromMnemonic(mnemonic, mnemonicPassphrase string) ([]byte, error) {
-	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
-		return nil, bip39.ErrInvalidMnemonic
-	}
-	return bip39.NewSeed(mnemonic, mnemonicPassphrase), nil
 }
