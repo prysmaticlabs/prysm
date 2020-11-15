@@ -21,6 +21,7 @@ func TestDerivationFromMnemonic(t *testing.T) {
 	seedBytes, err := hex.DecodeString(seed)
 	require.NoError(t, err)
 	derivedSeed, err := seedFromMnemonic(mnemonic, passphrase)
+	require.NoError(t, err)
 	assert.DeepEqual(t, seedBytes, derivedSeed)
 
 	// We derive keys, then check the master SK and the child SK.
