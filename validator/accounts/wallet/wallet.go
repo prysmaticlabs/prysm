@@ -258,37 +258,28 @@ func (w *Wallet) Password() string {
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
 func (w *Wallet) InitializeKeymanager(ctx context.Context) (keymanager.IKeymanager, error) {
-	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read keymanager config")
-	}
 	var km keymanager.IKeymanager
+	var err error
 	switch w.KeymanagerKind() {
 	case keymanager.Imported:
-		opts, err := imported.UnmarshalOptionsFile(configFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal keymanageropts file")
-		}
 		km, err = imported.NewKeymanager(ctx, &imported.SetupConfig{
 			Wallet: w,
-			Opts:   opts,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize imported keymanager")
 		}
 	case keymanager.Derived:
-		opts, err := derived.UnmarshalOptionsFile(configFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
-		}
 		km, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
-			Opts:   opts,
 			Wallet: w,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
 	case keymanager.Remote:
+		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read keymanager config")
+		}
 		opts, err := remote.UnmarshalOptionsFile(configFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
@@ -385,30 +376,6 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser,
 	w.configFilePath = configFilePath
 	return os.Open(configFilePath)
 
-}
-
-// LockWalletConfigFile lock read and write to wallet file in order to prevent
-// two validators from using the same keys.
-func (w *Wallet) LockWalletConfigFile(_ context.Context) error {
-	fileLock := flock.New(w.configFilePath)
-	locked, err := fileLock.TryLock()
-	if err != nil {
-		return errors.Wrapf(err, "failed to lock wallet config file: %s", w.configFilePath)
-	}
-	if !locked {
-		return fmt.Errorf("failed to lock wallet config file: %s", w.configFilePath)
-	}
-	w.walletFileLock = fileLock
-	return nil
-}
-
-// UnlockWalletConfigFile unlock wallet file.
-// should be called before client is closing in order to remove the file lock.
-func (w *Wallet) UnlockWalletConfigFile() error {
-	if w.walletFileLock == nil {
-		return errors.New("trying to unlock a nil lock")
-	}
-	return w.walletFileLock.Unlock()
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file

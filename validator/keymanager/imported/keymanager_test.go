@@ -27,8 +27,7 @@ func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	}
 	dr := &Keymanager{
 		wallet:        wallet,
-		accountsStore: &AccountStore{},
-		opts:          DefaultKeymanagerOpts(),
+		accountsStore: &accountStore{},
 	}
 	numAccounts := 5
 	ctx := context.Background()
@@ -61,7 +60,7 @@ func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	decryptor := keystorev4.New()
 	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	require.NoError(t, err, "Could not decrypt validator accounts")
-	store := &AccountStore{}
+	store := &accountStore{}
 	require.NoError(t, json.Unmarshal(encodedAccounts, store))
 
 	require.Equal(t, numAccounts-1, len(store.PublicKeys))
@@ -78,8 +77,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 	dr := &Keymanager{
 		wallet:        wallet,
-		accountsStore: &AccountStore{},
-		opts:          DefaultKeymanagerOpts(),
+		accountsStore: &accountStore{},
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -91,7 +89,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
 		if i == 0 {
 			// Manually disable the first public key by adding it to the keymanager options
-			dr.opts.DisabledPublicKeys = append(dr.opts.DisabledPublicKeys, pubKey[:])
+			dr.disabledPublicKeys = append(dr.disabledPublicKeys, pubKey[:])
 		} else {
 			wantedPubKeys = append(wantedPubKeys, pubKey)
 		}
@@ -117,8 +115,7 @@ func TestImportedKeymanager_FetchAllValidatingPublicKeys(t *testing.T) {
 	}
 	dr := &Keymanager{
 		wallet:        wallet,
-		accountsStore: &AccountStore{},
-		opts:          DefaultKeymanagerOpts(),
+		accountsStore: &accountStore{},
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -151,8 +148,7 @@ func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	}
 	dr := &Keymanager{
 		wallet:        wallet,
-		accountsStore: &AccountStore{},
-		opts:          DefaultKeymanagerOpts(),
+		accountsStore: &accountStore{},
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -187,8 +183,7 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 	}
 	dr := &Keymanager{
 		wallet:        wallet,
-		accountsStore: &AccountStore{},
-		opts:          DefaultKeymanagerOpts(),
+		accountsStore: &accountStore{},
 	}
 
 	// First, generate accounts and their keystore.json files.
@@ -215,7 +210,7 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
 	require.NoError(t, err)
-	store := &AccountStore{}
+	store := &accountStore{}
 	require.NoError(t, json.Unmarshal(enc, store))
 	require.Equal(t, len(store.PublicKeys), len(store.PrivateKeys))
 	require.NotEqual(t, 0, len(store.PublicKeys))

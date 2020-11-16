@@ -2,9 +2,12 @@ package imported
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -13,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -63,7 +65,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.WithError(err).Errorf("Could not read file at path: %s", ev.Name)
 			return
 		}
-		accountsKeystore := &keymanager.Keystore{}
+		accountsKeystore := &accountsKeystoreRepresentation{}
 		if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
 			log.WithError(
 				err,
@@ -94,17 +96,16 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 
 // Replaces the accounts store struct in the imported keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
-func (dr *Keymanager) reloadAccountsFromKeystore(keystore *keymanager.Keystore) error {
+func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepresentation) error {
 	decryptor := keystorev4.New()
 	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.wallet.Password())
 	if err != nil {
-		return errors.Wrapf(err, "could not decrypt keystore file with public key %s", keystore.Pubkey)
+		return errors.Wrap(err, "could not decrypt keystore file")
 	}
-	newAccountsStore := &AccountStore{}
+	newAccountsStore := &accountStore{}
 	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
 		return err
 	}
-	dr.accountsStore = newAccountsStore
 	pubKeys := make([][48]byte, len(dr.accountsStore.PublicKeys))
 	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
 		privKey, err := bls.SecretKeyFromBytes(dr.accountsStore.PrivateKeys[i])
@@ -114,6 +115,19 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *keymanager.Keystore) 
 		pubKeyBytes := privKey.PublicKey().Marshal()
 		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
 	}
+	disabledPublicKeys := make([][]byte, 0)
+	for _, pubKey := range keystore.DisabledPublicKeys {
+		pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(pubKey, "0x"))
+		if err != nil {
+			return err
+		}
+		if len(pubKeyBytes) != 48 {
+			return fmt.Errorf("public key %s has wrong length", pubKey)
+		}
+		disabledPublicKeys = append(disabledPublicKeys, pubKeyBytes)
+	}
+	dr.accountsStore = newAccountsStore
+	dr.disabledPublicKeys = disabledPublicKeys
 	if err := dr.initializeKeysCachesFromKeystore(); err != nil {
 		return err
 	}

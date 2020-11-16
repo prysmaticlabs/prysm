@@ -71,21 +71,13 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
-	assert.NoError(t, err)
-	walletCfg, err := derived.UnmarshalOptionsFile(encoded)
-	assert.NoError(t, err)
-	// We assert the created configuration was as desired.
-	wantCfg := derived.DefaultKeymanagerOpts()
-	assert.DeepEqual(t, wantCfg, walletCfg)
-
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
-	km, ok := keymanager.(*derived.Keymanager)
+	derivedKM, ok := km.(*derived.Keymanager)
 	if !ok {
 		t.Fatal("not a derived keymanager")
 	}
-	names, err := km.ValidatingAccountNames(ctx)
+	names, err := derivedKM.ValidatingAccountNames(ctx)
 	assert.NoError(t, err)
 	require.Equal(t, len(names), int(cfg.numAccounts))
 }
