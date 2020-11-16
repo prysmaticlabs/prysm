@@ -239,14 +239,8 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	depositDataForAccounts := make([][]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		_, _, err := keymanager.CreateAccount(cliCtx.Context)
-		require.NoError(t, err)
-		enc, err := keymanager.DepositDataForAccount(uint64(i))
-		require.NoError(t, err)
-		depositDataForAccounts[i] = enc
-	}
+	err = keymanager.RecoverAccountsFromMnemonic(cliCtx.Context, testMnemonic, "", numAccounts)
+	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
 	r, writer, err := os.Pipe()

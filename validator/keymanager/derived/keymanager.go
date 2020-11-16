@@ -48,6 +48,7 @@ type SetupConfig struct {
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
 type Keymanager struct {
 	importedKM *imported.Keymanager
+	opts       *KeymanagerOpts
 }
 
 // DefaultKeymanagerOpts for a derived keymanager implementation.
@@ -73,6 +74,7 @@ func NewKeymanager(
 	}
 	return &Keymanager{
 		importedKM: importedKM,
+		opts:       cfg.Opts,
 	}, nil
 }
 
@@ -102,7 +104,7 @@ func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error)
 
 // KeymanagerOpts returns the derived keymanager options.
 func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
-	return dr.KeymanagerOpts()
+	return dr.opts
 }
 
 // WriteEncryptedKeystoresFromSeed given a mnemonic phrase, is able to regenerate N accounts
