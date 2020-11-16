@@ -46,30 +46,6 @@ var (
 			Help: "Count the number of times a node resyncs.",
 		},
 	)
-	numberOfBlocksRecoveredFromAtt = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_blocks_recovered_from_attestation_total",
-			Help: "Count the number of times a missing block recovered from attestation vote.",
-		},
-	)
-	numberOfBlocksNotRecoveredFromAtt = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_blocks_not_recovered_from_attestation_total",
-			Help: "Count the number of times a missing block not recovered and pruned from attestation vote.",
-		},
-	)
-	numberOfAttsRecovered = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_attestations_recovered_total",
-			Help: "Count the number of times attestation recovered because of missing block",
-		},
-	)
-	numberOfAttsNotRecovered = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_attestations_not_recovered_total",
-			Help: "Count the number of times attestation not recovered and pruned because of missing block",
-		},
-	)
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
