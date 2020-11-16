@@ -30,7 +30,11 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into signature")
 	}
-	return &Signature{s: signature}, nil
+	sigObj := &Signature{s: signature}
+	if sigObj.isInfinite() {
+		return nil, common.ErrInfiniteSignature
+	}
+	return sigObj, nil
 }
 
 // Verify a bls signature given a public key, a message.
@@ -216,4 +220,9 @@ func (s *Signature) Marshal() []byte {
 func (s *Signature) Copy() common.Signature {
 	sign := *s.s
 	return &Signature{s: &sign}
+}
+
+// defensive check to reject infinite signatures.
+func (s *Signature) isInfinite() bool {
+	return s.s.IsZero()
 }
