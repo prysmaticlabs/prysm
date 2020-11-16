@@ -42,17 +42,9 @@ const (
 	eipVersion               = "EIP-2335"
 )
 
-// KeymanagerOpts for a imported keymanager.
-type KeymanagerOpts struct {
-	EIPVersion         string   `json:"direct_eip_version"`
-	Version            string   `json:"direct_version"`
-	DisabledPublicKeys [][]byte `json:"disabled_public_keys"`
-}
-
 // Keymanager implementation for imported keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet              iface.Wallet
-	opts                *KeymanagerOpts
 	accountsStore       *AccountStore
 	accountsChangedFeed *event.Feed
 }
@@ -64,20 +56,10 @@ type AccountStore struct {
 	PublicKeys  [][]byte `json:"public_keys"`
 }
 
-// DefaultKeymanagerOpts for a imported keymanager implementation.
-func DefaultKeymanagerOpts() *KeymanagerOpts {
-	return &KeymanagerOpts{
-		EIPVersion:         eipVersion,
-		Version:            "2",
-		DisabledPublicKeys: [][]byte{},
-	}
-}
-
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
 	Wallet              iface.Wallet
-	Opts                *KeymanagerOpts
 	SkipMnemonicConfirm bool
 	Mnemonic            string
 }
@@ -94,7 +76,6 @@ func ResetCaches() {
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:              cfg.Wallet,
-		opts:                cfg.Opts,
 		accountsStore:       &AccountStore{},
 		accountsChangedFeed: new(event.Feed),
 	}
@@ -113,7 +94,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		accountsChangedFeed: new(event.Feed),
-		opts:                DefaultKeymanagerOpts(),
 	}
 	if numValidatorKeys == 0 {
 		return k, nil
@@ -132,47 +112,6 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 	orderedPublicKeys = pubKeys
 	lock.Unlock()
 	return k, nil
-}
-
-// UnmarshalOptionsFile attempts to JSON unmarshal a imported keymanager
-// options file into a struct.
-func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
-	enc, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
-		}
-	}()
-	opts := &KeymanagerOpts{}
-	if err := json.Unmarshal(enc, opts); err != nil {
-		return nil, err
-	}
-	return opts, nil
-}
-
-// MarshalOptionsFile returns a marshaled options file for a keymanager.
-func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error) {
-	return json.MarshalIndent(opts, "", "\t")
-}
-
-// KeymanagerOpts for the imported keymanager.
-func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
-	return dr.opts
-}
-
-// String pretty-print of a imported keymanager options.
-func (opts *KeymanagerOpts) String() string {
-	au := aurora.NewAurora(true)
-	var b strings.Builder
-	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("EIP Version"), opts.EIPVersion)
-	if _, err := b.WriteString(strAddr); err != nil {
-		log.Error(err)
-		return ""
-	}
-	return b.String()
 }
 
 // SubscribeAccountChanges creates an event subscription for a channel
