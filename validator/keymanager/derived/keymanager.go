@@ -2,10 +2,7 @@ package derived
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -30,34 +27,15 @@ const (
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
 )
 
-// KeymanagerOpts defines options for the keymanager that
-// are stored to disk in the wallet.
-type KeymanagerOpts struct {
-	DerivedPathStructure string `json:"derived_path_structure"`
-	DerivedEIPNumber     string `json:"derived_eip_number"`
-	DerivedVersion       string `json:"derived_version"`
-}
-
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
-	Opts   *KeymanagerOpts
 	Wallet iface.Wallet
 }
 
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
 type Keymanager struct {
 	importedKM *imported.Keymanager
-	opts       *KeymanagerOpts
-}
-
-// DefaultKeymanagerOpts for a derived keymanager implementation.
-func DefaultKeymanagerOpts() *KeymanagerOpts {
-	return &KeymanagerOpts{
-		DerivedPathStructure: "m / purpose / coin_type / account_index / withdrawal_key / validating_key",
-		DerivedEIPNumber:     EIPVersion,
-		DerivedVersion:       "2",
-	}
 }
 
 // NewKeymanager instantiates a new derived keymanager from configuration options.
@@ -67,44 +45,13 @@ func NewKeymanager(
 ) (*Keymanager, error) {
 	importedKM, err := imported.NewKeymanager(ctx, &imported.SetupConfig{
 		Wallet: cfg.Wallet,
-		Opts:   imported.DefaultKeymanagerOpts(),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &Keymanager{
 		importedKM: importedKM,
-		opts:       cfg.Opts,
 	}, nil
-}
-
-// UnmarshalOptionsFile attempts to JSON unmarshal a derived keymanager
-// options file into the *Config{} struct.
-func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
-	enc, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
-		}
-	}()
-	opts := &KeymanagerOpts{}
-	if err := json.Unmarshal(enc, opts); err != nil {
-		return nil, err
-	}
-	return opts, nil
-}
-
-// MarshalOptionsFile returns a marshaled options file for a keymanager.
-func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error) {
-	return json.MarshalIndent(opts, "", "\t")
-}
-
-// KeymanagerOpts returns the derived keymanager options.
-func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
-	return dr.opts
 }
 
 // RecoverAccountsFromMnemonic given a mnemonic phrase, is able to regenerate N accounts
