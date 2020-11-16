@@ -208,7 +208,8 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		p2p: p,
+		p2p:          p,
+		chainStarted: abool.New(),
 	}
 	digest, err := r.forkDigest()
 	require.NoError(t, err)
@@ -241,7 +242,8 @@ func TestStaticSubnets(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
-		p2p: p,
+		p2p:          p,
+		chainStarted: abool.New(),
 	}
 	defaultTopic := "/eth2/%x/beacon_attestation_%d"
 	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
