@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -111,12 +112,14 @@ func TestImportedKeymanager_ImportKeystores(t *testing.T) {
 	}
 	keystores[0] = keystores[1]
 	ctx := context.Background()
-	require.ErrorContains(t, "duplicated key found:", dr.ImportKeystores(
+	hook := logTest.NewGlobal()
+	require.NoError(t, dr.ImportKeystores(
 		ctx,
 		keystores,
 		password,
 	))
-	// Import them correctly without the duplicate.
+	require.LogsContain(t, hook, "Duplicate key")
+	// Import them correctly even without the duplicate.
 	require.NoError(t, dr.ImportKeystores(
 		ctx,
 		keystores[1:],
