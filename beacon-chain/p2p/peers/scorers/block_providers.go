@@ -1,7 +1,6 @@
 package scorers
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -37,7 +36,6 @@ var _ Scorer = (*BlockProviderScorer)(nil)
 
 // BlockProviderScorer represents block provider scoring service.
 type BlockProviderScorer struct {
-	ctx    context.Context
 	config *BlockProviderScorerConfig
 	store  *peerdata.Store
 	// maxScore is a cached value for maximum attainable block provider score.
