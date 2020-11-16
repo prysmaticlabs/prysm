@@ -298,13 +298,11 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	// Expected output format definition
 	const prologLength = 3
-	const accountLength = 14
+	const accountLength = 6
 	const epilogLength = 1
 	const nameOffset = 1
-	const keyOffset = 5
-	const validatingPrivateKeyOffset = 6
-	const withdrawalPrivateKeyOffset = 3
-	const depositOffset = 11
+	const keyOffset = 2
+	const validatingPrivateKeyOffset = 3
 
 	// Require the output has correct number of lines
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
