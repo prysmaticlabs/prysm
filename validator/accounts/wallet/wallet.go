@@ -55,7 +55,7 @@ var (
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
 		keymanager.Imported: "Imported Wallet (Recommended)",
-		keymanager.Derived:  "HD Wallet (Least secure)",
+		keymanager.Derived:  "HD Wallet",
 		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
