@@ -19,8 +19,8 @@ var (
 )
 
 const (
-	// EIPVersion used by this derived keymanager implementation.
-	EIPVersion = "EIP-2334"
+	// DerivationPathFormat describes the structure of how keys are derived from a master key.
+	DerivationPathFormat = "m / purpose / coin_type / account_index / withdrawal_key / validating_key"
 	// ValidatingKeyDerivationPathTemplate defining the hierarchical path for validating
 	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
