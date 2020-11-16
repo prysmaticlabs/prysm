@@ -235,10 +235,6 @@ message ImportKeystoresResponse {
     repeated bytes imported_public_keys = 1;
 }
 
-message CreateAccountRequest {
-    uint64 num_accounts = 1;
-}
-
 message DepositMessage {
     bytes pubkey = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
     bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
