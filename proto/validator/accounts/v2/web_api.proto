@@ -43,12 +43,6 @@ service Wallet {
 }
 
 service Accounts {
-    rpc CreateAccount(CreateAccountRequest) returns (DepositDataResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/accounts/create",
-            body: "*"
-        };
-    }
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/accounts"
