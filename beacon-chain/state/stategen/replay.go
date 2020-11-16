@@ -54,9 +54,8 @@ func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, 
 // The Blocks are returned in slot-descending order.
 func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
-	// TODO(#7620): Return error for invalid range.
 	if endSlot < startSlot {
-		return nil, nil
+		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)
 	}
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blocks, blockRoots, err := s.beaconDB.Blocks(ctx, filter)

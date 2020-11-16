@@ -174,10 +174,18 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 	service.finalizedInfo.slot = service.slotsPerArchivedPoint + 1
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, beaconState.SetSlot(1))
-	b := testutil.NewBeaconBlock()
-	b.Block.Slot = 1
+	beaconState, pks := testutil.DeterministicGenesisState(t, 32)
+	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.NoError(t, db.SaveState(ctx, beaconState, gRoot))
+	assert.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+
+	b, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, b))
 	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -200,12 +208,14 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
-	bRoot, err := b.Block.HashTreeRoot()
+	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, bRoot))
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.NoError(t, db.SaveState(ctx, beaconState, gRoot))
+	assert.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 
 	slot := uint64(10)
 	loadedState, err := service.StateBySlot(ctx, slot)

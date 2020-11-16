@@ -624,6 +624,13 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, len(indexedAtts), len(res.IndexedAttestations), "Incorrect indexted attestations length")
+	sort.Slice(indexedAtts, func(i, j int) bool {
+		return indexedAtts[i].Data.Slot < indexedAtts[j].Data.Slot
+	})
+	sort.Slice(res.IndexedAttestations, func(i, j int) bool {
+		return res.IndexedAttestations[i].Data.Slot < res.IndexedAttestations[j].Data.Slot
+	})
+
 	assert.DeepEqual(t, indexedAtts, res.IndexedAttestations, "Incorrect list indexed attestations response")
 }
 
