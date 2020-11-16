@@ -22,24 +22,23 @@ type EnglishMnemonicGenerator struct {
 }
 
 func GenerateAndConfirmMnemonic(
-	mnemonicPassphrase string,
 	skipMnemonicConfirm bool,
-) error {
+) (string, error) {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
-		return errors.Wrap(err, "could not initialize mnemonic source of randomness")
+		return "", errors.Wrap(err, "could not initialize mnemonic source of randomness")
 	}
 	m := &EnglishMnemonicGenerator{
 		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
 	phrase, err := m.Generate(mnemonicRandomness)
 	if err != nil {
-		return errors.Wrap(err, "could not generate wallet seed")
+		return "", errors.Wrap(err, "could not generate wallet seed")
 	}
 	if err := m.ConfirmAcknowledgement(phrase); err != nil {
-		return errors.Wrap(err, "could not confirm mnemonic acknowledgement")
+		return "", errors.Wrap(err, "could not confirm mnemonic acknowledgement")
 	}
-	return nil
+	return phrase, nil
 }
 
 // Generate a mnemonic seed phrase in english using a source of
