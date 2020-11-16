@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -101,8 +100,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	config.WalletDir = walletDir
 	config.WalletPassword = walletPassword
 	config.NumAccounts = int(numAccounts)
-	_, _, err = RecoverWallet(cliCtx.Context, config)
-	if err != nil {
+	if _, err = RecoverWallet(cliCtx.Context, config); err != nil {
 		return err
 	}
 	log.Infof(
@@ -112,14 +110,14 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 }
 
 // RecoverWallet uses a menmonic seed phrase to recover a wallet into the path provided.
-func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Wallet, []*ethpb.Deposit_Data, error) {
+func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Wallet, error) {
 	// Ensure that the wallet directory does not contain a wallet already
 	dirExists, err := wallet.Exists(cfg.WalletDir)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if dirExists {
-		return nil, nil, errors.New("a wallet already exists at this location. Please input an" +
+		return nil, errors.New("a wallet already exists at this location. Please input an" +
 			" alternative location for the new wallet or remove the current wallet")
 	}
 	w := wallet.New(&wallet.Config{
@@ -129,29 +127,29 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 	})
 	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not marshal keymanager config file")
+		return nil, errors.Wrap(err, "could not marshal keymanager config file")
 	}
 	if err := w.SaveWallet(); err != nil {
-		return nil, nil, errors.Wrap(err, "could not save wallet to disk")
+		return nil, errors.Wrap(err, "could not save wallet to disk")
 	}
 	if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return nil, nil, errors.Wrap(err, "could not write keymanager config to disk")
+		return nil, errors.Wrap(err, "could not write keymanager config to disk")
 	}
 	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
 		Opts:   derived.DefaultKeymanagerOpts(),
 		Wallet: w,
 	})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not make keymanager for given phrase")
+		return nil, errors.Wrap(err, "could not make keymanager for given phrase")
 	}
 	if err := km.RecoverAccountsFromMnemonic(ctx, cfg.Mnemonic, cfg.Mnemonic25thWord, cfg.NumAccounts); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	log.WithField("wallet-path", w.AccountsDir()).Infof(
 		"Successfully recovered HD wallet with %d accounts. Please use accounts list to view details for your accounts",
 		cfg.NumAccounts,
 	)
-	return w, nil, nil
+	return w, nil
 }
 
 func inputMnemonic(cliCtx *cli.Context) (string, error) {

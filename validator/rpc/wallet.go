@@ -110,13 +110,12 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if req.Mnemonic == "" {
 			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
 		}
-		_, _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
+		if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
 			WalletDir:      walletDir,
 			WalletPassword: req.WalletPassword,
 			Mnemonic:       req.Mnemonic,
 			NumAccounts:    int(req.NumAccounts),
-		})
-		if err != nil {
+		}); err != nil {
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
