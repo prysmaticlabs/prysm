@@ -82,7 +82,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		mixes[i] = make([]byte, 32)
 	}
 	require.NoError(t, headState.SetRandaoMixes(mixes))
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
