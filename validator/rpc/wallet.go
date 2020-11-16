@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"reflect"
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -178,47 +175,10 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
 	}
-	f, err := s.wallet.ReadKeymanagerConfigFromDisk(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not read keymanager config from disk: %v", err)
-	}
-	encoded, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not parse keymanager config: %v", err)
-	}
-	kmOpts := &imported.KeymanagerOpts{}
-	if err := json.Unmarshal(encoded, kmOpts); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
-	}
-	config := KmOptsToConfig(kmOpts)
-
 	return &pb.WalletResponse{
-		WalletPath:       s.walletDir,
-		KeymanagerKind:   keymanagerKind,
-		KeymanagerConfig: config,
+		WalletPath:     s.walletDir,
+		KeymanagerKind: keymanagerKind,
 	}, nil
-}
-
-// Convert KeymanagerOpts struct to a map[string]string
-func KmOptsToConfig(opts *imported.KeymanagerOpts) map[string]string {
-	val := reflect.ValueOf(opts).Elem()
-	var config = make(map[string]string, val.NumField())
-	for i := 0; i < val.NumField(); i++ {
-		f := val.Type().Field(i)
-		v := val.Field(i)
-		jsonName := strings.Split(f.Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
-
-		if keys, ok := v.Interface().([][]byte); ok {
-			str := make([]string, len(keys))
-			for i, key := range keys {
-				str[i] = fmt.Sprintf("%q", key)
-			}
-			config[jsonName] = strings.Join(str, ",")
-		} else {
-			config[jsonName] = fmt.Sprint(v)
-		}
-	}
-	return config
 }
 
 // GenerateMnemonic creates a new, random bip39 mnemonic phrase.
