@@ -83,13 +83,13 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	if err := DisableAccounts(cliCtx.Context, &AccountsConfig{
-		Wallet:            w,
-		Keymanager:        keymanager,
-		DisablePublicKeys: rawPublicKeys,
-	}); err != nil {
-		return err
-	}
+	//if err := DisableAccounts(cliCtx.Context, &AccountsConfig{
+	//	Wallet:            w,
+	//	Keymanager:        keymanager,
+	//	DisablePublicKeys: rawPublicKeys,
+	//}); err != nil {
+	//	return err
+	//}
 	log.WithField("publicKeys", allAccountStr).Info("Accounts disabled")
 	return nil
 }
@@ -184,87 +184,4 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	default:
 		return fmt.Errorf("keymanager kind %s not supported", w.KeymanagerKind())
 	}
-}
-
-// DisableAccount disables the accounts that the user requests to be disabled from the wallet
-func DisableAccounts(ctx context.Context, cfg *AccountsConfig) error {
-	switch cfg.Wallet.KeymanagerKind() {
-	case keymanager.Remote:
-		return errors.New("cannot disable accounts for a remote keymanager")
-	case keymanager.Imported:
-		km, ok := cfg.Keymanager.(*imported.Keymanager)
-		if !ok {
-			return errors.New("not a imported keymanager")
-		}
-		if len(cfg.DisablePublicKeys) == 1 {
-			log.Info("Disabling account...")
-		} else {
-			log.Info("Disabling accounts...")
-		}
-		updatedOpts := km.KeymanagerOpts()
-		// updatedDisabledPubKeys := make([][48]byte, 0)
-		existingDisabledPubKeys := make(map[[48]byte]bool, len(updatedOpts.DisabledPublicKeys))
-		for _, pk := range updatedOpts.DisabledPublicKeys {
-			existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
-		}
-		for _, pk := range cfg.DisablePublicKeys {
-			if _, ok := existingDisabledPubKeys[bytesutil.ToBytes48(pk)]; !ok {
-				updatedOpts.DisabledPublicKeys = append(updatedOpts.DisabledPublicKeys, pk)
-			}
-		}
-		keymanagerConfig, err := imported.MarshalOptionsFile(ctx, updatedOpts)
-		if err != nil {
-			return errors.Wrap(err, "could not marshal keymanager config file")
-		}
-		if err := cfg.Wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-			return errors.Wrap(err, "could not write keymanager config to disk")
-		}
-	case keymanager.Derived:
-		return errors.New("cannot disable accounts for a derived keymanager")
-	default:
-		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
-	}
-	return nil
-}
-
-// EnableAccounts enables the accounts that the user requests to be enabled from the wallet
-func EnableAccounts(ctx context.Context, cfg *AccountsConfig) error {
-	switch cfg.Wallet.KeymanagerKind() {
-	case keymanager.Remote:
-		return errors.New("cannot enable accounts for a remote keymanager")
-	case keymanager.Imported:
-		km, ok := cfg.Keymanager.(*imported.Keymanager)
-		if !ok {
-			return errors.New("not a imported keymanager")
-		}
-		if len(cfg.EnablePublicKeys) == 1 {
-			log.Info("Enabling account...")
-		} else {
-			log.Info("Enabling accounts...")
-		}
-		updatedOpts := km.KeymanagerOpts()
-		updatedDisabledPubKeys := make([][]byte, 0)
-		setEnablePubKeys := make(map[[48]byte]bool, len(cfg.EnablePublicKeys))
-		for _, pk := range cfg.EnablePublicKeys {
-			setEnablePubKeys[bytesutil.ToBytes48(pk)] = true
-		}
-		for _, pk := range updatedOpts.DisabledPublicKeys {
-			if _, ok := setEnablePubKeys[bytesutil.ToBytes48(pk)]; !ok {
-				updatedDisabledPubKeys = append(updatedDisabledPubKeys, pk)
-			}
-		}
-		updatedOpts.DisabledPublicKeys = updatedDisabledPubKeys
-		keymanagerConfig, err := imported.MarshalOptionsFile(ctx, updatedOpts)
-		if err != nil {
-			return errors.Wrap(err, "could not marshal keymanager config file")
-		}
-		if err := cfg.Wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-			return errors.Wrap(err, "could not write keymanager config to disk")
-		}
-	case keymanager.Derived:
-		return errors.New("cannot enable accounts for a derived keymanager")
-	default:
-		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
-	}
-	return nil
 }

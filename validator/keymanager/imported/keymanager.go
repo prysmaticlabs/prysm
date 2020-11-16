@@ -36,29 +36,38 @@ const (
 	// AccountsPath where all imported keymanager keystores are kept.
 	AccountsPath             = "accounts"
 	accountsKeystoreFileName = "all-accounts.keystore.json"
-	eipVersion               = "EIP-2335"
 )
 
 // Keymanager implementation for imported keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet              iface.Wallet
-	accountsStore       *AccountStore
-	accountsChangedFeed *event.Feed
-}
-
-// AccountStore defines a struct containing 1-to-1 corresponding
-// private keys and public keys for eth2 validators.
-type AccountStore struct {
-	PrivateKeys [][]byte `json:"private_keys"`
-	PublicKeys  [][]byte `json:"public_keys"`
+	wallet                    iface.Wallet
+	accountsStore             *accountStore
+	encryptedAccountsKeystore *accountsKeystoreRepresentation
+	accountsChangedFeed       *event.Feed
 }
 
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
-	Wallet              iface.Wallet
-	SkipMnemonicConfirm bool
-	Mnemonic            string
+	Wallet iface.Wallet
+}
+
+// Defines a struct containing 1-to-1 corresponding
+// private keys and public keys for eth2 validators.
+type accountStore struct {
+	PrivateKeys [][]byte `json:"private_keys"`
+	PublicKeys  [][]byte `json:"public_keys"`
+}
+
+// Defines an internal Prysm representation
+// of validator accounts, encrypted according to the EIP-2334 standard
+// but containing extra fields such as markers for disabled public keys.
+type accountsKeystoreRepresentation struct {
+	Crypto             map[string]interface{} `json:"crypto"`
+	ID                 string                 `json:"uuid"`
+	Version            uint                   `json:"version"`
+	Name               string                 `json:"name"`
+	DisabledPublicKeys []string               `json:"disabled_public_keys"`
 }
 
 // ResetCaches for the keymanager.
@@ -73,7 +82,7 @@ func ResetCaches() {
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:              cfg.Wallet,
-		accountsStore:       &AccountStore{},
+		accountsStore:       &accountStore{},
 		accountsChangedFeed: new(event.Feed),
 	}
 
@@ -202,7 +211,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 	lock.RLock()
 	keys := orderedPublicKeys
-	disabledPublicKeys := dr.KeymanagerOpts().DisabledPublicKeys
+	disabledPublicKeys := dr.encryptedAccountsKeystore.DisabledPublicKeys
 	result := make([][48]byte, 0)
 	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
 	for _, pk := range disabledPublicKeys {
@@ -239,7 +248,7 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
-	disabledPublicKeys := dr.KeymanagerOpts().DisabledPublicKeys
+	disabledPublicKeys := d
 	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
 	for _, pk := range disabledPublicKeys {
 		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
@@ -282,7 +291,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	} else if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
 	}
-	keystoreFile := &keymanager.Keystore{}
+	keystoreFile := &AccountsKeystoreRepresentation{}
 	if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 		return errors.Wrapf(err, "could not decode keystore file for accounts %s", accountsKeystoreFileName)
 	}
@@ -319,7 +328,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 func (dr *Keymanager) createAccountsKeystore(
 	_ context.Context,
 	privateKeys, publicKeys [][]byte,
-) (*keymanager.Keystore, error) {
+) (*AccountsKeystoreRepresentation, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -368,7 +377,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}
-	return &keymanager.Keystore{
+	return &AccountsKeystoreRepresentation{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Version: encryptor.Version(),
