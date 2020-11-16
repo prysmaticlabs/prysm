@@ -144,6 +144,7 @@ func TestImport_DuplicateKeys(t *testing.T) {
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 
+	// There should only be 1 account as the duplicate keystore was ignored
 	assert.Equal(t, 1, len(keys))
 }
 
