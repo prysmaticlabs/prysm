@@ -134,9 +134,7 @@ func TestImport_DuplicateKeys(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
