@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,7 +18,6 @@ type FakeValidator struct {
 	WaitForActivationCalled           bool
 	WaitForChainStartCalled           bool
 	WaitForSyncCalled                 bool
-	WaitForSyncedCalled               bool
 	SlasherReadyCalled                bool
 	NextSlotCalled                    bool
 	CanonicalHeadSlotCalled           bool
@@ -79,8 +79,7 @@ func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 
 // WaitForSynced for mocking.
 func (fv *FakeValidator) WaitForSynced(_ context.Context) error {
-	fv.WaitForSyncedCalled = true
-	return nil
+	return errors.New("unimplemented")
 }
 
 // SlasherReady for mocking.

@@ -38,10 +38,6 @@ var (
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
 			"transmitting a slashable offence over the network.",
 	}
-	waitForSyncedFlag = &cli.BoolFlag{
-		Name:  "wait-for-synced",
-		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
-	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
@@ -94,7 +90,6 @@ var devModeFlags = []cli.Flag{
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
-	waitForSyncedFlag,
 	ToledoTestnet,
 	PyrmontTestnet,
 	Mainnet,
@@ -120,7 +115,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	kafkaBootstrapServersFlag,
-	waitForSyncedFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	ToledoTestnet,
