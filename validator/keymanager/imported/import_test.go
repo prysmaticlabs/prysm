@@ -104,7 +104,7 @@ func TestImportedKeymanager_ImportKeystores(t *testing.T) {
 		accountsStore: &AccountStore{},
 	}
 
-	// Create a duplicate keystore and attempt to import it.
+	// Create a duplicate keystore and attempt to import it. This should complete correctly though log specific output.
 	numAccounts := 5
 	keystores := make([]*keymanager.Keystore, numAccounts+1)
 	for i := 1; i < numAccounts+1; i++ {
