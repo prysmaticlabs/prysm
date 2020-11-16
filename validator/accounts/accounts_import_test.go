@@ -123,7 +123,7 @@ func TestImport_DuplicateKeys(t *testing.T) {
 	time.Sleep(time.Second)
 	input, err := ioutil.ReadFile(keystorePath)
 	require.NoError(t, err)
-	keystorePath2 := filepath.Join(keysDir, fmt.Sprintf("copyOfKeystore.json"))
+	keystorePath2 := filepath.Join(keysDir, "copyOfKeystore.json")
 	err = ioutil.WriteFile(keystorePath2, input, os.ModePerm)
 	require.NoError(t, err)
 
