@@ -26,6 +26,11 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not unmarshal slashing protection JSON file")
 	}
 
+	// We validate the `Metadata` field of the slashing protection JSON file.
+	if err := validateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
+		return errors.Wrap(err, "slashing protection JSON metadata was incorrect")
+	}
+
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for _, validatorData := range interchangeJSON.Data {
@@ -59,6 +64,23 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
+	return nil
+}
+
+func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
+	// We need to ensure the version in the metadata field matches the one we support.
+	version := interchangeJSON.Metadata.InterchangeFormatVersion
+	if version != INTERCHANGE_FORMAT_VERSION {
+		return fmt.Errorf(
+			"slashing protection JSON version '%s' is not supported, wanted '%s'",
+			version,
+			INTERCHANGE_FORMAT_VERSION,
+		)
+	}
+
+	// We need to verify the genesis validators root matches that of our chain data, otherwise
+	// the imported slashing protection JSON was created on a different chain.
+	//validatorDB.
 	return nil
 }
 
