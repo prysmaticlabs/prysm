@@ -197,6 +197,7 @@ func mockAttestingAndProposalHistories(t *testing.T) ([]kv.EncHistoryData, []kv.
 		}
 		proposalData[v] = kv.ProposalHistoryForPubkey{Proposals: proposals}
 		hd, err = hd.SetLatestEpochWritten(ctx, uint64(latestTarget))
+		require.NoError(t, err)
 		attData[v] = hd
 	}
 	return attData, proposalData
