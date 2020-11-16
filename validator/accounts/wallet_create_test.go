@@ -184,6 +184,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
 		keymanagerKind:     keymanager.Derived,
+		numAccounts:        1,
 	})
 
 	// We attempt to create the wallet.
@@ -215,6 +216,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
 		keymanagerKind:     keymanager.Derived,
+		numAccounts:        1,
 	})
 
 	// We attempt to create the wallet.
