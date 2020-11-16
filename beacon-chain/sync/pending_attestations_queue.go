@@ -8,7 +8,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -82,23 +81,21 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						}
 					}
 				} else {
-					// Save the pending unaggregated attestation to the pool if the BLS signature is
-					// valid.
-					if _, err := bls.SignatureFromBytes(att.Aggregate.Signature); err != nil {
-						continue
-					}
-					if err := s.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
+					preState, err := s.chain.AttestationPreState(ctx, att.Aggregate)
+					if err != nil {
 						return err
 					}
+					valid := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+					if valid == pubsub.ValidationAccept {
+						if err := s.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
+							return err
+						}
+						s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
 
-					// Verify signed aggregate has a valid signature.
-					if _, err := bls.SignatureFromBytes(signedAtt.Signature); err != nil {
-						continue
-					}
-
-					// Broadcasting the signed attestation again once a node is able to process it.
-					if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
-						log.WithError(err).Debug("Failed to broadcast")
+						// Broadcasting the signed attestation again once a node is able to process it.
+						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
+							log.WithError(err).Debug("Failed to broadcast")
+						}
 					}
 				}
 			}
