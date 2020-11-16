@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -64,7 +63,7 @@ func TestDisableAccounts_Noninteractive(t *testing.T) {
 	// We attempt to disable the accounts specified.
 	require.NoError(t, DisableAccountsCli(cliCtx))
 
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{SkipMnemonicConfirm: false})
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	remainingAccounts, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -120,7 +119,7 @@ func TestEnableAccounts_Noninteractive(t *testing.T) {
 	// We attempt to disable the accounts specified.
 	require.NoError(t, DisableAccountsCli(cliCtx))
 
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{SkipMnemonicConfirm: false})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	remainingAccounts, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -129,7 +128,7 @@ func TestEnableAccounts_Noninteractive(t *testing.T) {
 	// We attempt to enable the accounts specified.
 	require.NoError(t, EnableAccountsCli(cliCtx))
 
-	km, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{SkipMnemonicConfirm: false})
+	km, err = w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	remainingAccounts, err = km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)

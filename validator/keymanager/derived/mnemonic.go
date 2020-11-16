@@ -4,27 +4,39 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/tyler-smith/go-bip39"
 )
 
 const confirmationText = "Confirm you have written down the recovery words somewhere safe (offline) [y|Y]"
-
-// SeedPhraseFactory defines a struct which
-// can generate new seed phrases in human-readable
-// format from a source of entropy in raw bytes. It
-// also provides methods for verifying a user has successfully
-// acknowledged the mnemonic phrase and written it down offline.
-type SeedPhraseFactory interface {
-	Generate(data []byte) (string, error)
-	ConfirmAcknowledgement(phrase string) error
-}
 
 // EnglishMnemonicGenerator implements methods for creating
 // mnemonic seed phrases in english using a given
 // source of entropy such as a private key.
 type EnglishMnemonicGenerator struct {
 	skipMnemonicConfirm bool
+}
+
+func GenerateAndConfirmMnemonic(
+	skipMnemonicConfirm bool,
+) (string, error) {
+	mnemonicRandomness := make([]byte, 32)
+	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
+		return "", errors.Wrap(err, "could not initialize mnemonic source of randomness")
+	}
+	m := &EnglishMnemonicGenerator{
+		skipMnemonicConfirm: skipMnemonicConfirm,
+	}
+	phrase, err := m.Generate(mnemonicRandomness)
+	if err != nil {
+		return "", errors.Wrap(err, "could not generate wallet seed")
+	}
+	if err := m.ConfirmAcknowledgement(phrase); err != nil {
+		return "", errors.Wrap(err, "could not confirm mnemonic acknowledgement")
+	}
+	return phrase, nil
 }
 
 // Generate a mnemonic seed phrase in english using a source of
@@ -57,4 +69,13 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 		log.Errorf("Could not confirm acknowledgement of prompt, please enter y")
 	}
 	return nil
+}
+
+//Uses the provided mnemonic seed phrase to generate the
+//appropriate seed file for recovering a derived wallets.
+func seedFromMnemonic(mnemonic, mnemonicPassphrase string) ([]byte, error) {
+	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
+		return nil, bip39.ErrInvalidMnemonic
+	}
+	return bip39.NewSeed(mnemonic, mnemonicPassphrase), nil
 }
