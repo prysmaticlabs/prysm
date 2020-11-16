@@ -125,18 +125,10 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		KeymanagerKind: keymanager.Derived,
 		WalletPassword: cfg.WalletPassword,
 	})
-	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal keymanager config file")
-	}
 	if err := w.SaveWallet(); err != nil {
 		return nil, errors.Wrap(err, "could not save wallet to disk")
 	}
-	if err := w.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return nil, errors.Wrap(err, "could not write keymanager config to disk")
-	}
 	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
-		Opts:   derived.DefaultKeymanagerOpts(),
 		Wallet: w,
 	})
 	if err != nil {
