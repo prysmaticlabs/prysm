@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -25,11 +24,11 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}
@@ -83,14 +82,26 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	//if err := DisableAccounts(cliCtx.Context, &AccountsConfig{
-	//	Wallet:            w,
-	//	Keymanager:        keymanager,
-	//	DisablePublicKeys: rawPublicKeys,
-	//}); err != nil {
-	//	return err
-	//}
-	log.WithField("publicKeys", allAccountStr).Info("Accounts disabled")
+	switch w.KeymanagerKind() {
+	case keymanager.Imported:
+		importedKM, ok := km.(*imported.Keymanager)
+		if !ok {
+			return errors.New("not an imported keymanager")
+		}
+		if err := importedKM.DisableAccounts(cliCtx.Context, rawPublicKeys); err != nil {
+			return err
+		}
+		log.WithField("publicKeys", allAccountStr).Info("Accounts disabled")
+	case keymanager.Derived:
+		//derivedKM, ok := km.(*derived.Keymanager)
+		//if !ok {
+		//	return errors.New("not an derived keymanager")
+		//}
+		//if err := derivedKM.DisableAccounts(cliCtx.Context, rawPublicKeys); err != nil {
+		//	return err
+		//}
+		//log.WithField("publicKeys", allAccountStr).Info("Accounts disabled")
+	}
 	return nil
 }
 
@@ -102,7 +113,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	ikeymanager, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}
@@ -110,11 +121,11 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	case keymanager.Remote:
 		return errors.New("cannot enable accounts for a remote keymanager")
 	case keymanager.Imported:
-		km, ok := ikeymanager.(*imported.Keymanager)
+		km, ok := km.(*imported.Keymanager)
 		if !ok {
 			return errors.New("not a imported keymanager")
 		}
-		disabledPublicKeys := km.KeymanagerOpts().DisabledPublicKeys
+		disabledPublicKeys := km.DisabledPublicKeys()
 		if len(disabledPublicKeys) == 0 {
 			return errors.New("No accounts are disabled.")
 		}
@@ -170,11 +181,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 				}
 			}
 		}
-		if err := EnableAccounts(cliCtx.Context, &AccountsConfig{
-			Wallet:           w,
-			Keymanager:       ikeymanager,
-			EnablePublicKeys: rawPublicKeys,
-		}); err != nil {
+		if err := km.EnableAccounts(cliCtx.Context, rawPublicKeys); err != nil {
 			return err
 		}
 		log.WithField("publicKeys", allAccountStr).Info("Accounts enabled")

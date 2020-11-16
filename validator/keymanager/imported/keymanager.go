@@ -3,6 +3,7 @@ package imported
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -17,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"go.opencensus.io/trace"
@@ -40,10 +40,10 @@ const (
 
 // Keymanager implementation for imported keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet                    iface.Wallet
-	accountsStore             *accountStore
-	encryptedAccountsKeystore *accountsKeystoreRepresentation
-	accountsChangedFeed       *event.Feed
+	wallet              iface.Wallet
+	accountsStore       *accountStore
+	disabledPublicKeys  [][]byte
+	accountsChangedFeed *event.Feed
 }
 
 // SetupConfig includes configuration values for initializing
@@ -138,6 +138,17 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 	return names, nil
 }
 
+// DisabledPublicKeys returns the currently disabled public keys in the keymanager.
+func (dr *Keymanager) DisabledPublicKeys() [][]byte {
+	disabledPubKeys := make([][]byte, len(dr.disabledPublicKeys))
+	for i, pubKey := range dr.disabledPublicKeys {
+		pubKeyBytes := make([]byte, 48)
+		copy(pubKeyBytes, pubKey)
+		disabledPubKeys[i] = pubKeyBytes
+	}
+	return disabledPubKeys
+}
+
 // Initialize public and secret key caches that are used to speed up the functions
 // FetchValidatingPublicKeys and Sign
 func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
@@ -211,7 +222,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 	lock.RLock()
 	keys := orderedPublicKeys
-	disabledPublicKeys := dr.encryptedAccountsKeystore.DisabledPublicKeys
+	disabledPublicKeys := dr.disabledPublicKeys
 	result := make([][48]byte, 0)
 	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
 	for _, pk := range disabledPublicKeys {
@@ -248,7 +259,7 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
-	disabledPublicKeys := d
+	disabledPublicKeys := dr.disabledPublicKeys
 	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
 	for _, pk := range disabledPublicKeys {
 		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
@@ -291,7 +302,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	} else if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
 	}
-	keystoreFile := &AccountsKeystoreRepresentation{}
+	keystoreFile := &accountsKeystoreRepresentation{}
 	if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 		return errors.Wrapf(err, "could not decode keystore file for accounts %s", accountsKeystoreFileName)
 	}
@@ -307,7 +318,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
 
-	store := &AccountStore{}
+	store := &accountStore{}
 	if err := json.Unmarshal(enc, store); err != nil {
 		return err
 	}
@@ -318,6 +329,15 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		return nil
 	}
 	dr.accountsStore = store
+	disabledPubKeys := make([][]byte, 0)
+	for _, pubKey := range keystoreFile.DisabledPublicKeys {
+		pubKeyBytes, err := hex.DecodeString(pubKey)
+		if err != nil {
+			return err
+		}
+		disabledPubKeys = append(disabledPubKeys, pubKeyBytes)
+	}
+	dr.disabledPublicKeys = disabledPubKeys
 	err = dr.initializeKeysCachesFromKeystore()
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize keys caches")
@@ -328,7 +348,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 func (dr *Keymanager) createAccountsKeystore(
 	_ context.Context,
 	privateKeys, publicKeys [][]byte,
-) (*AccountsKeystoreRepresentation, error) {
+) (*accountsKeystoreRepresentation, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -340,7 +360,7 @@ func (dr *Keymanager) createAccountsKeystore(
 		)
 	}
 	if dr.accountsStore == nil {
-		dr.accountsStore = &AccountStore{
+		dr.accountsStore = &accountStore{
 			PrivateKeys: privateKeys,
 			PublicKeys:  publicKeys,
 		}
@@ -377,10 +397,15 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}
-	return &AccountsKeystoreRepresentation{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
+	disabledPubKeys := make([]string, len(dr.disabledPublicKeys))
+	for i, pubKey := range dr.disabledPublicKeys {
+		disabledPubKeys[i] = fmt.Sprintf("%x", pubKey)
+	}
+	return &accountsKeystoreRepresentation{
+		Crypto:             cryptoFields,
+		ID:                 id.String(),
+		Version:            encryptor.Version(),
+		Name:               encryptor.Name(),
+		DisabledPublicKeys: disabledPubKeys,
 	}, nil
 }
