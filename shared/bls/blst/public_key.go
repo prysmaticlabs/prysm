@@ -36,6 +36,7 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy(), nil
 	}
+	// Subgroup check done when decompressing pubkey.
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {
 		return nil, errors.New("could not unmarshal bytes into public key")
