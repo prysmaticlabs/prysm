@@ -35,7 +35,7 @@ func (dr *Keymanager) ImportKeystores(
 		}
 		// if key exists prior to being added then output log that duplicate key was found
 		if _, ok := keys[string(pubKeyBytes)]; ok {
-			log.Warnf("Duplicate key %x will be ignored", pubKeyBytes)
+			log.Warnf("Duplicate key %x found during processing and will be ignored", pubKeyBytes)
 		}
 		keys[string(pubKeyBytes)] = string(privKeyBytes)
 		if err := bar.Add(1); err != nil {
