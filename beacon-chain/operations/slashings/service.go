@@ -124,7 +124,6 @@ func (p *Pool) InsertAttesterSlashing(
 	defer span.End()
 
 	if err := blocks.VerifyAttesterSlashing(ctx, state, slashing); err != nil {
-		numPendingAttesterSlashingFailedSigVerify.Inc()
 		return errors.Wrap(err, "could not verify attester slashing")
 	}
 
@@ -139,7 +138,6 @@ func (p *Pool) InsertAttesterSlashing(
 		// If the validator has already exited, has already been slashed, or if its index
 		// has been recently included in the pool of slashings, skip including this indice.
 		if !ok {
-			attesterSlashingReattempts.Inc()
 			cantSlash = append(cantSlash, val)
 			continue
 		}
@@ -150,7 +148,6 @@ func (p *Pool) InsertAttesterSlashing(
 			return p.pendingAttesterSlashing[i].validatorToSlash >= val
 		})
 		if found != len(p.pendingAttesterSlashing) && p.pendingAttesterSlashing[found].validatorToSlash == val {
-			attesterSlashingReattempts.Inc()
 			cantSlash = append(cantSlash, val)
 			continue
 		}
@@ -185,7 +182,6 @@ func (p *Pool) InsertProposerSlashing(
 	defer span.End()
 
 	if err := blocks.VerifyProposerSlashing(state, slashing); err != nil {
-		numPendingProposerSlashingFailedSigVerify.Inc()
 		return errors.Wrap(err, "could not verify proposer slashing")
 	}
 
@@ -198,7 +194,6 @@ func (p *Pool) InsertProposerSlashing(
 	// has been recently included in the pool of slashings, do not process this new
 	// slashing.
 	if !ok {
-		proposerSlashingReattempts.Inc()
 		return fmt.Errorf("validator at index %d cannot be slashed", idx)
 	}
 
