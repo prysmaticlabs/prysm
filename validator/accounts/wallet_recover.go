@@ -106,8 +106,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 		return err
 	}
 	log.Infof(
-		"Successfully recovered HD wallet and saved configuration to disk. " +
-			"Make a new validator account with ./prysm.sh validator accounts create",
+		"Successfully recovered HD wallet with accounts and saved configuration to disk",
 	)
 	return nil
 }
