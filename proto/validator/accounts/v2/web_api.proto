@@ -71,6 +71,7 @@ service Auth {
             body: "*"
         };
     }
+    numAccounts: 1,
     rpc Signup(AuthRequest) returns (AuthResponse) {
         option (google.api.http) = {
             post: "/v2/validator/signup",
