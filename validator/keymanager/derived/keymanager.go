@@ -165,3 +165,8 @@ func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]b
 func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
 	return dr.importedKM.FetchValidatingPrivateKeys(ctx)
 }
+
+// DeleteAccounts for a derived keymanager.
+func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
+	return dr.importedKM.DeleteAccounts(ctx, publicKeys)
+}
