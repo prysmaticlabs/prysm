@@ -5,10 +5,8 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-
 	"github.com/tyler-smith/go-bip39"
 )
 
