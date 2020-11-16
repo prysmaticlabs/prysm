@@ -35,15 +35,15 @@ func (dr *Keymanager) ImportKeystores(
 		}
 		// if key exists prior to being added then output log that duplicate key was found
 		if _, ok := keys[string(pubKeyBytes)]; ok {
-			log.Infof("Duplicate key %x will be ignored", pubKeyBytes)
+			log.Warnf("Duplicate key %x will be ignored", pubKeyBytes)
 		}
 		keys[string(pubKeyBytes)] = string(privKeyBytes)
 		if err := bar.Add(1); err != nil {
 			return errors.Wrap(err, "could not add to progress bar")
 		}
 	}
-	privKeys := make([][]byte, len(keys))
-	pubKeys := make([][]byte, len(keys))
+	privKeys := make([][]byte, 0)
+	pubKeys := make([][]byte, 0)
 	for pubKey, privKey := range keys {
 		pubKeys = append(pubKeys, []byte(pubKey))
 		privKeys = append(privKeys, []byte(privKey))
