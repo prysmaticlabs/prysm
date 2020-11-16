@@ -8,7 +8,7 @@ go_library(
         "mnemonic.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/derived",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",

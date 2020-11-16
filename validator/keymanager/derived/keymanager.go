@@ -107,7 +107,7 @@ func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return dr.opts
 }
 
-// WriteEncryptedKeystoresFromSeed given a mnemonic phrase, is able to regenerate N accounts
+// RecoverAccountsFromMnemonic given a mnemonic phrase, is able to regenerate N accounts
 // from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
 // to disk. Then, the mnemonic is never stored nor used by the validator.
 func (dr *Keymanager) RecoverAccountsFromMnemonic(

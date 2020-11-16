@@ -218,14 +218,14 @@ func createDerivedKeymanagerWallet(
 		Wallet: wallet,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not initialize HD keymanager")
 	}
 	mnemonic, err := derived.GenerateAndConfirmMnemonic(skipMnemonicConfirm)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not confirm mnemonic")
 	}
 	if err := km.RecoverAccountsFromMnemonic(ctx, mnemonic, mnemonicPassphrase, numAccounts); err != nil {
-		return err
+		return errors.Wrap(err, "could not recover accounts from mnemonic")
 	}
 	return nil
 }

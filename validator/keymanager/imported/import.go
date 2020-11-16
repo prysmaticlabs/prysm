@@ -65,11 +65,11 @@ func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys [][]byte, pub
 	// Write the accounts to disk into a single keystore.
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not import account keypairs")
 	}
 	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not marshal accounts keystore into JSON")
 	}
 	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
 }
