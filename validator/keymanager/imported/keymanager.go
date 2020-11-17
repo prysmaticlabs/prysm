@@ -3,15 +3,13 @@ package imported
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"strings"
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -20,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"go.opencensus.io/trace"
@@ -39,45 +36,38 @@ const (
 	// AccountsPath where all imported keymanager keystores are kept.
 	AccountsPath             = "accounts"
 	accountsKeystoreFileName = "all-accounts.keystore.json"
-	eipVersion               = "EIP-2335"
 )
-
-// KeymanagerOpts for a imported keymanager.
-type KeymanagerOpts struct {
-	EIPVersion string `json:"direct_eip_version"`
-	Version    string `json:"direct_version"`
-}
 
 // Keymanager implementation for imported keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet              iface.Wallet
-	opts                *KeymanagerOpts
-	accountsStore       *AccountStore
+	accountsStore       *accountStore
+	disabledPublicKeys  map[[48]byte]bool
 	accountsChangedFeed *event.Feed
-}
-
-// AccountStore defines a struct containing 1-to-1 corresponding
-// private keys and public keys for eth2 validators.
-type AccountStore struct {
-	PrivateKeys [][]byte `json:"private_keys"`
-	PublicKeys  [][]byte `json:"public_keys"`
-}
-
-// DefaultKeymanagerOpts for a imported keymanager implementation.
-func DefaultKeymanagerOpts() *KeymanagerOpts {
-	return &KeymanagerOpts{
-		EIPVersion: eipVersion,
-		Version:    "2",
-	}
 }
 
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
-	Wallet              iface.Wallet
-	Opts                *KeymanagerOpts
-	SkipMnemonicConfirm bool
-	Mnemonic            string
+	Wallet iface.Wallet
+}
+
+// Defines a struct containing 1-to-1 corresponding
+// private keys and public keys for eth2 validators.
+type accountStore struct {
+	PrivateKeys [][]byte `json:"private_keys"`
+	PublicKeys  [][]byte `json:"public_keys"`
+}
+
+// Defines an internal Prysm representation
+// of validator accounts, encrypted according to the EIP-2334 standard
+// but containing extra fields such as markers for disabled public keys.
+type accountsKeystoreRepresentation struct {
+	Crypto             map[string]interface{} `json:"crypto"`
+	ID                 string                 `json:"uuid"`
+	Version            uint                   `json:"version"`
+	Name               string                 `json:"name"`
+	DisabledPublicKeys []string               `json:"disabled_public_keys"`
 }
 
 // ResetCaches for the keymanager.
@@ -92,9 +82,9 @@ func ResetCaches() {
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:              cfg.Wallet,
-		opts:                cfg.Opts,
-		accountsStore:       &AccountStore{},
+		accountsStore:       &accountStore{},
 		accountsChangedFeed: new(event.Feed),
+		disabledPublicKeys:  make(map[[48]byte]bool),
 	}
 
 	if err := k.initializeAccountKeystore(ctx); err != nil {
@@ -131,47 +121,6 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 	return k, nil
 }
 
-// UnmarshalOptionsFile attempts to JSON unmarshal a imported keymanager
-// options file into a struct.
-func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
-	enc, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
-		}
-	}()
-	opts := &KeymanagerOpts{}
-	if err := json.Unmarshal(enc, opts); err != nil {
-		return nil, err
-	}
-	return opts, nil
-}
-
-// MarshalOptionsFile returns a marshaled options file for a keymanager.
-func MarshalOptionsFile(_ context.Context, opts *KeymanagerOpts) ([]byte, error) {
-	return json.MarshalIndent(opts, "", "\t")
-}
-
-// KeymanagerOpts for the imported keymanager.
-func (dr *Keymanager) KeymanagerOpts() *KeymanagerOpts {
-	return dr.opts
-}
-
-// String pretty-print of a imported keymanager options.
-func (opts *KeymanagerOpts) String() string {
-	au := aurora.NewAurora(true)
-	var b strings.Builder
-	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("EIP Version"), opts.EIPVersion)
-	if _, err := b.WriteString(strAddr); err != nil {
-		log.Error(err)
-		return ""
-	}
-	return b.String()
-}
-
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
@@ -188,6 +137,17 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 	}
 	lock.RUnlock()
 	return names, nil
+}
+
+// DisabledPublicKeys returns the currently disabled public keys in the keymanager.
+func (dr *Keymanager) DisabledPublicKeys() [][]byte {
+	disabledPubKeys := make([][]byte, 0)
+	for pubKey := range dr.disabledPublicKeys {
+		pubKeyBytes := make([]byte, 48)
+		copy(pubKeyBytes, pubKey[:])
+		disabledPubKeys = append(disabledPubKeys, pubKeyBytes)
+	}
+	return disabledPubKeys
 }
 
 // Initialize public and secret key caches that are used to speed up the functions
@@ -256,8 +216,25 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 	return nil
 }
 
-// FetchValidatingPublicKeys fetches the list of public keys from the imported account keystores.
+// FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
+	defer span.End()
+
+	lock.RLock()
+	keys := orderedPublicKeys
+	result := make([][48]byte, 0)
+	for _, pk := range keys {
+		if _, ok := dr.disabledPublicKeys[pk]; !ok {
+			result = append(result, pk)
+		}
+	}
+	lock.RUnlock()
+	return result, nil
+}
+
+// FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the imported account keystores.
+func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
@@ -279,11 +256,13 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
 	for i, pk := range pubKeys {
-		seckey, ok := secretKeysCache[pk]
-		if !ok {
-			return nil, errors.New("Could not fetch private key")
+		if _, ok := dr.disabledPublicKeys[pk]; !ok {
+			seckey, ok := secretKeysCache[pk]
+			if !ok {
+				return nil, errors.New("Could not fetch private key")
+			}
+			privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
 		}
-		privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
 	}
 	return privKeys, nil
 }
@@ -314,7 +293,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	} else if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
 	}
-	keystoreFile := &keymanager.Keystore{}
+	keystoreFile := &accountsKeystoreRepresentation{}
 	if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 		return errors.Wrapf(err, "could not decode keystore file for accounts %s", accountsKeystoreFileName)
 	}
@@ -330,7 +309,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		return errors.Wrap(err, "could not decrypt keystore")
 	}
 
-	store := &AccountStore{}
+	store := &accountStore{}
 	if err := json.Unmarshal(enc, store); err != nil {
 		return err
 	}
@@ -341,6 +320,17 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		return nil
 	}
 	dr.accountsStore = store
+
+	lock.Lock()
+	for _, pubKey := range keystoreFile.DisabledPublicKeys {
+		pubKeyBytes, err := hex.DecodeString(pubKey)
+		if err != nil {
+			lock.Unlock()
+			return err
+		}
+		dr.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
+	}
+	lock.Unlock()
 	err = dr.initializeKeysCachesFromKeystore()
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize keys caches")
@@ -351,7 +341,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 func (dr *Keymanager) createAccountsKeystore(
 	_ context.Context,
 	privateKeys, publicKeys [][]byte,
-) (*keymanager.Keystore, error) {
+) (*accountsKeystoreRepresentation, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -363,7 +353,7 @@ func (dr *Keymanager) createAccountsKeystore(
 		)
 	}
 	if dr.accountsStore == nil {
-		dr.accountsStore = &AccountStore{
+		dr.accountsStore = &accountStore{
 			PrivateKeys: privateKeys,
 			PublicKeys:  publicKeys,
 		}
@@ -400,10 +390,17 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}
-	return &keymanager.Keystore{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
+	disabledPubKeys := make([]string, 0)
+	lock.Lock()
+	defer lock.Unlock()
+	for pubKey := range dr.disabledPublicKeys {
+		disabledPubKeys = append(disabledPubKeys, fmt.Sprintf("%x", pubKey))
+	}
+	return &accountsKeystoreRepresentation{
+		Crypto:             cryptoFields,
+		ID:                 id.String(),
+		Version:            encryptor.Version(),
+		Name:               encryptor.Name(),
+		DisabledPublicKeys: disabledPubKeys,
 	}, nil
 }

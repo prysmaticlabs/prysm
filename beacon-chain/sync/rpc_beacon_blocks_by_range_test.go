@@ -273,7 +273,6 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 
 func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	d, _ := db.SetupDB(t)
-	hook := logTest.NewGlobal()
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
 		parentRoot := [32]byte{}
@@ -341,9 +340,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 		saveBlocks(req)
 
-		hook.Reset()
 		assert.NoError(t, sendRequest(p1, p2, r, req, true, true))
-		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used, but no overflow.
@@ -370,13 +367,10 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 		saveBlocks(req)
 
-		hook.Reset()
 		for i := 0; i < p2.Peers().Scorers().BadResponsesScorer().Params().Threshold; i++ {
 			err := sendRequest(p1, p2, r, req, false, true)
 			assert.ErrorContains(t, p2p.ErrRateLimited.Error(), err)
 		}
-		// Make sure that we were blocked indeed.
-		require.LogsContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used.
@@ -402,19 +396,15 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 		saveBlocks(req)
 
-		hook.Reset()
 		for i := 0; i < flags.Get().BlockBatchLimitBurstFactor; i++ {
 			assert.NoError(t, sendRequest(p1, p2, r, req, true, false))
 		}
-		require.LogsDoNotContain(t, hook, "Disconnecting bad peer")
 
 		// One more request should result in overflow.
-		hook.Reset()
 		for i := 0; i < p2.Peers().Scorers().BadResponsesScorer().Params().Threshold; i++ {
 			err := sendRequest(p1, p2, r, req, false, false)
 			assert.ErrorContains(t, p2p.ErrRateLimited.Error(), err)
 		}
-		require.LogsContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -52,24 +53,27 @@ type peerData struct {
 }
 
 func TestMain(m *testing.M) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	run := func() int {
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetOutput(ioutil.Discard)
 
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		EnablePeerScorer: true,
-	})
-	defer resetCfg()
+		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			EnablePeerScorer: true,
+		})
+		defer resetCfg()
 
-	resetFlags := flags.Get()
-	flags.Init(&flags.GlobalFlags{
-		BlockBatchLimit:            64,
-		BlockBatchLimitBurstFactor: 10,
-	})
-	defer func() {
-		flags.Init(resetFlags)
-	}()
+		resetFlags := flags.Get()
+		flags.Init(&flags.GlobalFlags{
+			BlockBatchLimit:            64,
+			BlockBatchLimitBurstFactor: 10,
+		})
+		defer func() {
+			flags.Init(resetFlags)
+		}()
 
-	m.Run()
+		return m.Run()
+	}
+	os.Exit(run())
 }
 
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {

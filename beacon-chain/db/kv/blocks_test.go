@@ -106,15 +106,13 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 	ctx := context.Background()
 	numBlocks := 10
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
-	blockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = uint64(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = b
-		r, err := totalBlocks[i].Block.HashTreeRoot()
+		_, err := totalBlocks[i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		blockRoots = append(blockRoots, r)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
 	zeroFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(0)
@@ -128,16 +126,14 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	ctx := context.Background()
 	numBlocks := 10
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
-	blockRoots := make([][32]byte, 0)
 	// Save blocks from slot 1 onwards.
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = uint64(i) + 1
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = b
-		r, err := totalBlocks[i].Block.HashTreeRoot()
+		_, err := totalBlocks[i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		blockRoots = append(blockRoots, r)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
 	badFilter := filters.NewFilter().SetStartSlot(5).SetEndSlot(1)

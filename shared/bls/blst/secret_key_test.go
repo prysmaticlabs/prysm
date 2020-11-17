@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64
+// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
 // +build blst_enabled
 
 package blst_test
@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -54,7 +55,7 @@ func TestSecretKeyFromBytes(t *testing.T) {
 		{
 			name:  "Bad",
 			input: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-			err:   errors.New("could not unmarshal bytes into secret key"),
+			err:   common.ErrSecretUnmarshal,
 		},
 		{
 			name:  "Good",

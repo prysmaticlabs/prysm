@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -65,16 +63,21 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
 		defer func() {
-			if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-				log.WithError(err).Debug("Failed to reset stream")
-			}
+			closeStream(stream, log)
 		}()
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
 		span.AddAttributes(trace.StringAttribute("topic", topic))
 		span.AddAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()))
 		log := log.WithField("peer", stream.Conn().RemotePeer().Pretty())
-
+		// Check before hand that peer is valid.
+		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
+			closeStream(stream, log)
+			if err := s.sendGoodByeAndDisconnect(ctx, codeBanned, stream.Conn().RemotePeer()); err != nil {
+				log.Debugf("Could not disconnect from peer: %v", err)
+			}
+			return
+		}
 		if err := stream.SetReadDeadline(timeutils.Now().Add(ttfbTimeout)); err != nil {
 			log.WithError(err).Debug("Could not set stream read deadline")
 			return

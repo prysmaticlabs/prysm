@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -100,11 +99,7 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	for {
 		select {
 		case w := <-walletChan:
-			keyManager, err := w.InitializeKeymanager(
-				ctx, &iface.InitializeKeymanagerConfig{
-					SkipMnemonicConfirm: true,
-				},
-			)
+			keyManager, err := w.InitializeKeymanager(ctx)
 			if err != nil {
 				return errors.Wrap(err, "could not read keymanager")
 			}
@@ -177,36 +172,6 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 			return errors.New("context has been canceled, exiting goroutine")
 		}
 	}
-}
-
-// WaitForSynced opens a stream with the beacon chain node so it can be informed of when the beacon node is
-// fully synced and ready to communicate with the validator.
-func (v *validator) WaitForSynced(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.WaitForSynced")
-	defer span.End()
-	// First, check if the beacon chain has started.
-	stream, err := v.validatorClient.WaitForSynced(ctx, &ptypes.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "could not setup beacon chain Synced streaming client")
-	}
-
-	log.Info("Waiting for chainstart to occur and the beacon node to be fully synced")
-	syncedRes, err := stream.Recv()
-	if err != io.EOF {
-		if ctx.Err() == context.Canceled {
-			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-		}
-		if err != nil {
-			return errors.Wrap(err, "could not receive Synced from stream")
-		}
-		v.genesisTime = syncedRes.GenesisTime
-	}
-
-	// Once the Synced log is received, we update the genesis time of the validator client
-	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
-	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Chain has started and the beacon node is synced")
-	return nil
 }
 
 // SlasherReady checks if slasher that was configured as external protection
@@ -477,7 +442,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
-// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
+// validator is known to not have a roles at the slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
 	rolesAt := make(map[[48]byte][]ValidatorRole)
@@ -549,6 +514,24 @@ func (v *validator) SaveProtections(ctx context.Context) error {
 	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
 	v.attesterHistoryByPubKeyLock.Unlock()
 
+	return nil
+}
+
+// ResetAttesterProtectionData reset validators protection data.
+func (v *validator) ResetAttesterProtectionData() {
+	v.attesterHistoryByPubKeyLock.Lock()
+	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
+	v.attesterHistoryByPubKeyLock.Unlock()
+}
+
+// SaveProtection saves the attestation information currently in validator state.
+func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
+	v.attesterHistoryByPubKeyLock.RLock()
+
+	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
+		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
+	}
+	v.attesterHistoryByPubKeyLock.RUnlock()
 	return nil
 }
 

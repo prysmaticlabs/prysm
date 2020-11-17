@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -17,12 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -150,11 +151,6 @@ func (s *ValidatorClient) Close() {
 
 	s.services.StopAll()
 	log.Info("Stopping Prysm validator")
-	if !s.cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		if err := s.wallet.UnlockWalletConfigFile(); err != nil {
-			log.WithError(err).Errorf("Failed to unlock wallet config file.")
-		}
-	}
 	close(s.stop)
 }
 
@@ -181,14 +177,9 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-			SkipMnemonicConfirm: false,
-		})
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
-		}
-		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
-			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
@@ -213,6 +204,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 		if err := clearDB(dataDir, forceClearFlag); err != nil {
 			return err
+		}
+	} else {
+		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+		if !fileutil.FileExists(dataFile) {
+			log.Warnf("Slashing protection file %s is missing.\n"+
+				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
+				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
@@ -262,14 +260,9 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-			SkipMnemonicConfirm: false,
-		})
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
-		}
-		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
-			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)

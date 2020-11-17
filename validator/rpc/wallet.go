@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -12,7 +11,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -109,13 +107,12 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		if req.Mnemonic == "" {
 			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
 		}
-		_, depositData, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
+		if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
 			WalletDir:      walletDir,
 			WalletPassword: req.WalletPassword,
 			Mnemonic:       req.Mnemonic,
-			NumAccounts:    int64(req.NumAccounts),
-		})
-		if err != nil {
+			NumAccounts:    int(req.NumAccounts),
+		}); err != nil {
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
@@ -126,23 +123,10 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			return nil, err
 		}
 
-		depositDataList := make([]*pb.DepositDataResponse_DepositData, len(depositData))
-		for i, item := range depositData {
-			data, err := accounts.DepositDataJSON(item)
-			if err != nil {
-				return nil, err
-			}
-			depositDataList[i] = &pb.DepositDataResponse_DepositData{
-				Data: data,
-			}
-		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
 				WalletPath:     walletDir,
 				KeymanagerKind: pb.KeymanagerKind_DERIVED,
-			},
-			AccountsCreated: &pb.DepositDataResponse{
-				DepositDataList: depositDataList,
 			},
 		}, nil
 	case pb.KeymanagerKind_REMOTE:
@@ -152,7 +136,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	}
 }
 
-// EditConfig allows the user to edit their wallet's keymanageropts.
+// EditConfig allows the user to edit their wallet's configuration.
 func (s *Server) EditConfig(_ context.Context, _ *pb.EditWalletConfigRequest) (*pb.WalletResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
@@ -191,22 +175,9 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
 	}
-	f, err := s.wallet.ReadKeymanagerConfigFromDisk(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not read keymanager config from disk: %v", err)
-	}
-	encoded, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not parse keymanager config: %v", err)
-	}
-	var config map[string]string
-	if err := json.Unmarshal(encoded, &config); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not JSON unmarshal keymanager config: %v", err)
-	}
 	return &pb.WalletResponse{
-		WalletPath:       s.walletDir,
-		KeymanagerKind:   keymanagerKind,
-		KeymanagerConfig: config,
+		WalletPath:     s.walletDir,
+		KeymanagerKind: keymanagerKind,
 	}, nil
 }
 
@@ -309,9 +280,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize keymanager")
 	}

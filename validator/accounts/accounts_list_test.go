@@ -33,6 +33,10 @@ func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][
 	return m.publicKeys, nil
 }
 
+func (m *mockRemoteKeymanager) FetchAllValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+	return m.publicKeys, nil
+}
+
 func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
 }
@@ -75,7 +79,6 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -228,22 +231,14 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	keymanager, err := derived.NewKeymanager(
 		cliCtx.Context,
 		&derived.SetupConfig{
-			Opts:                derived.DefaultKeymanagerOpts(),
-			Wallet:              w,
-			SkipMnemonicConfirm: true,
+			Wallet: w,
 		},
 	)
 	require.NoError(t, err)
 
 	numAccounts := 5
-	depositDataForAccounts := make([][]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		_, _, err := keymanager.CreateAccount(cliCtx.Context)
-		require.NoError(t, err)
-		enc, err := keymanager.DepositDataForAccount(uint64(i))
-		require.NoError(t, err)
-		depositDataForAccounts[i] = enc
-	}
+	err = keymanager.RecoverAccountsFromMnemonic(cliCtx.Context, testMnemonic, "", numAccounts)
+	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
 	r, writer, err := os.Pipe()
@@ -251,7 +246,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	os.Stdout = writer
 
 	// We call the list imported keymanager accounts function.
-	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true /* show deposit data */, true /*show private keys */, keymanager))
+	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true, keymanager))
 
 	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)
@@ -301,13 +296,11 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	// Expected output format definition
 	const prologLength = 3
-	const accountLength = 14
+	const accountLength = 6
 	const epilogLength = 1
 	const nameOffset = 1
-	const keyOffset = 5
-	const validatingPrivateKeyOffset = 6
-	const withdrawalPrivateKeyOffset = 3
-	const depositOffset = 11
+	const keyOffset = 2
+	const validatingPrivateKeyOffset = 3
 
 	// Require the output has correct number of lines
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
@@ -354,27 +347,6 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keyString := fmt.Sprintf("%#x", key)
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Validating Private Key %s not found on line number %d", keyString, lineNumber)
-	}
-
-	// Get withdrawal private keys and require the correct count
-	withdrawalPrivKeys, err := keymanager.FetchWithdrawalPrivateKeys(cliCtx.Context)
-	require.NoError(t, err)
-	require.Equal(t, numAccounts, len(pubKeys))
-
-	// Assert that withdrawal private keys are printed on the correct lines
-	for i, key := range withdrawalPrivKeys {
-		lineNumber := prologLength + accountLength*i + withdrawalPrivateKeyOffset
-		keyString := fmt.Sprintf("%#x", key)
-		keyFound := strings.Contains(lines[lineNumber], keyString)
-		assert.Equal(t, true, keyFound, "Withdrawal Private Key %s not found on line number %d", keyString, lineNumber)
-	}
-
-	// Assert that deposit data are printed on the correct lines
-	for i, deposit := range depositDataForAccounts {
-		lineNumber := prologLength + accountLength*i + depositOffset
-		depositString := fmt.Sprintf("%#x", deposit)
-		depositFound := strings.Contains(lines[lineNumber], depositString)
-		assert.Equal(t, true, depositFound, "Deposit data %s not found on line number %d", depositString, lineNumber)
 	}
 }
 

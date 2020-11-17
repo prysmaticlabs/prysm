@@ -434,7 +434,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCStatusRequest)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -521,7 +521,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		assert.NoError(t, r2.validateStatusMessage(context.Background(), out))
 	})
 
-	p1.AddConnectionHandler(r.sendRPCStatusRequest)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -688,7 +688,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 			assert.Equal(t, tt.expectError, r2.validateStatusMessage(context.Background(), out) != nil)
 		})
 
-		p1.AddConnectionHandler(r.sendRPCStatusRequest)
+		p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 		p1.Connect(p2)
 
 		if testutil.WaitTimeout(&wg, 1*time.Second) {

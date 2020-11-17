@@ -20,7 +20,6 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForSynced(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
@@ -35,6 +34,7 @@ type Validator interface {
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
 	SaveProtections(ctx context.Context) error
+	ResetAttesterProtectionData()
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
@@ -63,17 +63,11 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Slasher is not ready: %v", err)
 		}
 	}
-	if featureconfig.Get().WaitForSynced {
-		if err := v.WaitForSynced(ctx); err != nil {
-			log.Fatalf("Could not determine if chain started and beacon node is synced: %v", err)
-		}
-	} else {
-		if err := v.WaitForChainStart(ctx); err != nil {
-			log.Fatalf("Could not determine if beacon chain started: %v", err)
-		}
-		if err := v.WaitForSync(ctx); err != nil {
-			log.Fatalf("Could not determine if beacon node synced: %v", err)
-		}
+	if err := v.WaitForChainStart(ctx); err != nil {
+		log.Fatalf("Could not determine if beacon chain started: %v", err)
+	}
+	if err := v.WaitForSync(ctx); err != nil {
+		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
@@ -163,10 +157,8 @@ func run(ctx context.Context, v Validator) {
 			// Wait for all processes to complete, then report span complete.
 			go func() {
 				wg.Wait()
+				v.ResetAttesterProtectionData()
 				v.LogAttestationsSubmitted()
-				if err := v.SaveProtections(ctx); err != nil {
-					log.WithError(err).Error("Could not save validator protection")
-				}
 				// Log this client performance in the previous epoch
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 					log.WithError(err).Error("Could not report validator's rewards/penalties")

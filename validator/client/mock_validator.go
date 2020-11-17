@@ -17,7 +17,6 @@ type FakeValidator struct {
 	WaitForActivationCalled           bool
 	WaitForChainStartCalled           bool
 	WaitForSyncCalled                 bool
-	WaitForSyncedCalled               bool
 	SlasherReadyCalled                bool
 	NextSlotCalled                    bool
 	CanonicalHeadSlotCalled           bool
@@ -28,6 +27,7 @@ type FakeValidator struct {
 	ProposeBlockCalled                bool
 	LogValidatorGainsAndLossesCalled  bool
 	SaveProtectionsCalled             bool
+	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
 	ProposeBlockArg1                  uint64
 	AttestToBlockHeadArg1             uint64
@@ -73,12 +73,6 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
 // WaitForSync for mocking.
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 	fv.WaitForSyncCalled = true
-	return nil
-}
-
-// WaitForSynced for mocking.
-func (fv *FakeValidator) WaitForSynced(_ context.Context) error {
-	fv.WaitForSyncedCalled = true
 	return nil
 }
 
@@ -129,6 +123,11 @@ func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ uint64)
 func (fv *FakeValidator) SaveProtections(_ context.Context) error {
 	fv.SaveProtectionsCalled = true
 	return nil
+}
+
+// ResetAttesterProtectionData for mocking.
+func (fv *FakeValidator) ResetAttesterProtectionData() {
+	fv.DeleteProtectionCalled = true
 }
 
 // RolesAt for mocking.

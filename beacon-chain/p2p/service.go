@@ -24,6 +24,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -155,6 +156,13 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
 		pubsub.WithSubscriptionFilter(s),
+	}
+	// Add gossip scoring options.
+	if featureconfig.Get().EnablePeerScorer {
+		psOpts = append(
+			psOpts,
+			pubsub.WithPeerScore(peerScoringParams()),
+			pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute))
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()

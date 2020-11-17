@@ -2,7 +2,6 @@ package accounts
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -17,13 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 const (
@@ -45,6 +41,8 @@ type testWalletConfig struct {
 	backupDir               string
 	keysDir                 string
 	deletePublicKeys        string
+	enablePublicKeys        string
+	disablePublicKeys       string
 	voluntaryExitPublicKeys string
 	backupPublicKeys        string
 	backupPasswordFile      string
@@ -66,6 +64,8 @@ func setupWalletCtx(
 	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
 	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
 	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.DisablePublicKeysFlag.Name, cfg.disablePublicKeys, "")
+	set.String(flags.EnablePublicKeysFlag.Name, cfg.enablePublicKeys, "")
 	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
 	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
 	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
@@ -85,6 +85,8 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
 	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
 	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.DisablePublicKeysFlag.Name, cfg.disablePublicKeys))
+	assert.NoError(tb, set.Set(flags.EnablePublicKeysFlag.Name, cfg.enablePublicKeys))
 	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
 	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
 	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
@@ -157,20 +159,10 @@ func TestCreateWallet_Imported(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
-
-	// We read the keymanager config for the newly created wallet.
-	encoded, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
-	assert.NoError(t, err)
-	cfg, err := imported.UnmarshalOptionsFile(encoded)
-	assert.NoError(t, err)
-
-	// We assert the created configuration was as desired.
-	wantedCfg := imported.DefaultKeymanagerOpts()
-	assert.DeepEqual(t, wantedCfg, cfg)
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
@@ -180,6 +172,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
 		keymanagerKind:     keymanager.Derived,
+		numAccounts:        1,
 	})
 
 	// We attempt to create the wallet.
@@ -187,20 +180,10 @@ func TestCreateWallet_Derived(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	ctx := context.Background()
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
-
-	// We read the keymanager config for the newly created wallet.
-	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
-	assert.NoError(t, err)
-	cfg, err := derived.UnmarshalOptionsFile(encoded)
-	assert.NoError(t, err)
-
-	// We assert the created configuration was as desired.
-	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), cfg)
 }
 
 // TestCreateWallet_WalletAlreadyExists checks for expected error if trying to create a wallet when there is one already.
@@ -211,6 +194,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
 		keymanagerKind:     keymanager.Derived,
+		numAccounts:        1,
 	})
 
 	// We attempt to create the wallet.
@@ -231,48 +215,6 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 	// We attempt to create another wallet of different type at the same location. We expect an error.
 	_, err = CreateAndSaveWalletCli(cliCtx)
 	require.ErrorContains(t, "already exists", err)
-}
-
-// TestCorrectPassphrase_Derived makes sure the wallet created uses the provided passphrase
-func TestCorrectPassphrase_Derived(t *testing.T) {
-	walletDir, _, passwordFile := setupWalletAndPasswordsDir(t)
-
-	//Specify the password locally to this file for convenience.
-	password := "Pa$sW0rD0__Fo0xPr"
-	require.NoError(t, ioutil.WriteFile(passwordFile, []byte(password), os.ModePerm))
-
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:          walletDir,
-		walletPasswordFile: passwordFile,
-		keymanagerKind:     keymanager.Derived,
-		skipDepositConfirm: true,
-	})
-
-	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCli(cliCtx)
-	require.Equal(t, nil, err, "error in CreateAndSaveWalletCli()")
-
-	w := wallet.New(&wallet.Config{
-		WalletDir:      walletDir,
-		KeymanagerKind: keymanager.Derived,
-	})
-
-	seedConfigFile, err := w.ReadEncryptedSeedFromDisk(cliCtx.Context)
-	require.Equal(t, nil, err, "could not read encrypted seed file from disk")
-	defer func() {
-		err := seedConfigFile.Close()
-		require.Equal(t, nil, err, "Could not close encrypted seed file")
-	}()
-	encodedSeedFile, err := ioutil.ReadAll(seedConfigFile)
-	require.Equal(t, nil, err, "could not read seed configuration file contents")
-
-	seedConfig := &derived.SeedConfig{}
-	err = json.Unmarshal(encodedSeedFile, seedConfig)
-	require.Equal(t, nil, err, "could not unmarshal seed configuration")
-
-	decryptor := keystorev4.New()
-	_, err = decryptor.Decrypt(seedConfig.Crypto, password)
-	require.Equal(t, nil, err, "could not decrypt seed configuration with password")
 }
 
 func TestCreateWallet_Remote(t *testing.T) {

@@ -31,10 +31,6 @@ var backOffTime = map[types.SSZUint64]time.Duration{
 	p2p.GoodbyeCodeGenericError: 2 * time.Minute,
 }
 
-// Add a short delay to allow the stream to flush before resetting it.
-// There is still a chance that the peer won't receive the message.
-const flushDelay = 50 * time.Millisecond
-
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
@@ -57,6 +53,12 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	s.p2p.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(*m))
 	// closes all streams with the peer
 	return s.p2p.Disconnect(stream.Conn().RemotePeer())
+}
+
+// A custom goodbye method that is used by our connection handler, in the
+// event we receive bad peers.
+func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
+	return s.sendGoodByeAndDisconnect(ctx, p2p.GoodbyeCodeGenericError, id)
 }
 
 func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2p.RPCGoodbyeCode, id peer.ID) error {

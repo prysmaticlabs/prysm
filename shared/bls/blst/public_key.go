@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64 darwin,amd64
+// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
 // +build blst_enabled
 
 package blst
@@ -36,6 +36,7 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy(), nil
 	}
+	// Subgroup check done when decompressing pubkey.
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {
 		return nil, errors.New("could not unmarshal bytes into public key")
@@ -57,20 +58,11 @@ func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
 	agg := new(blstAggregatePublicKey)
 	mulP1 := make([]*blstPublicKey, 0, len(pubs))
 	for _, pubkey := range pubs {
-		if len(pubkey) != params.BeaconConfig().BLSPubkeyLength {
-			return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
+		pubKeyObj, err := PublicKeyFromBytes(pubkey)
+		if err != nil {
+			return nil, err
 		}
-		if cv, ok := pubkeyCache.Get(string(pubkey)); ok {
-			mulP1 = append(mulP1, cv.(*PublicKey).Copy().(*PublicKey).p)
-			continue
-		}
-		p := new(blstPublicKey).Uncompress(pubkey)
-		if p == nil {
-			return nil, errors.New("could not unmarshal bytes into public key")
-		}
-		pubKeyObj := &PublicKey{p: p}
-		pubkeyCache.Set(string(pubkey), pubKeyObj.Copy(), 48)
-		mulP1 = append(mulP1, p)
+		mulP1 = append(mulP1, pubKeyObj.(*PublicKey).p)
 	}
 	agg.Aggregate(mulP1)
 	return &PublicKey{p: agg.ToAffine()}, nil

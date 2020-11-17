@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64 darwin,amd64
+// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
 // +build blst_enabled
 
 package blst
@@ -6,7 +6,6 @@ package blst
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -42,7 +41,7 @@ func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 	}
 	secKey := new(blst.SecretKey).Deserialize(privKey)
 	if secKey == nil {
-		return nil, errors.New("could not unmarshal bytes into secret key")
+		return nil, common.ErrSecretUnmarshal
 	}
 	wrappedKey := &bls12SecretKey{p: secKey}
 	if wrappedKey.IsZero() {

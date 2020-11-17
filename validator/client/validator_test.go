@@ -61,6 +61,16 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]b
 	return keys, nil
 }
 
+func (m *mockKeymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	keys := make([][48]byte, 0)
+	for pubKey := range m.keysMap {
+		keys = append(keys, pubKey)
+	}
+	return keys, nil
+}
+
 func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], req.PublicKey)
@@ -185,99 +195,6 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	)
 	err := v.WaitForChainStart(context.Background())
 	want := "could not receive ChainStart from stream"
-	assert.ErrorContains(t, want, err)
-}
-
-func TestWaitForSynced_SetsGenesisTime(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
-	v := validator{
-		//keyManager:      testKeyManager,
-		validatorClient: client,
-	}
-	genesis := uint64(time.Unix(1, 0).Unix())
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
-	client.EXPECT().WaitForSynced(
-		gomock.Any(),
-		&ptypes.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.SyncedResponse{
-			Synced:      true,
-			GenesisTime: genesis,
-		},
-		nil,
-	)
-	require.NoError(t, v.WaitForSynced(context.Background()))
-	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
-	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
-}
-
-func TestWaitForSynced_ContextCanceled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
-	v := validator{
-		validatorClient: client,
-	}
-	genesis := uint64(time.Unix(0, 0).Unix())
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
-	client.EXPECT().WaitForSynced(
-		gomock.Any(),
-		&ptypes.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.SyncedResponse{
-			Synced:      true,
-			GenesisTime: genesis,
-		},
-		nil,
-	)
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	assert.ErrorContains(t, cancelledCtx, v.WaitForSynced(ctx))
-}
-
-func TestWaitForSynced_StreamSetupFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
-	v := validator{
-		validatorClient: client,
-	}
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
-	client.EXPECT().WaitForSynced(
-		gomock.Any(),
-		&ptypes.Empty{},
-	).Return(clientStream, errors.New("failed stream"))
-	err := v.WaitForSynced(context.Background())
-	want := "could not setup beacon chain Synced streaming client"
-	assert.ErrorContains(t, want, err)
-}
-
-func TestWaitForSynced_ReceiveErrorFromStream(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
-	v := validator{
-		validatorClient: client,
-	}
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
-	client.EXPECT().WaitForSynced(
-		gomock.Any(),
-		&ptypes.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		nil,
-		errors.New("fails"),
-	)
-	err := v.WaitForSynced(context.Background())
-	want := "could not receive Synced from stream"
 	assert.ErrorContains(t, want, err)
 }
 
@@ -817,6 +734,35 @@ func TestSaveProtections_OK(t *testing.T) {
 
 	require.DeepEqual(t, history1, savedHistories[pubKey1], "Unexpected retrieved history")
 	require.DeepEqual(t, history2, savedHistories[pubKey2], "Unexpected retrieved history")
+}
+
+func TestSaveProtection_OK(t *testing.T) {
+	pubKey1 := [48]byte{1}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	db := dbTest.SetupDB(t, [][48]byte{pubKey1})
+	ctx := context.Background()
+
+	cleanHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
+	require.NoError(t, err)
+	v := validator{
+		db:                      db,
+		validatorClient:         client,
+		attesterHistoryByPubKey: cleanHistories,
+	}
+
+	history1 := cleanHistories[pubKey1]
+	history1 = markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
+
+	cleanHistories[pubKey1] = history1
+
+	v.attesterHistoryByPubKey = cleanHistories
+	require.NoError(t, v.SaveProtection(context.Background(), pubKey1), "Could not update assignments")
+	savedHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
+	require.NoError(t, err)
+
+	require.DeepEqual(t, history1, savedHistories[pubKey1], "Unexpected retrieved history")
 }
 
 func TestRolesAt_OK(t *testing.T) {
