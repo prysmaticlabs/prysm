@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
