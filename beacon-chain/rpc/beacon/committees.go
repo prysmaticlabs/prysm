@@ -73,7 +73,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	}
 	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
-		return nil, nil, status.Error(codes.Internal, "Could not get state")
+		return nil, nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {

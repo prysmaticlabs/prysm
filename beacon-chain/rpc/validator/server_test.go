@@ -17,7 +17,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -419,111 +418,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.ChainStarted,
 			Data: &statefeed.ChainStartedData{
-				StartTime: time.Unix(0, 0),
-			},
-		})
-	}
-
-	exitRoutine <- true
-	require.LogsContain(t, hook, "Sending genesis time")
-}
-
-func TestWaitForSynced_ContextClosed(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	chainService := &mockChain.ChainService{}
-	Server := &Server{
-		Ctx: ctx,
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
-			ChainFeed: new(event.Feed),
-		},
-		StateNotifier: chainService.StateNotifier(),
-		BeaconDB:      db,
-		HeadFetcher:   chainService,
-	}
-
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
-	mockStream.EXPECT().Context().Return(context.Background())
-	go func(tt *testing.T) {
-		err := Server.WaitForSynced(&ptypes.Empty{}, mockStream)
-		assert.ErrorContains(tt, "Context canceled", err)
-		<-exitRoutine
-	}(t)
-	cancel()
-	exitRoutine <- true
-}
-
-func TestWaitForSynced_AlreadySynced(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
-	ctx := context.Background()
-	headBlockRoot := [32]byte{0x01, 0x02}
-	trie := testutil.NewBeaconState()
-	require.NoError(t, trie.SetSlot(3))
-	require.NoError(t, db.SaveState(ctx, trie, headBlockRoot))
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
-
-	chainService := &mockChain.ChainService{State: trie}
-	Server := &Server{
-		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{
-			ChainFeed: new(event.Feed),
-		},
-		BeaconDB:      db,
-		StateNotifier: chainService.StateNotifier(),
-		HeadFetcher:   chainService,
-		SyncChecker:   &mockSync.Sync{IsSyncing: false},
-	}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
-	mockStream.EXPECT().Send(
-		&ethpb.SyncedResponse{
-			Synced:      true,
-			GenesisTime: uint64(time.Unix(0, 0).Unix()),
-		},
-	).Return(nil)
-	mockStream.EXPECT().Context().Return(context.Background())
-	assert.NoError(t, Server.WaitForSynced(&ptypes.Empty{}, mockStream), "Could not call RPC method")
-}
-
-func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
-
-	hook := logTest.NewGlobal()
-	chainService := &mockChain.ChainService{}
-	Server := &Server{
-		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
-			ChainFeed: new(event.Feed),
-		},
-		BeaconDB:      db,
-		StateNotifier: chainService.StateNotifier(),
-		HeadFetcher:   chainService,
-	}
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
-	mockStream.EXPECT().Send(
-		&ethpb.SyncedResponse{
-			Synced:      true,
-			GenesisTime: uint64(time.Unix(0, 0).Unix()),
-		},
-	).Return(nil)
-	mockStream.EXPECT().Context().Return(context.Background())
-	go func(tt *testing.T) {
-		assert.NoError(tt, Server.WaitForSynced(&ptypes.Empty{}, mockStream), "Could not call RPC method")
-		<-exitRoutine
-	}(t)
-
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
 				StartTime: time.Unix(0, 0),
 			},
 		})

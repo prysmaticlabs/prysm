@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -36,9 +35,7 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager:            km,
@@ -75,9 +72,7 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		KeystoresPassword: strongPass,
 	})
 	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	return ss, pubKeys
 }
@@ -198,9 +193,7 @@ func TestServer_WalletConfig(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	s.wallet = w
 	s.keymanager = km
@@ -272,9 +265,7 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	ss := &Server{
 		wallet:     w,
@@ -298,9 +289,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager: km,
@@ -336,9 +325,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager:            km,
@@ -386,9 +373,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		ImportedPublicKeys: pubKeys,
 	}, res)
 
-	km, err = w.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err = w.InitializeKeymanager(ctx)
 	require.NoError(t, err)
 	keys, err = km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
