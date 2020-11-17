@@ -89,7 +89,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
 		if i == 0 {
 			// Manually disable the first public key by adding it to the keymanager options
-			dr.disabledPublicKeys = append(dr.disabledPublicKeys, pubKey[:])
+			dr.disabledPublicKeys[pubKey] = true
 		} else {
 			wantedPubKeys = append(wantedPubKeys, pubKey)
 		}
@@ -114,8 +114,9 @@ func TestImportedKeymanager_FetchAllValidatingPublicKeys(t *testing.T) {
 		WalletPassword: password,
 	}
 	dr := &Keymanager{
-		wallet:        wallet,
-		accountsStore: &accountStore{},
+		wallet:             wallet,
+		accountsStore:      &accountStore{},
+		disabledPublicKeys: make(map[[48]byte]bool),
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -147,8 +148,9 @@ func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 		WalletPassword: password,
 	}
 	dr := &Keymanager{
-		wallet:        wallet,
-		accountsStore: &accountStore{},
+		wallet:             wallet,
+		accountsStore:      &accountStore{},
+		disabledPublicKeys: make(map[[48]byte]bool),
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
@@ -182,8 +184,9 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 		WalletPassword:   password,
 	}
 	dr := &Keymanager{
-		wallet:        wallet,
-		accountsStore: &accountStore{},
+		wallet:             wallet,
+		accountsStore:      &accountStore{},
+		disabledPublicKeys: make(map[[48]byte]bool),
 	}
 
 	// First, generate accounts and their keystore.json files.

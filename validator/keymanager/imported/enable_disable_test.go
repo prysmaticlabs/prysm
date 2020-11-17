@@ -94,6 +94,7 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 			}
 			store.DisabledPublicKeys = existingDisabledKeysStr
 			encoded, err := json.Marshal(store)
+			require.NoError(t, err)
 			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded)
 			require.NoError(t, err)
 
@@ -204,6 +205,7 @@ func TestKeymanager_EnableAccounts(t *testing.T) {
 			}
 			store.DisabledPublicKeys = existingDisabledKeysStr
 			encoded, err := json.Marshal(store)
+			require.NoError(t, err)
 			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded)
 			require.NoError(t, err)
 
