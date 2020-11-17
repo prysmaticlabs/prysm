@@ -266,6 +266,12 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	return timeutils.Now(), peerdata.ErrPeerUnknown
 }
 
+// IsBad states if the peer is to be considered bad.
+// If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
+func (p *Status) IsBad(pid peer.ID) bool {
+	return p.scorers.IsBadPeer(pid)
+}
+
 // NextValidTime gets the earliest possible time it is to contact/dial
 // a peer again. This is used to back-off from peers in the event
 // they are 'full' or have banned us.
@@ -277,12 +283,6 @@ func (p *Status) NextValidTime(pid peer.ID) (time.Time, error) {
 		return peerData.NextValidTime, nil
 	}
 	return timeutils.Now(), peerdata.ErrPeerUnknown
-}
-
-// IsBad states if the peer is to be considered bad.
-// If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
-func (p *Status) IsBad(pid peer.ID) bool {
-	return p.scorers.IsBadPeer(pid)
 }
 
 // SetNextValidTime sets the earliest possible time we are

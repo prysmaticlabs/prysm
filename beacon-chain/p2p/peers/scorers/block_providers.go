@@ -14,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
+var _ Scorer = (*BlockProviderScorer)(nil)
+
 const (
 	// DefaultBlockProviderProcessedBatchWeight is a default reward weight of a processed batch of blocks.
 	DefaultBlockProviderProcessedBatchWeight = float64(0.1)

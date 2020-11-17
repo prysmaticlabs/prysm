@@ -7,6 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 )
 
+var _ Scorer = (*BadResponsesScorer)(nil)
+
 const (
 	// DefaultBadResponsesThreshold defines how many bad responses to tolerate before peer is deemed bad.
 	DefaultBadResponsesThreshold = 6
