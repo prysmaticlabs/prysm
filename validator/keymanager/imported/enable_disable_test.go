@@ -127,29 +127,110 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 
 func TestKeymanager_EnableAccounts(t *testing.T) {
 	numKeys := 5
+	randomPrivateKeys := make([][]byte, numKeys)
 	randomPublicKeys := make([][]byte, numKeys)
 	for i := 0; i < numKeys; i++ {
 		key, err := bls.RandKey()
 		require.NoError(t, err)
+		randomPrivateKeys[i] = key.Marshal()
 		randomPublicKeys[i] = key.PublicKey().Marshal()
 	}
-
 	tests := []struct {
 		name                 string
 		existingDisabledKeys [][]byte
 		keysToEnable         [][]byte
+		expectedDisabledKeys [][]byte
 		wantErr              bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:                 "Trying to enable already enabled keys fails silently",
+			existingDisabledKeys: make([][]byte, 0),
+			keysToEnable:         randomPublicKeys,
+			wantErr:              false,
+			expectedDisabledKeys: nil,
+		},
+		{
+			name:                 "Trying to enable a subset of keys works",
+			existingDisabledKeys: randomPublicKeys[0:2],
+			keysToEnable:         randomPublicKeys[0:1],
+			wantErr:              false,
+			expectedDisabledKeys: randomPublicKeys[1:2],
+		},
+		{
+			name:                 "Nil input keys to enable returns error",
+			existingDisabledKeys: randomPublicKeys,
+			keysToEnable:         nil,
+			wantErr:              true,
+		},
+		{
+			name:                 "No input keys to enable returns error",
+			existingDisabledKeys: randomPublicKeys,
+			keysToEnable:         make([][]byte, 0),
+			wantErr:              true,
+		},
+		{
+			name:                 "No existing enabled keys updates after enablng",
+			existingDisabledKeys: randomPublicKeys,
+			keysToEnable:         randomPublicKeys,
+			expectedDisabledKeys: make([][]byte, 0),
+		},
+		{
+			name:                 "Disjoint sets of already enabled + newly enabled leads to whole set",
+			existingDisabledKeys: randomPublicKeys[0:2],
+			keysToEnable:         randomPublicKeys[0:2],
+			wantErr:              false,
+			expectedDisabledKeys: make([][]byte, 0),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			wallet := &mock.Wallet{
+				Files: make(map[string]map[string][]byte),
+			}
 			dr := &Keymanager{
 				disabledPublicKeys: tt.existingDisabledKeys,
+				wallet:             wallet,
 			}
+			// First we write the accounts store file.
 			ctx := context.Background()
+			store, err := dr.createAccountsKeystore(ctx, randomPrivateKeys, randomPublicKeys)
+			require.NoError(t, err)
+			existingDisabledKeysStr := make([]string, len(tt.existingDisabledKeys))
+			for i := 0; i < len(tt.existingDisabledKeys); i++ {
+				existingDisabledKeysStr[i] = fmt.Sprintf("%x", tt.existingDisabledKeys[i])
+			}
+			store.DisabledPublicKeys = existingDisabledKeysStr
+			encoded, err := json.Marshal(store)
+			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded)
+			require.NoError(t, err)
+
 			if err := dr.EnableAccounts(ctx, tt.keysToEnable); (err != nil) != tt.wantErr {
 				t.Errorf("EnableAccounts() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				wanted := make(map[[48]byte]bool)
+				for _, pubKey := range tt.expectedDisabledKeys {
+					wanted[bytesutil.ToBytes48(pubKey)] = true
+				}
+				for _, pubKey := range dr.disabledPublicKeys {
+					if _, ok := wanted[bytesutil.ToBytes48(pubKey)]; !ok {
+						t.Errorf("Expected %#x in disabled keys, but not found", pubKey)
+					}
+				}
+				// We verify that the updated disabled keys are reflected on disk as well.
+				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+				require.NoError(t, err)
+				keystore := &accountsKeystoreRepresentation{}
+				require.NoError(t, json.Unmarshal(encoded, keystore))
+
+				require.Equal(t, len(wanted), len(keystore.DisabledPublicKeys))
+				for _, pubKey := range keystore.DisabledPublicKeys {
+					pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(pubKey, "0x"))
+					require.NoError(t, err)
+					if _, ok := wanted[bytesutil.ToBytes48(pubKeyBytes)]; !ok {
+						t.Errorf("Expected %#x in disabled keys, but not found", pubKeyBytes)
+					}
+				}
 			}
 		})
 	}

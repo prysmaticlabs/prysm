@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
