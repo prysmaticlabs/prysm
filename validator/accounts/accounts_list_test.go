@@ -79,7 +79,6 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -232,7 +231,6 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	keymanager, err := derived.NewKeymanager(
 		cliCtx.Context,
 		&derived.SetupConfig{
-			Opts:   derived.DefaultKeymanagerOpts(),
 			Wallet: w,
 		},
 	)
@@ -248,7 +246,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	os.Stdout = writer
 
 	// We call the list imported keymanager accounts function.
-	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true /* show deposit data */, true /*show private keys */, keymanager))
+	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true, keymanager))
 
 	require.NoError(t, writer.Close())
 	out, err := ioutil.ReadAll(r)

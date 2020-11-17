@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -181,14 +180,6 @@ func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) 
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	defaultOpts := imported.DefaultKeymanagerOpts()
-	keymanagerConfig, err := imported.MarshalOptionsFile(ctx, defaultOpts)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
 	return nil
 }
 
@@ -205,16 +196,7 @@ func createDerivedKeymanagerWallet(
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	opts := derived.DefaultKeymanagerOpts()
-	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, opts)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
 	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
-		Opts:   opts,
 		Wallet: wallet,
 	})
 	if err != nil {

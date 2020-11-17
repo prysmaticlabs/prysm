@@ -26,7 +26,6 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 		WalletPassword:   "secretPassw0rd$1999",
 	}
 	km, err := NewKeymanager(ctx, &SetupConfig{
-		Opts:   DefaultKeymanagerOpts(),
 		Wallet: wallet,
 	})
 	require.NoError(t, err)
@@ -41,7 +40,6 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 		WalletPassword:   "secretPassw0rd$1999",
 	}
 	km, err = NewKeymanager(ctx, &SetupConfig{
-		Opts:   DefaultKeymanagerOpts(),
 		Wallet: wallet,
 	})
 	require.NoError(t, err)
@@ -82,7 +80,6 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Opts:   DefaultKeymanagerOpts(),
 		Wallet: wallet,
 	})
 	require.NoError(t, err)
@@ -122,7 +119,6 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Opts:   DefaultKeymanagerOpts(),
 		Wallet: wallet,
 	})
 	require.NoError(t, err)
@@ -160,7 +156,6 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Opts:   DefaultKeymanagerOpts(),
 		Wallet: wallet,
 	})
 	require.NoError(t, err)
