@@ -74,6 +74,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							return err
 						}
+						s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
 
 						// Broadcasting the signed attestation again once a node is able to process it.
 						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {

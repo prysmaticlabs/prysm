@@ -265,7 +265,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AggregationBits: aggBits,
 	}
@@ -299,6 +299,8 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
+	c, err := lru.New(10)
+	require.NoError(t, err)
 	r := &Service{
 		p2p: p1,
 		db:  db,
@@ -311,6 +313,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 		stateSummaryCache:    cache.NewStateSummaryCache(),
+		seenAttestationCache: c,
 	}
 
 	sb = testutil.NewBeaconBlock()
