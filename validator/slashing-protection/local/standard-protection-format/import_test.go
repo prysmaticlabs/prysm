@@ -244,6 +244,59 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 			},
 		},
 		{
+			name: "same blocks but different public keys are parsed correctly",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedBlocks: []*SignedBlock{
+						{
+							Slot:        "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						{
+							Slot:        "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[1]),
+					SignedBlocks: []*SignedBlock{
+						{
+							Slot:        "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						{
+							Slot:        "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedBlock{
+				pubKeys[0]: {
+					{
+						Slot:        "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						Slot:        "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+				},
+				pubKeys[1]: {
+					{
+						Slot:        "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						Slot:        "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+				},
+			},
+		},
+		{
 			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
 			data: []*ProtectionData{
 				{
@@ -425,6 +478,59 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 						SourceEpoch: "3",
 						TargetEpoch: "5",
 						SigningRoot: fmt.Sprintf("%x", roots[2]),
+					},
+				},
+			},
+		},
+		{
+			name: "same blocks but different public keys are parsed correctly",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						{
+							SourceEpoch: "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[1]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						{
+							SourceEpoch: "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedAttestation{
+				pubKeys[0]: {
+					{
+						SourceEpoch: "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						SourceEpoch: "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+				},
+				pubKeys[1]: {
+					{
+						SourceEpoch: "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						SourceEpoch: "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
 					},
 				},
 			},
