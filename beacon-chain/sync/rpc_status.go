@@ -156,11 +156,12 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	// If validation fails, then on the next request to chain status scorer, peer will be marked as
 	// bad, and disconnected.
 	err = s.validateStatusMessage(ctx, msg)
-	s.p2p.Peers().Scorers().PeerStatusScorer().UpdatePeerStatus(stream.Conn().RemotePeer(), msg, err)
+	s.p2p.Peers().Scorers().PeerStatusScorer().SetPeerStatus(stream.Conn().RemotePeer(), msg, err)
 	return err
 }
 
 func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
+	s.p2p.Peers().Scorers().PeerStatusScorer().SetHeadSlot(s.chain.HeadSlot())
 	if err := s.sendRPCStatusRequest(ctx, id); err != nil {
 		return err
 	}

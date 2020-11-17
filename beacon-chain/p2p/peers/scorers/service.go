@@ -15,6 +15,9 @@ var _ Scorer = (*Service)(nil)
 // This parameter is used in math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor.
 const ScoreRoundingFactor = 10000
 
+// BadPeerScore defines score that is returned for a bad peer (all other metrics are ignored).
+const BadPeerScore = -1.00
+
 // Scorer defines minimum set of methods every peer scorer must expose.
 type Scorer interface {
 	Score(pid peer.ID) float64

@@ -12,11 +12,15 @@ import (
 
 var _ Scorer = (*PeerStatusScorer)(nil)
 
+// minSlotsTillHeadForUsefulPeer minimum number of processable slots for a peer to be considered useful.
+const minSlotsTillHeadForUsefulPeer = 64 * 32
+
 // PeerStatusScorer represents scorer that evaluates peers based on their statuses.
 // Peer statuses are updated by regularly polling peers (see sync/rpc_status.go).
 type PeerStatusScorer struct {
-	config *PeerStatusScorerConfig
-	store  *peerdata.Store
+	config   *PeerStatusScorerConfig
+	store    *peerdata.Store
+	headSlot uint64
 }
 
 // PeerStatusScorerConfig holds configuration parameters for peer status scoring service.
@@ -42,14 +46,23 @@ func (s *PeerStatusScorer) Score(pid peer.ID) float64 {
 
 // score is a lock-free version of Score.
 func (s *PeerStatusScorer) score(pid peer.ID) float64 {
+	if s.isBadPeer(pid) {
+		return BadPeerScore
+	}
 	score := float64(0)
-	peerData, ok := s.store.PeerData(pid)
-	if !ok {
+	if s.headSlot == 0 {
 		return score
 	}
-	// Calculate
-	if peerData.ProcessedBlocks > 10 {
-		// todo
+	peerData, ok := s.store.PeerData(pid)
+	if !ok || peerData.ChainState == nil {
+		return score
+	}
+	if peerData.ChainState.HeadSlot < s.headSlot {
+		return score
+	}
+	// Full score for peer that advertises far enough head.
+	if (peerData.ChainState.HeadSlot - s.headSlot) >= minSlotsTillHeadForUsefulPeer {
+		return 1.00
 	}
 	return score
 }
@@ -86,8 +99,8 @@ func (s *PeerStatusScorer) BadPeers() []peer.ID {
 	return []peer.ID{}
 }
 
-// UpdatePeerStatus sets chain state data for a peer.
-func (s *PeerStatusScorer) UpdatePeerStatus(pid peer.ID, chainState *pb.Status, validationError error) {
+// SetPeerStatus sets chain state data for a given peer.
+func (s *PeerStatusScorer) SetPeerStatus(pid peer.ID, chainState *pb.Status, validationError error) {
 	s.store.Lock()
 	defer s.store.Unlock()
 
@@ -112,4 +125,9 @@ func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 		return peerData.ChainState, nil
 	}
 	return nil, peerdata.ErrPeerUnknown
+}
+
+// SetHeadSlot updates known head slot.
+func (s *PeerStatusScorer) SetHeadSlot(slot uint64) {
+	s.headSlot = slot
 }
