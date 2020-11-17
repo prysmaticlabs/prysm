@@ -9,6 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 )
 
+var _ Scorer = (*Service)(nil)
+
 // ScoreRoundingFactor defines how many digits to keep in decimal part.
 // This parameter is used in math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor.
 const ScoreRoundingFactor = 10000
@@ -18,7 +20,6 @@ type Scorer interface {
 	Score(pid peer.ID) float64
 	IsBadPeer(pid peer.ID) bool
 	BadPeers() []peer.ID
-	Decay()
 }
 
 // Service manages peer scorers that are used to calculate overall peer score.
@@ -100,6 +101,51 @@ func (s *Service) Score(pid peer.ID) float64 {
 	score += s.scorers.blockProviderScorer.score(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
 	score += s.scorers.peerStatusScorer.score(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
+}
+
+// IsBadPeer traverses all the scorers to see if any of them classifies peer as bad.
+func (s *Service) IsBadPeer(pid peer.ID) bool {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return s.isBadPeer(pid)
+}
+
+// isBadPeer is a lock-free version of isBadPeer.
+func (s *Service) isBadPeer(pid peer.ID) bool {
+	if s.scorers.badResponsesScorer.isBadPeer(pid) {
+		return true
+	}
+	if s.scorers.peerStatusScorer.isBadPeer(pid) {
+		return true
+	}
+	return false
+}
+
+// BadPeers returns the peers that are considered bad by any of registered scorers.
+func (s *Service) BadPeers() []peer.ID {
+	s.store.RLock()
+	defer s.store.RUnlock()
+
+	badPeers := make([]peer.ID, 0)
+	for pid := range s.store.Peers() {
+		if s.isBadPeer(pid) {
+			badPeers = append(badPeers, pid)
+		}
+	}
+	return badPeers
+}
+
+// ValidationError returns peer data validation error, which potentially provides more information
+// why peer is considered bad.
+func (s *Service) ValidationError(pid peer.ID) error {
+	s.store.RLock()
+	defer s.store.RUnlock()
+
+	peerData, ok := s.store.PeerData(pid)
+	if !ok {
+		return nil
+	}
+	return peerData.ChainStateValidationError
 }
 
 // loop handles background tasks.
