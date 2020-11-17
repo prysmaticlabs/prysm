@@ -86,7 +86,6 @@ func TestScorers_BadResponses_Decay(t *testing.T) {
 		ScorerParams: &scorers.Config{
 			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold: maxBadResponses,
-				Weight:    1,
 			},
 		},
 	})
