@@ -100,7 +100,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		if baseTopic == p2p.RPCMetaDataTopic {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != errWrongForkDigestVersion {
+				if err != ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)
@@ -126,7 +126,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			if err := handle(ctx, msg.Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != errWrongForkDigestVersion {
+				if err != ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)
@@ -140,7 +140,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != errWrongForkDigestVersion {
+				if err != ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)

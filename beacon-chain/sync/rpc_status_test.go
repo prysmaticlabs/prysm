@@ -78,7 +78,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		defer wg2.Done()
 		msg := new(p2pTypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, msg))
-		assert.Equal(t, codeWrongNetwork, *msg)
+		assert.Equal(t, p2pTypes.GoodbyeCodeWrongNetwork, *msg)
 		assert.NoError(t, stream.Close())
 	})
 
