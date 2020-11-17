@@ -27,6 +27,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedWaitForSyncedFlag = &cli.BoolFlag{
+		Name:   "wait-for-synced",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -34,4 +39,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnablePruningDepositProofs,
 	deprecatedEnableEth1DataMajorityVote,
 	deprecatedEnableBlst,
+	deprecatedWaitForSyncedFlag,
 }

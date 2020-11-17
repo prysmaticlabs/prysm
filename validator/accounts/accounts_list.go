@@ -9,7 +9,6 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -27,9 +26,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}
@@ -145,22 +142,6 @@ func listDerivedKeymanagerAccounts(
 			return errors.Wrap(err, "could not fetch validating private keys")
 		}
 	}
-	withdrawalPublicKeys, err := keymanager.FetchWithdrawalPublicKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not fetch validating public keys")
-	}
-	var withdrawalPrivateKeys [][32]byte
-	if showPrivateKeys {
-		withdrawalPrivateKeys, err = keymanager.FetchWithdrawalPrivateKeys(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not fetch withdrawal private keys")
-		}
-	}
-	nextAccountNumber := keymanager.NextAccountNumber()
-	currentAccountNumber := nextAccountNumber
-	if nextAccountNumber > 0 {
-		currentAccountNumber--
-	}
 	accountNames, err := keymanager.ValidatingAccountNames(ctx)
 	if err != nil {
 		return err
@@ -173,39 +154,18 @@ func listDerivedKeymanagerAccounts(
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(accountNames))
 	}
-	for i := uint64(0); i <= currentAccountNumber; i++ {
+	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
 		validatingKeyPath := fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
-		withdrawalKeyPath := fmt.Sprintf(derived.WithdrawalKeyDerivationPathTemplate, i)
 
 		// Retrieve the withdrawal key account metadata.
 		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
-		fmt.Printf("%s %#x\n", au.BrightMagenta("[withdrawal public key]").Bold(), withdrawalPublicKeys[i])
-		if showPrivateKeys {
-			fmt.Printf("%s %#x\n", au.BrightRed("[withdrawal private key]").Bold(), withdrawalPrivateKeys[i])
-		}
-		fmt.Printf("%s %s\n", au.BrightMagenta("[derivation path]").Bold(), withdrawalKeyPath)
-
 		// Retrieve the validating key account metadata.
 		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
-		if showPrivateKeys {
+		if showPrivateKeys && validatingPrivateKeys != nil {
 			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), validatingPrivateKeys[i])
 		}
 		fmt.Printf("%s %s\n", au.BrightCyan("[derivation path]").Bold(), validatingKeyPath)
-
-		if !showDepositData {
-			continue
-		}
-		enc, err := keymanager.DepositDataForAccount(i)
-		if err != nil {
-			return errors.Wrapf(err, "could not deposit data for account: %s", accountNames[i])
-		}
-		fmt.Printf(`
-======================Eth1 Deposit Transaction Data=====================
-
-%#x
-
-===================================================================`, enc)
 		fmt.Println(" ")
 	}
 	return nil
