@@ -33,7 +33,7 @@ func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 	secKey := &bls12.SecretKey{}
 	err := secKey.Deserialize(privKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal bytes into secret key")
+		return nil, common.ErrSecretUnmarshal
 	}
 	wrappedKey := &bls12SecretKey{p: secKey}
 	if wrappedKey.IsZero() {

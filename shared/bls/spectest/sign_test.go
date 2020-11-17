@@ -42,7 +42,8 @@ func testSignMessageYaml(t *testing.T) {
 			require.NoError(t, err)
 			sk, err := bls.SecretKeyFromBytes(pkBytes)
 			if err != nil {
-				if test.Output == "" && errors.Is(err, common.ErrZeroKey) {
+				if test.Output == "" &&
+					(errors.Is(err, common.ErrZeroKey) || errors.Is(err, common.ErrSecretUnmarshal)) {
 					return
 				}
 				t.Fatalf("cannot unmarshal secret key: %v", err)
