@@ -261,3 +261,45 @@ func TestScorers_Service_loop(t *testing.T) {
 	assert.Equal(t, false, s1.IsBadPeer(pid1), "Peer should not be marked as bad")
 	assert.Equal(t, uint64(0), s2.ProcessedBlocks("peer1"), "No blocks are expected")
 }
+
+func TestScorers_Service_IsBadPeer(t *testing.T) {
+	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold:     2,
+				DecayInterval: 50 * time.Second,
+			},
+		},
+	})
+
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer1"))
+	peerStatuses.Scorers().BadResponsesScorer().Increment("peer1")
+	peerStatuses.Scorers().BadResponsesScorer().Increment("peer1")
+	assert.Equal(t, true, peerStatuses.Scorers().IsBadPeer("peer1"))
+}
+
+func TestScorers_Service_BadPeers(t *testing.T) {
+	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold:     2,
+				DecayInterval: 50 * time.Second,
+			},
+		},
+	})
+
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer1"))
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer2"))
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer3"))
+	assert.Equal(t, 0, len(peerStatuses.Scorers().BadPeers()))
+	for _, pid := range []peer.ID{"peer1", "peer3"} {
+		peerStatuses.Scorers().BadResponsesScorer().Increment(pid)
+		peerStatuses.Scorers().BadResponsesScorer().Increment(pid)
+	}
+	assert.Equal(t, true, peerStatuses.Scorers().IsBadPeer("peer1"))
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer2"))
+	assert.Equal(t, true, peerStatuses.Scorers().IsBadPeer("peer3"))
+	assert.Equal(t, 2, len(peerStatuses.Scorers().BadPeers()))
+}
