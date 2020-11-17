@@ -280,7 +280,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 // IsBad states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	return p.scorers.BadResponsesScorer().IsBadPeer(pid)
+	return p.scorers.IsBadPeer(pid)
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
