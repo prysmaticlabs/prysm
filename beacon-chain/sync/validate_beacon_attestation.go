@@ -96,6 +96,11 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
+	if err := s.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve pre state")
@@ -157,11 +162,6 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.Attestation, bs *state.BeaconState) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
-
-	if err := s.chain.VerifyLmdFfgConsistency(ctx, a); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
 
 	committee, err := helpers.BeaconCommitteeFromState(bs, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {

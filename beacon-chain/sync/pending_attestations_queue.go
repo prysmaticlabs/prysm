@@ -82,6 +82,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						}
 					}
 				} else {
+					// This is an important validation before retrieving attestation pre state to defend against
+					// attestation's target intentionally reference checkpoint that's long ago.
+					if err := s.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
+						return err
+					}
 					preState, err := s.chain.AttestationPreState(ctx, att.Aggregate)
 					if err != nil {
 						return err
