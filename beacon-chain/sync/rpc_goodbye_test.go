@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -43,7 +44,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	failureCode := codeClientShutdown
+	failureCode := p2p.GoodbyeCodeClientShutdown
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
@@ -86,7 +87,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	failureCode := codeClientShutdown
+	failureCode := p2p.GoodbyeCodeClientShutdown
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
@@ -113,7 +114,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 
 	stream2, err := p1.BHost.NewStream(context.Background(), p3.BHost.ID(), pcl)
 	require.NoError(t, err)
-	failureCode = codeBanned
+	failureCode = p2p.GoodbyeCodeBanned
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream2))
 
@@ -146,7 +147,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 		p2p:         p1,
 		rateLimiter: newRateLimiter(p1),
 	}
-	failureCode := codeClientShutdown
+	failureCode := p2p.GoodbyeCodeClientShutdown
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
@@ -188,7 +189,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 		p2p:         p1,
 		rateLimiter: newRateLimiter(p1),
 	}
-	failureCode := codeClientShutdown
+	failureCode := p2p.GoodbyeCodeClientShutdown
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")

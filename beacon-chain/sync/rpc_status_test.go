@@ -16,6 +16,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -78,7 +79,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		defer wg2.Done()
 		msg := new(p2pTypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, msg))
-		assert.Equal(t, codeWrongNetwork, *msg)
+		assert.Equal(t, p2p.GoodbyeCodeWrongNetwork, *msg)
 		assert.NoError(t, stream.Close())
 	})
 

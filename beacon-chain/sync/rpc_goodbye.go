@@ -14,46 +14,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// Spec defined codes
-	codeClientShutdown types.SSZUint64 = iota
-	codeWrongNetwork
-	codeGenericError
-
-	// Teku specific codes
-	codeUnableToVerifyNetwork = types.SSZUint64(128)
-
-	// Lighthouse specific codes
-	codeTooManyPeers = types.SSZUint64(129)
-	codeBadScore     = types.SSZUint64(250)
-	codeBanned       = types.SSZUint64(251)
-)
-
-var goodByes = map[types.SSZUint64]string{
-	codeClientShutdown:        "client shutdown",
-	codeWrongNetwork:          "irrelevant network",
-	codeGenericError:          "fault/error",
-	codeUnableToVerifyNetwork: "unable to verify network",
-	codeTooManyPeers:          "client has too many peers",
-	codeBadScore:              "peer score too low",
-	codeBanned:                "client banned this node",
-}
-
 var backOffTime = map[types.SSZUint64]time.Duration{
 	// Do not dial peers which are from a different/unverifiable
 	// network.
-	codeWrongNetwork:          24 * time.Hour,
-	codeUnableToVerifyNetwork: 24 * time.Hour,
+	p2p.GoodbyeCodeWrongNetwork:          24 * time.Hour,
+	p2p.GoodbyeCodeUnableToVerifyNetwork: 24 * time.Hour,
 	// If local peer is banned, we back off for
 	// 2 hours to let the remote peer score us
 	// back up again.
-	codeBadScore:       2 * time.Hour,
-	codeBanned:         2 * time.Hour,
-	codeClientShutdown: 1 * time.Hour,
+	p2p.GoodbyeCodeBadScore:       2 * time.Hour,
+	p2p.GoodbyeCodeBanned:         2 * time.Hour,
+	p2p.GoodbyeCodeClientShutdown: 1 * time.Hour,
 	// Wait 5 minutes before dialing a peer who is
 	// 'full'
-	codeTooManyPeers: 5 * time.Minute,
-	codeGenericError: 2 * time.Minute,
+	p2p.GoodbyeCodeTooManyPeers: 5 * time.Minute,
+	p2p.GoodbyeCodeGenericError: 2 * time.Minute,
 }
 
 // Add a short delay to allow the stream to flush before resetting it.
@@ -84,7 +59,7 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	return s.p2p.Disconnect(stream.Conn().RemotePeer())
 }
 
-func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.SSZUint64, id peer.ID) error {
+func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2p.RPCGoodbyeCode, id peer.ID) error {
 	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
 		log.WithFields(logrus.Fields{
 			"error": err,
@@ -94,7 +69,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.SSZUi
 	return s.p2p.Disconnect(id)
 }
 
-func (s *Service) sendGoodByeMessage(ctx context.Context, code types.SSZUint64, id peer.ID) error {
+func (s *Service) sendGoodByeMessage(ctx context.Context, code p2p.RPCGoodbyeCode, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -112,8 +87,8 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code types.SSZUint64, 
 	return nil
 }
 
-func goodbyeMessage(num types.SSZUint64) string {
-	reason, ok := goodByes[num]
+func goodbyeMessage(num p2p.RPCGoodbyeCode) string {
+	reason, ok := p2p.GoodbyeCodeMessages[num]
 	if ok {
 		return reason
 	}
@@ -122,7 +97,7 @@ func goodbyeMessage(num types.SSZUint64) string {
 
 // determines which backoff time to use depending on the
 // goodbye code provided.
-func goodByeBackoff(num types.SSZUint64) time.Time {
+func goodByeBackoff(num p2p.RPCGoodbyeCode) time.Time {
 	duration, ok := backOffTime[num]
 	if !ok {
 		return time.Time{}
