@@ -8,6 +8,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -73,7 +74,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// Check before hand that peer is valid.
 		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			closeStream(stream, log)
-			if err := s.sendGoodByeAndDisconnect(ctx, codeBanned, stream.Conn().RemotePeer()); err != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
 				log.Debugf("Could not disconnect from peer: %v", err)
 			}
 			return
@@ -100,7 +101,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		if baseTopic == p2p.RPCMetaDataTopic {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != ErrWrongForkDigestVersion {
+				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)
@@ -126,7 +127,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			if err := handle(ctx, msg.Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != ErrWrongForkDigestVersion {
+				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)
@@ -140,7 +141,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != ErrWrongForkDigestVersion {
+				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)
