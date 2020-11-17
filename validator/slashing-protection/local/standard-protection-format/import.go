@@ -116,7 +116,8 @@ func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*Si
 			if err != nil {
 				return nil, err
 			}
-			h := hashutil.Hash(encoded)
+			// Namespace the hash by the public key and the encoded block.
+			h := hashutil.Hash(append(pubKey[:], encoded...))
 			if _, ok := seenHashes[h]; ok {
 				continue
 			}
@@ -145,7 +146,8 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 			if err != nil {
 				return nil, err
 			}
-			h := hashutil.Hash(encoded)
+			// Namespace the hash by the public key and the encoded block.
+			h := hashutil.Hash(append(pubKey[:], encoded...))
 			if _, ok := seenHashes[h]; ok {
 				continue
 			}
