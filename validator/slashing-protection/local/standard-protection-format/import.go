@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	log "github.com/sirupsen/logrus"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -26,6 +27,10 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err := json.Unmarshal(encodedJSON, interchangeJSON); err != nil {
 		return errors.Wrap(err, "could not unmarshal slashing protection JSON file")
 	}
+	if interchangeJSON.Data == nil {
+		log.Warn("No slashing protection data to import")
+		return nil
+	}
 
 	// We validate the `Metadata` field of the slashing protection JSON file.
 	if err := validateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
@@ -33,60 +38,32 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	}
 
 	// We need to handle duplicate public keys in the JSON file, with potentially
-	// different signing histories for both attestations and blocks. We create a map
-	// of pubKey -> []*SignedAttestation and pubKey -> []*SignedBlock. Then, we keep
-	// a map of observed hashes of signed attestations and blocks. If we observe a new hash,
-	// we insert those signed blocks and attestations for processing.
-	seenHashes := make(map[[32]byte]bool)
-	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
-	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
-	for _, validatorData := range interchangeJSON.Data {
-		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
-		if err != nil {
-			return fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
-		}
-		for _, sBlock := range validatorData.SignedBlocks {
-			encoded, err := json.Marshal(sBlock)
-			if err != nil {
-				return err
-			}
-			h := hashutil.Hash(encoded)
-			if _, ok := seenHashes[h]; ok {
-				continue
-			}
-			seenHashes[h] = true
-			signedBlocksByPubKey[pubKey] = append(signedBlocksByPubKey[pubKey], sBlock)
-		}
-		for _, sAtt := range validatorData.SignedAttestations {
-			encoded, err := json.Marshal(sAtt)
-			if err != nil {
-				return err
-			}
-			h := hashutil.Hash(encoded)
-			if _, ok := seenHashes[h]; ok {
-				continue
-			}
-			seenHashes[h] = true
-			signedAttestationsByPubKey[pubKey] = append(signedAttestationsByPubKey[pubKey], sAtt)
-		}
+	// different signing histories for both attestations and blocks.
+	signedBlocksByPubKey, err := parseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
+	if err != nil {
+		return err
+	}
+	signedAttsByPubKey, err := parseUniqueSignedAttestationsByPubKey(interchangeJSON.Data)
+	if err != nil {
+		return err
 	}
 
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
-		// Parse and transform the signed blocks data from the JSON
+		// Transform the processed signed blocks data from the JSON
 		// file into the internal Prysm representation of proposal history.
-		proposalHistory, err := parseSignedBlocks(ctx, signedBlocks)
+		proposalHistory, err := transformSignedBlocks(ctx, signedBlocks)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed blocks in JSON file for key %#x", pubKey)
 		}
 		proposalHistoryByPubKey[pubKey] = *proposalHistory
 	}
 
-	for pubKey, signedAtts := range signedAttestationsByPubKey {
-		// Parse and transform the signed attestation data from the JSON
+	for pubKey, signedAtts := range signedAttsByPubKey {
+		// Transform the processed signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
-		attestingHistory, err := parseSignedAttestations(ctx, signedAtts)
+		attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
@@ -122,7 +99,59 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 	return nil
 }
 
-func parseSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
+// We create a map of pubKey -> []*SignedBlock. Then, we keep a map of observed hashes of
+// signed blocks. If we observe a new hash, we insert those signed blocks for processing.
+func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
+	seenHashes := make(map[[32]byte]bool)
+	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
+	for _, validatorData := range data {
+		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
+		}
+		for _, sBlock := range validatorData.SignedBlocks {
+			encoded, err := json.Marshal(sBlock)
+			if err != nil {
+				return nil, err
+			}
+			h := hashutil.Hash(encoded)
+			if _, ok := seenHashes[h]; ok {
+				continue
+			}
+			seenHashes[h] = true
+			signedBlocksByPubKey[pubKey] = append(signedBlocksByPubKey[pubKey], sBlock)
+		}
+	}
+	return signedBlocksByPubKey, nil
+}
+
+// We create a map of pubKey -> []*SignedAttestation. Then, we keep a map of observed hashes of
+// signed attestations. If we observe a new hash, we insert those signed attestations for processing.
+func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
+	seenHashes := make(map[[32]byte]bool)
+	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
+	for _, validatorData := range data {
+		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
+		}
+		for _, sAtt := range validatorData.SignedAttestations {
+			encoded, err := json.Marshal(sAtt)
+			if err != nil {
+				return nil, err
+			}
+			h := hashutil.Hash(encoded)
+			if _, ok := seenHashes[h]; ok {
+				continue
+			}
+			seenHashes[h] = true
+			signedAttestationsByPubKey[pubKey] = append(signedAttestationsByPubKey[pubKey], sAtt)
+		}
+	}
+	return signedAttestationsByPubKey, nil
+}
+
+func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
 		slot, err := uint64FromString(proposal.Slot)
@@ -147,7 +176,7 @@ func parseSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.Pr
 	}, nil
 }
 
-func parseSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*kv.EncHistoryData, error) {
+func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*kv.EncHistoryData, error) {
 	attestingHistory := kv.NewAttestationHistoryArray(0)
 	highestEpochWritten := uint64(0)
 	var err error

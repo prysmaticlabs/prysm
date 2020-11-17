@@ -31,6 +31,17 @@ func TestStore_ImportInterchangeData_BadJSON(t *testing.T) {
 	require.ErrorContains(t, "could not unmarshal slashing protection JSON file", err)
 }
 
+func TestStore_ImportInterchangeData_NilData_FailsSilently(t *testing.T) {
+	// TODO: Add test.
+	ctx := context.Background()
+	publicKeys := createRandomPubKeys(t)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	buf := bytes.NewBuffer([]byte("helloworld"))
+	err := ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	require.ErrorContains(t, "could not unmarshal slashing protection JSON file", err)
+}
+
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	ctx := context.Background()
 	publicKeys := createRandomPubKeys(t)
@@ -220,6 +231,7 @@ func mockSlashingProtectionJSON(
 }
 
 func mockAttestingAndProposalHistories(t *testing.T) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey) {
+	// deduplicate and transform them into our internal format.
 	attData := make([]kv.EncHistoryData, numValidators)
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
