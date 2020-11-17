@@ -2,19 +2,26 @@ package imported
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 )
 
 func TestKeymanager_DisableAccounts(t *testing.T) {
 	numKeys := 5
+	randomPrivateKeys := make([][]byte, numKeys)
 	randomPublicKeys := make([][]byte, numKeys)
 	for i := 0; i < numKeys; i++ {
 		key, err := bls.RandKey()
 		require.NoError(t, err)
+		randomPrivateKeys[i] = key.Marshal()
 		randomPublicKeys[i] = key.PublicKey().Marshal()
 	}
 	tests := []struct {
@@ -66,10 +73,26 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			wallet := &mock.Wallet{
+				Files: make(map[string]map[string][]byte),
+			}
 			dr := &Keymanager{
 				disabledPublicKeys: tt.existingDisabledKeys,
+				wallet:             wallet,
 			}
+			// First we write the accounts store file.
 			ctx := context.Background()
+			store, err := dr.createAccountsKeystore(ctx, randomPrivateKeys, randomPublicKeys)
+			require.NoError(t, err)
+			existingDisabledKeysStr := make([]string, len(tt.existingDisabledKeys))
+			for i := 0; i < len(tt.existingDisabledKeys); i++ {
+				existingDisabledKeysStr[i] = fmt.Sprintf("%x", tt.existingDisabledKeys[i])
+			}
+			store.DisabledPublicKeys = existingDisabledKeysStr
+			encoded, err := json.Marshal(store)
+			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded)
+			require.NoError(t, err)
+
 			if err := dr.DisableAccounts(ctx, tt.keysToDisable); (err != nil) != tt.wantErr {
 				t.Errorf("DisableAccounts() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -81,6 +104,20 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 				for _, pubKey := range dr.disabledPublicKeys {
 					if _, ok := wanted[bytesutil.ToBytes48(pubKey)]; !ok {
 						t.Errorf("Expected %#x in disabled keys, but not found", pubKey)
+					}
+				}
+				// We verify that the updated disabled keys are reflected on disk as well.
+				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+				require.NoError(t, err)
+				keystore := &accountsKeystoreRepresentation{}
+				require.NoError(t, json.Unmarshal(encoded, keystore))
+
+				require.Equal(t, len(wanted), len(keystore.DisabledPublicKeys))
+				for _, pubKey := range keystore.DisabledPublicKeys {
+					pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(pubKey, "0x"))
+					require.NoError(t, err)
+					if _, ok := wanted[bytesutil.ToBytes48(pubKeyBytes)]; !ok {
+						t.Errorf("Expected %#x in disabled keys, but not found", pubKeyBytes)
 					}
 				}
 			}

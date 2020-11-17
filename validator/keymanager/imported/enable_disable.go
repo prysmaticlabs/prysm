@@ -2,7 +2,10 @@ package imported
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -26,7 +29,7 @@ func (dr *Keymanager) DisableAccounts(ctx context.Context, pubKeys [][]byte) err
 		newlyDisabledPubKeys = append(newlyDisabledPubKeys, pk[:])
 	}
 	dr.disabledPublicKeys = newlyDisabledPubKeys
-	return nil
+	return dr.rewriteDisabledKeysToDisk(ctx)
 }
 
 // EnableAccounts enables public keys from a user's wallet if they are disabled.
@@ -49,6 +52,29 @@ func (dr *Keymanager) EnableAccounts(ctx context.Context, pubKeys [][]byte) erro
 		newlyDisabledPubKeys = append(newlyDisabledPubKeys, pk[:])
 	}
 	dr.disabledPublicKeys = newlyDisabledPubKeys
-	// TODO: Write keystores.
+	return dr.rewriteDisabledKeysToDisk(ctx)
+}
+
+func (dr *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
+	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+	if err != nil {
+		return errors.Wrap(err, "could not read keystore file for accounts")
+	}
+	keystore := &accountsKeystoreRepresentation{}
+	if err := json.Unmarshal(encoded, keystore); err != nil {
+		return err
+	}
+	disabledKeysStrings := make([]string, len(dr.disabledPublicKeys))
+	for i := 0; i < len(dr.disabledPublicKeys); i++ {
+		disabledKeysStrings[i] = fmt.Sprintf("%x", dr.disabledPublicKeys[i])
+	}
+	keystore.DisabledPublicKeys = disabledKeysStrings
+	encoded, err = json.MarshalIndent(keystore, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+		return errors.Wrap(err, "could not write keystore file for accounts")
+	}
 	return nil
 }
