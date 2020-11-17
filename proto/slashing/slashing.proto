@@ -26,7 +26,7 @@ service Slasher {
     // This function is read-only, and does not need the beacon block header to be signed.
     rpc IsSlashableBlockNoUpdate(ethereum.eth.v1alpha1.BeaconBlockHeader) returns (Slashable);
 
-    // Returns the highest calculated source and target attestation for validator indexes
+    // Returns the highest source and target attestation for validator indexes that have been observed by the slasher.
     rpc HighestAttestations(HighestAttestationRequest) returns (HighestAttestationResponse);
 
 }
