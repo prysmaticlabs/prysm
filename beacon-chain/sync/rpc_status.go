@@ -43,7 +43,8 @@ func (s *Service) maintainPeerStatuses() {
 				}
 				// Disconnect from peers that are considered bad any of registered scorers.
 				if s.p2p.Peers().Scorers().IsBadPeer(id) {
-					if err := s.sendGoodByeAndDisconnect(s.ctx, p2p.GoodbyeCodeGenericError, id); err != nil {
+					goodbyeCode := p2p.ErrToGoodbyeCode(s.p2p.Peers().Scorers().ValidationError(id))
+					if err := s.sendGoodByeAndDisconnect(s.ctx, goodbyeCode, id); err != nil {
 						log.Debugf("Error when disconnecting with bad peer: %v", err)
 					}
 					return
@@ -151,19 +152,11 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
-	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
 
+	// If validation fails, then on the next request to chain status scorer, peer will be marked as
+	// bad, and disconnected.
 	err = s.validateStatusMessage(ctx, msg)
-	if err != nil {
-		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-		// Disconnect if on a wrong fork.
-		if errors.Is(err, p2p.ErrWrongForkDigestVersion) {
-			err := s.sendGoodByeAndDisconnect(ctx, p2p.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer())
-			if err != nil {
-				return err
-			}
-		}
-	}
+	s.p2p.Peers().Scorers().PeerStatusScorer().UpdatePeerStatus(stream.Conn().RemotePeer(), msg, err)
 	return err
 }
 

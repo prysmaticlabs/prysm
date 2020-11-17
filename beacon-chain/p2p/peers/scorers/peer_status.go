@@ -1,7 +1,10 @@
 package scorers
 
 import (
+	"errors"
+
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -55,6 +58,24 @@ func (s *PeerStatusScorer) score(pid peer.ID) float64 {
 func (s *PeerStatusScorer) IsBadPeer(pid peer.ID) bool {
 	s.store.RLock()
 	defer s.store.RUnlock()
+	return s.isBadPeer(pid)
+}
+
+// isBadPeer is lock-free version of IsBadPeer.
+func (s *PeerStatusScorer) isBadPeer(pid peer.ID) bool {
+	peerData, ok := s.store.PeerData(pid)
+	if !ok {
+		return false
+	}
+	// Mark peer as bad, if the latest error is one of the terminal ones.
+	terminalErrs := []error{
+		p2p.ErrWrongForkDigestVersion,
+	}
+	for _, err := range terminalErrs {
+		if errors.Is(peerData.ChainStateValidationError, err) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -65,37 +86,28 @@ func (s *PeerStatusScorer) BadPeers() []peer.ID {
 	return []peer.ID{}
 }
 
-// Decay updates peer scores by decaying collected data after a period of time.
-// This urges peers to keep up the performance to continue getting a high score (and allows
-// new peers to contest previously high scoring ones).
-func (s *PeerStatusScorer) Decay() {
-	s.store.Lock()
-	defer s.store.Unlock()
-
-	for _, peerData := range s.store.Peers() {
-		if peerData.ProcessedBlocks > 42 {
-			// todo
-		}
-	}
-}
-
-// UpdateChainState sets chain state data for a peer.
-func (s *PeerStatusScorer) UpdateChainState(pid peer.ID, chainState *pb.Status) {
+// UpdatePeerStatus sets chain state data for a peer.
+func (s *PeerStatusScorer) UpdatePeerStatus(pid peer.ID, chainState *pb.Status, validationError error) {
 	s.store.Lock()
 	defer s.store.Unlock()
 
 	peerData := s.store.PeerDataGetOrCreate(pid)
 	peerData.ChainState = chainState
 	peerData.ChainStateLastUpdated = timeutils.Now()
+	peerData.ChainStateValidationError = validationError
 }
 
-// ChainState gets the chain state of the given remote peer.
+// PeerStatus gets the chain state of the given remote peer.
 // This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
-func (s *PeerStatusScorer) ChainState(pid peer.ID) (*pb.Status, error) {
+func (s *PeerStatusScorer) PeerStatus(pid peer.ID) (*pb.Status, error) {
 	s.store.RLock()
 	defer s.store.RUnlock()
+	return s.peerStatus(pid)
+}
 
+// peerStatus lock-free version of PeerStatus.
+func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 	if peerData, ok := s.store.PeerData(pid); ok {
 		return peerData.ChainState, nil
 	}
