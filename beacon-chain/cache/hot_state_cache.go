@@ -31,7 +31,13 @@ type HotStateCache struct {
 
 // NewHotStateCache initializes the map and underlying cache.
 func NewHotStateCache() *HotStateCache {
-	cache, err := lru.New(hotStateCacheSize)
+	cache, err := lru.NewWithEvict(hotStateCacheSize, func(_ interface{}, value interface{}) {
+		st, ok := value.(*stateTrie.BeaconState)
+		if !ok {
+			return
+		}
+		st.ReleaseStateReference()
+	})
 	if err != nil {
 		panic(err)
 	}
