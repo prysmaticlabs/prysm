@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
@@ -35,28 +36,75 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// different signing histories for both attestations and blocks. We create a map
 	// of pubKey -> []*SignedAttestation and pubKey -> []*SignedBlock. In a later loop, we will
 	// deduplicate and transform them into our internal format.
-	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
-	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
+	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
+	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
 	for _, validatorData := range interchangeJSON.Data {
 		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
 			return fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
 		}
-		// Parse and transform the signed attestation data from the JSON
-		// file into the internal Prysm representation of attesting history.
-		attestingHistory, err := parseSignedAttestations(ctx, validatorData.SignedAttestations)
-		if err != nil {
-			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
-		}
-		attestingHistoryByPubKey[pubKey] = *attestingHistory
+		signedBlocksByPubKey[pubKey] = append(
+			signedBlocksByPubKey[pubKey], validatorData.SignedBlocks...,
+		)
+		signedAttestationsByPubKey[pubKey] = append(
+			signedAttestationsByPubKey[pubKey], validatorData.SignedAttestations...,
+		)
+	}
 
+	// We now deduplicate the blocks from the prior loop by hashing each item and inserting it
+	// into a map of pubKey -> []*SignedBlock and pubKey -> []*SignedAttestation.
+	uniqueHashes := make(map[[32]byte]bool)
+	uniqueSignedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
+	uniqueSignedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
+	for pubKey, signedBlocks := range signedBlocksByPubKey {
+		for _, sBlock := range signedBlocks {
+			encoded, err := json.Marshal(sBlock)
+			if err != nil {
+				return err
+			}
+			h := hashutil.Hash(encoded)
+			if _, ok := uniqueHashes[h]; !ok {
+				uniqueHashes[h] = true
+				uniqueSignedBlocksByPubKey[pubKey] = append(uniqueSignedBlocksByPubKey[pubKey], sBlock)
+				continue
+			}
+		}
+	}
+	for pubKey, signedAtts := range signedAttestationsByPubKey {
+		for _, sAtt := range signedAtts {
+			encoded, err := json.Marshal(sAtt)
+			if err != nil {
+				return err
+			}
+			h := hashutil.Hash(encoded)
+			if _, ok := uniqueHashes[h]; !ok {
+				uniqueHashes[h] = true
+				uniqueSignedAttestationsByPubKey[pubKey] = append(uniqueSignedAttestationsByPubKey[pubKey], sAtt)
+				continue
+			}
+		}
+	}
+
+	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
+	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
+	for pubKey, signedBlocks := range uniqueSignedBlocksByPubKey {
 		// Parse and transform the signed blocks data from the JSON
 		// file into the internal Prysm representation of proposal history.
-		proposalHistory, err := parseSignedBlocks(ctx, validatorData.SignedBlocks)
+		proposalHistory, err := parseSignedBlocks(ctx, signedBlocks)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed blocks in JSON file for key %#x", pubKey)
 		}
 		proposalHistoryByPubKey[pubKey] = *proposalHistory
+	}
+
+	for pubKey, signedAtts := range uniqueSignedAttestationsByPubKey {
+		// Parse and transform the signed attestation data from the JSON
+		// file into the internal Prysm representation of attesting history.
+		attestingHistory, err := parseSignedAttestations(ctx, signedAtts)
+		if err != nil {
+			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
+		}
+		attestingHistoryByPubKey[pubKey] = *attestingHistory
 	}
 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
