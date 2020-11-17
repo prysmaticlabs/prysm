@@ -180,6 +180,22 @@ func (b *BeaconState) ReleaseStateReference() {
 			b.stateFieldLeaves[field].MinusRef()
 		}
 	}
+	// Remove references to all large arrays.
+	b.sharedFieldReferences = make(map[fieldIndex]*reference, 0)
+	b.stateFieldLeaves = make(map[fieldIndex]*FieldTrie, 0)
+	// Large arrays, infrequently changed, constant size.
+	b.state.RandaoMixes = nil
+	b.state.StateRoots = nil
+	b.state.BlockRoots = nil
+	b.state.PreviousEpochAttestations = nil
+	b.state.CurrentEpochAttestations = nil
+	b.state.Slashings = nil
+	b.state.Eth1DataVotes = nil
+
+	// Large arrays, increases over time.
+	b.state.Validators = nil
+	b.state.Balances = nil
+	b.state.HistoricalRoots = nil
 }
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
