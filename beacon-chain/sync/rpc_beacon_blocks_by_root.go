@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -78,7 +79,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		blk, err := s.db.Block(ctx, root)
 		if err != nil {
 			log.WithError(err).Debug("Failed to fetch block")
-			resp, err := s.generateErrorResponse(responseCodeServerError, genericError)
+			resp, err := s.generateErrorResponse(responseCodeServerError, p2p.ErrGeneric.Error())
 			if err != nil {
 				log.WithError(err).Debug("Failed to generate a response error")
 			} else if _, err := stream.Write(resp); err != nil {

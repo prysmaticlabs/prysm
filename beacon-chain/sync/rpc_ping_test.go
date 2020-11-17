@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -174,14 +175,15 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectFailure(t, responseCodeInvalidRequest, seqError, stream)
+		expectFailure(t, responseCodeInvalidRequest, p2p.ErrInvalidSequenceNum.Error(), stream)
 
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
 
 	wantedSeq := p2pTypes.SSZUint64(p2.LocalMetadata.SeqNumber)
-	assert.ErrorContains(t, seqError, r.pingHandler(context.Background(), &wantedSeq, stream1))
+	err = r.pingHandler(context.Background(), &wantedSeq, stream1)
+	assert.ErrorContains(t, p2p.ErrInvalidSequenceNum.Error(), err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")

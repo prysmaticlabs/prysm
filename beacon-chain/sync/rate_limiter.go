@@ -82,7 +82,7 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	}
 	if amt > uint64(remaining) {
 		l.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-		if l.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
+		if l.p2p.Peers().Scorers().IsBadPeer(stream.Conn().RemotePeer()) {
 			log.Debug("Disconnecting bad peer")
 			defer func() {
 				if err := l.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
@@ -90,8 +90,8 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 				}
 			}()
 		}
-		writeErrorResponseToStream(responseCodeInvalidRequest, rateLimitedError, stream, l.p2p)
-		return errors.New(rateLimitedError)
+		writeErrorResponseToStream(responseCodeInvalidRequest, p2p.ErrRateLimited.Error(), stream, l.p2p)
+		return p2p.ErrRateLimited
 	}
 	return nil
 }

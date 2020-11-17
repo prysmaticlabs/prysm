@@ -14,19 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const genericError = "internal service error"
-const rateLimitedError = "rate limited"
-const reqError = "invalid range, step or count"
-const seqError = "invalid sequence number provided"
-const deadlineError = "i/o deadline exceeded"
-
-var errWrongForkDigestVersion = errors.New("wrong fork digest version")
-var errInvalidEpoch = errors.New("invalid epoch")
-var errInvalidFinalizedRoot = errors.New("invalid finalized root")
-var errInvalidSequenceNum = errors.New(seqError)
-var errGeneric = errors.New(genericError)
-var errInvalidParent = errors.New("mismatched parent root")
-
 var responseCodeSuccess = byte(0x00)
 var responseCodeInvalidRequest = byte(0x01)
 var responseCodeServerError = byte(0x02)

@@ -42,8 +42,7 @@ func TestRateLimiter_ExceedCapacity(t *testing.T) {
 		code, errMsg, err := readStatusCodeNoDeadline(stream, p2.Encoding())
 		require.NoError(t, err, "could not read incoming stream")
 		assert.Equal(t, responseCodeInvalidRequest, code, "not equal response codes")
-		assert.Equal(t, rateLimitedError, errMsg, "not equal errors")
-
+		assert.Equal(t, p2p.ErrRateLimited.Error(), errMsg, "not equal errors")
 	})
 	wg.Add(1)
 	stream, err := p1.BHost.NewStream(context.Background(), p2.PeerID(), protocol.ID(topic))

@@ -41,15 +41,8 @@ func (s *Service) maintainPeerStatuses() {
 					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
 				}
-				// Disconnect from peers returning incomprehensible/unprocessable data.
-				if s.p2p.Peers().Scorers().BadResponsesScorer().IsBadPeer(id) {
-					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
-						log.Debugf("Error when disconnecting with bad peer: %v", err)
-					}
-					return
-				}
-				// Disconnect from peers that have failed validation on their previous status requests.
-				if s.p2p.Peers().Scorers().PeerStatusScorer().IsBadPeer(id) {
+				// Disconnect from peers that are considered bad any of registered scorers.
+				if s.p2p.Peers().Scorers().IsBadPeer(id) {
 					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
 						log.Debugf("Error when disconnecting with bad peer: %v", err)
 					}
@@ -164,7 +157,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
-		if errors.Is(err, errWrongForkDigestVersion) {
+		if errors.Is(err, p2p.ErrWrongForkDigestVersion) {
 			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
 			}
@@ -212,9 +205,9 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 
 		respCode := byte(0)
 		switch err {
-		case errGeneric:
+		case p2p.ErrGeneric:
 			respCode = responseCodeServerError
-		case errWrongForkDigestVersion:
+		case p2p.ErrWrongForkDigestVersion:
 			// Respond with our status and disconnect with the peer.
 			s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
 			if err := s.respondWithStatus(ctx, stream); err != nil {
@@ -285,7 +278,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return err
 	}
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
-		return errWrongForkDigestVersion
+		return p2p.ErrWrongForkDigestVersion
 	}
 	genesis := s.chain.GenesisTime()
 	finalizedEpoch := s.chain.FinalizedCheckpt().Epoch
@@ -297,7 +290,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		maxFinalizedEpoch = maxEpoch - 2
 	}
 	if msg.FinalizedEpoch > maxFinalizedEpoch {
-		return errInvalidEpoch
+		return p2p.ErrInvalidEpoch
 	}
 	// Exit early if the peer's finalized epoch
 	// is less than that of the remote peer's.
@@ -311,14 +304,14 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return nil
 	}
 	if !s.db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
-		return errInvalidFinalizedRoot
+		return p2p.ErrInvalidFinalizedRoot
 	}
 	blk, err := s.db.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 	if err != nil {
-		return errGeneric
+		return p2p.ErrGeneric
 	}
 	if blk == nil {
-		return errGeneric
+		return p2p.ErrGeneric
 	}
 	if helpers.SlotToEpoch(blk.Block.Slot) == msg.FinalizedEpoch {
 		return nil
@@ -326,12 +319,12 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 
 	startSlot, err := helpers.StartSlot(msg.FinalizedEpoch)
 	if err != nil {
-		return errGeneric
+		return p2p.ErrGeneric
 	}
 	if startSlot > blk.Block.Slot {
 		childBlock, err := s.db.FinalizedChildBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 		if err != nil {
-			return errGeneric
+			return p2p.ErrGeneric
 		}
 		// Is a valid finalized block if no
 		// other child blocks exist yet.
@@ -341,9 +334,9 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		// If child finalized block also has a smaller or
 		// equal slot number we return an error.
 		if startSlot >= childBlock.Block.Slot {
-			return errInvalidEpoch
+			return p2p.ErrInvalidEpoch
 		}
 		return nil
 	}
-	return errInvalidEpoch
+	return p2p.ErrInvalidEpoch
 }

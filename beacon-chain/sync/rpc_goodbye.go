@@ -117,7 +117,7 @@ func goodbyeMessage(num types.SSZUint64) string {
 	if ok {
 		return reason
 	}
-	return fmt.Sprintf("unknown goodbye value of %d Received", num)
+	return fmt.Sprintf("unknown goodbye value of %d received", num)
 }
 
 // determines which backoff time to use depending on the
