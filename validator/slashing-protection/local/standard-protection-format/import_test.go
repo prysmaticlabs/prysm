@@ -198,15 +198,51 @@ func Test_validateMetadata(t *testing.T) {
 }
 
 func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
-	numValidators := 10
+	numValidators := 4
 	pubKeys := createRandomPubKeys(t, numValidators)
-	roots := createRandomRoots(t, 10)
+	roots := createRandomRoots(t, numValidators)
 	tests := []struct {
 		name    string
 		data    []*ProtectionData
 		want    map[[48]byte][]*SignedBlock
 		wantErr bool
 	}{
+		{
+			name: "nil values are skipped",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedBlocks: []*SignedBlock{
+						{
+							Slot:        "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						nil,
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedBlocks: []*SignedBlock{
+						{
+							Slot:        "3",
+							SigningRoot: fmt.Sprintf("%x", roots[2]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedBlock{
+				pubKeys[0]: {
+					{
+						Slot:        "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						Slot:        "3",
+						SigningRoot: fmt.Sprintf("%x", roots[2]),
+					},
+				},
+			},
+		},
 		{
 			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
 			data: []*ProtectionData{
@@ -228,7 +264,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "3",
-							SigningRoot: fmt.Sprintf("%x", roots[3]),
+							SigningRoot: fmt.Sprintf("%x", roots[2]),
 						},
 					},
 				},
@@ -245,7 +281,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 					{
 						Slot:        "3",
-						SigningRoot: fmt.Sprintf("%x", roots[3]),
+						SigningRoot: fmt.Sprintf("%x", roots[2]),
 					},
 				},
 			},
@@ -281,6 +317,53 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "intersecting duplicate public key entries are handled properly",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedBlocks: []*SignedBlock{
+						{
+							Slot:        "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						{
+							Slot:        "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedBlocks: []*SignedBlock{
+						{
+							Slot:        "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+						{
+							Slot:        "3",
+							SigningRoot: fmt.Sprintf("%x", roots[2]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedBlock{
+				pubKeys[0]: {
+					{
+						Slot:        "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						Slot:        "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+					{
+						Slot:        "3",
+						SigningRoot: fmt.Sprintf("%x", roots[2]),
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -296,31 +379,197 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	}
 }
 
-//func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
-//	type args struct {
-//		data []*ProtectionData
-//	}
-//	tests := []struct {
-//		name    string
-//		args    args
-//		want    map[[48]byte][]*SignedAttestation
-//		wantErr bool
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			got, err := parseUniqueSignedAttestationsByPubKey(tt.args.data)
-//			if (err != nil) != tt.wantErr {
-//				t.Errorf("parseUniqueSignedAttestationsByPubKey() error = %v, wantErr %v", err, tt.wantErr)
-//				return
-//			}
-//			if !reflect.DeepEqual(got, tt.want) {
-//				t.Errorf("parseUniqueSignedAttestationsByPubKey() got = %v, want %v", got, tt.want)
-//			}
-//		})
-//	}
-//}
+func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
+	numValidators := 4
+	pubKeys := createRandomPubKeys(t, numValidators)
+	roots := createRandomRoots(t, numValidators)
+	tests := []struct {
+		name    string
+		data    []*ProtectionData
+		want    map[[48]byte][]*SignedAttestation
+		wantErr bool
+	}{
+		{
+			name: "nil values are skipped",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "1",
+							TargetEpoch: "3",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						nil,
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "3",
+							TargetEpoch: "5",
+							SigningRoot: fmt.Sprintf("%x", roots[2]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedAttestation{
+				pubKeys[0]: {
+					{
+						SourceEpoch: "1",
+						TargetEpoch: "3",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						SourceEpoch: "3",
+						TargetEpoch: "5",
+						SigningRoot: fmt.Sprintf("%x", roots[2]),
+					},
+				},
+			},
+		},
+		{
+			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "1",
+							TargetEpoch: "3",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						{
+							SourceEpoch: "2",
+							TargetEpoch: "4",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "3",
+							TargetEpoch: "5",
+							SigningRoot: fmt.Sprintf("%x", roots[2]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedAttestation{
+				pubKeys[0]: {
+					{
+						SourceEpoch: "1",
+						TargetEpoch: "3",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+					{
+						SourceEpoch: "3",
+						TargetEpoch: "5",
+						SigningRoot: fmt.Sprintf("%x", roots[2]),
+					},
+				},
+			},
+		},
+		{
+			name: "full duplicate entries are uniquely parsed",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedAttestation{
+				pubKeys[0]: {
+					{
+						SourceEpoch: "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+				},
+			},
+		},
+		{
+			name: "intersecting duplicate public key entries are handled properly",
+			data: []*ProtectionData{
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "1",
+							SigningRoot: fmt.Sprintf("%x", roots[0]),
+						},
+						{
+							SourceEpoch: "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+					},
+				},
+				{
+					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					SignedAttestations: []*SignedAttestation{
+						{
+							SourceEpoch: "2",
+							SigningRoot: fmt.Sprintf("%x", roots[1]),
+						},
+						{
+							SourceEpoch: "3",
+							SigningRoot: fmt.Sprintf("%x", roots[2]),
+						},
+					},
+				},
+			},
+			want: map[[48]byte][]*SignedAttestation{
+				pubKeys[0]: {
+					{
+						SourceEpoch: "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
+					{
+						SourceEpoch: "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+					{
+						SourceEpoch: "3",
+						SigningRoot: fmt.Sprintf("%x", roots[2]),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseUniqueSignedAttestationsByPubKey(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseUniqueSignedAttestationsByPubKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseUniqueSignedAttestationsByPubKey() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
 func mockSlashingProtectionJSON(
 	t *testing.T,

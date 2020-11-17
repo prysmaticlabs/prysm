@@ -40,11 +40,11 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// different signing histories for both attestations and blocks.
 	signedBlocksByPubKey, err := parseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
 	}
 	signedAttsByPubKey, err := parseUniqueSignedAttestationsByPubKey(interchangeJSON.Data)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
@@ -109,6 +109,9 @@ func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*Si
 			return nil, fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
 		}
 		for _, sBlock := range validatorData.SignedBlocks {
+			if sBlock == nil {
+				continue
+			}
 			encoded, err := json.Marshal(sBlock)
 			if err != nil {
 				return nil, err
@@ -135,6 +138,9 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 			return nil, fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
 		}
 		for _, sAtt := range validatorData.SignedAttestations {
+			if sAtt == nil {
+				continue
+			}
 			encoded, err := json.Marshal(sAtt)
 			if err != nil {
 				return nil, err
