@@ -16,8 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -161,20 +159,10 @@ func TestCreateWallet_Imported(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
-
-	// We read the keymanager config for the newly created wallet.
-	encoded, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
-	assert.NoError(t, err)
-	cfg, err := imported.UnmarshalOptionsFile(encoded)
-	assert.NoError(t, err)
-
-	// We assert the created configuration was as desired.
-	wantedCfg := imported.DefaultKeymanagerOpts()
-	assert.DeepEqual(t, wantedCfg, cfg)
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
@@ -192,20 +180,10 @@ func TestCreateWallet_Derived(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	ctx := context.Background()
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
-
-	// We read the keymanager config for the newly created wallet.
-	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
-	assert.NoError(t, err)
-	cfg, err := derived.UnmarshalOptionsFile(encoded)
-	assert.NoError(t, err)
-
-	// We assert the created configuration was as desired.
-	assert.DeepEqual(t, derived.DefaultKeymanagerOpts(), cfg)
 }
 
 // TestCreateWallet_WalletAlreadyExists checks for expected error if trying to create a wallet when there is one already.

@@ -51,7 +51,6 @@ func TestImport_Noninteractive(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -169,7 +168,6 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -226,7 +224,6 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -348,7 +345,6 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: wallet,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -359,7 +355,6 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: wallet,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)

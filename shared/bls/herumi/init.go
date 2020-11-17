@@ -9,4 +9,7 @@ func init() {
 	if err := bls.SetETHmode(bls.EthModeDraft07); err != nil {
 		panic(err)
 	}
+	// Check subgroup order for pubkeys and signatures.
+	bls.VerifyPublicKeyOrder(true)
+	bls.VerifySignatureOrder(true)
 }
