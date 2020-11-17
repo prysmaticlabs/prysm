@@ -12,17 +12,20 @@ func (dr *Keymanager) DisableAccounts(ctx context.Context, pubKeys [][]byte) err
 	if pubKeys == nil || len(pubKeys) < 1 {
 		return errors.New("no public keys specified to disable")
 	}
-	updatedDisabledPubKeys := make([][]byte, 0)
-	existingDisabledPubKeys := make(map[[48]byte]bool, len(dr.disabledPublicKeys))
+	existingDisabledPubKeys := make(map[[48]byte]bool)
 	for _, pk := range dr.disabledPublicKeys {
 		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
 	}
 	for _, pk := range pubKeys {
 		if _, ok := existingDisabledPubKeys[bytesutil.ToBytes48(pk)]; !ok {
-			updatedDisabledPubKeys = append(updatedDisabledPubKeys, pk)
+			existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
 		}
 	}
-	dr.disabledPublicKeys = updatedDisabledPubKeys
+	newlyDisabledPubKeys := make([][]byte, 0)
+	for pk := range existingDisabledPubKeys {
+		newlyDisabledPubKeys = append(newlyDisabledPubKeys, pk[:])
+	}
+	dr.disabledPublicKeys = newlyDisabledPubKeys
 	return nil
 }
 
@@ -31,16 +34,21 @@ func (dr *Keymanager) EnableAccounts(ctx context.Context, pubKeys [][]byte) erro
 	if pubKeys == nil || len(pubKeys) < 1 {
 		return errors.New("no public keys specified to enable")
 	}
-	updatedDisabledPubKeys := make([][]byte, 0)
-	setEnabledPubKeys := make(map[[48]byte]bool, len(pubKeys))
-	for _, pk := range pubKeys {
-		setEnabledPubKeys[bytesutil.ToBytes48(pk)] = true
-	}
+	existingDisabledPubKeys := make(map[[48]byte]bool)
 	for _, pk := range dr.disabledPublicKeys {
-		if _, ok := setEnabledPubKeys[bytesutil.ToBytes48(pk)]; !ok {
-			updatedDisabledPubKeys = append(updatedDisabledPubKeys, pk)
+		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
+	}
+	for _, pk := range pubKeys {
+		keyBytes := bytesutil.ToBytes48(pk)
+		if _, ok := existingDisabledPubKeys[keyBytes]; ok {
+			delete(existingDisabledPubKeys, keyBytes)
 		}
 	}
-	dr.disabledPublicKeys = updatedDisabledPubKeys
+	newlyDisabledPubKeys := make([][]byte, 0)
+	for pk := range existingDisabledPubKeys {
+		newlyDisabledPubKeys = append(newlyDisabledPubKeys, pk[:])
+	}
+	dr.disabledPublicKeys = newlyDisabledPubKeys
+	// TODO: Write keystores.
 	return nil
 }

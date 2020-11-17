@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -38,6 +38,31 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 			wantErr:              false,
 			expectedDisabledKeys: randomPublicKeys,
 		},
+		{
+			name:                 "Nil input keys to disable returns error",
+			existingDisabledKeys: randomPublicKeys,
+			keysToDisable:        nil,
+			wantErr:              true,
+		},
+		{
+			name:                 "No input keys to disable returns error",
+			existingDisabledKeys: randomPublicKeys,
+			keysToDisable:        make([][]byte, 0),
+			wantErr:              true,
+		},
+		{
+			name:                 "No existing disabled keys updates after disabling",
+			existingDisabledKeys: make([][]byte, 0),
+			keysToDisable:        randomPublicKeys,
+			expectedDisabledKeys: randomPublicKeys,
+		},
+		{
+			name:                 "Disjoint sets of already disabled + newly disabled leads to whole set",
+			existingDisabledKeys: randomPublicKeys[0:2],
+			keysToDisable:        randomPublicKeys[2:],
+			wantErr:              false,
+			expectedDisabledKeys: randomPublicKeys,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -48,8 +73,17 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 			if err := dr.DisableAccounts(ctx, tt.keysToDisable); (err != nil) != tt.wantErr {
 				t.Errorf("DisableAccounts() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			assert.Equal(t, len(tt.expectedDisabledKeys), len(dr.disabledPublicKeys))
-			//assert.DeepEqual(t, tt.expectedDisabledKeys, dr.disabledPublicKeys)
+			if !tt.wantErr {
+				wanted := make(map[[48]byte]bool)
+				for _, pubKey := range tt.expectedDisabledKeys {
+					wanted[bytesutil.ToBytes48(pubKey)] = true
+				}
+				for _, pubKey := range dr.disabledPublicKeys {
+					if _, ok := wanted[bytesutil.ToBytes48(pubKey)]; !ok {
+						t.Errorf("Expected %#x in disabled keys, but not found", pubKey)
+					}
+				}
+			}
 		})
 	}
 }
