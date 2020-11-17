@@ -130,6 +130,10 @@ var (
 		Name:  "enable-debug-rpc-endpoints",
 		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
 	}
+	SubscribeToAllSubnets = &cli.BoolFlag{
+		Name:  "subscribe-all-subnets",
+		Usage: "Subscribe to all possible attestation subnets.",
+	}
 	// HistoricalSlasherNode is a set of beacon node flags required for performing historical detection with a slasher.
 	HistoricalSlasherNode = &cli.BoolFlag{
 		Name:  "historical-slasher-node",
