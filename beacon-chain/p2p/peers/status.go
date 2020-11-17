@@ -279,6 +279,12 @@ func (p *Status) NextValidTime(pid peer.ID) (time.Time, error) {
 	return timeutils.Now(), peerdata.ErrPeerUnknown
 }
 
+// IsBad states if the peer is to be considered bad.
+// If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
+func (p *Status) IsBad(pid peer.ID) bool {
+	return p.scorers.IsBadPeer(pid)
+}
+
 // SetNextValidTime sets the earliest possible time we are
 // able to contact this peer again.
 func (p *Status) SetNextValidTime(pid peer.ID, nextTime time.Time) {

@@ -247,7 +247,7 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 		log.WithError(err).Debug("Could not convert to peer data")
 		return false
 	}
-	if s.peers.Scorers().IsBadPeer(peerData.ID) {
+	if s.peers.IsBad(peerData.ID) {
 		return false
 	}
 	if s.peers.IsActive(peerData.ID) {

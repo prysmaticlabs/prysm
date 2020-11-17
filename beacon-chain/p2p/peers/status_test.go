@@ -316,7 +316,7 @@ func TestPeerBadResponses(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	assert.Equal(t, false, p.Scorers().IsBadPeer(id), "Peer marked as bad when should be good")
+	assert.Equal(t, false, p.IsBad(id), "Peer marked as bad when should be good")
 
 	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
 	require.NoError(t, err, "Failed to create address")
@@ -327,25 +327,25 @@ func TestPeerBadResponses(t *testing.T) {
 	resBadResponses, err := scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 0, resBadResponses, "Unexpected bad responses")
-	assert.Equal(t, false, p.Scorers().IsBadPeer(id), "Peer marked as bad when should be good")
+	assert.Equal(t, false, p.IsBad(id), "Peer marked as bad when should be good")
 
 	scorer.Increment(id)
 	resBadResponses, err = scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 1, resBadResponses, "Unexpected bad responses")
-	assert.Equal(t, false, p.Scorers().IsBadPeer(id), "Peer marked as bad when should be good")
+	assert.Equal(t, false, p.IsBad(id), "Peer marked as bad when should be good")
 
 	scorer.Increment(id)
 	resBadResponses, err = scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 2, resBadResponses, "Unexpected bad responses")
-	assert.Equal(t, true, p.Scorers().IsBadPeer(id), "Peer not marked as bad when it should be")
+	assert.Equal(t, true, p.IsBad(id), "Peer not marked as bad when it should be")
 
 	scorer.Increment(id)
 	resBadResponses, err = scorer.Count(id)
 	require.NoError(t, err)
 	assert.Equal(t, 3, resBadResponses, "Unexpected bad responses")
-	assert.Equal(t, true, p.Scorers().IsBadPeer(id), "Peer not marked as bad when it should be")
+	assert.Equal(t, true, p.IsBad(id), "Peer not marked as bad when it should be")
 }
 
 func TestAddMetaData(t *testing.T) {

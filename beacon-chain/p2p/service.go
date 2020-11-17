@@ -438,7 +438,7 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 	if info.ID == s.host.ID() {
 		return nil
 	}
-	if s.Peers().Scorers().IsBadPeer(info.ID) {
+	if s.Peers().IsBad(info.ID) {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
