@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -401,4 +402,24 @@ func TestService_BatchRootRequest(t *testing.T) {
 	}
 	assert.Equal(t, 4, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 4, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
+}
+
+func TestService_AddPeningBlockToQueueOverMax(t *testing.T) {
+	r := &Service{
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+
+	b := testutil.NewBeaconBlock()
+	b1 := state.CopySignedBeaconBlock(b)
+	b1.Block.StateRoot = []byte{'a'}
+	b2 := state.CopySignedBeaconBlock(b)
+	b2.Block.StateRoot = []byte{'b'}
+	require.NoError(t, r.insertBlockToPendingQueue(0, b, [32]byte{}))
+	require.NoError(t, r.insertBlockToPendingQueue(0, b1, [32]byte{1}))
+	require.NoError(t, r.insertBlockToPendingQueue(0, b2, [32]byte{2}))
+
+	b3 := state.CopySignedBeaconBlock(b)
+	b3.Block.StateRoot = []byte{'c'}
+	require.ErrorContains(t, "could not add pending block to queue for slot 0", r.insertBlockToPendingQueue(0, b3, [32]byte{3}))
 }

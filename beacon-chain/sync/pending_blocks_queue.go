@@ -3,8 +3,10 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
@@ -27,6 +29,7 @@ var processPendingBlocksPeriod = slotutil.DivideSlotBy(3 /* times per slot */)
 
 const maxPeerRequest = 50
 const numOfTries = 5
+const maxBlocksPerSlot = 3
 
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (s *Service) processPendingBlocksQueue() {
@@ -293,7 +296,9 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 		return nil
 	}
 
-	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, gcache.DefaultExpiration); err != nil {
+	// Decrease exp itme in proportion to how many blocks are still in the cache for slot key.
+	d := gcache.DefaultExpiration.Seconds() / float64(len(newBlks))
+	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, time.Duration(d)); err != nil {
 		return err
 	}
 	delete(s.seenPendingBlocks, r)
@@ -338,9 +343,15 @@ func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
 	}
 
 	blks := s.pendingBlocksInCache(b.Block.Slot)
+
+	if len(blks) == 3 {
+		return fmt.Errorf("could not add pending block to queue for slot %d", b.Block.Slot)
+	}
+
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block.Slot)
-	return s.slotToPendingBlocks.Add(k, blks, gcache.DefaultExpiration)
+	s.slotToPendingBlocks.Set(k, blks, gcache.DefaultExpiration)
+	return nil
 }
 
 // This converts input string to slot number in uint64.
