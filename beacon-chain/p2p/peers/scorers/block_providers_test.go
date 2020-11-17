@@ -457,3 +457,18 @@ func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 		})
 	}
 }
+
+func TestScorers_BlockProvider_BadPeerMarking(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+		ScorerParams: &scorers.Config{},
+	})
+	scorer := peerStatuses.Scorers().BlockProviderScorer()
+
+	assert.Equal(t, false, scorer.IsBadPeer("peer1"), "Unexpected status for unregistered peer")
+	scorer.IncrementProcessedBlocks("peer1", 64)
+	assert.Equal(t, false, scorer.IsBadPeer("peer1"))
+	assert.Equal(t, 0, len(scorer.BadPeers()))
+}
