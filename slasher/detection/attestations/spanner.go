@@ -185,6 +185,11 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.saveSigBytes")
 	defer traceSpan.End()
 	target := att.Data.Target.Epoch
+	source := att.Data.Source.Epoch
+	// handle source > target well
+	if source > target {
+		target = source
+	}
 	spanMap, err := s.slasherDB.EpochSpans(ctx, target, dbTypes.UseCache)
 	if err != nil {
 		return err
@@ -233,6 +238,12 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	target := att.Data.Target.Epoch
 	if source < 1 {
 		return nil
+	}
+	// handle source > target well
+	if source > target {
+		tmp := source
+		source = target
+		target = tmp
 	}
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
@@ -306,6 +317,12 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 	defer traceSpan.End()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
+	// handle source > target well
+	if source > target {
+		tmp := source
+		source = target
+		target = tmp
+	}
 	latestMaxSpanDistanceObserved.Set(float64(target - source))
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
