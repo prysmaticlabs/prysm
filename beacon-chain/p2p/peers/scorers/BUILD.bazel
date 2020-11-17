@@ -28,6 +28,7 @@ go_test(
     srcs = [
         "bad_responses_test.go",
         "block_providers_test.go",
+        "peer_status_test.go",
         "scorers_test.go",
         "service_test.go",
     ],
@@ -36,6 +37,8 @@ go_test(
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
+        "//beacon-chain/p2p/types:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/testutil/assert:go_default_library",

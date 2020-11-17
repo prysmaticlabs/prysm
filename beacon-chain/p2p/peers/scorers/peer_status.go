@@ -12,15 +12,13 @@ import (
 
 var _ Scorer = (*PeerStatusScorer)(nil)
 
-// minSlotsTillHeadForUsefulPeer minimum number of processable slots for a peer to be considered useful.
-const minSlotsTillHeadForUsefulPeer = 64 * 32
-
 // PeerStatusScorer represents scorer that evaluates peers based on their statuses.
 // Peer statuses are updated by regularly polling peers (see sync/rpc_status.go).
 type PeerStatusScorer struct {
-	config   *PeerStatusScorerConfig
-	store    *peerdata.Store
-	headSlot uint64
+	config           *PeerStatusScorerConfig
+	store            *peerdata.Store
+	ourHeadSlot      uint64
+	maxKnownHeadSlot uint64
 }
 
 // PeerStatusScorerConfig holds configuration parameters for peer status scoring service.
@@ -50,19 +48,17 @@ func (s *PeerStatusScorer) score(pid peer.ID) float64 {
 		return BadPeerScore
 	}
 	score := float64(0)
-	if s.headSlot == 0 {
-		return score
-	}
 	peerData, ok := s.store.PeerData(pid)
 	if !ok || peerData.ChainState == nil {
 		return score
 	}
-	if peerData.ChainState.HeadSlot < s.headSlot {
+	if peerData.ChainState.HeadSlot < s.ourHeadSlot {
 		return score
 	}
-	// Full score for peer that advertises far enough head.
-	if (peerData.ChainState.HeadSlot - s.headSlot) >= minSlotsTillHeadForUsefulPeer {
-		return 1.00
+	// Calculate score as a ratio to the known maximum head slot.
+	// The closer the current peer's head slot to the maximum, the higher is the calculated score.
+	if s.maxKnownHeadSlot > 0 {
+		return float64(peerData.ChainState.HeadSlot) / float64(s.maxKnownHeadSlot)
 	}
 	return score
 }
@@ -108,6 +104,11 @@ func (s *PeerStatusScorer) SetPeerStatus(pid peer.ID, chainState *pb.Status, val
 	peerData.ChainState = chainState
 	peerData.ChainStateLastUpdated = timeutils.Now()
 	peerData.ChainStateValidationError = validationError
+
+	// Update maximum known head slot (scores will be calculated with respect to that maximum value).
+	if chainState != nil && chainState.HeadSlot > s.maxKnownHeadSlot {
+		s.maxKnownHeadSlot = chainState.HeadSlot
+	}
 }
 
 // PeerStatus gets the chain state of the given remote peer.
@@ -129,5 +130,5 @@ func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 
 // SetHeadSlot updates known head slot.
 func (s *PeerStatusScorer) SetHeadSlot(slot uint64) {
-	s.headSlot = slot
+	s.ourHeadSlot = slot
 }
