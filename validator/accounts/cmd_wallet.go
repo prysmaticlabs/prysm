@@ -28,8 +28,9 @@ var WalletCommands = &cli.Command{
 				flags.WalletPasswordFileFlag,
 				flags.Mnemonic25thWordFileFlag,
 				flags.SkipMnemonic25thWordCheckFlag,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -55,8 +56,9 @@ var WalletCommands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -83,8 +85,9 @@ var WalletCommands = &cli.Command{
 				flags.NumAccountsFlag,
 				flags.Mnemonic25thWordFileFlag,
 				flags.SkipMnemonic25thWordCheckFlag,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

@@ -43,12 +43,6 @@ service Wallet {
 }
 
 service Accounts {
-    rpc CreateAccount(CreateAccountRequest) returns (DepositDataResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/accounts/create",
-            body: "*"
-        };
-    }
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/accounts"
@@ -138,12 +132,7 @@ message GenerateMnemonicResponse {
 
 message WalletResponse {
     string wallet_path = 1;
-
     KeymanagerKind keymanager_kind = 2;
-
-    // Key manager configs, this is meant to be some what generic.
-    // It'll later be encoded with json to represent in front end UI.
-    map<string, string> keymanager_config = 3;
 }
 
 message ListAccountsRequest {
@@ -239,10 +228,6 @@ message ImportKeystoresRequest {
 
 message ImportKeystoresResponse {
     repeated bytes imported_public_keys = 1;
-}
-
-message CreateAccountRequest {
-    uint64 num_accounts = 1;
 }
 
 message DepositMessage {

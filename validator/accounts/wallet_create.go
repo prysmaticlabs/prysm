@@ -9,13 +9,11 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -26,6 +24,7 @@ type CreateWalletConfig struct {
 	RemoteKeymanagerOpts *remote.KeymanagerOpts
 	SkipMnemonicConfirm  bool
 	Mnemonic25thWord     string
+	NumAccounts          int
 }
 
 // CreateAndSaveWalletCli from user input with a desired keymanager. If a
@@ -69,23 +68,27 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	switch w.KeymanagerKind() {
 	case keymanager.Imported:
 		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with imported keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
-			"Successfully created wallet with on-disk keymanager configuration. " +
-				"Make a new validator account with ./prysm.sh validator accounts create",
+			"Successfully created wallet with ability to import keystores",
 		)
 	case keymanager.Derived:
-		if err = createDerivedKeymanagerWallet(ctx, w, cfg.SkipMnemonicConfirm, cfg.Mnemonic25thWord); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with derived keymanager")
+		if err = createDerivedKeymanagerWallet(
+			ctx,
+			w,
+			cfg.Mnemonic25thWord,
+			cfg.SkipMnemonicConfirm,
+			cfg.NumAccounts,
+		); err != nil {
+			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
-			"Successfully created HD wallet and saved configuration to disk. " +
-				"Make a new validator account with ./prysm.sh validator accounts create",
+			"Successfully created HD wallet from mnemonic and regenerated accounts",
 		)
 	case keymanager.Remote:
 		if err = createRemoteKeymanagerWallet(ctx, w, cfg.RemoteKeymanagerOpts); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet with remote keymanager")
+			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
@@ -126,6 +129,13 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 	}
 	skipMnemonic25thWord := cliCtx.IsSet(flags.SkipMnemonic25thWordCheckFlag.Name)
 	has25thWordFile := cliCtx.IsSet(flags.Mnemonic25thWordFileFlag.Name)
+	if keymanagerKind == keymanager.Derived {
+		numAccounts, err := inputNumAccounts(cliCtx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get number of accounts to generate")
+		}
+		createWalletConfig.NumAccounts = int(numAccounts)
+	}
 	if keymanagerKind == keymanager.Derived && !skipMnemonic25thWord && !has25thWordFile {
 		resp, err := promptutil.ValidatePrompt(
 			os.Stdin, newMnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
@@ -170,39 +180,34 @@ func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) 
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	defaultOpts := imported.DefaultKeymanagerOpts()
-	keymanagerConfig, err := imported.MarshalOptionsFile(ctx, defaultOpts)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
 	return nil
 }
 
 func createDerivedKeymanagerWallet(
 	ctx context.Context,
 	wallet *wallet.Wallet,
-	skipMnemonicConfirm bool,
 	mnemonicPassphrase string,
+	skipMnemonicConfirm bool,
+	numAccounts int,
 ) error {
-	keymanagerConfig, err := derived.MarshalOptionsFile(ctx, derived.DefaultKeymanagerOpts())
-	if err != nil {
-		return errors.Wrap(err, "could not marshal keymanager config file")
+	if wallet == nil {
+		return errors.New("nil wallet")
 	}
 	if err := wallet.SaveWallet(); err != nil {
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
-	}
-	_, err = wallet.InitializeKeymanager(ctx, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: skipMnemonicConfirm,
-		Mnemonic25thWord:    mnemonicPassphrase,
+	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
+		Wallet: wallet,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, "could not initialize HD keymanager")
+	}
+	mnemonic, err := derived.GenerateAndConfirmMnemonic(skipMnemonicConfirm)
+	if err != nil {
+		return errors.Wrap(err, "could not confirm mnemonic")
+	}
+	if err := km.RecoverAccountsFromMnemonic(ctx, mnemonic, mnemonicPassphrase, numAccounts); err != nil {
+		return errors.Wrap(err, "could not recover accounts from mnemonic")
 	}
 	return nil
 }

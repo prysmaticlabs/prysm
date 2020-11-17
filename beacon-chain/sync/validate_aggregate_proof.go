@@ -80,15 +80,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
-	// Verify attestation target root is consistent with the head root.
-	// This verification is not in the spec, however we guard against it as it opens us up
-	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
-	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
-	if err := s.chain.VerifyLmdFfgConsistency(ctx, m.Message.Aggregate); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-
 	validationRes := s.validateAggregatedAtt(ctx, m)
 	if validationRes != pubsub.ValidationAccept {
 		return validationRes
@@ -104,6 +95,16 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregatedAtt")
 	defer span.End()
+
+	// Verify attestation target root is consistent with the head root.
+	// This verification is not in the spec, however we guard against it as it opens us up
+	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
+	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
+	if err := s.chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
+		fmt.Println(err)
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
 
 	attSlot := signed.Message.Aggregate.Data.Slot
 
