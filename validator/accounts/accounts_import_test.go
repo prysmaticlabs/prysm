@@ -80,6 +80,67 @@ func TestImport_Noninteractive(t *testing.T) {
 	assert.Equal(t, 2, len(keys))
 }
 
+// TestImport_DuplicateKeys is a regression test that ensures correction function if duplicate keys are being imported
+func TestImport_DuplicateKeys(t *testing.T) {
+	imported.ResetCaches()
+	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
+	keysDir := filepath.Join(t.TempDir(), "keysDir")
+	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
+
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		passwordsDir:        passwordsDir,
+		keysDir:             keysDir,
+		keymanagerKind:      keymanager.Imported,
+		walletPasswordFile:  passwordFilePath,
+		accountPasswordFile: passwordFilePath,
+	})
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
+	})
+	require.NoError(t, err)
+	keymanager, err := imported.NewKeymanager(
+		cliCtx.Context,
+		&imported.SetupConfig{
+			Wallet: w,
+		},
+	)
+	require.NoError(t, err)
+
+	// Make sure there are no accounts at the start.
+	accounts, err := keymanager.ValidatingAccountNames()
+	require.NoError(t, err)
+	assert.Equal(t, len(accounts), 0)
+
+	// Create a key and then copy it to create a duplicate
+	_, keystorePath := createKeystore(t, keysDir)
+	time.Sleep(time.Second)
+	input, err := ioutil.ReadFile(keystorePath)
+	require.NoError(t, err)
+	keystorePath2 := filepath.Join(keysDir, "copyOfKeystore.json")
+	err = ioutil.WriteFile(keystorePath2, input, os.ModePerm)
+	require.NoError(t, err)
+
+	require.NoError(t, ImportAccountsCli(cliCtx))
+
+	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+		WalletDir:      walletDir,
+		WalletPassword: password,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(cliCtx.Context)
+	require.NoError(t, err)
+	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
+	require.NoError(t, err)
+
+	// There should only be 1 account as the duplicate keystore was ignored
+	assert.Equal(t, 1, len(keys))
+}
+
 func TestImport_Noninteractive_RandomName(t *testing.T) {
 	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
