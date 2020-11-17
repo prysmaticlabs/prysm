@@ -60,6 +60,9 @@ func (s *BadResponsesScorer) Score(pid peer.ID) float64 {
 
 // score is a lock-free version of Score.
 func (s *BadResponsesScorer) score(pid peer.ID) float64 {
+	if s.isBadPeer(pid) {
+		return BadPeerScore
+	}
 	score := float64(0)
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
