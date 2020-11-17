@@ -64,11 +64,20 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 	defer traceSpan.End()
 	sourceEpoch := att.Data.Source.Epoch
 	targetEpoch := att.Data.Target.Epoch
-	if (targetEpoch - sourceEpoch) > params.BeaconConfig().WeakSubjectivityPeriod {
+	dis := targetEpoch - sourceEpoch
+
+	if sourceEpoch > targetEpoch { //Prevent underflow and handle source > target slashable cases.
+		dis = sourceEpoch - targetEpoch
+		tmp := sourceEpoch
+		sourceEpoch = targetEpoch
+		targetEpoch = tmp
+	}
+
+	if dis > params.BeaconConfig().WeakSubjectivityPeriod {
 		return nil, fmt.Errorf(
 			"attestation span was greater than weak subjectivity period %d, received: %d",
 			params.BeaconConfig().WeakSubjectivityPeriod,
-			targetEpoch-sourceEpoch,
+			dis,
 		)
 	}
 
@@ -82,7 +91,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 	}
 
 	var detections []*types.DetectionResult
-	distance := uint16(targetEpoch - sourceEpoch)
+	distance := uint16(dis)
 	for _, idx := range att.AttestingIndices {
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(ctx.Err(), "could not detect slashings")

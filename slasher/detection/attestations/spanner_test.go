@@ -456,6 +456,29 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 				17: {0, 0},
 			},
 		},
+		{
+			name:           "Should slash if max span > distance && source > target",
+			sourceEpoch:    6,
+			targetEpoch:    3,
+			slashableEpoch: 7,
+			shouldSlash:    true,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
+			// committed a slashable offense by having a max span of 4 > distance.
+			spansByEpochForValidator: map[uint64][3]uint16{
+				3: {0, 4},
+			},
+		},
+		{
+			name:        "Should not slash if max span = distance && source > target",
+			sourceEpoch: 6,
+			targetEpoch: 3,
+			shouldSlash: false,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
+			// have committed slashable offense by having a max span of 1 < distance.
+			spansByEpochForValidator: map[uint64][3]uint16{
+				3: {0, 1},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -490,7 +513,9 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 				},
 				AttestingIndices: []uint64{0},
 			}
+			t.Log("before detect")
 			res, err := sd.DetectSlashingsForAttestation(ctx, att)
+			t.Logf("after detect %v", res)
 			require.NoError(t, err)
 			require.Equal(t, false, !tt.shouldSlash && res != nil, "Did not want validator to be slashed but found slashable offense: %v", res)
 			if tt.shouldSlash {
