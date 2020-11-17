@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -438,17 +439,20 @@ func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 		},
 	}
 
+	peerStatusGen := func() *peers.Status {
+		return peers.NewStatus(ctx, &peers.StatusConfig{
+			ScorerParams: &scorers.Config{
+				BlockProviderScorerConfig: &scorers.BlockProviderScorerConfig{
+					ProcessedBatchWeight: 0.05,
+					ProcessedBlocksCap:   20 * batchSize,
+					Decay:                10 * batchSize,
+				},
+			},
+		})
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
-				ScorerParams: &scorers.Config{
-					BlockProviderScorerConfig: &scorers.BlockProviderScorerConfig{
-						ProcessedBatchWeight: 0.05,
-						ProcessedBlocksCap:   20 * batchSize,
-						Decay:                10 * batchSize,
-					},
-				},
-			})
+			peerStatuses := peerStatusGen()
 			scorer := peerStatuses.Scorers().BlockProviderScorer()
 			if tt.update != nil {
 				tt.update(scorer)
@@ -456,4 +460,29 @@ func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 			tt.check(scorer)
 		})
 	}
+
+	t.Run("peer scorer disabled", func(t *testing.T) {
+		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			EnablePeerScorer: false,
+		})
+		defer resetCfg()
+		peerStatuses := peerStatusGen()
+		scorer := peerStatuses.Scorers().BlockProviderScorer()
+		assert.Equal(t, "disabled", scorer.FormatScorePretty("peer1"))
+	})
+}
+
+func TestScorers_BlockProvider_BadPeerMarking(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
+		ScorerParams: &scorers.Config{},
+	})
+	scorer := peerStatuses.Scorers().BlockProviderScorer()
+
+	assert.Equal(t, false, scorer.IsBadPeer("peer1"), "Unexpected status for unregistered peer")
+	scorer.IncrementProcessedBlocks("peer1", 64)
+	assert.Equal(t, false, scorer.IsBadPeer("peer1"))
+	assert.Equal(t, 0, len(scorer.BadPeers()))
 }
