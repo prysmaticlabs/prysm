@@ -10,9 +10,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -126,45 +124,4 @@ func Test_IsValid_RandomFiles(t *testing.T) {
 	valid, err = wallet.IsValid(path)
 	require.NoError(t, err)
 	require.Equal(t, true, valid)
-}
-
-func Test_LockUnlockFile(t *testing.T) {
-	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
-	numAccounts := int64(5)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:           walletDir,
-		passwordsDir:        passwordsDir,
-		walletPasswordFile:  passwordFile,
-		accountPasswordFile: passwordFile,
-		keymanagerKind:      keymanager.Imported,
-		numAccounts:         numAccounts,
-	})
-
-	// We attempt to create the wallet.
-	_, err := accounts.CreateAndSaveWalletCli(cliCtx)
-	require.NoError(t, err)
-
-	// We attempt to open the newly created wallet.
-	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir:      walletDir,
-		WalletPassword: password,
-	})
-	require.NoError(t, err)
-	defer unlock(t, w)
-	_, err = w.InitializeKeymanager(cliCtx.Context)
-	require.NoError(t, err)
-	assert.NoError(t, err)
-	err = w.LockWalletConfigFile(cliCtx.Context)
-	assert.NoError(t, err)
-	err = w.LockWalletConfigFile(cliCtx.Context)
-	assert.ErrorContains(t, "failed to lock wallet config file", err)
-	unlock(t, w)
-	err = w.LockWalletConfigFile(cliCtx.Context)
-	assert.NoError(t, err)
-
-}
-
-func unlock(tb assertions.AssertionTestingTB, wallet *wallet.Wallet) {
-	err := wallet.UnlockWalletConfigFile()
-	require.NoError(tb, err)
 }
