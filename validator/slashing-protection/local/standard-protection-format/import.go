@@ -31,6 +31,10 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "slashing protection JSON metadata was incorrect")
 	}
 
+	// We need to handle duplicate public keys in the JSON file, with potentially
+	// different signing histories for both attestations and blocks. We create a map
+	// of pubKey -> []*SignedAttestation and pubKey -> []*SignedBlock. In a later loop, we will
+	// deduplicate and transform them into our internal format.
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for _, validatorData := range interchangeJSON.Data {

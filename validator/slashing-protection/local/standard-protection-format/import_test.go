@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
@@ -130,18 +129,51 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 func Test_validateMetadata(t *testing.T) {
 	tests := []struct {
 		name            string
-		validatorDB     db.Database
 		interchangeJSON *EIPSlashingProtectionFormat
 		wantErr         bool
 	}{
 		{
-			"Incorrect version for "
+			name: "Incorrect version for EIP format should fail",
+			interchangeJSON: &EIPSlashingProtectionFormat{
+				Metadata: struct {
+					InterchangeFormatVersion string `json:"interchange_format_version"`
+					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+				}{
+					InterchangeFormatVersion: "1",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Junk data for version should fail",
+			interchangeJSON: &EIPSlashingProtectionFormat{
+				Metadata: struct {
+					InterchangeFormatVersion string `json:"interchange_format_version"`
+					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+				}{
+					InterchangeFormatVersion: "asdljas$d",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Proper version field should pass",
+			interchangeJSON: &EIPSlashingProtectionFormat{
+				Metadata: struct {
+					InterchangeFormatVersion string `json:"interchange_format_version"`
+					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+				}{
+					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+				},
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			validatorDB := dbtest.SetupDB(t, nil)
 			ctx := context.Background()
-			if err := validateMetadata(ctx, tt.validatorDB, tt.interchangeJSON); (err != nil) != tt.wantErr {
+			if err := validateMetadata(ctx, validatorDB, tt.interchangeJSON); (err != nil) != tt.wantErr {
 				t.Errorf("validateMetadata() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
