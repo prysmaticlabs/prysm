@@ -13,7 +13,6 @@ import (
 
 func TestImportedKeymanager_ExtractKeystores(t *testing.T) {
 	secretKeysCache = make(map[[48]byte]bls.SecretKey)
-	lock.Lock()
 	dr := &Keymanager{}
 	validatingKeys := make([]bls.SecretKey, 10)
 	for i := 0; i < len(validatingKeys); i++ {
@@ -22,7 +21,6 @@ func TestImportedKeymanager_ExtractKeystores(t *testing.T) {
 		validatingKeys[i] = secretKey
 		secretKeysCache[bytesutil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
 	}
-	lock.Unlock()
 	ctx := context.Background()
 	password := "password"
 

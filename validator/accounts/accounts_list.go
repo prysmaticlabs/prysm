@@ -8,6 +8,7 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -49,7 +50,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
+		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
 	case keymanager.Remote:
@@ -91,6 +92,11 @@ func listImportedKeymanagerAccounts(
 	)
 
 	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	disabledPublicKeys := keymanager.DisabledPublicKeys()
+	existingDisabledPk := make(map[[48]byte]bool, len(disabledPublicKeys))
+	for _, dpk := range disabledPublicKeys {
+		existingDisabledPk[bytesutil.ToBytes48(dpk)] = true
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -103,7 +109,11 @@ func listImportedKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
+		if existingDisabledPk[pubKeys[i]] {
+			fmt.Printf("%s | %s (%s)\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightRed(accountNames[i]).Bold(), au.BrightRed("disabled").Bold())
+		} else {
+			fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
+		}
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if showPrivateKeys {
 			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
@@ -124,13 +134,12 @@ func listImportedKeymanagerAccounts(
 
 func listDerivedKeymanagerAccounts(
 	ctx context.Context,
-	showDepositData,
 	showPrivateKeys bool,
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
-	fmt.Printf("(derivation format) %s\n", au.BrightGreen(keymanager.KeymanagerOpts().DerivedPathStructure).Bold())
+	fmt.Printf("(derivation format) %s\n", au.BrightGreen(derived.DerivationPathFormat).Bold())
 	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")

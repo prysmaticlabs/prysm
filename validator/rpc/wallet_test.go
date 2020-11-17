@@ -21,62 +21,6 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][]byte) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
-	require.NoError(t, err)
-	ss := &Server{
-		keymanager:            km,
-		wallet:                w,
-		walletDir:             defaultWalletPath,
-		walletInitializedFeed: new(event.Feed),
-	}
-	// First we import accounts into the wallet.
-	encryptor := keystorev4.New()
-	keystores := make([]string, numAccounts)
-	pubKeys := make([][]byte, len(keystores))
-	for i := 0; i < len(keystores); i++ {
-		privKey, err := bls.RandKey()
-		require.NoError(t, err)
-		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
-		id, err := uuid.NewRandom()
-		require.NoError(t, err)
-		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
-		require.NoError(t, err)
-		item := &keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Version: encryptor.Version(),
-			Pubkey:  pubKey,
-			Name:    encryptor.Name(),
-		}
-		encodedFile, err := json.MarshalIndent(item, "", "\t")
-		require.NoError(t, err)
-		keystores[i] = string(encodedFile)
-		pubKeys[i] = privKey.PublicKey().Marshal()
-	}
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
-		KeystoresImported: keystores,
-		KeystoresPassword: strongPass,
-	})
-	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx)
-	require.NoError(t, err)
-	return ss, pubKeys
-}
-
 func TestServer_CreateWallet_Imported(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
@@ -200,12 +144,9 @@ func TestServer_WalletConfig(t *testing.T) {
 	resp, err := s.WalletConfig(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 
-	expectedConfig := imported.DefaultKeymanagerOpts()
-	jsonMap := KmOptsToConfig(expectedConfig)
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
-		WalletPath:       localWalletDir,
-		KeymanagerKind:   pb.KeymanagerKind_IMPORTED,
-		KeymanagerConfig: jsonMap,
+		WalletPath:     localWalletDir,
+		KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 	})
 }
 
