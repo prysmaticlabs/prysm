@@ -132,12 +132,7 @@ message GenerateMnemonicResponse {
 
 message WalletResponse {
     string wallet_path = 1;
-
     KeymanagerKind keymanager_kind = 2;
-
-    // Key manager configs, this is meant to be some what generic.
-    // It'll later be encoded with json to represent in front end UI.
-    map<string, string> keymanager_config = 3;
 }
 
 message ListAccountsRequest {
