@@ -121,10 +121,8 @@ func TestScorers_PeerStatus_Score(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
-				PeerLimit: 30,
-				ScorerParams: &scorers.Config{
-					PeerStatusScorerConfig: &scorers.PeerStatusScorerConfig{},
-				},
+				PeerLimit:    30,
+				ScorerParams: &scorers.Config{},
 			})
 			scorer := peerStatuses.Scorers().PeerStatusScorer()
 			if tt.update != nil {
