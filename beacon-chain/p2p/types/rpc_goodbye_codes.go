@@ -34,7 +34,7 @@ func ErrToGoodbyeCode(err error) RPCGoodbyeCode {
 	switch err {
 	case ErrWrongForkDigestVersion:
 		return GoodbyeCodeWrongNetwork
+	default:
+		return GoodbyeCodeGenericError
 	}
-
-	return GoodbyeCodeGenericError
 }
