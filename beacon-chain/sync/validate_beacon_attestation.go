@@ -100,6 +100,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
+	if err := s.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
 
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
@@ -155,10 +159,8 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	return pubsub.ValidationAccept
 }
 
-// This validates beacon unaggregated attestation using the given state, the validation consists of:
-// FFG and LMD fork choice consistency
-// Bitfield length and count consistency
-// Finalized ancestor consistency
+// This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
+// and signature verification.
 func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.Attestation, bs *state.BeaconState) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
@@ -183,12 +185,6 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 
 	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
 		log.WithError(err).Error("Could not verify attestation")
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-
-	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-	if err := s.chain.VerifyFinalizedConsistency(ctx, a.Data.BeaconBlockRoot); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
