@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -56,7 +55,7 @@ var (
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
 		keymanager.Imported: "Imported Wallet (Recommended)",
-		keymanager.Derived:  "HD Wallet (Least secure)",
+		keymanager.Derived:  "HD Wallet",
 		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
@@ -258,10 +257,7 @@ func (w *Wallet) Password() string {
 
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
-func (w *Wallet) InitializeKeymanager(
-	ctx context.Context,
-	cfg *iface.InitializeKeymanagerConfig,
-) (keymanager.IKeymanager, error) {
+func (w *Wallet) InitializeKeymanager(ctx context.Context) (keymanager.IKeymanager, error) {
 	configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keymanager config")
@@ -286,10 +282,8 @@ func (w *Wallet) InitializeKeymanager(
 			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
 		km, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
-			Opts:                opts,
-			Wallet:              w,
-			SkipMnemonicConfirm: cfg.SkipMnemonicConfirm,
-			Mnemonic25thWord:    cfg.Mnemonic25thWord,
+			Opts:   opts,
+			Wallet: w,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
@@ -426,28 +420,6 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) 
 		return errors.Wrapf(err, "could not write %s", configFilePath)
 	}
 	log.WithField("configFilePath", configFilePath).Debug("Wrote keymanager config file to disk")
-	return nil
-}
-
-// ReadEncryptedSeedFromDisk reads the encrypted wallet seed configuration from
-// within the wallet path.
-func (w *Wallet) ReadEncryptedSeedFromDisk(_ context.Context) (io.ReadCloser, error) {
-	configFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
-	if !fileutil.FileExists(configFilePath) {
-		return nil, fmt.Errorf("no encrypted seed file found at path: %s", w.accountsPath)
-	}
-	return os.Open(configFilePath)
-}
-
-// WriteEncryptedSeedToDisk writes the encrypted wallet seed configuration
-// within the wallet path.
-func (w *Wallet) WriteEncryptedSeedToDisk(_ context.Context, encoded []byte) error {
-	seedFilePath := filepath.Join(w.accountsPath, derived.EncryptedSeedFileName)
-	// Write the config file to disk.
-	if err := fileutil.WriteFile(seedFilePath, encoded); err != nil {
-		return errors.Wrapf(err, "could not write %s", seedFilePath)
-	}
-	log.WithField("seedFilePath", seedFilePath).Debug("Wrote wallet encrypted seed file to disk")
 	return nil
 }
 
