@@ -32,6 +32,7 @@ type Server struct {
 	proposeLock     sync.Mutex
 }
 
+// HighestAttestations returns thee highest observed attestation source and epoch for a given validator id.
 func (ss *Server) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest) (*slashpb.HighestAttestationResponse, error) {
 	ret := make([]*slashpb.HighestAttestation, 0)
 	for _, id := range req.ValidatorIds {
@@ -41,7 +42,7 @@ func (ss *Server) HighestAttestations(ctx context.Context, req *slashpb.HighestA
 		}
 		if res != nil {
 			ret = append(ret, &slashpb.HighestAttestation{
-				ValidatorId:        id,
+				ValidatorId:        res.ValidatorId,
 				HighestTargetEpoch: res.HighestTargetEpoch,
 				HighestSourceEpoch: res.HighestSourceEpoch,
 			})
