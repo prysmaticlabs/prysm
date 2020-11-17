@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
@@ -83,9 +82,7 @@ func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, err
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
 
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: false,
-	})
+	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not initialize keymanager")
 	}
