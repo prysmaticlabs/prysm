@@ -28,8 +28,8 @@ func TestScorers_Service_Init(t *testing.T) {
 		t.Run("bad responses scorer", func(t *testing.T) {
 			params := peerStatuses.Scorers().BadResponsesScorer().Params()
 			assert.Equal(t, scorers.DefaultBadResponsesThreshold, params.Threshold, "Unexpected threshold value")
-			assert.Equal(t, scorers.DefaultBadResponsesWeight, params.Weight, "Unexpected weight value")
-			assert.Equal(t, scorers.DefaultBadResponsesDecayInterval, params.DecayInterval, "Unexpected decay interval value")
+			assert.Equal(t, scorers.DefaultBadResponsesDecayInterval,
+				params.DecayInterval, "Unexpected decay interval value")
 		})
 
 		t.Run("block providers scorer", func(t *testing.T) {
@@ -48,7 +48,6 @@ func TestScorers_Service_Init(t *testing.T) {
 			ScorerParams: &scorers.Config{
 				BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 					Threshold:     2,
-					Weight:        -1,
 					DecayInterval: 1 * time.Minute,
 				},
 				BlockProviderScorerConfig: &scorers.BlockProviderScorerConfig{
@@ -64,7 +63,6 @@ func TestScorers_Service_Init(t *testing.T) {
 		t.Run("bad responses scorer", func(t *testing.T) {
 			params := peerStatuses.Scorers().BadResponsesScorer().Params()
 			assert.Equal(t, 2, params.Threshold, "Unexpected threshold value")
-			assert.Equal(t, -1.0, params.Weight, "Unexpected weight value")
 			assert.Equal(t, 1*time.Minute, params.DecayInterval, "Unexpected decay interval value")
 		})
 
@@ -119,7 +117,8 @@ func TestScorers_Service_Score(t *testing.T) {
 		for _, pid := range pids {
 			peerStatuses.Add(nil, pid, nil, network.DirUnknown)
 			// Not yet used peer gets boosted score.
-			assert.Equal(t, s.BlockProviderScorer().MaxScore(), s.Score(pid), "Unexpected score for not yet used peer")
+			startScore := s.BlockProviderScorer().MaxScore()
+			assert.Equal(t, startScore/float64(s.ActiveScorersCount()), s.Score(pid), "Unexpected score for not yet used peer")
 		}
 		return s, pids
 	}
@@ -136,27 +135,29 @@ func TestScorers_Service_Score(t *testing.T) {
 
 	t.Run("bad responses score", func(t *testing.T) {
 		s, pids := setupScorer()
-		zeroScore := s.BlockProviderScorer().MaxScore()
+		// Peers start with boosted start score (new peers are boosted by block provider).
+		startScore := s.BlockProviderScorer().MaxScore() / float64(s.ActiveScorersCount())
+		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.ActiveScorersCount())
 
 		// Update peers' stats and test the effect on peer order.
 		s.BadResponsesScorer().Increment("peer2")
-		assert.DeepEqual(t, pack(s, zeroScore, zeroScore-0.2, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, startScore, startScore+penalty, startScore), peerScores(s, pids))
 		s.BadResponsesScorer().Increment("peer1")
 		s.BadResponsesScorer().Increment("peer1")
-		assert.DeepEqual(t, pack(s, zeroScore-0.4, zeroScore-0.2, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, startScore+2*penalty, startScore+penalty, startScore), peerScores(s, pids))
 
 		// See how decaying affects order of peers.
 		s.BadResponsesScorer().Decay()
-		assert.DeepEqual(t, pack(s, zeroScore-0.2, zeroScore, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, startScore+penalty, startScore, startScore), peerScores(s, pids))
 		s.BadResponsesScorer().Decay()
-		assert.DeepEqual(t, pack(s, zeroScore, zeroScore, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, startScore, startScore, startScore), peerScores(s, pids))
 	})
 
 	t.Run("block providers score", func(t *testing.T) {
 		s, pids := setupScorer()
 		s1 := s.BlockProviderScorer()
-		zeroScore := s.BlockProviderScorer().MaxScore()
-		batchWeight := s1.Params().ProcessedBatchWeight
+		startScore := s.BlockProviderScorer().MaxScore() / 2
+		batchWeight := s1.Params().ProcessedBatchWeight / 2
 
 		// Partial batch.
 		s1.IncrementProcessedBlocks("peer1", batchSize/4)
@@ -164,11 +165,11 @@ func TestScorers_Service_Score(t *testing.T) {
 
 		// Single batch.
 		s1.IncrementProcessedBlocks("peer1", batchSize)
-		assert.DeepEqual(t, pack(s, batchWeight, zeroScore, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, startScore, startScore), peerScores(s, pids), "Unexpected scores")
 
 		// Multiple batches.
 		s1.IncrementProcessedBlocks("peer2", batchSize*4)
-		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, zeroScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, startScore), peerScores(s, pids), "Unexpected scores")
 
 		// Partial batch.
 		s1.IncrementProcessedBlocks("peer3", batchSize/2)
@@ -187,25 +188,22 @@ func TestScorers_Service_Score(t *testing.T) {
 	})
 
 	t.Run("overall score", func(t *testing.T) {
-		// Full score, no penalty.
 		s, _ := setupScorer()
 		s1 := s.BlockProviderScorer()
 		s2 := s.BadResponsesScorer()
-		batchWeight := s1.Params().ProcessedBatchWeight
+		batchWeight := s1.Params().ProcessedBatchWeight / float64(s.ActiveScorersCount())
+		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.ActiveScorersCount())
 
+		// Full score, no penalty.
 		s1.IncrementProcessedBlocks("peer1", batchSize*5)
-		assert.Equal(t, roundScore(batchWeight*5), s1.Score("peer1"))
+		assert.Equal(t, roundScore(batchWeight*5), s.Score("peer1"))
 		// Now, adjust score by introducing penalty for bad responses.
 		s2.Increment("peer1")
 		s2.Increment("peer1")
-		assert.Equal(t, -0.4, s2.Score("peer1"), "Unexpected bad responses score")
-		assert.Equal(t, roundScore(batchWeight*5), s1.Score("peer1"), "Unexpected block provider score")
-		assert.Equal(t, roundScore(batchWeight*5-0.4), s.Score("peer1"), "Unexpected overall score")
+		assert.Equal(t, roundScore(batchWeight*5+2*penalty), s.Score("peer1"), "Unexpected overall score")
 		// If peer continues to misbehave, score becomes negative.
 		s2.Increment("peer1")
-		assert.Equal(t, -0.6, s2.Score("peer1"), "Unexpected bad responses score")
-		assert.Equal(t, roundScore(batchWeight*5), s1.Score("peer1"), "Unexpected block provider score")
-		assert.Equal(t, roundScore(batchWeight*5-0.6), s.Score("peer1"), "Unexpected overall score")
+		assert.Equal(t, roundScore(batchWeight*5+3*penalty), s.Score("peer1"), "Unexpected overall score")
 	})
 }
 
@@ -218,7 +216,6 @@ func TestScorers_Service_loop(t *testing.T) {
 		ScorerParams: &scorers.Config{
 			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
 				Threshold:     5,
-				Weight:        -0.5,
 				DecayInterval: 50 * time.Millisecond,
 			},
 			BlockProviderScorerConfig: &scorers.BlockProviderScorerConfig{
@@ -263,4 +260,46 @@ func TestScorers_Service_loop(t *testing.T) {
 	<-done
 	assert.Equal(t, false, s1.IsBadPeer(pid1), "Peer should not be marked as bad")
 	assert.Equal(t, uint64(0), s2.ProcessedBlocks("peer1"), "No blocks are expected")
+}
+
+func TestScorers_Service_IsBadPeer(t *testing.T) {
+	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold:     2,
+				DecayInterval: 50 * time.Second,
+			},
+		},
+	})
+
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer1"))
+	peerStatuses.Scorers().BadResponsesScorer().Increment("peer1")
+	peerStatuses.Scorers().BadResponsesScorer().Increment("peer1")
+	assert.Equal(t, true, peerStatuses.Scorers().IsBadPeer("peer1"))
+}
+
+func TestScorers_Service_BadPeers(t *testing.T) {
+	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold:     2,
+				DecayInterval: 50 * time.Second,
+			},
+		},
+	})
+
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer1"))
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer2"))
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer3"))
+	assert.Equal(t, 0, len(peerStatuses.Scorers().BadPeers()))
+	for _, pid := range []peer.ID{"peer1", "peer3"} {
+		peerStatuses.Scorers().BadResponsesScorer().Increment(pid)
+		peerStatuses.Scorers().BadResponsesScorer().Increment(pid)
+	}
+	assert.Equal(t, true, peerStatuses.Scorers().IsBadPeer("peer1"))
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer("peer2"))
+	assert.Equal(t, true, peerStatuses.Scorers().IsBadPeer("peer3"))
+	assert.Equal(t, 2, len(peerStatuses.Scorers().BadPeers()))
 }
