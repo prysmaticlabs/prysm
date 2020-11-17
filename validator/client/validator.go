@@ -179,12 +179,6 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-// WaitForSynced opens a stream with the beacon chain node so it can be informed of when the beacon node is
-// fully synced and ready to communicate with the validator.
-func (v *validator) WaitForSynced(ctx context.Context) error {
-	return errors.New("unimplemented")
-}
-
 // SlasherReady checks if slasher that was configured as external protection
 // is reachable.
 func (v *validator) SlasherReady(ctx context.Context) error {

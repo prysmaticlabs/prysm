@@ -209,9 +209,3 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 		}
 	}
 }
-
-// WaitForSynced subscribes to the state channel and ends the stream when the state channel
-// indicates the beacon node has been initialized and is ready
-func (vs *Server) WaitForSynced(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
-	return errors.New("unimplemented")
-}

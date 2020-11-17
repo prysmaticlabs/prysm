@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -75,11 +74,6 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 	fv.WaitForSyncCalled = true
 	return nil
-}
-
-// WaitForSynced for mocking.
-func (fv *FakeValidator) WaitForSynced(_ context.Context) error {
-	return errors.New("unimplemented")
 }
 
 // SlasherReady for mocking.
