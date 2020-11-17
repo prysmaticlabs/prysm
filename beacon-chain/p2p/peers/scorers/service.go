@@ -102,10 +102,7 @@ func (s *Service) IsBadPeer(pid peer.ID) bool {
 
 // isBadPeer is a lock-free version of isBadPeer.
 func (s *Service) isBadPeer(pid peer.ID) bool {
-	if s.scorers.badResponsesScorer.isBadPeer(pid) {
-		return true
-	}
-	return false
+	return s.scorers.badResponsesScorer.isBadPeer(pid)
 }
 
 // BadPeers returns the peers that are considered bad by any of registered scorers.
