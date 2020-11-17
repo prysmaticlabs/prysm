@@ -513,7 +513,6 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 				},
 				AttestingIndices: []uint64{0},
 			}
-			t.Log("before detect")
 			res, err := sd.DetectSlashingsForAttestation(ctx, att)
 			t.Logf("after detect %v", res)
 			require.NoError(t, err)
