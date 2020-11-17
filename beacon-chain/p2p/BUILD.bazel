@@ -22,8 +22,6 @@ go_library(
         "options.go",
         "pubsub.go",
         "pubsub_filter.go",
-        "rpc_error.go",
-        "rpc_goodbye_code.go",
         "rpc_topic_mappings.go",
         "sender.go",
         "service.go",
