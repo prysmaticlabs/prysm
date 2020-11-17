@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bls/common"
+
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -50,7 +52,7 @@ func TestSecretKeyFromBytes(t *testing.T) {
 		{
 			name:  "Bad",
 			input: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-			err:   errors.New("could not unmarshal bytes into secret key: err blsSecretKeyDeserialize ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+			err:   common.ErrSecretUnmarshal,
 		},
 		{
 			name:  "Good",

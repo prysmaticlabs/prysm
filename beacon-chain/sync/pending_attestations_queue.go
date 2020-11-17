@@ -63,7 +63,6 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		// Has the pending attestation's missing block arrived and the node processed block yet?
 		hasStateSummary := s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
 		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || hasStateSummary) {
-			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, signedAtt := range attestations {
 				att := signedAtt.Message
 				// The pending attestations can arrive in both aggregated and unaggregated forms,
@@ -76,7 +75,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							return err
 						}
-						numberOfAttsRecovered.Inc()
+						s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
 
 						// Broadcasting the signed attestation again once a node is able to process it.
 						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
@@ -92,7 +91,6 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					if err := s.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
 						return err
 					}
-					numberOfAttsRecovered.Inc()
 
 					// Verify signed aggregate has a valid signature.
 					if _, err := bls.SignatureFromBytes(signedAtt.Signature); err != nil {
@@ -168,7 +166,6 @@ func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
 			if slot >= atts[i].Message.Aggregate.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
 				// Remove the pending attestation from the list in place.
 				atts = append(atts[:i], atts[i+1:]...)
-				numberOfAttsNotRecovered.Inc()
 			}
 		}
 		s.blkRootToPendingAtts[bRoot] = atts
@@ -177,7 +174,6 @@ func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
 		// a node will remove the key from the map to avoid dangling keys.
 		if len(s.blkRootToPendingAtts[bRoot]) == 0 {
 			delete(s.blkRootToPendingAtts, bRoot)
-			numberOfBlocksNotRecoveredFromAtt.Inc()
 		}
 	}
 }
