@@ -20,6 +20,12 @@ func Test_uint64FromString(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "Max Uint64 works",
+			str:     "18446744073709551615",
+			want:    math.MaxUint64,
+			wantErr: false,
+		},
+		{
 			name:    "Negative number fails",
 			str:     "-3",
 			wantErr: true,
