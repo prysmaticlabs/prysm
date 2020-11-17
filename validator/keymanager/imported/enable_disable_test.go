@@ -76,8 +76,12 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 			wallet := &mock.Wallet{
 				Files: make(map[string]map[string][]byte),
 			}
+			disabledPubKeys := make(map[[48]byte]bool)
+			for _, pubKey := range tt.existingDisabledKeys {
+				disabledPubKeys[bytesutil.ToBytes48(pubKey)] = true
+			}
 			dr := &Keymanager{
-				disabledPublicKeys: tt.existingDisabledKeys,
+				disabledPublicKeys: disabledPubKeys,
 				wallet:             wallet,
 			}
 			// First we write the accounts store file.
@@ -100,11 +104,6 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 				wanted := make(map[[48]byte]bool)
 				for _, pubKey := range tt.expectedDisabledKeys {
 					wanted[bytesutil.ToBytes48(pubKey)] = true
-				}
-				for _, pubKey := range dr.disabledPublicKeys {
-					if _, ok := wanted[bytesutil.ToBytes48(pubKey)]; !ok {
-						t.Errorf("Expected %#x in disabled keys, but not found", pubKey)
-					}
 				}
 				// We verify that the updated disabled keys are reflected on disk as well.
 				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
@@ -187,8 +186,12 @@ func TestKeymanager_EnableAccounts(t *testing.T) {
 			wallet := &mock.Wallet{
 				Files: make(map[string]map[string][]byte),
 			}
+			disabledPubKeys := make(map[[48]byte]bool)
+			for _, pubKey := range tt.existingDisabledKeys {
+				disabledPubKeys[bytesutil.ToBytes48(pubKey)] = true
+			}
 			dr := &Keymanager{
-				disabledPublicKeys: tt.existingDisabledKeys,
+				disabledPublicKeys: disabledPubKeys,
 				wallet:             wallet,
 			}
 			// First we write the accounts store file.
@@ -212,8 +215,8 @@ func TestKeymanager_EnableAccounts(t *testing.T) {
 				for _, pubKey := range tt.expectedDisabledKeys {
 					wanted[bytesutil.ToBytes48(pubKey)] = true
 				}
-				for _, pubKey := range dr.disabledPublicKeys {
-					if _, ok := wanted[bytesutil.ToBytes48(pubKey)]; !ok {
+				for pubKey := range dr.disabledPublicKeys {
+					if _, ok := wanted[pubKey]; !ok {
 						t.Errorf("Expected %#x in disabled keys, but not found", pubKey)
 					}
 				}

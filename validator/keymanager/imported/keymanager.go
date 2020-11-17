@@ -42,7 +42,7 @@ const (
 type Keymanager struct {
 	wallet              iface.Wallet
 	accountsStore       *accountStore
-	disabledPublicKeys  [][]byte
+	disabledPublicKeys  map[[48]byte]bool
 	accountsChangedFeed *event.Feed
 }
 
@@ -84,6 +84,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		wallet:              cfg.Wallet,
 		accountsStore:       &accountStore{},
 		accountsChangedFeed: new(event.Feed),
+		disabledPublicKeys:  make(map[[48]byte]bool),
 	}
 
 	if err := k.initializeAccountKeystore(ctx); err != nil {
@@ -140,11 +141,11 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 
 // DisabledPublicKeys returns the currently disabled public keys in the keymanager.
 func (dr *Keymanager) DisabledPublicKeys() [][]byte {
-	disabledPubKeys := make([][]byte, len(dr.disabledPublicKeys))
-	for i, pubKey := range dr.disabledPublicKeys {
+	disabledPubKeys := make([][]byte, 0)
+	for pubKey := range dr.disabledPublicKeys {
 		pubKeyBytes := make([]byte, 48)
-		copy(pubKeyBytes, pubKey)
-		disabledPubKeys[i] = pubKeyBytes
+		copy(pubKeyBytes, pubKey[:])
+		disabledPubKeys = append(disabledPubKeys, pubKeyBytes)
 	}
 	return disabledPubKeys
 }
@@ -222,14 +223,9 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 	lock.RLock()
 	keys := orderedPublicKeys
-	disabledPublicKeys := dr.disabledPublicKeys
 	result := make([][48]byte, 0)
-	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
-	for _, pk := range disabledPublicKeys {
-		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
-	}
 	for _, pk := range keys {
-		if _, ok := existingDisabledPubKeys[pk]; !ok {
+		if _, ok := dr.disabledPublicKeys[pk]; !ok {
 			result = append(result, pk)
 		}
 	}
@@ -259,13 +255,8 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
-	disabledPublicKeys := dr.disabledPublicKeys
-	existingDisabledPubKeys := make(map[[48]byte]bool, len(disabledPublicKeys))
-	for _, pk := range disabledPublicKeys {
-		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
-	}
 	for i, pk := range pubKeys {
-		if _, ok := existingDisabledPubKeys[pk]; !ok {
+		if _, ok := dr.disabledPublicKeys[pk]; !ok {
 			seckey, ok := secretKeysCache[pk]
 			if !ok {
 				return nil, errors.New("Could not fetch private key")
@@ -329,15 +320,17 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		return nil
 	}
 	dr.accountsStore = store
-	disabledPubKeys := make([][]byte, 0)
+
+	lock.Lock()
 	for _, pubKey := range keystoreFile.DisabledPublicKeys {
 		pubKeyBytes, err := hex.DecodeString(pubKey)
 		if err != nil {
+			lock.Unlock()
 			return err
 		}
-		disabledPubKeys = append(disabledPubKeys, pubKeyBytes)
+		dr.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
 	}
-	dr.disabledPublicKeys = disabledPubKeys
+	lock.Unlock()
 	err = dr.initializeKeysCachesFromKeystore()
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize keys caches")
@@ -397,9 +390,11 @@ func (dr *Keymanager) createAccountsKeystore(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}
-	disabledPubKeys := make([]string, len(dr.disabledPublicKeys))
-	for i, pubKey := range dr.disabledPublicKeys {
-		disabledPubKeys[i] = fmt.Sprintf("%x", pubKey)
+	disabledPubKeys := make([]string, 0)
+	lock.Lock()
+	defer lock.Unlock()
+	for pubKey := range dr.disabledPublicKeys {
+		disabledPubKeys = append(disabledPubKeys, fmt.Sprintf("%x", pubKey))
 	}
 	return &accountsKeystoreRepresentation{
 		Crypto:             cryptoFields,

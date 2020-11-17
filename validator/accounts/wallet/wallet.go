@@ -28,8 +28,6 @@ var log = logrus.WithField("prefix", "wallet")
 const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
-	// DirectoryPermissions for directories created under the wallet path.
-	DirectoryPermissions = os.ModePerm
 	// NewWalletPasswordPromptText for wallet creation.
 	NewWalletPasswordPromptText = "New wallet password"
 	// WalletPasswordPromptText for wallet unlocking.

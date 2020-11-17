@@ -136,7 +136,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	}
 }
 
-// EditConfig allows the user to edit their wallet's keymanageropts.
+// EditConfig allows the user to edit their wallet's configuration.
 func (s *Server) EditConfig(_ context.Context, _ *pb.EditWalletConfigRequest) (*pb.WalletResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }

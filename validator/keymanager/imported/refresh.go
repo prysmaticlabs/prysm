@@ -115,7 +115,8 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepre
 		pubKeyBytes := privKey.PublicKey().Marshal()
 		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
 	}
-	disabledPublicKeys := make([][]byte, 0)
+	lock.Lock()
+	defer lock.Unlock()
 	for _, pubKey := range keystore.DisabledPublicKeys {
 		pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(pubKey, "0x"))
 		if err != nil {
@@ -124,10 +125,9 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepre
 		if len(pubKeyBytes) != 48 {
 			return fmt.Errorf("public key %s has wrong length", pubKey)
 		}
-		disabledPublicKeys = append(disabledPublicKeys, pubKeyBytes)
+		dr.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
 	}
 	dr.accountsStore = newAccountsStore
-	dr.disabledPublicKeys = disabledPublicKeys
 	if err := dr.initializeKeysCachesFromKeystore(); err != nil {
 		return err
 	}

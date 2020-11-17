@@ -14,20 +14,13 @@ func (dr *Keymanager) DisableAccounts(ctx context.Context, pubKeys [][]byte) err
 	if pubKeys == nil || len(pubKeys) < 1 {
 		return errors.New("no public keys specified to disable")
 	}
-	existingDisabledPubKeys := make(map[[48]byte]bool)
-	for _, pk := range dr.disabledPublicKeys {
-		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
-	}
+	lock.Lock()
+	defer lock.Unlock()
 	for _, pk := range pubKeys {
-		if _, ok := existingDisabledPubKeys[bytesutil.ToBytes48(pk)]; !ok {
-			existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
+		if _, ok := dr.disabledPublicKeys[bytesutil.ToBytes48(pk)]; !ok {
+			dr.disabledPublicKeys[bytesutil.ToBytes48(pk)] = true
 		}
 	}
-	newlyDisabledPubKeys := make([][]byte, 0)
-	for pk := range existingDisabledPubKeys {
-		newlyDisabledPubKeys = append(newlyDisabledPubKeys, pk[:])
-	}
-	dr.disabledPublicKeys = newlyDisabledPubKeys
 	return dr.rewriteDisabledKeysToDisk(ctx)
 }
 
@@ -36,21 +29,14 @@ func (dr *Keymanager) EnableAccounts(ctx context.Context, pubKeys [][]byte) erro
 	if pubKeys == nil || len(pubKeys) < 1 {
 		return errors.New("no public keys specified to enable")
 	}
-	existingDisabledPubKeys := make(map[[48]byte]bool)
-	for _, pk := range dr.disabledPublicKeys {
-		existingDisabledPubKeys[bytesutil.ToBytes48(pk)] = true
-	}
+	lock.Lock()
+	defer lock.Unlock()
 	for _, pk := range pubKeys {
 		keyBytes := bytesutil.ToBytes48(pk)
-		if _, ok := existingDisabledPubKeys[keyBytes]; ok {
-			delete(existingDisabledPubKeys, keyBytes)
+		if _, ok := dr.disabledPublicKeys[keyBytes]; ok {
+			delete(dr.disabledPublicKeys, keyBytes)
 		}
 	}
-	newlyDisabledPubKeys := make([][]byte, 0)
-	for pk := range existingDisabledPubKeys {
-		newlyDisabledPubKeys = append(newlyDisabledPubKeys, pk[:])
-	}
-	dr.disabledPublicKeys = newlyDisabledPubKeys
 	return dr.rewriteDisabledKeysToDisk(ctx)
 }
 
@@ -63,9 +49,9 @@ func (dr *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
 	if err := json.Unmarshal(encoded, keystore); err != nil {
 		return err
 	}
-	disabledKeysStrings := make([]string, len(dr.disabledPublicKeys))
-	for i := 0; i < len(dr.disabledPublicKeys); i++ {
-		disabledKeysStrings[i] = fmt.Sprintf("%x", dr.disabledPublicKeys[i])
+	disabledKeysStrings := make([]string, 0)
+	for pk := range dr.disabledPublicKeys {
+		disabledKeysStrings = append(disabledKeysStrings, fmt.Sprintf("%x", pk))
 	}
 	keystore.DisabledPublicKeys = disabledKeysStrings
 	encoded, err = json.MarshalIndent(keystore, "", "\t")
