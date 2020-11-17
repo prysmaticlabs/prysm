@@ -30,17 +30,6 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	assert.Equal(t, true, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
-func TestCancelledContext_WaitsForSynced(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		WaitForSynced: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
-	v := &FakeValidator{}
-	run(cancelledContext(), v)
-	assert.Equal(t, true, v.WaitForSyncedCalled, "Expected WaitForSynced() to be called")
-}
-
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	v := &FakeValidator{}
 	run(cancelledContext(), v)
