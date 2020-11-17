@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -46,30 +47,6 @@ var (
 			Help: "Count the number of times a node resyncs.",
 		},
 	)
-	numberOfBlocksRecoveredFromAtt = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_blocks_recovered_from_attestation_total",
-			Help: "Count the number of times a missing block recovered from attestation vote.",
-		},
-	)
-	numberOfBlocksNotRecoveredFromAtt = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_blocks_not_recovered_from_attestation_total",
-			Help: "Count the number of times a missing block not recovered and pruned from attestation vote.",
-		},
-	)
-	numberOfAttsRecovered = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_attestations_recovered_total",
-			Help: "Count the number of times attestation recovered because of missing block",
-		},
-	)
-	numberOfAttsNotRecovered = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "beacon_attestations_not_recovered_total",
-			Help: "Count the number of times attestation not recovered and pruned because of missing block",
-		},
-	)
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
@@ -90,11 +67,19 @@ func (s *Service) updateMetrics() {
 	if err != nil {
 		log.WithError(err).Debugf("Could not compute fork digest")
 	}
+	indices := s.aggregatorSubnetIndices(s.chain.CurrentSlot())
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	attTopic += s.p2p.Encoding().ProtocolSuffix()
-	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-		formattedTopic := fmt.Sprintf(attTopic, digest, i)
-		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
+	if flags.Get().SubscribeToAllSubnets {
+		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+			formattedTopic := fmt.Sprintf(attTopic, digest, i)
+			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
+		}
+	} else {
+		for _, committeeIdx := range indices {
+			formattedTopic := fmt.Sprintf(attTopic, digest, committeeIdx)
+			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
+		}
 	}
 
 	// We update all other gossip topics.

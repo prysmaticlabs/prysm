@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -52,7 +51,6 @@ func TestImport_Noninteractive(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -74,9 +72,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -110,7 +106,6 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -132,9 +127,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -169,7 +162,6 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: w,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -186,9 +178,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-		SkipMnemonicConfirm: true,
-	})
+	km, err := w.InitializeKeymanager(cliCtx.Context)
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -293,7 +283,6 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: wallet,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)
@@ -304,7 +293,6 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		cliCtx.Context,
 		&imported.SetupConfig{
 			Wallet: wallet,
-			Opts:   imported.DefaultKeymanagerOpts(),
 		},
 	)
 	require.NoError(t, err)

@@ -17,43 +17,15 @@ var AccountCommands = &cli.Command{
 	Usage:    "defines commands for interacting with eth2 validator accounts (work in progress)",
 	Subcommands: []*cli.Command{
 		{
-			Name: "create",
-			Description: `creates a new validator account for eth2. If no wallet exists at the given wallet path, creates a new wallet for a user based on
-specified input, capable of creating a imported, derived, or remote wallet.
-this command outputs a deposit data string which is required to become a validator in eth2.`,
-			Flags: cmd.WrapFlags([]cli.Flag{
-				flags.Mnemonic25thWordFileFlag,
-				flags.SkipMnemonic25thWordCheckFlag,
-				flags.WalletDirFlag,
-				flags.WalletPasswordFileFlag,
-				flags.NumAccountsFlag,
-				featureconfig.ToledoTestnet,
-				featureconfig.PyrmontTestnet,
-				cmd.AcceptTosFlag,
-			}),
-			Before: func(cliCtx *cli.Context) error {
-				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
-					return err
-				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
-				if err := CreateAccountCli(cliCtx); err != nil {
-					log.Fatalf("Could not create new account: %v", err)
-				}
-				return nil
-			},
-		},
-		{
 			Name:        "delete",
 			Description: `deletes the selected accounts from a users wallet.`,
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.DeletePublicKeysFlag,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -71,56 +43,6 @@ this command outputs a deposit data string which is required to become a validat
 			},
 		},
 		{
-			Name:        "disable",
-			Description: "Disable the selected accounts from a users wallet.",
-			Flags: cmd.WrapFlags([]cli.Flag{
-				flags.WalletDirFlag,
-				flags.WalletPasswordFileFlag,
-				flags.DisablePublicKeysFlag,
-				featureconfig.ToledoTestnet,
-				featureconfig.PyrmontTestnet,
-				cmd.AcceptTosFlag,
-			}),
-			Before: func(cliCtx *cli.Context) error {
-				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
-					return err
-				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
-				if err := DisableAccountsCli(cliCtx); err != nil {
-					log.Fatalf("Could not disable account: %v", err)
-				}
-				return nil
-			},
-		},
-		{
-			Name:        "enable",
-			Description: "Enable the selected accounts from a users wallet.",
-			Flags: cmd.WrapFlags([]cli.Flag{
-				flags.WalletDirFlag,
-				flags.WalletPasswordFileFlag,
-				flags.EnablePublicKeysFlag,
-				featureconfig.ToledoTestnet,
-				featureconfig.PyrmontTestnet,
-				cmd.AcceptTosFlag,
-			}),
-			Before: func(cliCtx *cli.Context) error {
-				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
-					return err
-				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
-				if err := EnableAccountsCli(cliCtx); err != nil {
-					log.Fatalf("Could not enable account: %v", err)
-				}
-				return nil
-			},
-		},
-		{
 			Name:        "list",
 			Description: "Lists all validator accounts in a user's wallet directory",
 			Flags: cmd.WrapFlags([]cli.Flag{
@@ -128,8 +50,9 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordFileFlag,
 				flags.ShowDepositDataFlag,
 				flags.ShowPrivateKeysFlag,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -158,8 +81,9 @@ this command outputs a deposit data string which is required to become a validat
 				flags.BackupDirFlag,
 				flags.BackupPublicKeysFlag,
 				flags.BackupPasswordFile,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -185,8 +109,9 @@ this command outputs a deposit data string which is required to become a validat
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
 				flags.ImportPrivateKeyFileFlag,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -217,8 +142,9 @@ this command outputs a deposit data string which is required to become a validat
 				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
-				featureconfig.ToledoTestnet,
+				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

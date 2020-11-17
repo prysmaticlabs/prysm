@@ -2190,8 +2190,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:dGeuKeaXxCepTbwsz7kYSfP1yazw1uRMn58CqNCcPP4=",
-        version = "v0.0.0-20201003171600-a72e5f77d233",
+        sum = "h1:bvsgNf1mHXFN5M+BYXqnWvceQkibz28Qo/x/jOs6wGc=",
+        version = "v0.0.0-20201116210408-3e6658264073",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2463,11 +2463,11 @@ def prysm_deps():
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/03c38676b08bd0bdbb120b94464d9c692a509842.tar.gz",
+            "https://github.com/supranational/blst/archive/9b4b16fb42692370ba8a6ccfbca1803691225413.tar.gz",
         ],
-        strip_prefix = "blst-03c38676b08bd0bdbb120b94464d9c692a509842",
+        strip_prefix = "blst-9b4b16fb42692370ba8a6ccfbca1803691225413",
         build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "390695dd5084228de3e9f06e6800c79a5f90cdef4129fa36aaa18b1d24730138",
+        sha256 = "4e03c7d673fdf9f8f2ddd3e64edc31001a86ad380a8e9266c197cff70856d054",
     )
     go_repository(
         name = "com_github_syndtr_goleveldb",
