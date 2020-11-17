@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -152,11 +151,6 @@ func (s *ValidatorClient) Close() {
 
 	s.services.StopAll()
 	log.Info("Stopping Prysm validator")
-	if !s.cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		if err := s.wallet.UnlockWalletConfigFile(); err != nil {
-			log.WithError(err).Errorf("Failed to unlock wallet config file.")
-		}
-	}
 	close(s.stop)
 }
 
@@ -183,14 +177,9 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-			SkipMnemonicConfirm: false,
-		})
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
-		}
-		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
-			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
@@ -271,14 +260,9 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, &iface.InitializeKeymanagerConfig{
-			SkipMnemonicConfirm: false,
-		})
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
-		}
-		if err := w.LockWalletConfigFile(cliCtx.Context); err != nil {
-			log.Fatalf("Could not get a lock on wallet file. Please check if you have another validator instance running and using the same wallet: %v", err)
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
