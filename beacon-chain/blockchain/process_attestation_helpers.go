@@ -56,14 +56,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 
 	// To avoid sharing the same state across checkpoint state cache and hot state cache,
 	// we don't add the state to check point cache.
-	has, err := s.stateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
-	if err != nil {
-		return nil, err
-	}
-	if !has {
-		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
+
+	if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
+		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 	}
 	return baseState, nil
 
