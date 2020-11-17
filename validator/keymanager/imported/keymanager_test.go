@@ -76,8 +76,9 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		WalletPassword: password,
 	}
 	dr := &Keymanager{
-		wallet:        wallet,
-		accountsStore: &accountStore{},
+		wallet:             wallet,
+		accountsStore:      &accountStore{},
+		disabledPublicKeys: make(map[[48]byte]bool),
 	}
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
