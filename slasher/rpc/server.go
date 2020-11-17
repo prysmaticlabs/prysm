@@ -32,10 +32,17 @@ type Server struct {
 	proposeLock     sync.Mutex
 }
 
-// HighestAttestations returns thee highest observed attestation source and epoch for a given validator id.
+// HighestAttestations returns the highest observed attestation source and epoch for a given validator id.
 func (ss *Server) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest) (*slashpb.HighestAttestationResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "history.HighestAttestations")
+	defer span.End()
+
 	ret := make([]*slashpb.HighestAttestation, 0)
 	for _, id := range req.ValidatorIds {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		res, err := ss.slasherDB.HighestAttestation(ctx, id)
 		if err != nil {
 			return nil, err
