@@ -28,6 +28,10 @@ var (
 		Name: "latest_max_span_distance_observed",
 		Help: "The latest distance between target - source observed for max spans",
 	})
+	sourceLargerThenTargetObserved = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "attestation_source_larger_then_target",
+		Help: "The number of attestation data source epoch that aren larger then target epoch.",
+	})
 )
 
 // We look back 128 epochs when updating min/max spans
@@ -71,6 +75,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		tmp := sourceEpoch
 		sourceEpoch = targetEpoch
 		targetEpoch = tmp
+		sourceLargerThenTargetObserved.Inc()
 	}
 
 	if dis > params.BeaconConfig().WeakSubjectivityPeriod {
