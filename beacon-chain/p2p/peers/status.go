@@ -156,14 +156,14 @@ func (p *Status) ENR(pid peer.ID) (*enr.Record, error) {
 
 // SetChainState sets the chain state of the given remote peer.
 func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
-	p.scorers.PeerStatusScorer().UpdateChainState(pid, chainState)
+	p.scorers.PeerStatusScorer().UpdatePeerStatus(pid, chainState, nil)
 }
 
 // ChainState gets the chain state of the given remote peer.
 // This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
-	return p.scorers.PeerStatusScorer().ChainState(pid)
+	return p.scorers.PeerStatusScorer().PeerStatus(pid)
 }
 
 // IsActive checks if a peers is active and returns the result appropriately.
@@ -264,12 +264,6 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 		return peerData.ChainStateLastUpdated, nil
 	}
 	return timeutils.Now(), peerdata.ErrPeerUnknown
-}
-
-// IsBad states if the peer is to be considered bad.
-// If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
-func (p *Status) IsBad(pid peer.ID) bool {
-	return p.scorers.BadResponsesScorer().IsBadPeer(pid)
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
