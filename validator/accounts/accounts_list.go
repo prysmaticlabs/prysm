@@ -92,7 +92,7 @@ func listImportedKeymanagerAccounts(
 	)
 
 	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
-	disabledPublicKeys := keymanager.KeymanagerOpts().DisabledPublicKeys
+	disabledPublicKeys := keymanager.DisabledPublicKeys()
 	existingDisabledPk := make(map[[48]byte]bool, len(disabledPublicKeys))
 	for _, dpk := range disabledPublicKeys {
 		existingDisabledPk[bytesutil.ToBytes48(dpk)] = true
