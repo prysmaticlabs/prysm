@@ -205,8 +205,8 @@ func captureArrivalTimeMetric(genesisTime, currentSlot uint64) error {
 	if err != nil {
 		return err
 	}
-	diffMs := timeutils.Now().Sub(startTime) / time.Millisecond
-	arrivalBlockPropagationHistogram.Observe(float64(diffMs))
+	ms := timeutils.Now().Sub(startTime) / time.Millisecond
+	arrivalBlockPropagationHistogram.Observe(float64(ms))
 
 	return nil
 }
