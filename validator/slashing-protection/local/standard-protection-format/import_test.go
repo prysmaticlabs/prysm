@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
@@ -123,6 +124,27 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 				"Imported proposals are different then the generated ones",
 			)
 		}
+	}
+}
+
+func Test_validateMetadata(t *testing.T) {
+	tests := []struct {
+		name            string
+		validatorDB     db.Database
+		interchangeJSON *EIPSlashingProtectionFormat
+		wantErr         bool
+	}{
+		{
+			"Incorrect version for "
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			if err := validateMetadata(ctx, tt.validatorDB, tt.interchangeJSON); (err != nil) != tt.wantErr {
+				t.Errorf("validateMetadata() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 

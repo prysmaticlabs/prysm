@@ -80,7 +80,7 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 
 	// We need to verify the genesis validators root matches that of our chain data, otherwise
 	// the imported slashing protection JSON was created on a different chain.
-	//validatorDB.
+	// TODO(#7813): Add this check, very important!
 	return nil
 }
 
