@@ -34,8 +34,10 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 
 	// We need to handle duplicate public keys in the JSON file, with potentially
 	// different signing histories for both attestations and blocks. We create a map
-	// of pubKey -> []*SignedAttestation and pubKey -> []*SignedBlock. In a later loop, we will
-	// deduplicate and transform them into our internal format.
+	// of pubKey -> []*SignedAttestation and pubKey -> []*SignedBlock. Then, we keep
+	// a map of observed hashes of signed attestations and blocks. If we observe a new hash,
+	// we insert those signed blocks and attestations for processing.
+	seenHashes := make(map[[32]byte]bool)
 	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
 	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
 	for _, validatorData := range interchangeJSON.Data {
@@ -43,51 +45,35 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		if err != nil {
 			return fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
 		}
-		signedBlocksByPubKey[pubKey] = append(
-			signedBlocksByPubKey[pubKey], validatorData.SignedBlocks...,
-		)
-		signedAttestationsByPubKey[pubKey] = append(
-			signedAttestationsByPubKey[pubKey], validatorData.SignedAttestations...,
-		)
-	}
-
-	// We now deduplicate the blocks from the prior loop by hashing each item and inserting it
-	// into a map of pubKey -> []*SignedBlock and pubKey -> []*SignedAttestation.
-	uniqueHashes := make(map[[32]byte]bool)
-	uniqueSignedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
-	uniqueSignedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
-	for pubKey, signedBlocks := range signedBlocksByPubKey {
-		for _, sBlock := range signedBlocks {
+		for _, sBlock := range validatorData.SignedBlocks {
 			encoded, err := json.Marshal(sBlock)
 			if err != nil {
 				return err
 			}
 			h := hashutil.Hash(encoded)
-			if _, ok := uniqueHashes[h]; !ok {
-				uniqueHashes[h] = true
-				uniqueSignedBlocksByPubKey[pubKey] = append(uniqueSignedBlocksByPubKey[pubKey], sBlock)
+			if _, ok := seenHashes[h]; ok {
 				continue
 			}
+			seenHashes[h] = true
+			signedBlocksByPubKey[pubKey] = append(signedBlocksByPubKey[pubKey], sBlock)
 		}
-	}
-	for pubKey, signedAtts := range signedAttestationsByPubKey {
-		for _, sAtt := range signedAtts {
+		for _, sAtt := range validatorData.SignedAttestations {
 			encoded, err := json.Marshal(sAtt)
 			if err != nil {
 				return err
 			}
 			h := hashutil.Hash(encoded)
-			if _, ok := uniqueHashes[h]; !ok {
-				uniqueHashes[h] = true
-				uniqueSignedAttestationsByPubKey[pubKey] = append(uniqueSignedAttestationsByPubKey[pubKey], sAtt)
+			if _, ok := seenHashes[h]; ok {
 				continue
 			}
+			seenHashes[h] = true
+			signedAttestationsByPubKey[pubKey] = append(signedAttestationsByPubKey[pubKey], sAtt)
 		}
 	}
 
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
-	for pubKey, signedBlocks := range uniqueSignedBlocksByPubKey {
+	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Parse and transform the signed blocks data from the JSON
 		// file into the internal Prysm representation of proposal history.
 		proposalHistory, err := parseSignedBlocks(ctx, signedBlocks)
@@ -97,7 +83,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		proposalHistoryByPubKey[pubKey] = *proposalHistory
 	}
 
-	for pubKey, signedAtts := range uniqueSignedAttestationsByPubKey {
+	for pubKey, signedAtts := range signedAttestationsByPubKey {
 		// Parse and transform the signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
 		attestingHistory, err := parseSignedAttestations(ctx, signedAtts)
