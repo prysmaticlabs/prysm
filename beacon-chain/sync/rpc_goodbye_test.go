@@ -10,9 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -44,7 +43,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	failureCode := p2p.GoodbyeCodeClientShutdown
+	failureCode := p2ptypes.GoodbyeCodeClientShutdown
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
@@ -87,7 +86,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	failureCode := p2p.GoodbyeCodeClientShutdown
+	failureCode := p2ptypes.GoodbyeCodeClientShutdown
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
@@ -114,7 +113,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 
 	stream2, err := p1.BHost.NewStream(context.Background(), p3.BHost.ID(), pcl)
 	require.NoError(t, err)
-	failureCode = p2p.GoodbyeCodeBanned
+	failureCode = p2ptypes.GoodbyeCodeBanned
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream2))
 
@@ -147,7 +146,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 		p2p:         p1,
 		rateLimiter: newRateLimiter(p1),
 	}
-	failureCode := p2p.GoodbyeCodeClientShutdown
+	failureCode := p2ptypes.GoodbyeCodeClientShutdown
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
@@ -157,7 +156,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(p2pTypes.SSZUint64)
+		out := new(p2ptypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
@@ -189,7 +188,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 		p2p:         p1,
 		rateLimiter: newRateLimiter(p1),
 	}
-	failureCode := p2p.GoodbyeCodeClientShutdown
+	failureCode := p2ptypes.GoodbyeCodeClientShutdown
 
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
@@ -199,7 +198,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(p2pTypes.SSZUint64)
+		out := new(p2ptypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())

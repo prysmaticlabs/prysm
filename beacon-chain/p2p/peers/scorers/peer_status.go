@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -82,7 +82,7 @@ func (s *PeerStatusScorer) isBadPeer(pid peer.ID) bool {
 	}
 	// Mark peer as bad, if the latest error is one of the terminal ones.
 	terminalErrs := []error{
-		p2p.ErrWrongForkDigestVersion,
+		p2ptypes.ErrWrongForkDigestVersion,
 	}
 	for _, err := range terminalErrs {
 		if errors.Is(peerData.ChainStateValidationError, err) {

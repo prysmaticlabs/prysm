@@ -1,9 +1,7 @@
-package p2p
-
-import "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+package types
 
 // RPCGoodbyeCode represents goodbye code, used in sync package.
-type RPCGoodbyeCode = types.SSZUint64
+type RPCGoodbyeCode = SSZUint64
 
 const (
 	// Spec defined codes.
@@ -29,4 +27,14 @@ var GoodbyeCodeMessages = map[RPCGoodbyeCode]string{
 	GoodbyeCodeTooManyPeers:          "client has too many peers",
 	GoodbyeCodeBadScore:              "peer score too low",
 	GoodbyeCodeBanned:                "client banned this node",
+}
+
+// ErrToGoodbyeCode converts given error to RPC goodbye code.
+func ErrToGoodbyeCode(err error) RPCGoodbyeCode {
+	switch err {
+	case ErrWrongForkDigestVersion:
+		return GoodbyeCodeWrongNetwork
+	}
+
+	return GoodbyeCodeGenericError
 }

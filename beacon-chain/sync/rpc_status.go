@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,7 +44,7 @@ func (s *Service) maintainPeerStatuses() {
 				}
 				// Disconnect from peers that are considered bad any of registered scorers.
 				if s.p2p.Peers().Scorers().IsBadPeer(id) {
-					goodbyeCode := p2p.ErrToGoodbyeCode(s.p2p.Peers().Scorers().ValidationError(id))
+					goodbyeCode := p2ptypes.ErrToGoodbyeCode(s.p2p.Peers().Scorers().ValidationError(id))
 					if err := s.sendGoodByeAndDisconnect(s.ctx, goodbyeCode, id); err != nil {
 						log.Debugf("Error when disconnecting with bad peer: %v", err)
 					}
@@ -200,9 +201,9 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 
 		respCode := byte(0)
 		switch err {
-		case p2p.ErrGeneric:
+		case p2ptypes.ErrGeneric:
 			respCode = responseCodeServerError
-		case p2p.ErrWrongForkDigestVersion:
+		case p2ptypes.ErrWrongForkDigestVersion:
 			// Respond with our status and disconnect with the peer.
 			s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
 			if err := s.respondWithStatus(ctx, stream); err != nil {
@@ -211,7 +212,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			if err := stream.Close(); err != nil { // Close before disconnecting.
 				log.WithError(err).Debug("Failed to close stream")
 			}
-			err := s.sendGoodByeAndDisconnect(ctx, p2p.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer())
+			err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer())
 			if err != nil {
 				return err
 			}
@@ -232,7 +233,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		if err := stream.Close(); err != nil { // Close before disconnecting.
 			log.WithError(err).Debug("Failed to close stream")
 		}
-		if err := s.sendGoodByeAndDisconnect(ctx, codeGenericError, stream.Conn().RemotePeer()); err != nil {
+		if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeGenericError, stream.Conn().RemotePeer()); err != nil {
 			return err
 		}
 		return originalErr
@@ -273,7 +274,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return err
 	}
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
-		return p2p.ErrWrongForkDigestVersion
+		return p2ptypes.ErrWrongForkDigestVersion
 	}
 	genesis := s.chain.GenesisTime()
 	finalizedEpoch := s.chain.FinalizedCheckpt().Epoch
@@ -285,7 +286,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		maxFinalizedEpoch = maxEpoch - 2
 	}
 	if msg.FinalizedEpoch > maxFinalizedEpoch {
-		return p2p.ErrInvalidEpoch
+		return p2ptypes.ErrInvalidEpoch
 	}
 	// Exit early if the peer's finalized epoch
 	// is less than that of the remote peer's.
@@ -299,14 +300,14 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return nil
 	}
 	if !s.db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
-		return p2p.ErrInvalidFinalizedRoot
+		return p2ptypes.ErrInvalidFinalizedRoot
 	}
 	blk, err := s.db.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 	if err != nil {
-		return p2p.ErrGeneric
+		return p2ptypes.ErrGeneric
 	}
 	if blk == nil {
-		return p2p.ErrGeneric
+		return p2ptypes.ErrGeneric
 	}
 	if helpers.SlotToEpoch(blk.Block.Slot) == msg.FinalizedEpoch {
 		return nil
@@ -314,12 +315,12 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 
 	startSlot, err := helpers.StartSlot(msg.FinalizedEpoch)
 	if err != nil {
-		return p2p.ErrGeneric
+		return p2ptypes.ErrGeneric
 	}
 	if startSlot > blk.Block.Slot {
 		childBlock, err := s.db.FinalizedChildBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 		if err != nil {
-			return p2p.ErrGeneric
+			return p2ptypes.ErrGeneric
 		}
 		// Is a valid finalized block if no
 		// other child blocks exist yet.
@@ -329,9 +330,9 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		// If child finalized block also has a smaller or
 		// equal slot number we return an error.
 		if startSlot >= childBlock.Block.Slot {
-			return p2p.ErrInvalidEpoch
+			return p2ptypes.ErrInvalidEpoch
 		}
 		return nil
 	}
-	return p2p.ErrInvalidEpoch
+	return p2ptypes.ErrInvalidEpoch
 }

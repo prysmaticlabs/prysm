@@ -17,18 +17,18 @@ import (
 var backOffTime = map[types.SSZUint64]time.Duration{
 	// Do not dial peers which are from a different/unverifiable
 	// network.
-	p2p.GoodbyeCodeWrongNetwork:          24 * time.Hour,
-	p2p.GoodbyeCodeUnableToVerifyNetwork: 24 * time.Hour,
+	types.GoodbyeCodeWrongNetwork:          24 * time.Hour,
+	types.GoodbyeCodeUnableToVerifyNetwork: 24 * time.Hour,
 	// If local peer is banned, we back off for
 	// 2 hours to let the remote peer score us
 	// back up again.
-	p2p.GoodbyeCodeBadScore:       2 * time.Hour,
-	p2p.GoodbyeCodeBanned:         2 * time.Hour,
-	p2p.GoodbyeCodeClientShutdown: 1 * time.Hour,
+	types.GoodbyeCodeBadScore:       2 * time.Hour,
+	types.GoodbyeCodeBanned:         2 * time.Hour,
+	types.GoodbyeCodeClientShutdown: 1 * time.Hour,
 	// Wait 5 minutes before dialing a peer who is
 	// 'full'
-	p2p.GoodbyeCodeTooManyPeers: 5 * time.Minute,
-	p2p.GoodbyeCodeGenericError: 2 * time.Minute,
+	types.GoodbyeCodeTooManyPeers: 5 * time.Minute,
+	types.GoodbyeCodeGenericError: 2 * time.Minute,
 }
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
@@ -58,10 +58,10 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 // A custom goodbye method that is used by our connection handler, in the
 // event we receive bad peers.
 func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
-	return s.sendGoodByeAndDisconnect(ctx, p2p.GoodbyeCodeGenericError, id)
+	return s.sendGoodByeAndDisconnect(ctx, types.GoodbyeCodeGenericError, id)
 }
 
-func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2p.RPCGoodbyeCode, id peer.ID) error {
+func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.RPCGoodbyeCode, id peer.ID) error {
 	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
 		log.WithFields(logrus.Fields{
 			"error": err,
@@ -71,7 +71,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2p.RPCGood
 	return s.p2p.Disconnect(id)
 }
 
-func (s *Service) sendGoodByeMessage(ctx context.Context, code p2p.RPCGoodbyeCode, id peer.ID) error {
+func (s *Service) sendGoodByeMessage(ctx context.Context, code types.RPCGoodbyeCode, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -89,8 +89,8 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2p.RPCGoodbyeCod
 	return nil
 }
 
-func goodbyeMessage(num p2p.RPCGoodbyeCode) string {
-	reason, ok := p2p.GoodbyeCodeMessages[num]
+func goodbyeMessage(num types.RPCGoodbyeCode) string {
+	reason, ok := types.GoodbyeCodeMessages[num]
 	if ok {
 		return reason
 	}
@@ -99,7 +99,7 @@ func goodbyeMessage(num p2p.RPCGoodbyeCode) string {
 
 // determines which backoff time to use depending on the
 // goodbye code provided.
-func goodByeBackoff(num p2p.RPCGoodbyeCode) time.Time {
+func goodByeBackoff(num types.RPCGoodbyeCode) time.Time {
 	duration, ok := backOffTime[num]
 	if !ok {
 		return time.Time{}

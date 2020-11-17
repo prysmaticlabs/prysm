@@ -1,4 +1,4 @@
-package p2p
+package types
 
 import "errors"
 
@@ -13,12 +13,3 @@ var (
 	ErrIODeadline             = errors.New("i/o deadline exceeded")
 	ErrInvalidRequest         = errors.New("invalid range, step or count")
 )
-
-func ErrToGoodbyeCode(err error) RPCGoodbyeCode {
-	switch err {
-	case ErrWrongForkDigestVersion:
-		return GoodbyeCodeWrongNetwork
-	}
-
-	return GoodbyeCodeGenericError
-}

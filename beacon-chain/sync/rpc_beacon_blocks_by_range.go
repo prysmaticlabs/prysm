@@ -9,7 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -81,14 +81,14 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 
 		if endSlot-startSlot > rangeLimit {
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2p.ErrInvalidRequest.Error(), stream)
-			err := p2p.ErrInvalidRequest
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrInvalidRequest.Error(), stream)
+			err := p2ptypes.ErrInvalidRequest
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 
 		err := s.writeBlockRangeToStream(ctx, startSlot, endSlot, m.Step, &prevRoot, stream)
-		if err != nil && !errors.Is(err, p2p.ErrInvalidParent) {
+		if err != nil && !errors.Is(err, p2ptypes.ErrInvalidParent) {
 			return err
 		}
 		// Reduce capacity of peer in the rate limiter first.
@@ -98,7 +98,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 		// Exit in the event we have a disjoint chain to
 		// return.
-		if errors.Is(err, p2p.ErrInvalidParent) {
+		if errors.Is(err, p2ptypes.ErrInvalidParent) {
 			break
 		}
 
@@ -129,7 +129,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	blks, roots, err := s.db.Blocks(ctx, filter)
 	if err != nil {
 		log.WithError(err).Debug("Failed to retrieve blocks")
-		s.writeErrorResponseToStream(responseCodeServerError, p2p.ErrGeneric.Error(), stream)
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -138,7 +138,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		genBlock, genRoot, err := s.retrieveGenesisBlock(ctx)
 		if err != nil {
 			log.WithError(err).Debug("Failed to retrieve genesis block")
-			s.writeErrorResponseToStream(responseCodeServerError, p2p.ErrGeneric.Error(), stream)
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			traceutil.AnnotateError(span, err)
 			return err
 		}
@@ -149,15 +149,15 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	// we only return valid sets of blocks.
 	blks, roots, err = s.dedupBlocksAndRoots(blks, roots)
 	if err != nil {
-		s.writeErrorResponseToStream(responseCodeServerError, p2p.ErrGeneric.Error(), stream)
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		traceutil.AnnotateError(span, err)
 		return err
 	}
 	blks, roots = s.sortBlocksAndRoots(blks, roots)
 
 	blks, err = s.filterBlocks(ctx, blks, roots, prevRoot, step, startSlot)
-	if err != nil && err != p2p.ErrInvalidParent {
-		s.writeErrorResponseToStream(responseCodeServerError, p2p.ErrGeneric.Error(), stream)
+	if err != nil && err != p2ptypes.ErrInvalidParent {
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -167,7 +167,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 		if chunkErr := s.chunkWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Failed to send a chunked response")
-			s.writeErrorResponseToStream(responseCodeServerError, p2p.ErrGeneric.Error(), stream)
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			traceutil.AnnotateError(span, chunkErr)
 			return chunkErr
 		}
@@ -190,20 +190,20 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 
 	// Ensure all request params are within appropriate bounds
 	if count == 0 || count > maxRequestBlocks {
-		return p2p.ErrInvalidRequest
+		return p2ptypes.ErrInvalidRequest
 	}
 
 	if step == 0 || step > rangeLimit {
-		return p2p.ErrInvalidRequest
+		return p2ptypes.ErrInvalidRequest
 	}
 
 	if startSlot > highestExpectedSlot {
-		return p2p.ErrInvalidRequest
+		return p2ptypes.ErrInvalidRequest
 	}
 
 	endSlot := startSlot + (step * (count - 1))
 	if endSlot-startSlot > rangeLimit {
-		return p2p.ErrInvalidRequest
+		return p2ptypes.ErrInvalidRequest
 	}
 	return nil
 }
@@ -229,7 +229,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		if isRequestedSlotStep && isCanonical {
 			// Exit early if our valid block is non linear.
 			if parentValid && isSingular && !isLinear {
-				return newBlks, p2p.ErrInvalidParent
+				return newBlks, p2ptypes.ErrInvalidParent
 			}
 			newBlks = append(newBlks, blks[i])
 			// Set the previous root as the

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
 )
@@ -81,8 +82,8 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	}
 	if amt > uint64(remaining) {
 		l.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-		writeErrorResponseToStream(responseCodeInvalidRequest, p2p.ErrRateLimited.Error(), stream, l.p2p)
-		return p2p.ErrRateLimited
+		writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrRateLimited.Error(), stream, l.p2p)
+		return p2ptypes.ErrRateLimited
 	}
 	return nil
 }
