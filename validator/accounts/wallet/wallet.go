@@ -81,7 +81,6 @@ type Wallet struct {
 	accountsPath   string
 	configFilePath string
 	walletPassword string
-	walletFileLock *flock.Flock
 	keymanagerKind keymanager.Kind
 }
 

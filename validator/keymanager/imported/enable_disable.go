@@ -32,10 +32,7 @@ func (dr *Keymanager) EnableAccounts(ctx context.Context, pubKeys [][]byte) erro
 	lock.Lock()
 	defer lock.Unlock()
 	for _, pk := range pubKeys {
-		keyBytes := bytesutil.ToBytes48(pk)
-		if _, ok := dr.disabledPublicKeys[keyBytes]; ok {
-			delete(dr.disabledPublicKeys, keyBytes)
-		}
+		delete(dr.disabledPublicKeys, bytesutil.ToBytes48(pk))
 	}
 	return dr.rewriteDisabledKeysToDisk(ctx)
 }
