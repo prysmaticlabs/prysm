@@ -204,7 +204,7 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 		}
 		return numAccounts, nil
 	}
-	numAccounts, err := promptutil.ValidatePrompt(os.Stdin, "Enter how many accounts you would like to recover", promptutil.ValidateNumber)
+	numAccounts, err := promptutil.ValidatePrompt(os.Stdin, "Enter how many accounts you would like to generate from the mnemonic", promptutil.ValidateNumber)
 	if err != nil {
 		return 0, err
 	}
