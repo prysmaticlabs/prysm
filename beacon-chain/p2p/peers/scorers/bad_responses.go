@@ -17,8 +17,6 @@ const (
 	DefaultBadResponsesDecayInterval = time.Hour
 )
 
-var _ Scorer = (*BadResponsesScorer)(nil)
-
 // BadResponsesScorer represents bad responses scoring service.
 type BadResponsesScorer struct {
 	config *BadResponsesScorerConfig

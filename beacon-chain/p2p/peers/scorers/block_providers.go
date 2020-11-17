@@ -34,8 +34,6 @@ const (
 	DefaultBlockProviderStalePeerRefreshInterval = 5 * time.Minute
 )
 
-var _ Scorer = (*BlockProviderScorer)(nil)
-
 // BlockProviderScorer represents block provider scoring service.
 type BlockProviderScorer struct {
 	config *BlockProviderScorerConfig
