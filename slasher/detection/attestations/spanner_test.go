@@ -514,7 +514,6 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 				AttestingIndices: []uint64{0},
 			}
 			res, err := sd.DetectSlashingsForAttestation(ctx, att)
-			t.Logf("after detect %v", res)
 			require.NoError(t, err)
 			require.Equal(t, false, !tt.shouldSlash && res != nil, "Did not want validator to be slashed but found slashable offense: %v", res)
 			if tt.shouldSlash {
