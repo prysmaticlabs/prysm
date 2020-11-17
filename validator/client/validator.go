@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -100,11 +99,7 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	for {
 		select {
 		case w := <-walletChan:
-			keyManager, err := w.InitializeKeymanager(
-				ctx, &iface.InitializeKeymanagerConfig{
-					SkipMnemonicConfirm: true,
-				},
-			)
+			keyManager, err := w.InitializeKeymanager(ctx)
 			if err != nil {
 				return errors.Wrap(err, "could not read keymanager")
 			}
