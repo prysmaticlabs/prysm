@@ -143,6 +143,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 				return errors.Wrap(err, "could not prune deposit proofs")
 			}
 		}
+		finalizedState.ReleaseStateReference()
 	}
 
 	defer reportAttestationInclusion(b)

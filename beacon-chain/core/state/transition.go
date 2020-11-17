@@ -182,6 +182,7 @@ func CalculateStateRoot(
 
 	// Copy state to avoid mutating the state reference.
 	state = state.Copy()
+	defer state.ReleaseStateReference()
 
 	// Execute per slots transition.
 	state, err := ProcessSlots(ctx, state, signed.Block.Slot)

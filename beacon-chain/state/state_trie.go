@@ -173,6 +173,15 @@ func (b *BeaconState) Copy() *BeaconState {
 	return dst
 }
 
+func (b *BeaconState) ReleaseStateReference() {
+	for field, v := range b.sharedFieldReferences {
+		v.MinusRef()
+		if b.stateFieldLeaves[field].reference != nil {
+			b.stateFieldLeaves[field].MinusRef()
+		}
+	}
+}
+
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {

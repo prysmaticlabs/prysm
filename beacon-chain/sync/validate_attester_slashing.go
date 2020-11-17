@@ -58,6 +58,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	}
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
+	headState.ReleaseStateReference()
 	return pubsub.ValidationAccept
 }
 

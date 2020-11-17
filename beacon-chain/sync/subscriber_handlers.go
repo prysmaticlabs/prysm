@@ -25,6 +25,7 @@ func (s *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 		return err
 	}
 	s.exitPool.InsertVoluntaryExit(ctx, headState, ve)
+	headState.ReleaseStateReference()
 	return nil
 }
 
@@ -45,6 +46,7 @@ func (s *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 			return errors.Wrap(err, "could not insert attester slashing into pool")
 		}
 		s.setAttesterSlashingIndicesSeen(aSlashing.Attestation_1.AttestingIndices, aSlashing.Attestation_2.AttestingIndices)
+		headState.ReleaseStateReference()
 	}
 	return nil
 }
@@ -66,6 +68,7 @@ func (s *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 			return errors.Wrap(err, "could not insert proposer slashing into pool")
 		}
 		s.setProposerSlashingIndexSeen(pSlashing.Header_1.Header.ProposerIndex)
+		headState.ReleaseStateReference()
 	}
 	return nil
 }

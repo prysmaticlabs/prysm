@@ -54,6 +54,7 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
 		return pubsub.ValidationReject
 	}
+	headState.ReleaseStateReference()
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept

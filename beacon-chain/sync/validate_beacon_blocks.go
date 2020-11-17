@@ -157,6 +157,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		s.setBadBlock(ctx, blockRoot)
 		return pubsub.ValidationReject
 	}
+	parentState.ReleaseStateReference()
 
 	msg.ValidatorData = blk // Used in downstream subscriber
 	return pubsub.ValidationAccept

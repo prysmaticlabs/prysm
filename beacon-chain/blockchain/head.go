@@ -140,6 +140,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
+	newHeadState.ReleaseStateReference()
 
 	return nil
 }
