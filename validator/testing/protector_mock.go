@@ -3,46 +3,46 @@ package testing
 import (
 	"context"
 
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
+
+var _ = slashingprotection.Protector(MockProtector{})
 
 // MockProtector mocks the protector.
 type MockProtector struct {
-	AllowAttestation        bool
-	AllowBlock              bool
-	VerifyAttestationCalled bool
-	CommitAttestationCalled bool
-	VerifyBlockCalled       bool
-	CommitBlockCalled       bool
-	StatusCalled            bool
+	SlashableAttestation         bool
+	SlashableBlock               bool
+	IsSlashableAttestationCalled bool
+	IsSlashableBlockCalled       bool
 }
 
-// CheckAttestationSafety returns bool with allow attestation value.
-func (mp MockProtector) CheckAttestationSafety(_ context.Context, _ *eth.IndexedAttestation) bool {
-	mp.VerifyAttestationCalled = true
-	return mp.AllowAttestation
+// IsSlashableAttestation --
+func (mp MockProtector) IsSlashableAttestation(
+	ctx context.Context,
+	indexedAtt *ethpb.IndexedAttestation,
+	pubKey [48]byte,
+	domain *ethpb.DomainResponse,
+) (bool, error) {
+	return mp.SlashableAttestation, nil
 }
 
-// CommitAttestation returns bool with allow attestation value.
-func (mp MockProtector) CommitAttestation(_ context.Context, _ *eth.IndexedAttestation) bool {
-	mp.CommitAttestationCalled = true
-	return mp.AllowAttestation
-}
-
-// CheckBlockSafety returns bool with allow block value.
-func (mp MockProtector) CheckBlockSafety(_ context.Context, _ *eth.BeaconBlockHeader) bool {
-	mp.VerifyBlockCalled = true
-	return mp.AllowBlock
-}
-
-// CommitBlock returns bool with allow block value.
-func (mp MockProtector) CommitBlock(_ context.Context, _ *eth.SignedBeaconBlockHeader) (bool, error) {
-	mp.CommitBlockCalled = true
-	return mp.AllowBlock, nil
+// IsSlashableBlock --
+func (mp MockProtector) IsSlashableBlock(
+	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
+) (bool, error) {
+	return mp.SlashableBlock, nil
 }
 
 // Status returns nil.
 func (mp MockProtector) Status() error {
-	mp.StatusCalled = true
+	return nil
+}
+
+// Start returns.
+func (mp MockProtector) Start() {}
+
+// Stop returns nil.
+func (mp MockProtector) Stop() error {
 	return nil
 }

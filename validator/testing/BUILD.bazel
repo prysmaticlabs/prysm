@@ -10,6 +10,7 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/slashing:go_default_library",
+        "//validator/slashing-protection:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//:go_default_library",

@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
+	protectionMock "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -152,6 +153,9 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: false,
+	}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -183,21 +187,19 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: false,
+	}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Times(2).Return(testutil.NewBeaconBlock().Block, nil /*err*/)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -208,6 +210,9 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	validator.ProposeBlock(context.Background(), slot, pubKey)
 	require.LogsDoNotContain(t, hook, "Attempted to submit a slashable block")
 
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: true,
+	}
 	validator.ProposeBlock(context.Background(), slot, pubKey)
 	require.LogsContain(t, hook, "Attempted to submit a slashable block")
 }
@@ -218,21 +223,19 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: false,
+	}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Times(2).Return(testutil.NewBeaconBlock().Block, nil /*err*/)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -242,6 +245,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsDoNotContain(t, hook, "Attempted to submit a slashable block")
+
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: true,
+	}
 
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsContain(t, hook, "Attempted to submit a slashable block")
@@ -253,6 +260,9 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: false,
+	}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -297,6 +307,9 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: false,
+	}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -340,7 +353,9 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: false,
+	}
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
@@ -369,6 +384,9 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableBlock: false,
+	}
 
 	validator.graffiti = []byte("12345678901234567890123456789012")
 
