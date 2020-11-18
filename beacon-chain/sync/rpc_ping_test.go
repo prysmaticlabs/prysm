@@ -12,7 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -54,13 +54,13 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, stream)
-		out := new(p2pTypes.SSZUint64)
+		out := new(p2ptypes.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	seqNumber := p2pTypes.SSZUint64(2)
+	seqNumber := p2ptypes.SSZUint64(2)
 
 	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
@@ -117,7 +117,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(p2pTypes.SSZUint64)
+		out := new(p2ptypes.SSZUint64)
 		assert.NoError(t, r2.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
@@ -174,14 +174,15 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectFailure(t, responseCodeInvalidRequest, seqError, stream)
+		expectFailure(t, responseCodeInvalidRequest, p2ptypes.ErrInvalidSequenceNum.Error(), stream)
 
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
 
-	wantedSeq := p2pTypes.SSZUint64(p2.LocalMetadata.SeqNumber)
-	assert.ErrorContains(t, seqError, r.pingHandler(context.Background(), &wantedSeq, stream1))
+	wantedSeq := p2ptypes.SSZUint64(p2.LocalMetadata.SeqNumber)
+	err = r.pingHandler(context.Background(), &wantedSeq, stream1)
+	assert.ErrorContains(t, p2ptypes.ErrInvalidSequenceNum.Error(), err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")

@@ -244,7 +244,7 @@ func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 
-	if untilDepositIndex > int64(len(dc.deposits)) {
+	if untilDepositIndex >= int64(len(dc.deposits)) {
 		untilDepositIndex = int64(len(dc.deposits) - 1)
 	}
 
