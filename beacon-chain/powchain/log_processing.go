@@ -81,14 +81,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 			return errors.Wrap(err, "Could not process deposit log")
 		}
 		if s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
-			eth1Data := &protodb.ETH1ChainData{
-				CurrentEth1Data:   s.latestEth1Data,
-				ChainstartData:    s.chainStartData,
-				BeaconState:       s.preGenesisState.InnerStateUnsafe(), // I promise not to mutate it!
-				Trie:              s.depositTrie.ToProto(),
-				DepositContainers: s.depositCache.AllDepositContainers(ctx),
-			}
-			return s.beaconDB.SavePowchainData(ctx, eth1Data)
+			return s.savePowchainData(ctx)
 		}
 		return nil
 	}
@@ -231,6 +224,11 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 			StartTime: chainStartTime,
 		},
 	})
+	if err := s.savePowchainData(s.ctx); err != nil {
+		// continue on, if the save fails as this will get re-saved
+		// in the next interval.
+		log.Error(err)
+	}
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
@@ -489,4 +487,16 @@ func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, b
 		s.chainStartData.GenesisTime = genesisTime
 		s.ProcessChainStart(s.chainStartData.GenesisTime, blockHash, blockNumber)
 	}
+}
+
+// save all powchain related metadata to disk.
+func (s *Service) savePowchainData(ctx context.Context) error {
+	eth1Data := &protodb.ETH1ChainData{
+		CurrentEth1Data:   s.latestEth1Data,
+		ChainstartData:    s.chainStartData,
+		BeaconState:       s.preGenesisState.InnerStateUnsafe(), // I promise not to mutate it!
+		Trie:              s.depositTrie.ToProto(),
+		DepositContainers: s.depositCache.AllDepositContainers(ctx),
+	}
+	return s.beaconDB.SavePowchainData(ctx, eth1Data)
 }
