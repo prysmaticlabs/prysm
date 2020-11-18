@@ -42,10 +42,9 @@ func (s *Service) maintainPeerStatuses() {
 					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
 				}
+				// Disconnect from peers that are considered bad by any of the registered scorers.
 				if s.p2p.Peers().IsBad(id) {
-					if err := s.sendGoodByeAndDisconnect(s.ctx, p2ptypes.GoodbyeCodeGenericError, id); err != nil {
-						log.Debugf("Error when disconnecting with bad peer: %v", err)
-					}
+					s.disconnectBadPeer(s.ctx, id)
 					return
 				}
 				// If the status hasn't been updated in the recent interval time.
@@ -65,8 +64,8 @@ func (s *Service) maintainPeerStatuses() {
 	})
 }
 
-// resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
-// in which case we attempt a resync using the initial sync method to catch up.
+// resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers
+// by more than an epoch, in which case we attempt a resync using the initial sync method to catch up.
 func (s *Service) resyncIfBehind() {
 	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
 	// Run sixteen times per epoch.
@@ -143,7 +142,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	if code != 0 {
-		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(id)
 		return errors.New(errMsg)
 	}
 
@@ -151,22 +150,18 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
-	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
 
+	// If validation fails, validation error is logged, and peer status scorer will mark peer as bad.
 	err = s.validateStatusMessage(ctx, msg)
-	if err != nil {
-		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-		// Disconnect if on a wrong fork.
-		if errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {
-			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
-				return err
-			}
-		}
+	s.p2p.Peers().Scorers().PeerStatusScorer().SetPeerStatus(id, msg, err)
+	if s.p2p.Peers().IsBad(id) {
+		s.disconnectBadPeer(s.ctx, id)
 	}
 	return err
 }
 
 func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
+	s.p2p.Peers().Scorers().PeerStatusScorer().SetHeadSlot(s.chain.HeadSlot())
 	if err := s.sendRPCStatusRequest(ctx, id); err != nil {
 		return err
 	}
@@ -198,10 +193,12 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}
 	s.rateLimiter.add(stream, 1)
 
+	remotePeer := stream.Conn().RemotePeer()
 	if err := s.validateStatusMessage(ctx, m); err != nil {
 		log.WithFields(logrus.Fields{
-			"peer":  stream.Conn().RemotePeer(),
-			"error": err}).Debug("Invalid status message from peer")
+			"peer":  remotePeer,
+			"error": err,
+		}).Debug("Invalid status message from peer")
 
 		respCode := byte(0)
 		switch err {
@@ -209,20 +206,20 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			respCode = responseCodeServerError
 		case p2ptypes.ErrWrongForkDigestVersion:
 			// Respond with our status and disconnect with the peer.
-			s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
+			s.p2p.Peers().SetChainState(remotePeer, m)
 			if err := s.respondWithStatus(ctx, stream); err != nil {
 				return err
 			}
 			if err := stream.Close(); err != nil { // Close before disconnecting.
 				log.WithError(err).Debug("Failed to close stream")
 			}
-			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, remotePeer); err != nil {
 				return err
 			}
 			return nil
 		default:
 			respCode = responseCodeInvalidRequest
-			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(remotePeer)
 		}
 
 		originalErr := err
@@ -236,12 +233,12 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		if err := stream.Close(); err != nil { // Close before disconnecting.
 			log.WithError(err).Debug("Failed to close stream")
 		}
-		if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeGenericError, stream.Conn().RemotePeer()); err != nil {
+		if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeGenericError, remotePeer); err != nil {
 			return err
 		}
 		return originalErr
 	}
-	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
+	s.p2p.Peers().SetChainState(remotePeer, m)
 
 	return s.respondWithStatus(ctx, stream)
 }
