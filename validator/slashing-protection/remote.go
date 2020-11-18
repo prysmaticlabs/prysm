@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -119,50 +120,27 @@ func (rp *RemoteProtector) Status() error {
 
 // CheckBlockSafety this function is part of slashing protection for block proposals it performs
 // validation without db update. To be used before the block is signed.
-func (rp *RemoteProtector) IsSlashableBlock(ctx context.Context, blockHeader *ethpb.BeaconBlockHeader) bool {
-	slashable, err := rp.slasherClient.IsSlashableBlockNoUpdate(ctx, blockHeader)
+func (rp *RemoteProtector) IsSlashableBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) bool {
+	signedHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
 	if err != nil {
-		log.Errorf("External slashing block protection returned an error: %v", err)
+		log.WithError(err).Error("Could not extract signed header from block")
 		return false
 	}
-	if slashable != nil && slashable.Slashable {
-		log.Warn("External slashing proposal protection found the block to be slashable")
-	}
-	return !slashable.Slashable
-}
-
-// CommitBlock this function is part of slashing protection for block proposals it performs
-// validation and db update. To be used after the block is proposed.
-func (rp *RemoteProtector) CommitBlock(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) (bool, error) {
-	ps, err := rp.slasherClient.IsSlashableBlock(ctx, blockHeader)
+	resp, err := rp.slasherClient.IsSlashableBlock(ctx, signedHeader)
 	if err != nil {
-		log.Errorf("External slashing block protection returned an error: %v", err)
-		return false, err
+		log.WithError(err).Error("Remote slashing block protection returned an error")
+		return false
 	}
-	if ps != nil && ps.ProposerSlashing != nil {
-		log.Warn("External slashing proposal protection found the block to be slashable")
-		return false, nil
+	if resp != nil && resp.ProposerSlashing != nil {
+		log.Warn("Remote slashing proposal protection found a block to be slashable")
+		return true
 	}
-	return true, nil
+	return false
 }
 
 // CheckAttestationSafety implements the slashing protection for attestations without db update.
 // To be used before signing.
 func (rp *RemoteProtector) IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) bool {
-	slashable, err := rp.slasherClient.IsSlashableAttestationNoUpdate(ctx, attestation)
-	if err != nil {
-		log.Errorf("External slashing attestation protection returned an error: %v", err)
-		return false
-	}
-	if slashable.Slashable {
-		log.Warn("External slashing attestation protection found the attestation to be slashable")
-	}
-	return !slashable.Slashable
-}
-
-// CommitAttestation implements the slashing protection for attestations it performs
-// validation and db update. To be used after the attestation is proposed.
-func (rp *RemoteProtector) CommitAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) bool {
 	as, err := rp.slasherClient.IsSlashableAttestation(ctx, attestation)
 	if err != nil {
 		log.Errorf("External slashing attestation protection returned an error: %v", err)

@@ -46,4 +46,5 @@ func (s *Service) IsSlashableBlock(
 	if err := s.validatorDB.SaveProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot, signingRoot[:]); err != nil {
 		return errors.Wrap(err, "failed to save updated proposal history")
 	}
+	return nil
 }
