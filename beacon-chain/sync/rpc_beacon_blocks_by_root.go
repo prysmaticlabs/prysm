@@ -78,7 +78,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		blk, err := s.db.Block(ctx, root)
 		if err != nil {
 			log.WithError(err).Debug("Failed to fetch block")
-			resp, err := s.generateErrorResponse(responseCodeServerError, genericError)
+			resp, err := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 			if err != nil {
 				log.WithError(err).Debug("Failed to generate a response error")
 			} else if _, err := stream.Write(resp); err != nil {
