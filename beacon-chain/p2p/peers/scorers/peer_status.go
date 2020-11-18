@@ -2,6 +2,7 @@ package scorers
 
 import (
 	"errors"
+	"math"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
@@ -58,7 +59,8 @@ func (s *PeerStatusScorer) score(pid peer.ID) float64 {
 	// Calculate score as a ratio to the known maximum head slot.
 	// The closer the current peer's head slot to the maximum, the higher is the calculated score.
 	if s.maxKnownHeadSlot > 0 {
-		return float64(peerData.ChainState.HeadSlot) / float64(s.maxKnownHeadSlot)
+		score = float64(peerData.ChainState.HeadSlot) / float64(s.maxKnownHeadSlot)
+		return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 	}
 	return score
 }
