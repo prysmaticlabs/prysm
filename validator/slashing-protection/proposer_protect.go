@@ -11,8 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// IsSlashableBlock checks if signed beacon block is slashable against
-// a validator's slashing protection history and against a remote slashing protector if enabled.
+// IsSlashableBlock determines if an incoming block is slashable
+// according to local protection and remote protection (if enabled). Then, if the block
+// successfully passes checks, we update our local proposals history accordingly.
 func (s *Service) IsSlashableBlock(
 	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
 ) (bool, error) {

@@ -33,8 +33,7 @@ type Validator interface {
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
-	SaveProtections(ctx context.Context) error
-	ResetAttesterProtectionData()
+	ResetProtections(ctx context.Context)
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
@@ -157,7 +156,7 @@ func run(ctx context.Context, v Validator) {
 			// Wait for all processes to complete, then report span complete.
 			go func() {
 				wg.Wait()
-				v.ResetAttesterProtectionData()
+				v.ResetProtections(slotCtx)
 				v.LogAttestationsSubmitted()
 				// Log this client performance in the previous epoch
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {

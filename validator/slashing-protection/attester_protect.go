@@ -12,6 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
+// IsSlashableAttestation determines if an incoming attestation is slashable
+// according to local protection and remote protection (if enabled). Then, if the attestation
+// successfully passes checks, we update our local attesting history accordingly.
 func (s *Service) IsSlashableAttestation(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,

@@ -2,9 +2,11 @@ package slashingprotection
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -29,6 +31,13 @@ type Protector interface {
 	shared.Service
 }
 
+type AttestingHistoryManager interface {
+	SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) error
+	LoadAttestingHistoryForPubKeys(ctx context.Context, attestingPubKeys [][48]byte) error
+	AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) (kv.EncHistoryData, error)
+	ResetAttestingHistoryForEpoch(ctx context.Context)
+}
+
 // Service to manage validator slashing protection. Local slashing
 // protection is mandatory at runtime but remote protection is optional.
 type Service struct {
@@ -50,8 +59,7 @@ type Config struct {
 	GrpcHeadersFlag            string
 }
 
-// NewService creates a new validator service for the service
-// registry.
+// NewService creates a new validator service for the service registry.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	srv := &Service{
@@ -68,14 +76,14 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	return srv, nil
 }
 
-// Start the slasher protection service.
+// Start the slashing protection service.
 func (s *Service) Start() {
 	if s.remoteProtector != nil {
 		s.remoteProtector.Start()
 	}
 }
 
-// Stop --
+// Stop the slashing protection service.
 func (s *Service) Stop() error {
 	s.cancel()
 	log.Info("Stopping slashing protection service")
@@ -85,10 +93,40 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status --
+// Status of the slashing protection service.
 func (s *Service) Status() error {
 	if s.remoteProtector != nil {
 		return s.remoteProtector.Status()
 	}
 	return nil
+}
+
+func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) error {
+	s.attestingHistoryByPubKeyLock.RLock()
+	defer s.attestingHistoryByPubKeyLock.RUnlock()
+	history, ok := s.attesterHistoryByPubKey[pubKey]
+	if !ok {
+		return fmt.Errorf("no attesting history found for pubkey %#x\n", pubKey)
+	}
+	if err := s.validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history); err != nil {
+		return errors.Wrapf(err, "could not save attesting history to db for public key %#x", pubKey)
+	}
+	return nil
+}
+
+func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingPubKeys [][48]byte) error {
+	attHistoryByPubKey, err := s.validatorDB.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
+	if err != nil {
+		return errors.Wrap(err, "could not get attester history")
+	}
+	s.attestingHistoryByPubKeyLock.Lock()
+	s.attesterHistoryByPubKey = attHistoryByPubKey
+	s.attestingHistoryByPubKeyLock.Unlock()
+	return nil
+}
+
+func (s *Service) ResetAttestingHistoryForEpoch(ctx context.Context) {
+	s.attestingHistoryByPubKeyLock.Lock()
+	s.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
+	s.attestingHistoryByPubKeyLock.Unlock()
 }
