@@ -105,10 +105,14 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 
 	if peerData, ok := p.store.PeerData(pid); ok {
 		// Peer already exists, just update its address info.
+		prevAddress := peerData.Address
 		peerData.Address = address
 		peerData.Direction = direction
 		if record != nil {
 			peerData.Enr = record
+		}
+		if !prevAddress.Equal(address) {
+			p.addIpToTracker(pid)
 		}
 		return
 	}
@@ -286,26 +290,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 // IsBad states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	p.store.RLock()
-	peerData, ok := p.store.PeerData(pid)
-	if !ok {
-		p.store.RUnlock()
-		return false
-	}
-	ip, err := manet.ToIP(peerData.Address)
-	if err != nil {
-		p.store.RUnlock()
-		return true
-	}
-	if val, ok := p.ipTracker[ip.String()]; ok {
-		if val > 5 {
-			fmt.Printf("\n %s is bad ip", ip.String())
-			p.store.RUnlock()
-			return true
-		}
-	}
-	p.store.RUnlock()
-	return p.scorers.IsBadPeer(pid)
+	return p.isfromBadIP(pid) || p.scorers.IsBadPeer(pid)
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
@@ -486,9 +471,9 @@ func (p *Status) Prune() {
 
 	// Delete peers from map.
 	for _, peerData := range peersToPrune {
-		p.deleteIpFromTracker(peerData.pid)
 		p.store.DeletePeerData(peerData.pid)
 	}
+	p.tallyIPTracker()
 }
 
 // BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed
@@ -605,6 +590,27 @@ func (p *Status) HighestEpoch() uint64 {
 	return helpers.SlotToEpoch(highestSlot)
 }
 
+func (p *Status) isfromBadIP(pid peer.ID) bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	peerData, ok := p.store.PeerData(pid)
+	if !ok {
+		return false
+	}
+	ip, err := manet.ToIP(peerData.Address)
+	if err != nil {
+		return true
+	}
+	if val, ok := p.ipTracker[ip.String()]; ok {
+		if val > 5 {
+			fmt.Printf("\n %s is bad ip", ip.String())
+			return true
+		}
+	}
+	return false
+}
+
 func (p *Status) addIpToTracker(pid peer.ID) {
 	data, ok := p.store.PeerData(pid)
 	if !ok {
@@ -618,35 +624,26 @@ func (p *Status) addIpToTracker(pid peer.ID) {
 		return
 	}
 	stringIP := ip.String()
-	if _, ok := p.ipTracker[stringIP]; ok {
-		p.ipTracker[stringIP] += 1
-		fmt.Printf("\n adding ip: %s with val %d and string %s", stringIP, p.ipTracker[stringIP], pid.String())
-		return
-	}
-	p.ipTracker[stringIP] = 1
+	p.ipTracker[stringIP] += 1
+	fmt.Printf("\n adding ip: %s with val %d and string %s", stringIP, p.ipTracker[stringIP], pid.String())
 	return
 }
 
-func (p *Status) deleteIpFromTracker(pid peer.ID) {
-	data, ok := p.store.PeerData(pid)
-	if !ok {
-		return
-	}
-	ip, err := manet.ToIP(data.Address)
-	if err != nil {
-		// Should never happen, it is
-		// assumed every IP coming in
-		// is a valid ip.
-		return
-	}
-	stringIP := ip.String()
-	if val, ok := p.ipTracker[stringIP]; ok {
-		if val > 0 {
-			p.ipTracker[stringIP] = val - 1
-			fmt.Printf("\n deleting ip: %s", stringIP)
-			return
+func (p *Status) tallyIPTracker() {
+	tracker := map[string]uint64{}
+	// Iterate through all peers.
+	for _, peerData := range p.store.Peers() {
+		ip, err := manet.ToIP(peerData.Address)
+		if err != nil {
+			// Should never happen, it is
+			// assumed every IP coming in
+			// is a valid ip.
+			continue
 		}
+		stringIP := ip.String()
+		tracker[stringIP] += 1
 	}
+	p.ipTracker = tracker
 	return
 }
 
