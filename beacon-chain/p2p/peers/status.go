@@ -24,7 +24,6 @@ package peers
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"time"
 
@@ -55,8 +54,13 @@ const (
 	PeerConnecting
 )
 
-// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
-const maxLimitBuffer = 150
+const (
+	// ColocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
+	ColocationLimit = 5
+
+	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
+	maxLimitBuffer = 150
+)
 
 // Status is the structure holding the peer status information.
 type Status struct {
@@ -111,7 +115,7 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 		if record != nil {
 			peerData.Enr = record
 		}
-		if !prevAddress.Equal(address) {
+		if !sameIP(prevAddress, address) {
 			p.addIpToTracker(pid)
 		}
 		return
@@ -598,13 +602,15 @@ func (p *Status) isfromBadIP(pid peer.ID) bool {
 	if !ok {
 		return false
 	}
+	if peerData.Address == nil {
+		return false
+	}
 	ip, err := manet.ToIP(peerData.Address)
 	if err != nil {
 		return true
 	}
 	if val, ok := p.ipTracker[ip.String()]; ok {
-		if val > 5 {
-			fmt.Printf("\n %s is bad ip", ip.String())
+		if val > ColocationLimit {
 			return true
 		}
 	}
@@ -616,6 +622,9 @@ func (p *Status) addIpToTracker(pid peer.ID) {
 	if !ok {
 		return
 	}
+	if data.Address == nil {
+		return
+	}
 	ip, err := manet.ToIP(data.Address)
 	if err != nil {
 		// Should never happen, it is
@@ -625,7 +634,6 @@ func (p *Status) addIpToTracker(pid peer.ID) {
 	}
 	stringIP := ip.String()
 	p.ipTracker[stringIP] += 1
-	fmt.Printf("\n adding ip: %s with val %d and string %s", stringIP, p.ipTracker[stringIP], pid.String())
 	return
 }
 
@@ -633,6 +641,9 @@ func (p *Status) tallyIPTracker() {
 	tracker := map[string]uint64{}
 	// Iterate through all peers.
 	for _, peerData := range p.store.Peers() {
+		if peerData.Address == nil {
+			continue
+		}
 		ip, err := manet.ToIP(peerData.Address)
 		if err != nil {
 			// Should never happen, it is
@@ -645,6 +656,22 @@ func (p *Status) tallyIPTracker() {
 	}
 	p.ipTracker = tracker
 	return
+}
+
+func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
+	// Exit early if we do get nil multiaddresses
+	if firstAddr == nil || secondAddr == nil {
+		return false
+	}
+	firstIP, err := manet.ToIP(firstAddr)
+	if err != nil {
+		return false
+	}
+	secondIP, err := manet.ToIP(secondAddr)
+	if err != nil {
+		return false
+	}
+	return firstIP.Equal(secondIP)
 }
 
 func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
