@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -354,7 +353,7 @@ func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
 	blks := s.pendingBlocksInCache(b.Block.Slot)
 
 	if len(blks) >= maxBlocksPerSlot {
-		return fmt.Errorf("could not add pending block to queue for slot %d", b.Block.Slot)
+		return nil
 	}
 
 	blks = append(blks, b)
