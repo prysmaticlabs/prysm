@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrSlashableBlock       = errors.New("attempted to sign a double proposal, block rejected by slashing protection")
+	ErrSlashableBlock       = errors.New("attempted a double proposal, block rejected by local slashing protection")
 	ErrRemoteSlashableBlock = errors.New("attempted a double proposal, block rejected by remote slashing protection")
 )
 
@@ -24,18 +24,18 @@ func (s *Service) IsSlashableBlock(
 	if block == nil || block.Block == nil {
 		return errors.New("received nil block")
 	}
-	fmtKey := fmt.Sprintf("%#x", pubKey)
+	metricsKey := fmt.Sprintf("%#x", pubKey)
 	existingSigningRoot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot)
 	if err != nil {
 		return errors.Wrap(err, "failed to get proposal history")
 	}
 	// Check if the block is slashable by local and remote slashing protection
 	if s.remoteProtector != nil && s.remoteProtector.IsSlashableBlock(ctx, block) {
-		remoteSlashableProposalsTotal.WithLabelValues(fmtKey).Inc()
+		remoteSlashableProposalsTotal.WithLabelValues(metricsKey).Inc()
 		return ErrRemoteSlashableBlock
 	}
 	if !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
-		localSlashableProposalsTotal.WithLabelValues(fmtKey).Inc()
+		localSlashableProposalsTotal.WithLabelValues(metricsKey).Inc()
 		return ErrSlashableBlock
 	}
 	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)

@@ -2,11 +2,13 @@ package slashingprotection
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 
 	"github.com/sirupsen/logrus"
 )
@@ -24,10 +26,12 @@ type Protector interface {
 // Service to manage validator slashing protection. Local slashing
 // protection is mandatory at runtime but remote protection is optional.
 type Service struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
-	remoteProtector Protector
-	validatorDB     db.Database
+	ctx                          context.Context
+	cancel                       context.CancelFunc
+	remoteProtector              Protector
+	validatorDB                  db.Database
+	attestingHistoryByPubKeyLock sync.RWMutex
+	attesterHistoryByPubKey      map[[48]byte]kv.EncHistoryData
 }
 
 // Config for the slashing protection service.
