@@ -194,4 +194,5 @@ func TestScorers_PeerStatus_PeerStatus(t *testing.T) {
 	assert.Equal(t, uint64(128), status.HeadSlot)
 	assert.Equal(t, nil, peerStatuses.Scorers().ValidationError("peer1"))
 	assert.ErrorContains(t, p2ptypes.ErrInvalidEpoch.Error(), peerStatuses.Scorers().ValidationError("peer2"))
+	assert.Equal(t, nil, peerStatuses.Scorers().ValidationError("peer3"))
 }
