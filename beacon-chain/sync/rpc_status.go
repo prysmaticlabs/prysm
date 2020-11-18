@@ -194,10 +194,12 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}
 	s.rateLimiter.add(stream, 1)
 
+	remotePeer := stream.Conn().RemotePeer()
 	if err := s.validateStatusMessage(ctx, m); err != nil {
 		log.WithFields(logrus.Fields{
-			"peer":  stream.Conn().RemotePeer(),
-			"error": err}).Debug("Invalid status message from peer")
+			"peer":  remotePeer,
+			"error": err,
+		}).Debug("Invalid status message from peer")
 
 		respCode := byte(0)
 		switch err {
@@ -205,20 +207,20 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			respCode = responseCodeServerError
 		case p2ptypes.ErrWrongForkDigestVersion:
 			// Respond with our status and disconnect with the peer.
-			s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
+			s.p2p.Peers().SetChainState(remotePeer, m)
 			if err := s.respondWithStatus(ctx, stream); err != nil {
 				return err
 			}
 			if err := stream.Close(); err != nil { // Close before disconnecting.
 				log.WithError(err).Debug("Failed to close stream")
 			}
-			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, remotePeer); err != nil {
 				return err
 			}
 			return nil
 		default:
 			respCode = responseCodeInvalidRequest
-			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(remotePeer)
 		}
 
 		originalErr := err
@@ -232,12 +234,12 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		if err := stream.Close(); err != nil { // Close before disconnecting.
 			log.WithError(err).Debug("Failed to close stream")
 		}
-		if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeGenericError, stream.Conn().RemotePeer()); err != nil {
+		if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeGenericError, remotePeer); err != nil {
 			return err
 		}
 		return originalErr
 	}
-	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
+	s.p2p.Peers().SetChainState(remotePeer, m)
 
 	return s.respondWithStatus(ctx, stream)
 }
