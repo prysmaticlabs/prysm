@@ -212,7 +212,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			if err := stream.Close(); err != nil { // Close before disconnecting.
 				log.WithError(err).Debug("Failed to close stream")
 			}
-			if s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer()) != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
 			}
 			return nil
