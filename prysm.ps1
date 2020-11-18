@@ -3,7 +3,6 @@ $ProgressPreference = 'SilentlyContinue' # Disable Invoke-WebRequest progress ba
 
 # Complain if invalid arguments were provided.
 if ("beacon-chain", "validator", "slasher" -notcontains $args[0]) {
-    Write-Host "ERROR: prysm is only supported on 64-bit Operating Systems" -ForegroundColor Red;
     Write-Host @"
 Usage: ./prysm.sh1 PROCESS FLAGS.
 
