@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -65,8 +64,6 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 
 	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
 	require.NoError(t, err)
-	attHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
-	attHistoryByPubKey[pubKey] = kv.NewAttestationHistoryArray(0)
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[48]byte]bls.SecretKey{
@@ -80,7 +77,6 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		attesterHistoryByPubKey:        attHistoryByPubKey,
 	}
 
 	return validator, m, validatorKey, ctrl.Finish

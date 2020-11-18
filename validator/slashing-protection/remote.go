@@ -10,9 +10,7 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -116,36 +114,4 @@ func (rp *RemoteProtector) Status() error {
 		)
 	}
 	return nil
-}
-
-// CheckBlockSafety this function is part of slashing protection for block proposals it performs
-// validation without db update. To be used before the block is signed.
-func (rp *RemoteProtector) IsSlashableBlock(
-	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
-) (bool, error) {
-	signedHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
-	if err != nil {
-		return false, errors.Wrap(err, "could not extract signed header from block")
-	}
-	resp, err := rp.slasherClient.IsSlashableBlock(ctx, signedHeader)
-	if err != nil {
-		return false, errors.Wrap(err, "remote slashing block protection returned an error")
-	}
-	return resp != nil && resp.ProposerSlashing != nil, nil
-}
-
-// CheckAttestationSafety implements the slashing protection for attestations without db update.
-// To be used before signing.
-func (rp *RemoteProtector) IsSlashableAttestation(
-	ctx context.Context,
-	indexedAtt *ethpb.IndexedAttestation,
-	pubKey [48]byte,
-	domain *ethpb.DomainResponse,
-) (bool, error) {
-	as, err := rp.slasherClient.IsSlashableAttestation(ctx, indexedAtt)
-	if err != nil {
-		log.Errorf("External slashing attestation protection returned an error: %v", err)
-		return false, err
-	}
-	return as != nil && as.AttesterSlashing != nil, nil
 }

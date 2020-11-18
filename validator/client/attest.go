@@ -122,7 +122,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		}
 		return
 	}
-	if err := v.SaveProtection(ctx, pubKey); err != nil {
+	if err := v.attestingHistoryManager.SaveAttestingHistoryForPubKey(ctx, pubKey); err != nil {
 		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
 	}
 

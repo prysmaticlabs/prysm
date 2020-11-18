@@ -4,10 +4,12 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "attester_protect.go",
+        "local_attester_protect.go",
+        "local_proposer_protect.go",
         "metrics.go",
-        "proposer_protect.go",
         "remote.go",
+        "remote_attester_protect.go",
+        "remote_proposer_protect.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection",
@@ -41,8 +43,10 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "attester_protect_test.go",
-        "propose_protect_test.go",
+        "local_attester_protect_test.go",
+        "local_proposer_protect_test.go",
+        "remote_attester_protect_test.go",
+        "remote_proposer_protect_test.go",
         "remote_test.go",
         "service_test.go",
     ],
