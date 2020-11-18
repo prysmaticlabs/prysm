@@ -2,7 +2,6 @@ package slashingprotection
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"testing"
 
@@ -44,8 +43,9 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 		},
 	}
 	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
-	err = srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+	slashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	assert.Equal(t, false, slashable)
 }
 
 func Test_isNewAttSlashable_DoubleVote(t *testing.T) {
@@ -110,13 +110,12 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 		go func(i int) {
 			att.Data.Source.Epoch = 110 - uint64(i)
 			att.Data.Target.Epoch = 111 + uint64(i)
-			err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
-			if err == nil {
-				notSlashable++
+			isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+			require.NoError(t, err)
+			if isSlashable {
+				slashable++
 			} else {
-				if errors.Is(err, ErrSlashableAttestation) {
-					slashable++
-				}
+				notSlashable++
 			}
 			wg.Done()
 		}(i)
@@ -165,13 +164,12 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 		go func(i int) {
 			att.Data.Source.Epoch = 110 - uint64(i)
 			att.Data.Target.Epoch = 111
-			err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
-			if err == nil {
-				notSlashable++
+			isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+			require.NoError(t, err)
+			if isSlashable {
+				slashable++
 			} else {
-				if errors.Is(err, ErrSlashableAttestation) {
-					slashable++
-				}
+				notSlashable++
 			}
 			wg.Done()
 		}(i)

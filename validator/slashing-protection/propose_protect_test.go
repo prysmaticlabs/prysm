@@ -2,7 +2,6 @@ package slashingprotection
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -47,11 +46,13 @@ func TestService_IsSlashableBlock_OK(t *testing.T) {
 		validatorDB: validatorDB,
 	}
 	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
-	err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
-	assert.Equal(t, true, errors.Is(err, ErrSlashableBlock))
+	slashable, err := srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
+	require.NoError(t, err)
+	assert.Equal(t, true, slashable, "Expected block to be slashable")
 
 	// Change the slot and now we should not get a slashable block.
 	signedBlock.Block.Slot = slot + 1
-	err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
-	require.NoError(t, err, "Expected block to not be slashable")
+	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
+	require.NoError(t, err)
+	assert.Equal(t, false, slashable, "Expected block to not be slashable")
 }

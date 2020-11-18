@@ -7,6 +7,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -30,9 +31,14 @@ func TestRemoteProtector_IsSlashableAttestation(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(t, false, s.IsSlashableAttestation(context.Background(), att), "Expected verify attestation to fail verification")
+	ctx := context.Background()
+	slashable, err := s.IsSlashableAttestation(ctx, att, [48]byte{}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, true, slashable, "Expected attestation to be slashable")
 	s = &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashAttestation: false}}
-	assert.Equal(t, true, s.IsSlashableAttestation(context.Background(), att), "Expected verify attestation to pass verification")
+	slashable, err = s.IsSlashableAttestation(ctx, att, [48]byte{}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, false, slashable, "Expected attestation to not be slashable")
 }
 
 func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
@@ -46,7 +52,12 @@ func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
 			Body:          &eth.BeaconBlockBody{},
 		},
 	}
-	assert.Equal(t, true, s.IsSlashableBlock(context.Background(), blk), "Expected verify block to fail verification")
-	s = &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}
-	assert.Equal(t, false, s.IsSlashableBlock(context.Background(), blk), "Expected verify block to pass verification")
+	ctx := context.Background()
+	slashable, err := s.IsSlashableBlock(ctx, blk, [48]byte{}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, true, slashable, "Expected attestation to be slashable")
+	s = &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashAttestation: false}}
+	slashable, err = s.IsSlashableBlock(ctx, blk, [48]byte{}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, false, slashable, "Expected attestation to not be slashable")
 }

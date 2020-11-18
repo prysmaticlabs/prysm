@@ -14,15 +14,6 @@ import (
 
 var log = logrus.WithField("prefix", "slashing-protection")
 
-type AttestingHistory struct{}
-
-type AttestingHistoryManager interface {
-	GetLastEpochWritten(ctx context.Context) (uint64, error)
-	SetLastEpochWritten(ctx context.Context, epoch uint64) error
-	HistoryForTargetEpoch(ctx context.Context, targetEpoch uint64) (*AttestingHistory, error)
-	SetHistoryForTargetEpoch(ctx context.Context, targetEpoch uint64, hist *AttestingHistory) error
-}
-
 // Protector interface defines a struct which provides methods
 // for validator slashing protection.
 type Protector interface {
