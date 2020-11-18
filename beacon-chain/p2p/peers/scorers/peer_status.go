@@ -94,7 +94,14 @@ func (s *PeerStatusScorer) isBadPeer(pid peer.ID) bool {
 func (s *PeerStatusScorer) BadPeers() []peer.ID {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return []peer.ID{}
+
+	badPeers := make([]peer.ID, 0)
+	for pid := range s.store.Peers() {
+		if s.isBadPeer(pid) {
+			badPeers = append(badPeers, pid)
+		}
+	}
+	return badPeers
 }
 
 // SetPeerStatus sets chain state data for a given peer.
