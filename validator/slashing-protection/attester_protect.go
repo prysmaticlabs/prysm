@@ -5,16 +5,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-)
-
-var (
-	ErrSlashableAttestation       = errors.New("attempted an attestation rejected by local slashing protection")
-	ErrRemoteSlashableAttestation = errors.New("attempted an attestation rejected by remote slashing protection")
 )
 
 func (s *Service) IsSlashableAttestation(
@@ -22,22 +16,26 @@ func (s *Service) IsSlashableAttestation(
 	indexedAtt *ethpb.IndexedAttestation,
 	pubKey [48]byte,
 	domain *ethpb.DomainResponse,
-) error {
+) (bool, error) {
 	metricsKey := fmt.Sprintf("%#x", pubKey[:])
 	signingRoot, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain.SignatureDomain)
 	if err != nil {
-		return err
+		return false, err
 	}
 	s.attestingHistoryByPubKeyLock.Lock()
 	defer s.attestingHistoryByPubKeyLock.Unlock()
 	attesterHistory, ok := s.attesterHistoryByPubKey[pubKey]
 	if !ok {
-		return fmt.Errorf("could not get local slashing protection data for validator %#x", pubKey)
+		return false, fmt.Errorf("could not get local slashing protection data for validator %#x", pubKey)
 	}
 	// Check if the attestation is slashable by local and remote slashing protection
-	if s.remoteProtector != nil && s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt) {
+	if s.remoteProtector != nil {
+		slashable, err := s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, domain)
+		if err != nil {
+			return false, err
+		}
 		remoteSlashableAttestationsTotal.WithLabelValues(metricsKey).Inc()
-		return ErrRemoteSlashableAttestation
+		return slashable, nil
 	}
 	if isNewAttSlashable(
 		ctx,
@@ -47,7 +45,7 @@ func (s *Service) IsSlashableAttestation(
 		signingRoot,
 	) {
 		localSlashableAttestationsTotal.WithLabelValues(metricsKey).Inc()
-		return ErrSlashableAttestation
+		return true, nil
 	}
 	// We update the attester history with new values.
 	attesterHistory = markAttestationForTargetEpoch(
@@ -58,7 +56,7 @@ func (s *Service) IsSlashableAttestation(
 		signingRoot,
 	)
 	s.attesterHistoryByPubKey[pubKey] = attesterHistory
-	return nil
+	return false, nil
 }
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch

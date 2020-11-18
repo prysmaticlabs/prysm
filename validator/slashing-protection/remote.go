@@ -120,35 +120,32 @@ func (rp *RemoteProtector) Status() error {
 
 // CheckBlockSafety this function is part of slashing protection for block proposals it performs
 // validation without db update. To be used before the block is signed.
-func (rp *RemoteProtector) IsSlashableBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) bool {
+func (rp *RemoteProtector) IsSlashableBlock(
+	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
+) (bool, error) {
 	signedHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
 	if err != nil {
-		log.WithError(err).Error("Could not extract signed header from block")
-		return false
+		return false, errors.Wrap(err, "could not extract signed header from block")
 	}
 	resp, err := rp.slasherClient.IsSlashableBlock(ctx, signedHeader)
 	if err != nil {
-		log.WithError(err).Error("Remote slashing block protection returned an error")
-		return false
+		return false, errors.Wrap(err, "remote slashing block protection returned an error")
 	}
-	if resp != nil && resp.ProposerSlashing != nil {
-		log.Warn("Remote slashing proposal protection found a block to be slashable")
-		return true
-	}
-	return false
+	return resp != nil && resp.ProposerSlashing != nil, nil
 }
 
 // CheckAttestationSafety implements the slashing protection for attestations without db update.
 // To be used before signing.
-func (rp *RemoteProtector) IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) bool {
-	as, err := rp.slasherClient.IsSlashableAttestation(ctx, attestation)
+func (rp *RemoteProtector) IsSlashableAttestation(
+	ctx context.Context,
+	indexedAtt *ethpb.IndexedAttestation,
+	pubKey [48]byte,
+	domain *ethpb.DomainResponse,
+) (bool, error) {
+	as, err := rp.slasherClient.IsSlashableAttestation(ctx, indexedAtt)
 	if err != nil {
 		log.Errorf("External slashing attestation protection returned an error: %v", err)
-		return false
+		return false, err
 	}
-	if as != nil && as.AttesterSlashing != nil {
-		log.Warnf("External slashing attestation protection found the attestation to be slashable: %v", as)
-		return false
-	}
-	return true
+	return as != nil && as.AttesterSlashing != nil, nil
 }

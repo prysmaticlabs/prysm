@@ -31,10 +31,10 @@ type Protector interface {
 		indexedAtt *ethpb.IndexedAttestation,
 		pubKey [48]byte,
 		domain *ethpb.DomainResponse,
-	) error
+	) (bool, error)
 	IsSlashableBlock(
 		ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
-	) error
+	) (bool, error)
 	shared.Service
 }
 
