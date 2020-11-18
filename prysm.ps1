@@ -60,7 +60,7 @@ else {
 $fileName = "$($args[0])-$version-windows-amd64.exe";
 $folderBin = "$folderDist\$fileName";
 
-if (Test-Path $folderBin) {
+if ((Test-Path $folderBin) -and (Test-Path "$folderBin.sha256") -and (Test-Path "$folderBin.sig")) {
     Write-Host "$($args[0]) is up to date with version: $version" -ForegroundColor Green;
 }
 else {
