@@ -389,6 +389,8 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
 	hook := logTest.NewGlobal()
+
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
@@ -405,8 +407,9 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+			Started:               true,
+			GenesisTime:           uint64(time.Unix(0, 0).Unix()),
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
 		},
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
@@ -418,9 +421,10 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
 		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.ChainStarted,
-			Data: &statefeed.ChainStartedData{
-				StartTime: time.Unix(0, 0),
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Unix(0, 0),
+				GenesisValidatorsRoot: genesisValidatorsRoot[:],
 			},
 		})
 	}

@@ -182,6 +182,8 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 				if !ok {
 					return errors.New("event data is not type *statefeed.InitializedData")
 				}
+				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
+				log.Debug("Sending genesis time notification to connected validator clients")
 				res := &ethpb.ChainStartResponse{
 					Started:               true,
 					GenesisTime:           uint64(data.StartTime.Unix()),
