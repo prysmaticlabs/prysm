@@ -4,172 +4,50 @@ import (
 	"context"
 	"errors"
 	"sync"
-
-	//"strings"
-	//"sync"
 	"testing"
 
-	//"github.com/golang/mock/gomock"
-	//ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	//"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	//"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	//"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	//"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	//mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
-//func TestPreSignatureValidation(t *testing.T) {
-//	config := &featureconfig.Flags{
-//		SlasherProtection: true,
-//	}
-//	reset := featureconfig.InitWithReset(config)
-//	defer reset()
-//	validator, m, validatorKey, finish := client.setup(t)
-//	defer finish()
-//	pubKey := [48]byte{}
-//	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-//	att := &ethpb.IndexedAttestation{
-//		AttestingIndices: []uint64{1, 2},
-//		Data: &ethpb.AttestationData{
-//			Slot:            5,
-//			CommitteeIndex:  2,
-//			BeaconBlockRoot: bytesutil.PadTo([]byte("great block"), 32),
-//			Source: &ethpb.Checkpoint{
-//				Epoch: 4,
-//				Root:  bytesutil.PadTo([]byte("good source"), 32),
-//			},
-//			Target: &ethpb.Checkpoint{
-//				Epoch: 10,
-//				Root:  bytesutil.PadTo([]byte("good target"), 32),
-//			},
-//		},
-//	}
-//	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
-//	validator.protector = mockProtector
-//	m.validatorClient.EXPECT().DomainData(
-//		gomock.Any(), // ctx
-//		gomock.Any(), // epoch
-//	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-//	err := validator.preAttSignValidations(context.Background(), att, pubKey)
-//	require.ErrorContains(t, failedPreAttSignExternalErr, err)
-//	mockProtector.AllowAttestation = true
-//	err = validator.preAttSignValidations(context.Background(), att, pubKey)
-//	require.NoError(t, err, "Expected allowed attestation not to throw error")
-//}
-//
-//func TestPreSignatureValidation_NilLocal(t *testing.T) {
-//	config := &featureconfig.Flags{
-//		SlasherProtection: false,
-//	}
-//	reset := featureconfig.InitWithReset(config)
-//	defer reset()
-//	validator, m, _, finish := client.setup(t)
-//	defer finish()
-//	att := &ethpb.IndexedAttestation{
-//		AttestingIndices: []uint64{1, 2},
-//		Data: &ethpb.AttestationData{
-//			Slot:            5,
-//			CommitteeIndex:  2,
-//			BeaconBlockRoot: bytesutil.PadTo([]byte("great block"), 32),
-//			Source: &ethpb.Checkpoint{
-//				Epoch: 4,
-//				Root:  bytesutil.PadTo([]byte("good source"), 32),
-//			},
-//			Target: &ethpb.Checkpoint{
-//				Epoch: 10,
-//				Root:  bytesutil.PadTo([]byte("good target"), 32),
-//			},
-//		},
-//	}
-//	fakePubkey := bytesutil.ToBytes48([]byte("test"))
-//	m.validatorClient.EXPECT().DomainData(
-//		gomock.Any(), // ctx
-//		gomock.Any(), // epoch
-//	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-//	err := validator.preAttSignValidations(context.Background(), att, fakePubkey)
-//	require.NoError(t, err, "Expected allowed attestation not to throw error")
-//}
-//
-//func TestPostSignatureUpdate(t *testing.T) {
-//	config := &featureconfig.Flags{
-//		SlasherProtection: true,
-//	}
-//	reset := featureconfig.InitWithReset(config)
-//	defer reset()
-//	validator, m, validatorKey, finish := client.setup(t)
-//	defer finish()
-//	ctx := context.Background()
-//	pubKey := [48]byte{}
-//	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-//	att := &ethpb.IndexedAttestation{
-//		AttestingIndices: []uint64{1, 2},
-//		Data: &ethpb.AttestationData{
-//			Slot:            5,
-//			CommitteeIndex:  2,
-//			BeaconBlockRoot: bytesutil.PadTo([]byte("great block"), 32),
-//			Source: &ethpb.Checkpoint{
-//				Epoch: 4,
-//				Root:  bytesutil.PadTo([]byte("good source"), 32),
-//			},
-//			Target: &ethpb.Checkpoint{
-//				Epoch: 10,
-//				Root:  bytesutil.PadTo([]byte("good target"), 32),
-//			},
-//		},
-//	}
-//	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
-//	validator.protector = mockProtector
-//	m.validatorClient.EXPECT().DomainData(
-//		gomock.Any(), // ctx
-//		gomock.Any(), // epoch2
-//	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-//	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
-//	require.NoError(t, err)
-//	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
-//	require.ErrorContains(t, failedPostAttSignExternalErr, err, "Expected error on post signature update is detected as slashable")
-//	mockProtector.AllowAttestation = true
-//	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
-//	require.NoError(t, err, "Expected allowed attestation not to throw error")
-//}
-//
-//func TestPostSignatureUpdate_NilLocal(t *testing.T) {
-//	config := &featureconfig.Flags{
-//		SlasherProtection: false,
-//	}
-//	reset := featureconfig.InitWithReset(config)
-//	defer reset()
-//	ctx := context.Background()
-//	validator, _, _, finish := client.setup(t)
-//	defer finish()
-//	att := &ethpb.IndexedAttestation{
-//		AttestingIndices: []uint64{1, 2},
-//		Data: &ethpb.AttestationData{
-//			Slot:            5,
-//			CommitteeIndex:  2,
-//			BeaconBlockRoot: []byte("great block"),
-//			Source: &ethpb.Checkpoint{
-//				Epoch: 4,
-//				Root:  []byte("good source"),
-//			},
-//			Target: &ethpb.Checkpoint{
-//				Epoch: 10,
-//				Root:  []byte("good target"),
-//			},
-//		},
-//	}
-//	sr := [32]byte{1}
-//	fakePubkey := bytesutil.ToBytes48([]byte("test"))
-//	err := validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
-//	require.NoError(t, err, "Expected allowed attestation not to throw error")
-//}
-//
+func TestService_IsSlashableAttestation_OK(t *testing.T) {
+	ctx := context.Background()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := privKey.PublicKey()
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], pubKey.Marshal())
+
+	srv := &Service{
+		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
+	}
+	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
+
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 4,
+				Root:  make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 10,
+				Root:  make([]byte, 32),
+			},
+		},
+	}
+	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
+	err = srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
+}
+
 func Test_isNewAttSlashable_DoubleVote(t *testing.T) {
 	ctx := context.Background()
 	history := kv.NewAttestationHistoryArray(3)
@@ -304,56 +182,55 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	require.Equal(t, totalAttestations-1, slashable, "Expecting all other attestations to be found as slashable")
 }
 
-//
-//func TestAttestationHistory_Prunes(t *testing.T) {
-//	ctx := context.Background()
-//	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-//
-//	signingRoot := [32]byte{1}
-//	signingRoot2 := [32]byte{2}
-//	signingRoot3 := [32]byte{3}
-//	signingRoot4 := [32]byte{4}
-//	history := kv.NewAttestationHistoryArray(0)
-//
-//	// Try an attestation on totally unmarked history, should not be slashable.
-//	require.Equal(t, false, isNewAttSlashable(ctx, history, 0, wsPeriod+5, signingRoot), "Should not be slashable")
-//
-//	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
-//	prunedNewAttSource := uint64(0)
-//	prunedNewAttTarget := uint64(3)
-//	history = markAttestationForTargetEpoch(ctx, history, prunedNewAttSource, prunedNewAttTarget, signingRoot)
-//	newAttSource := prunedNewAttSource + 6
-//	newAttTarget := prunedNewAttTarget + 6
-//	history = markAttestationForTargetEpoch(ctx, history, newAttSource, newAttTarget, signingRoot2)
-//	lte, err := history.GetLatestEpochWritten(ctx)
-//	require.NoError(t, err)
-//	require.Equal(t, newAttTarget, lte, "Unexpected latest epoch")
-//
-//	// Mark an attestation spanning epochs 54000 to 54003.
-//	farNewAttSource := newAttSource + wsPeriod
-//	farNewAttTarget := newAttTarget + wsPeriod
-//	history = markAttestationForTargetEpoch(ctx, history, farNewAttSource, farNewAttTarget, signingRoot3)
-//	lte, err = history.GetLatestEpochWritten(ctx)
-//	require.NoError(t, err)
-//	require.Equal(t, farNewAttTarget, lte, "Unexpected latest epoch")
-//
-//	require.Equal(t, (*kv.HistoryData)(nil), safeTargetToSource(ctx, history, prunedNewAttTarget), "Unexpectedly marked attestation")
-//	require.Equal(t, farNewAttSource, safeTargetToSource(ctx, history, farNewAttTarget).Source, "Unexpectedly marked attestation")
-//
-//	// Try an attestation from existing source to outside prune, should slash.
-//	if !isNewAttSlashable(ctx, history, newAttSource, farNewAttTarget, signingRoot4) {
-//		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttSource, farNewAttTarget)
-//	}
-//	// Try an attestation from before existing target to outside prune, should slash.
-//	if !isNewAttSlashable(ctx, history, newAttTarget-1, farNewAttTarget, signingRoot4) {
-//		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttTarget-1, farNewAttTarget)
-//	}
-//	// Try an attestation larger than pruning amount, should slash.
-//	if !isNewAttSlashable(ctx, history, 0, farNewAttTarget+5, signingRoot4) {
-//		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
-//	}
-//}
-//
+func TestAttestationHistory_Prunes(t *testing.T) {
+	ctx := context.Background()
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+
+	signingRoot := [32]byte{1}
+	signingRoot2 := [32]byte{2}
+	signingRoot3 := [32]byte{3}
+	signingRoot4 := [32]byte{4}
+	history := kv.NewAttestationHistoryArray(0)
+
+	// Try an attestation on totally unmarked history, should not be slashable.
+	require.Equal(t, false, isNewAttSlashable(ctx, history, 0, wsPeriod+5, signingRoot), "Should not be slashable")
+
+	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
+	prunedNewAttSource := uint64(0)
+	prunedNewAttTarget := uint64(3)
+	history = markAttestationForTargetEpoch(ctx, history, prunedNewAttSource, prunedNewAttTarget, signingRoot)
+	newAttSource := prunedNewAttSource + 6
+	newAttTarget := prunedNewAttTarget + 6
+	history = markAttestationForTargetEpoch(ctx, history, newAttSource, newAttTarget, signingRoot2)
+	lte, err := history.GetLatestEpochWritten(ctx)
+	require.NoError(t, err)
+	require.Equal(t, newAttTarget, lte, "Unexpected latest epoch")
+
+	// Mark an attestation spanning epochs 54000 to 54003.
+	farNewAttSource := newAttSource + wsPeriod
+	farNewAttTarget := newAttTarget + wsPeriod
+	history = markAttestationForTargetEpoch(ctx, history, farNewAttSource, farNewAttTarget, signingRoot3)
+	lte, err = history.GetLatestEpochWritten(ctx)
+	require.NoError(t, err)
+	require.Equal(t, farNewAttTarget, lte, "Unexpected latest epoch")
+
+	require.Equal(t, (*kv.HistoryData)(nil), safeTargetToSource(ctx, history, prunedNewAttTarget), "Unexpectedly marked attestation")
+	require.Equal(t, farNewAttSource, safeTargetToSource(ctx, history, farNewAttTarget).Source, "Unexpectedly marked attestation")
+
+	// Try an attestation from existing source to outside prune, should slash.
+	if !isNewAttSlashable(ctx, history, newAttSource, farNewAttTarget, signingRoot4) {
+		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttSource, farNewAttTarget)
+	}
+	// Try an attestation from before existing target to outside prune, should slash.
+	if !isNewAttSlashable(ctx, history, newAttTarget-1, farNewAttTarget, signingRoot4) {
+		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttTarget-1, farNewAttTarget)
+	}
+	// Try an attestation larger than pruning amount, should slash.
+	if !isNewAttSlashable(ctx, history, 0, farNewAttTarget+5, signingRoot4) {
+		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
+	}
+}
+
 func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	ctx := context.Background()
 	history := kv.NewAttestationHistoryArray(0)
