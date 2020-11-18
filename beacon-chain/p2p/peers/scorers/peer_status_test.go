@@ -6,10 +6,12 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestScorers_PeerStatus_Score(t *testing.T) {
@@ -171,4 +173,25 @@ func TestScorers_PeerStatus_BadPeers(t *testing.T) {
 	assert.Equal(t, true, peerStatuses.Scorers().PeerStatusScorer().IsBadPeer(pid3))
 	assert.Equal(t, 2, len(peerStatuses.Scorers().PeerStatusScorer().BadPeers()))
 	assert.Equal(t, 2, len(peerStatuses.Scorers().BadPeers()))
+}
+
+func TestScorers_PeerStatus_PeerStatus(t *testing.T) {
+	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		ScorerParams: &scorers.Config{},
+	})
+	status, err := peerStatuses.Scorers().PeerStatusScorer().PeerStatus("peer1")
+	require.ErrorContains(t, peerdata.ErrPeerUnknown.Error(), err)
+	assert.Equal(t, (*pb.Status)(nil), status)
+
+	peerStatuses.Scorers().PeerStatusScorer().SetPeerStatus("peer1", &pb.Status{
+		HeadSlot: 128,
+	}, nil)
+	peerStatuses.Scorers().PeerStatusScorer().SetPeerStatus("peer2", &pb.Status{
+		HeadSlot: 128,
+	}, p2ptypes.ErrInvalidEpoch)
+	status, err = peerStatuses.Scorers().PeerStatusScorer().PeerStatus("peer1")
+	require.NoError(t, err)
+	assert.Equal(t, uint64(128), status.HeadSlot)
+	assert.Equal(t, nil, peerStatuses.Scorers().ValidationError("peer1"))
+	assert.ErrorContains(t, p2ptypes.ErrInvalidEpoch.Error(), peerStatuses.Scorers().ValidationError("peer2"))
 }
