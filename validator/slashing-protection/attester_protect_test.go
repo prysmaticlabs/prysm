@@ -3,6 +3,7 @@ package slashingprotection
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -101,26 +102,26 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
 	notSlashable := 0
 	slashable := 0
-	//var wg sync.WaitGroup
+	var wg sync.WaitGroup
 	totalAttestations := 100
 	for i := 0; i < totalAttestations; i++ {
-		//wg.Add(1)
-		//// Setup many double voting attestations.
-		//go func(i int) {
-		att.Data.Source.Epoch = 110 - uint64(i)
-		att.Data.Target.Epoch = 111 + uint64(i)
-		err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
-		if err == nil {
-			notSlashable++
-		} else {
-			if errors.Is(err, ErrSlashableAttestation) {
-				slashable++
+		wg.Add(1)
+		// Setup many double voting attestations.
+		go func(i int) {
+			att.Data.Source.Epoch = 110 - uint64(i)
+			att.Data.Target.Epoch = 111 + uint64(i)
+			err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+			if err == nil {
+				notSlashable++
+			} else {
+				if errors.Is(err, ErrSlashableAttestation) {
+					slashable++
+				}
 			}
-		}
-		//	wg.Done()
-		//}(i)
+			wg.Done()
+		}(i)
 	}
-	//wg.Wait()
+	wg.Wait()
 	require.Equal(t, totalAttestations, notSlashable+slashable)
 	require.Equal(t, 1, notSlashable, "Expecting only one attestations to not be slashable")
 	require.Equal(t, totalAttestations-1, slashable, "Expecting all other attestations to be found as slashable")
@@ -156,26 +157,26 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
 	notSlashable := 0
 	slashable := 0
-	//var wg sync.WaitGroup
+	var wg sync.WaitGroup
 	totalAttestations := 100
 	for i := 0; i < totalAttestations; i++ {
-		//wg.Add(1)
-		//// Setup many double voting attestations.
-		//go func(i int) {
-		att.Data.Source.Epoch = 110 - uint64(i)
-		att.Data.Target.Epoch = 111
-		err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
-		if err == nil {
-			notSlashable++
-		} else {
-			if errors.Is(err, ErrSlashableAttestation) {
-				slashable++
+		wg.Add(1)
+		// Setup many double voting attestations.
+		go func(i int) {
+			att.Data.Source.Epoch = 110 - uint64(i)
+			att.Data.Target.Epoch = 111
+			err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+			if err == nil {
+				notSlashable++
+			} else {
+				if errors.Is(err, ErrSlashableAttestation) {
+					slashable++
+				}
 			}
-		}
-		//	wg.Done()
-		//}(i)
+			wg.Done()
+		}(i)
 	}
-	//wg.Wait()
+	wg.Wait()
 	require.Equal(t, totalAttestations, notSlashable+slashable)
 	require.Equal(t, 1, notSlashable, "Expecting only one attestations to not be slashable")
 	require.Equal(t, totalAttestations-1, slashable, "Expecting all other attestations to be found as slashable")

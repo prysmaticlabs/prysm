@@ -28,9 +28,9 @@ func (s *Service) IsSlashableAttestation(
 	if err != nil {
 		return err
 	}
-	s.attestingHistoryByPubKeyLock.RLock()
+	s.attestingHistoryByPubKeyLock.Lock()
+	defer s.attestingHistoryByPubKeyLock.Unlock()
 	attesterHistory, ok := s.attesterHistoryByPubKey[pubKey]
-	s.attestingHistoryByPubKeyLock.RUnlock()
 	if !ok {
 		return fmt.Errorf("could not get local slashing protection data for validator %#x", pubKey)
 	}
@@ -57,9 +57,7 @@ func (s *Service) IsSlashableAttestation(
 		indexedAtt.Data.Target.Epoch,
 		signingRoot,
 	)
-	s.attestingHistoryByPubKeyLock.Lock()
 	s.attesterHistoryByPubKey[pubKey] = attesterHistory
-	s.attestingHistoryByPubKeyLock.Unlock()
 	return nil
 }
 
