@@ -403,13 +403,11 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	genesisValRoot := chainService.GenesisValidatorRoot()
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
-			Started:               true,
-			GenesisTime:           uint64(time.Unix(0, 0).Unix()),
-			GenesisValidatorsRoot: genesisValRoot[:],
+			Started:     true,
+			GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		},
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
