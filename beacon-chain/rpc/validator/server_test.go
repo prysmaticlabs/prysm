@@ -320,8 +320,10 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	require.NoError(t, trie.SetSlot(3))
 	require.NoError(t, db.SaveState(ctx, trie, headBlockRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	require.NoError(t, trie.SetGenesisValidatorRoot(genesisValidatorsRoot[:]))
 
-	chainService := &mockChain.ChainService{State: trie}
+	chainService := &mockChain.ChainService{State: trie, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
@@ -336,8 +338,9 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+			Started:               true,
+			GenesisTime:           uint64(time.Unix(0, 0).Unix()),
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
 		},
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
@@ -346,7 +349,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	genesisValidatorRoot := [32]byte{0x01, 0x02}
+	genesisValidatorRoot := params.BeaconConfig().ZeroHash
 
 	// Set head state to nil
 	chainService := &mockChain.ChainService{State: nil}
@@ -385,6 +388,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 
 	hook := logTest.NewGlobal()
 	chainService := &mockChain.ChainService{}
@@ -403,8 +407,9 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+			Started:               true,
+			GenesisTime:           uint64(time.Unix(0, 0).Unix()),
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
 		},
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
@@ -418,7 +423,8 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.ChainStarted,
 			Data: &statefeed.ChainStartedData{
-				StartTime: time.Unix(0, 0),
+				StartTime:             time.Unix(0, 0),
+				GenesisValidatorsRoot: genesisValidatorsRoot[:],
 			},
 		})
 	}
