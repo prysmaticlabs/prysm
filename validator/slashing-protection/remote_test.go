@@ -3,11 +3,11 @@ package slashingprotection
 import (
 	"context"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 )
 
 var _ = Protector(&RemoteProtector{})
@@ -25,7 +25,6 @@ type mockSlasher struct {
 func (ms mockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.AttesterSlashingResponse, error) {
 	ms.isSlashableAttestationCalled = true
 	if ms.slashAttestation {
-
 		slashingAtt, ok := proto.Clone(in).(*eth.IndexedAttestation)
 		if !ok {
 			return nil, errors.New("object is not of type *eth.IndexedAttestation")
