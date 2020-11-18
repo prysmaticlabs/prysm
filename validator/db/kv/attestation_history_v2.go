@@ -127,6 +127,41 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	return hd, nil
 }
 
+// UpdateHistoryForAttestation returns a modified attestation history with specified target+epoch pairs marked
+// as attested for. This is used to prevent the validator client from signing any slashable attestations.
+func (hd EncHistoryData) UpdateHistoryForAttestation(
+	ctx context.Context,
+	sourceEpoch,
+	targetEpoch uint64,
+	signingRoot [32]byte,
+) (EncHistoryData, error) {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	latestEpochWritten, err := hd.GetLatestEpochWritten(ctx)
+	if err != nil {
+		return EncHistoryData{}, errors.Wrap(err, "could not get latest epoch written from history")
+	}
+	if targetEpoch > latestEpochWritten {
+		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
+		// Limit the overwriting to one weak subjectivity period as further is not needed.
+		maxToWrite := latestEpochWritten + wsPeriod
+		for i := latestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
+			hd, err = hd.SetTargetData(ctx, i%wsPeriod, &HistoryData{Source: params.BeaconConfig().FarFutureEpoch})
+			if err != nil {
+				return EncHistoryData{}, errors.Wrap(err, "could not set target data")
+			}
+		}
+		hd, err = hd.SetLatestEpochWritten(ctx, targetEpoch)
+		if err != nil {
+			return EncHistoryData{}, errors.Wrap(err, "could not set latest epoch written")
+		}
+	}
+	hd, err = hd.SetTargetData(ctx, targetEpoch%wsPeriod, &HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
+	if err != nil {
+		return EncHistoryData{}, errors.Wrap(err, "could not set target data")
+	}
+	return hd, nil
+}
+
 // AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
 func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeysV2")

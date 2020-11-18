@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -48,13 +49,15 @@ func (s *Service) IsSlashableAttestation(
 		return true, nil
 	}
 	// We update the attester history with new values.
-	attesterHistory = markAttestationForTargetEpoch(
+	attesterHistory, err = attesterHistory.UpdateHistoryForAttestation(
 		ctx,
-		attesterHistory,
 		indexedAtt.Data.Source.Epoch,
 		indexedAtt.Data.Target.Epoch,
 		signingRoot,
 	)
+	if err != nil {
+		return false, errors.Wrap(err, "could not update attesting history data")
+	}
 	s.attesterHistoryByPubKey[pubKey] = attesterHistory
 	return false, nil
 }
@@ -111,43 +114,6 @@ func isNewAttSlashable(ctx context.Context, history kv.EncHistoryData, sourceEpo
 	}
 
 	return false
-}
-
-// markAttestationForTargetEpoch returns the modified attestation history with the passed-in epochs marked
-// as attested for. This is done to prevent the validator client from signing any slashable attestations.
-func markAttestationForTargetEpoch(ctx context.Context, history kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) kv.EncHistoryData {
-	if history == nil {
-		return nil
-	}
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
-	if err != nil {
-		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
-		return nil
-	}
-	if targetEpoch > latestEpochWritten {
-		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
-		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		maxToWrite := latestEpochWritten + wsPeriod
-		for i := latestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
-			history, err = history.SetTargetData(ctx, i%wsPeriod, &kv.HistoryData{Source: params.BeaconConfig().FarFutureEpoch})
-			if err != nil {
-				log.WithError(err).Error("Could not set target to the encapsulated data")
-				return nil
-			}
-		}
-		history, err = history.SetLatestEpochWritten(ctx, targetEpoch)
-		if err != nil {
-			log.WithError(err).Error("Could not set latest epoch written to the encapsulated data")
-			return nil
-		}
-	}
-	history, err = history.SetTargetData(ctx, targetEpoch%wsPeriod, &kv.HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
-	if err != nil {
-		log.WithError(err).Error("Could not set target to the encapsulated data")
-		return nil
-	}
-	return history
 }
 
 // safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at

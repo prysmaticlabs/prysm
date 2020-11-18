@@ -55,7 +55,9 @@ func Test_isNewAttSlashable_DoubleVote(t *testing.T) {
 	newAttSource := uint64(0)
 	newAttTarget := uint64(3)
 	sr1 := [32]byte{1}
-	history = markAttestationForTargetEpoch(ctx, history, newAttSource, newAttTarget, sr1)
+	var err error
+	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, sr1)
+	require.NoError(t, err)
 	lew, err := history.GetLatestEpochWritten(ctx)
 	require.NoError(t, err)
 	require.Equal(t, newAttTarget, lew, "Unexpected latest epoch written")
@@ -196,10 +198,13 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
 	prunedNewAttSource := uint64(0)
 	prunedNewAttTarget := uint64(3)
-	history = markAttestationForTargetEpoch(ctx, history, prunedNewAttSource, prunedNewAttTarget, signingRoot)
+	var err error
+	history, err = history.UpdateHistoryForAttestation(ctx, prunedNewAttSource, prunedNewAttTarget, signingRoot)
+	require.NoError(t, err)
 	newAttSource := prunedNewAttSource + 6
 	newAttTarget := prunedNewAttTarget + 6
-	history = markAttestationForTargetEpoch(ctx, history, newAttSource, newAttTarget, signingRoot2)
+	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, signingRoot2)
+	require.NoError(t, err)
 	lte, err := history.GetLatestEpochWritten(ctx)
 	require.NoError(t, err)
 	require.Equal(t, newAttTarget, lte, "Unexpected latest epoch")
@@ -207,7 +212,8 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	// Mark an attestation spanning epochs 54000 to 54003.
 	farNewAttSource := newAttSource + wsPeriod
 	farNewAttTarget := newAttTarget + wsPeriod
-	history = markAttestationForTargetEpoch(ctx, history, farNewAttSource, farNewAttTarget, signingRoot3)
+	history, err = history.UpdateHistoryForAttestation(ctx, farNewAttSource, farNewAttTarget, signingRoot3)
+	require.NoError(t, err)
 	lte, err = history.GetLatestEpochWritten(ctx)
 	require.NoError(t, err)
 	require.Equal(t, farNewAttTarget, lte, "Unexpected latest epoch")
@@ -237,7 +243,9 @@ func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	signingRoot := [32]byte{1}
 	newAttSource := uint64(0)
 	newAttTarget := uint64(3)
-	history = markAttestationForTargetEpoch(ctx, history, newAttSource, newAttTarget, signingRoot)
+	var err error
+	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, signingRoot)
+	require.NoError(t, err)
 	lte, err := history.GetLatestEpochWritten(ctx)
 	require.NoError(t, err)
 	require.Equal(t, newAttTarget, lte)
@@ -261,7 +269,9 @@ func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	// Mark an attestation spanning epochs 1 to 2.
 	newAttSource := uint64(1)
 	newAttTarget := uint64(2)
-	history = markAttestationForTargetEpoch(ctx, history, newAttSource, newAttTarget, signingRoot)
+	var err error
+	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, signingRoot)
+	require.NoError(t, err)
 	lte, err := history.GetLatestEpochWritten(ctx)
 	require.NoError(t, err)
 	require.Equal(t, newAttTarget, lte)
