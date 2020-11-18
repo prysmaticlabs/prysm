@@ -632,9 +632,12 @@ func (p *Status) addIpToTracker(pid peer.ID) {
 		// is a valid ip.
 		return
 	}
+	// Ignore loopback addresses.
+	if ip.IsLoopback() {
+		return
+	}
 	stringIP := ip.String()
 	p.ipTracker[stringIP] += 1
-	return
 }
 
 func (p *Status) tallyIPTracker() {
@@ -655,7 +658,6 @@ func (p *Status) tallyIPTracker() {
 		tracker[stringIP] += 1
 	}
 	p.ipTracker = tracker
-	return
 }
 
 func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
