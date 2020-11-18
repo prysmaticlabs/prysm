@@ -305,8 +305,8 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 	}
 
 	// Decrease exp itme in proportion to how many blocks are still in the cache for slot key.
-	d := gcache.DefaultExpiration.Seconds() / float64(len(newBlks))
-	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, time.Duration(d)); err != nil {
+	d := time.Duration(gcache.DefaultExpiration.Seconds()/float64(len(newBlks))) * time.Second
+	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, d); err != nil {
 		return err
 	}
 	delete(s.seenPendingBlocks, r)
