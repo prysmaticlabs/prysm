@@ -7,11 +7,10 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func TestRemoteProtector_IsSlashableAttestation(t *testing.T) {
-	s := &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashAttestation: true}}
+	s := &RemoteProtector{slasherClient: mockSlasher{slashAttestation: true}}
 	att := &eth.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &eth.AttestationData{
@@ -32,7 +31,7 @@ func TestRemoteProtector_IsSlashableAttestation(t *testing.T) {
 	slashable, err := s.IsSlashableAttestation(ctx, att, [48]byte{}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, true, slashable, "Expected attestation to be slashable")
-	s = &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashAttestation: false}}
+	s = &RemoteProtector{slasherClient: mockSlasher{slashAttestation: false}}
 	slashable, err = s.IsSlashableAttestation(ctx, att, [48]byte{}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, false, slashable, "Expected attestation to not be slashable")

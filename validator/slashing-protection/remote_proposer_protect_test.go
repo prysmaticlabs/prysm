@@ -8,11 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
-	s := &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashBlock: true}}
+	s := &RemoteProtector{slasherClient: mockSlasher{slashBlock: true}}
 	blk := &eth.SignedBeaconBlock{
 		Block: &eth.BeaconBlock{
 			Slot:          0,
@@ -26,7 +25,7 @@ func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
 	slashable, err := s.IsSlashableBlock(ctx, blk, [48]byte{}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, true, slashable, "Expected attestation to be slashable")
-	s = &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashAttestation: false}}
+	s = &RemoteProtector{slasherClient: mockSlasher{slashAttestation: false}}
 	slashable, err = s.IsSlashableBlock(ctx, blk, [48]byte{}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, false, slashable, "Expected attestation to not be slashable")
