@@ -11,6 +11,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -20,6 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
+
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -724,9 +727,9 @@ func TestSaveProtections_OK(t *testing.T) {
 	}
 
 	history1 := cleanHistories[pubKey1]
-	history1 = markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
+	history1 = slashingprotection.markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
 
-	history2 := markAttestationForTargetEpoch(ctx, history1, 2, 3, [32]byte{2})
+	history2 := slashingprotection.markAttestationForTargetEpoch(ctx, history1, 2, 3, [32]byte{2})
 
 	cleanHistories[pubKey1] = history1
 	cleanHistories[pubKey2] = history2
@@ -757,7 +760,7 @@ func TestSaveProtection_OK(t *testing.T) {
 	}
 
 	history1 := cleanHistories[pubKey1]
-	history1 = markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
+	history1 = slashingprotection.markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
 
 	cleanHistories[pubKey1] = history1
 

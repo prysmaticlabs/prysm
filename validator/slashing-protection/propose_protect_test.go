@@ -1,13 +1,15 @@
-package client
+package slashingprotection
 
 import (
 	"context"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -18,7 +20,7 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := client.setup(t)
 	defer finish()
 
 	block := &ethpb.BeaconBlock{
@@ -30,7 +32,7 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
+	require.ErrorContains(t, client.failedPreBlockSignLocalErr, err)
 	block.Slot = 9
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
@@ -42,7 +44,7 @@ func TestPreBlockSignValidation(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := client.setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -54,7 +56,7 @@ func TestPreBlockSignValidation(t *testing.T) {
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
 	err := validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
+	require.ErrorContains(t, client.failedPreBlockSignExternalErr, err)
 	mockProtector.AllowBlock = true
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
@@ -66,7 +68,7 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := client.setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -76,7 +78,7 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
 	err := validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, nil)
-	require.ErrorContains(t, failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
+	require.ErrorContains(t, client.failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
 	mockProtector.AllowBlock = true
 	err = validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")

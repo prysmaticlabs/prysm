@@ -1,4 +1,4 @@
-package client
+package slashingprotection
 
 import (
 	"context"
@@ -8,10 +8,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
@@ -22,7 +24,7 @@ func TestPreSignatureValidation(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := client.setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -61,7 +63,7 @@ func TestPreSignatureValidation_NilLocal(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, m, _, finish := setup(t)
+	validator, m, _, finish := client.setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -94,7 +96,7 @@ func TestPostSignatureUpdate(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := client.setup(t)
 	defer finish()
 	ctx := context.Background()
 	pubKey := [48]byte{}
@@ -137,7 +139,7 @@ func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
 	ctx := context.Background()
-	validator, _, _, finish := setup(t)
+	validator, _, _, finish := client.setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -199,7 +201,7 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 		},
 	}
 
-	v, _, validatorKey, finish := setup(t)
+	v, _, validatorKey, finish := client.setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -249,7 +251,7 @@ func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
 		},
 	}
 
-	v, _, validatorKey, finish := setup(t)
+	v, _, validatorKey, finish := client.setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())

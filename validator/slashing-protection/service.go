@@ -6,6 +6,8 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/validator/db"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,6 +29,7 @@ type Service struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	remoteProtector Protector
+	validatorDB     db.Database
 }
 
 // Config for the slashing protection service.
