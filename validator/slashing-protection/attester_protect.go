@@ -7,74 +7,55 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
-var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
-var failedPreAttSignExternalErr = "attempted to make slashable attestation, rejected by external slasher service"
-var failedPostAttSignExternalErr = "external slasher service detected a submitted slashable attestation"
+var (
+	ErrSlashableAttestation       = errors.New("attempted an attestation rejected by local slashing protection")
+	ErrRemoteSlashableAttestation = errors.New("attempted an attestation rejected by remote slashing protection")
+)
 
-func (v *client.validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-
-	v.attesterHistoryByPubKeyLock.RLock()
-	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
-	v.attesterHistoryByPubKeyLock.RUnlock()
-	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
+func (s *Service) IsSlashableAttestation(
+	ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, domain *ethpb.DomainResponse,
+) error {
+	metricsKey := fmt.Sprintf("%#x", pubKey[:])
+	signingRoot, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain.SignatureDomain)
 	if err != nil {
-		client.log.WithError(err).Error("Could not get domain and signing root from attestation")
 		return err
 	}
-	if ok && isNewAttSlashable(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, sr) {
-		if v.emitAccountMetrics {
-			client.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return errors.New(failedAttLocalProtectionErr)
-	} else if !ok {
-		client.log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
+	s.attestingHistoryByPubKeyLock.RLock()
+	attesterHistory, ok := s.attesterHistoryByPubKey[pubKey]
+	s.attestingHistoryByPubKeyLock.RUnlock()
+	if !ok {
+		return fmt.Errorf("could not get local slashing protection data for validator %#x", pubKey)
 	}
-
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
-			if v.emitAccountMetrics {
-				client.ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPreAttSignExternalErr)
-		}
+	// Check if the attestation is slashable by local and remote slashing protection
+	if s.remoteProtector != nil && s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt) {
+		remoteSlashableAttestationsTotal.WithLabelValues(metricsKey).Inc()
+		return ErrRemoteSlashableAttestation
 	}
-	return nil
-}
-
-func (v *client.validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte) error {
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	v.attesterHistoryByPubKeyLock.Lock()
-	defer v.attesterHistoryByPubKeyLock.Unlock()
-	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
-	if ok {
-		if isNewAttSlashable(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, signingRoot) {
-			if v.emitAccountMetrics {
-				client.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedAttLocalProtectionErr)
-		}
-		attesterHistory = markAttestationForTargetEpoch(ctx, attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch, signingRoot)
-		v.attesterHistoryByPubKey[pubKey] = attesterHistory
-	} else {
-		client.log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
+	if isNewAttSlashable(
+		ctx,
+		attesterHistory,
+		indexedAtt.Data.Source.Epoch,
+		indexedAtt.Data.Target.Epoch,
+		signingRoot,
+	) {
+		localSlashableAttestationsTotal.WithLabelValues(metricsKey).Inc()
+		return ErrSlashableAttestation
 	}
-
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.CommitAttestation(ctx, indexedAtt) {
-			if v.emitAccountMetrics {
-				client.ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPostAttSignExternalErr)
-		}
-	}
+	attesterHistory = markAttestationForTargetEpoch(
+		ctx,
+		attesterHistory,
+		indexedAtt.Data.Source.Epoch,
+		indexedAtt.Data.Target.Epoch,
+		signingRoot,
+	)
+	s.attestingHistoryByPubKeyLock.Lock()
+	s.attesterHistoryByPubKey[pubKey] = attesterHistory
+	s.attestingHistoryByPubKeyLock.Unlock()
 	return nil
 }
 
@@ -88,7 +69,7 @@ func isNewAttSlashable(ctx context.Context, history kv.EncHistoryData, sourceEpo
 	// Previously pruned, we should return false.
 	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
-		client.log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
+		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return false
 	}
 
@@ -99,7 +80,7 @@ func isNewAttSlashable(ctx context.Context, history kv.EncHistoryData, sourceEpo
 	// Check if there has already been a vote for this target epoch.
 	hd, err := history.GetTargetData(ctx, targetEpoch)
 	if err != nil {
-		client.log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
+		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
 		return false
 	}
 	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
@@ -141,7 +122,7 @@ func markAttestationForTargetEpoch(ctx context.Context, history kv.EncHistoryDat
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
-		client.log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
+		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return nil
 	}
 	if targetEpoch > latestEpochWritten {
@@ -151,19 +132,19 @@ func markAttestationForTargetEpoch(ctx context.Context, history kv.EncHistoryDat
 		for i := latestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
 			history, err = history.SetTargetData(ctx, i%wsPeriod, &kv.HistoryData{Source: params.BeaconConfig().FarFutureEpoch})
 			if err != nil {
-				client.log.WithError(err).Error("Could not set target to the encapsulated data")
+				log.WithError(err).Error("Could not set target to the encapsulated data")
 				return nil
 			}
 		}
 		history, err = history.SetLatestEpochWritten(ctx, targetEpoch)
 		if err != nil {
-			client.log.WithError(err).Error("Could not set latest epoch written to the encapsulated data")
+			log.WithError(err).Error("Could not set latest epoch written to the encapsulated data")
 			return nil
 		}
 	}
 	history, err = history.SetTargetData(ctx, targetEpoch%wsPeriod, &kv.HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
 	if err != nil {
-		client.log.WithError(err).Error("Could not set target to the encapsulated data")
+		log.WithError(err).Error("Could not set target to the encapsulated data")
 		return nil
 	}
 	return history
@@ -175,7 +156,7 @@ func safeTargetToSource(ctx context.Context, history kv.EncHistoryData, targetEp
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
-		client.log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
+		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
 		return nil
 	}
 	if targetEpoch > latestEpochWritten {
@@ -186,7 +167,7 @@ func safeTargetToSource(ctx context.Context, history kv.EncHistoryData, targetEp
 	}
 	hd, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
 	if err != nil {
-		client.log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
+		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
 		return nil
 	}
 	return hd
