@@ -19,7 +19,7 @@ func TestStore_GenesisValidatorRoot_ReadAndWrite(t *testing.T) {
 	}{
 		{
 			name:  "empty then write",
-			want:  []byte{},
+			want:  nil,
 			write: []byte{1},
 		},
 		{
@@ -29,7 +29,7 @@ func TestStore_GenesisValidatorRoot_ReadAndWrite(t *testing.T) {
 		},
 		{
 			name:  "5 then zerohash",
-			want:  []byte{1},
+			want:  []byte{5},
 			write: params.BeaconConfig().ZeroHash[:],
 		},
 		{
@@ -43,9 +43,8 @@ func TestStore_GenesisValidatorRoot_ReadAndWrite(t *testing.T) {
 			got, err := db.GenesisValidatorRoot(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenesisValidatorRoot() error = %v, wantErr %v", err, tt.wantErr)
-				return
 			}
-			require.Equal(t, got, tt.want)
+			require.DeepEqual(t, tt.want, got)
 			require.NoError(t, db.SaveGenesisValidatorRoot(ctx, tt.write))
 		})
 	}

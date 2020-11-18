@@ -7,25 +7,25 @@ import (
 )
 
 // SaveGenesisValidatorRoot saves the genesis validator root to db.
-func (s *Store) SaveGenesisValidatorRoot(ctx context.Context, data []byte) error {
+func (s *Store) SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error {
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(genesisInfoBucket)
-		return bkt.Put(genesisValidatorsRootKey, data)
+		return bkt.Put(genesisValidatorsRootKey, genValRoot)
 	})
 	return err
 }
 
 // GenesisValidatorRoot retrieves the genesis validator root from db.
-func (s *Store) GenesisValidatorRoot(ctx context.Context) ([]byte, error) {
-	var data []byte
+func (s *Store) GenesisValidatorsRoot(ctx context.Context) ([]byte, error) {
+	var genValRoot []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(genesisInfoBucket)
 		enc := bkt.Get(genesisValidatorsRootKey)
 		if len(enc) == 0 {
 			return nil
 		}
-		data = enc
+		genValRoot = enc
 		return nil
 	})
-	return data, err
+	return genValRoot, err
 }
