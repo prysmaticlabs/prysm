@@ -3,11 +3,11 @@ package slashingprotection
 import (
 	"context"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = Protector(&RemoteProtector{})

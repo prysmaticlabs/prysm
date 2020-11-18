@@ -109,7 +109,7 @@ func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]
 	defer s.attestingHistoryByPubKeyLock.RUnlock()
 	history, ok := s.attesterHistoryByPubKey[pubKey]
 	if !ok {
-		return fmt.Errorf("no attesting history found for pubkey %#x\n", pubKey)
+		return fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
 	}
 	if err := s.validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history); err != nil {
 		return errors.Wrapf(err, "could not save attesting history to db for public key %#x", pubKey)
@@ -139,7 +139,7 @@ func (s *Service) AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte
 	defer s.attestingHistoryByPubKeyLock.RUnlock()
 	history, ok := s.attesterHistoryByPubKey[pubKey]
 	if !ok {
-		return kv.EncHistoryData{}, fmt.Errorf("no attesting history found for pubkey %#x\n", pubKey)
+		return kv.EncHistoryData{}, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
 	}
 	return history, nil
 }

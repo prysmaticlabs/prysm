@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -362,7 +362,7 @@ func (s *ValidatorClient) registerClientService(
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	var slashingProtector *slashingprotection.Service
-	if err := s.services.FetchService(&slashingProtector); err == nil {
+	if err := s.services.FetchService(&slashingProtector); err != nil {
 		return err
 	}
 	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
