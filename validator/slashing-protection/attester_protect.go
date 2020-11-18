@@ -18,7 +18,10 @@ var (
 )
 
 func (s *Service) IsSlashableAttestation(
-	ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, domain *ethpb.DomainResponse,
+	ctx context.Context,
+	indexedAtt *ethpb.IndexedAttestation,
+	pubKey [48]byte,
+	domain *ethpb.DomainResponse,
 ) error {
 	metricsKey := fmt.Sprintf("%#x", pubKey[:])
 	signingRoot, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain.SignatureDomain)
@@ -46,6 +49,7 @@ func (s *Service) IsSlashableAttestation(
 		localSlashableAttestationsTotal.WithLabelValues(metricsKey).Inc()
 		return ErrSlashableAttestation
 	}
+	// We update the attester history with new values.
 	attesterHistory = markAttestationForTargetEpoch(
 		ctx,
 		attesterHistory,

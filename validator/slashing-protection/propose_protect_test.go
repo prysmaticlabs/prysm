@@ -2,84 +2,56 @@ package slashingprotection
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
+	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
-func TestPreBlockSignLocalValidation(t *testing.T) {
+func TestService_IsSlashableBlock_OK(t *testing.T) {
 	ctx := context.Background()
-	config := &featureconfig.Flags{
-		SlasherProtection: false,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
-	validator, _, validatorKey, finish := client.setup(t)
-	defer finish()
-
-	block := &ethpb.BeaconBlock{
-		Slot:          10,
-		ProposerIndex: 0,
-	}
-	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorKey.PublicKey().Marshal(), 10, []byte{1})
+	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.ErrorContains(t, client.failedPreBlockSignLocalErr, err)
-	block.Slot = 9
-	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.NoError(t, err, "Expected allowed attestation not to throw error")
-}
-
-func TestPreBlockSignValidation(t *testing.T) {
-	config := &featureconfig.Flags{
-		SlasherProtection: true,
+	pubKey := privKey.PublicKey()
+	validatorDB := dbtest.SetupDB(t, nil)
+	slot := uint64(10)
+	signedBlock := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:          slot,
+			ProposerIndex: 0,
+			ParentRoot:    make([]byte, 32),
+			StateRoot:     make([]byte, 32),
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: make([]byte, 96),
+				Eth1Data: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+				Graffiti: make([]byte, 32),
+			},
+		},
 	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
-	validator, _, validatorKey, finish := client.setup(t)
-	defer finish()
-	pubKey := [48]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	dummySigningRoot := [32]byte{}
+	copy(dummySigningRoot[:], []byte{1})
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey.Marshal(), slot, dummySigningRoot[:])
+	require.NoError(t, err)
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], pubKey.Marshal())
 
-	block := &ethpb.BeaconBlock{
-		Slot:          10,
-		ProposerIndex: 0,
+	srv := &Service{
+		validatorDB: validatorDB,
 	}
-	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
-	validator.protector = mockProtector
-	err := validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.ErrorContains(t, client.failedPreBlockSignExternalErr, err)
-	mockProtector.AllowBlock = true
-	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.NoError(t, err, "Expected allowed attestation not to throw error")
-}
+	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
+	err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
+	assert.Equal(t, true, errors.Is(err, ErrSlashableBlock))
 
-func TestPostBlockSignUpdate(t *testing.T) {
-	config := &featureconfig.Flags{
-		SlasherProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
-	validator, _, validatorKey, finish := client.setup(t)
-	defer finish()
-	pubKey := [48]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	emptyBlock := testutil.NewBeaconBlock()
-	emptyBlock.Block.Slot = 10
-	emptyBlock.Block.ProposerIndex = 0
-	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
-	validator.protector = mockProtector
-	err := validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, nil)
-	require.ErrorContains(t, client.failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
-	mockProtector.AllowBlock = true
-	err = validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)})
-	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	// Change the slot and now we should not get a slashable block.
+	signedBlock.Block.Slot = slot + 1
+	err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
+	require.NoError(t, err, "Expected block to not be slashable")
 }
