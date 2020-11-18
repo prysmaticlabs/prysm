@@ -321,6 +321,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, trie, headBlockRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	require.NoError(t, trie.SetGenesisValidatorRoot(genesisValidatorsRoot[:]))
 
 	chainService := &mockChain.ChainService{State: trie, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{
@@ -348,7 +349,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	db, _ := dbutil.SetupDB(t)
-	genesisValidatorRoot := [32]byte{0x01, 0x02}
+	genesisValidatorRoot := params.BeaconConfig().ZeroHash
 
 	// Set head state to nil
 	chainService := &mockChain.ChainService{State: nil}
