@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	protectionMock "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -29,8 +30,11 @@ import (
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, validatorKey, finish := setup(t)
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -40,11 +44,14 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 
 func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -61,6 +68,9 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -79,7 +89,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch2
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
@@ -99,6 +109,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -123,7 +137,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -172,6 +186,10 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -204,7 +222,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -212,6 +230,9 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{AttestationDataRoot: make([]byte, 32)}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: true,
+	}
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Attempted to submit a slashable attestation")
 }
@@ -224,6 +245,10 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -256,7 +281,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -264,8 +289,11 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: true,
+	}
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, "Attepted to submit a slashable attestation")
+	require.LogsContain(t, hook, "Attempted to submit a slashable attestation")
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
@@ -276,6 +304,10 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -300,7 +332,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -318,7 +350,9 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32), Epoch: 2},
 		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 1},
 	}, nil)
-
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: true,
+	}
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Attempted to submit a slashable attestation")
 }
@@ -359,6 +393,11 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	wg.Add(1)
 	defer wg.Wait()
 
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
+
 	validator.genesisTime = uint64(timeutils.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
@@ -386,7 +425,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -403,6 +442,10 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -422,7 +465,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -440,6 +483,10 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 func TestSignAttestation(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
+	validator.protector = &protectionMock.MockProtector{
+		SlashableAttestation: false,
+	}
+	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 
 	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
 	require.NoError(t, err, "Failed to generate key from bytes")
@@ -454,6 +501,7 @@ func TestSignAttestation(t *testing.T) {
 	require.NoError(t, err)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
+		Times(2).
 		Return(&ethpb.DomainResponse{SignatureDomain: attesterDomain}, nil)
 	ctx := context.Background()
 	att := testutil.NewAttestation()

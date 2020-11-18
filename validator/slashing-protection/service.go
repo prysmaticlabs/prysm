@@ -57,14 +57,17 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
+	ValidatorDB                db.Database
 }
 
 // NewService creates a new validator service for the service registry.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	srv := &Service{
-		ctx:    ctx,
-		cancel: cancel,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
+		validatorDB:             cfg.ValidatorDB,
 	}
 	if cfg.SlasherEndpoint != "" {
 		rp, err := NewRemoteProtector(ctx, cfg)

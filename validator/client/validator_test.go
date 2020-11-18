@@ -18,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -648,66 +646,6 @@ func TestUpdateDuties_OK(t *testing.T) {
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
 	assert.Equal(t, resp.Duties[0].CommitteeIndex, v.duties.Duties[0].CommitteeIndex, "Unexpected validator assignments")
 	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
-}
-
-func TestUpdateProtections_OK(t *testing.T) {
-	ctx := context.Background()
-	pubKey1 := [48]byte{1}
-	pubKey2 := [48]byte{2}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
-	history := kv.NewAttestationHistoryArray(2)
-	history, err := history.SetTargetData(ctx, 1, &kv.HistoryData{Source: 0, SigningRoot: []byte{1}})
-	require.NoError(t, err)
-	history, err = history.SetTargetData(ctx, 2, &kv.HistoryData{Source: 1, SigningRoot: []byte{2}})
-	require.NoError(t, err)
-	history, err = history.SetLatestEpochWritten(ctx, 2)
-	require.NoError(t, err)
-	history2 := kv.NewAttestationHistoryArray(3)
-	history2, err = history2.SetTargetData(ctx, 3, &kv.HistoryData{Source: 2, SigningRoot: []byte{1}})
-	require.NoError(t, err)
-	history2, err = history2.SetLatestEpochWritten(ctx, 3)
-	require.NoError(t, err)
-
-	histories := make(map[[48]byte]kv.EncHistoryData)
-	histories[pubKey1] = history
-	histories[pubKey2] = history2
-	require.NoError(t, db.SaveAttestationHistoryForPubKeysV2(context.Background(), histories))
-
-	slot := params.BeaconConfig().SlotsPerEpoch
-	duties := &ethpb.DutiesResponse{
-		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{
-				AttesterSlot:   slot,
-				ValidatorIndex: 200,
-				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
-				PublicKey:      pubKey1[:],
-			},
-			{
-				AttesterSlot:   slot,
-				ValidatorIndex: 201,
-				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
-				PublicKey:      pubKey2[:],
-			},
-		},
-	}
-	v := validator{
-		db:              db,
-		validatorClient: client,
-		duties:          duties,
-	}
-	require.NoError(t, v.UpdateProtections(context.Background(), slot), "Could not update assignments")
-
-	wanted1, err := v.attestingHistoryManager.AttestingHistoryForPubKey(ctx, pubKey1)
-	require.NoError(t, err)
-	wanted2, err := v.attestingHistoryManager.AttestingHistoryForPubKey(ctx, pubKey2)
-	require.NoError(t, err)
-	require.DeepEqual(t, history, wanted1, "Unexpected retrieved history")
-	require.DeepEqual(t, history2, wanted2, "Unexpected retrieved history")
 }
 
 func TestRolesAt_OK(t *testing.T) {
