@@ -26,8 +26,15 @@ type AttestingHistoryManager interface {
 // Protector interface defines a struct which provides methods
 // for validator slashing protection.
 type Protector interface {
-	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) bool
-	IsSlashableBlock(ctx context.Context, signedBlock *ethpb.SignedBeaconBlock) bool
+	IsSlashableAttestation(
+		ctx context.Context,
+		indexedAtt *ethpb.IndexedAttestation,
+		pubKey [48]byte,
+		domain *ethpb.DomainResponse,
+	) error
+	IsSlashableBlock(
+		ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
+	) error
 	shared.Service
 }
 
