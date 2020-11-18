@@ -6,7 +6,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// SaveGenesisValidatorRoot saves the genesis validator root to db.
+// SaveGenesisValidatorsRoot saves the genesis validator root to db.
 func (s *Store) SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error {
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(genesisInfoBucket)
@@ -15,7 +15,7 @@ func (s *Store) SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte
 	return err
 }
 
-// GenesisValidatorRoot retrieves the genesis validator root from db.
+// GenesisValidatorsRoot retrieves the genesis validator root from db.
 func (s *Store) GenesisValidatorsRoot(ctx context.Context) ([]byte, error) {
 	var genValRoot []byte
 	err := s.db.View(func(tx *bolt.Tx) error {

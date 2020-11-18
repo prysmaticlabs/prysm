@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestStore_GenesisValidatorRoot_ReadAndWrite(t *testing.T) {
+func TestStore_GenesisValidatorsRoot_ReadAndWrite(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t, [][48]byte{})
 	tests := []struct {
@@ -40,12 +40,12 @@ func TestStore_GenesisValidatorRoot_ReadAndWrite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := db.GenesisValidatorRoot(ctx)
+			got, err := db.GenesisValidatorsRoot(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenesisValidatorRoot() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			require.DeepEqual(t, tt.want, got)
-			require.NoError(t, db.SaveGenesisValidatorRoot(ctx, tt.write))
+			require.NoError(t, db.SaveGenesisValidatorsRoot(ctx, tt.write))
 		})
 	}
 }
