@@ -13,12 +13,12 @@ Use this script to download the latest Prysm release binaries.
 Downloaded binaries are saved to .\dist
  
 To specify a specific release version:
-  $env:USE_PRYSM_VERSION=v1.0.0-alpha3
+  `$env:USE_PRYSM_VERSION=v1.0.0-alpha3
  to resume using the latest release:
   Remove-Item env:USE_PRYSM_VERSION
  
 To automatically restart crashed processes:
-  $env:PRYSM_AUTORESTART=$TRUE ; .\prysm.sh1 beacon-chain
+  `$env:PRYSM_AUTORESTART=`$TRUE ; .\prysm.sh1 beacon-chain
  to stop autorestart run:
   Remove-Item env:PRYSM_AUTORESTART
 "@;
