@@ -764,6 +764,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	assert.Equal(t, false, p1.Peers().Scorers().IsBadPeer(p2.PeerID()), "Peer is marked as bad")
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -775,9 +776,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	require.NoError(t, err, "Failed to obtain peer connection state")
 	assert.Equal(t, peers.PeerDisconnected, connectionState, "Expected peer to be disconnected")
 
-	badResponses, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.PeerID())
-	require.NoError(t, err, "Failed to obtain peer connection state")
-	assert.Equal(t, 1, badResponses, "Bad response was not bumped to one")
+	assert.Equal(t, true, p1.Peers().Scorers().IsBadPeer(p2.PeerID()), "Peer is not marked as bad")
 }
 
 func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
