@@ -65,16 +65,6 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorProposeFailVecSlasher used to count failed proposals by slashing protection.
-	ValidatorProposeFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_proposals_rejected_total",
-			Help: "Count the block proposals rejected by slashing protection.",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
 	// ValidatorBalancesGaugeVec used to keep track of validator balances by public key.
 	ValidatorBalancesGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -156,16 +146,6 @@ var (
 		prometheus.CounterOpts{
 			Namespace: "validator",
 			Name:      "failed_attestations",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
-	// ValidatorAttestFailVecSlasher used to count failed attestations by slashing protection.
-	ValidatorAttestFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_attestations_rejected_total",
-			Help: "Count the attestations rejected by slashing protection.",
 		},
 		[]string{
 			"pubkey",

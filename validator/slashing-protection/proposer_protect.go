@@ -3,11 +3,11 @@ package slashingprotection
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -16,61 +16,34 @@ var (
 	ErrRemoteSlashableBlock = errors.New("attempted a double proposal, block rejected by remote slashing protection")
 )
 
+// IsSlashableBlock checks if signed beacon block is slashable against
+// a validator's slashing protection history and against a remote slashing protector if enabled.
 func (s *Service) IsSlashableBlock(
-	ctx context.Context, header *ethpb.BeaconBlockHeader, pubKey [48]byte,
+	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
 ) error {
-	signingRoot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], header.Slot)
+	if block == nil || block.Block == nil {
+		return errors.New("received nil block")
+	}
+	fmtKey := fmt.Sprintf("%#x", pubKey)
+	existingSigningRoot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot)
 	if err != nil {
 		return errors.Wrap(err, "failed to get proposal history")
 	}
-	// If the bit for the current slot is marked, do not propose.
-	if !bytes.Equal(signingRoot, params.BeaconConfig().ZeroHash[:]) {
-		//		if v.emitAccountMetrics {
-		//			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		//		}
+	// Check if the block is slashable by local and remote slashing protection
+	if s.remoteProtector != nil && s.remoteProtector.IsSlashableBlock(ctx, block) {
+		remoteSlashableProposalsTotal.WithLabelValues(fmtKey).Inc()
+		return ErrRemoteSlashableBlock
+	}
+	if !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
+		localSlashableProposalsTotal.WithLabelValues(fmtKey).Inc()
 		return ErrSlashableBlock
 	}
-
-	if s.remoteProtector != nil {
-		if !s.remoteProtector.IsSlashableBlock(ctx, header) {
-			//if v.emitAccountMetrics {
-			//	ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			//}
-			return ErrRemoteSlashableBlock
-		}
-	}
-	return nil
-}
-
-func (s *Service) CommitBlock(ctx context.Context, pubKey [48]byte, block *ethpb.SignedBeaconBlock, domain *ethpb.DomainResponse) error {
 	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)
 	if err != nil {
-		//if v.emitAccountMetrics {
-		//	ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		//}
 		return errors.Wrap(err, "failed to compute signing root for block")
 	}
+	// If the block is not slashable, we perform an immediate write to our DB.
 	if err := s.validatorDB.SaveProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot, signingRoot[:]); err != nil {
-		//if v.emitAccountMetrics {
-		//	ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		//}
 		return errors.Wrap(err, "failed to save updated proposal history")
 	}
-	if s.remoteProtector != nil {
-		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
-		if err != nil {
-			return errors.Wrap(err, "failed to get block header from block")
-		}
-		valid, err := s.remoteProtector.CommitBlock(ctx, sbh)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			//if v.emitAccountMetrics {
-			//	ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			//}
-			return ErrRemoteSlashableBlock
-		}
-	}
-	return nil
 }

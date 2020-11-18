@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"

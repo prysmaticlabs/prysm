@@ -17,9 +17,7 @@ var log = logrus.WithField("prefix", "slashing-protection")
 // for validator slashing protection.
 type Protector interface {
 	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) bool
-	CommitAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) bool
-	IsSlashableBlock(ctx context.Context, blockHeader *ethpb.BeaconBlockHeader) bool
-	CommitBlock(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) (bool, error)
+	IsSlashableBlock(ctx context.Context, signedBlock *ethpb.SignedBeaconBlock) bool
 	shared.Service
 }
 
