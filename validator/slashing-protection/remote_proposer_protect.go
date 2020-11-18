@@ -21,5 +21,9 @@ func (rp *RemoteProtector) IsSlashableBlock(
 	if err != nil {
 		return false, errors.Wrap(err, "remote slashing block protection returned an error")
 	}
-	return resp != nil && resp.ProposerSlashing != nil, nil
+	if resp != nil && resp.ProposerSlashing != nil {
+		remoteSlashableProposalsTotal.Inc()
+		return true, nil
+	}
+	return false, nil
 }

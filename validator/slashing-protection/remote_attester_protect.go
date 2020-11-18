@@ -19,5 +19,9 @@ func (rp *RemoteProtector) IsSlashableAttestation(
 		log.Errorf("External slashing attestation protection returned an error: %v", err)
 		return false, err
 	}
-	return as != nil && as.AttesterSlashing != nil, nil
+	if as != nil && as.AttesterSlashing != nil {
+		remoteSlashableAttestationsTotal.Inc()
+		return true, nil
+	}
+	return false, nil
 }

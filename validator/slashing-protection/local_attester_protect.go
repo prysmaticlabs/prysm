@@ -21,7 +21,6 @@ func (s *Service) IsSlashableAttestation(
 	pubKey [48]byte,
 	domain *ethpb.DomainResponse,
 ) (bool, error) {
-	metricsKey := fmt.Sprintf("%#x", pubKey[:])
 	signingRoot, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain.SignatureDomain)
 	if err != nil {
 		return false, err
@@ -38,7 +37,7 @@ func (s *Service) IsSlashableAttestation(
 		if err != nil {
 			return false, err
 		}
-		remoteSlashableAttestationsTotal.WithLabelValues(metricsKey).Inc()
+		remoteSlashableAttestationsTotal.Inc()
 		return slashable, nil
 	}
 	if isNewAttSlashable(
@@ -48,7 +47,7 @@ func (s *Service) IsSlashableAttestation(
 		indexedAtt.Data.Target.Epoch,
 		signingRoot,
 	) {
-		localSlashableAttestationsTotal.WithLabelValues(metricsKey).Inc()
+		localSlashableAttestationsTotal.Inc()
 		return true, nil
 	}
 	// We update the attester history with new values.

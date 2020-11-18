@@ -3,7 +3,6 @@ package slashingprotection
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -20,7 +19,6 @@ func (s *Service) IsSlashableBlock(
 	if block == nil || block.Block == nil {
 		return false, errors.New("received nil block")
 	}
-	metricsKey := fmt.Sprintf("%#x", pubKey)
 	existingSigningRoot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get proposal history")
@@ -31,11 +29,11 @@ func (s *Service) IsSlashableBlock(
 		if err != nil {
 			return false, errors.Wrap(err, "failed to get proposal history")
 		}
-		remoteSlashableProposalsTotal.WithLabelValues(metricsKey).Inc()
+		remoteSlashableProposalsTotal.Inc()
 		return slashable, nil
 	}
 	if !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
-		localSlashableProposalsTotal.WithLabelValues(metricsKey).Inc()
+		localSlashableProposalsTotal.Inc()
 		return true, nil
 	}
 	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/sirupsen/logrus"
@@ -69,7 +70,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
 		validatorDB:             cfg.ValidatorDB,
 	}
-	if cfg.SlasherEndpoint != "" {
+	if featureconfig.Get().SlasherProtection && cfg.SlasherEndpoint != "" {
 		rp, err := NewRemoteProtector(ctx, cfg)
 		if err != nil {
 			return nil, err

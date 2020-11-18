@@ -19,6 +19,7 @@ go_library(
         "//proto/slashing:go_default_library",
         "//shared:go_default_library",
         "//shared/blockutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/grpcutils:go_default_library",
         "//shared/params:go_default_library",
         "//validator/db:go_default_library",
