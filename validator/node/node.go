@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
-	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -225,10 +225,8 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().SlasherProtection {
-		if err := s.registerSlasherClientService(); err != nil {
-			return err
-		}
+	if err := s.registerSlashingProtectionService(); err != nil {
+		return err
 	}
 	if err := s.registerClientService(keyManager); err != nil {
 		return err
@@ -301,10 +299,8 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().SlasherProtection {
-		if err := s.registerSlasherClientService(); err != nil {
-			return err
-		}
+	if err := s.registerSlashingProtectionService(); err != nil {
+		return err
 	}
 	if err := s.registerClientService(keyManager); err != nil {
 		return err
@@ -333,6 +329,26 @@ func (s *ValidatorClient) registerPrometheusService() error {
 	return s.services.RegisterService(service)
 }
 
+func (s *ValidatorClient) registerSlashingProtectionService() error {
+	slasherEndpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
+	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
+	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	sp, err := slashingprotection.NewService(s.cliCtx.Context, &slashingprotection.Config{
+		SlasherEndpoint:            slasherEndpoint,
+		CertFlag:                   cert,
+		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
+		GrpcRetriesFlag:            grpcRetries,
+		GrpcRetryDelay:             grpcRetryDelay,
+		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize slashing protection service")
+	}
+	return s.services.RegisterService(sp)
+}
+
 func (s *ValidatorClient) registerClientService(
 	keyManager keymanager.IKeymanager,
 ) error {
@@ -345,10 +361,9 @@ func (s *ValidatorClient) registerClientService(
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	var sp *slashing_protection.Service
-	var protector slashing_protection.Protector
-	if err := s.services.FetchService(&sp); err == nil {
-		protector = sp
+	var slashingProtector *slashingprotection.Service
+	if err := s.services.FetchService(&slashingProtector); err == nil {
+		return err
 	}
 	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
@@ -362,7 +377,7 @@ func (s *ValidatorClient) registerClientService(
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		Protector:                  protector,
+		Protector:                  slashingProtector,
 		ValDB:                      s.db,
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,
@@ -372,29 +387,6 @@ func (s *ValidatorClient) registerClientService(
 		return errors.Wrap(err, "could not initialize client service")
 	}
 	return s.services.RegisterService(v)
-}
-func (s *ValidatorClient) registerSlasherClientService() error {
-	endpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
-	if endpoint == "" {
-		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
-
-	}
-	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
-	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewService(s.cliCtx.Context, &slashing_protection.Config{
-		Endpoint:                   endpoint,
-		CertFlag:                   cert,
-		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
-		GrpcRetriesFlag:            grpcRetries,
-		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize client service")
-	}
-	return s.services.RegisterService(sp)
 }
 
 func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {

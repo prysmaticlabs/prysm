@@ -44,6 +44,7 @@ go_test(
         "attester_protect_test.go",
         "propose_protect_test.go",
         "remote_test.go",
+        "service_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

@@ -66,11 +66,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
-		log.WithField("slot", b.Slot).WithError(err).Error("Failed block safety check")
-		return
-	}
-
 	// Sign returned block from beacon node
 	sig, domain, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
@@ -84,9 +79,17 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Block:     b,
 		Signature: sig,
 	}
-
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
-		log.WithField("slot", blk.Block.Slot).WithError(err).Error("Failed post block signing validations")
+	slashable, err := v.protector.IsSlashableBlock(ctx, blk, pubKey, domain)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"slot": blk.Block.Slot,
+		}).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
+		return
+	}
+	if slashable {
+		log.WithFields(logrus.Fields{
+			"slot": blk.Block.Slot,
+		}).Warn("Attempted to submit a slashable block, blocked by slashing protection")
 		return
 	}
 

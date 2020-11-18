@@ -63,20 +63,29 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		AttestingIndices: []uint64{duty.ValidatorIndex},
 		Data:             data,
 	}
-	if err := v.preAttSignValidations(ctx, indexedAtt, pubKey); err != nil {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Error("Failed attestation safety check")
-		return
-	}
 
-	sig, signingRoot, err := v.signAtt(ctx, pubKey, data)
+	sig, domain, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return
+	}
+	indexedAtt.Signature = sig
+	slashable, err := v.protector.IsSlashableAttestation(ctx, indexedAtt, pubKey, domain)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"sourceEpoch": indexedAtt.Data.Source.Epoch,
+			"targetEpoch": indexedAtt.Data.Target.Epoch,
+		}).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
+		return
+	}
+	if slashable {
+		log.WithFields(logrus.Fields{
+			"sourceEpoch": indexedAtt.Data.Source.Epoch,
+			"targetEpoch": indexedAtt.Data.Target.Epoch,
+		}).Warn("Attempted to submit a slashable attestation, blocked by slashing protection")
 		return
 	}
 
@@ -103,15 +112,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Data:            data,
 		AggregationBits: aggregationBitfield,
 		Signature:       sig,
-	}
-
-	indexedAtt.Signature = sig
-	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey, signingRoot); err != nil {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Error("Failed post attestation signing updates")
-		return
 	}
 
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
@@ -166,10 +166,14 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 }
 
 // Given validator's public key, this function returns the signature of an attestation data and its signing root.
-func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, [32]byte, error) {
+func (v *validator) signAtt(
+	ctx context.Context,
+	pubKey [48]byte,
+	data *ethpb.AttestationData,
+) ([]byte, *ethpb.DomainResponse, error) {
 	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
 	if err != nil {
-		return nil, [32]byte{}, err
+		return nil, nil, err
 	}
 
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
@@ -179,10 +183,10 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		Object:          &validatorpb.SignRequest_AttestationData{AttestationData: data},
 	})
 	if err != nil {
-		return nil, [32]byte{}, err
+		return nil, nil, err
 	}
 
-	return sig.Marshal(), root, nil
+	return sig.Marshal(), domain, nil
 }
 
 func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {
