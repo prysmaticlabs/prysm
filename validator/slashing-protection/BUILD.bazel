@@ -13,7 +13,7 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/slashing:go_default_library",
