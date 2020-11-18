@@ -46,7 +46,7 @@ func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
 			Body:          &eth.BeaconBlockBody{},
 		},
 	}
-	assert.Equal(t, false, s.IsSlashableBlock(context.Background(), blk), "Expected verify block to fail verification")
+	assert.Equal(t, true, s.IsSlashableBlock(context.Background(), blk), "Expected verify block to fail verification")
 	s = &RemoteProtector{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}
-	assert.Equal(t, true, s.IsSlashableBlock(context.Background(), blk), "Expected verify block to pass verification")
+	assert.Equal(t, false, s.IsSlashableBlock(context.Background(), blk), "Expected verify block to pass verification")
 }
