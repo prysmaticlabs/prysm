@@ -105,6 +105,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
@@ -112,8 +113,9 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: genesis,
+			Started:               true,
+			GenesisTime:           genesis,
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
 		},
 		nil,
 	)
@@ -132,6 +134,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
+	genesisValidatorsRoot := bytesutil.PadTo([]byte("validators"), 32)
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
@@ -139,8 +142,9 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: genesis,
+			Started:               true,
+			GenesisTime:           genesis,
+			GenesisValidatorsRoot: genesisValidatorsRoot,
 		},
 		nil,
 	)
