@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -121,7 +122,6 @@ func TestScorers_PeerStatus_Score(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
-				PeerLimit:    30,
 				ScorerParams: &scorers.Config{},
 			})
 			scorer := peerStatuses.Scorers().PeerStatusScorer()
@@ -131,4 +131,16 @@ func TestScorers_PeerStatus_Score(t *testing.T) {
 			tt.check(scorer)
 		})
 	}
+}
+
+func TestScorers_PeerStatus_IsBadPeer(t *testing.T) {
+	peerStatuses := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		ScorerParams: &scorers.Config{},
+	})
+	pid := peer.ID("peer1")
+	assert.Equal(t, false, peerStatuses.Scorers().IsBadPeer(pid))
+	assert.Equal(t, false, peerStatuses.Scorers().PeerStatusScorer().IsBadPeer(pid))
+	peerStatuses.Scorers().PeerStatusScorer().SetPeerStatus(pid, &pb.Status{}, p2ptypes.ErrWrongForkDigestVersion)
+	assert.Equal(t, true, peerStatuses.Scorers().IsBadPeer(pid))
+	assert.Equal(t, true, peerStatuses.Scorers().PeerStatusScorer().IsBadPeer(pid))
 }
