@@ -266,7 +266,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	return timeutils.Now(), peerdata.ErrPeerUnknown
 }
 
-// IsBad states if the peer is to be considered bad.
+// IsBad states if the peer is to be considered bad (by *any* of the registered scorers).
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
 	return p.scorers.IsBadPeer(pid)
