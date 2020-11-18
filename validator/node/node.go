@@ -378,6 +378,7 @@ func (s *ValidatorClient) registerClientService(
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  slashingProtector,
+		AttestingHistoryManager:    slashingProtector,
 		ValDB:                      s.db,
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,

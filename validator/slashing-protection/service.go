@@ -130,3 +130,13 @@ func (s *Service) ResetAttestingHistoryForEpoch(ctx context.Context) {
 	s.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
 	s.attestingHistoryByPubKeyLock.Unlock()
 }
+
+func (s *Service) AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) (kv.EncHistoryData, error) {
+	s.attestingHistoryByPubKeyLock.RLock()
+	defer s.attestingHistoryByPubKeyLock.RUnlock()
+	history, ok := s.attesterHistoryByPubKey[pubKey]
+	if !ok {
+		return kv.EncHistoryData{}, fmt.Errorf("no attesting history found for pubkey %#x\n", pubKey)
+	}
+	return history, nil
+}

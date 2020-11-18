@@ -48,25 +48,26 @@ type GenesisFetcher interface {
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	useWeb                bool
-	emitAccountMetrics    bool
-	logValidatorBalances  bool
-	conn                  *grpc.ClientConn
-	grpcRetryDelay        time.Duration
-	grpcRetries           uint
-	maxCallRecvMsgSize    int
-	walletInitializedFeed *event.Feed
-	cancel                context.CancelFunc
-	db                    db.Database
-	dataDir               string
-	withCert              string
-	endpoint              string
-	validator             Validator
-	protector             slashingprotection.Protector
-	ctx                   context.Context
-	keyManager            keymanager.IKeymanager
-	grpcHeaders           []string
-	graffiti              []byte
+	useWeb                  bool
+	emitAccountMetrics      bool
+	logValidatorBalances    bool
+	conn                    *grpc.ClientConn
+	grpcRetryDelay          time.Duration
+	grpcRetries             uint
+	maxCallRecvMsgSize      int
+	walletInitializedFeed   *event.Feed
+	cancel                  context.CancelFunc
+	db                      db.Database
+	dataDir                 string
+	withCert                string
+	endpoint                string
+	validator               Validator
+	protector               slashingprotection.Protector
+	attestingHistoryManager slashingprotection.AttestingHistoryManager
+	ctx                     context.Context
+	keyManager              keymanager.IKeymanager
+	grpcHeaders             []string
+	graffiti                []byte
 }
 
 // Config for the validator service.
@@ -79,6 +80,7 @@ type Config struct {
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
 	Protector                  slashingprotection.Protector
+	AttestingHistoryManager    slashingprotection.AttestingHistoryManager
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
@@ -94,24 +96,25 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ValidatorService{
-		ctx:                   ctx,
-		cancel:                cancel,
-		endpoint:              cfg.Endpoint,
-		withCert:              cfg.CertFlag,
-		dataDir:               cfg.DataDir,
-		graffiti:              []byte(cfg.GraffitiFlag),
-		keyManager:            cfg.KeyManager,
-		logValidatorBalances:  cfg.LogValidatorBalances,
-		emitAccountMetrics:    cfg.EmitAccountMetrics,
-		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:           cfg.GrpcRetriesFlag,
-		grpcRetryDelay:        cfg.GrpcRetryDelay,
-		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:             cfg.Protector,
-		validator:             cfg.Validator,
-		db:                    cfg.ValDB,
-		walletInitializedFeed: cfg.WalletInitializedFeed,
-		useWeb:                cfg.UseWeb,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		endpoint:                cfg.Endpoint,
+		withCert:                cfg.CertFlag,
+		dataDir:                 cfg.DataDir,
+		graffiti:                []byte(cfg.GraffitiFlag),
+		keyManager:              cfg.KeyManager,
+		logValidatorBalances:    cfg.LogValidatorBalances,
+		emitAccountMetrics:      cfg.EmitAccountMetrics,
+		maxCallRecvMsgSize:      cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:             cfg.GrpcRetriesFlag,
+		grpcRetryDelay:          cfg.GrpcRetryDelay,
+		grpcHeaders:             strings.Split(cfg.GrpcHeadersFlag, ","),
+		protector:               cfg.Protector,
+		attestingHistoryManager: cfg.AttestingHistoryManager,
+		validator:               cfg.Validator,
+		db:                      cfg.ValDB,
+		walletInitializedFeed:   cfg.WalletInitializedFeed,
+		useWeb:                  cfg.UseWeb,
 	}, nil
 }
 

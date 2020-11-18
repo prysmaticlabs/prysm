@@ -1,3 +1,6 @@
 package slashingprotection
 
-var _ = Protector(&Service{})
+var (
+	_ = Protector(&Service{})
+	_ = AttestingHistoryManager(&Service{})
+)
