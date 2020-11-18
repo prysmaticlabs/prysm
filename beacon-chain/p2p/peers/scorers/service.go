@@ -153,17 +153,17 @@ func (s *Service) ValidationError(pid peer.ID) error {
 
 // loop handles background tasks.
 func (s *Service) loop(ctx context.Context) {
-	decayBadResponsesStats := time.NewTicker(s.BadResponsesScorer().Params().DecayInterval)
+	decayBadResponsesStats := time.NewTicker(s.scorers.badResponsesScorer.Params().DecayInterval)
 	defer decayBadResponsesStats.Stop()
-	decayBlockProviderStats := time.NewTicker(s.BlockProviderScorer().Params().DecayInterval)
+	decayBlockProviderStats := time.NewTicker(s.scorers.blockProviderScorer.Params().DecayInterval)
 	defer decayBlockProviderStats.Stop()
 
 	for {
 		select {
 		case <-decayBadResponsesStats.C:
-			s.BadResponsesScorer().Decay()
+			s.scorers.badResponsesScorer.Decay()
 		case <-decayBlockProviderStats.C:
-			s.BlockProviderScorer().Decay()
+			s.scorers.blockProviderScorer.Decay()
 		case <-ctx.Done():
 			return
 		}
