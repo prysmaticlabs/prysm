@@ -228,8 +228,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{
-			StartTime:             chainStartTime,
-			GenesisValidatorsRoot: s.preGenesisState.GenesisValidatorRoot(),
+			StartTime: chainStartTime,
 		},
 	})
 }
