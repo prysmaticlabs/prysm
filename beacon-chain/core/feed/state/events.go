@@ -33,6 +33,8 @@ type BlockProcessedData struct {
 type ChainStartedData struct {
 	// StartTime is the time at which the chain started.
 	StartTime time.Time
+	// GenesisValidatorsRoot represents state.validators.HashTreeRoot().
+	GenesisValidatorsRoot []byte
 }
 
 // SyncedData is the data sent with Synced events.
