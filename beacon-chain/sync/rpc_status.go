@@ -156,7 +156,6 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	s.p2p.Peers().Scorers().PeerStatusScorer().SetPeerStatus(id, msg, err)
 	if s.p2p.Peers().IsBad(id) {
 		s.disconnectBadPeer(s.ctx, id)
-		return s.p2p.Peers().Scorers().ValidationError(id)
 	}
 	return err
 }
