@@ -12,7 +12,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -23,8 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
-
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -216,7 +213,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, slashingprotection.failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Attempted to submit a slashable attestation")
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
@@ -268,7 +265,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, slashingprotection.failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Attepted to submit a slashable attestation")
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
@@ -311,7 +308,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsDoNotContain(t, hook, slashingprotection.failedAttLocalProtectionErr)
+	require.LogsDoNotContain(t, hook, "Attempted to submit a slashable attestation")
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -323,7 +320,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, slashingprotection.failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Attempted to submit a slashable attestation")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
@@ -472,14 +469,17 @@ func TestSignAttestation(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	sig, sr, err := validator.signAtt(ctx, pubKey, att.Data)
+	sig, _, err := validator.signAtt(ctx, pubKey, att.Data)
+	require.NoError(t, err)
+	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
+	require.NoError(t, err)
 	require.NoError(t, err, "%x,%x,%v", sig, sr, err)
 	require.Equal(t, "b6a60f8497bd328908be83634d045"+
 		"dd7a32f5e246b2c4031fc2f316983f362e36fc27fd3d6d5a2b15"+
 		"b4dbff38804ffb10b1719b7ebc54e9cbf3293fd37082bc0fc91f"+
 		"79d70ce5b04ff13de3c8e10bb41305bfdbe921a43792c12624f2"+
 		"25ee865", hex.EncodeToString(sig))
-	// proposer domain
+	// Verify the proposer domain.
 	require.DeepEqual(t, "02bbdb88056d6cbafd6e94575540"+
 		"e74b8cf2c0f2c1b79b8e17e7b21ed1694305", hex.EncodeToString(sr[:]))
 }

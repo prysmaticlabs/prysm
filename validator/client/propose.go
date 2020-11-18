@@ -1,6 +1,5 @@
 package client
 
-// Validator client proposer functions.
 import (
 	"context"
 	"fmt"
