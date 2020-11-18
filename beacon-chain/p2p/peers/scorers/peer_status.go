@@ -16,10 +16,10 @@ var _ Scorer = (*PeerStatusScorer)(nil)
 // PeerStatusScorer represents scorer that evaluates peers based on their statuses.
 // Peer statuses are updated by regularly polling peers (see sync/rpc_status.go).
 type PeerStatusScorer struct {
-	config           *PeerStatusScorerConfig
-	store            *peerdata.Store
-	ourHeadSlot      uint64
-	maxKnownHeadSlot uint64
+	config              *PeerStatusScorerConfig
+	store               *peerdata.Store
+	ourHeadSlot         uint64
+	highestPeerHeadSlot uint64
 }
 
 // PeerStatusScorerConfig holds configuration parameters for peer status scoring service.
@@ -58,8 +58,8 @@ func (s *PeerStatusScorer) score(pid peer.ID) float64 {
 	}
 	// Calculate score as a ratio to the known maximum head slot.
 	// The closer the current peer's head slot to the maximum, the higher is the calculated score.
-	if s.maxKnownHeadSlot > 0 {
-		score = float64(peerData.ChainState.HeadSlot) / float64(s.maxKnownHeadSlot)
+	if s.highestPeerHeadSlot > 0 {
+		score = float64(peerData.ChainState.HeadSlot) / float64(s.highestPeerHeadSlot)
 		return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 	}
 	return score
@@ -115,8 +115,8 @@ func (s *PeerStatusScorer) SetPeerStatus(pid peer.ID, chainState *pb.Status, val
 	peerData.ChainStateValidationError = validationError
 
 	// Update maximum known head slot (scores will be calculated with respect to that maximum value).
-	if chainState != nil && chainState.HeadSlot > s.maxKnownHeadSlot {
-		s.maxKnownHeadSlot = chainState.HeadSlot
+	if chainState != nil && chainState.HeadSlot > s.highestPeerHeadSlot {
+		s.highestPeerHeadSlot = chainState.HeadSlot
 	}
 }
 
