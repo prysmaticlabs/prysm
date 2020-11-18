@@ -227,6 +227,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	if err := s.savePowchainData(s.ctx); err != nil {
 		// continue on, if the save fails as this will get re-saved
 		// in the next interval.
+		log.Error(err)
 	}
 }
 
