@@ -2,6 +2,9 @@ package slashingprotection
 
 import (
 	"context"
+	"errors"
+	"sync"
+
 	//"strings"
 	//"sync"
 	"testing"
@@ -9,6 +12,9 @@ import (
 	//"github.com/golang/mock/gomock"
 	//ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	//"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	//"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -239,56 +245,61 @@ func Test_isNewAttSlashable_DoubleVote(t *testing.T) {
 //	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
 //}
 //
-//func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
-//	ctx := context.Background()
-//	att := &ethpb.IndexedAttestation{
-//		AttestingIndices: []uint64{1, 2},
-//		Data: &ethpb.AttestationData{
-//			Slot:            5,
-//			CommitteeIndex:  2,
-//			BeaconBlockRoot: []byte("great block"),
-//			Source: &ethpb.Checkpoint{
-//				Root: []byte("good source"),
-//			},
-//			Target: &ethpb.Checkpoint{
-//				Root: []byte("good target"),
-//			},
-//		},
-//	}
-//
-//	v, _, validatorKey, finish := client.setup(t)
-//	defer finish()
-//	pubKey := [48]byte{}
-//	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-//	passThrough := 0
-//	slashable := 0
-//	var wg sync.WaitGroup
-//	for i := uint64(0); i < 100; i++ {
-//
-//		wg.Add(1)
-//		//Test double attestations.
-//		go func(i uint64) {
-//			sr := [32]byte{byte(i)}
-//			att.Data.Source.Epoch = 110 - i
-//			att.Data.Target.Epoch = 111
-//			err := v.postAttSignUpdate(ctx, att, pubKey, sr)
-//			if err == nil {
-//				passThrough++
-//			} else {
-//				if strings.Contains(err.Error(), failedAttLocalProtectionErr) {
-//					slashable++
-//				}
-//				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
-//				t.Logf("signing root %d", att.Data.Target.Epoch)
-//			}
-//			wg.Done()
-//		}(i)
-//	}
-//	wg.Wait()
-//	require.Equal(t, 1, passThrough, "Expecting only one attestations to go through and all others to be found to be slashable")
-//	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
-//
-//}
+func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
+	ctx := context.Background()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := privKey.PublicKey()
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], pubKey.Marshal())
+
+	srv := &Service{
+		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
+	}
+	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
+
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+		},
+	}
+	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
+	notSlashable := 0
+	slashable := 0
+	var wg sync.WaitGroup
+	totalAttestations := 100
+	for i := 0; i < totalAttestations; i++ {
+		wg.Add(1)
+		// Setup many double voting attestations.
+		go func(i int) {
+			att.Data.Source.Epoch = 110 - uint64(i)
+			att.Data.Target.Epoch = 111
+			err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+			if err == nil {
+				notSlashable++
+			} else {
+				if errors.Is(err, ErrSlashableAttestation) {
+					slashable++
+				}
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	require.Equal(t, totalAttestations, notSlashable+slashable)
+	require.Equal(t, 1, notSlashable, "Expecting only one attestations to not be slashable")
+	require.Equal(t, totalAttestations-1, slashable, "Expecting all other attestations to be found as slashable")
+}
+
 //
 //func TestAttestationHistory_Prunes(t *testing.T) {
 //	ctx := context.Background()
