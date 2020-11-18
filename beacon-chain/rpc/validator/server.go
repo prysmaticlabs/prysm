@@ -187,7 +187,7 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 				res := &ethpb.ChainStartResponse{
 					Started:               true,
 					GenesisTime:           uint64(data.StartTime.Unix()),
-					GenesisValidatorsRoot: head.GenesisValidatorRoot(),
+					GenesisValidatorsRoot: data.GenesisValidatorsRoot,
 				}
 				return stream.Send(res)
 			}
@@ -201,7 +201,7 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 				res := &ethpb.ChainStartResponse{
 					Started:               true,
 					GenesisTime:           uint64(data.StartTime.Unix()),
-					GenesisValidatorsRoot: head.GenesisValidatorRoot(),
+					GenesisValidatorsRoot: data.GenesisValidatorsRoot,
 				}
 				return stream.Send(res)
 			}
