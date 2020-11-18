@@ -18,7 +18,6 @@ func TestScorers_PeerStatus_Score(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	//batchSize := uint64(flags.Get().BlockBatchLimit)
 	tests := []struct {
 		name   string
 		update func(scorer *scorers.PeerStatusScorer)
