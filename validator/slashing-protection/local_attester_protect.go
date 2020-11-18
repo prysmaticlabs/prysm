@@ -64,34 +64,26 @@ func (s *Service) IsSlashableAttestation(
 	return false, nil
 }
 
-// isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
-// and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
-func isNewAttSlashable(ctx context.Context, history kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) bool {
-	if history == nil {
-		return false
-	}
+func isOlderThanWeakSubjectivity(ctx context.Context, history kv.EncHistoryData, targetEpoch uint64) (bool, error) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Previously pruned, we should return false.
 	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
-		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
-		return false
+		return false, errors.Wrap(err, "could not get latest epoch written for attesting history")
 	}
+	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod, nil
+}
 
-	if latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod { //Underflow protected older then weak subjectivity check.
-		return false
-	}
-
+func isDoubleVote(ctx context.Context, history kv.EncHistoryData, targetEpoch uint64, signingRoot [32]byte) (bool, error) {
 	// Check if there has already been a vote for this target epoch.
 	hd, err := history.GetTargetData(ctx, targetEpoch)
 	if err != nil {
-		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
-		return false
+		return false, errors.Wrapf(err, "could not get data for target epoch: %d", targetEpoch)
 	}
-	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
-		return true
-	}
+	return !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot), nil
+}
 
+func isSurroundVote(ctx context.Context, history kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) (bool, error) {
 	// Check if the new attestation would be surrounding another attestation.
 	for i := sourceEpoch; i <= targetEpoch; i++ {
 		// Unattested for epochs are marked as (*kv.HistoryData)(nil).
@@ -100,7 +92,7 @@ func isNewAttSlashable(ctx context.Context, history kv.EncHistoryData, sourceEpo
 			continue
 		}
 		if historyBoundary.Source > sourceEpoch {
-			return true
+			return true, nil
 		}
 	}
 
@@ -111,11 +103,10 @@ func isNewAttSlashable(ctx context.Context, history kv.EncHistoryData, sourceEpo
 			continue
 		}
 		if h.Source < sourceEpoch {
-			return true
+			return true, nil
 		}
 	}
-
-	return false
+	return false, nil
 }
 
 // safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at

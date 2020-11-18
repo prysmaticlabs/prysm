@@ -19,10 +19,6 @@ func (s *Service) IsSlashableBlock(
 	if block == nil || block.Block == nil {
 		return false, errors.New("received nil block")
 	}
-	existingSigningRoot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get proposal history")
-	}
 	// Check if the block is slashable by local and remote slashing protection
 	if s.remoteProtector != nil {
 		slashable, err := s.remoteProtector.IsSlashableBlock(ctx, block, pubKey, domain)
@@ -31,6 +27,10 @@ func (s *Service) IsSlashableBlock(
 		}
 		remoteSlashableProposalsTotal.Inc()
 		return slashable, nil
+	}
+	existingSigningRoot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get proposal history")
 	}
 	if !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
 		localSlashableProposalsTotal.Inc()
