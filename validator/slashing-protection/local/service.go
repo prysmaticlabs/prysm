@@ -55,6 +55,8 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// SaveAttestingHistoryForPubKey persists current, in-memory attesting history for
+// a public key to the database.
 func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) error {
 	s.attestingHistoryByPubKeyLock.RLock()
 	defer s.attestingHistoryByPubKeyLock.RUnlock()
@@ -68,6 +70,8 @@ func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]
 	return nil
 }
 
+// LoadAttestingHistoryForPubKeys retrieves histories from disk for the specified
+// attesting public keys and loads them into an in-memory map.
 func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingPubKeys [][48]byte) error {
 	attHistoryByPubKey, err := s.validatorDB.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
 	if err != nil {
@@ -79,12 +83,14 @@ func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingP
 	return nil
 }
 
+// ResetAttestingHistoryForEpoch empties out the in-memory attesting histories.
 func (s *Service) ResetAttestingHistoryForEpoch(ctx context.Context) {
 	s.attestingHistoryByPubKeyLock.Lock()
 	s.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
 	s.attestingHistoryByPubKeyLock.Unlock()
 }
 
+// AttestingHistoryForPubKey retrieves a history from the in-memory map of histories.
 func (s *Service) AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) (kv.EncHistoryData, error) {
 	s.attestingHistoryByPubKeyLock.RLock()
 	defer s.attestingHistoryByPubKeyLock.RUnlock()
