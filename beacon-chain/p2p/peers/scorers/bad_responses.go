@@ -1,18 +1,17 @@
 package scorers
 
 import (
-	"context"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 )
 
+var _ Scorer = (*BadResponsesScorer)(nil)
+
 const (
 	// DefaultBadResponsesThreshold defines how many bad responses to tolerate before peer is deemed bad.
 	DefaultBadResponsesThreshold = 6
-	// DefaultBadResponsesWeight is a default weight. Since score represents penalty, it has negative weight.
-	DefaultBadResponsesWeight = -1.0
 	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
 	// Every interval bad responses counter will be decremented by 1.
 	DefaultBadResponsesDecayInterval = time.Hour
@@ -20,7 +19,6 @@ const (
 
 // BadResponsesScorer represents bad responses scoring service.
 type BadResponsesScorer struct {
-	ctx    context.Context
 	config *BadResponsesScorerConfig
 	store  *peerdata.Store
 }
@@ -29,28 +27,21 @@ type BadResponsesScorer struct {
 type BadResponsesScorerConfig struct {
 	// Threshold specifies number of bad responses tolerated, before peer is banned.
 	Threshold int
-	// Weight defines weight of bad response/threshold ratio on overall score.
-	Weight float64
 	// DecayInterval specifies how often bad response stats should be decayed.
 	DecayInterval time.Duration
 }
 
 // newBadResponsesScorer creates new bad responses scoring service.
-func newBadResponsesScorer(
-	ctx context.Context, store *peerdata.Store, config *BadResponsesScorerConfig) *BadResponsesScorer {
+func newBadResponsesScorer(store *peerdata.Store, config *BadResponsesScorerConfig) *BadResponsesScorer {
 	if config == nil {
 		config = &BadResponsesScorerConfig{}
 	}
 	scorer := &BadResponsesScorer{
-		ctx:    ctx,
 		config: config,
 		store:  store,
 	}
 	if scorer.config.Threshold == 0 {
 		scorer.config.Threshold = DefaultBadResponsesThreshold
-	}
-	if scorer.config.Weight == 0.0 {
-		scorer.config.Weight = DefaultBadResponsesWeight
 	}
 	if scorer.config.DecayInterval == 0 {
 		scorer.config.DecayInterval = DefaultBadResponsesDecayInterval
@@ -65,8 +56,11 @@ func (s *BadResponsesScorer) Score(pid peer.ID) float64 {
 	return s.score(pid)
 }
 
-// score is a lock-free version of ScoreBadResponses.
+// score is a lock-free version of Score.
 func (s *BadResponsesScorer) score(pid peer.ID) float64 {
+	if s.isBadPeer(pid) {
+		return BadPeerScore
+	}
 	score := float64(0)
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
@@ -74,7 +68,8 @@ func (s *BadResponsesScorer) score(pid peer.ID) float64 {
 	}
 	if peerData.BadResponses > 0 {
 		score = float64(peerData.BadResponses) / float64(s.config.Threshold)
-		score = score * s.config.Weight
+		// Since score represents a penalty, negate it.
+		score *= -1
 	}
 	return score
 }
@@ -131,7 +126,7 @@ func (s *BadResponsesScorer) isBadPeer(pid peer.ID) bool {
 	return false
 }
 
-// BadPeers returns the peers that are bad.
+// BadPeers returns the peers that are considered bad.
 func (s *BadResponsesScorer) BadPeers() []peer.ID {
 	s.store.RLock()
 	defer s.store.RUnlock()

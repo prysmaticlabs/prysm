@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -42,8 +43,7 @@ func TestRateLimiter_ExceedCapacity(t *testing.T) {
 		code, errMsg, err := readStatusCodeNoDeadline(stream, p2.Encoding())
 		require.NoError(t, err, "could not read incoming stream")
 		assert.Equal(t, responseCodeInvalidRequest, code, "not equal response codes")
-		assert.Equal(t, rateLimitedError, errMsg, "not equal errors")
-
+		assert.Equal(t, p2ptypes.ErrRateLimited.Error(), errMsg, "not equal errors")
 	})
 	wg.Add(1)
 	stream, err := p1.BHost.NewStream(context.Background(), p2.PeerID(), protocol.ID(topic))

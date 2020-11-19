@@ -125,11 +125,20 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				continue
 			}
+
+			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
+				log.Debugf("Could not validate block from slot %d: %v", b.Block.Slot, err)
+				s.setBadBlock(ctx, blkRoot)
+				traceutil.AnnotateError(span, err)
+			}
+
 			if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
 			}
+
+			s.setSeenBlockIndexSlot(b.Block.Slot, b.Block.ProposerIndex)
 
 			// Broadcasting the block again once a node is able to process it.
 			if err := s.p2p.Broadcast(ctx, b); err != nil {

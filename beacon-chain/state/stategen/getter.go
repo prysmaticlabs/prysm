@@ -193,6 +193,11 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 		return nil, errUnknownBoundaryState
 	}
 
+	// Return state early if we are retrieving it from our finalized state cache.
+	if startState.Slot() == targetSlot {
+		return startState, nil
+	}
+
 	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load blocks for hot state using root")

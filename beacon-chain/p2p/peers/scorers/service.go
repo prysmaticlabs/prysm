@@ -9,35 +9,58 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 )
 
+var _ Scorer = (*Service)(nil)
+
 // ScoreRoundingFactor defines how many digits to keep in decimal part.
 // This parameter is used in math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor.
 const ScoreRoundingFactor = 10000
 
+// BadPeerScore defines score that is returned for a bad peer (all other metrics are ignored).
+const BadPeerScore = -1.00
+
+// Scorer defines minimum set of methods every peer scorer must expose.
+type Scorer interface {
+	Score(pid peer.ID) float64
+	IsBadPeer(pid peer.ID) bool
+	BadPeers() []peer.ID
+}
+
 // Service manages peer scorers that are used to calculate overall peer score.
 type Service struct {
-	ctx     context.Context
 	store   *peerdata.Store
 	scorers struct {
 		badResponsesScorer  *BadResponsesScorer
 		blockProviderScorer *BlockProviderScorer
+		peerStatusScorer    *PeerStatusScorer
 	}
+	weights     map[Scorer]float64
+	totalWeight float64
 }
 
 // Config holds configuration parameters for scoring service.
 type Config struct {
 	BadResponsesScorerConfig  *BadResponsesScorerConfig
 	BlockProviderScorerConfig *BlockProviderScorerConfig
+	PeerStatusScorerConfig    *PeerStatusScorerConfig
 }
 
 // NewService provides fully initialized peer scoring service.
 func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Service {
 	s := &Service{
-		ctx:   ctx,
-		store: store,
+		store:   store,
+		weights: make(map[Scorer]float64),
 	}
-	s.scorers.badResponsesScorer = newBadResponsesScorer(ctx, store, config.BadResponsesScorerConfig)
-	s.scorers.blockProviderScorer = newBlockProviderScorer(ctx, store, config.BlockProviderScorerConfig)
-	go s.loop(s.ctx)
+
+	// Register scorers.
+	s.scorers.badResponsesScorer = newBadResponsesScorer(store, config.BadResponsesScorerConfig)
+	s.setScorerWeight(s.scorers.badResponsesScorer, 1.0)
+	s.scorers.blockProviderScorer = newBlockProviderScorer(store, config.BlockProviderScorerConfig)
+	s.setScorerWeight(s.scorers.blockProviderScorer, 1.0)
+	s.scorers.peerStatusScorer = newPeerStatusScorer(store, config.PeerStatusScorerConfig)
+	s.setScorerWeight(s.scorers.peerStatusScorer, 0.0)
+
+	// Start background tasks.
+	go s.loop(ctx)
 
 	return s
 }
@@ -52,6 +75,22 @@ func (s *Service) BlockProviderScorer() *BlockProviderScorer {
 	return s.scorers.blockProviderScorer
 }
 
+// PeerStatusScorer exposes peer chain status scoring service.
+func (s *Service) PeerStatusScorer() *PeerStatusScorer {
+	return s.scorers.peerStatusScorer
+}
+
+// ActiveScorersCount returns number of scorers that can affect score (have non-zero weight).
+func (s *Service) ActiveScorersCount() int {
+	cnt := 0
+	for _, w := range s.weights {
+		if w > 0 {
+			cnt++
+		}
+	}
+	return cnt
+}
+
 // Score returns calculated peer score across all tracked metrics.
 func (s *Service) Score(pid peer.ID) float64 {
 	s.store.RLock()
@@ -61,9 +100,55 @@ func (s *Service) Score(pid peer.ID) float64 {
 	if _, ok := s.store.PeerData(pid); !ok {
 		return 0
 	}
-	score += s.scorers.badResponsesScorer.score(pid)
-	score += s.scorers.blockProviderScorer.score(pid)
+	score += s.scorers.badResponsesScorer.score(pid) * s.scorerWeight(s.scorers.badResponsesScorer)
+	score += s.scorers.blockProviderScorer.score(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
+	score += s.scorers.peerStatusScorer.score(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
+}
+
+// IsBadPeer traverses all the scorers to see if any of them classifies peer as bad.
+func (s *Service) IsBadPeer(pid peer.ID) bool {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return s.isBadPeer(pid)
+}
+
+// isBadPeer is a lock-free version of isBadPeer.
+func (s *Service) isBadPeer(pid peer.ID) bool {
+	if s.scorers.badResponsesScorer.isBadPeer(pid) {
+		return true
+	}
+	if s.scorers.peerStatusScorer.isBadPeer(pid) {
+		return true
+	}
+	return false
+}
+
+// BadPeers returns the peers that are considered bad by any of registered scorers.
+func (s *Service) BadPeers() []peer.ID {
+	s.store.RLock()
+	defer s.store.RUnlock()
+
+	badPeers := make([]peer.ID, 0)
+	for pid := range s.store.Peers() {
+		if s.isBadPeer(pid) {
+			badPeers = append(badPeers, pid)
+		}
+	}
+	return badPeers
+}
+
+// ValidationError returns peer data validation error, which potentially provides more information
+// why peer is considered bad.
+func (s *Service) ValidationError(pid peer.ID) error {
+	s.store.RLock()
+	defer s.store.RUnlock()
+
+	peerData, ok := s.store.PeerData(pid)
+	if !ok {
+		return nil
+	}
+	return peerData.ChainStateValidationError
 }
 
 // loop handles background tasks.
@@ -83,4 +168,15 @@ func (s *Service) loop(ctx context.Context) {
 			return
 		}
 	}
+}
+
+// setScorerWeight adds scorer to map of known scorers.
+func (s *Service) setScorerWeight(scorer Scorer, weight float64) {
+	s.weights[scorer] = weight
+	s.totalWeight += s.weights[scorer]
+}
+
+// scorerWeight calculates contribution percentage of a given scorer in total score.
+func (s *Service) scorerWeight(scorer Scorer) float64 {
+	return s.weights[scorer] / s.totalWeight
 }

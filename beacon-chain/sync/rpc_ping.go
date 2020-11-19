@@ -33,9 +33,9 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if errors.Is(err, errInvalidSequenceNum) {
+		if errors.Is(err, types.ErrInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, seqError, stream)
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidSequenceNum.Error(), stream)
 		}
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Debug("Failed to close stream")
@@ -76,7 +76,10 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 		defer cancel()
 		md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
 		if err != nil {
-			if !strings.Contains(err.Error(), deadlineError) {
+			// We cannot compare errors directly as the stream muxer error
+			// type isn't compatible with the error we have, so a direct
+			// equality checks fails.
+			if !strings.Contains(err.Error(), types.ErrIODeadline.Error()) {
 				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
 			}
 			return
@@ -122,7 +125,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if errors.Is(err, errInvalidSequenceNum) {
+		if errors.Is(err, types.ErrInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 		return err
@@ -151,7 +154,7 @@ func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, er
 	}
 	// Return error on invalid sequence number.
 	if md.SeqNumber > uint64(seq) {
-		return false, errInvalidSequenceNum
+		return false, types.ErrInvalidSequenceNum
 	}
 	return md.SeqNumber == uint64(seq), nil
 }

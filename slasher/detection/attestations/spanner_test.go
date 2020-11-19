@@ -456,6 +456,29 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 				17: {0, 0},
 			},
 		},
+		{
+			name:           "Should slash if max span > distance && source > target",
+			sourceEpoch:    6,
+			targetEpoch:    3,
+			slashableEpoch: 7,
+			shouldSlash:    true,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
+			// committed a slashable offense by having a max span of 4 > distance.
+			spansByEpochForValidator: map[uint64][3]uint16{
+				3: {0, 4},
+			},
+		},
+		{
+			name:        "Should not slash if max span = distance && source > target",
+			sourceEpoch: 6,
+			targetEpoch: 3,
+			shouldSlash: false,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
+			// have committed slashable offense by having a max span of 1 < distance.
+			spansByEpochForValidator: map[uint64][3]uint16{
+				3: {0, 1},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -621,6 +644,87 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				indexedAttestation(3, 7, []uint64{1}),
 				indexedAttestation(6, 7, []uint64{2}),
 				indexedAttestation(1, 5, []uint64{3}),
+			},
+		},
+		{
+			name: "3 of 4 validators slashed, differing surrounds source > target",
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{0, 1, 2, 3},
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 7,
+						Root:  []byte("good source"),
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 5,
+						Root:  []byte("good target"),
+					},
+				},
+				Signature: []byte{1, 2},
+			},
+			slashableEpochs: []uint64{8, 9, 10, 0},
+			// Detections - surround, surround, surround, none.
+			shouldSlash: []bool{true, true, true, false},
+			// Atts in map: (src, epoch) - 0: (1, 8), 1: (3, 9), 2: (2, 10), 3: (4, 6)
+			atts: []*ethpb.IndexedAttestation{
+				indexedAttestation(1, 8, []uint64{0}),
+				indexedAttestation(3, 9, []uint64{1}),
+				indexedAttestation(2, 10, []uint64{2}),
+				indexedAttestation(4, 6, []uint64{3}),
+			},
+		},
+		{
+			name: "3 of 4 validators slashed, differing surrounded source > target",
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{0, 1, 2, 3},
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 9,
+						Root:  []byte("good source"),
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 2,
+						Root:  []byte("good target"),
+					},
+				},
+				Signature: []byte{1, 2},
+			},
+			slashableEpochs: []uint64{8, 8, 7, 0},
+			// Detections - surround, surround, surround, none.
+			shouldSlash: []bool{true, true, true, false},
+			// Atts in map: (src, epoch) - 0: (5, 8), 1: (3, 8), 2: (4, 7), 3: (1, 5)
+			atts: []*ethpb.IndexedAttestation{
+				indexedAttestation(5, 8, []uint64{0}),
+				indexedAttestation(3, 8, []uint64{1}),
+				indexedAttestation(4, 7, []uint64{2}),
+				indexedAttestation(1, 5, []uint64{3}),
+			},
+		},
+		{
+			name: "3 of 4 validators slashed, differing surrounded source > target in update",
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{0, 1, 2, 3},
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 2,
+						Root:  []byte("good source"),
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 9,
+						Root:  []byte("good target"),
+					},
+				},
+				Signature: []byte{1, 2},
+			},
+			slashableEpochs: []uint64{8, 8, 7, 0},
+			// Detections - surround, surround, surround, none.
+			shouldSlash: []bool{true, true, true, false},
+			// Atts in map: (src, epoch) - 0: (5, 8), 1: (3, 8), 2: (4, 7), 3: (1, 5)
+			atts: []*ethpb.IndexedAttestation{
+				indexedAttestation(8, 5, []uint64{0}),
+				indexedAttestation(8, 3, []uint64{1}),
+				indexedAttestation(7, 4, []uint64{2}),
+				indexedAttestation(5, 1, []uint64{3}),
 			},
 		},
 	}

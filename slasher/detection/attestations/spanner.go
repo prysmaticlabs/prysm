@@ -28,6 +28,10 @@ var (
 		Name: "latest_max_span_distance_observed",
 		Help: "The latest distance between target - source observed for max spans",
 	})
+	sourceLargerThenTargetObserved = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "attestation_source_larger_then_target",
+		Help: "The number of attestation data source epoch that aren larger then target epoch.",
+	})
 )
 
 // We look back 128 epochs when updating min/max spans
@@ -64,11 +68,21 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 	defer traceSpan.End()
 	sourceEpoch := att.Data.Source.Epoch
 	targetEpoch := att.Data.Target.Epoch
-	if (targetEpoch - sourceEpoch) > params.BeaconConfig().WeakSubjectivityPeriod {
+	dis := targetEpoch - sourceEpoch
+
+	if sourceEpoch > targetEpoch { //Prevent underflow and handle source > target slashable cases.
+		dis = sourceEpoch - targetEpoch
+		tmp := sourceEpoch
+		sourceEpoch = targetEpoch
+		targetEpoch = tmp
+		sourceLargerThenTargetObserved.Inc()
+	}
+
+	if dis > params.BeaconConfig().WeakSubjectivityPeriod {
 		return nil, fmt.Errorf(
 			"attestation span was greater than weak subjectivity period %d, received: %d",
 			params.BeaconConfig().WeakSubjectivityPeriod,
-			targetEpoch-sourceEpoch,
+			dis,
 		)
 	}
 
@@ -82,7 +96,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 	}
 
 	var detections []*types.DetectionResult
-	distance := uint16(targetEpoch - sourceEpoch)
+	distance := uint16(dis)
 	for _, idx := range att.AttestingIndices {
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(ctx.Err(), "could not detect slashings")
@@ -171,6 +185,11 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.saveSigBytes")
 	defer traceSpan.End()
 	target := att.Data.Target.Epoch
+	source := att.Data.Source.Epoch
+	// handle source > target well
+	if source > target {
+		target = source
+	}
 	spanMap, err := s.slasherDB.EpochSpans(ctx, target, dbTypes.UseCache)
 	if err != nil {
 		return err
@@ -219,6 +238,12 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	target := att.Data.Target.Epoch
 	if source < 1 {
 		return nil
+	}
+	// handle source > target well
+	if source > target {
+		tmp := source
+		source = target
+		target = tmp
 	}
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
@@ -292,6 +317,12 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 	defer traceSpan.End()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
+	// handle source > target well
+	if source > target {
+		tmp := source
+		source = target
+		target = tmp
+	}
 	latestMaxSpanDistanceObserved.Set(float64(target - source))
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
