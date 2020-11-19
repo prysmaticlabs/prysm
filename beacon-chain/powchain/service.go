@@ -767,20 +767,10 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Use our end block as the start point first in the event genesis hasn't happened.
-	startPoint, err := s.BlockTimeByHeight(ctx, big.NewInt(int64(end)))
+	start, err := s.determineEarliestVotingBlock(ctx, end)
 	if err != nil {
 		return err
 	}
-	// In the event we know genesis, we can now cache for our voting period.
-	if s.chainStartData.GenesisTime != 0 {
-		startPoint = s.chainStartData.GenesisTime
-	}
-	start, err := s.determineEarliestVotingBlock(ctx, startPoint)
-	if err != nil {
-		return err
-	}
-
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 	_, err = s.batchRequestHeaders(start, end)
 	if err != nil {
@@ -790,7 +780,16 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 }
 
 // determines the earliest voting block from which to start caching all our previous headers from.
-func (s *Service) determineEarliestVotingBlock(ctx context.Context, genesisTime uint64) (uint64, error) {
+func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock uint64) (uint64, error) {
+	genesisTime := s.chainStartData.GenesisTime
+	// In the event genesis has not occurred yet, we just request go back follow_distance blocks.
+	if genesisTime == 0 {
+		earliestBlk := uint64(0)
+		if followBlock > params.BeaconConfig().Eth1FollowDistance {
+			earliestBlk = followBlock - params.BeaconConfig().Eth1FollowDistance
+		}
+		return earliestBlk, nil
+	}
 	currSlot := helpers.CurrentSlot(genesisTime)
 	votingTime := helpers.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
