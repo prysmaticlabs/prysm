@@ -3,6 +3,7 @@ package peers_test
 import (
 	"context"
 	"crypto/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -517,6 +518,45 @@ func TestPrune(t *testing.T) {
 	assert.ErrorContains(t, "peer unknown", err)
 }
 
+func TestPeerIPTracker(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
+
+	badIP := "211.227.218.116"
+	badPeers := []peer.ID{}
+	for i := 0; i < peers.ColocationLimit+10; i++ {
+		port := strconv.Itoa(3000 + i)
+		addr, err := ma.NewMultiaddr("/ip4/" + badIP + "/tcp/" + port)
+		if err != nil {
+			t.Fatal(err)
+		}
+		badPeers = append(badPeers, createPeer(t, p, addr))
+	}
+	for _, pr := range badPeers {
+		assert.Equal(t, true, p.IsBad(pr), "peer with bad ip is not bad")
+	}
+
+	// Add in bad peers, so that our records are trimmed out
+	// from the peer store.
+	for i := 0; i < p.MaxPeerLimit()+100; i++ {
+		// Peer added to peer handler.
+		pid := addPeer(t, p, peers.PeerConnected)
+		p.Scorers().BadResponsesScorer().Increment(pid)
+	}
+	p.Prune()
+
+	for _, pr := range badPeers {
+		assert.Equal(t, false, p.IsBad(pr), "peer with good ip is regarded as bad")
+	}
+}
+
 func TestTrimmedOrderedPeers(t *testing.T) {
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
@@ -831,5 +871,17 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
 	})
+	return id
+}
+
+func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr) peer.ID {
+	mhBytes := []byte{0x11, 0x04}
+	idBytes := make([]byte, 4)
+	_, err := rand.Read(idBytes)
+	require.NoError(t, err)
+	mhBytes = append(mhBytes, idBytes...)
+	id, err := peer.IDFromBytes(mhBytes)
+	require.NoError(t, err)
+	p.Add(new(enr.Record), id, addr, network.DirUnknown)
 	return id
 }
