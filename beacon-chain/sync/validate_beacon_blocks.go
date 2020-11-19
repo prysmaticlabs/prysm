@@ -114,7 +114,9 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Handle block when the parent is unknown.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		s.pendingQueueLock.Lock()
-		s.insertBlockToPendingQueue(blk.Block.Slot, blk, blockRoot)
+		if err := s.insertBlockToPendingQueue(blk.Block.Slot, blk, blockRoot); err != nil {
+			return pubsub.ValidationIgnore
+		}
 		s.pendingQueueLock.Unlock()
 		return pubsub.ValidationIgnore
 	}
@@ -209,8 +211,8 @@ func captureArrivalTimeMetric(genesisTime, currentSlot uint64) error {
 	if err != nil {
 		return err
 	}
-	diffMs := timeutils.Now().Sub(startTime) / time.Millisecond
-	arrivalBlockPropagationHistogram.Observe(float64(diffMs))
+	ms := timeutils.Now().Sub(startTime) / time.Millisecond
+	arrivalBlockPropagationHistogram.Observe(float64(ms))
 
 	return nil
 }
