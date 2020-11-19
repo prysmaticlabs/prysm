@@ -16,11 +16,10 @@ var log = logrus.WithField("prefix", "local-slashing-protection")
 // Service to manage validator slashing protection. Local slashing
 // protection is mandatory at runtime.
 type Service struct {
-	ctx                          context.Context
-	cancel                       context.CancelFunc
-	validatorDB                  db.Database
-	attestingHistoryByPubKeyLock sync.RWMutex
-	attesterHistoryByPubKey      map[[48]byte]kv.EncHistoryData
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	validatorDB             db.Database
+	attesterHistoryByPubKey *sync.Map
 }
 
 // Config for the slashing protection service.
@@ -34,7 +33,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	srv := &Service{
 		ctx:                     ctx,
 		cancel:                  cancel,
-		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
+		attesterHistoryByPubKey: &sync.Map{},
 		validatorDB:             cfg.ValidatorDB,
 	}
 	return srv, nil
@@ -58,11 +57,13 @@ func (s *Service) Status() error {
 // SaveAttestingHistoryForPubKey persists current, in-memory attesting history for
 // a public key to the database.
 func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) error {
-	s.attestingHistoryByPubKeyLock.RLock()
-	defer s.attestingHistoryByPubKeyLock.RUnlock()
-	history, ok := s.attesterHistoryByPubKey[pubKey]
+	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
 	if !ok {
 		return fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
+	}
+	history, ok := val.(kv.EncHistoryData)
+	if !ok {
+		return fmt.Errorf("value in map for %#x is not attesting history data", pubKey)
 	}
 	if err := s.validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history); err != nil {
 		return errors.Wrapf(err, "could not save attesting history to db for public key %#x", pubKey)
@@ -73,34 +74,31 @@ func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]
 // LoadAttestingHistoryForPubKeys retrieves histories from disk for the specified
 // attesting public keys and loads them into an in-memory map.
 func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingPubKeys [][48]byte) error {
-	log.Warn("Loading attesting history...")
 	attHistoryByPubKey, err := s.validatorDB.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
 	if err != nil {
-		log.Warn("Error loading attesting history")
 		return errors.Wrap(err, "could not get attester history")
 	}
-	log.Warn("Updating attesting history maps...")
-	s.attestingHistoryByPubKeyLock.Lock()
-	s.attesterHistoryByPubKey = attHistoryByPubKey
-	s.attestingHistoryByPubKeyLock.Unlock()
-	log.Warn("Updated attesting history maps")
+	s.attesterHistoryByPubKey = &sync.Map{}
+	for pubKey, history := range attHistoryByPubKey {
+		s.attesterHistoryByPubKey.Store(pubKey, history)
+	}
 	return nil
 }
 
 // ResetAttestingHistoryForEpoch empties out the in-memory attesting histories.
 func (s *Service) ResetAttestingHistoryForEpoch(ctx context.Context) {
-	s.attestingHistoryByPubKeyLock.Lock()
-	s.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
-	s.attestingHistoryByPubKeyLock.Unlock()
+	s.attesterHistoryByPubKey = &sync.Map{}
 }
 
 // AttestingHistoryForPubKey retrieves a history from the in-memory map of histories.
 func (s *Service) AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) (kv.EncHistoryData, error) {
-	s.attestingHistoryByPubKeyLock.RLock()
-	defer s.attestingHistoryByPubKeyLock.RUnlock()
-	history, ok := s.attesterHistoryByPubKey[pubKey]
+	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
 	if !ok {
-		return kv.EncHistoryData{}, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
+		return nil, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
+	}
+	history, ok := val.(kv.EncHistoryData)
+	if !ok {
+		return nil, fmt.Errorf("value in map for %#x is not attesting history data", pubKey)
 	}
 	return history, nil
 }

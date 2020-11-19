@@ -24,13 +24,9 @@ func (s *Service) IsSlashableAttestation(
 	if indexedAtt == nil || indexedAtt.Data == nil {
 		return false, errors.New("received nil attestation")
 	}
-	log.Info("Checking is slashable att")
-	s.attestingHistoryByPubKeyLock.Lock()
-	log.Info("Acquired lock")
-	defer s.attestingHistoryByPubKeyLock.Unlock()
-	attesterHistory, ok := s.attesterHistoryByPubKey[pubKey]
-	if !ok {
-		return false, fmt.Errorf("could not get local slashing protection data for validator %#x", pubKey)
+	attesterHistory, err := s.AttestingHistoryForPubKey(ctx, pubKey)
+	if err != nil {
+		return false, err
 	}
 	if attesterHistory == nil {
 		return false, fmt.Errorf("nil attester history found for public key %#x", pubKey)
@@ -74,7 +70,7 @@ func (s *Service) IsSlashableAttestation(
 	}
 
 	// We update our in-memory map of attester history.
-	s.attesterHistoryByPubKey[pubKey] = newAttesterHistory
+	s.attesterHistoryByPubKey.Store(pubKey, newAttesterHistory)
 	return false, nil
 }
 
