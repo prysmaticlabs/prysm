@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -68,7 +67,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	// Sign returned block from beacon node
-	sig, signingRoot, err := v.signBlock(ctx, pubKey, epoch, b)
+	sig, signingRoot, err := v.signBlock(ctx, pubKey, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -200,9 +199,9 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 func (v *validator) signBlock(
 	ctx context.Context,
 	pubKey [48]byte,
-	epoch uint64,
 	b *ethpb.BeaconBlock,
 ) ([]byte, [32]byte, error) {
+	epoch := b.Slot / params.BeaconConfig().SlotsPerEpoch
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, domainDataErr)
