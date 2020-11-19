@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -24,9 +25,16 @@ func (s *Service) IsSlashableAttestation(
 	if indexedAtt == nil || indexedAtt.Data == nil {
 		return false, errors.New("received nil attestation")
 	}
-	attesterHistory, err := s.AttestingHistoryForPubKey(ctx, pubKey)
-	if err != nil {
-		return false, err
+	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
+	lock.Lock()
+	defer lock.Unlock()
+	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
+	if !ok {
+		return false, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
+	}
+	attesterHistory, ok := val.(kv.EncHistoryData)
+	if !ok {
+		return false, fmt.Errorf("value in map for %#x is not attesting history data", pubKey)
 	}
 	if attesterHistory == nil {
 		return false, fmt.Errorf("nil attester history found for public key %#x", pubKey)

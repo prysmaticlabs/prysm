@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/sirupsen/logrus"
@@ -57,6 +58,10 @@ func (s *Service) Status() error {
 // SaveAttestingHistoryForPubKey persists current, in-memory attesting history for
 // a public key to the database.
 func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) error {
+	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
+	lock.Lock()
+	defer lock.Unlock()
+
 	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
 	if !ok {
 		return fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
@@ -91,6 +96,9 @@ func (s *Service) ResetAttestingHistoryForEpoch(ctx context.Context) {
 
 // AttestingHistoryForPubKey retrieves a history from the in-memory map of histories.
 func (s *Service) AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) (kv.EncHistoryData, error) {
+	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
+	lock.Lock()
+	defer lock.Unlock()
 	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
 	if !ok {
 		return nil, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
