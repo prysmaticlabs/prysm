@@ -2,11 +2,13 @@ package slashingprotection
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -286,3 +288,145 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 //	newAttTarget = uint64(3)
 //	require.Equal(t, true, isNewAttSlashable(ctx, history, newAttSource, newAttTarget, signingRoot))
 //}
+
+func Test_isOlderThanWeakSubjectivity(t *testing.T) {
+	tests := []struct {
+		name               string
+		want               bool
+		latestEpochWritten uint64
+		targetEpoch        uint64
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isOlderThanWeakSubjectivity(tt.latestEpochWritten, tt.targetEpoch); got != tt.want {
+				t.Errorf("isOlderThanWeakSubjectivity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isDoubleVote(t *testing.T) {
+	ctx := context.Background()
+	history := kv.NewAttestationHistoryArray(0)
+	signingRoot1 := bytesutil.PadTo([]byte{1}, 32)
+	signingRoot2 := bytesutil.PadTo([]byte{2}, 32)
+	hist, err := history.SetTargetData(ctx, 1, &kv.HistoryData{
+		Source:      0,
+		SigningRoot: signingRoot1,
+	})
+	require.NoError(t, err)
+	history = hist
+	tests := []struct {
+		name        string
+		targetEpoch uint64
+		history     kv.EncHistoryData
+		signingRoot []byte
+		want        bool
+		wantErr     bool
+	}{
+		{
+			name:        "vote exists but matching signing root should not lead to double vote",
+			targetEpoch: 1,
+			history:     history,
+			signingRoot: signingRoot1,
+			want:        false,
+		},
+		{
+			name:        "vote exists and non-matching signing root should lead to double vote",
+			targetEpoch: 1,
+			history:     history,
+			signingRoot: signingRoot2,
+			want:        true,
+		},
+		{
+			name:        "vote does not exist should not lead to double vote",
+			targetEpoch: 2,
+			history:     history,
+			signingRoot: []byte{},
+			want:        false,
+		},
+		{
+			name:        "error retrieving target data should not lead to double vote",
+			targetEpoch: 0,
+			history:     kv.EncHistoryData{},
+			signingRoot: []byte{},
+			want:        false,
+			wantErr:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := [32]byte{}
+			copy(root[:], tt.signingRoot)
+			got, err := isDoubleVote(ctx, tt.history, tt.targetEpoch, root)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("isDoubleVote() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("isDoubleVote() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isSurroundVote(t *testing.T) {
+	type args struct {
+		ctx                context.Context
+		history            kv.EncHistoryData
+		latestEpochWritten uint64
+		sourceEpoch        uint64
+		targetEpoch        uint64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := isSurroundVote(tt.args.ctx, tt.args.history, tt.args.latestEpochWritten, tt.args.sourceEpoch, tt.args.targetEpoch)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("isSurroundVote() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("isSurroundVote() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_checkHistoryAtTargetEpoch(t *testing.T) {
+	type args struct {
+		ctx                context.Context
+		history            kv.EncHistoryData
+		latestEpochWritten uint64
+		targetEpoch        uint64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *kv.HistoryData
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := checkHistoryAtTargetEpoch(tt.args.ctx, tt.args.history, tt.args.latestEpochWritten, tt.args.targetEpoch)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("checkHistoryAtTargetEpoch() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("checkHistoryAtTargetEpoch() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
