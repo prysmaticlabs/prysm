@@ -627,12 +627,10 @@ func TestSignBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	sig, domain, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
-	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
+	sig, _, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
+	require.NoError(t, err, "%x,%x,%v", sig, proposerDomain, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
 		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
 		"faa9a09a88beaff697404ca028b1c7052b0de37dbcff985dfa500459783370312bdd"+
 		"36d6e0f224", hex.EncodeToString(sig))
-	// proposer domain
-	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }

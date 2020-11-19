@@ -22,11 +22,11 @@ func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	slashable, err := s.IsSlashableBlock(ctx, blk, [48]byte{}, nil)
+	slashable, err := s.IsSlashableBlock(ctx, blk, [48]byte{}, [32]byte{})
 	require.NoError(t, err)
 	assert.Equal(t, true, slashable, "Expected attestation to be slashable")
 	s = &RemoteProtector{slasherClient: mockSlasher{slashAttestation: false}}
-	slashable, err = s.IsSlashableBlock(ctx, blk, [48]byte{}, nil)
+	slashable, err = s.IsSlashableBlock(ctx, blk, [48]byte{}, [32]byte{})
 	require.NoError(t, err)
 	assert.Equal(t, false, slashable, "Expected attestation to not be slashable")
 }

@@ -8,10 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 )
 
-// CheckBlockSafety this function is part of slashing protection for block proposals it performs
-// validation without db update. To be used before the block is signed.
+// IsSlashableBlock submits a block to a remote slasher instance to check whether it is
+// slashable or not via a gRPC connection.
 func (rp *RemoteProtector) IsSlashableBlock(
-	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
+	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, signingRoot [32]byte,
 ) (bool, error) {
 	signedHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
 	if err != nil {

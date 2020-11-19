@@ -6,13 +6,13 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
-// CheckAttestationSafety implements the slashing protection for attestations without db update.
-// To be used before signing.
+// IsSlashableAttestation submits an attestation to a remote slasher instance to check
+// whether it is slashable or not via a gRPC connection.
 func (rp *RemoteProtector) IsSlashableAttestation(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
 	pubKey [48]byte,
-	domain *ethpb.DomainResponse,
+	signingRoot [32]byte,
 ) (bool, error) {
 	as, err := rp.slasherClient.IsSlashableAttestation(ctx, indexedAtt)
 	if err != nil {

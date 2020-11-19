@@ -22,14 +22,14 @@ func (mp MockProtector) IsSlashableAttestation(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
 	pubKey [48]byte,
-	domain *ethpb.DomainResponse,
+	signingRoot [32]byte,
 ) (bool, error) {
 	return mp.SlashableAttestation, nil
 }
 
 // IsSlashableBlock --
 func (mp MockProtector) IsSlashableBlock(
-	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
+	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, signingRoot [32]byte,
 ) (bool, error) {
 	return mp.SlashableBlock, nil
 }

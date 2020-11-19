@@ -41,8 +41,9 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 			},
 		},
 	}
-	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
-	slashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+	dummySigningRoot := [32]byte{}
+	copy(dummySigningRoot[:], "root")
+	slashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, dummySigningRoot)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 	assert.Equal(t, false, slashable)
 }
@@ -100,7 +101,8 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 			},
 		},
 	}
-	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
+	dummySigningRoot := [32]byte{}
+	copy(dummySigningRoot[:], "root")
 	notSlashable := 0
 	slashable := 0
 	var wg sync.WaitGroup
@@ -111,7 +113,7 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 		go func(i int) {
 			att.Data.Source.Epoch = 110 - uint64(i)
 			att.Data.Target.Epoch = 111 + uint64(i)
-			isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+			isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, dummySigningRoot)
 			require.NoError(t, err)
 			if isSlashable {
 				slashable++
@@ -154,7 +156,8 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 			},
 		},
 	}
-	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
+	dummySigningRoot := [32]byte{}
+	copy(dummySigningRoot[:], "root")
 	notSlashable := 0
 	slashable := 0
 	var wg sync.WaitGroup
@@ -165,7 +168,7 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 		go func(i int) {
 			att.Data.Source.Epoch = 110 - uint64(i)
 			att.Data.Target.Epoch = 111
-			isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, domainResp)
+			isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, dummySigningRoot)
 			require.NoError(t, err)
 			if isSlashable {
 				slashable++

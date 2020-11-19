@@ -45,14 +45,13 @@ func TestService_IsSlashableBlock_OK(t *testing.T) {
 	srv := &Service{
 		validatorDB: validatorDB,
 	}
-	domainResp := &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}
-	slashable, err := srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
+	slashable, err := srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
 	require.NoError(t, err)
 	assert.Equal(t, true, slashable, "Expected block to be slashable")
 
 	// Change the slot and now we should not get a slashable block.
 	signedBlock.Block.Slot = slot + 1
-	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, domainResp)
+	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
 	require.NoError(t, err)
 	assert.Equal(t, false, slashable, "Expected block to not be slashable")
 }
