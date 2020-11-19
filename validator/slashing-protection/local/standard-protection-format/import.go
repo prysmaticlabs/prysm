@@ -94,7 +94,13 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 
 	// We need to verify the genesis validators root matches that of our chain data, otherwise
 	// the imported slashing protection JSON was created on a different chain.
-	// TODO(#7813): Add this check, very important!
+	gvr, err := rootFromHex(interchangeJSON.Metadata.GenesisValidatorsRoot)
+	if err != nil {
+		return fmt.Errorf("%#x is not a valid root: %v", interchangeJSON.Metadata.GenesisValidatorsRoot, err)
+	}
+	if err = validatorDB.SaveGenesisValidatorRoot(ctx, gvr[:]); err != nil {
+		return errors.Wrap(err, "could not save genesis validator root to db")
+	}
 	return nil
 }
 

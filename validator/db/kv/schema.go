@@ -9,4 +9,6 @@ var (
 	historicAttestationsBucket = []byte("attestation-history-bucket")
 	// New Validator slashing protection from slashable attestations.
 	newHistoricAttestationsBucket = []byte("attestation-history-bucket-interchange")
+	// Validator environment values.
+	environment = []byte("env-bucket")
 )

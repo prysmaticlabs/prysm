@@ -28,8 +28,12 @@ type ValidatorDB interface {
 	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
 	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
 
-	// New attestation store methods
+	// New attestation store methods.
 	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
 	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
 	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
+
+	// Environment protection data store.
+	GenesisValidatorRoot(ctx context.Context) ([]byte, error)
+	SaveGenesisValidatorRoot(ctx context.Context, genesisValidatorRoot []byte) error
 }
