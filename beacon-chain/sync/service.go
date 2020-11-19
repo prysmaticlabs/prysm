@@ -48,6 +48,8 @@ const badBlockSize = 1000
 
 const syncMetricsInterval = 10 * time.Second
 
+var pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot) * time.Second // Seconds in one epoch.
+
 // Config to set up the regular sync service.
 type Config struct {
 	P2P                 p2p.P2P
@@ -117,8 +119,7 @@ type Service struct {
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, cfg *Config) *Service {
-	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
-	c := gcache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second) // Expiration time set to one epoch.
+	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
 
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)

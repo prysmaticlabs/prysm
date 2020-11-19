@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -305,7 +304,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 	}
 
 	// Decrease exp itme in proportion to how many blocks are still in the cache for slot key.
-	d := time.Duration(gcache.DefaultExpiration.Seconds()/float64(len(newBlks))) * time.Second
+	d := time.Duration(pendingBlockExpTime.Nanoseconds() / int64(len(newBlks)))
 	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, d); err != nil {
 		return err
 	}
@@ -358,7 +357,7 @@ func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
 
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block.Slot)
-	s.slotToPendingBlocks.Set(k, blks, gcache.DefaultExpiration)
+	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
 	return nil
 }
 
