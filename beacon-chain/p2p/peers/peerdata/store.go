@@ -48,10 +48,11 @@ type PeerData struct {
 	Enr           *enr.Record
 	NextValidTime time.Time
 	// Chain related data.
-	ChainState            *pb.Status
-	MetaData              *pb.MetaData
-	ChainStateLastUpdated time.Time
-	// Scorers related data.
+	MetaData                  *pb.MetaData
+	ChainState                *pb.Status
+	ChainStateLastUpdated     time.Time
+	ChainStateValidationError error
+	// Scorers internal data.
 	BadResponses         int
 	ProcessedBlocks      uint64
 	BlockProviderUpdated time.Time

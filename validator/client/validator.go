@@ -60,7 +60,6 @@ type validator struct {
 	attesterHistoryByPubKeyLock        sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	genesisTime                        uint64
-	genesisValidatorRoot               []byte
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
@@ -134,13 +133,11 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
+		v.genesisTime = chainStartRes.GenesisTime
+		if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
+			return errors.Wrap(err, "could not save genesis validator root")
+		}
 	}
-	v.genesisTime = chainStartRes.GenesisTime
-	err = v.db.SaveGenesisValidatorRoot(ctx, v.genesisValidatorRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not save genesis validator root in ChainStart stream")
-	}
-	v.genesisValidatorRoot = chainStartRes.GenesisValidatorsRoot
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.

@@ -1,6 +1,11 @@
 package kv
 
 var (
+	// Genesis information bucket key.
+	genesisInfoBucket = []byte("genesis-info-bucket")
+	// Genesis validators root key.
+	genesisValidatorsRootKey = []byte("genesis-val-root")
+
 	// Validator slashing protection from double proposals.
 	historicProposalsBucket = []byte("proposal-history-bucket")
 	// Validator slashing protection from double proposals.

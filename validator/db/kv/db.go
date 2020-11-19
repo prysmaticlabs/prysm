@@ -86,6 +86,7 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
 			tx,
+			genesisInfoBucket,
 			historicProposalsBucket,
 			historicAttestationsBucket,
 			newHistoricAttestationsBucket,
