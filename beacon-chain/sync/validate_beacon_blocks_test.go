@@ -11,6 +11,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	gcache "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -162,7 +163,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -225,7 +226,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -310,7 +311,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
@@ -415,7 +416,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   cache.NewStateSummaryCache(),
 	}
@@ -541,7 +542,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -605,7 +606,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
@@ -705,7 +706,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
