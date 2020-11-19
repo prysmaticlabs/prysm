@@ -24,7 +24,7 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
 	srv := &Service{
-		attesterHistoryByPubKey: &sync.Map{},
+		attesterHistoryByPubKey: new(sync.Map),
 	}
 	srv.attesterHistoryByPubKey.Store(pubKeyBytes, kv.NewAttestationHistoryArray(0))
 
@@ -60,7 +60,7 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
 	srv := &Service{
-		attesterHistoryByPubKey: &sync.Map{},
+		attesterHistoryByPubKey: new(sync.Map),
 	}
 	srv.attesterHistoryByPubKey.Store(pubKeyBytes, kv.NewAttestationHistoryArray(0))
 
@@ -86,7 +86,6 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	totalAttestations := 100
 	for i := 0; i < totalAttestations; i++ {
 		wg.Add(1)
-		// Setup many double voting attestations.
 		go func(i int) {
 			att.Data.Source.Epoch = 110 - uint64(i)
 			att.Data.Target.Epoch = 111 + uint64(i)
@@ -115,7 +114,7 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
 	srv := &Service{
-		attesterHistoryByPubKey: &sync.Map{},
+		attesterHistoryByPubKey: new(sync.Map),
 	}
 	srv.attesterHistoryByPubKey.Store(pubKeyBytes, kv.NewAttestationHistoryArray(0))
 
@@ -138,7 +137,7 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	notSlashable := 0
 	slashable := 0
 	var wg sync.WaitGroup
-	totalAttestations := 100
+	totalAttestations := 10
 	for i := 0; i < totalAttestations; i++ {
 		wg.Add(1)
 		// Setup many double voting attestations.

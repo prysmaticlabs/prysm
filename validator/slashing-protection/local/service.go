@@ -33,7 +33,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	srv := &Service{
 		ctx:                     ctx,
 		cancel:                  cancel,
-		attesterHistoryByPubKey: &sync.Map{},
+		attesterHistoryByPubKey: new(sync.Map),
 		validatorDB:             cfg.ValidatorDB,
 	}
 	return srv, nil
@@ -78,7 +78,6 @@ func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingP
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
-	s.attesterHistoryByPubKey = &sync.Map{}
 	for pubKey, history := range attHistoryByPubKey {
 		s.attesterHistoryByPubKey.Store(pubKey, history)
 	}
@@ -87,7 +86,7 @@ func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingP
 
 // ResetAttestingHistoryForEpoch empties out the in-memory attesting histories.
 func (s *Service) ResetAttestingHistoryForEpoch(ctx context.Context) {
-	s.attesterHistoryByPubKey = &sync.Map{}
+	s.attesterHistoryByPubKey = new(sync.Map)
 }
 
 // AttestingHistoryForPubKey retrieves a history from the in-memory map of histories.
