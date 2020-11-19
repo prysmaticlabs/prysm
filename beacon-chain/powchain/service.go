@@ -793,6 +793,7 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	return nil
 }
 
+// determines the earliest voting block from which to start caching all our previous headers from.
 func (s *Service) determineEarliestVotingBlock(ctx context.Context, genesisTime uint64) (uint64, error) {
 	currSlot := helpers.CurrentSlot(genesisTime)
 	votingTime := helpers.VotingPeriodStartTime(genesisTime, currSlot)
