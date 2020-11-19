@@ -785,7 +785,6 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 		return err
 	}
 
-	log.Errorf("caching from %d to %d", start, end)
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 	_, err = s.batchRequestHeaders(start, end)
 	if err != nil {
