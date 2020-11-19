@@ -37,7 +37,7 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.Wrapf(err, "could not get latest epoch written for pubkey %#x", pubKey)
 	}
 	// An attestation older than the weak subjectivity is not slashable, we should just return false.
-	if isOlderThanWeakSubjectivity(latestEpochWritten, indexedAtt.Data.Target.Epoch) {
+	if differenceOutsideWeakSubjectivityBounds(latestEpochWritten, indexedAtt.Data.Target.Epoch) {
 		return false, nil
 	}
 	doubleVote, err := isDoubleVote(ctx, attesterHistory, indexedAtt.Data.Target.Epoch, signingRoot)
@@ -85,7 +85,9 @@ func (s *Service) IsSlashableAttestation(
 	return false, nil
 }
 
-func isOlderThanWeakSubjectivity(latestEpochWritten, targetEpoch uint64) bool {
+// Checks that the difference between the latest epoch written and
+// target epoch is greater than or equal to the weak subjectivity period.
+func differenceOutsideWeakSubjectivityBounds(latestEpochWritten, targetEpoch uint64) bool {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod
 }
@@ -147,7 +149,7 @@ func checkHistoryAtTargetEpoch(
 	targetEpoch uint64,
 ) (*kv.HistoryData, error) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	if isOlderThanWeakSubjectivity(latestEpochWritten, targetEpoch) {
+	if differenceOutsideWeakSubjectivityBounds(latestEpochWritten, targetEpoch) {
 		return nil, nil
 	}
 	// Ignore target epoch is > latest written.

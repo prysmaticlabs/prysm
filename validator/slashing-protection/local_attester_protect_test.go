@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -49,32 +50,6 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 	assert.Equal(t, false, slashable)
 }
-
-//func Test_isNewAttSlashable_DoubleVote(t *testing.T) {
-//	ctx := context.Background()
-//	history := kv.NewAttestationHistoryArray(3)
-//	// Mark an attestation spanning epochs 0 to 3.
-//	newAttSource := uint64(0)
-//	newAttTarget := uint64(3)
-//	sr1 := [32]byte{1}
-//	var err error
-//	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, sr1)
-//	require.NoError(t, err)
-//	lew, err := history.GetLatestEpochWritten(ctx)
-//	require.NoError(t, err)
-//	require.Equal(t, newAttTarget, lew, "Unexpected latest epoch written")
-//
-//	// Try an attestation that should be slashable spanning epochs 1 to 3.
-//	sr2 := [32]byte{2}
-//	newAttSource = uint64(1)
-//	newAttTarget = uint64(3)
-//	assert.Equal(
-//		t,
-//		true,
-//		isNewAttSlashable(ctx, history, newAttSource, newAttTarget, sr2),
-//		"Expected attestation to be slashable",
-//	)
-//}
 
 func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T) {
 	ctx := context.Background()
@@ -186,122 +161,36 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	require.Equal(t, totalAttestations-1, slashable, "Expecting all other attestations to be found as slashable")
 }
 
-//func TestAttestationHistory_Prunes(t *testing.T) {
-//	ctx := context.Background()
-//	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-//
-//	signingRoot := [32]byte{1}
-//	signingRoot2 := [32]byte{2}
-//	signingRoot3 := [32]byte{3}
-//	signingRoot4 := [32]byte{4}
-//	history := kv.NewAttestationHistoryArray(0)
-//
-//	// Try an attestation on totally unmarked history, should not be slashable.
-//	require.Equal(t, false, isNewAttSlashable(ctx, history, 0, wsPeriod+5, signingRoot), "Should not be slashable")
-//
-//	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
-//	prunedNewAttSource := uint64(0)
-//	prunedNewAttTarget := uint64(3)
-//	var err error
-//	history, err = history.UpdateHistoryForAttestation(ctx, prunedNewAttSource, prunedNewAttTarget, signingRoot)
-//	require.NoError(t, err)
-//	newAttSource := prunedNewAttSource + 6
-//	newAttTarget := prunedNewAttTarget + 6
-//	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, signingRoot2)
-//	require.NoError(t, err)
-//	lte, err := history.GetLatestEpochWritten(ctx)
-//	require.NoError(t, err)
-//	require.Equal(t, newAttTarget, lte, "Unexpected latest epoch")
-//
-//	// Mark an attestation spanning epochs 54000 to 54003.
-//	farNewAttSource := newAttSource + wsPeriod
-//	farNewAttTarget := newAttTarget + wsPeriod
-//	history, err = history.UpdateHistoryForAttestation(ctx, farNewAttSource, farNewAttTarget, signingRoot3)
-//	require.NoError(t, err)
-//	lte, err = history.GetLatestEpochWritten(ctx)
-//	require.NoError(t, err)
-//	require.Equal(t, farNewAttTarget, lte, "Unexpected latest epoch")
-//
-//	require.Equal(t, (*kv.HistoryData)(nil), safeTargetToSource(ctx, history, prunedNewAttTarget), "Unexpectedly marked attestation")
-//	require.Equal(t, farNewAttSource, safeTargetToSource(ctx, history, farNewAttTarget).Source, "Unexpectedly marked attestation")
-//
-//	// Try an attestation from existing source to outside prune, should slash.
-//	if !isNewAttSlashable(ctx, history, newAttSource, farNewAttTarget, signingRoot4) {
-//		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttSource, farNewAttTarget)
-//	}
-//	// Try an attestation from before existing target to outside prune, should slash.
-//	if !isNewAttSlashable(ctx, history, newAttTarget-1, farNewAttTarget, signingRoot4) {
-//		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttTarget-1, farNewAttTarget)
-//	}
-//	// Try an attestation larger than pruning amount, should slash.
-//	if !isNewAttSlashable(ctx, history, 0, farNewAttTarget+5, signingRoot4) {
-//		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
-//	}
-//}
-
-//func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
-//	ctx := context.Background()
-//	history := kv.NewAttestationHistoryArray(0)
-//
-//	// Mark an attestation spanning epochs 0 to 3.
-//	signingRoot := [32]byte{1}
-//	newAttSource := uint64(0)
-//	newAttTarget := uint64(3)
-//	var err error
-//	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, signingRoot)
-//	require.NoError(t, err)
-//	lte, err := history.GetLatestEpochWritten(ctx)
-//	require.NoError(t, err)
-//	require.Equal(t, newAttTarget, lte)
-//
-//	// Try an attestation that should be slashable (being surrounded) spanning epochs 1 to 2.
-//	newAttSource = uint64(1)
-//	newAttTarget = uint64(2)
-//	require.Equal(
-//		t,
-//		true,
-//		isNewAttSlashable(ctx, history, newAttSource, newAttTarget, signingRoot),
-//		"Expected slashable attestation",
-//	)
-//}
-//
-//func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
-//	ctx := context.Background()
-//	history := kv.NewAttestationHistoryArray(0)
-//	signingRoot := [32]byte{1}
-//
-//	// Mark an attestation spanning epochs 1 to 2.
-//	newAttSource := uint64(1)
-//	newAttTarget := uint64(2)
-//	var err error
-//	history, err = history.UpdateHistoryForAttestation(ctx, newAttSource, newAttTarget, signingRoot)
-//	require.NoError(t, err)
-//	lte, err := history.GetLatestEpochWritten(ctx)
-//	require.NoError(t, err)
-//	require.Equal(t, newAttTarget, lte)
-//	ts, err := history.GetTargetData(ctx, newAttTarget)
-//	require.NoError(t, err)
-//	require.Equal(t, newAttSource, ts.Source)
-//
-//	// Try an attestation that should be slashable (surrounding) spanning epochs 0 to 3.
-//	newAttSource = uint64(0)
-//	newAttTarget = uint64(3)
-//	require.Equal(t, true, isNewAttSlashable(ctx, history, newAttSource, newAttTarget, signingRoot))
-//}
-
-func Test_isOlderThanWeakSubjectivity(t *testing.T) {
+func Test_differenceOutsideWeakSubjectivityBounds(t *testing.T) {
 	tests := []struct {
 		name               string
 		want               bool
 		latestEpochWritten uint64
 		targetEpoch        uint64
 	}{
-		// TODO: Add test cases.
+		{
+			name:               "difference of weak subjectivity period - 1 returns false",
+			latestEpochWritten: (2 * params.BeaconConfig().WeakSubjectivityPeriod) - 1,
+			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
+			want:               false,
+		},
+		{
+			name:               "difference of weak subjectivity period returns true",
+			latestEpochWritten: 2 * params.BeaconConfig().WeakSubjectivityPeriod,
+			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
+			want:               true,
+		},
+		{
+			name:               "difference > weak subjectivity period returns true",
+			latestEpochWritten: (2 * params.BeaconConfig().WeakSubjectivityPeriod) + 1,
+			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
+			want:               true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isOlderThanWeakSubjectivity(tt.latestEpochWritten, tt.targetEpoch); got != tt.want {
-				t.Errorf("isOlderThanWeakSubjectivity() = %v, want %v", got, tt.want)
+			if got := differenceOutsideWeakSubjectivityBounds(tt.latestEpochWritten, tt.targetEpoch); got != tt.want {
+				t.Errorf("differenceOutsideWeakSubjectivityBounds() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -373,24 +262,54 @@ func Test_isDoubleVote(t *testing.T) {
 }
 
 func Test_isSurroundVote(t *testing.T) {
-	type args struct {
-		ctx                context.Context
+	ctx := context.Background()
+	source := uint64(1)
+	target := uint64(4)
+	history := kv.NewAttestationHistoryArray(0)
+	signingRoot1 := bytesutil.PadTo([]byte{1}, 32)
+	hist, err := history.SetTargetData(ctx, target, &kv.HistoryData{
+		Source:      source,
+		SigningRoot: signingRoot1,
+	})
+	require.NoError(t, err)
+	history = hist
+	tests := []struct {
+		name               string
 		history            kv.EncHistoryData
 		latestEpochWritten uint64
 		sourceEpoch        uint64
 		targetEpoch        uint64
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    bool
-		wantErr bool
+		want               bool
+		wantErr            bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:               "ignores attestations outside of weak subjectivity bounds",
+			history:            kv.NewAttestationHistoryArray(0),
+			latestEpochWritten: 2 * params.BeaconConfig().WeakSubjectivityPeriod,
+			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
+			sourceEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
+			want:               false,
+		},
+		{
+			name:               "detects surrounding attestations",
+			history:            history,
+			latestEpochWritten: target,
+			targetEpoch:        target + 1,
+			sourceEpoch:        source - 1,
+			want:               true,
+		},
+		{
+			name:               "detects surrounded attestations",
+			history:            history,
+			latestEpochWritten: target,
+			targetEpoch:        target - 1,
+			sourceEpoch:        source + 1,
+			want:               true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := isSurroundVote(tt.args.ctx, tt.args.history, tt.args.latestEpochWritten, tt.args.sourceEpoch, tt.args.targetEpoch)
+			got, err := isSurroundVote(ctx, tt.history, tt.latestEpochWritten, tt.sourceEpoch, tt.targetEpoch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("isSurroundVote() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -403,23 +322,54 @@ func Test_isSurroundVote(t *testing.T) {
 }
 
 func Test_checkHistoryAtTargetEpoch(t *testing.T) {
-	type args struct {
-		ctx                context.Context
+	ctx := context.Background()
+	history := kv.NewAttestationHistoryArray(0)
+	signingRoot1 := bytesutil.PadTo([]byte{1}, 32)
+	hist, err := history.SetTargetData(ctx, 1, &kv.HistoryData{
+		Source:      0,
+		SigningRoot: signingRoot1,
+	})
+	require.NoError(t, err)
+	history = hist
+	tests := []struct {
+		name               string
 		history            kv.EncHistoryData
 		latestEpochWritten uint64
 		targetEpoch        uint64
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *kv.HistoryData
-		wantErr bool
+		want               *kv.HistoryData
+		wantErr            bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:               "ignores difference in epochs outside of weak subjectivity bounds",
+			history:            kv.NewAttestationHistoryArray(0),
+			latestEpochWritten: 2 * params.BeaconConfig().WeakSubjectivityPeriod,
+			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
+			want:               nil,
+			wantErr:            false,
+		},
+		{
+			name:               "ignores target epoch > latest written epoch",
+			history:            kv.NewAttestationHistoryArray(0),
+			latestEpochWritten: params.BeaconConfig().WeakSubjectivityPeriod,
+			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod + 1,
+			want:               nil,
+			wantErr:            false,
+		},
+		{
+			name:               "target epoch == latest written epoch should return correct results",
+			history:            history,
+			latestEpochWritten: 1,
+			targetEpoch:        1,
+			want: &kv.HistoryData{
+				Source:      0,
+				SigningRoot: signingRoot1,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := checkHistoryAtTargetEpoch(tt.args.ctx, tt.args.history, tt.args.latestEpochWritten, tt.args.targetEpoch)
+			got, err := checkHistoryAtTargetEpoch(ctx, tt.history, tt.latestEpochWritten, tt.targetEpoch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("checkHistoryAtTargetEpoch() error = %v, wantErr %v", err, tt.wantErr)
 				return
