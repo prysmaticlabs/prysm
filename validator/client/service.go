@@ -179,6 +179,7 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
+		attestingHistoryManager:        v.attestingHistoryManager,
 		localSlashingProtector:         v.localSlashingProtector,
 		remoteSlashingProtector:        v.remoteSlashingProtector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},

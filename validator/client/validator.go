@@ -495,7 +495,6 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 		}
 		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
 	}
-	log.Warn("HELLO Extracted attesting keys for protection")
 	return v.attestingHistoryManager.LoadAttestingHistoryForPubKeys(ctx, attestingPubKeys)
 }
 
