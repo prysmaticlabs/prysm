@@ -28,7 +28,6 @@ import (
 	"time"
 
 	manet "github.com/multiformats/go-multiaddr/net"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
