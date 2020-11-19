@@ -2,12 +2,15 @@ package slashingprotection
 
 import (
 	"context"
+	"testing"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var _ = Protector(&RemoteProtector{})
@@ -78,4 +81,32 @@ func (ms mockSlasher) IsSlashableBlockNoUpdate(_ context.Context, _ *eth.BeaconB
 	return &slashpb.Slashable{
 		Slashable: ms.slashBlock,
 	}, nil
+}
+
+func Test_parseSlasherError(t *testing.T) {
+	tests := []struct {
+		name    string
+		errs    []error
+		wantErr error
+	}{
+		{
+			name: "Unavailable",
+			errs: []error{
+				status.Error(codes.Unavailable, "failed to reach server"),
+				status.Error(codes.Canceled, "canceled"),
+				status.Error(codes.ResourceExhausted, "exhausted"),
+			},
+			wantErr: ErrSlasherUnavailable,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, e := range tt.errs {
+				err := parseSlasherError(e)
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("parseSlasherError() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}
+		})
+	}
 }

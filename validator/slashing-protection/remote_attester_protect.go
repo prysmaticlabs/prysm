@@ -16,8 +16,7 @@ func (rp *RemoteProtector) IsSlashableAttestation(
 ) (bool, error) {
 	as, err := rp.slasherClient.IsSlashableAttestation(ctx, indexedAtt)
 	if err != nil {
-		log.Errorf("External slashing attestation protection returned an error: %v", err)
-		return false, err
+		return false, parseSlasherError(err)
 	}
 	if as != nil && as.AttesterSlashing != nil {
 		remoteSlashableAttestationsTotal.Inc()

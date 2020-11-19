@@ -14,9 +14,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+)
+
+var (
+	ErrSlasherUnavailable = errors.New("slasher server is unavailable")
 )
 
 // RemoteProtector --
@@ -114,4 +120,17 @@ func (rp *RemoteProtector) Status() error {
 		)
 	}
 	return nil
+}
+
+func parseSlasherError(err error) error {
+	log.WithError(err).Errorf("Received an error from slasher for remote slashing protection")
+	switch status.Code(err) {
+	case codes.ResourceExhausted:
+		return ErrSlasherUnavailable
+	case codes.Canceled:
+		return ErrSlasherUnavailable
+	case codes.Unavailable:
+		return ErrSlasherUnavailable
+	}
+	return errors.Wrap(err, "remote slashing block protection returned an error")
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -75,10 +76,13 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	indexedAtt.Signature = sig
 	slashable, err := v.protector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 	if err != nil {
-		log.WithFields(
-			attestationLogFields(pubKey, indexedAtt),
-		).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
-		return
+		// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
+		if !errors.Is(err, slashingprotection.ErrSlasherUnavailable) {
+			log.WithFields(
+				attestationLogFields(pubKey, indexedAtt),
+			).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
+			return
+		}
 	}
 	if slashable {
 		log.WithFields(

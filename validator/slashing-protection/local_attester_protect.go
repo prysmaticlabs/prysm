@@ -37,7 +37,7 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.Wrapf(err, "could not get latest epoch written for pubkey %#x", pubKey)
 	}
 	// An attestation older than the weak subjectivity is not slashable, we should just return false.
-	if isOlderThanWeakSubjectivity(ctx, latestEpochWritten, indexedAtt.Data.Target.Epoch) {
+	if isOlderThanWeakSubjectivity(latestEpochWritten, indexedAtt.Data.Target.Epoch) {
 		return false, nil
 	}
 	doubleVote, err := isDoubleVote(ctx, attesterHistory, indexedAtt.Data.Target.Epoch, signingRoot)
@@ -85,7 +85,7 @@ func (s *Service) IsSlashableAttestation(
 	return false, nil
 }
 
-func isOlderThanWeakSubjectivity(ctx context.Context, latestEpochWritten, targetEpoch uint64) bool {
+func isOlderThanWeakSubjectivity(latestEpochWritten, targetEpoch uint64) bool {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod
 }
@@ -108,48 +108,55 @@ func isSurroundVote(
 ) (bool, error) {
 	// Check if the new attestation would be surrounding another attestation.
 	for i := sourceEpoch; i <= targetEpoch; i++ {
-		// Unattested for epochs are marked as (*kv.HistoryData)(nil).
-		historyBoundary := safeTargetToSource(ctx, history, i)
-		if historyBoundary.IsEmpty() {
+		historyAtTarget, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
+		if err != nil {
+			return false, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
+		}
+		if historyAtTarget == nil || historyAtTarget.IsEmpty() {
 			continue
 		}
-		if historyBoundary.Source > sourceEpoch {
+		if historyAtTarget.Source > sourceEpoch {
+			// Surrounding attestation caught.
 			return true, nil
 		}
 	}
 
 	// Check if the new attestation is being surrounded.
 	for i := targetEpoch; i <= latestEpochWritten; i++ {
-		h := safeTargetToSource(ctx, history, i)
-		if h.IsEmpty() {
+		historyAtTarget, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
+		if err != nil {
+			return false, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
+		}
+		if historyAtTarget == nil || historyAtTarget.IsEmpty() {
 			continue
 		}
-		if h.Source < sourceEpoch {
+		if historyAtTarget.Source < sourceEpoch {
+			// Surrounded attestation caught.
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-// safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at
-// returns the "default" nil value.
-func safeTargetToSource(ctx context.Context, history kv.EncHistoryData, targetEpoch uint64) *kv.HistoryData {
+// Returns the actual attesting history at a specified target epoch.
+// The response is nil if there was no attesting history at that epoch.
+func checkHistoryAtTargetEpoch(
+	ctx context.Context,
+	history kv.EncHistoryData,
+	latestEpochWritten,
+	targetEpoch uint64,
+) (*kv.HistoryData, error) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
-	if err != nil {
-		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
-		return nil
+	if isOlderThanWeakSubjectivity(latestEpochWritten, targetEpoch) {
+		return nil, nil
 	}
+	// Ignore target epoch is > latest written.
 	if targetEpoch > latestEpochWritten {
-		return nil
+		return nil, nil
 	}
-	if latestEpochWritten >= wsPeriod && targetEpoch < latestEpochWritten-wsPeriod { //Underflow protected older then weak subjectivity check.
-		return nil
-	}
-	hd, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
+	historyData, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
 	if err != nil {
-		log.WithError(err).Errorf("Could not get target data for target epoch: %d", targetEpoch)
-		return nil
+		return nil, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
 	}
-	return hd
+	return historyData, nil
 }

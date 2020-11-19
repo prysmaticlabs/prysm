@@ -19,7 +19,7 @@ func (rp *RemoteProtector) IsSlashableBlock(
 	}
 	resp, err := rp.slasherClient.IsSlashableBlock(ctx, signedHeader)
 	if err != nil {
-		return false, errors.Wrap(err, "remote slashing block protection returned an error")
+		return false, parseSlasherError(err)
 	}
 	if resp != nil && resp.ProposerSlashing != nil {
 		remoteSlashableProposalsTotal.Inc()
