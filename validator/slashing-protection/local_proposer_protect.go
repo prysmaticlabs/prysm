@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -14,7 +13,7 @@ import (
 // according to local protection and remote protection (if enabled). Then, if the block
 // successfully passes checks, we update our local proposals history accordingly.
 func (s *Service) IsSlashableBlock(
-	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
+	ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, signingRoot [32]byte,
 ) (bool, error) {
 	if block == nil || block.Block == nil {
 		return false, errors.New("received nil block")
@@ -29,16 +28,12 @@ func (s *Service) IsSlashableBlock(
 		localSlashableProposalsTotal.Inc()
 		return true, nil
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to compute signing root for block")
-	}
 	// If the block is not slashable, we perform an immediate write to our DB.
 	if err := s.validatorDB.SaveProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot, signingRoot[:]); err != nil {
 		return false, errors.Wrap(err, "failed to save updated proposal history")
 	}
 	if s.remoteProtector != nil {
-		slashable, err := s.remoteProtector.IsSlashableBlock(ctx, block, pubKey, domain)
+		slashable, err := s.remoteProtector.IsSlashableBlock(ctx, block, pubKey, signingRoot)
 		if err != nil {
 			return false, errors.Wrap(err, "failed to get proposal history")
 		}

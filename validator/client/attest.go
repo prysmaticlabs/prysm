@@ -64,7 +64,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Data:             data,
 	}
 
-	sig, domain, err := v.signAtt(ctx, pubKey, data)
+	sig, signingRoot, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
@@ -73,7 +73,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 	indexedAtt.Signature = sig
-	slashable, err := v.protector.IsSlashableAttestation(ctx, indexedAtt, pubKey, domain)
+	slashable, err := v.protector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 	if err != nil {
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
@@ -168,10 +168,10 @@ func (v *validator) signAtt(
 	ctx context.Context,
 	pubKey [48]byte,
 	data *ethpb.AttestationData,
-) ([]byte, *ethpb.DomainResponse, error) {
+) ([]byte, [32]byte, error) {
 	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
 	if err != nil {
-		return nil, nil, err
+		return nil, [32]byte{}, err
 	}
 
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
@@ -181,10 +181,10 @@ func (v *validator) signAtt(
 		Object:          &validatorpb.SignRequest_AttestationData{AttestationData: data},
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, [32]byte{}, err
 	}
 
-	return sig.Marshal(), domain, nil
+	return sig.Marshal(), root, nil
 }
 
 func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {

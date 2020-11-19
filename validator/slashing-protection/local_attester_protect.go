@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
@@ -19,11 +18,10 @@ func (s *Service) IsSlashableAttestation(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
 	pubKey [48]byte,
-	domain *ethpb.DomainResponse,
+	signingRoot [32]byte,
 ) (bool, error) {
-	signingRoot, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain.SignatureDomain)
-	if err != nil {
-		return false, err
+	if indexedAtt == nil || indexedAtt.Data == nil {
+		return false, errors.New("received nil attestation")
 	}
 	s.attestingHistoryByPubKeyLock.Lock()
 	defer s.attestingHistoryByPubKeyLock.Unlock()
@@ -77,7 +75,7 @@ func (s *Service) IsSlashableAttestation(
 
 	// We check the attestation with respect to remote slashing protection if enabled.
 	if s.remoteProtector != nil {
-		slashable, err := s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, domain)
+		slashable, err := s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 		if err != nil {
 			return false, err
 		}

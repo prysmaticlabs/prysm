@@ -66,7 +66,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, b)
+	sig, signingRoot, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -78,7 +78,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Block:     b,
 		Signature: sig,
 	}
-	slashable, err := v.protector.IsSlashableBlock(ctx, blk, pubKey, domain)
+	slashable, err := v.protector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
 	if err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, blk),
@@ -192,19 +192,23 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(
+	ctx context.Context,
+	pubKey [48]byte,
+	epoch uint64,
+	b *ethpb.BeaconBlock,
+) ([]byte, [32]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
-		return nil, nil, errors.Wrap(err, domainDataErr)
+		return nil, [32]byte{}, errors.Wrap(err, domainDataErr)
 	}
 	if domain == nil {
-		return nil, nil, errors.New(domainDataErr)
+		return nil, [32]byte{}, errors.New(domainDataErr)
 	}
-
 	var sig bls.Signature
 	blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, signingRootErr)
+		return nil, [32]byte{}, errors.Wrap(err, signingRootErr)
 	}
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
@@ -213,9 +217,9 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		Object:          &validatorpb.SignRequest_Block{Block: b},
 	})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not sign block proposal")
+		return nil, [32]byte{}, errors.Wrap(err, "could not sign block proposal")
 	}
-	return sig.Marshal(), domain, nil
+	return sig.Marshal(), blockRoot, nil
 }
 
 // Sign voluntary exit with proposer domain and private key.

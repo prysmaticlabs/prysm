@@ -24,10 +24,10 @@ type Protector interface {
 		ctx context.Context,
 		indexedAtt *ethpb.IndexedAttestation,
 		pubKey [48]byte,
-		domain *ethpb.DomainResponse,
+		signingRoot [32]byte,
 	) (bool, error)
 	IsSlashableBlock(
-		ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, domain *ethpb.DomainResponse,
+		ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, signingRoot [32]byte,
 	) (bool, error)
 	shared.Service
 }
