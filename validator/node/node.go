@@ -32,7 +32,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -228,6 +229,11 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if err := s.registerSlashingProtectionService(); err != nil {
 		return err
 	}
+	if featureconfig.Get().EnableSlasherConnection {
+		if err := s.registerRemoteSlashingProtectionService(); err != nil {
+			return err
+		}
+	}
 	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
@@ -302,6 +308,11 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := s.registerSlashingProtectionService(); err != nil {
 		return err
 	}
+	if featureconfig.Get().EnableSlasherConnection {
+		if err := s.registerRemoteSlashingProtectionService(); err != nil {
+			return err
+		}
+	}
 	if err := s.registerClientService(keyManager); err != nil {
 		return err
 	}
@@ -330,12 +341,22 @@ func (s *ValidatorClient) registerPrometheusService() error {
 }
 
 func (s *ValidatorClient) registerSlashingProtectionService() error {
+	sp, err := local.NewService(s.cliCtx.Context, &local.Config{
+		ValidatorDB: s.db,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize local slashing protection service")
+	}
+	return s.services.RegisterService(sp)
+}
+
+func (s *ValidatorClient) registerRemoteSlashingProtectionService() error {
 	slasherEndpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
 	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashingprotection.NewService(s.cliCtx.Context, &slashingprotection.Config{
+	sp, err := remote.NewService(s.cliCtx.Context, &remote.Config{
 		SlasherEndpoint:            slasherEndpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
@@ -344,7 +365,7 @@ func (s *ValidatorClient) registerSlashingProtectionService() error {
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not initialize slashing protection service")
+		return errors.Wrap(err, "could not initialize remote slashing protection service")
 	}
 	return s.services.RegisterService(sp)
 }
@@ -361,9 +382,15 @@ func (s *ValidatorClient) registerClientService(
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	var slashingProtector *slashingprotection.Service
+	var slashingProtector *local.Service
 	if err := s.services.FetchService(&slashingProtector); err != nil {
 		return err
+	}
+	var remoteSlashingProtector *remote.Service
+	if featureconfig.Get().EnableSlasherConnection {
+		if err := s.services.FetchService(&remoteSlashingProtector); err != nil {
+			return err
+		}
 	}
 	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
@@ -377,7 +404,8 @@ func (s *ValidatorClient) registerClientService(
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		Protector:                  slashingProtector,
+		LocalSlashingProtector:     slashingProtector,
+		RemoteSlashingProtector:    remoteSlashingProtector,
 		AttestingHistoryManager:    slashingProtector,
 		ValDB:                      s.db,
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),

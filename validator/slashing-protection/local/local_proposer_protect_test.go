@@ -1,4 +1,4 @@
-package slashingprotection
+package local
 
 import (
 	"context"

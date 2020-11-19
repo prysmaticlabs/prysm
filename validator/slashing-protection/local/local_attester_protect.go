@@ -1,4 +1,4 @@
-package slashingprotection
+package local
 
 import (
 	"bytes"
@@ -9,11 +9,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
 
 // IsSlashableAttestation determines if an incoming attestation is slashable
-// according to local protection and remote protection (if enabled). Then, if the attestation
-// successfully passes checks, we update our local attesting history accordingly.
+// according to local protection. Then, if the attestation successfully passes
+// checks, we update our local attesting history accordingly.
 func (s *Service) IsSlashableAttestation(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
@@ -56,7 +57,7 @@ func (s *Service) IsSlashableAttestation(
 	}
 	// If an attestation is a double vote or a surround vote, it is slashable.
 	if doubleVote || surroundVote {
-		localSlashableAttestationsTotal.Inc()
+		slashingprotection.LocalSlashableAttestationsTotal.Inc()
 		return true, nil
 	}
 	// We update the attester history with new values.
@@ -72,16 +73,6 @@ func (s *Service) IsSlashableAttestation(
 
 	// We update our in-memory map of attester history.
 	s.attesterHistoryByPubKey[pubKey] = newAttesterHistory
-
-	// We check the attestation with respect to remote slashing protection if enabled.
-	if s.remoteProtector != nil {
-		slashable, err := s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
-		if err != nil {
-			return false, err
-		}
-		remoteSlashableAttestationsTotal.Inc()
-		return slashable, nil
-	}
 	return false, nil
 }
 

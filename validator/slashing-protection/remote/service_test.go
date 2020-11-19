@@ -1,4 +1,4 @@
-package slashingprotection
+package remote
 
 import (
 	"context"
@@ -8,12 +8,13 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var _ = Protector(&RemoteProtector{})
+var _ = slashingprotection.Protector(&Service{})
 
 type mockSlasher struct {
 	slashAttestation                     bool

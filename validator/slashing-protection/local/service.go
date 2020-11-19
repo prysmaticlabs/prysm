@@ -1,50 +1,23 @@
-package slashingprotection
+package local
 
 import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "slashing-protection")
-
-// Protector interface defines a struct which provides methods
-// for validator slashing protection.
-type Protector interface {
-	IsSlashableAttestation(
-		ctx context.Context,
-		indexedAtt *ethpb.IndexedAttestation,
-		pubKey [48]byte,
-		signingRoot [32]byte,
-	) (bool, error)
-	IsSlashableBlock(
-		ctx context.Context, block *ethpb.SignedBeaconBlock, pubKey [48]byte, signingRoot [32]byte,
-	) (bool, error)
-	shared.Service
-}
-
-type AttestingHistoryManager interface {
-	SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) error
-	LoadAttestingHistoryForPubKeys(ctx context.Context, attestingPubKeys [][48]byte) error
-	AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte) (kv.EncHistoryData, error)
-	ResetAttestingHistoryForEpoch(ctx context.Context)
-}
+var log = logrus.WithField("prefix", "local-slashing-protection")
 
 // Service to manage validator slashing protection. Local slashing
-// protection is mandatory at runtime but remote protection is optional.
+// protection is mandatory at runtime.
 type Service struct {
 	ctx                          context.Context
 	cancel                       context.CancelFunc
-	remoteProtector              Protector
 	validatorDB                  db.Database
 	attestingHistoryByPubKeyLock sync.RWMutex
 	attesterHistoryByPubKey      map[[48]byte]kv.EncHistoryData
@@ -52,13 +25,7 @@ type Service struct {
 
 // Config for the slashing protection service.
 type Config struct {
-	SlasherEndpoint            string
-	CertFlag                   string
-	GrpcMaxCallRecvMsgSizeFlag int
-	GrpcRetriesFlag            uint
-	GrpcRetryDelay             time.Duration
-	GrpcHeadersFlag            string
-	ValidatorDB                db.Database
+	ValidatorDB db.Database
 }
 
 // NewService creates a new validator service for the service registry.
@@ -70,38 +37,21 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
 		validatorDB:             cfg.ValidatorDB,
 	}
-	if featureconfig.Get().SlasherProtection && cfg.SlasherEndpoint != "" {
-		rp, err := NewRemoteProtector(ctx, cfg)
-		if err != nil {
-			return nil, err
-		}
-		srv.remoteProtector = rp
-	}
 	return srv, nil
 }
 
 // Start the slashing protection service.
 func (s *Service) Start() {
-	if s.remoteProtector != nil {
-		s.remoteProtector.Start()
-	}
 }
 
 // Stop the slashing protection service.
 func (s *Service) Stop() error {
 	s.cancel()
-	log.Info("Stopping slashing protection service")
-	if s.remoteProtector != nil {
-		return s.remoteProtector.Stop()
-	}
 	return nil
 }
 
 // Status of the slashing protection service.
 func (s *Service) Status() error {
-	if s.remoteProtector != nil {
-		return s.remoteProtector.Status()
-	}
 	return nil
 }
 

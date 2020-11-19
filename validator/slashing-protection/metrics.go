@@ -7,28 +7,28 @@ import (
 
 var (
 	// Counts slashable block proposal attempts detected by local slashing protection.
-	localSlashableProposalsTotal = promauto.NewCounter(
+	LocalSlashableProposalsTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "slashable_validator_proposals_rejected_local_total",
 			Help: "Counts block proposal attempts rejected by slashing protection.",
 		},
 	)
 	// Counts slashable block proposal attempts detected by remote slashing protection.
-	remoteSlashableProposalsTotal = promauto.NewCounter(
+	RemoteSlashableProposalsTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "slashable_validator_proposals_rejected_remote_total",
 			Help: "Counts block proposal attempts rejected by slashing protection.",
 		},
 	)
 	// Counts slashable attestation attempts detected by local slashing protection.
-	localSlashableAttestationsTotal = promauto.NewCounter(
+	LocalSlashableAttestationsTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "slashable_validator_attestations_rejected_local_total",
 			Help: "Counts attestation attempts rejected by local slashing protection.",
 		},
 	)
 	// Counts slashable attestation attempts detected by remote slashing protection.
-	remoteSlashableAttestationsTotal = promauto.NewCounter(
+	RemoteSlashableAttestationsTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "slashable_validator_attestations_rejected_remote_total",
 			Help: "Counts attestation attempts rejected by remote slashing protection.",

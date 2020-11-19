@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/remote"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -79,14 +79,27 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Block:     b,
 		Signature: sig,
 	}
-	slashable, err := v.protector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
+
+	slashable, err := v.localSlashingProtector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
 	if err != nil {
 		// If slasher is unavailable, trust local protection and proceed with submitting the block..
-		if !errors.Is(err, slashingprotection.ErrSlasherUnavailable) {
+		if !errors.Is(err, remote.ErrSlasherUnavailable) {
 			log.WithFields(
 				blockLogFields(pubKey, blk),
 			).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
 			return
+		}
+	}
+	if v.remoteSlashingProtector != nil {
+		slashable, err = v.remoteSlashingProtector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
+		if err != nil {
+			// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
+			if !errors.Is(err, remote.ErrSlasherUnavailable) {
+				log.WithFields(
+					blockLogFields(pubKey, blk),
+				).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
+				return
+			}
 		}
 	}
 	if slashable {

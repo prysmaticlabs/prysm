@@ -153,7 +153,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: false,
 	}
 
@@ -187,7 +187,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: false,
 	}
 
@@ -210,7 +210,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	validator.ProposeBlock(context.Background(), slot, pubKey)
 	require.LogsDoNotContain(t, hook, "Attempted to submit a slashable block")
 
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: true,
 	}
 	validator.ProposeBlock(context.Background(), slot, pubKey)
@@ -223,7 +223,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: false,
 	}
 
@@ -246,7 +246,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsDoNotContain(t, hook, "Attempted to submit a slashable block")
 
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: true,
 	}
 
@@ -260,7 +260,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: false,
 	}
 
@@ -307,7 +307,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: false,
 	}
 
@@ -353,7 +353,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: false,
 	}
 	m.validatorClient.EXPECT().DomainData(
@@ -384,7 +384,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableBlock: false,
 	}
 
@@ -627,7 +627,7 @@ func TestSignBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	sig, _, err := validator.signBlock(ctx, pubKey, 0, blk.Block)
+	sig, _, err := validator.signBlock(ctx, pubKey, blk.Block)
 	require.NoError(t, err, "%x,%x,%v", sig, proposerDomain, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
 		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+

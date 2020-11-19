@@ -1,14 +1,15 @@
-package slashingprotection
+package remote
 
 import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
 
 // IsSlashableAttestation submits an attestation to a remote slasher instance to check
 // whether it is slashable or not via a gRPC connection.
-func (rp *RemoteProtector) IsSlashableAttestation(
+func (rp *Service) IsSlashableAttestation(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
 	pubKey [48]byte,
@@ -19,7 +20,7 @@ func (rp *RemoteProtector) IsSlashableAttestation(
 		return false, parseSlasherError(err)
 	}
 	if as != nil && as.AttesterSlashing != nil {
-		remoteSlashableAttestationsTotal.Inc()
+		slashingprotection.RemoteSlashableAttestationsTotal.Inc()
 		return true, nil
 	}
 	return false, nil

@@ -1,9 +1,10 @@
-package slashingprotection
+package remote
 
 import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -12,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -23,10 +25,21 @@ import (
 
 var (
 	ErrSlasherUnavailable = errors.New("slasher server is unavailable")
+	log                   = logrus.WithField("prefix", "remote-slashing-protection")
 )
 
-// RemoteProtector --
-type RemoteProtector struct {
+// Config for the slashing protection service.
+type Config struct {
+	SlasherEndpoint            string
+	CertFlag                   string
+	GrpcMaxCallRecvMsgSizeFlag int
+	GrpcRetriesFlag            uint
+	GrpcRetryDelay             time.Duration
+	GrpcHeadersFlag            string
+}
+
+// Service for remote slashing protection.
+type Service struct {
 	ctx             context.Context
 	slasherEndpoint string
 	slasherClient   slashpb.SlasherClient
@@ -34,7 +47,8 @@ type RemoteProtector struct {
 	opts            []grpc.DialOption
 }
 
-func NewRemoteProtector(ctx context.Context, config *Config) (*RemoteProtector, error) {
+// NewService for remote slashing protection.
+func NewService(ctx context.Context, config *Config) (*Service, error) {
 	var dialOpt grpc.DialOption
 	if config.CertFlag != "" {
 		creds, err := credentials.NewClientTLSFromFile(config.CertFlag, "")
@@ -79,7 +93,7 @@ func NewRemoteProtector(ctx context.Context, config *Config) (*RemoteProtector, 
 			grpcutils.LogGRPCRequests,
 		)),
 	}
-	return &RemoteProtector{
+	return &Service{
 		ctx:             ctx,
 		slasherEndpoint: config.SlasherEndpoint,
 		opts:            opts,
@@ -87,7 +101,7 @@ func NewRemoteProtector(ctx context.Context, config *Config) (*RemoteProtector, 
 }
 
 // Start the remote protector service.
-func (rp *RemoteProtector) Start() {
+func (rp *Service) Start() {
 	conn, err := grpc.DialContext(rp.ctx, rp.slasherEndpoint, rp.opts...)
 	if err != nil {
 		log.Errorf("Could not dial slasher endpoint: %s", rp.slasherEndpoint)
@@ -98,7 +112,7 @@ func (rp *RemoteProtector) Start() {
 }
 
 // Stop the remote protector service.
-func (rp *RemoteProtector) Stop() error {
+func (rp *Service) Stop() error {
 	log.Info("Stopping remote slashing protector")
 	if rp.conn != nil {
 		return rp.conn.Close()
@@ -108,7 +122,7 @@ func (rp *RemoteProtector) Stop() error {
 
 // Status checks if the connection to slasher server is ready,
 // returns error otherwise.
-func (rp *RemoteProtector) Status() error {
+func (rp *Service) Status() error {
 	if rp.conn == nil {
 		return errors.New("no connection to slasher RPC")
 	}

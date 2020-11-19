@@ -69,7 +69,8 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          slashingprotection.Protector
+	localSlashingProtector             slashingprotection.Protector
+	remoteSlashingProtector            slashingprotection.Protector
 	attestingHistoryManager            slashingprotection.AttestingHistoryManager
 	db                                 vdb.Database
 	graffiti                           []byte
@@ -178,7 +179,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
 	defer span.End()
 	if featureconfig.Get().SlasherProtection {
-		err := v.protector.Status()
+		err := v.remoteSlashingProtector.Status()
 		if err == nil {
 			return nil
 		}
@@ -188,7 +189,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 			select {
 			case <-ticker.C:
 				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
-				err = v.protector.Status()
+				err = v.remoteSlashingProtector.Status()
 				if err != nil {
 					continue
 				}

@@ -62,7 +62,8 @@ type ValidatorService struct {
 	withCert                string
 	endpoint                string
 	validator               Validator
-	protector               slashingprotection.Protector
+	localSlashingProtector  slashingprotection.Protector
+	remoteSlashingProtector slashingprotection.Protector
 	attestingHistoryManager slashingprotection.AttestingHistoryManager
 	ctx                     context.Context
 	keyManager              keymanager.IKeymanager
@@ -79,7 +80,8 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingprotection.Protector
+	LocalSlashingProtector     slashingprotection.Protector
+	RemoteSlashingProtector    slashingprotection.Protector
 	AttestingHistoryManager    slashingprotection.AttestingHistoryManager
 	Endpoint                   string
 	Validator                  Validator
@@ -109,7 +111,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetries:             cfg.GrpcRetriesFlag,
 		grpcRetryDelay:          cfg.GrpcRetryDelay,
 		grpcHeaders:             strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:               cfg.Protector,
+		localSlashingProtector:  cfg.LocalSlashingProtector,
+		remoteSlashingProtector: cfg.RemoteSlashingProtector,
 		attestingHistoryManager: cfg.AttestingHistoryManager,
 		validator:               cfg.Validator,
 		db:                      cfg.ValDB,
@@ -176,7 +179,8 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		protector:                      v.protector,
+		localSlashingProtector:         v.localSlashingProtector,
+		remoteSlashingProtector:        v.remoteSlashingProtector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,

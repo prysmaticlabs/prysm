@@ -1,4 +1,4 @@
-package slashingprotection
+package remote
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
-	s := &RemoteProtector{slasherClient: mockSlasher{slashBlock: true}}
+	s := &Service{slasherClient: mockSlasher{slashBlock: true}}
 	blk := &eth.SignedBeaconBlock{
 		Block: &eth.BeaconBlock{
 			Slot:          0,
@@ -25,7 +25,7 @@ func TestRemoteProtector_IsSlashableBlock(t *testing.T) {
 	slashable, err := s.IsSlashableBlock(ctx, blk, [48]byte{}, [32]byte{})
 	require.NoError(t, err)
 	assert.Equal(t, true, slashable, "Expected attestation to be slashable")
-	s = &RemoteProtector{slasherClient: mockSlasher{slashAttestation: false}}
+	s = &Service{slasherClient: mockSlasher{slashAttestation: false}}
 	slashable, err = s.IsSlashableBlock(ctx, blk, [48]byte{}, [32]byte{})
 	require.NoError(t, err)
 	assert.Equal(t, false, slashable, "Expected attestation to not be slashable")

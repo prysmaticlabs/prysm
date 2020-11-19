@@ -32,7 +32,7 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 
@@ -48,7 +48,7 @@ func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 
@@ -68,7 +68,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -109,7 +109,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
@@ -186,7 +186,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
@@ -230,7 +230,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{AttestationDataRoot: make([]byte, 32)}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: true,
 	}
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
@@ -245,7 +245,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
@@ -289,7 +289,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: true,
 	}
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
@@ -304,7 +304,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
@@ -350,7 +350,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32), Epoch: 2},
 		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 1},
 	}, nil)
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: true,
 	}
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
@@ -393,7 +393,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	wg.Add(1)
 	defer wg.Wait()
 
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
@@ -442,7 +442,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
@@ -483,7 +483,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 func TestSignAttestation(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
-	validator.protector = &protectionMock.MockProtector{
+	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
 	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}

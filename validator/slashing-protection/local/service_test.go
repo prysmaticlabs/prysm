@@ -1,4 +1,4 @@
-package slashingprotection_test
+package local_test
 
 import (
 	"context"
@@ -8,11 +8,12 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local"
 )
 
 var (
-	_ = slashingprotection.Protector(&slashingprotection.Service{})
-	_ = slashingprotection.AttestingHistoryManager(&slashingprotection.Service{})
+	_ = slashingprotection.Protector(&local.Service{})
+	_ = slashingprotection.AttestingHistoryManager(&local.Service{})
 )
 
 func TestAttestingHistoryForPubKey_OK(t *testing.T) {
@@ -38,7 +39,7 @@ func TestAttestingHistoryForPubKey_OK(t *testing.T) {
 	histories[pubKey2] = history2
 	require.NoError(t, validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, histories))
 
-	srv, err := slashingprotection.NewService(ctx, &slashingprotection.Config{
+	srv, err := local.NewService(ctx, &local.Config{
 		ValidatorDB: validatorDB,
 	})
 	require.NoError(t, err)
