@@ -280,6 +280,7 @@ func signVoluntaryExit(
 func blockLogFields(pubKey [48]byte, sBlock *ethpb.SignedBeaconBlock) logrus.Fields {
 	return logrus.Fields{
 		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
+		"proposerIndex":     sBlock.Block.ProposerIndex,
 		"blockSlot":         sBlock.Block.Slot,
 		"signature":         fmt.Sprintf("%#x", sBlock.Signature),
 	}
