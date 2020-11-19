@@ -98,7 +98,7 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 	if err != nil {
 		return fmt.Errorf("%#x is not a valid root: %v", interchangeJSON.Metadata.GenesisValidatorsRoot, err)
 	}
-	if err = validatorDB.SaveGenesisValidatorRoot(ctx, gvr[:]); err != nil {
+	if err = validatorDB.SaveGenesisValidatorsRoot(ctx, gvr[:]); err != nil {
 		return errors.Wrap(err, "could not save genesis validator root to db")
 	}
 	return nil

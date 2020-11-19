@@ -256,7 +256,7 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, nil)
 			ctx := context.Background()
-			require.NoError(t, validatorDB.SaveGenesisValidatorRoot(ctx, tt.dbGenesisValidatorRoot))
+			require.NoError(t, validatorDB.SaveGenesisValidatorsRoot(ctx, tt.dbGenesisValidatorRoot))
 			err := validateMetadata(ctx, validatorDB, tt.interchangeJSON)
 			if tt.wantFatal {
 				require.LogsContain(t, hook, "Attempt to change genesis validator root data in db")

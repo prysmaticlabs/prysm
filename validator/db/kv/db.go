@@ -16,7 +16,6 @@ var ProtectionDbFileName = "validator.db"
 
 const proposalExported = "PROPOSALS_IMPORTED"
 const attestationExported = "ATTESTATIONS_IMPORTED"
-const genesisValidatorRootKey = "GENESIS_VALIDATOR_ROOT"
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
