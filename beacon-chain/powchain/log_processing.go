@@ -350,9 +350,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	return nil
 }
 
-// requestBatchedLogs requests and processes all the logs from the period
-// last polled to now.
-func (s *Service) requestBatchedLogs(ctx context.Context) error {
+// requestBatchedHeadersAndLogs requests and processes all the headers and
+// logs from the period last polled to now.
+func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	// We request for the nth block behind the current head, in order to have
 	// stabilized logs when we retrieve it from the 1.0 chain.
 
