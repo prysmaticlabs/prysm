@@ -104,7 +104,7 @@ func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*Si
 	seenHashes := make(map[[32]byte]bool)
 	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
 	for _, validatorData := range data {
-		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
+		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
 		}
@@ -134,7 +134,7 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 	seenHashes := make(map[[32]byte]bool)
 	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
 	for _, validatorData := range data {
-		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
+		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid public key: %v", validatorData.Pubkey, err)
 		}
@@ -161,14 +161,14 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
-		slot, err := uint64FromString(proposal.Slot)
+		slot, err := Uint64FromString(proposal.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid slot: %v", slot, err)
 		}
 		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
 		if proposal.SigningRoot != "" {
-			signingRoot, err = rootFromHex(proposal.SigningRoot)
+			signingRoot, err = RootFromHex(proposal.SigningRoot)
 			if err != nil {
 				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
@@ -188,7 +188,7 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 	highestEpochWritten := uint64(0)
 	var err error
 	for _, attestation := range atts {
-		target, err := uint64FromString(attestation.TargetEpoch)
+		target, err := Uint64FromString(attestation.TargetEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid epoch: %v", target, err)
 		}
@@ -196,14 +196,14 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 		if target > highestEpochWritten {
 			highestEpochWritten = target
 		}
-		source, err := uint64FromString(attestation.SourceEpoch)
+		source, err := Uint64FromString(attestation.SourceEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid epoch: %v", source, err)
 		}
 		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
 		if attestation.SigningRoot != "" {
-			signingRoot, err = rootFromHex(attestation.SigningRoot)
+			signingRoot, err = RootFromHex(attestation.SigningRoot)
 			if err != nil {
 				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}

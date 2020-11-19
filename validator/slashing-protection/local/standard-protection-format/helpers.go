@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-func uint64FromString(str string) (uint64, error) {
+func Uint64FromString(str string) (uint64, error) {
 	return strconv.ParseUint(str, 10, 64)
 }
 
-func pubKeyFromHex(str string) ([48]byte, error) {
+func PubKeyFromHex(str string) ([48]byte, error) {
 	pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
 		return [48]byte{}, err
@@ -24,7 +24,7 @@ func pubKeyFromHex(str string) ([48]byte, error) {
 	return pk, nil
 }
 
-func rootFromHex(str string) ([32]byte, error) {
+func RootFromHex(str string) ([32]byte, error) {
 	rootHexBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
 		return [32]byte{}, err

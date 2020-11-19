@@ -48,13 +48,13 @@ func Test_uint64FromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := uint64FromString(tt.str)
+			got, err := Uint64FromString(tt.str)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("uint64FromString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Uint64FromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("uint64FromString() got = %v, want %v", got, tt.want)
+				t.Errorf("Uint64FromString() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -100,13 +100,13 @@ func Test_pubKeyFromHex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := pubKeyFromHex(tt.str)
+			got, err := PubKeyFromHex(tt.str)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("pubKeyFromHex() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("PubKeyFromHex() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("pubKeyFromHex() got = %v, want %v", got, tt.want)
+				t.Errorf("PubKeyFromHex() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -152,7 +152,7 @@ func Test_rootFromHex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := rootFromHex(tt.str)
+			got, err := RootFromHex(tt.str)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("rootFromHex() error = %v, wantErr %v", err, tt.wantErr)
 				return
