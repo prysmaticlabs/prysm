@@ -24,7 +24,9 @@ func (s *Service) IsSlashableAttestation(
 	if indexedAtt == nil || indexedAtt.Data == nil {
 		return false, errors.New("received nil attestation")
 	}
+	log.Info("Checking is slashable att")
 	s.attestingHistoryByPubKeyLock.Lock()
+	log.Info("Acquired lock")
 	defer s.attestingHistoryByPubKeyLock.Unlock()
 	attesterHistory, ok := s.attesterHistoryByPubKey[pubKey]
 	if !ok {

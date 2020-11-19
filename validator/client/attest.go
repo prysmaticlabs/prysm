@@ -74,6 +74,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 	indexedAtt.Signature = sig
+	log.Warnf("Local protector: %v", v.localSlashingProtector)
 	slashable, err := v.localSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 	if err != nil {
 		log.WithFields(
