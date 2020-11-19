@@ -272,6 +272,33 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 	}
 }
 
+func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 0, Root: gRoot[:]}))
+
+	service.finalizedInfo.state = beaconState
+	service.finalizedInfo.slot = beaconState.Slot()
+	service.finalizedInfo.root = gRoot
+
+	// This tests where hot state was already cached.
+	loadedState, err := service.loadStateByRoot(ctx, gRoot)
+	require.NoError(t, err)
+
+	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not correctly retrieve finalized state")
+	}
+}
+
 func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	ctx := context.Background()
 	db, ssc := testDB.SetupDB(t)
