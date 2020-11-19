@@ -25,6 +25,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -63,6 +64,10 @@ var logThreshold = 20
 
 // period to log chainstart related information
 var logPeriod = 1 * time.Minute
+
+// estimated number of eth1 blocks in a voting period.
+var blocksPerVotingPeriod = params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
+	params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
 
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
@@ -681,7 +686,11 @@ func (s *Service) initPOWService() {
 				continue
 			}
 			// Cache eth1 headers from our voting period.
-			s.cacheHeadersForEth1DataVote(ctx)
+			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
+				log.Errorf("Unable to process past headers %v", err)
+				s.retryETH1Node(err)
+				continue
+			}
 			return
 		}
 	}
@@ -756,22 +765,46 @@ func (s *Service) logTillChainStart() {
 
 // cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
 // instead of making multiple RPC requests to the ETH1 endpoint.
-func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
-	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
-		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
+func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
+	// Find the end block to request from.
 	end, err := s.followBlockHeight(ctx)
 	if err != nil {
-		log.Errorf("Unable to fetch height of follow block: %v", err)
+		return err
+	}
+	// Use our end block as the start point first in the event genesis hasn't happened.
+	startPoint, err := s.BlockTimeByHeight(ctx, big.NewInt(int64(end)))
+	if err != nil {
+		return err
+	}
+	// In the event we know genesis, we can now cache for our voting period.
+	if s.chainStartData.GenesisTime != 0 {
+		startPoint = s.chainStartData.GenesisTime
+	}
+	start, err := s.determineEarliestVotingBlock(ctx, startPoint)
+	if err != nil {
+		return err
 	}
 
-	// We fetch twice the number of headers just to be safe.
-	start := uint64(0)
-	if end >= 2*blocksPerVotingPeriod {
-		start = end - 2*blocksPerVotingPeriod
-	}
+	log.Errorf("caching from %d to %d", start, end)
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 	_, err = s.batchRequestHeaders(start, end)
 	if err != nil {
-		log.Errorf("Unable to cache headers: %v", err)
+		return err
 	}
+	return nil
+}
+
+func (s *Service) determineEarliestVotingBlock(ctx context.Context, genesisTime uint64) (uint64, error) {
+	currSlot := helpers.CurrentSlot(genesisTime)
+	votingTime := helpers.VotingPeriodStartTime(genesisTime, currSlot)
+	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
+	if followBackDist > votingTime {
+		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)
+	}
+	earliestValidTime := votingTime - followBackDist
+	blkNum, err := s.BlockNumberByTimestamp(ctx, earliestValidTime)
+	if err != nil {
+		return 0, err
+	}
+	return blkNum.Uint64(), nil
 }
