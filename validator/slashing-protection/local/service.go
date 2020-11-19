@@ -3,7 +3,6 @@ package local
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -20,7 +19,7 @@ type Service struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	validatorDB             db.Database
-	attesterHistoryByPubKey *sync.Map
+	attesterHistoryByPubKey map[[48]byte]kv.EncHistoryData
 }
 
 // Config for the slashing protection service.
@@ -34,7 +33,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	srv := &Service{
 		ctx:                     ctx,
 		cancel:                  cancel,
-		attesterHistoryByPubKey: new(sync.Map),
+		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
 		validatorDB:             cfg.ValidatorDB,
 	}
 	return srv, nil
@@ -62,13 +61,9 @@ func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]
 	lock.Lock()
 	defer lock.Unlock()
 
-	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
+	history, ok := s.attesterHistoryByPubKey[pubKey]
 	if !ok {
 		return fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
-	}
-	history, ok := val.(kv.EncHistoryData)
-	if !ok {
-		return fmt.Errorf("value in map for %#x is not attesting history data", pubKey)
 	}
 	if err := s.validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history); err != nil {
 		return errors.Wrapf(err, "could not save attesting history to db for public key %#x", pubKey)
@@ -83,15 +78,13 @@ func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingP
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
-	for pubKey, history := range attHistoryByPubKey {
-		s.attesterHistoryByPubKey.Store(pubKey, history)
-	}
+	s.attesterHistoryByPubKey = attHistoryByPubKey
 	return nil
 }
 
 // ResetAttestingHistoryForEpoch empties out the in-memory attesting histories.
 func (s *Service) ResetAttestingHistoryForEpoch(ctx context.Context) {
-	s.attesterHistoryByPubKey = new(sync.Map)
+	s.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
 }
 
 // AttestingHistoryForPubKey retrieves a history from the in-memory map of histories.
@@ -99,13 +92,9 @@ func (s *Service) AttestingHistoryForPubKey(ctx context.Context, pubKey [48]byte
 	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
 	lock.Lock()
 	defer lock.Unlock()
-	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
+	history, ok := s.attesterHistoryByPubKey[pubKey]
 	if !ok {
 		return nil, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
-	}
-	history, ok := val.(kv.EncHistoryData)
-	if !ok {
-		return nil, fmt.Errorf("value in map for %#x is not attesting history data", pubKey)
 	}
 	return history, nil
 }

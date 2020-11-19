@@ -24,9 +24,9 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
 	srv := &Service{
-		attesterHistoryByPubKey: new(sync.Map),
+		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
 	}
-	srv.attesterHistoryByPubKey.Store(pubKeyBytes, kv.NewAttestationHistoryArray(0))
+	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
 
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -60,9 +60,9 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
 	srv := &Service{
-		attesterHistoryByPubKey: new(sync.Map),
+		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
 	}
-	srv.attesterHistoryByPubKey.Store(pubKeyBytes, kv.NewAttestationHistoryArray(0))
+	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
 
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -114,9 +114,9 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
 	srv := &Service{
-		attesterHistoryByPubKey: new(sync.Map),
+		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
 	}
-	srv.attesterHistoryByPubKey.Store(pubKeyBytes, kv.NewAttestationHistoryArray(0))
+	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
 
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},

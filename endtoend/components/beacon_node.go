@@ -54,6 +54,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 		"--verbosity=debug",
 		"--force-clear-db",
 		"--e2e-config",
+		"--subscribe-all-subnets",
 		"--accept-terms-of-use",
 	}
 	if config.UsePprof {
