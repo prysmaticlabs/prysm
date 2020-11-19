@@ -643,7 +643,7 @@ func (s *Service) handleETH1FollowDistance() {
 		log.Error("Beacon node is not respecting the follow distance")
 		return
 	}
-	if err := s.requestBatchedLogs(ctx); err != nil {
+	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {
 		s.runError = err
 		log.Error(err)
 		return
@@ -759,7 +759,6 @@ func (s *Service) logTillChainStart() {
 func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
 	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
 		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
-
 	end, err := s.followBlockHeight(ctx)
 	if err != nil {
 		log.Errorf("Unable to fetch height of follow block: %v", err)
