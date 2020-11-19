@@ -361,7 +361,12 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 		return err
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
-		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
+		// Cache eth1 block header here.
+		_, err := s.BlockHashByHeight(ctx, big.NewInt(int64(i)))
+		if err != nil {
+			return err
+		}
+		err = s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
 			return err
 		}
