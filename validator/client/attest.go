@@ -74,7 +74,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 	indexedAtt.Signature = sig
-	log.Warnf("Local protector: %v", v.localSlashingProtector)
+	log.Infof("Checking att slashable for pubkey %#x", pubKey)
 	slashable, err := v.localSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 	if err != nil {
 		log.WithFields(
@@ -82,24 +82,26 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
 		return
 	}
-	if v.remoteSlashingProtector != nil {
-		slashable, err = v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
-		if err != nil {
-			// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
-			if !errors.Is(err, remote.ErrSlasherUnavailable) {
-				log.WithFields(
-					attestationLogFields(pubKey, indexedAtt),
-				).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
-				return
-			}
-		}
-	}
+	log.Info("Completed checking")
+	//if v.remoteSlashingProtector != nil {
+	//	slashable, err = v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
+	//	if err != nil {
+	//		// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
+	//		if !errors.Is(err, remote.ErrSlasherUnavailable) {
+	//			log.WithFields(
+	//				attestationLogFields(pubKey, indexedAtt),
+	//			).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
+	//			return
+	//		}
+	//	}
+	//}
 	if slashable {
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
 		).Warn("Attempted to submit a slashable attestation, blocked by slashing protection")
 		return
 	}
+	log.Infof("Att was not slashable for pubkey %#x", pubKey)
 
 	var indexInCommittee uint64
 	var found bool
