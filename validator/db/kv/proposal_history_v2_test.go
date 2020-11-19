@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -17,8 +18,7 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 	for _, pub := range pubkeys {
 		signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pub[:], 0)
 		require.NoError(t, err)
-		expected := bytesutil.PadTo([]byte{}, 32)
-		require.DeepEqual(t, expected, signingRoot, "Expected proposal history slot signing root to be empty")
+		require.Equal(t, true, signingRoot == nil)
 	}
 }
 
@@ -55,9 +55,7 @@ func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
 	require.NoError(t, err, "Saving proposal history failed: %v")
 	signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], emptySlot)
 	require.NoError(t, err, "Failed to get proposal history")
-
-	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), signingRoot, "Expected DB to keep object the same")
+	assert.Equal(t, true, signingRoot == nil)
 }
 
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
@@ -144,7 +142,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 		for _, slot := range tt.removedSlots {
 			sr, err := db.ProposalHistoryForSlot(context.Background(), pubKey[:], slot)
 			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), sr, "Unexpected difference in bytes for epoch %d", slot)
+			require.Equal(t, true, sr == nil)
 		}
 		for _, slot := range tt.storedSlots {
 			sr, err := db.ProposalHistoryForSlot(context.Background(), pubKey[:], slot)
@@ -184,19 +182,18 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 		if _, ok := proposedSlots[slot]; ok {
 			root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
 			require.NoError(t, err)
-			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root, "slot: %d", slot)
+			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root)
 			continue
 		}
 		root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
 		require.NoError(t, err)
-		require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), root)
+		require.Equal(t, true, root == nil)
 	}
 }
 
 func TestShouldImportProposals(t *testing.T) {
 	pubkey := [48]byte{3}
 	db := setupDB(t, nil)
-	//ctx := context.Background()
 
 	shouldImport, err := db.shouldImportProposals()
 	require.NoError(t, err)

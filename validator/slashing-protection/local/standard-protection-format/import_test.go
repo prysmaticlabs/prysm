@@ -88,11 +88,10 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 		for _, proposal := range proposals {
 			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
 			require.NoError(t, err)
-			require.DeepEqual(
+			require.Equal(
 				t,
-				params.BeaconConfig().ZeroHash[:],
-				receivedProposalSigningRoot,
-				"Imported proposal signing root is different than the empty default",
+				true,
+				receivedProposalSigningRoot == nil,
 			)
 		}
 	}
