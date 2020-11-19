@@ -26,9 +26,7 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.New("received nil attestation")
 	}
 	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
-	log.Infof("Acquiring lock for public key %#x", pubKey)
 	lock.Lock()
-	log.Infof("Acquired lock for public key %#x", pubKey)
 	defer lock.Unlock()
 	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
 	if !ok {

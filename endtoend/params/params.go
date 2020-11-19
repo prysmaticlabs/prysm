@@ -46,7 +46,7 @@ var SlasherLogFileName = "slasher-%d.log"
 var ValidatorLogFileName = "vals-%d.log"
 
 // StandardBeaconCount is a global constant for the count of beacon nodes of standard E2E tests.
-var StandardBeaconCount = 2
+var StandardBeaconCount = 1
 
 // DepositCount is the amount of deposits E2E makes on a separate validator client.
 var DepositCount = uint64(64)
@@ -72,7 +72,7 @@ func Init(beaconNodeCount int) error {
 		TestPath:              testPath,
 		LogPath:               logPath,
 		TestShardIndex:        testIndex,
-		BeaconNodeCount:       beaconNodeCount,
+		BeaconNodeCount:       1,
 		Eth1RPCPort:           3100 + testIndex*100, // Multiplying 100 here so the test index doesn't conflict with the other node ports.
 		BootNodePort:          4100 + testIndex*100,
 		BeaconNodeRPCPort:     4150 + testIndex*100,
