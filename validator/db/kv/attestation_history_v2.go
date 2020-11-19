@@ -179,6 +179,9 @@ func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKe
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		for _, key := range publicKeys {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			enc := bucket.Get(key[:])
 			var attestationHistory EncHistoryData
 			if len(enc) == 0 {
