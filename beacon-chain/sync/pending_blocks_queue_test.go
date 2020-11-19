@@ -423,5 +423,6 @@ func TestService_AddPeningBlockToQueueOverMax(t *testing.T) {
 
 	b3 := state.CopySignedBeaconBlock(b)
 	b3.Block.StateRoot = []byte{'c'}
-	require.ErrorContains(t, "could not add pending block to queue for slot 0", r.insertBlockToPendingQueue(0, b3, [32]byte{3}))
+	require.NoError(t, r.insertBlockToPendingQueue(0, b2, [32]byte{3}))
+	require.Equal(t, maxBlocksPerSlot, len(r.pendingBlocksInCache(0)))
 }
