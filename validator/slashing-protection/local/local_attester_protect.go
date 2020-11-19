@@ -26,7 +26,9 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.New("received nil attestation")
 	}
 	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
+	log.Infof("Acquiring lock for public key %#x", pubKey)
 	lock.Lock()
+	log.Infof("Acquired lock for public key %#x", pubKey)
 	defer lock.Unlock()
 	val, ok := s.attesterHistoryByPubKey.Load(pubKey)
 	if !ok {
@@ -77,8 +79,10 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.Wrap(err, "could not update attesting history data")
 	}
 
+	log.Infof("Updating store for pubkey %#x", pubKey)
 	// We update our in-memory map of attester history.
 	s.attesterHistoryByPubKey.Store(pubKey, newAttesterHistory)
+	log.Infof("Updated store for pubkey %#x", pubKey)
 	return false, nil
 }
 
