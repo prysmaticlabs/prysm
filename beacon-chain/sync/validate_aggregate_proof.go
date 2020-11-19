@@ -111,13 +111,13 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationReject
 	}
 
-	attSlot := signed.Message.Aggregate.Data.Slot
 	bs, err := s.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
+	attSlot := signed.Message.Aggregate.Data.Slot
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
 	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(bs.Slot()) {
 		startSlot, err := helpers.StartSlot(helpers.SlotToEpoch(attSlot))
