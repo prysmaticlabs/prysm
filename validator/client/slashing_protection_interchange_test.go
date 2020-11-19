@@ -149,6 +149,35 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 								require.NotNil(t, err, "post validation should have failed for block at slot %d", bSlot)
 							}
 						}
+
+						// This loops through a list of attestation signings to attempt after importing the interchange data above.
+						for _, sa := range step.Attestations {
+							target, err := interchangeformat.Uint64FromString(sa.TargetEpoch)
+							require.NoError(t, err)
+							source, err := interchangeformat.Uint64FromString(sa.SourceEpoch)
+							require.NoError(t, err)
+							pk, err := interchangeformat.PubKeyFromHex(sa.Pubkey)
+							require.NoError(t, err)
+							ia := &ethpb.IndexedAttestation{
+								Data: &ethpb.AttestationData{
+									Target: &ethpb.Checkpoint{Epoch: target},
+									Source: &ethpb.Checkpoint{Epoch: source},
+								},
+							}
+							err = validator.preAttSignValidations(context.Background(), ia, pk)
+							if sa.ShouldSucceed {
+								require.NoError(t, err)
+							} else {
+								require.NotNil(t, err, "pre validation should have failed for attestation at source epoch %d", sa.SourceEpoch)
+							}
+
+							err = validator.postAttSignUpdate(context.Background(), ia, pk, [32]byte{}) // TODO: what signing root should we use here?
+							if sa.ShouldSucceed {
+								require.NoError(t, err)
+							} else {
+								require.NotNil(t, err, "post validation should have failed for attestation at source peoch %d", sa.SourceEpoch)
+							}
+						}
 					}
 				})
 			}
