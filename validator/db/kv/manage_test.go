@@ -198,6 +198,7 @@ func assertStore(t *testing.T, store *Store, pubKeys [][48]byte, expectedHistory
 	for _, key := range pubKeys {
 		proposalHistory, err := store.ProposalHistoryForSlot(context.Background(), key[:], 0)
 		require.NoError(t, err, "Retrieving proposal history failed for public key %v", key)
+		require.NotNil(t, proposalHistory)
 		expectedProposals := expectedHistory.Proposals[key]
 		require.DeepEqual(t, expectedProposals, proposalHistory, "Proposals are incorrect")
 	}

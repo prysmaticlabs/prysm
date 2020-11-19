@@ -21,6 +21,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 	defer span.End()
 
 	var err error
+	noDataFound := false
 	signingRoot := make([]byte, 32)
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
@@ -30,11 +31,15 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		}
 		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if len(sr) == 0 {
+			noDataFound = true
 			return nil
 		}
 		copy(signingRoot, sr)
 		return nil
 	})
+	if noDataFound {
+		return nil, nil
+	}
 	return signingRoot, err
 }
 

@@ -24,7 +24,7 @@ func (s *Service) IsSlashableBlock(
 		return false, errors.Wrap(err, "failed to get proposal history")
 	}
 	// Check if we are performing a double block proposal.
-	if !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
+	if existingSigningRoot != nil && !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
 		localSlashableProposalsTotal.Inc()
 		return true, nil
 	}
