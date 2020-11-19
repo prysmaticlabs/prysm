@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
@@ -75,7 +76,10 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 		defer cancel()
 		md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
 		if err != nil {
-			if !errors.Is(err, types.ErrIODeadline) {
+			// We cannot compare errors directly as the stream muxer error
+			// type isn't compatible with the error we have, so a direct
+			// equality checks fails.
+			if !strings.Contains(err.Error(), types.ErrIODeadline.Error()) {
 				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
 			}
 			return
