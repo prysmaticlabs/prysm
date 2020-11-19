@@ -31,27 +31,38 @@ func (s *Service) IsSlashableAttestation(
 	if !ok {
 		return false, fmt.Errorf("could not get local slashing protection data for validator %#x", pubKey)
 	}
-	// Check if the attestation is slashable by local and remote slashing protection
-	if s.remoteProtector != nil {
-		slashable, err := s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, domain)
-		if err != nil {
-			return false, err
-		}
-		remoteSlashableAttestationsTotal.Inc()
-		return slashable, nil
+	if attesterHistory == nil {
+		return false, fmt.Errorf("nil attester history found for public key %#x", pubKey)
 	}
-	if isNewAttSlashable(
+	latestEpochWritten, err := attesterHistory.GetLatestEpochWritten(ctx)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not get latest epoch written for pubkey %#x", pubKey)
+	}
+	// An attestation older than the weak subjectivity is not slashable, we should just return false.
+	if isOlderThanWeakSubjectivity(ctx, latestEpochWritten, indexedAtt.Data.Target.Epoch) {
+		return false, nil
+	}
+	doubleVote, err := isDoubleVote(ctx, attesterHistory, indexedAtt.Data.Target.Epoch, signingRoot)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not check if pubkey is attempting a double vote %#x", pubKey)
+	}
+	surroundVote, err := isSurroundVote(
 		ctx,
 		attesterHistory,
-		indexedAtt.Data.Source.Epoch,
 		indexedAtt.Data.Target.Epoch,
-		signingRoot,
-	) {
+		indexedAtt.Data.Target.Epoch,
+		indexedAtt.Data.Source.Epoch,
+	)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not check if pubkey is attempting a surround vote %#x", pubKey)
+	}
+	// If an attestation is a double vote or a surround vote, it is slashable.
+	if doubleVote || surroundVote {
 		localSlashableAttestationsTotal.Inc()
 		return true, nil
 	}
 	// We update the attester history with new values.
-	attesterHistory, err = attesterHistory.UpdateHistoryForAttestation(
+	newAttesterHistory, err := attesterHistory.UpdateHistoryForAttestation(
 		ctx,
 		indexedAtt.Data.Source.Epoch,
 		indexedAtt.Data.Target.Epoch,
@@ -60,18 +71,25 @@ func (s *Service) IsSlashableAttestation(
 	if err != nil {
 		return false, errors.Wrap(err, "could not update attesting history data")
 	}
-	s.attesterHistoryByPubKey[pubKey] = attesterHistory
+
+	// We update our in-memory map of attester history.
+	s.attesterHistoryByPubKey[pubKey] = newAttesterHistory
+
+	// We check the attestation with respect to remote slashing protection if enabled.
+	if s.remoteProtector != nil {
+		slashable, err := s.remoteProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, domain)
+		if err != nil {
+			return false, err
+		}
+		remoteSlashableAttestationsTotal.Inc()
+		return slashable, nil
+	}
 	return false, nil
 }
 
-func isOlderThanWeakSubjectivity(ctx context.Context, history kv.EncHistoryData, targetEpoch uint64) (bool, error) {
+func isOlderThanWeakSubjectivity(ctx context.Context, latestEpochWritten, targetEpoch uint64) bool {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	// Previously pruned, we should return false.
-	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "could not get latest epoch written for attesting history")
-	}
-	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod, nil
+	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod
 }
 
 func isDoubleVote(ctx context.Context, history kv.EncHistoryData, targetEpoch uint64, signingRoot [32]byte) (bool, error) {
@@ -83,7 +101,13 @@ func isDoubleVote(ctx context.Context, history kv.EncHistoryData, targetEpoch ui
 	return !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot), nil
 }
 
-func isSurroundVote(ctx context.Context, history kv.EncHistoryData, sourceEpoch, targetEpoch uint64, signingRoot [32]byte) (bool, error) {
+func isSurroundVote(
+	ctx context.Context,
+	history kv.EncHistoryData,
+	latestEpochWritten,
+	sourceEpoch,
+	targetEpoch uint64,
+) (bool, error) {
 	// Check if the new attestation would be surrounding another attestation.
 	for i := sourceEpoch; i <= targetEpoch; i++ {
 		// Unattested for epochs are marked as (*kv.HistoryData)(nil).

@@ -140,26 +140,29 @@ func (hd EncHistoryData) UpdateHistoryForAttestation(
 	if err != nil {
 		return EncHistoryData{}, errors.Wrap(err, "could not get latest epoch written from history")
 	}
+	currentHD := hd
 	if targetEpoch > latestEpochWritten {
 		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
 		maxToWrite := latestEpochWritten + wsPeriod
 		for i := latestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
-			hd, err = hd.SetTargetData(ctx, i%wsPeriod, &HistoryData{Source: params.BeaconConfig().FarFutureEpoch})
+			newHD, err := hd.SetTargetData(ctx, i%wsPeriod, &HistoryData{Source: params.BeaconConfig().FarFutureEpoch})
 			if err != nil {
 				return EncHistoryData{}, errors.Wrap(err, "could not set target data")
 			}
+			currentHD = newHD
 		}
-		hd, err = hd.SetLatestEpochWritten(ctx, targetEpoch)
+		newHD, err := currentHD.SetLatestEpochWritten(ctx, targetEpoch)
 		if err != nil {
 			return EncHistoryData{}, errors.Wrap(err, "could not set latest epoch written")
 		}
+		currentHD = newHD
 	}
-	hd, err = hd.SetTargetData(ctx, targetEpoch%wsPeriod, &HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
+	newHD, err := currentHD.SetTargetData(ctx, targetEpoch%wsPeriod, &HistoryData{Source: sourceEpoch, SigningRoot: signingRoot[:]})
 	if err != nil {
 		return EncHistoryData{}, errors.Wrap(err, "could not set target data")
 	}
-	return hd, nil
+	return newHD, nil
 }
 
 // AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.

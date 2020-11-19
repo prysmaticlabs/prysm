@@ -80,15 +80,15 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 	slashable, err := v.protector.IsSlashableBlock(ctx, blk, pubKey, domain)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"slot": blk.Block.Slot,
-		}).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
+		log.WithFields(
+			blockLogFields(pubKey, blk),
+		).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
 		return
 	}
 	if slashable {
-		log.WithFields(logrus.Fields{
-			"slot": blk.Block.Slot,
-		}).Warn("Attempted to submit a slashable block, blocked by slashing protection")
+		log.WithFields(
+			blockLogFields(pubKey, blk),
+		).Warn("Attempted to submit a slashable block, blocked by slashing protection")
 		return
 	}
 
@@ -254,4 +254,12 @@ func signVoluntaryExit(
 		return nil, errors.Wrap(err, signExitErr)
 	}
 	return sig.Marshal(), nil
+}
+
+func blockLogFields(pubKey [48]byte, sBlock *ethpb.SignedBeaconBlock) logrus.Fields {
+	return logrus.Fields{
+		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
+		"blockSlot":         sBlock.Block.Slot,
+		"signature":         fmt.Sprintf("%#x", sBlock.Signature),
+	}
 }

@@ -75,17 +75,15 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	indexedAtt.Signature = sig
 	slashable, err := v.protector.IsSlashableAttestation(ctx, indexedAtt, pubKey, domain)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
 		return
 	}
 	if slashable {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).Warn("Attempted to submit a slashable attestation, blocked by slashing protection")
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).Warn("Attempted to submit a slashable attestation, blocked by slashing protection")
 		return
 	}
 
@@ -230,4 +228,18 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
 	time.Sleep(timeutils.Until(finalTime))
+}
+
+func attestationLogFields(pubKey [48]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
+	return logrus.Fields{
+		"attesterPublicKey": fmt.Sprintf("%#x", pubKey),
+		"attestationSlot":   indexedAtt.Data.Slot,
+		"committeeIndex":    indexedAtt.Data.CommitteeIndex,
+		"beaconBlockRoot":   fmt.Sprintf("%#x", indexedAtt.Data.BeaconBlockRoot),
+		"sourceEpoch":       indexedAtt.Data.Source.Epoch,
+		"sourceRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Source.Root),
+		"targetEpoch":       indexedAtt.Data.Target.Epoch,
+		"targetRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Target.Root),
+		"signature":         fmt.Sprintf("%#x", indexedAtt.Signature),
+	}
 }
