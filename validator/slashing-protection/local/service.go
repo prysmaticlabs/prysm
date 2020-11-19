@@ -73,13 +73,17 @@ func (s *Service) SaveAttestingHistoryForPubKey(ctx context.Context, pubKey [48]
 // LoadAttestingHistoryForPubKeys retrieves histories from disk for the specified
 // attesting public keys and loads them into an in-memory map.
 func (s *Service) LoadAttestingHistoryForPubKeys(ctx context.Context, attestingPubKeys [][48]byte) error {
+	log.Warn("HELLO Tryng to load history...")
 	attHistoryByPubKey, err := s.validatorDB.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
 	if err != nil {
+		log.Warn("ERROR LOADING HISTORY")
 		return errors.Wrap(err, "could not get attester history")
 	}
+	log.Warn("BEFORE THE LOCK")
 	s.attestingHistoryByPubKeyLock.Lock()
 	s.attesterHistoryByPubKey = attHistoryByPubKey
 	s.attestingHistoryByPubKeyLock.Unlock()
+	log.Warn("AFTER THE LOCK")
 	return nil
 }
 
