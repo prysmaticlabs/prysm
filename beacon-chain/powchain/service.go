@@ -65,10 +65,6 @@ var logThreshold = 20
 // period to log chainstart related information
 var logPeriod = 1 * time.Minute
 
-// estimated number of eth1 blocks in a voting period.
-var blocksPerVotingPeriod = params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
-	params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
-
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {

@@ -18,10 +18,10 @@ var (
 	// a headerInfo struct.
 	ErrNotAHeaderInfo = errors.New("object is not a header info")
 
-	// maxCacheSize is 2x of the follow distance and voting period for additional cache padding.
+	// maxCacheSize is 2x of the follow distance for additional cache padding.
 	// Requests should be only accessing blocks within recent blocks within the
 	// Eth1FollowDistance.
-	maxCacheSize = 2 * (params.BeaconConfig().Eth1FollowDistance + blocksPerVotingPeriod)
+	maxCacheSize = 2 * params.BeaconConfig().Eth1FollowDistance
 
 	// Metrics
 	headerCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
