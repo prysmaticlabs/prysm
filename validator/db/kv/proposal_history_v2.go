@@ -16,7 +16,7 @@ import (
 
 // ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error) {
+func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
 	defer span.End()
 
@@ -29,6 +29,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
+		minSlot := valBucket.Get(minimalProposalSlotKey)
 		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if len(sr) == 0 {
 			noDataFound = true
@@ -50,6 +51,7 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForPubKeysV2")
 	defer span.End()
+
 	minimalProposalSlot := make(map[[48]byte]uint64)
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
