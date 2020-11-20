@@ -75,11 +75,9 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.Wrap(err, "could not update attesting history data")
 	}
 
-	log.Infof("Updating store for pubkey %#x", pubKey)
 	if err := s.validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newAttesterHistory); err != nil {
 		return false, err
 	}
-	log.Infof("Updated store for pubkey %#x", pubKey)
 	return false, nil
 }
 
