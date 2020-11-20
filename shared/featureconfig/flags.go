@@ -80,11 +80,16 @@ var (
 		Name:  "enable-sync-backtracking",
 		Usage: "Enable experimental fork exploration backtracking algorithm",
 	}
+	enableLargerGossipHistory = &cli.BoolFlag{
+		Name:  "enable-larger-gossip-history",
+		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableSyncBacktracking,
+	enableLargerGossipHistory,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -121,6 +126,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBlst,
 	disableEth1DataMajorityVote,
 	enablePeerScorer,
+	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
 	enableSyncBacktracking,
