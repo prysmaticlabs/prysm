@@ -47,6 +47,7 @@ type Flags struct {
 	EnablePeerScorer           bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnablePruningDepositProofs bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 	EnableSyncBacktracking     bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
+	EnableLargerGossipHistory  bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -173,6 +174,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableSyncBacktracking.Name) {
 		log.Warn("Enabling init-sync backtracking algorithm")
 		cfg.EnableSyncBacktracking = true
+	}
+	if ctx.Bool(enableLargerGossipHistory.Name) {
+		log.Warn("Using a larger gossip history for the node")
+		cfg.EnableLargerGossipHistory = true
 	}
 	Init(cfg)
 }

@@ -88,7 +88,22 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 // peer handler.
 // TODO(#6043): Add hooks to add in peer inspector to our global peer handler.
 func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
-	// no-op
+	for id, snap := range peerMap {
+		ag, err := s.Host().Peerstore().Get(id, "AgentVersion")
+		_, ok := ag.(string)
+		if err != nil || !ok {
+			continue
+		}
+		if snap.Score < 0 {
+			log.Debugf("Peer id %s with score %f and behaviour penalty %f", id.String(), snap.Score,
+				snap.BehaviourPenalty)
+			for t, p := range snap.Topics {
+				log.Debugf("peer %s with topic %s and first deliveires %f , invalid deliveries %f, "+
+					"mesh deliveries %f and time in mesh %d ms ", id.String(), t, p.FirstMessageDeliveries,
+					p.InvalidMessageDeliveries, p.MeshMessageDeliveries, p.TimeInMesh.Milliseconds())
+			}
+		}
+	}
 }
 
 // Content addressable ID function.
@@ -116,9 +131,19 @@ func msgIDFunction(pmsg *pubsub_pb.Message) string {
 
 func setPubSubParameters() {
 	heartBeatInterval := 700 * time.Millisecond
-	pubsub.GossipSubDlo = 5
+	pubsub.GossipSubDlo = 6
+	pubsub.GossipSubD = 8
 	pubsub.GossipSubHeartbeatInterval = heartBeatInterval
 	pubsub.GossipSubHistoryLength = 6
 	pubsub.GossipSubHistoryGossip = 3
 	pubsub.TimeCacheDuration = 550 * heartBeatInterval
+
+	// Set a larger gossip history to ensure that slower
+	// messages have a longer time to be propagated. This
+	// comes with the tradeoff of larger memory usage and
+	// size of the seen message cache.
+	if featureconfig.Get().EnableLargerGossipHistory {
+		pubsub.GossipSubHistoryLength = 12
+		pubsub.GossipSubHistoryLength = 5
+	}
 }
