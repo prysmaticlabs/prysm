@@ -106,6 +106,11 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 		validatorClient: client,
 		db:              db,
 	}
+
+	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
+	require.NoError(t, err)
+	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validator root")
+
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
@@ -122,7 +127,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, v.WaitForChainStart(context.Background()))
-	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
+	savedGenValRoot, err = db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
@@ -194,7 +199,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 		nil,
 	)
 	err = v.WaitForChainStart(context.Background())
-	require.ErrorContains(t, "did not match saved root", err)
+	require.ErrorContains(t, "does not match root saved", err)
 }
 
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
