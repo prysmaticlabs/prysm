@@ -212,14 +212,12 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		enc := bucket.Get(publicKey[:])
 		if len(enc) != 0 {
-			attestingHistory = enc
+			// Copy to prevent internal array reference being overwritten by boltdb.
+			copy(attestingHistory, enc)
 		}
 		return nil
 	})
-	// Copy to prevent internal array reference being overwritten by boltdb.
-	history := make(EncHistoryData, len(attestingHistory))
-	copy(history, attestingHistory)
-	return history, err
+	return attestingHistory, err
 }
 
 // SaveAttestationHistoryForPubKeysV2 saves the attestation histories for the requested validator public keys.

@@ -217,7 +217,7 @@ func (v *validator) signBlock(
 	pubKey [48]byte,
 	b *ethpb.BeaconBlock,
 ) ([]byte, [32]byte, error) {
-	epoch := b.Slot / params.BeaconConfig().SlotsPerEpoch
+	epoch := helpers.SlotToEpoch(b.Slot)
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, domainDataErr)
