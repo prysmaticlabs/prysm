@@ -65,6 +65,10 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.WithError(err).Errorf("Could not read file at path: %s", ev.Name)
 			return
 		}
+		if fileBytes == nil {
+			log.WithError(err).Errorf("Loaded in an empty file: %s", ev.Name)
+			return
+		}
 		accountsKeystore := &accountsKeystoreRepresentation{}
 		if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
 			log.WithError(
@@ -83,9 +87,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 		case event := <-watcher.Events:
 			// If a file was modified, we attempt to read that file
 			// and parse it into our accounts store.
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				fileChangesChan <- event
-			}
+			fileChangesChan <- event
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", accountsFilePath)
 		case <-ctx.Done():
@@ -105,6 +107,12 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepre
 	newAccountsStore := &accountStore{}
 	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
 		return err
+	}
+	if len(newAccountsStore.PublicKeys) == 0 || len(newAccountsStore.PrivateKeys) == 0 {
+		return errors.New("attempted to reload a keystore with 0 public/private keys")
+	}
+	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
+		return errors.New("number of public and private keys in keystore do not match")
 	}
 	pubKeys := make([][48]byte, len(dr.accountsStore.PublicKeys))
 	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
