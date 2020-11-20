@@ -36,15 +36,15 @@ type Flags struct {
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
-	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
-	SkipBLSVerify              bool // Skips BLS verification across the runtime.
-	PruneEpochBoundaryStates   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression  bool // EnableSnappyDBCompression in the database.
-	SlasherProtection          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	EnableNoise                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	EnablePeerScorer           bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnableSyncBacktracking     bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
-	EnableLargerGossipHistory  bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
+	WriteSSZStateTransitions  bool // WriteSSZStateTransitions to tmp directory.
+	SkipBLSVerify             bool // Skips BLS verification across the runtime.
+	PruneEpochBoundaryStates  bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
+	SlasherProtection         bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	EnableNoise               bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	EnablePeerScorer          bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnableSyncBacktracking    bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
+	EnableLargerGossipHistory bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
