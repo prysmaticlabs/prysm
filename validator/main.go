@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
+	slashingProtection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -106,6 +107,7 @@ func main() {
 	app.Commands = []*cli.Command{
 		accounts.WalletCommands,
 		accounts.AccountCommands,
+		slashingProtection.ProtectionCommands,
 	}
 
 	app.Flags = appFlags
