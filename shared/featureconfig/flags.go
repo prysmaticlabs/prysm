@@ -51,14 +51,6 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "max_cover",
 	}
-	disableBlst = &cli.BoolFlag{
-		Name:  "disable-blst",
-		Usage: "Disables the new BLS library, blst, from Supranational",
-	}
-	disableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:  "disable-eth1-data-majority-vote",
-		Usage: "Disables the Voting With The Majority algorithm when voting for eth1data.",
-	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
@@ -70,11 +62,6 @@ var (
 	checkPtInfoCache = &cli.BoolFlag{
 		Name:  "use-check-point-cache",
 		Usage: "Enables check point info caching",
-	}
-	disablePruningDepositProofs = &cli.BoolFlag{
-		Name: "disable-pruning-deposit-proofs",
-		Usage: "Disables pruning deposit proofs when they are no longer needed." +
-			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
 	enableSyncBacktracking = &cli.BoolFlag{
 		Name:  "enable-sync-backtracking",
@@ -99,7 +86,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	PyrmontTestnet,
 	Mainnet,
 	disableAccountsV2,
-	disableBlst,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -123,12 +109,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	ToledoTestnet,
 	PyrmontTestnet,
 	Mainnet,
-	disableBlst,
-	disableEth1DataMajorityVote,
 	enablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
-	disablePruningDepositProofs,
 	enableSyncBacktracking,
 }...)
 

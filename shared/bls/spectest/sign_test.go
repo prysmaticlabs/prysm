@@ -18,15 +18,7 @@ import (
 )
 
 func TestSignMessageYaml(t *testing.T) {
-	flags := &featureconfig.Flags{}
-	reset := featureconfig.InitWithReset(flags)
-	t.Run("herumi", testSignMessageYaml)
-	reset()
-
-	flags.EnableBlst = true
-	reset = featureconfig.InitWithReset(flags)
 	t.Run("blst", testSignMessageYaml)
-	reset()
 }
 
 func testSignMessageYaml(t *testing.T) {

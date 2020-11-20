@@ -21,7 +21,6 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -73,12 +72,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
 	}
 
-	var eth1Data *ethpb.Eth1Data
-	if featureconfig.Get().EnableEth1DataMajorityVote {
-		eth1Data, err = vs.eth1DataMajorityVote(ctx, head)
-	} else {
-		eth1Data, err = vs.eth1Data(ctx, req.Slot)
-	}
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}

@@ -38,14 +38,11 @@ type Flags struct {
 	// Feature related flags.
 	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
 	SkipBLSVerify              bool // Skips BLS verification across the runtime.
-	EnableBlst                 bool // Enables new BLS library from supranational.
 	PruneEpochBoundaryStates   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression  bool // EnableSnappyDBCompression in the database.
 	SlasherProtection          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	EnableNoise                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	EnableEth1DataMajorityVote bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer           bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnablePruningDepositProofs bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 	EnableSyncBacktracking     bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
 	EnableLargerGossipHistory  bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 
@@ -149,27 +146,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
 
-	cfg.EnableEth1DataMajorityVote = true
-	if ctx.Bool(disableEth1DataMajorityVote.Name) {
-		log.Warn("Disabling eth1data majority vote")
-		cfg.EnableEth1DataMajorityVote = false
-	}
 	if ctx.Bool(enablePeerScorer.Name) {
 		log.Warn("Enabling peer scoring in P2P")
 		cfg.EnablePeerScorer = true
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
-	}
-	cfg.EnableBlst = true
-	if ctx.Bool(disableBlst.Name) {
-		log.Warn("Disabling new BLS library blst")
-		cfg.EnableBlst = false
-	}
-	cfg.EnablePruningDepositProofs = true
-	if ctx.Bool(disablePruningDepositProofs.Name) {
-		log.Warn("Disabling pruning deposit proofs")
-		cfg.EnablePruningDepositProofs = false
 	}
 	if ctx.Bool(enableSyncBacktracking.Name) {
 		log.Warn("Enabling init-sync backtracking algorithm")

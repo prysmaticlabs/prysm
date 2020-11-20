@@ -15,15 +15,7 @@ import (
 )
 
 func TestAggregateYaml(t *testing.T) {
-	flags := &featureconfig.Flags{}
-	reset := featureconfig.InitWithReset(flags)
-	t.Run("herumi", testAggregateYaml)
-	reset()
-
-	flags.EnableBlst = true
-	reset = featureconfig.InitWithReset(flags)
 	t.Run("blst", testAggregateYaml)
-	reset()
 }
 
 func testAggregateYaml(t *testing.T) {

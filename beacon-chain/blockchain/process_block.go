@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -137,12 +136,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
 		eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
 		s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
-		if featureconfig.Get().EnablePruningDepositProofs {
 			// Deposit proofs are only used during state transition and can be safely removed to save space.
 			if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
 				return errors.Wrap(err, "could not prune deposit proofs")
 			}
-		}
 	}
 
 	defer reportAttestationInclusion(b)
