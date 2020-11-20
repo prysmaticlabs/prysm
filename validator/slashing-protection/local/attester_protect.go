@@ -7,6 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -58,13 +60,7 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.Wrapf(err, "could not check if pubkey is attempting a surround vote %#x", pubKey)
 	}
 	// If an attestation is a double vote or a surround vote, it is slashable.
-	if doubleVote {
-		log.Warn("Tried to create a double vote which is a slashable offense")
-		slashingprotection.LocalSlashableAttestationsTotal.Inc()
-		return true, nil
-	}
-	if surroundVote {
-		log.Warn("Tried to create a surround vote which is a slashable offense")
+	if doubleVote || surroundVote {
 		slashingprotection.LocalSlashableAttestationsTotal.Inc()
 		return true, nil
 	}
@@ -100,7 +96,15 @@ func isDoubleVote(ctx context.Context, history kv.EncHistoryData, targetEpoch ui
 	if err != nil {
 		return false, errors.Wrapf(err, "could not get data for target epoch: %d", targetEpoch)
 	}
-	return !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot), nil
+	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
+		log.WithFields(logrus.Fields{
+			"signingRoot":                   fmt.Sprintf("%#x", signingRoot),
+			"targetEpoch":                   targetEpoch,
+			"previouslyAttestedSigningRoot": fmt.Sprintf("%#x", hd.SigningRoot),
+		}).Warn("Attempted to submit a double vote, but blocked by slashing protection")
+		return true, nil
+	}
+	return false, nil
 }
 
 func isSurroundVote(
@@ -121,6 +125,12 @@ func isSurroundVote(
 		}
 		if historyAtTarget.Source > sourceEpoch {
 			// Surrounding attestation caught.
+			log.WithFields(logrus.Fields{
+				"targetEpoch":                   targetEpoch,
+				"sourceEpoch":                   sourceEpoch,
+				"previouslyAttestedTargetEpoch": i,
+				"previouslyAttestedSourceEpoch": historyAtTarget.Source,
+			}).Warn("Attempted to submit a surrounding attestation, but blocked by slashing protection")
 			return true, nil
 		}
 	}
@@ -136,6 +146,12 @@ func isSurroundVote(
 		}
 		if historyAtTarget.Source < sourceEpoch {
 			// Surrounded attestation caught.
+			log.WithFields(logrus.Fields{
+				"targetEpoch":                   targetEpoch,
+				"sourceEpoch":                   sourceEpoch,
+				"previouslyAttestedTargetEpoch": i,
+				"previouslyAttestedSourceEpoch": historyAtTarget.Source,
+			}).Warn("Attempted to submit a surrounded attestation, but blocked by slashing protection")
 			return true, nil
 		}
 	}
