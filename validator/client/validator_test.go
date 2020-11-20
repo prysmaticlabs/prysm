@@ -102,11 +102,11 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 
 	db := dbTest.SetupDB(t, [][48]byte{})
 	v := validator{
-		//keyManager:      testKeyManager,
 		validatorClient: client,
 		db:              db,
 	}
 
+	// Make sure its clean at the start.
 	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validator root")
@@ -157,7 +157,6 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 
 	db := dbTest.SetupDB(t, [][48]byte{})
 	v := validator{
-		//keyManager:      testKeyManager,
 		validatorClient: client,
 		db:              db,
 	}
@@ -185,6 +184,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
 	genesisValidatorsRoot = bytesutil.ToBytes32([]byte("badvalidators"))
+
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
