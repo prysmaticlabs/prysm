@@ -9,7 +9,7 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/remote",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/slashing:go_default_library",
         "//shared/blockutil:go_default_library",
