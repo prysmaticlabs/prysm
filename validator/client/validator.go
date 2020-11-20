@@ -134,6 +134,9 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
+		if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
+			return errors.Wrap(err, "could not save genesis validator root")
+		}
 	}
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
