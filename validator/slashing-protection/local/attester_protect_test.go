@@ -2,6 +2,7 @@ package local
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -141,18 +142,18 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 			},
 		},
 	}
-	dummySigningRoot := [32]byte{}
-	copy(dummySigningRoot[:], "root")
 	notSlashable := 0
 	slashable := 0
 	var wg sync.WaitGroup
-	totalAttestations := 10
+	totalAttestations := 100
 	for i := 0; i < totalAttestations; i++ {
 		wg.Add(1)
 		// Setup many double voting attestations.
 		go func(i int) {
 			att.Data.Source.Epoch = 110 - uint64(i)
 			att.Data.Target.Epoch = 111
+			dummySigningRoot := [32]byte{}
+			copy(dummySigningRoot[:], fmt.Sprintf("%d", i))
 			isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, dummySigningRoot)
 			require.NoError(t, err)
 			if isSlashable {

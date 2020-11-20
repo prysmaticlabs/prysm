@@ -207,12 +207,13 @@ func (store *Store) AttestationHistoryForPubKey(ctx context.Context, publicKey [
 	defer span.End()
 
 	var err error
-	attestingHistory := NewAttestationHistoryArray(0)
+	var attestingHistory EncHistoryData
 	err = store.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		enc := bucket.Get(publicKey[:])
 		if len(enc) != 0 {
 			// Copy to prevent internal array reference being overwritten by boltdb.
+			attestingHistory = make(EncHistoryData, len(enc))
 			copy(attestingHistory, enc)
 		}
 		return nil
