@@ -74,7 +74,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	// verify nothing was saved to the DB. If there is an error in the import process, we need to make
 	// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
 	// data to our DB, or it does not.
-	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
+	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for i := 0; i < len(publicKeys); i++ {
 		defaultAttestingHistory := kv.NewAttestationHistoryArray(0)
@@ -119,7 +119,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
 	// verify those indeed match the originally generated mock histories.
-	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
+	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for i := 0; i < len(publicKeys); i++ {
 		require.DeepEqual(

@@ -19,14 +19,14 @@ type ValidatorDB interface {
 	GenesisValidatorsRoot(ctx context.Context) ([]byte, error)
 	SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error
 
-	// New data structure methods
+	// Proposal history methods for slashing protection.
 	ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error)
 	SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error
-	SaveProposalHistoryForPubKeysV2(ctx context.Context, proposals map[[48]byte]kv.ProposalHistoryForPubkey) error
+	SaveProposalHistoryForPubKeys(ctx context.Context, proposals map[[48]byte]kv.ProposalHistoryForPubkey) error
 
-	// New attestation store methods
-	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
-	AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (kv.EncHistoryData, error)
-	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
-	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
+	// Attesting history methods for slashing protection.
+	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
+	AttestationHistoryForPubKey(ctx context.Context, publicKey [48]byte) (kv.EncHistoryData, error)
+	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
+	SaveAttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
 }

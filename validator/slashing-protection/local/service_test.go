@@ -36,11 +36,11 @@ func TestAttestingHistoryForPubKey_OK(t *testing.T) {
 	histories := make(map[[48]byte]kv.EncHistoryData)
 	histories[pubKey1] = history
 	histories[pubKey2] = history2
-	require.NoError(t, validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, histories))
+	require.NoError(t, validatorDB.SaveAttestationHistoryForPubKeys(ctx, histories))
 
-	wanted1, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey1)
+	wanted1, err := validatorDB.AttestationHistoryForPubKey(ctx, pubKey1)
 	require.NoError(t, err)
-	wanted2, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey2)
+	wanted2, err := validatorDB.AttestationHistoryForPubKey(ctx, pubKey2)
 	require.NoError(t, err)
 	require.DeepEqual(t, history, wanted1, "Unexpected retrieved history")
 	require.DeepEqual(t, history2, wanted2, "Unexpected retrieved history")

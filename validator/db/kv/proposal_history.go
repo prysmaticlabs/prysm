@@ -52,12 +52,12 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 	return signingRoot, err
 }
 
-// SaveProposalHistoryForPubKeysV2 saves the proposal histories for the provided validator public keys.
-func (store *Store) SaveProposalHistoryForPubKeysV2(
+// SaveProposalHistoryForPubKeys saves the proposal histories for the provided validator public keys.
+func (store *Store) SaveProposalHistoryForPubKeys(
 	ctx context.Context,
 	historyByPubKeys map[[48]byte]ProposalHistoryForPubkey,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForPubKeysV2")
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForPubKeys")
 	defer span.End()
 
 	err := store.update(func(tx *bolt.Tx) error {

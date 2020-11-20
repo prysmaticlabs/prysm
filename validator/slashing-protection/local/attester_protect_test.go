@@ -29,7 +29,7 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 	}
 	require.NoError(
 		t,
-		validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
 	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -68,7 +68,7 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	}
 	require.NoError(
 		t,
-		validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
 	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -125,7 +125,7 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	}
 	require.NoError(
 		t,
-		validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
 	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
