@@ -98,9 +98,11 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
+	db := dbTest.SetupDB(t, [][48]byte{})
 	v := validator{
 		//keyManager:      testKeyManager,
 		validatorClient: client,
+		db:              db,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
@@ -118,6 +120,10 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, v.WaitForChainStart(context.Background()))
+	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 }
