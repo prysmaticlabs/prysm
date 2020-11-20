@@ -196,9 +196,6 @@ func (s *Service) Stop() error {
 
 // Status of the currently running regular sync service.
 func (s *Service) Status() error {
-	if s.chainStarted.IsNotSet() {
-		return errors.New("chain not yet started")
-	}
 	if s.initialSync.Syncing() {
 		return errors.New("waiting for initial sync")
 	}
