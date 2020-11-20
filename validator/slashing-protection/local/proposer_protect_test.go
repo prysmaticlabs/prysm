@@ -54,9 +54,9 @@ func TestService_IsSlashableBlock_OK(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, false, slashable, "Expected block to not be slashable")
 
-	// Change the slot and now we should not get a slashable block.
-	signedBlock.Block.Slot = slot + 1
+	// Change the slot and now we should get a slashable block becuse it is below the min signed block.
+	signedBlock.Block.Slot = slot - 1
 	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
 	require.NoError(t, err)
-	assert.Equal(t, false, slashable, "Expected block to not be slashable")
+	assert.Equal(t, true, slashable, "Expected block to not be slashable")
 }
