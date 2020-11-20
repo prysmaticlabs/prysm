@@ -88,22 +88,7 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 // peer handler.
 // TODO(#6043): Add hooks to add in peer inspector to our global peer handler.
 func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
-	for id, snap := range peerMap {
-		ag, err := s.Host().Peerstore().Get(id, "AgentVersion")
-		_, ok := ag.(string)
-		if err != nil || !ok {
-			continue
-		}
-		if snap.Score < 0 {
-			log.Debugf("Peer id %s with score %f and behaviour penalty %f", id.String(), snap.Score,
-				snap.BehaviourPenalty)
-			for t, p := range snap.Topics {
-				log.Debugf("peer %s with topic %s and first deliveires %f , invalid deliveries %f, "+
-					"mesh deliveries %f and time in mesh %d ms ", id.String(), t, p.FirstMessageDeliveries,
-					p.InvalidMessageDeliveries, p.MeshMessageDeliveries, p.TimeInMesh.Milliseconds())
-			}
-		}
-	}
+	// no-op
 }
 
 // Content addressable ID function.
