@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
 
 // IsSlashableAttestation determines if an incoming attestation is slashable
@@ -52,9 +52,9 @@ func (s *Service) IsSlashableAttestation(
 	surroundVote, err := isSurroundVote(
 		ctx,
 		attesterHistory,
-		indexedAtt.Data.Target.Epoch,
-		indexedAtt.Data.Target.Epoch,
+		latestEpochWritten,
 		indexedAtt.Data.Source.Epoch,
+		indexedAtt.Data.Target.Epoch,
 	)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not check if pubkey is attempting a surround vote %#x", pubKey)
@@ -143,6 +143,7 @@ func isSurroundVote(
 		if historyAtTarget == nil || historyAtTarget.IsEmpty() {
 			continue
 		}
+		//time="2020-11-20 16:55:13" level=warning msg="Attempted to submit a surrounded attestation, but blocked by slashing protection" prefix=local-slashing-protection        previouslyAttestedSourceEpoch=0 previouslyAttestedTargetEpoch=1 sourceEpoch=2 targetEpoch=0
 		prevTarget := i
 		prevSource := historyAtTarget.Source
 		if surroundedByPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
