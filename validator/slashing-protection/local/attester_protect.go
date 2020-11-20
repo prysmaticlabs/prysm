@@ -112,7 +112,6 @@ func isSurroundVote(
 	sourceEpoch,
 	targetEpoch uint64,
 ) (bool, error) {
-	// Check if the new attestation would be surrounding another attestation.
 	for i := sourceEpoch; i <= targetEpoch; i++ {
 		historyAtTarget, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
 		if err != nil {
@@ -121,13 +120,15 @@ func isSurroundVote(
 		if historyAtTarget == nil || historyAtTarget.IsEmpty() {
 			continue
 		}
-		if historyAtTarget.Source > sourceEpoch {
+		prevTarget := i
+		prevSource := historyAtTarget.Source
+		if surroundingPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
 			// Surrounding attestation caught.
 			log.WithFields(logrus.Fields{
 				"targetEpoch":                   targetEpoch,
 				"sourceEpoch":                   sourceEpoch,
-				"previouslyAttestedTargetEpoch": i,
-				"previouslyAttestedSourceEpoch": historyAtTarget.Source,
+				"previouslyAttestedTargetEpoch": prevTarget,
+				"previouslyAttestedSourceEpoch": prevSource,
 			}).Warn("Attempted to submit a surrounding attestation, but blocked by slashing protection")
 			return true, nil
 		}
@@ -142,13 +143,15 @@ func isSurroundVote(
 		if historyAtTarget == nil || historyAtTarget.IsEmpty() {
 			continue
 		}
-		if historyAtTarget.Source < sourceEpoch {
+		prevTarget := i
+		prevSource := historyAtTarget.Source
+		if surroundedByPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
 			// Surrounded attestation caught.
 			log.WithFields(logrus.Fields{
 				"targetEpoch":                   targetEpoch,
 				"sourceEpoch":                   sourceEpoch,
-				"previouslyAttestedTargetEpoch": i,
-				"previouslyAttestedSourceEpoch": historyAtTarget.Source,
+				"previouslyAttestedTargetEpoch": prevTarget,
+				"previouslyAttestedSourceEpoch": prevSource,
 			}).Warn("Attempted to submit a surrounded attestation, but blocked by slashing protection")
 			return true, nil
 		}
@@ -177,4 +180,12 @@ func checkHistoryAtTargetEpoch(
 		return nil, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
 	}
 	return historyData, nil
+}
+
+func surroundedByPrevAttestation(prevSource, prevTarget, newSource, newTarget uint64) bool {
+	return prevSource < newSource && newTarget < prevTarget
+}
+
+func surroundingPrevAttestation(prevSource, prevTarget, newSource, newTarget uint64) bool {
+	return newSource < prevSource && prevTarget < newTarget
 }

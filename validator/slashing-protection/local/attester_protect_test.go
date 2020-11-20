@@ -314,6 +314,46 @@ func Test_isSurroundVote(t *testing.T) {
 			sourceEpoch:        source + 1,
 			want:               true,
 		},
+		{
+			name:               "new attestation source == old source, but new target < old target",
+			history:            history,
+			latestEpochWritten: target,
+			targetEpoch:        target - 1,
+			sourceEpoch:        source,
+			want:               false,
+		},
+		{
+			name:               "new attestation source > old source, but new target == old target",
+			history:            history,
+			latestEpochWritten: target,
+			targetEpoch:        target,
+			sourceEpoch:        source + 1,
+			want:               false,
+		},
+		{
+			name:               "new attestation source and targets equal to old one",
+			history:            history,
+			latestEpochWritten: target,
+			targetEpoch:        target,
+			sourceEpoch:        source,
+			want:               false,
+		},
+		{
+			name:               "new attestation source == old source, but new target > old target",
+			history:            history,
+			latestEpochWritten: target,
+			targetEpoch:        target + 1,
+			sourceEpoch:        source,
+			want:               false,
+		},
+		{
+			name:               "new attestation source < old source, but new target == old target",
+			history:            history,
+			latestEpochWritten: target,
+			targetEpoch:        target,
+			sourceEpoch:        source - 1,
+			want:               false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -384,6 +424,130 @@ func Test_checkHistoryAtTargetEpoch(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("checkHistoryAtTargetEpoch() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_surroundedByPrevAttestation(t *testing.T) {
+	type args struct {
+		oldSource uint64
+		oldTarget uint64
+		newSource uint64
+		newTarget uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "new attestation is surrounded by an old one",
+			args: args{
+				oldSource: 2,
+				oldTarget: 6,
+				newSource: 3,
+				newTarget: 5,
+			},
+			want: true,
+		},
+		{
+			name: "new attestation source and targets equal to old one",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 5,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source == old source, but new target < old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 4,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source > old source, but new target == old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 4,
+				newTarget: 5,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := surroundedByPrevAttestation(tt.args.oldSource, tt.args.oldTarget, tt.args.newSource, tt.args.newTarget); got != tt.want {
+				t.Errorf("surroundedByPrevAttestation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_surroundingPrevAttestation(t *testing.T) {
+	type args struct {
+		oldSource uint64
+		oldTarget uint64
+		newSource uint64
+		newTarget uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "new attestation is surrounding an old one",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 2,
+				newTarget: 6,
+			},
+			want: true,
+		},
+		{
+			name: "new attestation source and targets equal to old one",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 5,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source == old source, but new target > old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 6,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source < old source, but new target == old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 2,
+				newTarget: 5,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := surroundingPrevAttestation(tt.args.oldSource, tt.args.oldTarget, tt.args.newSource, tt.args.newTarget); got != tt.want {
+				t.Errorf("surroundingPrevAttestation() = %v, want %v", got, tt.want)
 			}
 		})
 	}
