@@ -50,7 +50,7 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForPubKeysV2")
 	defer span.End()
-
+	minimalProposalSlot := make(map[[48]byte]uint64)
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		for pubKey, history := range historyByPubKeys {
@@ -59,6 +59,14 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 				return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 			}
 			for _, proposal := range history.Proposals {
+				minimalSlot, ok := minimalProposalSlot[pubKey]
+				if !ok || (ok && proposal.Slot < minimalSlot) {
+					minimalProposalSlot[pubKey] = proposal.Slot
+					if err = valBucket.Put(minimalProposalSlotKey, bytesutil.Uint64ToBytesBigEndian(proposal.Slot)); err != nil {
+						return err
+					}
+				}
+				fmt.Printf("save proposal for slot %d pubkey %#x signing root %#x\n", proposal, pubKey[:6], proposal.SigningRoot[:6])
 				if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(proposal.Slot), proposal.SigningRoot); err != nil {
 					return err
 				}
