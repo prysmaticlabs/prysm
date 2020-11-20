@@ -58,7 +58,13 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.Wrapf(err, "could not check if pubkey is attempting a surround vote %#x", pubKey)
 	}
 	// If an attestation is a double vote or a surround vote, it is slashable.
-	if doubleVote || surroundVote {
+	if doubleVote {
+		log.Warn("Tried to create a double vote which is a slashable offense")
+		slashingprotection.LocalSlashableAttestationsTotal.Inc()
+		return true, nil
+	}
+	if surroundVote {
+		log.Warn("Tried to create a surround vote which is a slashable offense")
 		slashingprotection.LocalSlashableAttestationsTotal.Inc()
 		return true, nil
 	}
