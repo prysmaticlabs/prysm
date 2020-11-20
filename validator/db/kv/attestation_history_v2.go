@@ -201,7 +201,7 @@ func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKe
 	return attestationHistoryForVals, err
 }
 
-// AttestationHistoryForPubKeyV2 --
+// AttestationHistoryForPubKeyV2 fetches the attestation history for a public key.
 func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeyV2")
 	defer span.End()
@@ -216,7 +216,10 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		}
 		return nil
 	})
-	return attestingHistory, err
+	// Copy to prevent internal array reference being overwritten by boltdb.
+	history := make(EncHistoryData, len(attestingHistory))
+	copy(history, attestingHistory)
+	return history, err
 }
 
 // SaveAttestationHistoryForPubKeysV2 saves the attestation histories for the requested validator public keys.

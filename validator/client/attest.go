@@ -81,7 +81,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
 		return
 	}
-	if v.remoteSlashingProtector != nil {
+	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
 		slashable, err = v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 		if err != nil {
 			// If slasher is unavailable, trust local protection and proceed with submitting the attestation.

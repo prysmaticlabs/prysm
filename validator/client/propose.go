@@ -87,7 +87,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
 		return
 	}
-	if v.remoteSlashingProtector != nil {
+	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
 		slashable, err = v.remoteSlashingProtector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
 		if err != nil {
 			// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
