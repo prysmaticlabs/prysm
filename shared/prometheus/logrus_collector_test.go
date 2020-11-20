@@ -43,9 +43,11 @@ func TestLogrusCollector(t *testing.T) {
 		{"info message with empty prefix", 3, 3, "", log.InfoLevel},
 		{"warn message with empty prefix", 2, 2, "", log.WarnLevel},
 		{"error message with empty prefix", 1, 1, "", log.ErrorLevel},
+		{"fatal message with empty prefix", 1, 1, "", log.FatalLevel},
 		{"error message with prefix", 1, 1, "foo", log.ErrorLevel},
 		{"info message with prefix", 3, 3, "foo", log.InfoLevel},
 		{"warn message with prefix", 2, 2, "foo", log.WarnLevel},
+		{"fatal message with prefix", 2, 2, "foo", log.FatalLevel},
 	}
 
 	for _, tt := range tests {
@@ -104,5 +106,7 @@ func logExampleMessage(logger logger, level log.Level) {
 		logger.Warn("Warning message!")
 	case log.ErrorLevel:
 		logger.Error("Error message!!")
+	case log.FatalLevel:
+		logger.Error("Fatal message!!")
 	}
 }

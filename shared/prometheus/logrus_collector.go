@@ -14,7 +14,7 @@ type LogrusCollector struct {
 }
 
 var (
-	supportedLevels = []logrus.Level{logrus.InfoLevel, logrus.WarnLevel, logrus.ErrorLevel}
+	supportedLevels = []logrus.Level{logrus.InfoLevel, logrus.WarnLevel, logrus.ErrorLevel, logrus.FatalLevel}
 	counterVec      = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "log_entries_total",
 		Help: "Total number of log messages.",
