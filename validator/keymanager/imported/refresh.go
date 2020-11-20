@@ -83,9 +83,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 		case event := <-watcher.Events:
 			// If a file was modified, we attempt to read that file
 			// and parse it into our accounts store.
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				fileChangesChan <- event
-			}
+			fileChangesChan <- event
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", accountsFilePath)
 		case <-ctx.Done():
