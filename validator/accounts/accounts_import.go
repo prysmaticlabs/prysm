@@ -113,46 +113,6 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "Only imported wallets can import more keystores")
 	}
 
-	resp, err := promptutil.ValidatePrompt(
-		os.Stdin,
-		"Have you used the keys you are importing to validate in the past?",
-		promptutil.ValidateYesOrNo,
-	)
-	if err != nil {
-		return err
-	}
-	if resp == "y" {
-		protectionFilePath, err := prompt.InputDirectory(cliCtx, prompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
-		if err != nil {
-			return err
-		}
-		if protectionFilePath != "" {
-			fullPath, err := fileutil.ExpandPath(protectionFilePath)
-			if err != nil {
-				return errors.Wrapf(err, "could not expand file path for %s", protectionFilePath)
-			}
-			if !fileutil.FileExists(fullPath) {
-				return fmt.Errorf("file %s does not exist", fullPath)
-			}
-			protectionJSON, err := os.Open(fullPath)
-			if err != nil {
-				return errors.Wrapf(err, "could not read private key file at path %s", fullPath)
-			}
-
-			dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-			if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
-				dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-			}
-			valDB, err := kv.NewKVStore(dataDir, nil)
-			if err != nil {
-				return errors.Wrap(err, "could not initialize db")
-			}
-			if err := slashingProtection.ImportStandardProtectionJSON(cliCtx.Context, valDB, protectionJSON); err != nil {
-				return err
-			}
-		}
-	}
-
 	// Check if the user wishes to import a one-off, private key directly
 	// as an account into the Prysm validator.
 	if cliCtx.IsSet(flags.ImportPrivateKeyFileFlag.Name) {
@@ -232,6 +192,47 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		"Successfully imported %s accounts, view all of them by running accounts list\n",
 		au.BrightMagenta(strconv.Itoa(len(keystoresImported))),
 	)
+
+	resp, err := promptutil.ValidatePrompt(
+		os.Stdin,
+		"Have you used the keys you imported to validate in the past? (y/n)",
+		promptutil.ValidateYesOrNo,
+	)
+	if err != nil {
+		return err
+	}
+	if resp == "y" {
+		protectionFilePath, err := prompt.InputDirectory(cliCtx, prompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
+		if err != nil {
+			return err
+		}
+		if protectionFilePath != "" {
+			fullPath, err := fileutil.ExpandPath(protectionFilePath)
+			if err != nil {
+				return errors.Wrapf(err, "could not expand file path for %s", protectionFilePath)
+			}
+			if !fileutil.FileExists(fullPath) {
+				return fmt.Errorf("file %s does not exist", fullPath)
+			}
+			protectionJSON, err := os.Open(fullPath)
+			if err != nil {
+				return errors.Wrapf(err, "could not read private key file at path %s", fullPath)
+			}
+
+			dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+			if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
+				dataDir = cliCtx.String(cmd.DataDirFlag.Name)
+			}
+			valDB, err := kv.NewKVStore(dataDir, nil)
+			if err != nil {
+				return errors.Wrap(err, "could not initialize db")
+			}
+			if err := slashingProtection.ImportStandardProtectionJSON(cliCtx.Context, valDB, protectionJSON); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
