@@ -19,7 +19,7 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 		signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pub[:], 0)
 		require.NoError(t, err)
 		require.Equal(t, true, signingRoot == nil)
-		require.Equal(t, 0, min)
+		require.Equal(t, uint64(0), min)
 	}
 }
 
