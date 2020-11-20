@@ -15,7 +15,6 @@ import (
 var ProtectionDbFileName = "validator.db"
 
 const proposalExported = "PROPOSALS_IMPORTED"
-const attestationExported = "ATTESTATIONS_IMPORTED"
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.

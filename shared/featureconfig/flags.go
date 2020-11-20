@@ -46,6 +46,12 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
+	disableStrictRemoteSlashingProtection = &cli.BoolFlag{
+		Name: "disable-strict-remote-slashing-protection",
+		Usage: "Allows submitting attestations and blocks to the beacon node from the validator client if " +
+			"remote slasher protection returns gRPC error code " +
+			"UNAVAILABLE, CANCELED, or RESOURCE_EXHAUSTED",
+	}
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
@@ -100,6 +106,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	Mainnet,
 	disableAccountsV2,
 	disableBlst,
+	disableStrictRemoteSlashingProtection,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
