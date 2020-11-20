@@ -30,7 +30,7 @@ type pubKeyAttestations struct {
 
 // Merge merges data from sourceStores into a new store, which is created in targetDirectory.
 func Merge(ctx context.Context, sourceStores []*Store, targetDirectory string) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.Db.Manage")
+	ctx, span := trace.StartSpan(ctx, "Validator.Db.Merge")
 	defer span.End()
 
 	allProposals, allAttestations, err := getAllProposalsAndAllAttestations(sourceStores)
@@ -43,7 +43,7 @@ func Merge(ctx context.Context, sourceStores []*Store, targetDirectory string) e
 // Split splits data from sourceStore into several stores, one for each public key in sourceStore.
 // Each new store is created in its own subdirectory inside targetDirectory.
 func Split(ctx context.Context, sourceStore *Store, targetDirectory string) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.Db.Manage")
+	ctx, span := trace.StartSpan(ctx, "Validator.Db.Split")
 	defer span.End()
 
 	allProposals, allAttestations, err := getAllProposalsAndAllAttestations([]*Store{sourceStore})
