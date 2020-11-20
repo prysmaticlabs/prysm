@@ -2,7 +2,11 @@ package imported
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+
+	"github.com/google/uuid"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -11,6 +15,68 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 )
+
+func TestImportedKeymanager_reloadAccountsFromKeystore_NoKeys(t *testing.T) {
+	password := "Passw03rdz293**%#2"
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   password,
+	}
+	dr := &Keymanager{
+		wallet: wallet,
+	}
+	accountsStore := &accountStore{
+		PrivateKeys: nil,
+		PublicKeys:  nil,
+	}
+	encodedStore, err := json.MarshalIndent(accountsStore, "", "\t")
+	require.NoError(t, err)
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
+	require.NoError(t, err)
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	keystore := &accountsKeystoreRepresentation{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
+	err = dr.reloadAccountsFromKeystore(keystore)
+	assert.ErrorContains(t, "0 public/private keys", err)
+}
+
+func TestImportedKeymanager_reloadAccountsFromKeystore_MismatchedNumKeys(t *testing.T) {
+	password := "Passw03rdz293**%#2"
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+		WalletPassword:   password,
+	}
+	dr := &Keymanager{
+		wallet: wallet,
+	}
+	accountsStore := &accountStore{
+		PrivateKeys: [][]byte{[]byte("hello")},
+		PublicKeys:  [][]byte{[]byte("hi"), []byte("world")},
+	}
+	encodedStore, err := json.MarshalIndent(accountsStore, "", "\t")
+	require.NoError(t, err)
+	encryptor := keystorev4.New()
+	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
+	require.NoError(t, err)
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	keystore := &accountsKeystoreRepresentation{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
+	err = dr.reloadAccountsFromKeystore(keystore)
+	assert.ErrorContains(t, "do not match", err)
+}
 
 func TestImportedKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	password := "Passw03rdz293**%#2"
