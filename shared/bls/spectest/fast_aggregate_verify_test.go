@@ -47,8 +47,6 @@ func testFastAggregateVerifyYaml(t *testing.T) {
 			if msg == "" {
 				msg = test.Input.Messages
 			}
-			msgBytes, err := hex.DecodeString(msg[2:])
-			require.NoError(t, err)
 			sigBytes, err := hex.DecodeString(test.Input.Signature[2:])
 			require.NoError(t, err)
 			sig, err := bls.SignatureFromBytes(sigBytes)
@@ -59,6 +57,8 @@ func testFastAggregateVerifyYaml(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to signature: %v", err)
 			}
 
+			msgBytes, err := hex.DecodeString(msg[2:])
+			require.NoError(t, err)
 			verified := sig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msgBytes))
 			if verified != test.Output {
 				t.Fatalf("Signature does not match the expected verification output. "+
