@@ -3,22 +3,17 @@ package interchangeformat
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -49,13 +44,13 @@ func TestStore_ImportInterchangeData_NilData_FailsSilently(t *testing.T) {
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
-	publicKeys := createRandomPubKeys(t, numValidators)
+	publicKeys := spTest.CreateRandomPubKeys(t, numValidators)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators)
-	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
+	attestingHistory, proposalHistory := spTest.MockAttestingAndProposalHistories(t, numValidators)
+	standardProtectionFormat := spTest.MockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
 
 	// We replace a slot of one of the blocks with junk data.
 	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
@@ -199,8 +194,8 @@ func Test_validateMetadata(t *testing.T) {
 
 func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	numValidators := 4
-	pubKeys := createRandomPubKeys(t, numValidators)
-	roots := createRandomRoots(t, numValidators)
+	pubKeys := spTest.CreateRandomPubKeys(t, numValidators)
+	roots := spTest.CreateRandomRoots(t, numValidators)
 	tests := []struct {
 		name    string
 		data    []*ProtectionData
@@ -434,8 +429,8 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 
 func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	numValidators := 4
-	pubKeys := createRandomPubKeys(t, numValidators)
-	roots := createRandomRoots(t, numValidators)
+	pubKeys := testing.CreateRandomPubKeys(t, numValidators)
+	roots := testing.CreateRandomRoots(t, numValidators)
 	tests := []struct {
 		name    string
 		data    []*ProtectionData
@@ -675,100 +670,4 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			}
 		})
 	}
-}
-
-func mockSlashingProtectionJSON(
-	t *testing.T,
-	publicKeys [][48]byte,
-	attestingHistories []kv.EncHistoryData,
-	proposalHistories []kv.ProposalHistoryForPubkey,
-) *EIPSlashingProtectionFormat {
-	standardProtectionFormat := &EIPSlashingProtectionFormat{}
-	standardProtectionFormat.Metadata.GenesisValidatorsRoot = hex.EncodeToString(bytesutil.PadTo([]byte{32}, 32))
-	standardProtectionFormat.Metadata.InterchangeFormatVersion = "5"
-	ctx := context.Background()
-	for i := 0; i < len(publicKeys); i++ {
-		data := &ProtectionData{
-			Pubkey: hex.EncodeToString(publicKeys[i][:]),
-		}
-		highestEpochWritten, err := attestingHistories[i].GetLatestEpochWritten(ctx)
-		require.NoError(t, err)
-		for target := uint64(0); target <= highestEpochWritten; target++ {
-			hd, err := attestingHistories[i].GetTargetData(ctx, target)
-			require.NoError(t, err)
-			data.SignedAttestations = append(data.SignedAttestations, &SignedAttestation{
-				TargetEpoch: strconv.FormatUint(target, 10),
-				SourceEpoch: strconv.FormatUint(hd.Source, 10),
-				SigningRoot: hex.EncodeToString(hd.SigningRoot),
-			})
-		}
-		for target := uint64(0); target < highestEpochWritten; target++ {
-			proposal := proposalHistories[i].Proposals[target]
-			block := &SignedBlock{
-				Slot:        strconv.FormatUint(proposal.Slot, 10),
-				SigningRoot: hex.EncodeToString(proposal.SigningRoot),
-			}
-			data.SignedBlocks = append(data.SignedBlocks, block)
-
-		}
-		standardProtectionFormat.Data = append(standardProtectionFormat.Data, data)
-	}
-	return standardProtectionFormat
-}
-
-func mockAttestingAndProposalHistories(t *testing.T, numValidators int) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey) {
-	// deduplicate and transform them into our internal format.
-	attData := make([]kv.EncHistoryData, numValidators)
-	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
-	gen := rand.NewGenerator()
-	ctx := context.Background()
-	for v := 0; v < numValidators; v++ {
-		var err error
-		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 100)
-		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
-		proposals := make([]kv.Proposal, 0)
-		for i := 1; i < latestTarget; i++ {
-			signingRoot := [32]byte{}
-			signingRootStr := fmt.Sprintf("%d", i)
-			copy(signingRoot[:], signingRootStr)
-			historyData := &kv.HistoryData{
-				Source:      uint64(gen.Intn(100000)),
-				SigningRoot: signingRoot[:],
-			}
-			hd, err = hd.SetTargetData(ctx, uint64(i), historyData)
-			require.NoError(t, err)
-		}
-		for i := 1; i <= latestTarget; i++ {
-			signingRoot := [32]byte{}
-			signingRootStr := fmt.Sprintf("%d", i)
-			copy(signingRoot[:], signingRootStr)
-			proposals = append(proposals, kv.Proposal{
-				Slot:        uint64(i),
-				SigningRoot: signingRoot[:],
-			})
-		}
-		proposalData[v] = kv.ProposalHistoryForPubkey{Proposals: proposals}
-		hd, err = hd.SetLatestEpochWritten(ctx, uint64(latestTarget))
-		require.NoError(t, err)
-		attData[v] = hd
-	}
-	return attData, proposalData
-}
-
-func createRandomPubKeys(t *testing.T, numValidators int) [][48]byte {
-	pubKeys := make([][48]byte, numValidators)
-	for i := 0; i < numValidators; i++ {
-		randKey, err := bls.RandKey()
-		require.NoError(t, err)
-		copy(pubKeys[i][:], randKey.PublicKey().Marshal())
-	}
-	return pubKeys
-}
-
-func createRandomRoots(t *testing.T, numRoots int) [][32]byte {
-	roots := make([][32]byte, numRoots)
-	for i := 0; i < numRoots; i++ {
-		roots[i] = hashutil.Hash([]byte(fmt.Sprintf("%d", i)))
-	}
-	return roots
 }
