@@ -3,6 +3,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/hex"
@@ -134,8 +135,22 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
-		if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
-			return errors.Wrap(err, "could not save genesis validator root")
+		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get current genesis validators root")
+		}
+		if len(curGenValRoot) == 0 {
+			if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
+				return errors.Wrap(err, "could not save genesis validator root")
+			}
+		} else {
+			if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
+				return fmt.Errorf(
+					"received genesis validators root %#x did not match saved root %#x",
+					chainStartRes.GenesisValidatorsRoot,
+					curGenValRoot,
+				)
+			}
 		}
 	}
 
