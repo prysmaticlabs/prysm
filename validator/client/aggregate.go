@@ -70,7 +70,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err != nil {
 		status, ok := status.FromError(err)
 		if ok && status.Code() == codes.NotFound {
-			log.WithField("slot", slot).Warnf("Could not find attestation to submit: %v", err)
+			log.WithField("slot", slot).WithError(err).Warn("No attestations to aggregate")
 		} else {
 			log.WithField("slot", slot).Errorf("Could not submit slot signature to beacon node: %v", err)
 			if v.emitAccountMetrics {
