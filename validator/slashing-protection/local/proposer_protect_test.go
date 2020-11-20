@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -35,8 +36,9 @@ func TestService_IsSlashableBlock_OK(t *testing.T) {
 			},
 		},
 	}
-	dummySigningRoot := [32]byte{}
-	copy(dummySigningRoot[:], []byte{1})
+	dummySigningRoot := [32]byte{1}
+	dummySigningRoot2 := [32]byte{2}
+
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey.Marshal(), slot, dummySigningRoot[:])
 	require.NoError(t, err)
 	pubKeyBytes := [48]byte{}
@@ -45,7 +47,13 @@ func TestService_IsSlashableBlock_OK(t *testing.T) {
 	srv := &Service{
 		validatorDB: validatorDB,
 	}
+	// Same signing root should be slashable.
 	slashable, err := srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
+	require.NoError(t, err)
+	assert.Equal(t, false, slashable, "Expected block to not be slashable")
+
+	// Different signing root should be slashable.
+	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot2)
 	require.NoError(t, err)
 	assert.Equal(t, true, slashable, "Expected block to be slashable")
 
@@ -54,4 +62,13 @@ func TestService_IsSlashableBlock_OK(t *testing.T) {
 	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
 	require.NoError(t, err)
 	assert.Equal(t, false, slashable, "Expected block to not be slashable")
+
+	// Zero hash should be slashable with any signing root.
+	signedBlock.Block.Slot = slot + 2
+	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, params.BeaconConfig().ZeroHash)
+	require.NoError(t, err)
+	assert.Equal(t, false, slashable, "Expected new slot block to not be slashable")
+	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
+	require.NoError(t, err)
+	assert.Equal(t, true, slashable, "Expected block to be slashable")
 }

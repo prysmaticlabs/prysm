@@ -3,11 +3,11 @@ package local
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
 
 // IsSlashableBlock determines if an incoming block is slashable
@@ -25,7 +25,9 @@ func (s *Service) IsSlashableBlock(
 		return false, errors.Wrap(err, "failed to get proposal history")
 	}
 	// Check if we are performing a double block proposal.
-	if existingSigningRoot != nil && !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
+	same := existingSigningRoot != nil && bytes.Equal(existingSigningRoot, signingRoot[:])
+	if existingSigningRoot != nil && !same {
+		fmt.Printf("existingSigningRoot %#x signingRoot %#x\n", existingSigningRoot[26:], signingRoot[26:])
 		slashingprotection.LocalSlashableProposalsTotal.Inc()
 		return true, nil
 	}
