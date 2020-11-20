@@ -95,7 +95,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			if !errors.Is(err, remote.ErrSlasherUnavailable) {
 				log.WithFields(
 					blockLogFields(pubKey, blk),
-				).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
+				).WithError(err).Warn("Could not check block safety with slashing protection, not submitting")
 				return
 			}
 		}

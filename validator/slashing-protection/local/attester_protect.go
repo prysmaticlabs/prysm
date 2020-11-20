@@ -27,7 +27,7 @@ func (s *Service) IsSlashableAttestation(
 	if indexedAtt == nil || indexedAtt.Data == nil {
 		return false, errors.New("received nil attestation")
 	}
-	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
+	lock := mputil.NewMultilock(string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 	attesterHistory, err := s.validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey)

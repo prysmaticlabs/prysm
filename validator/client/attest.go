@@ -89,7 +89,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			if !errors.Is(err, remote.ErrSlasherUnavailable) {
 				log.WithFields(
 					attestationLogFields(pubKey, indexedAtt),
-				).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
+				).WithError(err).Warn("Could not check attestation safety with slashing protection, not submitting")
 				return
 			}
 		}
