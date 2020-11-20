@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 )
 
 // IsSlashableBlock determines if an incoming block is slashable
@@ -20,9 +20,14 @@ func (s *Service) IsSlashableBlock(
 		return false, errors.New("received nil block")
 	}
 	// Check if the block is slashable by local and remote slashing protection
-	existingSigningRoot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot)
+	existingSigningRoot, minSlot, err := s.validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get proposal history")
+	}
+	// Dont allow blocks with minimal slot lower then the minimal imported slot to be signed.
+	if block.Block.Slot < minSlot {
+		slashingprotection.LocalSlashableProposalsTotal.Inc()
+		return true, nil
 	}
 	// Check if we are performing a double block proposal.
 	if existingSigningRoot != nil && !bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {

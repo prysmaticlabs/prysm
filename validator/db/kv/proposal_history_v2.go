@@ -22,6 +22,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 
 	var err error
 	noDataFound := false
+	var minimalSlot uint64
 	signingRoot := make([]byte, 32)
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
@@ -29,8 +30,9 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
-		minSlot := valBucket.Get(minimalProposalSlotKey)
 		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
+		min := valBucket.Get(minimalProposalSlotKey)
+		minimalSlot = bytesutil.BytesToUint64BigEndian(min)
 		if len(sr) == 0 {
 			noDataFound = true
 			return nil
@@ -38,10 +40,11 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		copy(signingRoot, sr)
 		return nil
 	})
+	fmt.Printf("minimal slot %d pub key %#x\n", minimalSlot, publicKey[:6])
 	if noDataFound {
-		return nil, nil
+		return nil, minimalSlot, nil
 	}
-	return signingRoot, err
+	return signingRoot, minimalSlot, err
 }
 
 // SaveProposalHistoryForPubKeysV2 saves the proposal histories for the provided validator public keys.
@@ -83,12 +86,21 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
-
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(pubKey)
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
+		}
+		enc := valBucket.Get(minimalProposalSlotKey)
+		var minSlot uint64
+		if len(enc) != 0 {
+			minSlot = bytesutil.BytesToUint64BigEndian(enc)
+		}
+		if len(enc) == 0 || slot < minSlot {
+			if err := valBucket.Put(minimalProposalSlotKey, bytesutil.Uint64ToBytesBigEndian(slot)); err != nil {
+				return err
+			}
 		}
 		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot), signingRoot); err != nil {
 			return err

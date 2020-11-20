@@ -41,13 +41,18 @@ func TestService_IsSlashableBlock_OK(t *testing.T) {
 	require.NoError(t, err)
 	pubKeyBytes := [48]byte{}
 	copy(pubKeyBytes[:], pubKey.Marshal())
-
 	srv := &Service{
 		validatorDB: validatorDB,
 	}
 	slashable, err := srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
 	require.NoError(t, err)
 	assert.Equal(t, true, slashable, "Expected block to be slashable")
+
+	// Change the slot and now we should not get a slashable block.
+	signedBlock.Block.Slot = slot + 1
+	slashable, err = srv.IsSlashableBlock(ctx, signedBlock, pubKeyBytes, dummySigningRoot)
+	require.NoError(t, err)
+	assert.Equal(t, false, slashable, "Expected block to not be slashable")
 
 	// Change the slot and now we should not get a slashable block.
 	signedBlock.Block.Slot = slot + 1

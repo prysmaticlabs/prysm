@@ -20,8 +20,8 @@ type ValidatorDB interface {
 	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
 	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
 	//new data structure methods
-	ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error)
-	SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error
+	ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, uint64, error)
+	SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) (uint64, error)
 	SaveProposalHistoryForPubKeysV2(ctx context.Context, proposals map[[48]byte]kv.ProposalHistoryForPubkey) error
 
 	// Attester protection related methods.

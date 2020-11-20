@@ -16,9 +16,10 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 	db := setupDB(t, pubkeys)
 
 	for _, pub := range pubkeys {
-		signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pub[:], 0)
+		signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pub[:], 0)
 		require.NoError(t, err)
 		require.Equal(t, true, signingRoot == nil)
+		require.Equal(t, 0, min)
 	}
 }
 
@@ -26,7 +27,7 @@ func TestNewProposalHistoryForSlot_NilDB(t *testing.T) {
 	valPubkey := [48]byte{1, 2, 3}
 	db := setupDB(t, [][48]byte{})
 
-	_, err := db.ProposalHistoryForSlot(context.Background(), valPubkey[:], 0)
+	_, _, err := db.ProposalHistoryForSlot(context.Background(), valPubkey[:], 0)
 	require.ErrorContains(t, "validator history empty for public key", err, "Unexpected error for nil DB")
 }
 
@@ -38,11 +39,11 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], slot)
+	signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], slot)
 	require.NoError(t, err, "Failed to get proposal history")
-
 	require.NotNil(t, signingRoot)
 	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot, "Expected DB to keep object the same")
+	require.Equal(t, slot, min)
 }
 
 func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
@@ -53,9 +54,10 @@ func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
 	emptySlot := uint64(120)
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], emptySlot)
+	signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], emptySlot)
 	require.NoError(t, err, "Failed to get proposal history")
 	assert.Equal(t, true, signingRoot == nil)
+	require.Equal(t, slot, min)
 }
 
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
@@ -82,7 +84,7 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 		db := setupDB(t, [][48]byte{pubkey})
 		err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], 0, tt.signingRoot)
 		require.NoError(t, err, "Saving proposal history failed")
-		signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], 0)
+		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], 0)
 		require.NoError(t, err, "Failed to get proposal history")
 
 		require.NotNil(t, signingRoot)
@@ -140,12 +142,12 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 		}
 
 		for _, slot := range tt.removedSlots {
-			sr, err := db.ProposalHistoryForSlot(context.Background(), pubKey[:], slot)
+			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey[:], slot)
 			require.NoError(t, err, "Failed to get proposal history")
 			require.Equal(t, true, sr == nil)
 		}
 		for _, slot := range tt.storedSlots {
-			sr, err := db.ProposalHistoryForSlot(context.Background(), pubKey[:], slot)
+			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey[:], slot)
 			require.NoError(t, err, "Failed to get proposal history")
 			require.DeepEqual(t, signedRoot, sr, "Unexpected difference in bytes for epoch %d", slot)
 		}
@@ -180,12 +182,12 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 
 	for slot := uint64(0); slot <= lastIndex; slot++ {
 		if _, ok := proposedSlots[slot]; ok {
-			root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
+			root, _, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
 			require.NoError(t, err)
 			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root)
 			continue
 		}
-		root, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
+		root, _, err := db.ProposalHistoryForSlot(ctx, pubkey[:], slot)
 		require.NoError(t, err)
 		require.Equal(t, true, root == nil)
 	}

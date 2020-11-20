@@ -196,7 +196,7 @@ func prepareStoreAttestations(store *Store, pubKeys [][48]byte) (map[[48]byte]ma
 
 func assertStore(t *testing.T, store *Store, pubKeys [][48]byte, expectedHistory *storeHistory) {
 	for _, key := range pubKeys {
-		proposalHistory, err := store.ProposalHistoryForSlot(context.Background(), key[:], 0)
+		proposalHistory, _, err := store.ProposalHistoryForSlot(context.Background(), key[:], 0)
 		require.NoError(t, err, "Retrieving proposal history failed for public key %v", key)
 		require.NotNil(t, proposalHistory)
 		expectedProposals := expectedHistory.Proposals[key]
