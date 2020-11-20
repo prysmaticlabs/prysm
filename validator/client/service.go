@@ -64,7 +64,6 @@ type ValidatorService struct {
 	validator               Validator
 	localSlashingProtector  slashingprotection.Protector
 	remoteSlashingProtector slashingprotection.Protector
-	attestingHistoryManager slashingprotection.AttestingHistoryManager
 	ctx                     context.Context
 	keyManager              keymanager.IKeymanager
 	grpcHeaders             []string
@@ -82,7 +81,6 @@ type Config struct {
 	GrpcMaxCallRecvMsgSizeFlag int
 	LocalSlashingProtector     slashingprotection.Protector
 	RemoteSlashingProtector    slashingprotection.Protector
-	AttestingHistoryManager    slashingprotection.AttestingHistoryManager
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
@@ -113,7 +111,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcHeaders:             strings.Split(cfg.GrpcHeadersFlag, ","),
 		localSlashingProtector:  cfg.LocalSlashingProtector,
 		remoteSlashingProtector: cfg.RemoteSlashingProtector,
-		attestingHistoryManager: cfg.AttestingHistoryManager,
 		validator:               cfg.Validator,
 		db:                      cfg.ValDB,
 		walletInitializedFeed:   cfg.WalletInitializedFeed,
@@ -179,7 +176,6 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		attestingHistoryManager:        v.attestingHistoryManager,
 		localSlashingProtector:         v.localSlashingProtector,
 		remoteSlashingProtector:        v.remoteSlashingProtector,
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},

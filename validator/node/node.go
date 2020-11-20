@@ -406,7 +406,6 @@ func (s *ValidatorClient) registerClientService(
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		LocalSlashingProtector:     slashingProtector,
 		RemoteSlashingProtector:    remoteSlashingProtector,
-		AttestingHistoryManager:    slashingProtector,
 		ValDB:                      s.db,
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,

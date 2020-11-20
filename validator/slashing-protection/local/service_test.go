@@ -13,7 +13,6 @@ import (
 
 var (
 	_ = slashingprotection.Protector(&local.Service{})
-	_ = slashingprotection.AttestingHistoryManager(&local.Service{})
 )
 
 func TestAttestingHistoryForPubKey_OK(t *testing.T) {
@@ -39,15 +38,9 @@ func TestAttestingHistoryForPubKey_OK(t *testing.T) {
 	histories[pubKey2] = history2
 	require.NoError(t, validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, histories))
 
-	srv, err := local.NewService(ctx, &local.Config{
-		ValidatorDB: validatorDB,
-	})
+	wanted1, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey1)
 	require.NoError(t, err)
-	require.NoError(t, srv.LoadAttestingHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2}))
-
-	wanted1, err := srv.AttestingHistoryForPubKey(ctx, pubKey1)
-	require.NoError(t, err)
-	wanted2, err := srv.AttestingHistoryForPubKey(ctx, pubKey2)
+	wanted2, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey2)
 	require.NoError(t, err)
 	require.DeepEqual(t, history, wanted1, "Unexpected retrieved history")
 	require.DeepEqual(t, history2, wanted2, "Unexpected retrieved history")

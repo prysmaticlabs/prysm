@@ -112,7 +112,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
-	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -189,7 +188,6 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
-	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -248,7 +246,6 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
-	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -307,7 +304,6 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
-	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -396,7 +392,6 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
-	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 
 	validator.genesisTime = uint64(timeutils.Now().Unix())
 	validatorIndex := uint64(5)
@@ -445,7 +440,6 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
-	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -486,7 +480,6 @@ func TestSignAttestation(t *testing.T) {
 	validator.localSlashingProtector = &protectionMock.MockProtector{
 		SlashableAttestation: false,
 	}
-	validator.attestingHistoryManager = &protectionMock.MockAttestingHistoryManager{}
 
 	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
 	require.NoError(t, err, "Failed to generate key from bytes")

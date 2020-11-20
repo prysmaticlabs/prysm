@@ -71,7 +71,6 @@ type validator struct {
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	localSlashingProtector             slashingprotection.Protector
 	remoteSlashingProtector            slashingprotection.Protector
-	attestingHistoryManager            slashingprotection.AttestingHistoryManager
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
@@ -480,26 +479,6 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]Va
 		rolesAt[pubKey] = roles
 	}
 	return rolesAt, nil
-}
-
-// UpdateProtections goes through the duties of the given slot and fetches the required validator history,
-// assigning it in validator.
-func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
-	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
-	for _, duty := range v.duties.CurrentEpochDuties {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if duty == nil || duty.AttesterSlot != slot {
-			continue
-		}
-		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
-	}
-	return v.attestingHistoryManager.LoadAttestingHistoryForPubKeys(ctx, attestingPubKeys)
-}
-
-func (v *validator) ResetProtections(ctx context.Context) {
-	v.attestingHistoryManager.ResetAttestingHistoryForEpoch(ctx)
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:

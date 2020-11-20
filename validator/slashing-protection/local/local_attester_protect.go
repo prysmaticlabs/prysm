@@ -28,8 +28,8 @@ func (s *Service) IsSlashableAttestation(
 	lock := mputil.NewMultilock(fmt.Sprintf("%x", pubKey))
 	lock.Lock()
 	defer lock.Unlock()
-	attesterHistory, ok := s.attesterHistoryByPubKey[pubKey]
-	if !ok {
+	attesterHistory, err := s.validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey)
+	if err != nil {
 		return false, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
 	}
 	if attesterHistory == nil {
@@ -74,8 +74,9 @@ func (s *Service) IsSlashableAttestation(
 	}
 
 	log.Infof("Updating store for pubkey %#x", pubKey)
-	// We update our in-memory map of attester history.
-	s.attesterHistoryByPubKey[pubKey] = newAttesterHistory
+	if err := s.validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newAttesterHistory); err != nil {
+		return false, err
+	}
 	log.Infof("Updated store for pubkey %#x", pubKey)
 	return false, nil
 }

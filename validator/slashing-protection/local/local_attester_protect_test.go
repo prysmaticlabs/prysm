@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
 func TestService_IsSlashableAttestation_OK(t *testing.T) {
@@ -22,12 +23,14 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 	pubKey := privKey.PublicKey()
 	pubKeyBytes := [48]byte{}
 	copy(pubKeyBytes[:], pubKey.Marshal())
-
+	validatorDB := dbtest.SetupDB(t, [][48]byte{pubKeyBytes})
 	srv := &Service{
-		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
+		validatorDB: validatorDB,
 	}
-	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
-
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
@@ -59,11 +62,14 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	pubKeyBytes := [48]byte{}
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
+	validatorDB := dbtest.SetupDB(t, [][48]byte{pubKeyBytes})
 	srv := &Service{
-		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
+		validatorDB: validatorDB,
 	}
-	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
-
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
@@ -113,11 +119,14 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	pubKeyBytes := [48]byte{}
 	copy(pubKeyBytes[:], pubKey.Marshal())
 
+	validatorDB := dbtest.SetupDB(t, [][48]byte{pubKeyBytes})
 	srv := &Service{
-		attesterHistoryByPubKey: make(map[[48]byte]kv.EncHistoryData),
+		validatorDB: validatorDB,
 	}
-	srv.attesterHistoryByPubKey[pubKeyBytes] = kv.NewAttestationHistoryArray(0)
-
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
