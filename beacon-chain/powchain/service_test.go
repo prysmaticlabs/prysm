@@ -452,3 +452,55 @@ func TestInitDepositCache_OK(t *testing.T) {
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 	require.Equal(t, 3, len(s.depositCache.PendingContainers(context.Background(), nil)))
 }
+
+func TestNewService_EarliestVotingBlock(t *testing.T) {
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	beaconDB, _ := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	// simulated backend sets eth1 block
+	// time as 10 seconds
+	conf := params.BeaconConfig()
+	conf.SecondsPerETH1Block = 10
+	conf.Eth1FollowDistance = 50
+	params.OverrideBeaconConfig(conf)
+	defer func() {
+		params.UseMainnetConfig()
+	}()
+
+	// Genesis not set
+	followBlock := uint64(2000)
+	blk, err := web3Service.determineEarliestVotingBlock(context.Background(), followBlock)
+	require.NoError(t, err)
+	assert.Equal(t, followBlock-conf.Eth1FollowDistance, blk, "unexpected earliest voting block")
+
+	// Genesis is set.
+
+	numToForward := 1500
+	// forward 1500 blocks
+	for i := 0; i < numToForward; i++ {
+		testAcc.Backend.Commit()
+	}
+	currTime := testAcc.Backend.Blockchain().CurrentHeader().Time
+	now := time.Now()
+	err = testAcc.Backend.AdjustTime(now.Sub(time.Unix(int64(currTime), 0)))
+	require.NoError(t, err)
+	testAcc.Backend.Commit()
+
+	currTime = testAcc.Backend.Blockchain().CurrentHeader().Time
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentHeader().Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentHeader().Time
+	web3Service.chainStartData.GenesisTime = currTime
+
+	// With a current slot of zero, only request follow_blocks behind.
+	blk, err = web3Service.determineEarliestVotingBlock(context.Background(), followBlock)
+	require.NoError(t, err)
+	assert.Equal(t, followBlock-conf.Eth1FollowDistance, blk, "unexpected earliest voting block")
+
+}

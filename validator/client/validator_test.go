@@ -94,14 +94,68 @@ func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResp
 	return &ethpb.ValidatorActivationResponse{Statuses: multipleStatus}
 }
 
-func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
+func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	db := dbTest.SetupDB(t, [][48]byte{})
+	v := validator{
+		validatorClient: client,
+		db:              db,
+	}
+
+	// Make sure its clean at the start.
+	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
+	require.NoError(t, err)
+	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validator root")
+
+	genesis := uint64(time.Unix(1, 0).Unix())
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	client.EXPECT().WaitForChainStart(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.ChainStartResponse{
+			Started:               true,
+			GenesisTime:           genesis,
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
+		},
+		nil,
+	)
+	require.NoError(t, v.WaitForChainStart(context.Background()))
+	savedGenValRoot, err = db.GenesisValidatorsRoot(context.Background())
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
+	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
+	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
+
+	// Make sure theres no errors running if its the same data.
+	client.EXPECT().WaitForChainStart(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.ChainStartResponse{
+			Started:               true,
+			GenesisTime:           genesis,
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
+		},
+		nil,
+	)
+	require.NoError(t, v.WaitForChainStart(context.Background()))
+}
+
+func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	db := dbtest.SetupDB(t, [][48]byte{})
 	v := validator{
-		//keyManager:      testKeyManager,
 		validatorClient: client,
 		db:              db,
 	}
@@ -127,6 +181,24 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
+
+	genesisValidatorsRoot = bytesutil.ToBytes32([]byte("badvalidators"))
+
+	// Make sure theres no errors running if its the same data.
+	client.EXPECT().WaitForChainStart(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.ChainStartResponse{
+			Started:               true,
+			GenesisTime:           genesis,
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
+		},
+		nil,
+	)
+	err = v.WaitForChainStart(context.Background())
+	require.ErrorContains(t, "does not match root saved", err)
 }
 
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {

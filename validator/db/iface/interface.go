@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 // ValidatorDB defines the necessary methods for a Prysm validator DB.

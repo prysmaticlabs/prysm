@@ -17,7 +17,7 @@ func pubKeyFromHex(str string) ([48]byte, error) {
 		return [48]byte{}, err
 	}
 	if len(pubKeyBytes) != 48 {
-		return [48]byte{}, fmt.Errorf("public key does not correct, 48-byte length: %s", str)
+		return [48]byte{}, fmt.Errorf("public key is not correct, 48-byte length: %s", str)
 	}
 	var pk [48]byte
 	copy(pk[:], pubKeyBytes[:48])
@@ -30,7 +30,7 @@ func rootFromHex(str string) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	if len(rootHexBytes) != 32 {
-		return [32]byte{}, fmt.Errorf("public key does not correct, 32-byte length: %s", str)
+		return [32]byte{}, fmt.Errorf("wrong root length, 32-byte length: %s", str)
 	}
 	var root [32]byte
 	copy(root[:], rootHexBytes[:32])

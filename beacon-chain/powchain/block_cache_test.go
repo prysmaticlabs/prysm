@@ -2,6 +2,7 @@ package powchain
 
 import (
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -101,4 +102,48 @@ func TestBlockCache_maxSize(t *testing.T) {
 
 	assert.Equal(t, int(maxCacheSize), len(cache.hashCache.ListKeys()))
 	assert.Equal(t, int(maxCacheSize), len(cache.heightCache.ListKeys()))
+}
+
+func Test_headerToHeaderInfo(t *testing.T) {
+	type args struct {
+		hdr *gethTypes.Header
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *headerInfo
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			args: args{hdr: &gethTypes.Header{
+				Number: big.NewInt(500),
+				Time:   2345,
+			}},
+			want: &headerInfo{
+				Number: big.NewInt(500),
+				Hash:   common.Hash{239, 10, 13, 71, 156, 192, 23, 93, 73, 154, 255, 209, 163, 204, 129, 12, 179, 183, 65, 70, 205, 200, 57, 12, 17, 211, 209, 4, 104, 133, 73, 86},
+				Time:   2345,
+			},
+		},
+		{
+			name: "nil number",
+			args: args{hdr: &gethTypes.Header{
+				Time: 2345,
+			}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := headerToHeaderInfo(tt.args.hdr)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("headerToHeaderInfo() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("headerToHeaderInfo() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

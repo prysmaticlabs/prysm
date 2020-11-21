@@ -3,6 +3,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/hex"
@@ -132,8 +133,26 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
-		if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
-			return errors.Wrap(err, "could not save genesis validator root")
+		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get current genesis validators root")
+		}
+		if len(curGenValRoot) == 0 {
+			if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
+				return errors.Wrap(err, "could not save genesis validator root")
+			}
+		} else {
+			if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
+				log.Errorf("The genesis validators root received from the beacon node does not match what is in " +
+					"your validator database. This could indicate that this is a database meant for another network. If " +
+					"you were previously running this validator database on another network, please run --clear-db to " +
+					"clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues")
+				return fmt.Errorf(
+					"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
+					chainStartRes.GenesisValidatorsRoot,
+					curGenValRoot,
+				)
+			}
 		}
 	}
 

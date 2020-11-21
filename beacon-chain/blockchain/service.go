@@ -339,6 +339,9 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
+	if s.genesisRoot == params.BeaconConfig().ZeroHash {
+		return errors.New("genesis state has not been created")
+	}
 	if runtime.NumGoroutine() > s.maxRoutines {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
