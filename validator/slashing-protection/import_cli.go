@@ -17,7 +17,7 @@ import (
 func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 	protectionFilePath, err := prompt.InputDirectory(cliCtx, prompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get slashing protection json file")
 	}
 	if protectionFilePath != "" {
 		fullPath, err := fileutil.ExpandPath(protectionFilePath)
@@ -32,10 +32,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 			return errors.Wrapf(err, "could not read private key file at path %s", fullPath)
 		}
 
-		dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-		if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
-			dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-		}
+		dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 		valDB, err := kv.NewKVStore(dataDir, nil)
 		if err != nil {
 			return errors.Wrap(err, "could not initialize db")
