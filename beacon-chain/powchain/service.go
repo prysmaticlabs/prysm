@@ -345,18 +345,11 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 // refers to the latest eth1 block which follows the condition: eth1_timestamp +
 // SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= current_unix_time
 func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
-	latestValidTime := uint64(0)
-	totalFollowTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
-	if s.latestEth1Data.BlockTime > totalFollowTime {
-		latestValidTime = s.latestEth1Data.BlockTime - totalFollowTime
+	latestValidBlock := uint64(0)
+	if s.latestEth1Data.BlockHeight > params.BeaconConfig().Eth1FollowDistance {
+		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
 	}
-	log.Errorf("latest block time %d", s.latestEth1Data.BlockTime)
-	log.Errorf("requesting block time %d", latestValidTime)
-	lastValidBlk, err := s.BlockNumberByTimestamp(ctx, latestValidTime)
-	if err != nil {
-		return 0, err
-	}
-	return lastValidBlk.Uint64(), nil
+	return latestValidBlock, nil
 }
 
 func (s *Service) connectToPowChain() error {
