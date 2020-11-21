@@ -34,7 +34,7 @@ func (s *Service) IsSlashableAttestation(
 		return false, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
 	}
 	if history == nil {
-		return false, fmt.Errorf("nil attester history found for public key %#x", pubKey)
+		return false, nil
 	}
 	latestEpochWritten, err := attestinghistory.GetLatestEpochWritten(history)
 	if err != nil {
