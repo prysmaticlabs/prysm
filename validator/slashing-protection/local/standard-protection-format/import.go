@@ -32,17 +32,17 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	}
 
 	// We validate the `Metadata` field of the slashing protection JSON file.
-	if err := validateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
+	if err := ValidateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
 		return errors.Wrap(err, "slashing protection JSON metadata was incorrect")
 	}
 
 	// We need to handle duplicate public keys in the JSON file, with potentially
 	// different signing histories for both attestations and blocks.
-	signedBlocksByPubKey, err := parseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
+	signedBlocksByPubKey, err := ParseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
 	}
-	signedAttsByPubKey, err := parseUniqueSignedAttestationsByPubKey(interchangeJSON.Data)
+	signedAttsByPubKey, err := ParseUniqueSignedAttestationsByPubKey(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
@@ -81,7 +81,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	return nil
 }
 
-func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
+func ValidateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
 	// We need to ensure the version in the metadata field matches the one we support.
 	version := interchangeJSON.Metadata.InterchangeFormatVersion
 	if version != INTERCHANGE_FORMAT_VERSION {
@@ -100,7 +100,7 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 
 // We create a map of pubKey -> []*SignedBlock. Then, we keep a map of observed hashes of
 // signed blocks. If we observe a new hash, we insert those signed blocks for processing.
-func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
+func ParseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
 	seenHashes := make(map[[32]byte]bool)
 	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
 	for _, validatorData := range data {
@@ -130,7 +130,7 @@ func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*Si
 
 // We create a map of pubKey -> []*SignedAttestation. Then, we keep a map of observed hashes of
 // signed attestations. If we observe a new hash, we insert those signed attestations for processing.
-func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
+func ParseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
 	seenHashes := make(map[[32]byte]bool)
 	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
 	for _, validatorData := range data {

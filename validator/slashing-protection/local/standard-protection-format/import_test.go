@@ -1,4 +1,4 @@
-package interchangeformat
+package interchangeformat_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -22,7 +23,7 @@ func TestStore_ImportInterchangeData_BadJSON(t *testing.T) {
 	validatorDB := dbtest.SetupDB(t, nil)
 
 	buf := bytes.NewBuffer([]byte("helloworld"))
-	err := ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err := interchangeformat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.ErrorContains(t, "could not unmarshal slashing protection JSON file", err)
 }
 
@@ -31,12 +32,12 @@ func TestStore_ImportInterchangeData_NilData_FailsSilently(t *testing.T) {
 	ctx := context.Background()
 	validatorDB := dbtest.SetupDB(t, nil)
 
-	interchangeJSON := &EIPSlashingProtectionFormat{}
+	interchangeJSON := &interchangeformat.EIPSlashingProtectionFormat{}
 	encoded, err := json.Marshal(interchangeJSON)
 	require.NoError(t, err)
 
 	buf := bytes.NewBuffer(encoded)
-	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = interchangeformat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "No slashing protection data to import")
 }
@@ -62,7 +63,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 	// Next, we attempt to import it into our validator database and check that
 	// we obtain an error during the import process.
-	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = interchangeformat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	assert.NotNil(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
@@ -110,7 +111,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = interchangeformat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
@@ -141,12 +142,12 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 func Test_validateMetadata(t *testing.T) {
 	tests := []struct {
 		name            string
-		interchangeJSON *EIPSlashingProtectionFormat
+		interchangeJSON *interchangeformat.EIPSlashingProtectionFormat
 		wantErr         bool
 	}{
 		{
 			name: "Incorrect version for EIP format should fail",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &interchangeformat.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
@@ -158,7 +159,7 @@ func Test_validateMetadata(t *testing.T) {
 		},
 		{
 			name: "Junk data for version should fail",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &interchangeformat.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
@@ -170,12 +171,12 @@ func Test_validateMetadata(t *testing.T) {
 		},
 		{
 			name: "Proper version field should pass",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &interchangeformat.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
-					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+					InterchangeFormatVersion: interchangeformat.INTERCHANGE_FORMAT_VERSION,
 				},
 			},
 			wantErr: false,
@@ -185,8 +186,8 @@ func Test_validateMetadata(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, nil)
 			ctx := context.Background()
-			if err := validateMetadata(ctx, validatorDB, tt.interchangeJSON); (err != nil) != tt.wantErr {
-				t.Errorf("validateMetadata() error = %v, wantErr %v", err, tt.wantErr)
+			if err := interchangeformat.ValidateMetadata(ctx, validatorDB, tt.interchangeJSON); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateMetadata() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -198,16 +199,16 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	roots := spTest.CreateRandomRoots(t, numValidators)
 	tests := []struct {
 		name    string
-		data    []*ProtectionData
-		want    map[[48]byte][]*SignedBlock
+		data    []*interchangeformat.ProtectionData
+		want    map[[48]byte][]*interchangeformat.SignedBlock
 		wantErr bool
 	}{
 		{
 			name: "nil values are skipped",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -217,7 +218,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "3",
 							SigningRoot: fmt.Sprintf("%x", roots[2]),
@@ -225,7 +226,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*interchangeformat.SignedBlock{
 				pubKeys[0]: {
 					{
 						Slot:        "1",
@@ -240,10 +241,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "same blocks but different public keys are parsed correctly",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -256,7 +257,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[1]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -268,7 +269,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*interchangeformat.SignedBlock{
 				pubKeys[0]: {
 					{
 						Slot:        "1",
@@ -293,10 +294,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -309,7 +310,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "3",
 							SigningRoot: fmt.Sprintf("%x", roots[2]),
@@ -317,7 +318,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*interchangeformat.SignedBlock{
 				pubKeys[0]: {
 					{
 						Slot:        "1",
@@ -336,10 +337,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "full duplicate entries are uniquely parsed",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -348,7 +349,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -356,7 +357,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*interchangeformat.SignedBlock{
 				pubKeys[0]: {
 					{
 						Slot:        "1",
@@ -367,10 +368,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "intersecting duplicate public key entries are handled properly",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -383,7 +384,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*interchangeformat.SignedBlock{
 						{
 							Slot:        "2",
 							SigningRoot: fmt.Sprintf("%x", roots[1]),
@@ -395,7 +396,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*interchangeformat.SignedBlock{
 				pubKeys[0]: {
 					{
 						Slot:        "1",
@@ -415,13 +416,13 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseUniqueSignedBlocksByPubKey(tt.data)
+			got, err := interchangeformat.ParseUniqueSignedBlocksByPubKey(tt.data)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseUniqueSignedBlocksByPubKey() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ParseUniqueSignedBlocksByPubKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseUniqueSignedBlocksByPubKey() got = %v, want %v", got, tt.want)
+				t.Errorf("ParseUniqueSignedBlocksByPubKey() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -429,20 +430,20 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 
 func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	numValidators := 4
-	pubKeys := testing.CreateRandomPubKeys(t, numValidators)
-	roots := testing.CreateRandomRoots(t, numValidators)
+	pubKeys := spTest.CreateRandomPubKeys(t, numValidators)
+	roots := spTest.CreateRandomRoots(t, numValidators)
 	tests := []struct {
 		name    string
-		data    []*ProtectionData
-		want    map[[48]byte][]*SignedAttestation
+		data    []*interchangeformat.ProtectionData
+		want    map[[48]byte][]*interchangeformat.SignedAttestation
 		wantErr bool
 	}{
 		{
 			name: "nil values are skipped",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							TargetEpoch: "3",
@@ -453,7 +454,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "3",
 							TargetEpoch: "5",
@@ -462,7 +463,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*interchangeformat.SignedAttestation{
 				pubKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -479,10 +480,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "same blocks but different public keys are parsed correctly",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -495,7 +496,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[1]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -507,7 +508,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*interchangeformat.SignedAttestation{
 				pubKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -532,10 +533,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							TargetEpoch: "3",
@@ -550,7 +551,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "3",
 							TargetEpoch: "5",
@@ -559,7 +560,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*interchangeformat.SignedAttestation{
 				pubKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -581,10 +582,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "full duplicate entries are uniquely parsed",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -593,7 +594,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -601,7 +602,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*interchangeformat.SignedAttestation{
 				pubKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -612,10 +613,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "intersecting duplicate public key entries are handled properly",
-			data: []*ProtectionData{
+			data: []*interchangeformat.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -628,7 +629,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*interchangeformat.SignedAttestation{
 						{
 							SourceEpoch: "2",
 							SigningRoot: fmt.Sprintf("%x", roots[1]),
@@ -640,7 +641,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*interchangeformat.SignedAttestation{
 				pubKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -660,13 +661,13 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseUniqueSignedAttestationsByPubKey(tt.data)
+			got, err := interchangeformat.ParseUniqueSignedAttestationsByPubKey(tt.data)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseUniqueSignedAttestationsByPubKey() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ParseUniqueSignedAttestationsByPubKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseUniqueSignedAttestationsByPubKey() got = %v, want %v", got, tt.want)
+				t.Errorf("ParseUniqueSignedAttestationsByPubKey() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
