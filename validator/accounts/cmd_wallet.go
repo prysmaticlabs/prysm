@@ -12,7 +12,7 @@ import (
 var WalletCommands = &cli.Command{
 	Name:     "wallet",
 	Category: "wallet",
-	Usage:    "defines commands for interacting with eth2 validator wallets  progress)",
+	Usage:    "defines commands for interacting with eth2 validator wallets (work in progress)",
 	Subcommands: []*cli.Command{
 		{
 			Name: "create",
