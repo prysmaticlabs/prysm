@@ -1,7 +1,7 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_test")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_alpine", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 
@@ -44,13 +44,19 @@ go_image(
     visibility = ["//visibility:private"],
 )
 
+container_image(
+    name = "image_with_creation_time",
+    base = "image",
+    stamp = True,
+)
+
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/validator:latest": ":image",
-        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}": ":image",
-        "index.docker.io/prysmaticlabs/prysm-validator:latest": ":image",
-        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}": ":image",
+        "gcr.io/prysmaticlabs/prysm/validator:latest": ":image_with_creation_time",
+        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}": ":image_with_creation_time",
+        "index.docker.io/prysmaticlabs/prysm-validator:latest": ":image_with_creation_time",
+        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}": ":image_with_creation_time",
     },
     tags = ["manual"],
 )
