@@ -18,10 +18,10 @@ var ProtectionCommands = &cli.Command{
 	Subcommands: []*cli.Command{
 		{
 			Name:        "import",
-			Description: `imported a selected EIP-3076 compliant slashing protection JSON to the validator database.`,
+			Description: `imported a selected EIP-3076 compliant slashing protection JSON to the validator database`,
 			Flags: cmd.WrapFlags([]cli.Flag{
 				cmd.DataDirFlag,
-				flags.WalletPasswordFileFlag,
+				flags.SlashingProtectionJSONFileFlag,
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,
