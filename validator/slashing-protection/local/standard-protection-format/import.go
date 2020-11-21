@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -47,7 +48,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
-	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
+	attestingHistoryByPubKey := make(map[[48]byte]attestinghistory.History)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Transform the processed signed blocks data from the JSON
@@ -183,8 +184,8 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*k
 	}, nil
 }
 
-func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*kv.EncHistoryData, error) {
-	attestingHistory := kv.NewAttestationHistoryArray(0)
+func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*attestinghistory.History, error) {
+	history := attestinghistory.New(0)
 	highestEpochWritten := uint64(0)
 	var err error
 	for _, attestation := range atts {
@@ -208,16 +209,17 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
 		}
-		attestingHistory, err = attestingHistory.SetTargetData(
-			ctx, target, &kv.HistoryData{Source: source, SigningRoot: signingRoot[:]},
+		newHist, err := attestinghistory.MarkAsAttested(
+			history, &attestinghistory.HistoricalAttestation{Target: target, Source: source, SigningRoot: signingRoot[:]},
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not set target data for attesting history")
 		}
+		history = newHist
 	}
-	attestingHistory, err = attestingHistory.SetLatestEpochWritten(ctx, highestEpochWritten)
+	newHist, err := attestinghistory.SetLatestEpochWritten(history, highestEpochWritten)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set latest epoch written")
 	}
-	return &attestingHistory, nil
+	return &newHist, nil
 }

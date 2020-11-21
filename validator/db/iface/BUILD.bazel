@@ -6,5 +6,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/db/iface",
     # Other packages must use github.com/prysmaticlabs/prysm/validator/db.Database alias.
     visibility = ["//validator/db:__subpackages__"],
-    deps = ["//validator/db/kv:go_default_library"],
+    deps = [
+        "//validator/db/kv:go_default_library",
+        "//validator/slashing-protection/local/attesting-history:go_default_library",
+    ],
 )

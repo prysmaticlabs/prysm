@@ -102,12 +102,15 @@ func MarkAsAttested(hist History, incomingAtt *HistoricalAttestation) (History, 
 		newHist = append(newHist, ext...)
 	}
 	copy(newHist[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(incomingAtt.Source))
-	copy(newHist[cursor+sourceSize:cursor+sourceSize+signingRootSize], incomingAtt.SigningRoot[:])
+	copy(newHist[cursor+sourceSize:cursor+sourceSize+signingRootSize], incomingAtt.SigningRoot)
 	return newHist, nil
 }
 
 func IsEmptyHistoricalAttestation(histAtt *HistoricalAttestation) bool {
-	return histAtt != nil && histAtt.Source == params.BeaconConfig().FarFutureEpoch
+	if histAtt == nil {
+		return true
+	}
+	return histAtt.Source == params.BeaconConfig().FarFutureEpoch
 }
 
 // MarkAllAsAttestedSinceLatestWrittenEpoch returns an attesting history with specified target+epoch pairs

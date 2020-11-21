@@ -412,6 +412,7 @@ func Test_checkHistoryAtTargetEpoch(t *testing.T) {
 			latestEpochWritten: 1,
 			targetEpoch:        1,
 			want: &attestinghistory.HistoricalAttestation{
+				Target:      1,
 				Source:      0,
 				SigningRoot: signingRoot1,
 			},
