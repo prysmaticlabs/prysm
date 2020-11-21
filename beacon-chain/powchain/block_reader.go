@@ -160,7 +160,6 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 		}
 		cursorNum = hinfo.Number
 		cursorTime = hinfo.Time
-		log.Errorf("cursor time: %d", cursorTime)
 	}
 
 	// Exit early if we get the desired block.
