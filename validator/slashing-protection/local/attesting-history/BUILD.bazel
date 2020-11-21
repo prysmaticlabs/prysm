@@ -5,7 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = ["history.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
