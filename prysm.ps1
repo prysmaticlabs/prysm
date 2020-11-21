@@ -3,7 +3,6 @@ $ProgressPreference = 'SilentlyContinue' # Disable Invoke-WebRequest progress ba
 
 # Complain if invalid arguments were provided.
 if ("beacon-chain", "validator", "slasher" -notcontains $args[0]) {
-    Write-Host "ERROR: prysm is only supported on 64-bit Operating Systems" -ForegroundColor Red;
     Write-Host @"
 Usage: ./prysm.sh1 PROCESS FLAGS.
 
@@ -14,12 +13,12 @@ Use this script to download the latest Prysm release binaries.
 Downloaded binaries are saved to .\dist
  
 To specify a specific release version:
-  $env:USE_PRYSM_VERSION=v1.0.0-alpha3
+  `$env:USE_PRYSM_VERSION="v1.0.0-beta.3"
  to resume using the latest release:
   Remove-Item env:USE_PRYSM_VERSION
  
 To automatically restart crashed processes:
-  $env:PRYSM_AUTORESTART=$TRUE ; .\prysm.sh1 beacon-chain
+  `$env:PRYSM_AUTORESTART=`$TRUE ; .\prysm.sh1 beacon-chain
  to stop autorestart run:
   Remove-Item env:PRYSM_AUTORESTART
 "@;
@@ -61,7 +60,7 @@ else {
 $fileName = "$($args[0])-$version-windows-amd64.exe";
 $folderBin = "$folderDist\$fileName";
 
-if (Test-Path $folderBin) {
+if ((Test-Path $folderBin) -and (Test-Path "$folderBin.sha256") -and (Test-Path "$folderBin.sig")) {
     Write-Host "$($args[0]) is up to date with version: $version" -ForegroundColor Green;
 }
 else {

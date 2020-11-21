@@ -16,10 +16,16 @@ type ValidatorDB interface {
 	DatabasePath() string
 	ClearDB() error
 	UpdatePublicKeysBuckets(publicKeys [][48]byte) error
+
+	// Genesis information related methods.
+	GenesisValidatorsRoot(ctx context.Context) ([]byte, error)
+	SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error
+
 	// Proposer protection related methods.
 	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
 	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
-	//new data structure methods
+
+	// New data structure methods
 	ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error)
 	SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error
 	SaveProposalHistoryForPubKeysV2(ctx context.Context, proposals map[[48]byte]kv.ProposalHistoryForPubkey) error
@@ -28,7 +34,7 @@ type ValidatorDB interface {
 	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
 	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
 
-	// New attestation store methods
+	// New attestation store methods.
 	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
 	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
 	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error

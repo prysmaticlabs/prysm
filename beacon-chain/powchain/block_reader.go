@@ -229,7 +229,10 @@ func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*headerI
 		if err := s.headerCache.AddHeader(blk); err != nil {
 			return nil, err
 		}
-		info = headerToHeaderInfo(blk)
+		info, err = headerToHeaderInfo(blk)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return info, nil
 }

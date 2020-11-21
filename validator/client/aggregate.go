@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // SubmitAggregateAndProof submits the validator's signed slot signature to the beacon node
@@ -66,10 +68,16 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		SlotSignature:  slotSig,
 	})
 	if err != nil {
-		log.WithField("slot", slot).Errorf("Could not submit slot signature to beacon node: %v", err)
-		if v.emitAccountMetrics {
-			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+		status, ok := status.FromError(err)
+		if ok && status.Code() == codes.NotFound {
+			log.WithField("slot", slot).WithError(err).Warn("No attestations to aggregate")
+		} else {
+			log.WithField("slot", slot).WithError(err).Error("Could not submit slot signature to beacon node")
+			if v.emitAccountMetrics {
+				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			}
 		}
+
 		return
 	}
 
