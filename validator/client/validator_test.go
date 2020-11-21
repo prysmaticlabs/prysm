@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -154,7 +154,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
-	db := dbtest.SetupDB(t, [][48]byte{})
+	db := dbTest.SetupDB(t, [][48]byte{})
 	v := validator{
 		validatorClient: client,
 		db:              db,
