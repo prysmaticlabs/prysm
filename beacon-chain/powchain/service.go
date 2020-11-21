@@ -766,15 +766,16 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 // determines the earliest voting block from which to start caching all our previous headers from.
 func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock uint64) (uint64, error) {
 	genesisTime := s.chainStartData.GenesisTime
+	currSlot := helpers.CurrentSlot(genesisTime)
+
 	// In the event genesis has not occurred yet, we just request go back follow_distance blocks.
-	if genesisTime == 0 {
+	if genesisTime == 0 || currSlot == 0 {
 		earliestBlk := uint64(0)
 		if followBlock > params.BeaconConfig().Eth1FollowDistance {
 			earliestBlk = followBlock - params.BeaconConfig().Eth1FollowDistance
 		}
 		return earliestBlk, nil
 	}
-	currSlot := helpers.CurrentSlot(genesisTime)
 	votingTime := helpers.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
 	if followBackDist > votingTime {
