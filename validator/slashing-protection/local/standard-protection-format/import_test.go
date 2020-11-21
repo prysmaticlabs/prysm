@@ -3,6 +3,7 @@ package interchangeformat_test
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -13,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	interchangeformat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -140,6 +141,9 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 }
 
 func Test_validateMetadata(t *testing.T) {
+	goodRoot := [32]byte{1}
+	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
+	hex.Encode(goodStr, goodRoot[:])
 	tests := []struct {
 		name            string
 		interchangeJSON *interchangeformat.EIPSlashingProtectionFormat
@@ -153,6 +157,7 @@ func Test_validateMetadata(t *testing.T) {
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
 					InterchangeFormatVersion: "1",
+					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
 			wantErr: true,
@@ -165,6 +170,7 @@ func Test_validateMetadata(t *testing.T) {
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
 					InterchangeFormatVersion: "asdljas$d",
+					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
 			wantErr: true,
@@ -177,6 +183,7 @@ func Test_validateMetadata(t *testing.T) {
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
 					InterchangeFormatVersion: interchangeformat.INTERCHANGE_FORMAT_VERSION,
+					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
 			wantErr: false,
@@ -189,6 +196,66 @@ func Test_validateMetadata(t *testing.T) {
 			if err := interchangeformat.ValidateMetadata(ctx, validatorDB, tt.interchangeJSON); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateMetadata() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
+		})
+	}
+}
+
+func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
+	goodRoot := [32]byte{1}
+	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
+	hex.Encode(goodStr, goodRoot[:])
+	secondRoot := [32]byte{2}
+	secondStr := make([]byte, hex.EncodedLen(len(secondRoot)))
+	hex.Encode(secondStr, secondRoot[:])
+
+	tests := []struct {
+		name                   string
+		interchangeJSON        *interchangeformat.EIPSlashingProtectionFormat
+		dbGenesisValidatorRoot []byte
+		wantErr                bool
+	}{
+		{
+			name: "Same genesis roots should not fail",
+			interchangeJSON: &interchangeformat.EIPSlashingProtectionFormat{
+				Metadata: struct {
+					InterchangeFormatVersion string `json:"interchange_format_version"`
+					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+				}{
+					InterchangeFormatVersion: interchangeformat.INTERCHANGE_FORMAT_VERSION,
+					GenesisValidatorsRoot:    string(goodStr),
+				},
+			},
+			dbGenesisValidatorRoot: goodRoot[:],
+			wantErr:                false,
+		},
+		{
+			name: "Different genesis roots should not fail",
+			interchangeJSON: &interchangeformat.EIPSlashingProtectionFormat{
+				Metadata: struct {
+					InterchangeFormatVersion string `json:"interchange_format_version"`
+					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+				}{
+					InterchangeFormatVersion: interchangeformat.INTERCHANGE_FORMAT_VERSION,
+					GenesisValidatorsRoot:    string(secondStr),
+				},
+			},
+			dbGenesisValidatorRoot: goodRoot[:],
+			wantErr:                true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validatorDB := dbtest.SetupDB(t, nil)
+			ctx := context.Background()
+			require.NoError(t, validatorDB.SaveGenesisValidatorsRoot(ctx, tt.dbGenesisValidatorRoot))
+			err := interchangeformat.ValidateMetadata(ctx, validatorDB, tt.interchangeJSON)
+			if tt.wantErr {
+				require.ErrorContains(t, "genesis validator root doesnt match the one that is stored", err)
+			} else {
+				require.NoError(t, err)
+			}
+
 		})
 	}
 }
