@@ -345,27 +345,18 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 // refers to the latest eth1 block which follows the condition: eth1_timestamp +
 // SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= current_unix_time
 func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
-	latestValidBlock := uint64(0)
-	if s.latestEth1Data.BlockHeight > params.BeaconConfig().Eth1FollowDistance {
-		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
+	latestValidTime := uint64(0)
+	totalFollowTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	if s.latestEth1Data.BlockTime > totalFollowTime {
+		latestValidTime = s.latestEth1Data.BlockTime - totalFollowTime
 	}
-	blockTime, err := s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
+	log.Errorf("latest block time %d", s.latestEth1Data.BlockTime)
+	log.Errorf("requesting block time %d", latestValidTime)
+	lastValidBlk, err := s.BlockNumberByTimestamp(ctx, latestValidTime)
 	if err != nil {
 		return 0, err
 	}
-	followTime := func(t uint64) uint64 {
-		return t + params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block
-	}
-	for followTime(blockTime) > s.latestEth1Data.BlockTime && latestValidBlock > 0 {
-		// reduce block height to get eth1 block which
-		// fulfills stated condition
-		latestValidBlock--
-		blockTime, err = s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
-		if err != nil {
-			return 0, err
-		}
-	}
-	return latestValidBlock, nil
+	return lastValidBlk.Uint64(), nil
 }
 
 func (s *Service) connectToPowChain() error {
