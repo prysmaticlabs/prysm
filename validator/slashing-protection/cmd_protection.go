@@ -3,9 +3,12 @@ package slashingprotection
 import (
 	"log"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -35,7 +38,20 @@ var ProtectionCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ImportSlashingProtectionCLI(cliCtx, nil); err != nil {
+				var err error
+				dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+				if !cliCtx.IsSet(cmd.DataDirFlag.Name) {
+					var err error
+					dataDir, err = prompt.InputDirectory(cliCtx, prompt.DataDirDirPromptText, cmd.DataDirFlag)
+					if err != nil {
+						log.Fatalf("Could not get database directory: %v", err)
+					}
+				}
+				valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
+				if err != nil {
+					log.Fatalf("Could not access validator database at path: %s: %v", dataDir, err)
+				}
+				if err := ImportSlashingProtectionCLI(cliCtx, valDB); err != nil {
 					log.Fatalf("Could not import slashing protection JSON: %v", err)
 				}
 				return nil

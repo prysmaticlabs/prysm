@@ -6,10 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
@@ -23,11 +19,7 @@ import (
 func ImportSlashingProtectionCLI(cliCtx *cli.Context, valDB db.Database) error {
 	var err error
 	if valDB == nil {
-		dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-		valDB, err = kv.NewKVStore(dataDir, make([][48]byte, 0))
-		if err != nil {
-			return errors.Wrapf(err, "could not access validator database at path: %s", dataDir)
-		}
+		return errors.New("validator database cannot be nil")
 	}
 	protectionFilePath, err := prompt.InputDirectory(cliCtx, prompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
 	if err != nil {
