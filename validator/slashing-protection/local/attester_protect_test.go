@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 func TestService_IsSlashableAttestation_OK(t *testing.T) {
@@ -30,7 +30,7 @@ func TestService_IsSlashableAttestation_OK(t *testing.T) {
 	}
 	require.NoError(
 		t,
-		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, attestinghistory.New(0)),
 	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -69,7 +69,7 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	}
 	require.NoError(
 		t,
-		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, attestinghistory.New(0)),
 	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -126,7 +126,7 @@ func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
 	}
 	require.NoError(
 		t,
-		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, kv.NewAttestationHistoryArray(0)),
+		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, attestinghistory.New(0)),
 	)
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -206,11 +206,11 @@ func Test_differenceOutsideWeakSubjectivityBounds(t *testing.T) {
 }
 
 func Test_isDoubleVote(t *testing.T) {
-	ctx := context.Background()
-	history := kv.NewAttestationHistoryArray(0)
+	history := attestinghistory.New(0)
 	signingRoot1 := bytesutil.PadTo([]byte{1}, 32)
 	signingRoot2 := bytesutil.PadTo([]byte{2}, 32)
-	hist, err := history.SetTargetData(ctx, 1, &kv.HistoryData{
+	hist, err := attestinghistory.MarkAsAttested(history, &attestinghistory.HistoricalAttestation{
+		Target:      1,
 		Source:      0,
 		SigningRoot: signingRoot1,
 	})
@@ -219,7 +219,7 @@ func Test_isDoubleVote(t *testing.T) {
 	tests := []struct {
 		name        string
 		targetEpoch uint64
-		history     kv.EncHistoryData
+		history     attestinghistory.History
 		signingRoot []byte
 		want        bool
 		wantErr     bool
@@ -248,7 +248,7 @@ func Test_isDoubleVote(t *testing.T) {
 		{
 			name:        "error retrieving target data should not lead to double vote",
 			targetEpoch: 0,
-			history:     kv.EncHistoryData{},
+			history:     attestinghistory.History{},
 			signingRoot: []byte{},
 			want:        false,
 			wantErr:     true,
@@ -258,7 +258,7 @@ func Test_isDoubleVote(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			root := [32]byte{}
 			copy(root[:], tt.signingRoot)
-			got, err := isDoubleVote(ctx, tt.history, tt.targetEpoch, root)
+			got, err := isDoubleVote(tt.history, tt.targetEpoch, root)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("isDoubleVote() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -274,9 +274,10 @@ func Test_isSurroundVote(t *testing.T) {
 	ctx := context.Background()
 	source := uint64(1)
 	target := uint64(4)
-	history := kv.NewAttestationHistoryArray(0)
+	history := attestinghistory.New(0)
 	signingRoot1 := bytesutil.PadTo([]byte{1}, 32)
-	hist, err := history.SetTargetData(ctx, target, &kv.HistoryData{
+	hist, err := attestinghistory.MarkAsAttested(history, &attestinghistory.HistoricalAttestation{
+		Target:      target,
 		Source:      source,
 		SigningRoot: signingRoot1,
 	})
@@ -284,7 +285,7 @@ func Test_isSurroundVote(t *testing.T) {
 	history = hist
 	tests := []struct {
 		name               string
-		history            kv.EncHistoryData
+		history            attestinghistory.History
 		latestEpochWritten uint64
 		sourceEpoch        uint64
 		targetEpoch        uint64
@@ -293,7 +294,7 @@ func Test_isSurroundVote(t *testing.T) {
 	}{
 		{
 			name:               "ignores attestations outside of weak subjectivity bounds",
-			history:            kv.NewAttestationHistoryArray(0),
+			history:            attestinghistory.New(0),
 			latestEpochWritten: 2 * params.BeaconConfig().WeakSubjectivityPeriod,
 			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
 			sourceEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
@@ -372,9 +373,10 @@ func Test_isSurroundVote(t *testing.T) {
 
 func Test_checkHistoryAtTargetEpoch(t *testing.T) {
 	ctx := context.Background()
-	history := kv.NewAttestationHistoryArray(0)
+	history := attestinghistory.New(0)
 	signingRoot1 := bytesutil.PadTo([]byte{1}, 32)
-	hist, err := history.SetTargetData(ctx, 1, &kv.HistoryData{
+	hist, err := attestinghistory.MarkAsAttested(history, &attestinghistory.HistoricalAttestation{
+		Target:      1,
 		Source:      0,
 		SigningRoot: signingRoot1,
 	})
@@ -382,15 +384,15 @@ func Test_checkHistoryAtTargetEpoch(t *testing.T) {
 	history = hist
 	tests := []struct {
 		name               string
-		history            kv.EncHistoryData
+		history            attestinghistory.History
 		latestEpochWritten uint64
 		targetEpoch        uint64
-		want               *kv.HistoryData
+		want               *attestinghistory.HistoricalAttestation
 		wantErr            bool
 	}{
 		{
 			name:               "ignores difference in epochs outside of weak subjectivity bounds",
-			history:            kv.NewAttestationHistoryArray(0),
+			history:            attestinghistory.New(0),
 			latestEpochWritten: 2 * params.BeaconConfig().WeakSubjectivityPeriod,
 			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod,
 			want:               nil,
@@ -398,7 +400,7 @@ func Test_checkHistoryAtTargetEpoch(t *testing.T) {
 		},
 		{
 			name:               "ignores target epoch > latest written epoch",
-			history:            kv.NewAttestationHistoryArray(0),
+			history:            attestinghistory.New(0),
 			latestEpochWritten: params.BeaconConfig().WeakSubjectivityPeriod,
 			targetEpoch:        params.BeaconConfig().WeakSubjectivityPeriod + 1,
 			want:               nil,
@@ -409,7 +411,7 @@ func Test_checkHistoryAtTargetEpoch(t *testing.T) {
 			history:            history,
 			latestEpochWritten: 1,
 			targetEpoch:        1,
-			want: &kv.HistoryData{
+			want: &attestinghistory.HistoricalAttestation{
 				Source:      0,
 				SigningRoot: signingRoot1,
 			},

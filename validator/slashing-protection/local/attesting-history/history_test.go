@@ -9,27 +9,26 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-//func TestNew(t *testing.T) {
-//	ba := New(0)
-//	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
-//	ba = New(params.BeaconConfig().WeakSubjectivityPeriod - 1)
-//	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, uint64(len(ba)))
-//	ba = New(params.BeaconConfig().WeakSubjectivityPeriod)
-//	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
-//	ba = New(params.BeaconConfig().WeakSubjectivityPeriod + 1)
-//	assert.Equal(t, latestEpochWrittenSize+historySize+historySize, len(ba))
-//
-//}
-//
-//func TestSizeChecks(t *testing.T) {
-//	require.ErrorContains(t, "is smaller then minimal size", assertSize(History{}))
-//	require.NoError(t, assertSize(History{0, 1, 2, 3, 4, 5, 6, 7}))
-//	require.ErrorContains(t, "is not a multiple of entry size", assertSize(History{0, 1, 2, 3, 4, 5, 6, 7, 8}))
-//	require.NoError(t, assertSize(New(0)))
-//	require.NoError(t, assertSize(New(1)))
-//	require.NoError(t, assertSize(New(params.BeaconConfig().WeakSubjectivityPeriod)))
-//	require.NoError(t, assertSize(New(params.BeaconConfig().WeakSubjectivityPeriod-1)))
-//}
+func TestNew(t *testing.T) {
+	ba := New(0)
+	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
+	ba = New(params.BeaconConfig().WeakSubjectivityPeriod - 1)
+	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, uint64(len(ba)))
+	ba = New(params.BeaconConfig().WeakSubjectivityPeriod)
+	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
+	ba = New(params.BeaconConfig().WeakSubjectivityPeriod + 1)
+	assert.Equal(t, latestEpochWrittenSize+historySize+historySize, len(ba))
+}
+
+func TestSizeChecks(t *testing.T) {
+	require.ErrorContains(t, "is smaller then minimal size", assertSize(History{}))
+	require.NoError(t, assertSize(History{0, 1, 2, 3, 4, 5, 6, 7}))
+	require.ErrorContains(t, "is not a multiple of entry size", assertSize(History{0, 1, 2, 3, 4, 5, 6, 7, 8}))
+	require.NoError(t, assertSize(New(0)))
+	require.NoError(t, assertSize(New(1)))
+	require.NoError(t, assertSize(New(params.BeaconConfig().WeakSubjectivityPeriod)))
+	require.NoError(t, assertSize(New(params.BeaconConfig().WeakSubjectivityPeriod-1)))
+}
 
 func TestGetLatestEpochWritten(t *testing.T) {
 	ha := New(0)
@@ -47,18 +46,17 @@ func TestSetLatestEpochWritten(t *testing.T) {
 	assert.Equal(t, uint64(2828282828), bytesutil.FromBytes8(bytes))
 }
 
-func TestGetTargetData(t *testing.T) {
+func TestHistoricalAttestationAtTargetEpoch(t *testing.T) {
 	ha := New(0)
 	td, err := HistoricalAttestationAtTargetEpoch(ha, 0)
 	require.NoError(t, err)
-	assert.DeepEqual(t, HistoricalAttestation{Source: params.BeaconConfig().FarFutureEpoch}, td)
-	//td, err = HistoricalAttestationAtTargetEpoch(ha, 1)
-	//require.NoError(t, err)
-	//var nilHist *HistoryData
-	//require.Equal(t, nilHist, td)
+	assert.DeepEqual(t, &HistoricalAttestation{Source: params.BeaconConfig().FarFutureEpoch, SigningRoot: make([]byte, 32)}, td)
+	td, err = HistoricalAttestationAtTargetEpoch(ha, 1)
+	require.NoError(t, err)
+	require.Equal(t, true, td == nil)
 }
 
-func TestSetTargetData(t *testing.T) {
+func TestMarkAsAttested(t *testing.T) {
 	type testStruct struct {
 		name        string
 		enc         History
@@ -101,23 +99,22 @@ func TestSetTargetData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			enc, err := MarkAsAttested(
 				tt.enc,
-				HistoricalAttestation{
+				&HistoricalAttestation{
 					Target:      tt.target,
 					Source:      tt.source,
-					SigningRoot: bytesutil.ToBytes32(tt.signingRoot),
+					SigningRoot: tt.signingRoot,
 				})
 			if tt.error == "" {
 				require.NoError(t, err)
-				td, err := HistoricalAttestationAtTargetEpoch(tt.enc, tt.target)
+				td, err := HistoricalAttestationAtTargetEpoch(enc, tt.target)
 				require.NoError(t, err)
-				require.DeepEqual(t, bytesutil.ToBytes32(tt.signingRoot), td.SigningRoot)
+				require.NotNil(t, td)
+				require.DeepEqual(t, bytesutil.PadTo(tt.signingRoot, 32), td.SigningRoot)
 				require.Equal(t, tt.source, td.Source)
 				return
 			}
 			assert.ErrorContains(t, tt.error, err)
 			require.DeepEqual(t, tt.expected, enc)
-
 		})
 	}
-
 }

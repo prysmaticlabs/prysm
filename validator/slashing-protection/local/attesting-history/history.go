@@ -24,7 +24,7 @@ const (
 type HistoricalAttestation struct {
 	Source      uint64
 	Target      uint64
-	SigningRoot [32]byte
+	SigningRoot []byte
 }
 
 // History is a type alias to efficiently store historical attestation
@@ -40,7 +40,11 @@ func New(targetEpoch uint64) History {
 	initialHist := make(History, arraySize)
 	currentHist := initialHist
 	for epoch := uint64(0); epoch <= targetEpoch%params.BeaconConfig().WeakSubjectivityPeriod; epoch++ {
-		historicalAtt := HistoricalAttestation{Target: epoch, Source: params.BeaconConfig().FarFutureEpoch}
+		historicalAtt := &HistoricalAttestation{
+			Target:      epoch,
+			Source:      params.BeaconConfig().FarFutureEpoch,
+			SigningRoot: make([]byte, 32),
+		}
 		newHist, err := MarkAsAttested(currentHist, historicalAtt)
 		if err != nil {
 			log.WithError(err).Error("Failed to set empty target data")
@@ -66,31 +70,30 @@ func SetLatestEpochWritten(hist History, latestEpochWritten uint64) (History, er
 	return newHist, nil
 }
 
-func HistoricalAttestationAtTargetEpoch(hist History, target uint64) (HistoricalAttestation, error) {
+func HistoricalAttestationAtTargetEpoch(hist History, target uint64) (*HistoricalAttestation, error) {
 	if err := assertSize(hist); err != nil {
-		return HistoricalAttestation{}, err
+		return nil, err
 	}
 	// Cursor for the location to read target epoch from.
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
 	if uint64(len(hist)) < cursor+historySize {
-		return HistoricalAttestation{}, nil
+		return nil, nil
 	}
-	histAttestation := HistoricalAttestation{}
+	histAttestation := &HistoricalAttestation{}
 	histAttestation.Source = bytesutil.FromBytes8(hist[cursor : cursor+sourceSize])
 	histAttestation.Target = target
 	sr := make([]byte, 32)
 	copy(sr, hist[cursor+sourceSize:cursor+historySize])
-	histAttestation.SigningRoot = bytesutil.ToBytes32(sr)
+	histAttestation.SigningRoot = sr
 	return histAttestation, nil
 }
 
-func MarkAsAttested(hist History, incomingAtt HistoricalAttestation) (History, error) {
+func MarkAsAttested(hist History, incomingAtt *HistoricalAttestation) (History, error) {
 	if err := assertSize(hist); err != nil {
 		return nil, err
 	}
-	newHist := make([]byte, len(hist))
-	copy(newHist, hist)
+	newHist := hist
 	// Cursor for the location to write target epoch into.
 	// Modulus of target epoch by WEAK_SUBJECTIVITY_PERIOD.
 	cursor := latestEpochWrittenSize + (incomingAtt.Target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
@@ -103,8 +106,8 @@ func MarkAsAttested(hist History, incomingAtt HistoricalAttestation) (History, e
 	return newHist, nil
 }
 
-func IsEmptyHistoricalAttestation(histAtt HistoricalAttestation) bool {
-	return histAtt.Source == params.BeaconConfig().FarFutureEpoch
+func IsEmptyHistoricalAttestation(histAtt *HistoricalAttestation) bool {
+	return histAtt != nil && histAtt.Source == params.BeaconConfig().FarFutureEpoch
 }
 
 // MarkAllAsAttestedSinceLatestWrittenEpoch returns an attesting history with specified target+epoch pairs
@@ -112,7 +115,7 @@ func IsEmptyHistoricalAttestation(histAtt HistoricalAttestation) bool {
 func MarkAllAsAttestedSinceLatestWrittenEpoch(
 	ctx context.Context,
 	hist History,
-	incomingAtt HistoricalAttestation,
+	incomingAtt *HistoricalAttestation,
 ) (History, error) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	latestEpochWritten, err := GetLatestEpochWritten(hist)
@@ -125,7 +128,7 @@ func MarkAllAsAttestedSinceLatestWrittenEpoch(
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
 		maxToWrite := latestEpochWritten + wsPeriod
 		for i := latestEpochWritten + 1; i < incomingAtt.Target && i <= maxToWrite; i++ {
-			newHD, err := MarkAsAttested(hist, HistoricalAttestation{
+			newHD, err := MarkAsAttested(hist, &HistoricalAttestation{
 				Source: params.BeaconConfig().FarFutureEpoch,
 				Target: i % wsPeriod,
 			})
@@ -140,7 +143,7 @@ func MarkAllAsAttestedSinceLatestWrittenEpoch(
 		}
 		currentHD = newHD
 	}
-	newHD, err := MarkAsAttested(currentHD, HistoricalAttestation{
+	newHD, err := MarkAsAttested(currentHD, &HistoricalAttestation{
 		Target:      incomingAtt.Target % wsPeriod,
 		Source:      incomingAtt.Source,
 		SigningRoot: incomingAtt.SigningRoot,

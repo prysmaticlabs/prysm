@@ -7,12 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
+	"github.com/sirupsen/logrus"
 )
 
 // IsSlashableAttestation determines if an incoming attestation is slashable
@@ -30,14 +29,14 @@ func (s *Service) IsSlashableAttestation(
 	lock := mputil.NewMultilock(string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
-	attesterHistory, err := s.validatorDB.AttestationHistoryForPubKey(ctx, pubKey)
+	history, err := s.validatorDB.AttestationHistoryForPubKey(ctx, pubKey)
 	if err != nil {
 		return false, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
 	}
-	if attesterHistory == nil {
+	if history == nil {
 		return false, fmt.Errorf("nil attester history found for public key %#x", pubKey)
 	}
-	latestEpochWritten, err := attesterHistory.GetLatestEpochWritten(ctx)
+	latestEpochWritten, err := attestinghistory.GetLatestEpochWritten(history)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not get latest epoch written for pubkey %#x", pubKey)
 	}
@@ -45,13 +44,13 @@ func (s *Service) IsSlashableAttestation(
 	if differenceOutsideWeakSubjectivityBounds(latestEpochWritten, indexedAtt.Data.Target.Epoch) {
 		return false, nil
 	}
-	doubleVote, err := isDoubleVote(ctx, attesterHistory, indexedAtt.Data.Target.Epoch, signingRoot)
+	doubleVote, err := isDoubleVote(history, indexedAtt.Data.Target.Epoch, signingRoot)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not check if pubkey is attempting a double vote %#x", pubKey)
 	}
 	surroundVote, err := isSurroundVote(
 		ctx,
-		attesterHistory,
+		history,
 		latestEpochWritten,
 		indexedAtt.Data.Source.Epoch,
 		indexedAtt.Data.Target.Epoch,
@@ -65,11 +64,14 @@ func (s *Service) IsSlashableAttestation(
 		return true, nil
 	}
 	// We update the attester history with new values.
-	newAttesterHistory, err := attesterHistory.UpdateHistoryForAttestation(
+	newAttesterHistory, err := attestinghistory.MarkAllAsAttestedSinceLatestWrittenEpoch(
 		ctx,
-		indexedAtt.Data.Source.Epoch,
-		indexedAtt.Data.Target.Epoch,
-		signingRoot,
+		history,
+		&attestinghistory.HistoricalAttestation{
+			Source:      indexedAtt.Data.Source.Epoch,
+			Target:      indexedAtt.Data.Target.Epoch,
+			SigningRoot: signingRoot[:],
+		},
 	)
 	if err != nil {
 		return false, errors.Wrap(err, "could not update attesting history data")
@@ -88,17 +90,22 @@ func differenceOutsideWeakSubjectivityBounds(latestEpochWritten, targetEpoch uin
 	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod
 }
 
-func isDoubleVote(ctx context.Context, history kv.EncHistoryData, targetEpoch uint64, signingRoot [32]byte) (bool, error) {
+func isDoubleVote(
+	history attestinghistory.History,
+	targetEpoch uint64,
+	signingRoot [32]byte,
+) (bool, error) {
 	// Check if there has already been a vote for this target epoch.
-	hd, err := history.GetTargetData(ctx, targetEpoch)
+	historicalAttestation, err := attestinghistory.HistoricalAttestationAtTargetEpoch(history, targetEpoch)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not get data for target epoch: %d", targetEpoch)
 	}
-	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
+	isEmpty := attestinghistory.IsEmptyHistoricalAttestation(historicalAttestation)
+	if !isEmpty && !bytes.Equal(signingRoot[:], historicalAttestation.SigningRoot) {
 		log.WithFields(logrus.Fields{
 			"signingRoot":                   fmt.Sprintf("%#x", signingRoot),
 			"targetEpoch":                   targetEpoch,
-			"previouslyAttestedSigningRoot": fmt.Sprintf("%#x", hd.SigningRoot),
+			"previouslyAttestedSigningRoot": fmt.Sprintf("%#x", historicalAttestation.SigningRoot),
 		}).Warn("Attempted to submit a double vote, but blocked by slashing protection")
 		return true, nil
 	}
@@ -107,21 +114,21 @@ func isDoubleVote(ctx context.Context, history kv.EncHistoryData, targetEpoch ui
 
 func isSurroundVote(
 	ctx context.Context,
-	history kv.EncHistoryData,
+	history attestinghistory.History,
 	latestEpochWritten,
 	sourceEpoch,
 	targetEpoch uint64,
 ) (bool, error) {
 	for i := sourceEpoch; i <= targetEpoch; i++ {
-		historyAtTarget, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
+		historicalAtt, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
 		if err != nil {
 			return false, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
 		}
-		if historyAtTarget == nil || historyAtTarget.IsEmpty() {
+		if attestinghistory.IsEmptyHistoricalAttestation(historicalAtt) {
 			continue
 		}
 		prevTarget := i
-		prevSource := historyAtTarget.Source
+		prevSource := historicalAtt.Source
 		if surroundingPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
 			// Surrounding attestation caught.
 			log.WithFields(logrus.Fields{
@@ -136,16 +143,15 @@ func isSurroundVote(
 
 	// Check if the new attestation is being surrounded.
 	for i := targetEpoch; i <= latestEpochWritten; i++ {
-		historyAtTarget, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
+		historicalAtt, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
 		if err != nil {
 			return false, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
 		}
-		if historyAtTarget == nil || historyAtTarget.IsEmpty() {
+		if attestinghistory.IsEmptyHistoricalAttestation(historicalAtt) {
 			continue
 		}
-		//time="2020-11-20 16:55:13" level=warning msg="Attempted to submit a surrounded attestation, but blocked by slashing protection" prefix=local-slashing-protection        previouslyAttestedSourceEpoch=0 previouslyAttestedTargetEpoch=1 sourceEpoch=2 targetEpoch=0
 		prevTarget := i
-		prevSource := historyAtTarget.Source
+		prevSource := historicalAtt.Source
 		if surroundedByPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
 			// Surrounded attestation caught.
 			log.WithFields(logrus.Fields{
@@ -164,10 +170,10 @@ func isSurroundVote(
 // The response is nil if there was no attesting history at that epoch.
 func checkHistoryAtTargetEpoch(
 	ctx context.Context,
-	history kv.EncHistoryData,
+	history attestinghistory.History,
 	latestEpochWritten,
 	targetEpoch uint64,
-) (*kv.HistoryData, error) {
+) (*attestinghistory.HistoricalAttestation, error) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	if differenceOutsideWeakSubjectivityBounds(latestEpochWritten, targetEpoch) {
 		return nil, nil
@@ -176,11 +182,11 @@ func checkHistoryAtTargetEpoch(
 	if targetEpoch > latestEpochWritten {
 		return nil, nil
 	}
-	historyData, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
+	historicalAtt, err := attestinghistory.HistoricalAttestationAtTargetEpoch(history, targetEpoch%wsPeriod)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
 	}
-	return historyData, nil
+	return historicalAtt, nil
 }
 
 func surroundedByPrevAttestation(prevSource, prevTarget, newSource, newTarget uint64) bool {

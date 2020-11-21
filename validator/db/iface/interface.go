@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 // ValidatorDB defines the necessary methods for a Prysm validator DB.
@@ -25,8 +26,8 @@ type ValidatorDB interface {
 	SaveProposalHistoryForPubKeys(ctx context.Context, proposals map[[48]byte]kv.ProposalHistoryForPubkey) error
 
 	// Attesting history methods for slashing protection.
-	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
-	AttestationHistoryForPubKey(ctx context.Context, publicKey [48]byte) (kv.EncHistoryData, error)
-	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
-	SaveAttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
+	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]attestinghistory.History, error)
+	AttestationHistoryForPubKey(ctx context.Context, publicKey [48]byte) (attestinghistory.History, error)
+	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]attestinghistory.History) error
+	SaveAttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte, history attestinghistory.History) error
 }
