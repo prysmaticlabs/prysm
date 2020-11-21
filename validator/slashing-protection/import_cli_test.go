@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
 	"github.com/urfave/cli/v2"
@@ -25,7 +25,18 @@ func TestImportSlashingProtectionCLI(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
 	publicKeys := spTest.CreateRandomPubKeys(t, numValidators)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB, err := kv.NewKVStore(protectionDir, publicKeys)
+	if err != nil {
+		t.Fatalf("Failed to instantiate DB: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := validatorDB.Close(); err != nil {
+			t.Fatalf("Failed to close database: %v", err)
+		}
+		if err := validatorDB.ClearDB(); err != nil {
+			t.Fatalf("Failed to clear database: %v", err)
+		}
+	})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
@@ -47,14 +58,13 @@ func TestImportSlashingProtectionCLI(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	dataDirPath := t.TempDir()
-	set.String(cmd.DataDirFlag.Name, dataDirPath, "")
+	set.String(cmd.DataDirFlag.Name, protectionDir, "")
 	set.String(flags.SlashingProtectionJSONFileFlag.Name, protectionFilePath, "")
-	require.NoError(t, set.Set(cmd.DataDirFlag.Name, dataDirPath))
+	require.NoError(t, set.Set(cmd.DataDirFlag.Name, protectionDir))
 	require.NoError(t, set.Set(flags.SlashingProtectionJSONFileFlag.Name, protectionFilePath))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	require.NoError(t, ImportSlashingProtectionCLI(cliCtx))
+	require.NoError(t, ImportSlashingProtectionCLI(cliCtx, validatorDB))
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
 	// verify those indeed match the originally generated mock histories.

@@ -35,7 +35,7 @@ var ProtectionCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ImportSlashingProtectionCLI(cliCtx); err != nil {
+				if err := ImportSlashingProtectionCLI(cliCtx, nil); err != nil {
 					log.Fatalf("Could not import slashing protection JSON: %v", err)
 				}
 				return nil
