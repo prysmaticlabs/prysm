@@ -25,6 +25,10 @@ service Slasher {
     // Returns if a given beacon block header could be slashable when compared to the slashers history for the proposer.
     // This function is read-only, and does not need the beacon block header to be signed.
     rpc IsSlashableBlockNoUpdate(ethereum.eth.v1alpha1.BeaconBlockHeader) returns (Slashable);
+
+    // Returns the highest source and target attestation for validator indexes that have been observed by the slasher.
+    rpc HighestAttestations(HighestAttestationRequest) returns (HighestAttestationResponse);
+
 }
 
 message HighestAttestationRequest {
