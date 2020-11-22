@@ -33,7 +33,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode message")
+		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}

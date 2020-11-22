@@ -758,7 +758,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			FinalizedRoot:  finalizedRoot[:],
 		}
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-			log.WithError(err).Error("Failed to write to stream")
+			log.WithError(err).Debug("Could not write to stream")
 		}
 		_, err := r.p2p.Encoding().EncodeWithMaxLength(stream, expected)
 		assert.NoError(t, err)
@@ -773,7 +773,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	connectionState, err := p1.Peers().ConnectionState(p2.PeerID())
-	require.NoError(t, err, "Failed to obtain peer connection state")
+	require.NoError(t, err, "Could not obtain peer connection state")
 	assert.Equal(t, peers.PeerDisconnected, connectionState, "Expected peer to be disconnected")
 
 	assert.Equal(t, true, p1.Peers().Scorers().IsBadPeer(p2.PeerID()), "Peer is not marked as bad")
