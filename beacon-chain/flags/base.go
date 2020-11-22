@@ -167,4 +167,10 @@ var (
 		Name:  "db-backup-output-dir",
 		Usage: "Output directory for db backups",
 	}
+	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
+	Eth1HeaderReqLimit = &cli.Uint64Flag{
+		Name:  "eth1-header-req-limit",
+		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
+		Value: uint64(1000),
+	}
 )

@@ -149,16 +149,18 @@ type Service struct {
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
 	stateGen                *stategen.State
+	eth1HeaderReqLimit      uint64
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HTTPEndPoint    string
-	DepositContract common.Address
-	BeaconDB        db.HeadAccessDatabase
-	DepositCache    *depositcache.DepositCache
-	StateNotifier   statefeed.Notifier
-	StateGen        *stategen.State
+	HTTPEndPoint       string
+	DepositContract    common.Address
+	BeaconDB           db.HeadAccessDatabase
+	DepositCache       *depositcache.DepositCache
+	StateNotifier      statefeed.Notifier
+	StateGen           *stategen.State
+	Eth1HeaderReqLimit uint64
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -174,6 +176,11 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	genState, err := state.EmptyGenesisState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not setup genesis state")
+	}
+
+	eth1HeaderReqLimit := config.Eth1HeaderReqLimit
+	if eth1HeaderReqLimit == 0 {
+		eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
 	s := &Service{
@@ -201,6 +208,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		preGenesisState:         genState,
 		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
 		stateGen:                config.StateGen,
+		eth1HeaderReqLimit:      eth1HeaderReqLimit,
 	}
 
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
