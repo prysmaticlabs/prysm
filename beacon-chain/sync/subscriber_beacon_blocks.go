@@ -37,7 +37,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 	// Delete attestations from the block in the pool to avoid inclusion in future block.
 	if err := s.deleteAttsInPool(block.Body.Attestations); err != nil {
-		log.Errorf("Could not delete attestations in pool: %v", err)
+		log.Debugf("Could not delete attestations in pool: %v", err)
 		return nil
 	}
 

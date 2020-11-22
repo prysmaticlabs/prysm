@@ -32,7 +32,7 @@ type subHandler func(context.Context, proto.Message) error
 func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Debug("Failed to decode message")
+		log.WithError(err).Debug("Could not decode message")
 		return pubsub.ValidationReject
 	}
 	msg.ValidatorData = m
@@ -96,7 +96,8 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 	log := log.WithField("topic", topic)
 
 	if err := s.p2p.PubSub().RegisterTopicValidator(s.wrapAndReportValidation(topic, validator)); err != nil {
-		log.WithError(err).Error("Failed to register validator")
+		log.WithError(err).Error("Could not register validator for topic")
+		return nil
 	}
 
 	sub, err := s.p2p.SubscribeToTopic(topic)
@@ -104,7 +105,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
 		// libp2p PubSub library or a subscription request to a topic that fails to match the topic
 		// subscription filter.
-		log.WithError(err).WithField("topic", topic).Error("Failed to subscribe to topic")
+		log.WithError(err).WithField("topic", topic).Error("Could not subscribe topic")
 		return nil
 	}
 
@@ -134,7 +135,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			traceutil.AnnotateError(span, err)
-			log.WithError(err).Debug("Failed to handle p2p pubsub")
+			log.WithError(err).Debug("Could not handle p2p pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
@@ -306,7 +307,7 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 			v.Cancel()
 			fullTopic := fmt.Sprintf(topicFormat, digest, k) + s.p2p.Encoding().ProtocolSuffix()
 			if err := s.p2p.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
-				log.WithError(err).Error("Failed to unregister topic validator")
+				log.WithError(err).Error("Could not unregister topic validator")
 			}
 			delete(subscriptions, k)
 		}
