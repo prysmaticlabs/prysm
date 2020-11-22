@@ -32,6 +32,35 @@ type Server struct {
 	proposeLock     sync.Mutex
 }
 
+// HighestAttestations returns the highest observed attestation source and epoch for a given validator id.
+func (ss *Server) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest) (*slashpb.HighestAttestationResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "history.HighestAttestations")
+	defer span.End()
+
+	ret := make([]*slashpb.HighestAttestation, 0)
+	for _, id := range req.ValidatorIds {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		res, err := ss.slasherDB.HighestAttestation(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if res != nil {
+			ret = append(ret, &slashpb.HighestAttestation{
+				ValidatorId:        res.ValidatorId,
+				HighestTargetEpoch: res.HighestTargetEpoch,
+				HighestSourceEpoch: res.HighestSourceEpoch,
+			})
+		}
+	}
+
+	return &slashpb.HighestAttestationResponse{
+		Attestations: ret,
+	}, nil
+}
+
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {

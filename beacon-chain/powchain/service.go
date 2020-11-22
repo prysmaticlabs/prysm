@@ -349,22 +349,6 @@ func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
 	if s.latestEth1Data.BlockHeight > params.BeaconConfig().Eth1FollowDistance {
 		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
 	}
-	blockTime, err := s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
-	if err != nil {
-		return 0, err
-	}
-	followTime := func(t uint64) uint64 {
-		return t + params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block
-	}
-	for followTime(blockTime) > s.latestEth1Data.BlockTime && latestValidBlock > 0 {
-		// reduce block height to get eth1 block which
-		// fulfills stated condition
-		latestValidBlock--
-		blockTime, err = s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
-		if err != nil {
-			return 0, err
-		}
-	}
 	return latestValidBlock, nil
 }
 
@@ -800,15 +784,16 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 // determines the earliest voting block from which to start caching all our previous headers from.
 func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock uint64) (uint64, error) {
 	genesisTime := s.chainStartData.GenesisTime
+	currSlot := helpers.CurrentSlot(genesisTime)
+
 	// In the event genesis has not occurred yet, we just request go back follow_distance blocks.
-	if genesisTime == 0 {
+	if genesisTime == 0 || currSlot == 0 {
 		earliestBlk := uint64(0)
 		if followBlock > params.BeaconConfig().Eth1FollowDistance {
 			earliestBlk = followBlock - params.BeaconConfig().Eth1FollowDistance
 		}
 		return earliestBlk, nil
 	}
-	currSlot := helpers.CurrentSlot(genesisTime)
 	votingTime := helpers.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
 	if followBackDist > votingTime {
