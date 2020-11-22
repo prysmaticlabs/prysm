@@ -47,7 +47,6 @@ require (
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-ipfs-addr v0.0.1
-	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.1
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
 	github.com/json-iterator/go v1.1.10
@@ -58,9 +57,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-libp2p v0.10.2
 	github.com/libp2p/go-libp2p-blankhost v0.2.0
-	github.com/libp2p/go-libp2p-circuit v0.3.1
 	github.com/libp2p/go-libp2p-core v0.6.1
-	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-noise v0.1.1
 	github.com/libp2p/go-libp2p-pubsub v0.3.6
 	github.com/libp2p/go-libp2p-secio v0.2.2
