@@ -3,7 +3,6 @@ package local
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -27,7 +26,6 @@ func (s *Service) IsSlashableBlock(
 	// Check if we are performing a double block proposal.
 	same := existingSigningRoot != nil && bytes.Equal(existingSigningRoot, signingRoot[:])
 	if existingSigningRoot != nil && !same {
-		fmt.Printf("existingSigningRoot %#x signingRoot %#x\n", existingSigningRoot[26:], signingRoot[26:])
 		slashingprotection.LocalSlashableProposalsTotal.Inc()
 		return true, nil
 	}
