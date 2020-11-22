@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -55,8 +56,8 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators, minSlot)
-	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory, minSlot)
+	attHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators, minSlot)
+	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attHistory, proposalHistory, minSlot)
 
 	// We replace a slot of one of the blocks with junk data.
 	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
@@ -75,10 +76,10 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	// verify nothing was saved to the DB. If there is an error in the import process, we need to make
 	// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
 	// data to our DB, or it does not.
-	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
+	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for i := 0; i < len(publicKeys); i++ {
-		defaultAttestingHistory := kv.NewAttestationHistoryArray(0)
+		defaultAttestingHistory := attestinghistory.New(0)
 		require.DeepEqual(
 			t,
 			defaultAttestingHistory,
@@ -121,7 +122,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
 	// verify those indeed match the originally generated mock histories.
-	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
+	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for i := 0; i < len(publicKeys); i++ {
 		require.DeepEqual(
@@ -150,10 +151,15 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 }
 
 func Test_validateMetadata(t *testing.T) {
+	goodRoot := [32]byte{1}
+	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
+	hex.Encode(goodStr, goodRoot[:])
 	tests := []struct {
-		name            string
-		interchangeJSON *EIPSlashingProtectionFormat
-		wantErr         bool
+		name                   string
+		interchangeJSON        *EIPSlashingProtectionFormat
+		dbGenesisValidatorRoot []byte
+		wantErr                bool
+		wantFatal              string
 	}{
 		{
 			name: "Incorrect version for EIP format should fail",
@@ -163,6 +169,7 @@ func Test_validateMetadata(t *testing.T) {
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
 					InterchangeFormatVersion: "1",
+					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
 			wantErr: true,
@@ -175,6 +182,7 @@ func Test_validateMetadata(t *testing.T) {
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
 					InterchangeFormatVersion: "asdljas$d",
+					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
 			wantErr: true,
@@ -187,6 +195,7 @@ func Test_validateMetadata(t *testing.T) {
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
 					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
 			wantErr: false,
@@ -199,6 +208,66 @@ func Test_validateMetadata(t *testing.T) {
 			if err := validateMetadata(ctx, validatorDB, tt.interchangeJSON); (err != nil) != tt.wantErr {
 				t.Errorf("validateMetadata() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
+		})
+	}
+}
+
+func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
+	goodRoot := [32]byte{1}
+	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
+	hex.Encode(goodStr, goodRoot[:])
+	secondRoot := [32]byte{2}
+	secondStr := make([]byte, hex.EncodedLen(len(secondRoot)))
+	hex.Encode(secondStr, secondRoot[:])
+
+	tests := []struct {
+		name                   string
+		interchangeJSON        *EIPSlashingProtectionFormat
+		dbGenesisValidatorRoot []byte
+		wantErr                bool
+	}{
+		{
+			name: "Same genesis roots should not fail",
+			interchangeJSON: &EIPSlashingProtectionFormat{
+				Metadata: struct {
+					InterchangeFormatVersion string `json:"interchange_format_version"`
+					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+				}{
+					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+					GenesisValidatorsRoot:    string(goodStr),
+				},
+			},
+			dbGenesisValidatorRoot: goodRoot[:],
+			wantErr:                false,
+		},
+		{
+			name: "Different genesis roots should not fail",
+			interchangeJSON: &EIPSlashingProtectionFormat{
+				Metadata: struct {
+					InterchangeFormatVersion string `json:"interchange_format_version"`
+					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+				}{
+					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+					GenesisValidatorsRoot:    string(secondStr),
+				},
+			},
+			dbGenesisValidatorRoot: goodRoot[:],
+			wantErr:                true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validatorDB := dbtest.SetupDB(t, nil)
+			ctx := context.Background()
+			require.NoError(t, validatorDB.SaveGenesisValidatorsRoot(ctx, tt.dbGenesisValidatorRoot))
+			err := validateMetadata(ctx, validatorDB, tt.interchangeJSON)
+			if tt.wantErr {
+				require.ErrorContains(t, "genesis validator root doesnt match the one that is stored", err)
+			} else {
+				require.NoError(t, err)
+			}
+
 		})
 	}
 }
@@ -686,27 +755,26 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 func mockSlashingProtectionJSON(
 	t *testing.T,
 	publicKeys [][48]byte,
-	attestingHistories []kv.EncHistoryData,
+	attestingHistories []attestinghistory.History,
 	proposalHistories []kv.ProposalHistoryForPubkey,
 	minSlot uint64,
 ) *EIPSlashingProtectionFormat {
 	standardProtectionFormat := &EIPSlashingProtectionFormat{}
 	standardProtectionFormat.Metadata.GenesisValidatorsRoot = hex.EncodeToString(bytesutil.PadTo([]byte{32}, 32))
 	standardProtectionFormat.Metadata.InterchangeFormatVersion = "5"
-	ctx := context.Background()
 	for i := 0; i < len(publicKeys); i++ {
 		data := &ProtectionData{
 			Pubkey: hex.EncodeToString(publicKeys[i][:]),
 		}
-		highestEpochWritten, err := attestingHistories[i].GetLatestEpochWritten(ctx)
+		highestEpochWritten, err := attestinghistory.GetLatestEpochWritten(attestingHistories[i])
 		require.NoError(t, err)
 		for target := uint64(0); target <= highestEpochWritten; target++ {
-			hd, err := attestingHistories[i].GetTargetData(ctx, target)
+			historicalAtt, err := attestinghistory.HistoricalAttestationAtTargetEpoch(attestingHistories[i], target)
 			require.NoError(t, err)
 			data.SignedAttestations = append(data.SignedAttestations, &SignedAttestation{
 				TargetEpoch: strconv.FormatUint(target, 10),
-				SourceEpoch: strconv.FormatUint(hd.Source, 10),
-				SigningRoot: hex.EncodeToString(hd.SigningRoot),
+				SourceEpoch: strconv.FormatUint(historicalAtt.Source, 10),
+				SigningRoot: hex.EncodeToString(historicalAtt.SigningRoot),
 			})
 		}
 		for target := uint64(0); target <= highestEpochWritten-minSlot; target++ {
@@ -723,27 +791,30 @@ func mockSlashingProtectionJSON(
 	return standardProtectionFormat
 }
 
-func mockAttestingAndProposalHistories(t *testing.T, numValidators int, minSlot uint64) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey) {
+func mockAttestingAndProposalHistories(
+	t *testing.T, numValidators int, minSlot uint64,
+) ([]attestinghistory.History, []kv.ProposalHistoryForPubkey) {
 	// deduplicate and transform them into our internal format.
-	attData := make([]kv.EncHistoryData, numValidators)
+	attData := make([]attestinghistory.History, numValidators)
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
-	ctx := context.Background()
 	for v := 0; v < numValidators; v++ {
 		var err error
 		latestTarget := uint64(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod)/100)) + minSlot
-		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
+		hd := attestinghistory.New(latestTarget)
 		proposals := make([]kv.Proposal, 0)
 		for i := minSlot; i < latestTarget; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
-			historyData := &kv.HistoryData{
+			historyData := &attestinghistory.HistoricalAttestation{
 				Source:      uint64(gen.Intn(100000)),
 				SigningRoot: signingRoot[:],
+				Target:      i,
 			}
-			hd, err = hd.SetTargetData(ctx, i, historyData)
+			newHist, err := attestinghistory.MarkAsAttested(hd, historyData)
 			require.NoError(t, err)
+			hd = newHist
 		}
 		for i := minSlot; i <= latestTarget; i++ {
 			signingRoot := [32]byte{}
@@ -755,9 +826,9 @@ func mockAttestingAndProposalHistories(t *testing.T, numValidators int, minSlot 
 			})
 		}
 		proposalData[v] = kv.ProposalHistoryForPubkey{Proposals: proposals}
-		hd, err = hd.SetLatestEpochWritten(ctx, uint64(latestTarget))
+		newHist, err := attestinghistory.SetLatestEpochWritten(hd, latestTarget)
 		require.NoError(t, err)
-		attData[v] = hd
+		attData[v] = newHist
 	}
 	return attData, proposalData
 }

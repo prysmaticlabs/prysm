@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -78,27 +79,39 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if err != nil {
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
-		).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
+		).WithError(err).Error("Could not check attestation safety with local slashing protection, not submitting")
 		return
 	}
-	remoteSlashable := false
+	if locallySlashable {
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).Warn("Attempted to submit a slashable attestation, blocked by local slashing protection")
+		return
+	}
 	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
-		remoteSlashable, err = v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
+		remoteSlashable, err := v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 		if err != nil {
-			// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
-			if !errors.Is(err, remote.ErrSlasherUnavailable) {
+			if featureconfig.Get().DisableStrictRemoteSlashingProtection {
+				if !errors.Is(err, remote.ErrSlasherUnavailable) {
+					// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
+					log.WithFields(
+						attestationLogFields(pubKey, indexedAtt),
+					).WithError(err).Warn("Could not check attestation safety with remote slashing protection, not submitting")
+					return
+				}
+			} else {
 				log.WithFields(
 					attestationLogFields(pubKey, indexedAtt),
-				).WithError(err).Warn("Could not check attestation safety with slashing protection, not submitting")
+				).WithError(err).Warn("Could not check attestation safety with remote slashing protection, not submitting")
 				return
 			}
 		}
-	}
-	if locallySlashable || remoteSlashable {
-		log.WithFields(
-			attestationLogFields(pubKey, indexedAtt),
-		).Warn("Attempted to submit a slashable attestation, blocked by slashing protection")
-		return
+		if remoteSlashable {
+			log.WithFields(
+				attestationLogFields(pubKey, indexedAtt),
+			).Warn("Attempted to submit a slashable attestation, blocked by remote slashing protection")
+			return
+		}
 	}
 
 	var indexInCommittee uint64

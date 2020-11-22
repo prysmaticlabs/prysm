@@ -1,6 +1,7 @@
 package interchangeformat
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -47,7 +49,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
-	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
+	attestingHistoryByPubKey := make(map[[48]byte]attestinghistory.History)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Transform the processed signed blocks data from the JSON
@@ -72,10 +74,10 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
-	if err = validatorDB.SaveProposalHistoryForPubKeysV2(ctx, proposalHistoryByPubKey); err != nil {
+	if err = validatorDB.SaveProposalHistoryForPubKeys(ctx, proposalHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 	}
-	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
+	if err := validatorDB.SaveAttestationHistoryForPubKeys(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
 	return nil
@@ -94,7 +96,24 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 
 	// We need to verify the genesis validators root matches that of our chain data, otherwise
 	// the imported slashing protection JSON was created on a different chain.
-	// TODO(#7813): Add this check, very important!
+	gvr, err := rootFromHex(interchangeJSON.Metadata.GenesisValidatorsRoot)
+	if err != nil {
+		return fmt.Errorf("%#x is not a valid root: %v", interchangeJSON.Metadata.GenesisValidatorsRoot, err)
+	}
+	dbGvr, err := validatorDB.GenesisValidatorsRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve genesis validator root to db")
+	}
+	if dbGvr == nil {
+		if err = validatorDB.SaveGenesisValidatorsRoot(ctx, gvr[:]); err != nil {
+			return errors.Wrap(err, "could not save genesis validator root to db")
+		}
+		return nil
+	}
+	if !bytes.Equal(dbGvr, gvr[:]) {
+		return errors.New("genesis validator root doesnt match the one that is stored in slashing protection db. " +
+			"Please make sure you import the protection data that is relevant to the chain you are on")
+	}
 	return nil
 }
 
@@ -183,8 +202,8 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*k
 	}, nil
 }
 
-func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*kv.EncHistoryData, error) {
-	attestingHistory := kv.NewAttestationHistoryArray(0)
+func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*attestinghistory.History, error) {
+	history := attestinghistory.New(0)
 	highestEpochWritten := uint64(0)
 	var err error
 	for _, attestation := range atts {
@@ -208,16 +227,17 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
 		}
-		attestingHistory, err = attestingHistory.SetTargetData(
-			ctx, target, &kv.HistoryData{Source: source, SigningRoot: signingRoot[:]},
+		newHist, err := attestinghistory.MarkAsAttested(
+			history, &attestinghistory.HistoricalAttestation{Target: target, Source: source, SigningRoot: signingRoot[:]},
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not set target data for attesting history")
 		}
+		history = newHist
 	}
-	attestingHistory, err = attestingHistory.SetLatestEpochWritten(ctx, highestEpochWritten)
+	newHist, err := attestinghistory.SetLatestEpochWritten(history, highestEpochWritten)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set latest epoch written")
 	}
-	return &attestingHistory, nil
+	return &newHist, nil
 }

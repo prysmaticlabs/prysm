@@ -68,7 +68,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	if len(aggregatedAtts) == 0 {
 		aggregatedAtts = vs.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 		if len(aggregatedAtts) == 0 {
-			return nil, status.Errorf(codes.Internal, "Could not find attestation for slot and committee in pool")
+			return nil, status.Errorf(codes.NotFound, "Could not find attestation for slot and committee in pool")
 		}
 	}
 
