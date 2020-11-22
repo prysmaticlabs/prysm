@@ -75,43 +75,20 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 	indexedAtt.Signature = sig
-	locallySlashable, err := v.localSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
+
+	// Check if attestation is slashable.
+	slashable, err := v.checkSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
 	if err != nil {
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
-		).WithError(err).Error("Could not check attestation safety with local slashing protection, not submitting")
+		).WithError(err).Error("Could not check attestation safety with slashing protection, not submitting")
 		return
 	}
-	if locallySlashable {
+	if slashable {
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
 		).Warn("Attempted to submit a slashable attestation, blocked by local slashing protection")
 		return
-	}
-	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
-		remoteSlashable, err := v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
-		if err != nil {
-			if featureconfig.Get().DisableStrictRemoteSlashingProtection {
-				if !errors.Is(err, remote.ErrSlasherUnavailable) {
-					// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
-					log.WithFields(
-						attestationLogFields(pubKey, indexedAtt),
-					).WithError(err).Warn("Could not check attestation safety with remote slashing protection, not submitting")
-					return
-				}
-			} else {
-				log.WithFields(
-					attestationLogFields(pubKey, indexedAtt),
-				).WithError(err).Warn("Could not check attestation safety with remote slashing protection, not submitting")
-				return
-			}
-		}
-		if remoteSlashable {
-			log.WithFields(
-				attestationLogFields(pubKey, indexedAtt),
-			).Warn("Attempted to submit a slashable attestation, blocked by remote slashing protection")
-			return
-		}
 	}
 
 	var indexInCommittee uint64
@@ -209,6 +186,37 @@ func (v *validator) signAtt(
 	}
 
 	return sig.Marshal(), root, nil
+}
+
+// Check slashable attestation verifies an incoming indexed attestation against local slashing protection
+// and remote slashing protection (if enabled). If a slashable offense is found, we return an error.
+func (v *validator) checkSlashableAttestation(
+	ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte,
+) (bool, error) {
+	locallySlashable, err := v.localSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
+	if err != nil {
+		return false, err
+	}
+	if locallySlashable {
+		return true, nil
+	}
+	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
+		remoteSlashable, err := v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
+		if err != nil {
+			if featureconfig.Get().DisableStrictRemoteSlashingProtection {
+				if !errors.Is(err, remote.ErrSlasherUnavailable) {
+					// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
+					return false, err
+				}
+			} else {
+				return false, err
+			}
+		}
+		if remoteSlashable {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {

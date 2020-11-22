@@ -81,43 +81,19 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	locallySlashable, err := v.localSlashingProtector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
+	// Check if the block is slashable.
+	slashable, err := v.checkSlashableBlock(ctx, blk, pubKey, signingRoot)
 	if err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, blk),
-		).WithError(err).Error("Could not check block safety with local slashing protection, not submitting")
+		).WithError(err).Error("Could not check block safety with slashing protection, not submitting")
 		return
 	}
-	if locallySlashable {
+	if slashable {
 		log.WithFields(
 			blockLogFields(pubKey, blk),
-		).Warn("Attempted to submit a slashable block, blocked by local slashing protection")
+		).Warn("Attempted to submit a slashable block, blocked by slashing protection")
 		return
-	}
-	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
-		remoteSlashable, err := v.remoteSlashingProtector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
-		if err != nil {
-			if featureconfig.Get().DisableStrictRemoteSlashingProtection {
-				if !errors.Is(err, remote.ErrSlasherUnavailable) {
-					// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
-					log.WithFields(
-						blockLogFields(pubKey, blk),
-					).WithError(err).Warn("Could not check block safety with remote slashing protection, not submitting")
-					return
-				}
-			} else {
-				log.WithFields(
-					blockLogFields(pubKey, blk),
-				).WithError(err).Warn("Could not check block safety with remote slashing protection, not submitting")
-				return
-			}
-		}
-		if remoteSlashable {
-			log.WithFields(
-				blockLogFields(pubKey, blk),
-			).Warn("Attempted to submit a slashable block, blocked by remote slashing protection")
-			return
-		}
 	}
 
 	// Propose and broadcast block via beacon node
@@ -190,6 +166,37 @@ func ProposeExit(
 	)
 
 	return nil
+}
+
+// Check slashable block verifies an incoming block against local slashing protection
+// and remote slashing protection (if enabled). If a slashable offense is found, we return an error.
+func (v *validator) checkSlashableBlock(
+	ctx context.Context, sBlock *ethpb.SignedBeaconBlock, pubKey [48]byte, signingRoot [32]byte,
+) (bool, error) {
+	locallySlashable, err := v.localSlashingProtector.IsSlashableBlock(ctx, sBlock, pubKey, signingRoot)
+	if err != nil {
+		return false, err
+	}
+	if locallySlashable {
+		return true, nil
+	}
+	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
+		remoteSlashable, err := v.remoteSlashingProtector.IsSlashableBlock(ctx, sBlock, pubKey, signingRoot)
+		if err != nil {
+			if featureconfig.Get().DisableStrictRemoteSlashingProtection {
+				if !errors.Is(err, remote.ErrSlasherUnavailable) {
+					// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
+					return false, err
+				}
+			} else {
+				return false, err
+			}
+		}
+		if remoteSlashable {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // Sign randao reveal with randao domain and private key.
