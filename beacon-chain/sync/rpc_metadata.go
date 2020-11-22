@@ -15,7 +15,7 @@ import (
 func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 	}()
 	SetRPCStreamDeadlines(stream)
@@ -45,7 +45,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	// stream early leads it to a reset.
 	defer func() {
 		if err := helpers.FullClose(stream); isValidStreamError(err) {
-			log.WithError(err).Debugf("Failed to reset stream for protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Could not reset stream for protocol %s", stream.Protocol())
 		}
 	}()
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())

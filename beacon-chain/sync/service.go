@@ -254,7 +254,7 @@ func (s *Service) registerHandlers() {
 			case statefeed.Initialized:
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
-					log.Error("Event feed data is not type *statefeed.InitializedData")
+					log.Debug("Event feed data is not type *statefeed.InitializedData")
 					return
 				}
 				startTime := data.StartTime
@@ -273,7 +273,7 @@ func (s *Service) registerHandlers() {
 			case statefeed.Synced:
 				_, ok := event.Data.(*statefeed.SyncedData)
 				if !ok {
-					log.Error("Event feed data is not type *statefeed.SyncedData")
+					log.Debug("Event feed data is not type *statefeed.SyncedData")
 					return
 				}
 				// Register respective pubsub handlers at state synced event.
@@ -284,7 +284,7 @@ func (s *Service) registerHandlers() {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():
-			log.WithError(err).Error("Subscription to state notifier failed")
+			log.WithError(err).Error("Could not subscribe to state notifier")
 			return
 		}
 	}

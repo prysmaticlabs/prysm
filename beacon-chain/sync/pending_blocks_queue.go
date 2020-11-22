@@ -36,7 +36,7 @@ func (s *Service) processPendingBlocksQueue() {
 	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
 		if err := s.processPendingBlocks(s.ctx); err != nil {
-			log.WithError(err).Debug("Failed to process pending blocks")
+			log.WithError(err).Debug("Could not process pending blocks")
 		}
 		locker.Unlock()
 	})
@@ -146,7 +146,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Broadcasting the block again once a node is able to process it.
 			if err := s.p2p.Broadcast(ctx, b); err != nil {
-				log.WithError(err).Debug("Failed to broadcast block")
+				log.WithError(err).Debug("Could not broadcast block")
 			}
 
 			s.pendingQueueLock.Lock()
