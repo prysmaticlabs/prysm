@@ -957,6 +957,8 @@ func (m *HasWalletResponse) GetWalletExists() bool {
 }
 
 type ImportKeystoresRequest struct {
+	WalletPath           string   `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
+	WalletPassword       string   `protobuf:"bytes,3,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
 	KeystoresImported    []string `protobuf:"bytes,1,rep,name=keystores_imported,json=keystoresImported,proto3" json:"keystores_imported,omitempty"`
 	KeystoresPassword    string   `protobuf:"bytes,2,opt,name=keystores_password,json=keystoresPassword,proto3" json:"keystores_password,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
