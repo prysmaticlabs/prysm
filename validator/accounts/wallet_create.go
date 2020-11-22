@@ -35,6 +35,9 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	if keymanagerKind == keymanager.Imported {
+		return nil, errors.New("could not initialize wallet for imported accounts. Please use `validator accounts import` instead")
+	}
 	createWalletConfig, err := extractWalletCreationConfigFromCli(cliCtx, keymanagerKind)
 	if err != nil {
 		return nil, err
