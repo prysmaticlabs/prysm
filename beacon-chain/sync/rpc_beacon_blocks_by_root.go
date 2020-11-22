@@ -23,7 +23,9 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			return err
 		}
 		s.pendingQueueLock.Lock()
-		s.insertBlockToPendingQueue(blk.Block.Slot, blk, blkRoot)
+		if err := s.insertBlockToPendingQueue(blk.Block.Slot, blk, blkRoot); err != nil {
+			return err
+		}
 		s.pendingQueueLock.Unlock()
 		return nil
 	})
@@ -78,7 +80,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		blk, err := s.db.Block(ctx, root)
 		if err != nil {
 			log.WithError(err).Debug("Failed to fetch block")
-			resp, err := s.generateErrorResponse(responseCodeServerError, genericError)
+			resp, err := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 			if err != nil {
 				log.WithError(err).Debug("Failed to generate a response error")
 			} else if _, err := stream.Write(resp); err != nil {

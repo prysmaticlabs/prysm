@@ -25,6 +25,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -348,22 +349,6 @@ func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
 	if s.latestEth1Data.BlockHeight > params.BeaconConfig().Eth1FollowDistance {
 		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
 	}
-	blockTime, err := s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
-	if err != nil {
-		return 0, err
-	}
-	followTime := func(t uint64) uint64 {
-		return t + params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block
-	}
-	for followTime(blockTime) > s.latestEth1Data.BlockTime && latestValidBlock > 0 {
-		// reduce block height to get eth1 block which
-		// fulfills stated condition
-		latestValidBlock--
-		blockTime, err = s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
-		if err != nil {
-			return 0, err
-		}
-	}
 	return latestValidBlock, nil
 }
 
@@ -643,7 +628,7 @@ func (s *Service) handleETH1FollowDistance() {
 		log.Error("Beacon node is not respecting the follow distance")
 		return
 	}
-	if err := s.requestBatchedLogs(ctx); err != nil {
+	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {
 		s.runError = err
 		log.Error(err)
 		return
@@ -681,7 +666,11 @@ func (s *Service) initPOWService() {
 				continue
 			}
 			// Cache eth1 headers from our voting period.
-			s.cacheHeadersForEth1DataVote(ctx)
+			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
+				log.Errorf("Unable to process past headers %v", err)
+				s.retryETH1Node(err)
+				continue
+			}
 			return
 		}
 	}
@@ -756,23 +745,46 @@ func (s *Service) logTillChainStart() {
 
 // cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
 // instead of making multiple RPC requests to the ETH1 endpoint.
-func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) {
-	blocksPerVotingPeriod := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch *
-		params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().SecondsPerETH1Block
-
+func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
+	// Find the end block to request from.
 	end, err := s.followBlockHeight(ctx)
 	if err != nil {
-		log.Errorf("Unable to fetch height of follow block: %v", err)
+		return err
 	}
-
-	// We fetch twice the number of headers just to be safe.
-	start := uint64(0)
-	if end >= 2*blocksPerVotingPeriod {
-		start = end - 2*blocksPerVotingPeriod
+	start, err := s.determineEarliestVotingBlock(ctx, end)
+	if err != nil {
+		return err
 	}
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 	_, err = s.batchRequestHeaders(start, end)
 	if err != nil {
-		log.Errorf("Unable to cache headers: %v", err)
+		return err
 	}
+	return nil
+}
+
+// determines the earliest voting block from which to start caching all our previous headers from.
+func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock uint64) (uint64, error) {
+	genesisTime := s.chainStartData.GenesisTime
+	currSlot := helpers.CurrentSlot(genesisTime)
+
+	// In the event genesis has not occurred yet, we just request go back follow_distance blocks.
+	if genesisTime == 0 || currSlot == 0 {
+		earliestBlk := uint64(0)
+		if followBlock > params.BeaconConfig().Eth1FollowDistance {
+			earliestBlk = followBlock - params.BeaconConfig().Eth1FollowDistance
+		}
+		return earliestBlk, nil
+	}
+	votingTime := helpers.VotingPeriodStartTime(genesisTime, currSlot)
+	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
+	if followBackDist > votingTime {
+		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)
+	}
+	earliestValidTime := votingTime - followBackDist
+	blkNum, err := s.BlockNumberByTimestamp(ctx, earliestValidTime)
+	if err != nil {
+		return 0, err
+	}
+	return blkNum.Uint64(), nil
 }

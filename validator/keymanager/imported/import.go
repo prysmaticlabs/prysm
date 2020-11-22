@@ -23,31 +23,32 @@ func (dr *Keymanager) ImportKeystores(
 	importsPassword string,
 ) error {
 	decryptor := keystorev4.New()
-	privKeys := make([][]byte, len(keystores))
-	pubKeys := make([][]byte, len(keystores))
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
+	keys := map[string]string{}
 	var err error
-	var privKeyBytes []byte
-	var pubKeyBytes []byte
 	for i := 0; i < len(keystores); i++ {
+		var privKeyBytes []byte
+		var pubKeyBytes []byte
 		privKeyBytes, pubKeyBytes, importsPassword, err = dr.attemptDecryptKeystore(decryptor, keystores[i], importsPassword)
 		if err != nil {
 			return err
 		}
-		privKeys[i] = privKeyBytes
-		pubKeys[i] = pubKeyBytes
+		// if key exists prior to being added then output log that duplicate key was found
+		if _, ok := keys[string(pubKeyBytes)]; ok {
+			log.Warnf("Duplicate key in import folder will be ignored: %#x", pubKeyBytes)
+		}
+		keys[string(pubKeyBytes)] = string(privKeyBytes)
 		if err := bar.Add(1); err != nil {
 			return errors.Wrap(err, "could not add to progress bar")
 		}
 	}
-	foundKey := map[string]bool{}
-	for i := range pubKeys {
-		strKey := string(pubKeys[i])
-		if foundKey[strKey] {
-			return fmt.Errorf("duplicated key found: %#x", pubKeys[i])
-		}
-		foundKey[strKey] = true
+	privKeys := make([][]byte, 0)
+	pubKeys := make([][]byte, 0)
+	for pubKey, privKey := range keys {
+		pubKeys = append(pubKeys, []byte(pubKey))
+		privKeys = append(privKeys, []byte(privKey))
 	}
+
 	// Write the accounts to disk into a single keystore.
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {

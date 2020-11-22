@@ -14,53 +14,28 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// Spec defined codes
-	codeClientShutdown types.SSZUint64 = iota
-	codeWrongNetwork
-	codeGenericError
-
-	// Teku specific codes
-	codeUnableToVerifyNetwork = types.SSZUint64(128)
-
-	// Lighthouse specific codes
-	codeTooManyPeers = types.SSZUint64(129)
-	codeBadScore     = types.SSZUint64(250)
-	codeBanned       = types.SSZUint64(251)
-)
-
-var goodByes = map[types.SSZUint64]string{
-	codeClientShutdown:        "client shutdown",
-	codeWrongNetwork:          "irrelevant network",
-	codeGenericError:          "fault/error",
-	codeUnableToVerifyNetwork: "unable to verify network",
-	codeTooManyPeers:          "client has too many peers",
-	codeBadScore:              "peer score too low",
-	codeBanned:                "client banned this node",
-}
-
 var backOffTime = map[types.SSZUint64]time.Duration{
 	// Do not dial peers which are from a different/unverifiable
 	// network.
-	codeWrongNetwork:          24 * time.Hour,
-	codeUnableToVerifyNetwork: 24 * time.Hour,
+	types.GoodbyeCodeWrongNetwork:          24 * time.Hour,
+	types.GoodbyeCodeUnableToVerifyNetwork: 24 * time.Hour,
 	// If local peer is banned, we back off for
 	// 2 hours to let the remote peer score us
 	// back up again.
-	codeBadScore:       2 * time.Hour,
-	codeBanned:         2 * time.Hour,
-	codeClientShutdown: 1 * time.Hour,
+	types.GoodbyeCodeBadScore:       2 * time.Hour,
+	types.GoodbyeCodeBanned:         2 * time.Hour,
+	types.GoodbyeCodeClientShutdown: 1 * time.Hour,
 	// Wait 5 minutes before dialing a peer who is
 	// 'full'
-	codeTooManyPeers: 5 * time.Minute,
-	codeGenericError: 2 * time.Minute,
+	types.GoodbyeCodeTooManyPeers: 5 * time.Minute,
+	types.GoodbyeCodeGenericError: 2 * time.Minute,
 }
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	SetRPCStreamDeadlines(stream)
@@ -80,13 +55,25 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	return s.p2p.Disconnect(stream.Conn().RemotePeer())
 }
 
+// disconnectBadPeer checks whether peer is considered bad by some scorer, and tries to disconnect
+// the peer, if that is the case. Additionally, disconnection reason is obtained from scorer.
+func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
+	if !s.p2p.Peers().IsBad(id) {
+		return
+	}
+	goodbyeCode := types.ErrToGoodbyeCode(s.p2p.Peers().Scorers().ValidationError(id))
+	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
+		log.Debugf("Error when disconnecting with bad peer: %v", err)
+	}
+}
+
 // A custom goodbye method that is used by our connection handler, in the
 // event we receive bad peers.
 func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
-	return s.sendGoodByeAndDisconnect(ctx, codeGenericError, id)
+	return s.sendGoodByeAndDisconnect(ctx, types.GoodbyeCodeGenericError, id)
 }
 
-func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.SSZUint64, id peer.ID) error {
+func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.RPCGoodbyeCode, id peer.ID) error {
 	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
 		log.WithFields(logrus.Fields{
 			"error": err,
@@ -96,7 +83,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.SSZUi
 	return s.p2p.Disconnect(id)
 }
 
-func (s *Service) sendGoodByeMessage(ctx context.Context, code types.SSZUint64, id peer.ID) error {
+func (s *Service) sendGoodByeMessage(ctx context.Context, code types.RPCGoodbyeCode, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -114,17 +101,17 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code types.SSZUint64, 
 	return nil
 }
 
-func goodbyeMessage(num types.SSZUint64) string {
-	reason, ok := goodByes[num]
+func goodbyeMessage(num types.RPCGoodbyeCode) string {
+	reason, ok := types.GoodbyeCodeMessages[num]
 	if ok {
 		return reason
 	}
-	return fmt.Sprintf("unknown goodbye value of %d Received", num)
+	return fmt.Sprintf("unknown goodbye value of %d received", num)
 }
 
 // determines which backoff time to use depending on the
 // goodbye code provided.
-func goodByeBackoff(num types.SSZUint64) time.Time {
+func goodByeBackoff(num types.RPCGoodbyeCode) time.Time {
 	duration, ok := backOffTime[num]
 	if !ok {
 		return time.Time{}

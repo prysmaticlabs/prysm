@@ -32,6 +32,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
@@ -52,14 +53,20 @@ const (
 	PeerConnecting
 )
 
-// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
-const maxLimitBuffer = 150
+const (
+	// ColocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
+	ColocationLimit = 5
+
+	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
+	maxLimitBuffer = 150
+)
 
 // Status is the structure holding the peer status information.
 type Status struct {
-	ctx     context.Context
-	scorers *scorers.Service
-	store   *peerdata.Store
+	ctx       context.Context
+	scorers   *scorers.Service
+	store     *peerdata.Store
+	ipTracker map[string]uint64
 }
 
 // StatusConfig represents peer status service params.
@@ -76,9 +83,10 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		MaxPeers: maxLimitBuffer + config.PeerLimit,
 	})
 	return &Status{
-		ctx:     ctx,
-		store:   store,
-		scorers: scorers.NewService(ctx, store, config.ScorerParams),
+		ctx:       ctx,
+		store:     store,
+		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
+		ipTracker: map[string]uint64{},
 	}
 }
 
@@ -100,10 +108,14 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 
 	if peerData, ok := p.store.PeerData(pid); ok {
 		// Peer already exists, just update its address info.
+		prevAddress := peerData.Address
 		peerData.Address = address
 		peerData.Direction = direction
 		if record != nil {
 			peerData.Enr = record
+		}
+		if !sameIP(prevAddress, address) {
+			p.addIpToTracker(pid)
 		}
 		return
 	}
@@ -117,6 +129,7 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 		peerData.Enr = record
 	}
 	p.store.SetPeerData(pid, peerData)
+	p.addIpToTracker(pid)
 }
 
 // Address returns the multiaddress of the given remote peer.
@@ -156,25 +169,14 @@ func (p *Status) ENR(pid peer.ID) (*enr.Record, error) {
 
 // SetChainState sets the chain state of the given remote peer.
 func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
-	p.store.Lock()
-	defer p.store.Unlock()
-
-	peerData := p.store.PeerDataGetOrCreate(pid)
-	peerData.ChainState = chainState
-	peerData.ChainStateLastUpdated = timeutils.Now()
+	p.scorers.PeerStatusScorer().SetPeerStatus(pid, chainState, nil)
 }
 
 // ChainState gets the chain state of the given remote peer.
 // This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
-	p.store.RLock()
-	defer p.store.RUnlock()
-
-	if peerData, ok := p.store.PeerData(pid); ok {
-		return peerData.ChainState, nil
-	}
-	return nil, peerdata.ErrPeerUnknown
+	return p.scorers.PeerStatusScorer().PeerStatus(pid)
 }
 
 // IsActive checks if a peers is active and returns the result appropriately.
@@ -277,10 +279,10 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	return timeutils.Now(), peerdata.ErrPeerUnknown
 }
 
-// IsBad states if the peer is to be considered bad.
+// IsBad states if the peer is to be considered bad (by *any* of the registered scorers).
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	return p.scorers.IsBadPeer(pid)
+	return p.isfromBadIP(pid) || p.scorers.IsBadPeer(pid)
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
@@ -463,6 +465,7 @@ func (p *Status) Prune() {
 	for _, peerData := range peersToPrune {
 		p.store.DeletePeerData(peerData.pid)
 	}
+	p.tallyIPTracker()
 }
 
 // BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed
@@ -577,6 +580,88 @@ func (p *Status) HighestEpoch() uint64 {
 		}
 	}
 	return helpers.SlotToEpoch(highestSlot)
+}
+
+func (p *Status) isfromBadIP(pid peer.ID) bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	peerData, ok := p.store.PeerData(pid)
+	if !ok {
+		return false
+	}
+	if peerData.Address == nil {
+		return false
+	}
+	ip, err := manet.ToIP(peerData.Address)
+	if err != nil {
+		return true
+	}
+	if val, ok := p.ipTracker[ip.String()]; ok {
+		if val > ColocationLimit {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Status) addIpToTracker(pid peer.ID) {
+	data, ok := p.store.PeerData(pid)
+	if !ok {
+		return
+	}
+	if data.Address == nil {
+		return
+	}
+	ip, err := manet.ToIP(data.Address)
+	if err != nil {
+		// Should never happen, it is
+		// assumed every IP coming in
+		// is a valid ip.
+		return
+	}
+	// Ignore loopback addresses.
+	if ip.IsLoopback() {
+		return
+	}
+	stringIP := ip.String()
+	p.ipTracker[stringIP] += 1
+}
+
+func (p *Status) tallyIPTracker() {
+	tracker := map[string]uint64{}
+	// Iterate through all peers.
+	for _, peerData := range p.store.Peers() {
+		if peerData.Address == nil {
+			continue
+		}
+		ip, err := manet.ToIP(peerData.Address)
+		if err != nil {
+			// Should never happen, it is
+			// assumed every IP coming in
+			// is a valid ip.
+			continue
+		}
+		stringIP := ip.String()
+		tracker[stringIP] += 1
+	}
+	p.ipTracker = tracker
+}
+
+func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
+	// Exit early if we do get nil multiaddresses
+	if firstAddr == nil || secondAddr == nil {
+		return false
+	}
+	firstIP, err := manet.ToIP(firstAddr)
+	if err != nil {
+		return false
+	}
+	secondIP, err := manet.ToIP(secondAddr)
+	if err != nil {
+		return false
+	}
+	return firstIP.Equal(secondIP)
 }
 
 func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
