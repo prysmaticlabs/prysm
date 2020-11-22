@@ -16,13 +16,13 @@ import (
 var (
 	pubkeyCacheHit = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "pubkey_cache_hit",
+			Name: "herumi_pubkey_cache_hit",
 			Help: "Number of times pubkey cache has a hit.",
 		},
 	)
 	pubkeyCacheMiss = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "pubkey_cache_miss",
+			Name: "herumi_pubkey_cache_miss",
 			Help: "Number of times pubkey cache has a miss.",
 		},
 	)
