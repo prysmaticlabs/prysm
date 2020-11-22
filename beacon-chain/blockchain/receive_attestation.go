@@ -106,7 +106,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 		case <-s.ctx.Done():
 			return
 		case <-st.C():
-
+			s.processAttestationInnerLoop()
 		}
 	}
 }
