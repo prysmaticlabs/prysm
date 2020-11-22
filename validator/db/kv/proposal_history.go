@@ -49,7 +49,6 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		copy(signingRoot, sr)
 		return nil
 	})
-	fmt.Printf("minimal slot %d pub key %#x\n", minimalSlot, publicKey[:6])
 	if noDataFound {
 		return nil, minimalSlot, nil
 	}
@@ -80,7 +79,6 @@ func (store *Store) SaveProposalHistoryForPubKeys(
 						return err
 					}
 				}
-				fmt.Printf("save proposal for slot %d pubkey %#x signing root %#x\n", proposal, pubKey[:6], proposal.SigningRoot[:6])
 				if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(proposal.Slot), proposal.SigningRoot); err != nil {
 					return err
 				}
