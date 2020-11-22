@@ -52,7 +52,6 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		WalletDir:      cfg.WalletCfg.WalletDir,
 		WalletPassword: cfg.WalletCfg.WalletPassword,
 	})
-
 	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
 

@@ -48,13 +48,15 @@ func TestDisableAccounts_Noninteractive(t *testing.T) {
 		// Flags required for DisableAccounts to work.
 		disablePublicKeys: disablePublicKeys,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: password,
-		},
+
+	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
+	require.NoError(t, err)
+	w := wallet.New(&wallet.Config{
+		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
+		WalletDir:      cfg.WalletCfg.WalletDir,
+		WalletPassword: cfg.WalletCfg.WalletPassword,
 	})
+	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
 
 	// We attempt to import accounts.
@@ -104,13 +106,14 @@ func TestEnableAccounts_Noninteractive(t *testing.T) {
 		// Flags required for EnableAccounts to work.
 		enablePublicKeys: enablePublicKeys,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: password,
-		},
+	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
+	require.NoError(t, err)
+	w := wallet.New(&wallet.Config{
+		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
+		WalletDir:      cfg.WalletCfg.WalletDir,
+		WalletPassword: cfg.WalletCfg.WalletPassword,
 	})
+	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
 
 	// We attempt to import accounts.

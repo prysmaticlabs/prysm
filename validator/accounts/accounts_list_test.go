@@ -67,13 +67,14 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 		keymanagerKind:     keymanager.Imported,
 		walletPasswordFile: walletPasswordFile,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: "Passwordz0320$",
-		},
+	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
+	require.NoError(t, err)
+	w := wallet.New(&wallet.Config{
+		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
+		WalletDir:      cfg.WalletCfg.WalletDir,
+		WalletPassword: cfg.WalletCfg.WalletPassword,
 	})
+	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
 	km, err := imported.NewKeymanager(
 		cliCtx.Context,

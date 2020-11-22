@@ -145,26 +145,6 @@ func TestCreateOrOpenWallet(t *testing.T) {
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
 }
 
-func TestCreateWallet_Imported(t *testing.T) {
-	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:          walletDir,
-		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Imported,
-		walletPasswordFile: walletPasswordFile,
-	})
-
-	// We attempt to create the wallet.
-	_, err := CreateAndSaveWalletCli(cliCtx)
-	require.NoError(t, err)
-
-	// We attempt to open the newly created wallet.
-	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir: walletDir,
-	})
-	assert.NoError(t, err)
-}
-
 func TestCreateWallet_Derived(t *testing.T) {
 	walletDir, passwordsDir, passwordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
@@ -209,7 +189,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
 		walletPasswordFile: passwordFile,
-		keymanagerKind:     keymanager.Imported,
+		keymanagerKind:     keymanager.Remote,
 	})
 
 	// We attempt to create another wallet of different type at the same location. We expect an error.

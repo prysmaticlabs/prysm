@@ -112,14 +112,16 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: "Passwordz0320$",
-		},
-	})
+	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
 	require.NoError(t, err)
+	w := wallet.New(&wallet.Config{
+		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
+		WalletDir:      cfg.WalletCfg.WalletDir,
+		WalletPassword: cfg.WalletCfg.WalletPassword,
+	})
+	err = createImportedKeymanagerWallet(cliCtx.Context, w)
+	require.NoError(t, err)
+
 	_, _, err = prepareWallet(cliCtx)
 	assert.ErrorContains(t, "wallet is empty", err)
 }
