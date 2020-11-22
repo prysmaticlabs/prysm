@@ -7,18 +7,36 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/ristretto"
+
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var maxKeys = int64(100000)
-var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
-	NumCounters: maxKeys,
-	MaxCost:     1 << 22, // ~4mb is cache max size
-	BufferItems: 64,
-})
+var (
+	pubkeyCacheHit = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "pubkey_cache_hit",
+			Help: "Number of times pubkey cache has a hit.",
+		},
+	)
+	pubkeyCacheMiss = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "pubkey_cache_miss",
+			Help: "Number of times pubkey cache has a miss.",
+		},
+	)
+	// Max keys for our LFU cache.
+	maxKeys        = int64(100000)
+	pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
+		NumCounters: maxKeys,
+		MaxCost:     1 << 22, // ~4mb is cache max size
+		BufferItems: 64,
+	})
+)
 
 // PublicKey used in the BLS signature scheme.
 type PublicKey struct {
@@ -34,8 +52,10 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
+		pubkeyCacheHit.Inc()
 		return cv.(*PublicKey).Copy(), nil
 	}
+	pubkeyCacheMiss.Inc()
 	// Subgroup check done when decompressing pubkey.
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {

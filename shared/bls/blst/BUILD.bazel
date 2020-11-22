@@ -113,6 +113,8 @@ go_library(
             "//shared/rand:go_default_library",
             "@com_github_dgraph_io_ristretto//:go_default_library",
             "@com_github_pkg_errors//:go_default_library",
+            "@com_github_prometheus_client_golang//prometheus:go_default_library",
+            "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
             "@com_github_supranational_blst//:go_default_library",
         ],
         "//conditions:default": ["//shared/bls/common:go_default_library"],
