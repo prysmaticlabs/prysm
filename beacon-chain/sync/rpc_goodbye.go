@@ -35,7 +35,7 @@ var backOffTime = map[types.SSZUint64]time.Duration{
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+			log.WithError(err).Debug("Failed to close stream")
 		}
 	}()
 	SetRPCStreamDeadlines(stream)
