@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -105,41 +106,56 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 		case <-s.ctx.Done():
 			return
 		case <-st.C():
-			ctx := s.ctx
-			atts := s.attPool.ForkchoiceAttestations()
-			for _, a := range atts {
-				// Based on the spec, don't process the attestation until the subsequent slot.
-				// This delays consideration in the fork choice until their slot is in the past.
-				// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
-				nextSlot := a.Data.Slot + 1
-				if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-					continue
-				}
 
-				hasState := s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				if !(hasState && hasBlock) {
-					continue
-				}
-
-				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
-					log.WithError(err).Error("Could not delete fork choice attestation in pool")
-				}
-
-				if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
-					continue
-				}
-
-				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
-					log.WithFields(logrus.Fields{
-						"slot":             a.Data.Slot,
-						"committeeIndex":   a.Data.CommitteeIndex,
-						"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
-						"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
-						"aggregationCount": a.AggregationBits.Count(),
-					}).WithError(err).Warn("Could not receive attestation in chain service")
-				}
-			}
 		}
+	}
+}
+
+func (s *Service) processAttestationInnerLoop() {
+	ctx, span := trace.StartSpan(s.ctx, "blockchain.processAttestationInnerLoop")
+	defer span.End()
+	atts := s.attPool.ForkchoiceAttestations()
+	for _, a := range atts {
+		func () { // Process in anonymous function to capture span/trace interval.
+			ctx, span := trace.StartSpan(ctx, "blockchain.processAttestationInnerLoop.forEachAtt")
+			defer span.End()
+
+			// Based on the spec, don't process the attestation until the subsequent slot.
+			// This delays consideration in the fork choice until their slot is in the past.
+			// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
+			nextSlot := a.Data.Slot + 1
+			span.AddAttributes(trace.Int64Attribute("nextSlot", int64(nextSlot)))
+			if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+				traceutil.AnnotateError(span, err)
+				return
+			}
+
+			hasState := s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+			hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+			span.AddAttributes(trace.BoolAttribute("hasState", hasState), trace.BoolAttribute("hasBlock", hasBlock))
+			if !(hasState && hasBlock) {
+				return
+			}
+
+			if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
+				log.WithError(err).Error("Could not delete fork choice attestation in pool")
+				traceutil.AnnotateError(span, err)
+			}
+
+			if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
+				return
+			}
+
+			if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
+				log.WithFields(logrus.Fields{
+					"slot":             a.Data.Slot,
+					"committeeIndex":   a.Data.CommitteeIndex,
+					"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
+					"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
+					"aggregationCount": a.AggregationBits.Count(),
+				}).WithError(err).Warn("Could not receive attestation in chain service")
+				traceutil.AnnotateError(span, err)
+			}
+		}()
 	}
 }
