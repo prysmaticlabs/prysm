@@ -82,7 +82,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
-	SecondsPerETH1Block:              13,
+
+	// While eth1 mainnet block times are closer to 13s, we must conform with other clients in
+	// order to vote on the correct eth1 blocks.
+	//
+	// Additional context: https://github.com/ethereum/eth2.0-specs/issues/2132
+	// Bug prompting this change: https://github.com/prysmaticlabs/prysm/issues/7856
+	// Future optimization: https://github.com/prysmaticlabs/prysm/issues/7739
+	SecondsPerETH1Block: 14,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
