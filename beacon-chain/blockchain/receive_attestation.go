@@ -116,7 +116,7 @@ func (s *Service) processAttestationInnerLoop() {
 	defer span.End()
 	atts := s.attPool.ForkchoiceAttestations()
 	for _, a := range atts {
-		func () { // Process in anonymous function to capture span/trace interval.
+		func() { // Process in anonymous function to capture span/trace interval.
 			ctx, span := trace.StartSpan(ctx, "blockchain.processAttestationInnerLoop.forEachAtt")
 			defer span.End()
 
