@@ -184,7 +184,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	}
 
 	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
-		log.WithError(err).Error("Could not verify attestation")
+		log.WithError(err).Debug("Could not verify attestation")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}

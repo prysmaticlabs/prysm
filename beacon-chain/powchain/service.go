@@ -349,22 +349,6 @@ func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
 	if s.latestEth1Data.BlockHeight > params.BeaconConfig().Eth1FollowDistance {
 		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
 	}
-	blockTime, err := s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
-	if err != nil {
-		return 0, err
-	}
-	followTime := func(t uint64) uint64 {
-		return t + params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block
-	}
-	for followTime(blockTime) > s.latestEth1Data.BlockTime && latestValidBlock > 0 {
-		// reduce block height to get eth1 block which
-		// fulfills stated condition
-		latestValidBlock--
-		blockTime, err = s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
-		if err != nil {
-			return 0, err
-		}
-	}
 	return latestValidBlock, nil
 }
 
