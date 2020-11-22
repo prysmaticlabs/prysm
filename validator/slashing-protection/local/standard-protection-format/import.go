@@ -50,6 +50,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	}
 
 	attestingHistoryByPubKey := make(map[[48]byte]attestinghistory.History)
+	minAttByPubKeys := make(map[[48]byte]attestinghistory.MinAttestation)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Transform the processed signed blocks data from the JSON
@@ -64,11 +65,12 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		// Transform the processed signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
-		attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
+		attestingHistory, minAtt, err := transformSignedAttestations(ctx, signedAtts)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
 		attestingHistoryByPubKey[pubKey] = *attestingHistory
+		minAttByPubKeys[pubKey] = *minAtt
 	}
 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
@@ -77,7 +79,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err = validatorDB.SaveProposalHistoryForPubKeys(ctx, proposalHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 	}
-	if err := validatorDB.SaveAttestationHistoryForPubKeys(ctx, attestingHistoryByPubKey); err != nil {
+	if err := validatorDB.SaveAttestationHistoryForPubKeys(ctx, attestingHistoryByPubKey, minAttByPubKeys); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
 	return nil
@@ -202,42 +204,52 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*k
 	}, nil
 }
 
-func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*attestinghistory.History, error) {
+func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*attestinghistory.History, *attestinghistory.MinAttestation, error) {
 	history := attestinghistory.New(0)
 	highestEpochWritten := uint64(0)
+	minAtt := attestinghistory.MinAttestation{}
+
 	var err error
 	for _, attestation := range atts {
 		target, err := uint64FromString(attestation.TargetEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid epoch: %v", target, err)
+			return nil, nil, fmt.Errorf("%d is not a valid epoch: %v", target, err)
 		}
 		// Keep track of the highest epoch written from the imported JSON.
 		if target > highestEpochWritten {
 			highestEpochWritten = target
 		}
+		// Keep track of the lowest target epoch from the imported JSON.
+		if target < minAtt.Target {
+			minAtt.Target = target
+		}
 		source, err := uint64FromString(attestation.SourceEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid epoch: %v", source, err)
+			return nil, nil, fmt.Errorf("%d is not a valid epoch: %v", source, err)
+		}
+		// Keep track of the lowest source epoch from the imported JSON.
+		if source < minAtt.Source {
+			minAtt.Source = source
 		}
 		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
 		if attestation.SigningRoot != "" {
 			signingRoot, err = rootFromHex(attestation.SigningRoot)
 			if err != nil {
-				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
+				return nil, nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
 		}
 		newHist, err := attestinghistory.MarkAsAttested(
 			history, &attestinghistory.HistoricalAttestation{Target: target, Source: source, SigningRoot: signingRoot[:]},
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not set target data for attesting history")
+			return nil, nil, errors.Wrap(err, "could not set target data for attesting history")
 		}
 		history = newHist
 	}
 	newHist, err := attestinghistory.SetLatestEpochWritten(history, highestEpochWritten)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not set latest epoch written")
+		return nil, nil, errors.Wrap(err, "could not set latest epoch written")
 	}
-	return &newHist, nil
+	return &newHist, &minAtt, nil
 }

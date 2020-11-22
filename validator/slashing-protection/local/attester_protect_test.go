@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 func TestService_IsSlashableAttestation_OK(t *testing.T) {
@@ -110,6 +110,48 @@ func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T)
 	require.Equal(t, totalAttestations, notSlashable+slashable)
 	require.Equal(t, 1, notSlashable, "Expecting only one attestations to not be slashable")
 	require.Equal(t, totalAttestations-1, slashable, "Expecting all other attestations to be found as slashable")
+}
+
+func TestService_IsSlashableAttestation_LowerThenMin(t *testing.T) {
+	ctx := context.Background()
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := privKey.PublicKey()
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], pubKey.Marshal())
+
+	validatorDB := dbtest.SetupDB(t, [][48]byte{pubKeyBytes})
+	srv := &Service{
+		validatorDB: validatorDB,
+	}
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKeyBytes, attestinghistory.New(0)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveMinAttestation(ctx, pubKeyBytes, attestinghistory.MinAttestation{Source: 2, Target: 3}),
+	)
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 3,
+				Root:  make([]byte, 32),
+			},
+		},
+	}
+	dummySigningRoot := [32]byte{1}
+	isSlashable, err := srv.IsSlashableAttestation(ctx, att, pubKeyBytes, dummySigningRoot)
+	require.NoError(t, err)
+	require.Equal(t, true, isSlashable, "expected to be found as slashble")
 }
 
 func TestService_IsSlashableAttestation_DoubleVote(t *testing.T) {
@@ -555,4 +597,98 @@ func Test_surroundingPrevAttestation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_isLowerThenMin(t *testing.T) {
+	type args struct {
+		minAtt *attestinghistory.MinAttestation
+		source uint64
+		target uint64
+	}
+	tests := []struct {
+		name      string
+		args      args
+		slashable bool
+	}{
+		{
+			name: "nil min should not slash",
+			args: args{
+				minAtt: nil,
+				source: 0,
+				target: 0,
+			},
+			slashable: false,
+		},
+		{
+			name: "0 min should not slash",
+			args: args{
+				minAtt: &attestinghistory.MinAttestation{Source: 0, Target: 0},
+				source: 1,
+				target: 1,
+			},
+			slashable: false,
+		},
+		{
+			name: "equal source min should not slash",
+			args: args{
+				minAtt: &attestinghistory.MinAttestation{Source: 1, Target: 0},
+				source: 1,
+				target: 1,
+			},
+			slashable: false,
+		},
+		{
+			name: "equal target min should not slash",
+			args: args{
+				minAtt: &attestinghistory.MinAttestation{Source: 0, Target: 1},
+				source: 1,
+				target: 1,
+			},
+			slashable: false,
+		},
+		{
+			name: "equal source and target min should not slash",
+			args: args{
+				minAtt: &attestinghistory.MinAttestation{Source: 1, Target: 1},
+				source: 1,
+				target: 1,
+			},
+			slashable: false,
+		},
+		{
+			name: "higher source min should slash",
+			args: args{
+				minAtt: &attestinghistory.MinAttestation{Source: 2, Target: 0},
+				source: 1,
+				target: 1,
+			},
+			slashable: true,
+		},
+		{
+			name: "higher target min should slash",
+			args: args{
+				minAtt: &attestinghistory.MinAttestation{Source: 0, Target: 2},
+				source: 1,
+				target: 1,
+			},
+			slashable: true,
+		},
+		{
+			name: "higher source and target min should slash",
+			args: args{
+				minAtt: &attestinghistory.MinAttestation{Source: 2, Target: 2},
+				source: 1,
+				target: 1,
+			},
+			slashable: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isLowerThenMin(tt.args.minAtt, tt.args.source, tt.args.target); got != tt.slashable {
+				t.Errorf("surroundingPrevAttestation() = %v, want %v", got, tt.slashable)
+			}
+		})
+	}
+
 }

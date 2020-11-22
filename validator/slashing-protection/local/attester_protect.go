@@ -9,8 +9,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,7 +29,7 @@ func (s *Service) IsSlashableAttestation(
 	lock := mputil.NewMultilock(string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
-	history, err := s.validatorDB.AttestationHistoryForPubKey(ctx, pubKey)
+	history, minAtt, err := s.validatorDB.AttestationHistoryForPubKey(ctx, pubKey)
 	if err != nil {
 		return false, fmt.Errorf("no attesting history found for pubkey %#x", pubKey)
 	}
@@ -40,10 +40,11 @@ func (s *Service) IsSlashableAttestation(
 	if err != nil {
 		return false, errors.Wrapf(err, "could not get latest epoch written for pubkey %#x", pubKey)
 	}
-	// An attestation older than the weak subjectivity is not slashable, we should just return false.
+	// An attestation older than the weak subjectivity cant be detected with our protection db, we should just return false.
 	if differenceOutsideWeakSubjectivityBounds(latestEpochWritten, indexedAtt.Data.Target.Epoch) {
 		return false, nil
 	}
+	lowerThenMin := isLowerThenMin(&minAtt, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
 	doubleVote, err := isDoubleVote(history, indexedAtt.Data.Target.Epoch, signingRoot)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not check if pubkey is attempting a double vote %#x", pubKey)
@@ -59,7 +60,7 @@ func (s *Service) IsSlashableAttestation(
 		return false, errors.Wrapf(err, "could not check if pubkey is attempting a surround vote %#x", pubKey)
 	}
 	// If an attestation is a double vote or a surround vote, it is slashable.
-	if doubleVote || surroundVote {
+	if lowerThenMin || doubleVote || surroundVote {
 		slashingprotection.LocalSlashableAttestationsTotal.Inc()
 		return true, nil
 	}
@@ -88,6 +89,21 @@ func (s *Service) IsSlashableAttestation(
 func differenceOutsideWeakSubjectivityBounds(latestEpochWritten, targetEpoch uint64) bool {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod
+}
+
+func isLowerThenMin(
+	minAtt *attestinghistory.MinAttestation,
+	sourceEpoch uint64,
+	targetEpoch uint64,
+) bool {
+	if minAtt == nil {
+		return false
+	}
+	// Check if source of target epoch of the attestation is lower then the minimum.
+	if sourceEpoch < minAtt.Source || targetEpoch < minAtt.Target {
+		return true
+	}
+	return false
 }
 
 func isDoubleVote(

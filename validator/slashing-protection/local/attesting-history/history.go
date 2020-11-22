@@ -19,7 +19,17 @@ const (
 	signingRootSize        = 32
 	historySize            = targetSize + sourceSize + signingRootSize
 	minimalSize            = latestEpochWrittenSize
+	// Key prefix to minimal attestation source epoch in attestation bucket.
+	minimalAttestationSourceEpochKeyPrefix = "minimal-attestation-source-epoch"
+	// Key prefix to minimal attestation target epoch in attestation bucket.
+	minimalAttestationTargetEpochKeyPrefix = "minimal-attestation-target-epoch"
 )
+
+// Structure that represents minimal attestation source and target that are allowed to be signed.
+type MinAttestation struct {
+	Source uint64
+	Target uint64
+}
 
 type HistoricalAttestation struct {
 	Source      uint64
@@ -165,4 +175,14 @@ func assertSize(hist History) error {
 		return fmt.Errorf("encapsulated data size: %d is not a multiple of entry size: %d", len(hist), historySize)
 	}
 	return nil
+}
+
+// GetMinTargetKey given a public key returns the min source db key.
+func GetMinSourceKey(pubKey [48]byte) []byte {
+	return append([]byte(minimalAttestationSourceEpochKeyPrefix), pubKey[:]...)
+}
+
+// GetMinTargetKey given a public key returns the min target db key.
+func GetMinTargetKey(pubKey [48]byte) []byte {
+	return append([]byte(minimalAttestationTargetEpochKeyPrefix), pubKey[:]...)
 }

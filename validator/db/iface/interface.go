@@ -26,8 +26,10 @@ type ValidatorDB interface {
 	SaveProposalHistoryForPubKeys(ctx context.Context, proposals map[[48]byte]kv.ProposalHistoryForPubkey) error
 
 	// Attesting history methods for slashing protection.
-	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]attestinghistory.History, error)
-	AttestationHistoryForPubKey(ctx context.Context, publicKey [48]byte) (attestinghistory.History, error)
-	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]attestinghistory.History) error
+	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]attestinghistory.History, map[[48]byte]attestinghistory.MinAttestation, error)
+	AttestationHistoryForPubKey(ctx context.Context, publicKey [48]byte) (attestinghistory.History, attestinghistory.MinAttestation, error)
+	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]attestinghistory.History, minByPubKeys map[[48]byte]attestinghistory.MinAttestation) error
 	SaveAttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte, history attestinghistory.History) error
+	SaveMinAttestation(ctx context.Context, pubKey [48]byte, minAtt attestinghistory.MinAttestation) error
+	MinAttestation(ctx context.Context, pubKey [48]byte) (*attestinghistory.MinAttestation, error)
 }
