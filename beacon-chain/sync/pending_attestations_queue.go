@@ -72,7 +72,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					aggValid := s.validateAggregatedAtt(ctx, signedAtt) == pubsub.ValidationAccept
 					if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
-							return err
+							log.WithError(err).Debug("Failed to save aggregate attestation")
+							continue
 						}
 						s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
 
@@ -86,24 +87,33 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					// attestation's target intentionally reference checkpoint that's long ago.
 					// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
 					if err := s.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
-						return err
+						log.WithError(err).Debug("Failed to verify finalized consistency")
+						continue
 					}
 					if err := s.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
-						return err
+						log.WithError(err).Debug("Failed to verify FFG consistency")
+						continue
 					}
 					preState, err := s.chain.AttestationPreState(ctx, att.Aggregate)
 					if err != nil {
-						return err
+						log.WithError(err).Debug("Failed to retrieve attestation prestate")
+						continue
 					}
 					valid := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
 					if valid == pubsub.ValidationAccept {
 						if err := s.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
-							return err
+							log.WithError(err).Debug("Failed to save unaggregated attestation")
+							continue
 						}
 						s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
 
+						valCount, err := helpers.ActiveValidatorCount(preState, helpers.SlotToEpoch(att.Aggregate.Data.Slot))
+						if err != nil {
+							log.WithError(err).Debug("Failed to retrieve active validator count")
+							continue
+						}
 						// Broadcasting the signed attestation again once a node is able to process it.
-						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
+						if err := s.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
 							log.WithError(err).Debug("Failed to broadcast")
 						}
 					}
