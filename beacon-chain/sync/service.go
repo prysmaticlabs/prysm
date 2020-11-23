@@ -254,7 +254,7 @@ func (s *Service) registerHandlers() {
 			case statefeed.Initialized:
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
-					log.Debug("Event feed data is not type *statefeed.InitializedData")
+					log.Error("Event feed data is not type *statefeed.InitializedData")
 					return
 				}
 				startTime := data.StartTime
@@ -273,7 +273,7 @@ func (s *Service) registerHandlers() {
 			case statefeed.Synced:
 				_, ok := event.Data.(*statefeed.SyncedData)
 				if !ok {
-					log.Debug("Event feed data is not type *statefeed.SyncedData")
+					log.Error("Event feed data is not type *statefeed.SyncedData")
 					return
 				}
 				// Register respective pubsub handlers at state synced event.
