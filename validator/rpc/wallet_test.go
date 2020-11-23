@@ -5,20 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/google/uuid"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 func TestServer_CreateWallet_Imported(t *testing.T) {
@@ -276,4 +280,31 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	keys, err = km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(keys))
+}
+
+func Test_writeWalletPasswordToDisk(t *testing.T) {
+	walletDir := setupWalletDir(t)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		WriteWalletPasswordOnWebOnboarding: false,
+	})
+	defer resetCfg()
+	err := writeWalletPasswordToDisk(walletDir, "somepassword")
+	require.NoError(t, err)
+
+	// Expected a silent failure if the feature flag is not enabled.
+	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
+	assert.Equal(t, false, fileutil.FileExists(passwordFilePath))
+	resetCfg = featureconfig.InitWithReset(&featureconfig.Flags{
+		WriteWalletPasswordOnWebOnboarding: true,
+	})
+	defer resetCfg()
+	err = writeWalletPasswordToDisk(walletDir, "somepassword")
+	require.NoError(t, err)
+
+	// File should have been written.
+	assert.Equal(t, true, fileutil.FileExists(passwordFilePath))
+
+	// Attempting to write again should trigger an error.
+	err = writeWalletPasswordToDisk(walletDir, "somepassword")
+	require.NotNil(t, err)
 }

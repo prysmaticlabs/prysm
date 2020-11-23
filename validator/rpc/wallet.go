@@ -77,7 +77,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		if err := s.writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
+		if err := writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
 			return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
 		}
 		return &pb.CreateWalletResponse{
@@ -108,7 +108,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		if err := s.writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
+		if err := writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
 			return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
 		}
 		return &pb.CreateWalletResponse{
@@ -282,7 +282,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	return nil
 }
 
-func (s *Server) writeWalletPasswordToDisk(walletDir string, password string) error {
+func writeWalletPasswordToDisk(walletDir string, password string) error {
 	if !featureconfig.Get().WriteWalletPasswordOnWebOnboarding {
 		return nil
 	}
