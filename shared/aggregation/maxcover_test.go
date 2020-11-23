@@ -407,12 +407,12 @@ func TestMaxCover_MaxCoverCandidates_dedup(t *testing.T) {
 		{
 			name: "two items no duplicates",
 			cl: MaxCoverCandidates{
-				{0, &bitfield.Bitlist{0xfe, 0x01}, 0, false},
-				{0, &bitfield.Bitlist{0xff, 0x01}, 0, false},
+				{0, &bitfield.Bitlist{0b10111110, 0x01}, 0, false},
+				{0, &bitfield.Bitlist{0b01111111, 0x01}, 0, false},
 			},
 			want: &MaxCoverCandidates{
-				{0, &bitfield.Bitlist{0xff, 0x01}, 8, false},
-				{0, &bitfield.Bitlist{0xfe, 0x01}, 7, false},
+				{0, &bitfield.Bitlist{0b01111111, 0x01}, 7, false},
+				{0, &bitfield.Bitlist{0b10111110, 0x01}, 6, false},
 			},
 		},
 		{
@@ -430,16 +430,16 @@ func TestMaxCover_MaxCoverCandidates_dedup(t *testing.T) {
 			cl: MaxCoverCandidates{
 				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
 				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
-				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
-				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
-				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00101011, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b10100000, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00010000, 0b1}, 0, false},
 			},
 			want: &MaxCoverCandidates{
 				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
 				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
-				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
-				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
-				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
+				{4, &bitfield.Bitlist{0b00101011, 0b1}, 4, false},
+				{2, &bitfield.Bitlist{0b10100000, 0b1}, 2, false},
+				{1, &bitfield.Bitlist{0b00010000, 0b1}, 1, false},
 			},
 		},
 		{
@@ -457,9 +457,6 @@ func TestMaxCover_MaxCoverCandidates_dedup(t *testing.T) {
 			want: &MaxCoverCandidates{
 				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
 				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
-				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
-				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
-				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
 			},
 		},
 		{
@@ -480,21 +477,40 @@ func TestMaxCover_MaxCoverCandidates_dedup(t *testing.T) {
 			name: "unsorted no duplicates",
 			cl: MaxCoverCandidates{
 				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
-				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
-				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
-				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00100010, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b10100101, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00010000, 0b1}, 0, false},
 				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
 			},
 			want: &MaxCoverCandidates{
 				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
 				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
-				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
-				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
-				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
+				{4, &bitfield.Bitlist{0b10100101, 0b1}, 4, false},
+				{2, &bitfield.Bitlist{0b00100010, 0b1}, 2, false},
+				{1, &bitfield.Bitlist{0b00010000, 0b1}, 1, false},
 			},
 		},
 		{
 			name: "unsorted with duplicates",
+			cl: MaxCoverCandidates{
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b10100101, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b10100101, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
+				{4, &bitfield.Bitlist{0b10100101, 0b1}, 4, false},
+			},
+		},
+		{
+			name: "proper subset",
 			cl: MaxCoverCandidates{
 				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
 				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
@@ -509,9 +525,6 @@ func TestMaxCover_MaxCoverCandidates_dedup(t *testing.T) {
 			want: &MaxCoverCandidates{
 				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
 				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
-				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
-				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
-				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
 			},
 		},
 	}

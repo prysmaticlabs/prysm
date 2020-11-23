@@ -159,22 +159,32 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 }
 
 // dedup removes duplicate candidates (ones with the same bits set on).
+// Important: not only exact duplicates are removed, but proper subsets are removed too
+// (their known bits are redundant and are already contained in their supersets).
 func (cl *MaxCoverCandidates) dedup(allowOverlaps bool) *MaxCoverCandidates {
 	if len(*cl) < 2 {
 		return cl
 	}
+
 	uncoveredBits := cl.union()
 	if uncoveredBits == nil {
 		return cl
 	}
 	cl.score(uncoveredBits).sort()
-	for i := 1; i < len(*cl); i++ {
-		nonOverlappingBits := (*cl)[i-1].bits.Xor(*(*cl)[i].bits)
-		if (*cl)[i-1].score == (*cl)[i].score && nonOverlappingBits.Count() == 0 {
-			(*cl)[i-1].processed = true
+
+	for i, a := range *cl {
+		for j := i + 1; j < len(*cl); j++ {
+			b := (*cl)[j]
+			if a.bits.Contains(*b.bits) {
+				*cl = append((*cl)[:j], (*cl)[j+1:]...)
+				j--
+			} else if b.bits.Contains(*a.bits) {
+				*cl = append((*cl)[:i], (*cl)[i+1:]...)
+				break
+			}
 		}
 	}
-	return cl.filter(bitfield.NewBitlist((*cl)[0].bits.Len()), allowOverlaps)
+	return cl
 }
 
 // validate checks candidates for validity (equal bitlength etc).
