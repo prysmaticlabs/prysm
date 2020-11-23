@@ -1,56 +1,6 @@
-## Deposit Contract
+## Prysm Internal Validator Deposit Contract
 
-A validator will deposit 32 ETH to the deposit
-contract. The contract will generate a log showing the validator as a
-qualified validator. 
-The deposit is considered to be burned. As you burn the 32 ETH to participate,
-the beacon chain will see it and will credit the validator with the validator bond,
-At some point in the future, after a hard fork,
-the original deposit + interest can be withdrawn back on one of the shards.  
-To call the `registration` function, it takes arguments of `pubkey`, 
-`proof_of_possession`, `withdrawal_credentials`.
-If the user wants to deposit more than `DEPOSIT_SIZE` ETH, they would
-need to make multiple `deposit` calls.  
-When the contract publishes the `ChainStart` log, beacon nodes will
-start off the beacon chain with slot 0 and last recorded `block.timestamp`
-as beacon chain genesis time.
-The registration contract generate logs with the various arguments
-for consumption by beacon nodes. It does not validate `proof_of_possession`
-and `withdrawal_credentials`, pushing the validation logic to the
-beacon chain.
-
-## How to generate bindings for vyper contract
-
-This requires that you have vyper and abigen installed in your local machine.
-Vyper: https://github.com/ethereum/vyper
-Abigen: https://github.com/ethereum/go-ethereum/tree/master/cmd/abigen
-
-To generate the abi using the vyper compiler, you can use
-
-```
-
-docker run -v $(pwd):/code ethereum/vyper:0.1.0b12  -f abi /code/depositContract.v.py > abi.json
-
-```
-
-Then the abi will be outputted and you can save it in `abi.json` in the folder. 
-
-To generate the bytecode you can then use 
-
-```
-
-docker run -v $(pwd):/code ethereum/vyper:0.1.0b12 /code/depositContract.v.py > bytecode.bin
-
-```
-
-and save the bytecode in `bytecode.bin` in the folder. Now with both the abi and bytecode
-we can generate the go bindings. 
-
-```
-
-bazel run @com_github_ethereum_go_ethereum//cmd/abigen -- -bin $(pwd)/bytecode.bin -abi $(pwd)/abi.json -out $(pwd)/depositContract.go --pkg depositcontract --type DepositContract
-
-```
+**NOTE: THIS IS NOT THE OFFICIAL ETH2 VALIDATOR DEPOSIT CONTRACT. THE OFFICIAL CONTRACT CAN ONLY BE FOUND [HERE](https://github.com/ethereum/eth2.0-specs/blob/e4a9c5fa29def20c4264cd860868f131d6f40e72/solidity_deposit_contract/deposit_contract.sol). THE ONLY DEPOSIT CONTRACT ON MAINNET HAS ADDRESS 0x00000000219ab540356cbb839cbe05303d7705fa. DO NOT USE THE CONTRACT IN THIS FOLDER OUTSIDE OF DEVELOPMENT**
 
 ## How to execute tests
 

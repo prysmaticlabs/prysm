@@ -98,7 +98,7 @@ func (l *limiter) add(stream network.Stream, amt int64) {
 
 	collector, err := l.retrieveCollector(topic)
 	if err != nil {
-		log.Debugf("collector with topic '%s' does not exist", topic)
+		log.Errorf("collector with topic '%s' does not exist", topic)
 		return
 	}
 	key := stream.Conn().RemotePeer().String()
