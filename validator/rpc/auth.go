@@ -174,10 +174,12 @@ func (s *Server) checkUserSignup(ctx context.Context) {
 			if fileutil.FileExists(hashedPasswordPath) {
 				return
 			}
-			log.Warn(
-				"You are using the --web option but have not yet signed via a browser. " +
-					"If your web host and port are exposed to the Internet, someone else can attempt to sign up " +
-					"for you!",
+			log.Warnf(
+				"You are using the --web option but have not yet signed via a browser. "+
+					"If your web host and port are exposed to the Internet, someone else can attempt to sign up "+
+					"for you! You can visit http://%s:%d to view the Prysm web interface",
+				s.validatorGatewayHost,
+				s.validatorGatewayPort,
 			)
 		case <-s.ctx.Done():
 			return
