@@ -7,6 +7,52 @@ import (
 )
 
 var (
+	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
+	BeaconRPCProviderFlag = &cli.StringFlag{
+		Name:  "beacon-rpc-provider",
+		Usage: "Beacon node RPC provider endpoint",
+		Value: "127.0.0.1:4000",
+	}
+	// BeaconRPCGatewayProviderFlag defines a beacon node JSON-RPC endpoint.
+	BeaconRPCGatewayProviderFlag = &cli.StringFlag{
+		Name:  "beacon-rpc-gateway-provider",
+		Usage: "Beacon node RPC gateway provider endpoint",
+		Value: "127.0.0.1:3500",
+	}
+	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
+	SlasherRPCProviderFlag = &cli.StringFlag{
+		Name:  "slasher-rpc-provider",
+		Usage: "Slasher node RPC provider endpoint",
+		Value: "127.0.0.1:4002",
+	}
+	// SlasherCertFlag defines a flag for the slasher node's TLS certificate.
+	SlasherCertFlag = &cli.StringFlag{
+		Name:  "slasher-tls-cert",
+		Usage: "Certificate for secure slasher gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
+	}
+	// CertFlag defines a flag for the node's TLS certificate.
+	CertFlag = &cli.StringFlag{
+		Name:  "tls-cert",
+		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
+	}
+	// EnableRPCFlag enables controlling the validator client via gRPC (without web UI).
+	EnableRPCFlag = &cli.BoolFlag{
+		Name:  "rpc",
+		Usage: "Enables the RPC server for the validator client (without Web UI)",
+		Value: false,
+	}
+	// RPCHost defines the host on which the RPC server should listen.
+	RPCHost = &cli.StringFlag{
+		Name:  "rpc-host",
+		Usage: "Host on which the RPC server should listen",
+		Value: "127.0.0.1",
+	}
+	// RPCPort defines a validator client RPC port to open.
+	RPCPort = &cli.IntFlag{
+		Name:  "rpc-port",
+		Usage: "RPC port exposed by a validator client",
+		Value: 7000,
+	}
 	// GrpcRetriesFlag defines the number of times to retry a failed gRPC request.
 	GrpcRetriesFlag = &cli.UintFlag{
 		Name:  "grpc-retries",

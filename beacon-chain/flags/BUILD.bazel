@@ -3,11 +3,11 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "base.go",
         "config.go",
-        "grpc.go",
         "interop.go",
+        "manage.go",
         "p2p.go",
+        "rpc.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/flags",
     visibility = ["//beacon-chain:__subpackages__"],

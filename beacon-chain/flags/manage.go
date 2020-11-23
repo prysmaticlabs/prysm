@@ -8,14 +8,6 @@ import (
 )
 
 var (
-	// Network-related flags.
-
-	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
-	HTTPWeb3ProviderFlag = &cli.StringFlag{
-		Name:  "http-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint",
-		Value: "",
-	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
@@ -28,27 +20,12 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
 	}
-	// RPCHost defines the host on which the RPC server should listen.
-	RPCHost = &cli.StringFlag{
-		Name:  "rpc-host",
-		Usage: "Host on which the RPC server should listen",
-		Value: "127.0.0.1",
-	}
-	// RPCPort defines a beacon node RPC port to open.
-	RPCPort = &cli.IntFlag{
-		Name:  "rpc-port",
-		Usage: "RPC port exposed by a beacon node",
-		Value: 4000,
-	}
 	// ContractDeploymentBlock is the block in which the eth1 deposit contract was deployed.
 	ContractDeploymentBlock = &cli.IntFlag{
 		Name:  "contract-deployment-block",
 		Usage: "The eth1 block in which the deposit contract was deployed.",
 		Value: 11184524,
 	}
-
-	// Beacon node management flags.
-
 	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.
 	SetGCPercent = &cli.IntFlag{
 		Name:  "gc-percent",

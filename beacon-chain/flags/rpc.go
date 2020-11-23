@@ -3,6 +3,24 @@ package flags
 import "github.com/urfave/cli/v2"
 
 var (
+	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
+	HTTPWeb3ProviderFlag = &cli.StringFlag{
+		Name:  "http-web3provider",
+		Usage: "A mainchain web3 provider string http endpoint",
+		Value: "",
+	}
+	// RPCHost defines the host on which the RPC server should listen.
+	RPCHost = &cli.StringFlag{
+		Name:  "rpc-host",
+		Usage: "Host on which the RPC server should listen",
+		Value: "127.0.0.1",
+	}
+	// RPCPort defines a beacon node RPC port to open.
+	RPCPort = &cli.IntFlag{
+		Name:  "rpc-port",
+		Usage: "RPC port exposed by a beacon node",
+		Value: 4000,
+	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = &cli.StringFlag{
 		Name:  "tls-cert",

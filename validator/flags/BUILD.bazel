@@ -4,9 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "account.go",
-        "base.go",
-        "grpc.go",
         "interop.go",
+        "manage.go",
+        "rpc.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/flags",
     visibility = ["//validator:__subpackages__"],
