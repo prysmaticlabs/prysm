@@ -139,9 +139,9 @@ load(
 
 container_pull(
     name = "alpine_cc_linux_amd64",
-    digest = "sha256:3f7f4dfcb6dceac3a902f36609cc232262e49f5656a6dc4bb3da89e35fecc8a5",
+    digest = "sha256:752aa0c9a88461ffc50c5267bb7497ef03a303e38b2c8f7f2ded9bebe5f1f00e",
     registry = "index.docker.io",
-    repository = "fasibio/alpine-libgcc",
+    repository = "pinglamb/alpine-glibc",
 )
 
 container_pull(

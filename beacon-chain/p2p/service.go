@@ -156,6 +156,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
 		pubsub.WithSubscriptionFilter(s),
+		pubsub.WithPeerOutboundQueueSize(256),
 	}
 	// Add gossip scoring options.
 	if featureconfig.Get().EnablePeerScorer {

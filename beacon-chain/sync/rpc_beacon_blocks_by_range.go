@@ -23,7 +23,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	defer span.End()
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
@@ -128,7 +128,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(step)
 	blks, roots, err := s.db.Blocks(ctx, filter)
 	if err != nil {
-		log.WithError(err).Debug("Failed to retrieve blocks")
+		log.WithError(err).Debug("Could not retrieve blocks")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		traceutil.AnnotateError(span, err)
 		return err
@@ -137,7 +137,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	if startSlot == 0 {
 		genBlock, genRoot, err := s.retrieveGenesisBlock(ctx)
 		if err != nil {
-			log.WithError(err).Debug("Failed to retrieve genesis block")
+			log.WithError(err).Debug("Could not retrieve genesis block")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			traceutil.AnnotateError(span, err)
 			return err
@@ -166,7 +166,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			continue
 		}
 		if chunkErr := s.chunkWriter(stream, b); chunkErr != nil {
-			log.WithError(chunkErr).Debug("Failed to send a chunked response")
+			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			traceutil.AnnotateError(span, chunkErr)
 			return chunkErr
