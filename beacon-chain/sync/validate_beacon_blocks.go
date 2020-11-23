@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -50,10 +51,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	blk, ok := m.(*ethpb.SignedBeaconBlock)
 	if !ok {
+		log.WithError(errors.New("msg is not ethpb.SignedBeaconBlock")).Debug("Rejected block")
 		return pubsub.ValidationReject
 	}
 
 	if blk.Block == nil {
+		log.WithError(errors.New("block.Block is nil")).Debug("Rejected block")
 		return pubsub.ValidationReject
 	}
 
@@ -73,6 +76,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	blockRoot, err := blk.Block.HashTreeRoot()
 	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 	if s.db.HasBlock(ctx, blockRoot) {
@@ -81,6 +85,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Check if parent is a bad block and then reject the block.
 	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		s.setBadBlock(ctx, blockRoot)
+		e := fmt.Errorf("received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block.ParentRoot)
+		log.WithError(e).WithField("blockSlot", blk.Block.Slot).Debug("Rejected block")
 		return pubsub.ValidationReject
 	}
 
@@ -92,19 +98,24 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	s.pendingQueueLock.RUnlock()
 
 	if err := helpers.VerifySlotTime(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
 	// Add metrics for block arrival time subtracts slot start time.
-	if captureArrivalTimeMetric(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot) != nil {
+	if err := captureArrivalTimeMetric(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot); err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
 	startSlot, err := helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch)
 	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 	if startSlot >= blk.Block.Slot {
+		e := fmt.Errorf("finalized slot %d greater or equal to block slot %d", startSlot, blk.Block.Slot)
+		log.WithError(e).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
@@ -112,14 +123,16 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block.Slot, blk, blockRoot); err != nil {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 			return pubsub.ValidationIgnore
 		}
 		s.pendingQueueLock.Unlock()
+		log.WithError(errors.New("unknown parent")).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
 	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not validate beacon block")
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejected block")
 		return pubsub.ValidationReject
 	}
 
