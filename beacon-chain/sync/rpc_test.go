@@ -9,12 +9,14 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	prysmP2P "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -80,4 +82,46 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive RPC in 1 second")
 	}
+}
+
+func TestRegisterRPC_ReceivesInvalidMessage(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	remotePeer := p2ptest.NewTestP2P(t)
+	remotePeer.Connect(p2p)
+
+	r := &Service{
+		ctx: context.Background(),
+		p2p: p2p,
+	}
+
+	topic := "/testing/foobar/1"
+	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+		m, ok := msg.(*p2ppb.Fork)
+		if !ok {
+			t.Error("Object is not of type *pb.TestSimpleMessage")
+		}
+		if !bytes.Equal(m.CurrentVersion, []byte("fooo")) {
+			t.Errorf("Unexpected incoming message: %+v", m)
+		}
+		return nil
+	}
+	prysmP2P.RPCTopicMappings[topic] = new(p2ppb.Fork)
+	// Cleanup Topic mappings
+	defer func() {
+		delete(prysmP2P.RPCTopicMappings, topic)
+	}()
+	r.registerRPC(topic, handler)
+
+	stream, err := remotePeer.Host().NewStream(context.Background(), p2p.BHost.ID(), protocol.ID(topic+p2p.Encoding().ProtocolSuffix()))
+	require.NoError(t, err)
+	// Write invalid SSZ object to peer.
+	_, err = stream.Write([]byte("JUNK MESSAGE"))
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	faultCount, err := p2p.Peers().Scorers().BadResponsesScorer().Count(remotePeer.BHost.ID())
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, faultCount, "peer was not penalised for sending bad message")
+
 }

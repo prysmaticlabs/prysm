@@ -115,14 +115,15 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		if t.Kind() == reflect.Ptr {
 			msg := reflect.New(t.Elem())
 			if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
-				// Debug logs for goodbye/status errors
-				if strings.Contains(topic, p2p.RPCGoodByeTopic) || strings.Contains(topic, p2p.RPCStatusTopic) {
-					log.WithError(err).Debug("Could not decode goodbye stream message")
-					traceutil.AnnotateError(span, err)
-					return
-				}
 				log.WithError(err).Debug("Could not decode stream message")
 				traceutil.AnnotateError(span, err)
+				// In the event we get a goodbye which is unable to be unmarshalled, we set a backoff time.
+				if strings.Contains(topic, p2p.RPCGoodByeTopic) {
+					s.p2p.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(p2ptypes.GoodbyeCodeGenericError))
+					return
+				}
+				// Score down a peer for providing an invalid rpc payload over the wire.
+				s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
 			}
 			if err := handle(ctx, msg.Interface(), stream); err != nil {
@@ -137,6 +138,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
 				log.WithError(err).Debug("Could not decode stream message")
 				traceutil.AnnotateError(span, err)
+				s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
 			}
 			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
