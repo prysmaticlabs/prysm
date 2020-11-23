@@ -10,6 +10,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -282,6 +283,9 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 }
 
 func (s *Server) writeWalletPasswordToDisk(walletDir string, password string) error {
+	if !featureconfig.Get().WriteWalletPasswordOnWebOnboarding {
+		return nil
+	}
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
 	if fileutil.FileExists(passwordFilePath) {
 		return fmt.Errorf("cannot write wallet password file as it already exists %s", passwordFilePath)
