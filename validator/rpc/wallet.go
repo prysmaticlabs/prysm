@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"path/filepath"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -73,6 +76,9 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
+		if err := s.writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
+			return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
+		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
 				WalletPath:     walletDir,
@@ -101,7 +107,9 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-
+		if err := s.writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
+			return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
+		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
 				WalletPath:     walletDir,
@@ -271,4 +279,12 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 		s.walletInitializedFeed.Send(w)
 	}
 	return nil
+}
+
+func (s *Server) writeWalletPasswordToDisk(walletDir string, password string) error {
+	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
+	if fileutil.FileExists(passwordFilePath) {
+		return fmt.Errorf("cannot write wallet password file as it already exists %s", passwordFilePath)
+	}
+	return fileutil.WriteFile(passwordFilePath, []byte(password))
 }
