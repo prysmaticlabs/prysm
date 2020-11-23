@@ -98,7 +98,6 @@ require (
 	github.com/supranational/blst v0.2.1-0.20201113213949-9b4b16fb4269
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
 	github.com/tyler-smith/go-bip39 v1.0.2
-	github.com/urfave/cli v1.22.1
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.2
