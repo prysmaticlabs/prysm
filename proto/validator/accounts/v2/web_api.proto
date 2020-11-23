@@ -6,20 +6,9 @@ import "google/protobuf/empty.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 service Wallet {
-    rpc HasWallet(google.protobuf.Empty) returns (HasWalletResponse) {
-        option (google.api.http) = {
-            get: "/v2/validator/wallet/exists"
-        };
-    }
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/create",
-            body: "*"
-        };
-    }
-    rpc EditConfig(EditWalletConfigRequest) returns (WalletResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/config/edit",
             body: "*"
         };
     }

@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
-	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
+	"github.com/prysmaticlabs/prysm/validator/web"
 )
 
 var log = logrus.WithField("prefix", "gateway")
@@ -115,7 +116,7 @@ func (g *Gateway) Stop() error {
 
 func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 	c := cors.New(cors.Options{
-		AllowedOrigins:   g.allowedOrigins,
+		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodOptions},
 		AllowCredentials: true,
 		MaxAge:           600,

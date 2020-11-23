@@ -35,6 +35,7 @@ const (
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
 	if req.Password != req.PasswordConfirmation {
+		log.Error("Do not match")
 		return nil, status.Error(codes.InvalidArgument, "Password confirmation does not match")
 	}
 	// First, we check if the validator already has a password. In this case,
@@ -45,6 +46,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+		log.Error(err)
 		return nil, status.Error(codes.InvalidArgument, "Could not validate RPC password input")
 	}
 	hasDir, err := fileutil.HasDir(walletDir)
@@ -53,11 +55,13 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	}
 	if !hasDir {
 		if err := fileutil.MkdirAll(walletDir); err != nil {
+			log.Error(err)
 			return nil, status.Errorf(codes.Internal, "could not write directory %s to disk: %v", walletDir, err)
 		}
 	}
 	// Write the password hash to disk.
 	if err := s.SaveHashedPassword(req.Password); err != nil {
+		log.Error(err)
 		return nil, status.Errorf(codes.Internal, "could not write hashed password to disk: %v", err)
 	}
 	return s.sendAuthResponse()
@@ -115,6 +119,7 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 	// If everything is fine here, construct the auth token.
 	tokenString, expirationTime, err := s.createTokenString()
 	if err != nil {
+		log.Error(err)
 		return nil, status.Error(codes.Internal, "Could not create jwt token string")
 	}
 	return &pb.AuthResponse{
