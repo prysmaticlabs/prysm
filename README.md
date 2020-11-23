@@ -25,4 +25,4 @@ Want to get involved? Check out our [Contribution Guide](https://docs.prylabs.ne
 
 ## Legal Disclaimer
 
-[Terms of Use](https://github.com/prysmaticlabs/prysm/blob/553492e6e9141fbb1e8e0d59142f23bb808995eb/TERMS_OF_SERVICE.md)
+[Terms of Use](/TERMS_OF_SERVICE.md)
