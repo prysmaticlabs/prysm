@@ -82,7 +82,9 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
 	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, testutil.NewBeaconBlock(), [32]byte{}))
 
-	require.NoError(t, r.processPendingBlocks(context.Background()))
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
+
 	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
@@ -213,14 +215,19 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 	require.NoError(t, r.insertBlockToPendingQueue(b4.Block.Slot, b4, b4Root))
 	require.NoError(t, r.insertBlockToPendingQueue(b5.Block.Slot, b5, b5Root))
 
-	require.NoError(t, r.processPendingBlocks(context.Background()))
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
+
 	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b3 to the cache
 	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, b3, b3Root))
 	require.NoError(t, r.db.SaveBlock(context.Background(), b3))
-	require.NoError(t, r.processPendingBlocks(context.Background()))
+
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
+
 	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 3, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
@@ -228,7 +235,10 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, b2, b2Root))
 
 	require.NoError(t, r.db.SaveBlock(context.Background(), b2))
-	require.NoError(t, r.processPendingBlocks(context.Background()))
+
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
+	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
+
 	assert.Equal(t, 0, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 4, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
