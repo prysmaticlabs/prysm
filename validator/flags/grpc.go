@@ -3,7 +3,7 @@ package flags
 import (
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var (
