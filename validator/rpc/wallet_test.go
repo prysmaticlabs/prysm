@@ -31,12 +31,11 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 		walletDir:             defaultWalletPath,
 	}
 	_, err := s.Signup(ctx, &pb.AuthRequest{
-		Password:  strongPass,
-		WalletDir: defaultWalletPath,
+		Password:             strongPass,
+		PasswordConfirmation: strongPass,
 	})
 	require.NoError(t, err)
 	req := &pb.CreateWalletRequest{
-		WalletPath:     localWalletDir,
 		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: strongPass,
 	}
@@ -86,9 +85,9 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
+		walletDir:             localWalletDir,
 	}
 	req := &pb.CreateWalletRequest{
-		WalletPath:     localWalletDir,
 		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    0,
@@ -148,48 +147,6 @@ func TestServer_WalletConfig(t *testing.T) {
 		WalletPath:     localWalletDir,
 		KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 	})
-}
-
-func TestServer_HasWallet(t *testing.T) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
-	ss := &Server{
-		walletDir: defaultWalletPath,
-	}
-	// First delete the created folder and check the response
-	require.NoError(t, os.RemoveAll(defaultWalletPath))
-	resp, err := ss.HasWallet(ctx, &ptypes.Empty{})
-	require.NoError(t, err)
-	assert.DeepEqual(t, &pb.HasWalletResponse{
-		WalletExists: false,
-	}, resp)
-
-	// We now create the folder but without a valid wallet, i.e. lacking a subdirectory such as 'imported'
-	// We expect an empty directory to behave similarly as if there were no directory
-	require.NoError(t, os.MkdirAll(defaultWalletPath, os.ModePerm))
-	resp, err = ss.HasWallet(ctx, &ptypes.Empty{})
-	require.NoError(t, err)
-	assert.DeepEqual(t, &pb.HasWalletResponse{
-		WalletExists: false,
-	}, resp)
-
-	// We attempt to create the wallet.
-	_, err = accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	resp, err = ss.HasWallet(ctx, &ptypes.Empty{})
-	require.NoError(t, err)
-	assert.DeepEqual(t, &pb.HasWalletResponse{
-		WalletExists: true,
-	}, resp)
 }
 
 func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {

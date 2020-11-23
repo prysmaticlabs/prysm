@@ -35,7 +35,10 @@ var mainnetNetworkConfig = &NetworkConfig{
 	DepositContractAddress:            "0x00000000219ab540356cBB839Cbe05303d7705Fa",
 	ChainID:                           1, // Chain ID of eth1 mainnet.
 	NetworkID:                         1, // Network ID of eth1 mainnet.
-	BootstrapNodes:                    []string{},
+	BootstrapNodes: []string{
+		// Teku team's bootnode
+		"enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
+	},
 }
 
 var mainnetBeaconConfig = &BeaconChainConfig{
@@ -82,7 +85,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
-	SecondsPerETH1Block:              13,
+
+	// While eth1 mainnet block times are closer to 13s, we must conform with other clients in
+	// order to vote on the correct eth1 blocks.
+	//
+	// Additional context: https://github.com/ethereum/eth2.0-specs/issues/2132
+	// Bug prompting this change: https://github.com/prysmaticlabs/prysm/issues/7856
+	// Future optimization: https://github.com/prysmaticlabs/prysm/issues/7739
+	SecondsPerETH1Block: 14,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,

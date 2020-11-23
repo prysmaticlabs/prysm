@@ -196,12 +196,6 @@ func (s *Service) Stop() error {
 
 // Status of the currently running regular sync service.
 func (s *Service) Status() error {
-	if s.chainStarted.IsNotSet() {
-		return errors.New("chain not yet started")
-	}
-	if s.initialSync.Syncing() {
-		return errors.New("waiting for initial sync")
-	}
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
 	if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
@@ -260,7 +254,7 @@ func (s *Service) registerHandlers() {
 			case statefeed.Initialized:
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
-					log.Error("Event feed data is not type *statefeed.InitializedData")
+					log.Debug("Event feed data is not type *statefeed.InitializedData")
 					return
 				}
 				startTime := data.StartTime
@@ -279,7 +273,7 @@ func (s *Service) registerHandlers() {
 			case statefeed.Synced:
 				_, ok := event.Data.(*statefeed.SyncedData)
 				if !ok {
-					log.Error("Event feed data is not type *statefeed.SyncedData")
+					log.Debug("Event feed data is not type *statefeed.SyncedData")
 					return
 				}
 				// Register respective pubsub handlers at state synced event.
@@ -290,7 +284,7 @@ func (s *Service) registerHandlers() {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():
-			log.WithError(err).Error("Subscription to state notifier failed")
+			log.WithError(err).Error("Could not subscribe to state notifier")
 			return
 		}
 	}

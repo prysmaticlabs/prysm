@@ -156,6 +156,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(msgIDFunction),
 		pubsub.WithSubscriptionFilter(s),
+		pubsub.WithPeerOutboundQueueSize(256),
 	}
 	// Add gossip scoring options.
 	if featureconfig.Get().EnablePeerScorer {
@@ -439,7 +440,7 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 		return nil
 	}
 	if s.Peers().IsBad(info.ID) {
-		return nil
+		return errors.New("refused to connect to bad peer")
 	}
 	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
