@@ -1,7 +1,6 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -59,7 +58,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 
 func configureMinimumPeers(ctx *cli.Context, cfg *GlobalFlags) {
 	cfg.MinimumSyncPeers = ctx.Int(MinSyncPeers.Name)
-	maxPeers := ctx.Int(cmd.P2PMaxPeers.Name)
+	maxPeers := ctx.Int(P2PMaxPeers.Name)
 	if cfg.MinimumSyncPeers > maxPeers {
 		log.Warnf("Changing Minimum Sync Peers to %d", maxPeers)
 		cfg.MinimumSyncPeers = maxPeers
