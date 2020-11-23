@@ -134,6 +134,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				log.Debugf("Could not validate block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
 				continue
 			}
 
@@ -141,6 +143,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
 				continue
 			}
 
