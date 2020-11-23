@@ -402,6 +402,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
 	}
+	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	validatorGatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
@@ -418,6 +420,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		WalletDir:             walletDir,
 		Wallet:                s.wallet,
 		Keymanager:            km,
+		ValidatorGatewayHost:  validatorGatewayHost,
+		ValidatorGatewayPort:  validatorGatewayPort,
 	})
 	return s.services.RegisterService(server)
 }
