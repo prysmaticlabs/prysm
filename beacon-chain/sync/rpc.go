@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"reflect"
-	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -86,7 +85,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		base, ok := p2p.RPCTopicMappings[baseTopic]
 		if !ok {
-			log.Debugf("Could not retrieve base message for topic %s", baseTopic)
+			log.Errorf("Could not retrieve base message for topic %s", baseTopic)
 			return
 		}
 		t := reflect.TypeOf(base)

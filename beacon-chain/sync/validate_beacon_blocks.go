@@ -80,6 +80,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	// Check if parent is a bad block and then reject the block.
 	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+		log.Debugf("Received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block.ParentRoot)
 		s.setBadBlock(ctx, blockRoot)
 		return pubsub.ValidationReject
 	}
@@ -92,6 +93,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	s.pendingQueueLock.RUnlock()
 
 	if err := helpers.VerifySlotTime(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Rejecting incoming block.")
 		return pubsub.ValidationIgnore
 	}
 
