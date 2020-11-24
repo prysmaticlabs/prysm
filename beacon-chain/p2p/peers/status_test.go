@@ -538,7 +538,7 @@ func TestPeerIPTracker(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		badPeers = append(badPeers, createPeer(t, p, addr, network.DirUnknown))
+		badPeers = append(badPeers, createPeer(t, p, addr, network.DirUnknown, peerdata.PeerConnectionState(ethpb.ConnectionState_DISCONNECTED)))
 	}
 	for _, pr := range badPeers {
 		assert.Equal(t, true, p.IsBad(pr), "peer with bad ip is not bad")
@@ -548,7 +548,7 @@ func TestPeerIPTracker(t *testing.T) {
 	// from the peer store.
 	for i := 0; i < p.MaxPeerLimit()+100; i++ {
 		// Peer added to peer handler.
-		pid := addPeer(t, p, peers.PeerConnected)
+		pid := addPeer(t, p, peers.PeerDisconnected)
 		p.Scorers().BadResponsesScorer().Increment(pid)
 	}
 	p.Prune()
@@ -647,12 +647,12 @@ func TestAtInboundPeerLimit(t *testing.T) {
 	})
 	for i := 0; i < 15; i++ {
 		// Peer added to peer handler.
-		createPeer(t, p, nil, network.DirOutbound)
+		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}
 	assert.Equal(t, false, p.IsAtInboundLimit(), "Inbound limit exceeded")
 	for i := 0; i < 15; i++ {
 		// Peer added to peer handler.
-		createPeer(t, p, nil, network.DirInbound)
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}
 	assert.Equal(t, true, p.IsAtInboundLimit(), "Inbound limit not exceeded")
 }
@@ -908,7 +908,8 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	return id
 }
 
-func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr, dir network.Direction) peer.ID {
+func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr,
+	dir network.Direction, state peerdata.PeerConnectionState) peer.ID {
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)
 	_, err := rand.Read(idBytes)
@@ -917,6 +918,6 @@ func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr, dir network.Di
 	id, err := peer.IDFromBytes(mhBytes)
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, addr, dir)
-	p.SetConnectionState(id, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	p.SetConnectionState(id, state)
 	return id
 }
