@@ -64,10 +64,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Data:             data,
 	}
 	if err := v.preAttSignValidations(ctx, indexedAtt, pubKey); err != nil {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Error("Failed attestation safety check")
+		log.WithError(err).Error("Failed attestation slashing protection check")
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).Debug("Attempted slashable attestation details")
 		return
 	}
 
@@ -107,10 +107,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	indexedAtt.Signature = sig
 	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey, signingRoot); err != nil {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Error("Failed post attestation signing updates")
+		log.WithError(err).Error("Failed attestation slashing protection check")
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).Debug("Attempted slashable attestation details")
 		return
 	}
 
@@ -226,4 +226,18 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
 	time.Sleep(timeutils.Until(finalTime))
+}
+
+func attestationLogFields(pubKey [48]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
+	return logrus.Fields{
+		"attesterPublicKey": fmt.Sprintf("%#x", pubKey),
+		"attestationSlot":   indexedAtt.Data.Slot,
+		"committeeIndex":    indexedAtt.Data.CommitteeIndex,
+		"beaconBlockRoot":   fmt.Sprintf("%#x", indexedAtt.Data.BeaconBlockRoot),
+		"sourceEpoch":       indexedAtt.Data.Source.Epoch,
+		"sourceRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Source.Root),
+		"targetEpoch":       indexedAtt.Data.Target.Epoch,
+		"targetRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Target.Root),
+		"signature":         fmt.Sprintf("%#x", indexedAtt.Signature),
+	}
 }
