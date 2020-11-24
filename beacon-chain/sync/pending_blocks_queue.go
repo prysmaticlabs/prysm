@@ -134,12 +134,20 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				log.Debugf("Could not validate block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
 			}
 
 			if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
 			}
 
 			s.setSeenBlockIndexSlot(b.Block.Slot, b.Block.ProposerIndex)

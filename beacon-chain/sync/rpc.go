@@ -86,7 +86,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		base, ok := p2p.RPCTopicMappings[baseTopic]
 		if !ok {
-			log.Debugf("Could not retrieve base message for topic %s", baseTopic)
+			log.Errorf("Could not retrieve base message for topic %s", baseTopic)
 			return
 		}
 		t := reflect.TypeOf(base)

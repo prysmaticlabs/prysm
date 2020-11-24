@@ -801,10 +801,21 @@ func TestSaveProtections_OK(t *testing.T) {
 		attesterHistoryByPubKey: cleanHistories,
 	}
 
+	sr := [32]byte{1}
 	history1 := cleanHistories[pubKey1]
-	history1 = markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
+	newHist, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(ctx, history1, 1, &kv.HistoryData{
+		Source:      0,
+		SigningRoot: sr[:],
+	})
+	require.NoError(t, err)
+	history1 = newHist
 
-	history2 := markAttestationForTargetEpoch(ctx, history1, 2, 3, [32]byte{2})
+	sr2 := [32]byte{2}
+	history2, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(ctx, history1, 3, &kv.HistoryData{
+		Source:      2,
+		SigningRoot: sr2[:],
+	})
+	require.NoError(t, err)
 
 	cleanHistories[pubKey1] = history1
 	cleanHistories[pubKey2] = history2
@@ -835,7 +846,13 @@ func TestSaveProtection_OK(t *testing.T) {
 	}
 
 	history1 := cleanHistories[pubKey1]
-	history1 = markAttestationForTargetEpoch(ctx, history1, 0, 1, [32]byte{1})
+	sr := [32]byte{1}
+	newHist, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(ctx, history1, 1, &kv.HistoryData{
+		Source:      0,
+		SigningRoot: sr[:],
+	})
+	require.NoError(t, err)
+	history1 = newHist
 
 	cleanHistories[pubKey1] = history1
 
