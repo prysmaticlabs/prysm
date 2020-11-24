@@ -23,32 +23,40 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	v.attesterHistoryByPubKeyLock.RUnlock()
+	if !ok {
+		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
+		if err != nil {
+			return errors.Wrap(err, "could not get attester history")
+		}
+		attesterHistory, ok = attesterHistoryMap[pubKey]
+		if !ok {
+			attesterHistory = kv.NewAttestationHistoryArray(0)
+		}
+		v.attesterHistoryByPubKeyLock.Lock()
+		v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		v.attesterHistoryByPubKeyLock.Unlock()
+	}
 	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
 	if err != nil {
 		log.WithError(err).Error("Could not get domain and signing root from attestation")
 		return err
 	}
-	if ok {
-		slashable, err := isNewAttSlashable(
-			ctx,
-			attesterHistory,
-			indexedAtt.Data.Source.Epoch,
-			indexedAtt.Data.Target.Epoch,
-			sr,
-		)
-		if err != nil {
-			return errors.Wrap(err, "could not check if attestation is slashable")
-		}
-		if slashable {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedAttLocalProtectionErr)
-		}
-	} else {
-		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
+	slashable, err := isNewAttSlashable(
+		ctx,
+		attesterHistory,
+		indexedAtt.Data.Source.Epoch,
+		indexedAtt.Data.Target.Epoch,
+		sr,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not check if attestation is slashable")
 	}
-
+	if slashable {
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return errors.New(failedAttLocalProtectionErr)
+	}
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
@@ -62,42 +70,51 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 
 func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	v.attesterHistoryByPubKeyLock.Lock()
-	defer v.attesterHistoryByPubKeyLock.Unlock()
+	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
-	if ok {
-		slashable, err := isNewAttSlashable(
-			ctx,
-			attesterHistory,
-			indexedAtt.Data.Source.Epoch,
-			indexedAtt.Data.Target.Epoch,
-			signingRoot,
-		)
+	v.attesterHistoryByPubKeyLock.RUnlock()
+	if !ok {
+		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
 		if err != nil {
-			return errors.Wrap(err, "could not check if attestation is slashable")
+			return errors.Wrap(err, "could not get attester history")
 		}
-		if slashable {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedAttLocalProtectionErr)
+		attesterHistory, ok = attesterHistoryMap[pubKey]
+		if !ok {
+			attesterHistory = kv.NewAttestationHistoryArray(0)
 		}
-		newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
-			ctx,
-			attesterHistory,
-			indexedAtt.Data.Target.Epoch,
-			&kv.HistoryData{
-				Source:      indexedAtt.Data.Source.Epoch,
-				SigningRoot: signingRoot[:],
-			},
-		)
-		if err != nil {
-			return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
-		}
-		v.attesterHistoryByPubKey[pubKey] = newHistory
-	} else {
-		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
+		v.attesterHistoryByPubKeyLock.Lock()
+		v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		v.attesterHistoryByPubKeyLock.Unlock()
 	}
+	slashable, err := isNewAttSlashable(
+		ctx,
+		attesterHistory,
+		indexedAtt.Data.Source.Epoch,
+		indexedAtt.Data.Target.Epoch,
+		signingRoot,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not check if attestation is slashable")
+	}
+	if slashable {
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return errors.New(failedAttLocalProtectionErr)
+	}
+	newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
+		ctx,
+		attesterHistory,
+		indexedAtt.Data.Target.Epoch,
+		&kv.HistoryData{
+			Source:      indexedAtt.Data.Source.Epoch,
+			SigningRoot: signingRoot[:],
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
+	}
+	v.attesterHistoryByPubKey[pubKey] = newHistory
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
