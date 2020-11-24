@@ -189,7 +189,8 @@ func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKe
 			if len(enc) == 0 {
 				attestationHistory = NewAttestationHistoryArray(0)
 			} else {
-				attestationHistory = enc
+				attestationHistory = make(EncHistoryData, len(enc))
+				copy(attestationHistory, enc)
 			}
 			attestationHistoryForVals[key] = attestationHistory
 		}
