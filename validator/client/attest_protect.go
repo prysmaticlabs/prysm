@@ -32,9 +32,6 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		if !ok {
 			attesterHistory = kv.NewAttestationHistoryArray(0)
 		}
-		v.attesterHistoryByPubKeyLock.Lock()
-		v.attesterHistoryByPubKey[pubKey] = attesterHistory
-		v.attesterHistoryByPubKeyLock.Unlock()
 	}
 	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
 	if err != nil {
@@ -82,9 +79,6 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 		if !ok {
 			attesterHistory = kv.NewAttestationHistoryArray(0)
 		}
-		v.attesterHistoryByPubKeyLock.Lock()
-		v.attesterHistoryByPubKey[pubKey] = attesterHistory
-		v.attesterHistoryByPubKeyLock.Unlock()
 	}
 	slashable, err := isNewAttSlashable(
 		ctx,
