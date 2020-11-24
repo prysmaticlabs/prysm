@@ -182,7 +182,6 @@ func (al attList) dedup() attList {
 	if len(al) < 2 {
 		return al
 	}
-
 	for i := 0; i < len(al); i++ {
 		a := al[i]
 		for j := i + 1; j < len(al); j++ {
