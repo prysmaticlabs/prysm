@@ -25,7 +25,7 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 	logFields := logrus.Fields{
 		"genesisValidators": fmt.Sprintf("%d", genesisValidatorCount),
 		"genesisTime":       fmt.Sprintf("%v", genesisTime),
-		"genesisStateRoot": fmt.Sprintf("%x", genesisStateRoot),
+		"genesisStateRoot":  fmt.Sprintf("%x", genesisStateRoot),
 	}
 	secondTimerActivated := false
 	for {
