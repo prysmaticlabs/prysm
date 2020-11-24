@@ -114,6 +114,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	if err := v.SaveProtection(ctx, pubKey); err != nil {
+		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
+	}
+
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -121,9 +125,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
-	}
-	if err := v.SaveProtection(ctx, pubKey); err != nil {
-		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
 	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
