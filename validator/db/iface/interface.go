@@ -22,6 +22,7 @@ type ValidatorDB interface {
 	SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error
 
 	// Proposer protection related methods.
+	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
 	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
 	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
 
@@ -35,6 +36,7 @@ type ValidatorDB interface {
 	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
 
 	// New attestation store methods.
+	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
 	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
 	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
