@@ -529,6 +529,7 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 func (v *validator) SaveProtections(ctx context.Context) error {
 	v.attesterHistoryByPubKeyLock.RLock()
 	if err := v.db.SaveAttestationHistoryForPubKeysV2(ctx, v.attesterHistoryByPubKey); err != nil {
+		v.attesterHistoryByPubKeyLock.RUnlock()
 		return errors.Wrap(err, "could not save attester history to DB")
 	}
 	v.attesterHistoryByPubKeyLock.RUnlock()
@@ -549,11 +550,11 @@ func (v *validator) ResetAttesterProtectionData() {
 // SaveProtection saves the attestation information currently in validator state.
 func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
 	v.attesterHistoryByPubKeyLock.RLock()
+	defer v.attesterHistoryByPubKeyLock.RUnlock()
 
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
 		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
 	}
-	v.attesterHistoryByPubKeyLock.RUnlock()
 	return nil
 }
 

@@ -62,10 +62,10 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 
 func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	v.attesterHistoryByPubKeyLock.Lock()
-	defer v.attesterHistoryByPubKeyLock.Unlock()
 	var newHistory kv.EncHistoryData
+	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
+	v.attesterHistoryByPubKeyLock.RUnlock()
 	if ok {
 		slashable, err := isNewAttSlashable(
 			ctx,
@@ -100,7 +100,9 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	if err != nil {
 		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
 	}
+	v.attesterHistoryByPubKeyLock.Lock()
 	v.attesterHistoryByPubKey[pubKey] = updatedHistory
+	v.attesterHistoryByPubKeyLock.Unlock()
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
