@@ -154,10 +154,9 @@ func run(ctx context.Context, v Validator) {
 				}
 			}
 			// Wait for all processes to complete, then report span complete.
+			wg.Wait()
+			v.LogAttestationsSubmitted()
 			go func() {
-				wg.Wait()
-				v.ResetAttesterProtectionData()
-				v.LogAttestationsSubmitted()
 				// Log this client performance in the previous epoch
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 					log.WithError(err).Error("Could not report validator's rewards/penalties")
