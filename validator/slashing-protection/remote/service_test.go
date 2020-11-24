@@ -26,7 +26,7 @@ type mockSlasher struct {
 }
 
 // HighestAttestations will return an empty array of attestations.
-func (ms MockSlasher) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest, _ ...grpc.CallOption) (*slashpb.HighestAttestationResponse, error) {
+func (ms mockSlasher) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest, _ ...grpc.CallOption) (*slashpb.HighestAttestationResponse, error) {
 	return &slashpb.HighestAttestationResponse{
 		Attestations: nil,
 	}, nil
