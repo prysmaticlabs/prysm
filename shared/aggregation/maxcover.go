@@ -63,10 +63,6 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps, allowDuplicates bool) (*A
 		return nil, err
 	}
 
-	if !allowDuplicates {
-		mc.Candidates.dedup(allowOverlaps)
-	}
-
 	solution := &Aggregation{
 		Coverage: bitfield.NewBitlist(mc.Candidates[0].bits.Len()),
 		Keys:     make([]int, 0, k),
@@ -156,35 +152,6 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 		}
 	}
 	return ret
-}
-
-// dedup removes duplicate candidates (ones with the same bits set on).
-// Important: not only exact duplicates are removed, but proper subsets are removed too
-// (their known bits are redundant and are already contained in their supersets).
-func (cl *MaxCoverCandidates) dedup(allowOverlaps bool) *MaxCoverCandidates {
-	if len(*cl) < 2 {
-		return cl
-	}
-
-	uncoveredBits := cl.union()
-	if uncoveredBits == nil {
-		return cl
-	}
-	cl.score(uncoveredBits).sort()
-
-	for i, a := range *cl {
-		for j := i + 1; j < len(*cl); j++ {
-			b := (*cl)[j]
-			if a.bits.Contains(*b.bits) {
-				*cl = append((*cl)[:j], (*cl)[j+1:]...)
-				j--
-			} else if b.bits.Contains(*a.bits) {
-				*cl = append((*cl)[:i], (*cl)[i+1:]...)
-				break
-			}
-		}
-	}
-	return cl
 }
 
 // validate checks candidates for validity (equal bitlength etc).
