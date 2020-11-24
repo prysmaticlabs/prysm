@@ -19,6 +19,8 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -78,6 +80,18 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 }
+
+var (
+	// Metrics.
+	attestationMapHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "attestation_history_map_hit",
+		Help: "The number of attestation history calls that are present in the map.",
+	})
+	attestationMapMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "attestation_history_map_miss",
+		Help: "The number of attestation history calls that are'nt present in the map.",
+	})
+)
 
 // Done cleans up the validator.
 func (v *validator) Done() {
