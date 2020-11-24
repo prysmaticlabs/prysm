@@ -19,6 +19,7 @@ var (
 	noAuthPaths = map[string]bool{
 		"/ethereum.validator.accounts.v2.Auth/Signup":             true,
 		"/ethereum.validator.accounts.v2.Auth/Login":              true,
+		"/ethereum.validator.accounts.v2.Auth/HasUsedWeb":         true,
 		"/ethereum.validator.accounts.v2.Wallet/HasWallet":        true,
 		"/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic": true,
 	}

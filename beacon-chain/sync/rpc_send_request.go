@@ -33,7 +33,7 @@ func SendBeaconBlocksByRangeRequest(
 	}
 	defer func() {
 		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to close stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Could not close stream with protocol %s", stream.Protocol())
 		}
 	}()
 
@@ -89,7 +89,7 @@ func SendBeaconBlocksByRootRequest(
 	}
 	defer func() {
 		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 

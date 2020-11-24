@@ -127,7 +127,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
 		for _, blk := range response {
 			_, err := stream.Write([]byte{responseCodeSuccess})
-			assert.NoError(t, err, "Failed to write to stream")
+			assert.NoError(t, err, "Could not write to stream")
 			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
 			assert.NoError(t, err, "Could not send response back")
 		}

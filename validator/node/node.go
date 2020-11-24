@@ -245,6 +245,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
+	if fileutil.FileExists(defaultWalletPasswordFilePath) {
+		if err := cliCtx.Set(flags.WalletPasswordFileFlag.Name, defaultWalletPasswordFilePath); err != nil {
+			return errors.Wrap(err, "could not set default wallet password file path")
+		}
+	}
 	// Read the wallet from the specified path.
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, nil
@@ -416,6 +423,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
 	}
+	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	validatorGatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
@@ -432,6 +441,8 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		WalletDir:             walletDir,
 		Wallet:                s.wallet,
 		Keymanager:            km,
+		ValidatorGatewayHost:  validatorGatewayHost,
+		ValidatorGatewayPort:  validatorGatewayPort,
 	})
 	return s.services.RegisterService(server)
 }

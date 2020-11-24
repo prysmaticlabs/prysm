@@ -28,7 +28,7 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 
 	exists, err := s.attPool.HasAggregatedAttestation(a)
 	if err != nil {
-		return errors.Wrap(err, "failed to determine if attestation pool has this atttestation")
+		return errors.Wrap(err, "Could not determine if attestation pool has this atttestation")
 	}
 	if exists {
 		return nil

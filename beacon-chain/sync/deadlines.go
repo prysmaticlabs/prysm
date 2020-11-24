@@ -33,7 +33,7 @@ func SetStreamReadDeadline(stream network.Stream, duration time.Duration) {
 			"peer":      stream.Conn().RemotePeer(),
 			"protocol":  stream.Protocol(),
 			"direction": stream.Stat().Direction,
-		}).Debug("Failed to set stream deadline")
+		}).Debug("Could not set stream deadline")
 	}
 }
 
@@ -51,6 +51,6 @@ func SetStreamWriteDeadline(stream network.Stream, duration time.Duration) {
 			"peer":      stream.Conn().RemotePeer(),
 			"protocol":  stream.Protocol(),
 			"direction": stream.Stat().Direction,
-		}).Debug("Failed to set stream deadline")
+		}).Debug("Could not set stream deadline")
 	}
 }
