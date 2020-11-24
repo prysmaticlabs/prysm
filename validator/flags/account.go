@@ -34,12 +34,6 @@ var (
 		Name:  "account-password-file",
 		Usage: "Path to a plain-text, .txt file containing a password for a validator account",
 	}
-	// BackupPasswordFile for encrypting accounts a user wishes to back up.
-	BackupPasswordFile = &cli.StringFlag{
-		Name:  "backup-password-file",
-		Usage: "Path to a plain-text, .txt file containing the desired password for your backed up accounts",
-		Value: "",
-	}
 	// MnemonicFileFlag is used to enter a file to mnemonic phrase for new wallet creation, non-interactively.
 	MnemonicFileFlag = &cli.StringFlag{
 		Name:  "mnemonic-file",
@@ -54,6 +48,11 @@ var (
 	SkipMnemonic25thWordCheckFlag = &cli.StringFlag{
 		Name:  "skip-mnemonic-25th-word-check",
 		Usage: "Allows for skipping the check for a mnemonic 25th word passphrase for HD wallets",
+	}
+	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
+	KeysDirFlag = &cli.StringFlag{
+		Name:  "keys-dir",
+		Usage: "Path to a directory where keystores to be imported are stored",
 	}
 	// ImportPrivateKeyFileFlag allows for directly importing a private key hex string as an account.
 	ImportPrivateKeyFileFlag = &cli.StringFlag{
@@ -90,13 +89,6 @@ var (
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to enable",
 		Value: "",
 	}
-	// BackupPublicKeysFlag defines a comma-separated list of hex string public keys
-	// for accounts which a user desires to backup from their wallet.
-	BackupPublicKeysFlag = &cli.StringFlag{
-		Name:  "backup-public-keys",
-		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
-		Value: "",
-	}
 	// VoluntaryExitPublicKeysFlag defines a comma-separated list of hex string public keys
 	// for accounts on which a user wants to perform a voluntary exit.
 	VoluntaryExitPublicKeysFlag = &cli.StringFlag{
@@ -106,18 +98,26 @@ var (
 		Value: "",
 	}
 
-	// Directory flags.
+	// Backup flags.
 
-	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
-	KeysDirFlag = &cli.StringFlag{
-		Name:  "keys-dir",
-		Usage: "Path to a directory where keystores to be imported are stored",
-	}
 	// BackupDirFlag defines the path for the zip backup of the wallet will be created.
 	BackupDirFlag = &cli.StringFlag{
 		Name:  "backup-dir",
 		Usage: "Path to a directory where accounts will be backed up into a zip file",
 		Value: DefaultValidatorDir(),
+	}
+	// BackupPublicKeysFlag defines a comma-separated list of hex string public keys
+	// for accounts which a user desires to backup from their wallet.
+	BackupPublicKeysFlag = &cli.StringFlag{
+		Name:  "backup-public-keys",
+		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to backup",
+		Value: "",
+	}
+	// BackupPasswordFile for encrypting accounts a user wishes to back up.
+	BackupPasswordFile = &cli.StringFlag{
+		Name:  "backup-password-file",
+		Usage: "Path to a plain-text, .txt file containing the desired password for your backed up accounts",
+		Value: "",
 	}
 
 	// Cosmetic flags.
