@@ -23,7 +23,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	v.attesterHistoryByPubKeyLock.RUnlock()
 	if !ok {
-		attestationMapMiss.Inc()
+		AttestationMapMiss.Inc()
 		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
 		if err != nil {
 			return errors.Wrap(err, "could not get attester history")
@@ -33,7 +33,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
 		}
 	} else {
-		attestationMapHit.Inc()
+		AttestationMapHit.Inc()
 	}
 	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
 	if err != nil {
@@ -73,7 +73,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	defer v.attesterHistoryByPubKeyLock.Unlock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if !ok {
-		attestationMapMiss.Inc()
+		AttestationMapMiss.Inc()
 		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
 		if err != nil {
 			return errors.Wrap(err, "could not get attester history")
@@ -83,7 +83,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
 		}
 	} else {
-		attestationMapHit.Inc()
+		AttestationMapHit.Inc()
 	}
 	slashable, err := isNewAttSlashable(
 		ctx,
