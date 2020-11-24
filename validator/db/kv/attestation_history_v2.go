@@ -127,6 +127,49 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	return hd, nil
 }
 
+// MarkAllAsAttestedSinceLatestWrittenEpoch returns an attesting history with specified target+epoch pairs
+// since the latest written epoch up to the incoming attestation's target epoch as attested for.
+func MarkAllAsAttestedSinceLatestWrittenEpoch(
+	ctx context.Context,
+	hist EncHistoryData,
+	incomingTarget uint64,
+	incomingAtt *HistoryData,
+) (EncHistoryData, error) {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	latestEpochWritten, err := hist.GetLatestEpochWritten(ctx)
+	if err != nil {
+		return EncHistoryData{}, errors.Wrap(err, "could not get latest epoch written from history")
+	}
+	currentHD := hist
+	if incomingTarget > latestEpochWritten {
+		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
+		// Limit the overwriting to one weak subjectivity period as further is not needed.
+		maxToWrite := latestEpochWritten + wsPeriod
+		for i := latestEpochWritten + 1; i < incomingTarget && i <= maxToWrite; i++ {
+			newHD, err := hist.SetTargetData(ctx, i%wsPeriod, &HistoryData{
+				Source: params.BeaconConfig().FarFutureEpoch,
+			})
+			if err != nil {
+				return EncHistoryData{}, errors.Wrap(err, "could not set target data")
+			}
+			currentHD = newHD
+		}
+		newHD, err := currentHD.SetLatestEpochWritten(ctx, incomingTarget)
+		if err != nil {
+			return EncHistoryData{}, errors.Wrap(err, "could not set latest epoch written")
+		}
+		currentHD = newHD
+	}
+	newHD, err := currentHD.SetTargetData(ctx, incomingTarget%wsPeriod, &HistoryData{
+		Source:      incomingAtt.Source,
+		SigningRoot: incomingAtt.SigningRoot,
+	})
+	if err != nil {
+		return EncHistoryData{}, errors.Wrap(err, "could not set target data")
+	}
+	return newHD, nil
+}
+
 // AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
 func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeysV2")
