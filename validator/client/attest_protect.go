@@ -166,9 +166,6 @@ func isSurroundVote(
 		if historicalAtt.IsEmpty() {
 			continue
 		}
-		if historicalAtt.Source > sourceEpoch {
-			continue
-		}
 		prevTarget := i
 		prevSource := historicalAtt.Source
 		if surroundingPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
@@ -190,9 +187,6 @@ func isSurroundVote(
 			return false, errors.Wrapf(err, "could not check historical attestation at target epoch: %d", i)
 		}
 		if historicalAtt.IsEmpty() {
-			continue
-		}
-		if historicalAtt.Source > sourceEpoch {
 			continue
 		}
 		prevTarget := i
