@@ -7,11 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/sirupsen/logrus"
 )
 
 var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
@@ -141,6 +140,11 @@ func isNewAttSlashable(
 		return false, errors.Wrapf(err, "could not get target data for epoch: %d", targetEpoch)
 	}
 	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
+		log.WithFields(logrus.Fields{
+			"signingRoot":                   fmt.Sprintf("%#x", signingRoot),
+			"targetEpoch":                   targetEpoch,
+			"previouslyAttestedSigningRoot": fmt.Sprintf("%#x", hd.SigningRoot),
+		}).Warn("Attempted to submit a double vote, but blocked by slashing protection")
 		return true, nil
 	}
 
