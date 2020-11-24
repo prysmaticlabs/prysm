@@ -30,7 +30,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		}
 		attesterHistory, ok = attesterHistoryMap[pubKey]
 		if !ok {
-			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
+			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
 		}
 	}
 	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
