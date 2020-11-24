@@ -82,22 +82,36 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 			}
 			return errors.New(failedAttLocalProtectionErr)
 		}
+		newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
+			ctx,
+			attesterHistory,
+			indexedAtt.Data.Target.Epoch,
+			&kv.HistoryData{
+				Source:      indexedAtt.Data.Source.Epoch,
+				SigningRoot: signingRoot[:],
+			},
+		)
+		if err != nil {
+			return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
+		}
+		v.attesterHistoryByPubKey[pubKey] = newHistory
 	} else {
 		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
+		history := kv.NewAttestationHistoryArray(indexedAtt.Data.Target.Epoch)
+		newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
+			ctx,
+			history,
+			indexedAtt.Data.Target.Epoch,
+			&kv.HistoryData{
+				Source:      indexedAtt.Data.Source.Epoch,
+				SigningRoot: signingRoot[:],
+			},
+		)
+		if err != nil {
+			return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
+		}
+		v.attesterHistoryByPubKey[pubKey] = newHistory
 	}
-	newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
-		ctx,
-		attesterHistory,
-		indexedAtt.Data.Target.Epoch,
-		&kv.HistoryData{
-			Source:      indexedAtt.Data.Source.Epoch,
-			SigningRoot: signingRoot[:],
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
-	}
-	v.attesterHistoryByPubKey[pubKey] = newHistory
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
