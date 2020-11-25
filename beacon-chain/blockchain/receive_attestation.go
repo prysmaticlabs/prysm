@@ -101,7 +101,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	stateSub.Unsubscribe()
 
 	if s.genesisTime.IsZero() {
-		log.Warn("ProcessAttestations routing waiting for genesis time")
+		log.Warn("ProcessAttestations routine waiting for genesis time")
 		for s.genesisTime.IsZero() {
 			time.Sleep(1 * time.Second)
 		}
