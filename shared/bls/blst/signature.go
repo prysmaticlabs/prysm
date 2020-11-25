@@ -141,8 +141,8 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 
 	// Signature and PKs are assumed to be already validated!
 	signature := new(blstAggregateSignature)
-	signature.Aggregate(rawSigs, false)
-	if signature == nil {
+	validAgg := signature.Aggregate(rawSigs, false)
+	if !validAgg {
 		return nil
 	}
 	return &Signature{s: signature.ToAffine()}

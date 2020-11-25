@@ -79,6 +79,9 @@ func AggregatePair(a1, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 	}
 
 	aggregatedSig := aggregateSignatures([]bls.Signature{baseSig, newSig})
+	if aggregatedSig == nil {
+		return nil, errors.New("nil aggregate returned")
+	}
 	baseAtt.Signature = aggregatedSig.Marshal()
 	baseAtt.AggregationBits = newBits
 

@@ -94,10 +94,14 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 		}
 		signs[i] = sig
 	}
+	agg := aggregateSignatures(signs)
+	if agg == nil {
+		return nil, errors.New("nil aggregate provided")
+	}
 	return &ethpb.Attestation{
 		AggregationBits: coverage,
 		Data:            stateTrie.CopyAttestationData(al[0].Data),
-		Signature:       aggregateSignatures(signs).Marshal(),
+		Signature:       agg.Marshal(),
 	}, nil
 }
 
