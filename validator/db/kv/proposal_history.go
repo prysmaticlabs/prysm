@@ -12,6 +12,16 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ProposalHistoryForPubkey for a validator public key.
+type ProposalHistoryForPubkey struct {
+	Proposals []Proposal
+}
+
+type Proposal struct {
+	Slot        uint64 `json:"slot"`
+	SigningRoot []byte `json:"signing_root"`
+}
+
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.
 func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
