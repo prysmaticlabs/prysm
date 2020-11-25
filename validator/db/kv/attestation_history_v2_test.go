@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -328,4 +329,38 @@ func TestStore_AttestedPublicKeys(t *testing.T) {
 	keys, err = validatorDB.AttestedPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, [][48]byte{pubKey}, keys)
+}
+
+func TestStore_AttestedPublicKeys_OnlyPublicKeysCounted(t *testing.T) {
+	ctx := context.Background()
+	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, validatorDB.Close(), "Failed to close database")
+		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+	})
+
+	keys, err := validatorDB.AttestedPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, make([][48]byte, 0), keys)
+
+	pubKey := [48]byte{1}
+	err = validatorDB.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		valBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
+		if err != nil {
+			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
+		}
+		for _, bucketKey := range bucketKeys {
+			if err := valBucket.Put(bucketKey, []byte{1}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	keys, err = validatorDB.AttestedPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(keys))
 }
