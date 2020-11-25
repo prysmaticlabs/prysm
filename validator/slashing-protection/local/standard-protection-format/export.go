@@ -68,6 +68,38 @@ func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKe
 	return signedBlocks, nil
 }
 
+func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedAttestation, error) {
+	attestingHistories, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
+	if err != nil {
+		return nil, err
+	}
+	history, ok := attestingHistories[pubKey]
+	if !ok {
+		return nil, nil
+	}
+	highestWritten, err := history.GetLatestEpochWritten(ctx)
+	if err != nil {
+		return nil, err
+	}
+	signedAtts := make([]*SignedAttestation, 0)
+	for i := uint64(0); i < highestWritten; i++ {
+		historicalAtt, err := history.GetTargetData(ctx, i)
+		if err != nil {
+			return nil, err
+		}
+		signingRootHex, err := rootToHex(historicalAtt.SigningRoot)
+		if err != nil {
+			return nil, err
+		}
+		signedAtts = append(signedAtts, &SignedAttestation{
+			SourceEpoch: fmt.Sprintf("%d", historicalAtt.Source),
+			TargetEpoch: fmt.Sprintf("%d", i),
+			SigningRoot: signingRootHex,
+		})
+	}
+	return signedAtts, nil
+}
+
 func rootToHex(root []byte) (string, error) {
 	if len(root) != 32 {
 		return "", fmt.Errorf("wanted length 32, received %d", len(root))
