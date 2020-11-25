@@ -12,16 +12,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ProposalHistoryForPubkey for a validator public key.
-type ProposalHistoryForPubkey struct {
-	Proposals []Proposal
-}
-
-type Proposal struct {
-	Slot        uint64 `json:"slot"`
-	SigningRoot []byte `json:"signing_root"`
-}
-
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.
 func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
@@ -40,28 +30,31 @@ func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	return proposedPublicKeys, err
 }
 
-// ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root.
-// Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([]byte, error) {
+// ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root as well
+// as a boolean that tells us if we have a proposal history stored at the slot. It is possible we have proposed
+// a slot but stored a nil signing root, so the boolean helps give full information.
+func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([32]byte, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
 	defer span.End()
 
 	var err error
-	signingRoot := make([]byte, 32)
+	var proposalExists bool
+	signingRoot := [32]byte{}
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		valBucket := bucket.Bucket(publicKey[:])
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
-		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
-		if len(sr) == 0 {
+		signingRootBytes := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
+		if signingRootBytes == nil {
 			return nil
 		}
-		copy(signingRoot, sr)
+		proposalExists = true
+		copy(signingRoot[:], signingRootBytes)
 		return nil
 	})
-	return signingRoot, err
+	return signingRoot, proposalExists, err
 }
 
 // SaveProposalHistoryForSlot saves the proposal history for the requested validator public key.
@@ -156,19 +149,6 @@ func (store *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byt
 		return nil
 	})
 	return highestSignedProposalSlot, err
-}
-
-// UpdatePublicKeysBuckets for a specified list of keys.
-func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
-	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
-		for _, pubKey := range pubKeys {
-			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
-				return errors.Wrap(err, "failed to create proposal history bucket")
-			}
-		}
-		return nil
-	})
 }
 
 func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot uint64) error {
