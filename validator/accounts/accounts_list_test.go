@@ -408,6 +408,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 
 		Configuration options
 		Remote gRPC address: localhost:4000
+		Require TLS: true
 		Client cert path: /tmp/client.crt
 		Client key path: /tmp/client.key
 		CA cert path: /tmp/ca.crt
@@ -425,9 +426,9 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	*/
 
 	// Expected output format definition
-	const prologLength = 10
+	const prologLength = 11
 	const configOffset = 4
-	const configLength = 4
+	const configLength = 5
 	const accountLength = 4
 	const nameOffset = 1
 	const keyOffset = 2
