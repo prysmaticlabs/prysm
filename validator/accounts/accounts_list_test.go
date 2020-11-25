@@ -381,6 +381,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		publicKeys: pubKeys,
 		opts: &remote.KeymanagerOpts{
 			RemoteCertificate: &remote.CertificateConfig{
+				RequireTls:     true,
 				ClientCertPath: "/tmp/client.crt",
 				ClientKeyPath:  "/tmp/client.key",
 				CACertPath:     "/tmp/ca.crt",

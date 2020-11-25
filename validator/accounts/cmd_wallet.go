@@ -22,6 +22,7 @@ var WalletCommands = &cli.Command{
 				flags.WalletDirFlag,
 				flags.KeymanagerKindFlag,
 				flags.GrpcRemoteAddressFlag,
+				flags.DisableRemoteSignerTlsFlag,
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,

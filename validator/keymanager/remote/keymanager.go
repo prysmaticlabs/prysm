@@ -41,6 +41,7 @@ type KeymanagerOpts struct {
 // certificate authority certs, client certs, and client keys
 // for TLS gRPC connections.
 type CertificateConfig struct {
+	RequireTls     bool   `json:"require_tls"`
 	ClientCertPath string `json:"crt_path"`
 	ClientKeyPath  string `json:"key_path"`
 	CACertPath     string `json:"ca_crt_path"`
@@ -144,6 +145,13 @@ func (opts *KeymanagerOpts) String() string {
 	var b strings.Builder
 	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("Remote gRPC address"), opts.RemoteAddr)
 	if _, err := b.WriteString(strAddr); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strRequireTls := fmt.Sprintf(
+		"%s: %t\n", au.BrightMagenta("Require TLS"), opts.RemoteCertificate.RequireTls,
+	)
+	if _, err := b.WriteString(strRequireTls); err != nil {
 		log.Error(err)
 		return ""
 	}
