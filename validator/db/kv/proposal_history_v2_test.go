@@ -16,10 +16,10 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 	db := setupDB(t, pubkeys)
 
 	for _, pub := range pubkeys {
-		signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pub, 0)
+		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pub, 0)
 		require.NoError(t, err)
 		expected := bytesutil.PadTo([]byte{}, 32)
-		require.DeepEqual(t, expected, signingRoot, "Expected proposal history slot signing root to be empty")
+		require.DeepEqual(t, expected, signingRoot[:], "Expected proposal history slot signing root to be empty")
 	}
 }
 
@@ -27,7 +27,7 @@ func TestNewProposalHistoryForSlot_NilDB(t *testing.T) {
 	valPubkey := [48]byte{1, 2, 3}
 	db := setupDB(t, [][48]byte{})
 
-	_, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
+	_, _, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
 	require.ErrorContains(t, "validator history empty for public key", err, "Unexpected error for nil DB")
 }
 
@@ -39,11 +39,11 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey, slot)
+	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, slot)
 	require.NoError(t, err, "Failed to get proposal history")
 
 	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot, "Expected DB to keep object the same")
+	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot[:], "Expected DB to keep object the same")
 }
 
 func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
@@ -54,11 +54,11 @@ func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
 	emptySlot := uint64(120)
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey, emptySlot)
+	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, emptySlot)
 	require.NoError(t, err, "Failed to get proposal history")
 
 	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), signingRoot, "Expected DB to keep object the same")
+	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), signingRoot[:], "Expected DB to keep object the same")
 }
 
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
@@ -85,11 +85,11 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 		db := setupDB(t, [][48]byte{pubkey})
 		err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, 0, tt.signingRoot)
 		require.NoError(t, err, "Saving proposal history failed")
-		signingRoot, err := db.ProposalHistoryForSlot(context.Background(), pubkey, 0)
+		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, 0)
 		require.NoError(t, err, "Failed to get proposal history")
 
 		require.NotNil(t, signingRoot)
-		require.DeepEqual(t, tt.signingRoot, signingRoot, "Expected DB to keep object the same")
+		require.DeepEqual(t, tt.signingRoot, signingRoot[:], "Expected DB to keep object the same")
 	}
 }
 
@@ -143,14 +143,14 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 		}
 
 		for _, slot := range tt.removedSlots {
-			sr, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
+			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
 			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), sr, "Unexpected difference in bytes for epoch %d", slot)
+			require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), sr[:], "Unexpected difference in bytes for epoch %d", slot)
 		}
 		for _, slot := range tt.storedSlots {
-			sr, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
+			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
 			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, signedRoot, sr, "Unexpected difference in bytes for epoch %d", slot)
+			require.DeepEqual(t, signedRoot, sr[:], "Unexpected difference in bytes for epoch %d", slot)
 		}
 	}
 }
@@ -183,14 +183,14 @@ func TestStore_ImportProposalHistory(t *testing.T) {
 
 	for slot := uint64(0); slot <= lastIndex; slot++ {
 		if _, ok := proposedSlots[slot]; ok {
-			root, err := db.ProposalHistoryForSlot(ctx, pubkey, slot)
+			root, _, err := db.ProposalHistoryForSlot(ctx, pubkey, slot)
 			require.NoError(t, err)
-			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root, "slot: %d", slot)
+			require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), root[:], "slot: %d", slot)
 			continue
 		}
-		root, err := db.ProposalHistoryForSlot(ctx, pubkey, slot)
+		root, _, err := db.ProposalHistoryForSlot(ctx, pubkey, slot)
 		require.NoError(t, err)
-		require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), root)
+		require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), root[:])
 	}
 }
 
