@@ -15,10 +15,11 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 	db := setupDB(t, pubkeys)
 
 	for _, pub := range pubkeys {
-		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pub[:], 0)
+		signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pub[:], 0)
 		require.NoError(t, err)
 		expected := bytesutil.PadTo([]byte{}, 32)
 		require.DeepEqual(t, expected, signingRoot, "Expected proposal history slot signing root to be empty")
+		require.Equal(t, uint64(0), min)
 	}
 }
 
@@ -38,11 +39,12 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], slot)
+	signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], slot)
 	require.NoError(t, err, "Failed to get proposal history")
 
 	require.NotNil(t, signingRoot)
 	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot, "Expected DB to keep object the same")
+	require.Equal(t, slot, min)
 }
 
 func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
@@ -53,11 +55,12 @@ func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
 	emptySlot := uint64(120)
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], emptySlot)
+	signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], emptySlot)
 	require.NoError(t, err, "Failed to get proposal history")
 
 	require.NotNil(t, signingRoot)
 	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), signingRoot, "Expected DB to keep object the same")
+	require.Equal(t, slot, min)
 }
 
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
