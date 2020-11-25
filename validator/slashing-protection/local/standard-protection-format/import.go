@@ -80,7 +80,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 			}
 		}
 	}
-	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
+	if err := validatorDB.SaveAttestationHistoryForPubKeys(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
 	return nil

@@ -752,7 +752,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 	histories := make(map[[48]byte]kv.EncHistoryData)
 	histories[pubKey1] = history
 	histories[pubKey2] = history2
-	require.NoError(t, db.SaveAttestationHistoryForPubKeysV2(context.Background(), histories))
+	require.NoError(t, db.SaveAttestationHistoryForPubKeys(context.Background(), histories))
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	duties := &ethpb.DutiesResponse{
@@ -792,7 +792,7 @@ func TestSaveProtection_OK(t *testing.T) {
 	db := dbTest.SetupDB(t, [][48]byte{pubKey1})
 	ctx := context.Background()
 
-	cleanHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
+	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1})
 	require.NoError(t, err)
 	v := validator{
 		db:                      db,
@@ -813,7 +813,7 @@ func TestSaveProtection_OK(t *testing.T) {
 
 	v.attesterHistoryByPubKey = cleanHistories
 	require.NoError(t, v.SaveProtection(context.Background(), pubKey1), "Could not update assignments")
-	savedHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
+	savedHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1})
 	require.NoError(t, err)
 
 	require.DeepEqual(t, history1, savedHistories[pubKey1], "Unexpected retrieved history")

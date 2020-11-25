@@ -24,7 +24,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	v.attesterHistoryByPubKeyLock.RUnlock()
 	if !ok {
 		AttestationMapMiss.Inc()
-		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
+		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeys(ctx, [][48]byte{pubKey})
 		if err != nil {
 			return errors.Wrap(err, "could not get attester history")
 		}
@@ -74,7 +74,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if !ok {
 		AttestationMapMiss.Inc()
-		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
+		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeys(ctx, [][48]byte{pubKey})
 		if err != nil {
 			return errors.Wrap(err, "could not get attester history")
 		}
