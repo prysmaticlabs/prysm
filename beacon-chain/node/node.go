@@ -507,7 +507,10 @@ func (b *BeaconNode) registerPOWChainService() error {
 		}
 	}
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
+		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
+			"you are trying to run on a different network than what the database contains. You can run once with "+
+			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
+			knownContract, cfg.DepositContract.Bytes())
 	}
 
 	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
