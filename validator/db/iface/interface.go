@@ -28,7 +28,7 @@ type ValidatorDB interface {
 	// New data structure methods
 	HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
 	LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
-	ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([]byte, error)
+	ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([32]byte, bool, error)
 	SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot uint64, signingRoot []byte) error
 	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
 
