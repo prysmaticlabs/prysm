@@ -11,7 +11,7 @@ var (
 	highestSignedProposalKey = []byte("highest-signed-proposal")
 
 	// Key to the highest signed source and target epoch in a validator bucket.
-	highestSignedSourceKey  = []byte("highest-signed-source-epoch")
+	highestSignedSourceKey = []byte("highest-signed-source-epoch")
 	highestSignedTargetKey = []byte("highest-signed-target-epoch")
 
 	// Validator slashing protection from double proposals.

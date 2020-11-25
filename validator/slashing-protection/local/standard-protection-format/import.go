@@ -70,10 +70,6 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		attestingHistoryByPubKey[pubKey] = *attestingHistory
 	}
 
-	if err := saveHighestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey); err != nil {
-		return err
-	}
-
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
@@ -87,7 +83,8 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
-	return nil
+
+	return saveHighestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
 }
 
 func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
