@@ -257,7 +257,9 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
+	// save 0 slot for public key as minimal slot.
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey[:], 0, []byte{1})
+	require.NoError(t, err)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
