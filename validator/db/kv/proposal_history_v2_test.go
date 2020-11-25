@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -222,4 +223,27 @@ func TestStore_UpdateProposalsProtectionDb(t *testing.T) {
 	shouldImport, err = db.shouldImportProposals()
 	require.NoError(t, err)
 	require.Equal(t, false, shouldImport, "Proposals should not be re-imported")
+}
+
+func TestStore_ProposedPublicKeys(t *testing.T) {
+	ctx := context.Background()
+	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, validatorDB.Close(), "Failed to close database")
+		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+	})
+
+	keys, err := validatorDB.ProposedPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, make([][48]byte, 0), keys)
+
+	pubKey := [48]byte{1}
+	dummyRoot := [32]byte{}
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey[:], 1, dummyRoot[:])
+	require.NoError(t, err)
+
+	keys, err = validatorDB.ProposedPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][48]byte{pubKey}, keys)
 }

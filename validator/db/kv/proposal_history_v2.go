@@ -14,6 +14,24 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ProposedPublicKeys retrieves all public keys in our proposals history bucket.
+func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
+	defer span.End()
+	var err error
+	proposedPublicKeys := make([][48]byte, 0)
+	err = store.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newhistoricProposalsBucket)
+		return bucket.ForEach(func(key []byte, _ []byte) error {
+			pubKeyBytes := [48]byte{}
+			copy(pubKeyBytes[:], key)
+			proposedPublicKeys = append(proposedPublicKeys, pubKeyBytes)
+			return nil
+		})
+	})
+	return proposedPublicKeys, err
+}
+
 // ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
 func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error) {
