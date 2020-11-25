@@ -126,7 +126,6 @@ func (v *ValidatorService) Start() {
 	dialOpts := ConstructDialOptions(
 		v.maxCallRecvMsgSize,
 		v.withCert,
-		v.grpcHeaders,
 		v.grpcRetries,
 		v.grpcRetryDelay,
 		streamInterceptor,
@@ -134,6 +133,18 @@ func (v *ValidatorService) Start() {
 	if dialOpts == nil {
 		return
 	}
+
+	for _, hdr := range v.grpcHeaders {
+		if hdr != "" {
+			ss := strings.Split(hdr, "=")
+			if len(ss) != 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+				continue
+			}
+			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], ss[1])
+		}
+	}
+
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
@@ -236,7 +247,6 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 func ConstructDialOptions(
 	maxCallRecvMsgSize int,
 	withCert string,
-	grpcHeaders []string,
 	grpcRetries uint,
 	grpcRetryDelay time.Duration,
 	extraOpts ...grpc.DialOption,
@@ -260,25 +270,12 @@ func ConstructDialOptions(
 		maxCallRecvMsgSize = 10 * 5 << 20 // Default 50Mb
 	}
 
-	md := make(metadata.MD)
-	for _, hdr := range grpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
-				continue
-			}
-			md.Set(ss[0], ss[1])
-		}
-	}
-
 	dialOpts := []grpc.DialOption{
 		transportSecurity,
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
 			grpc_retry.WithMax(grpcRetries),
 			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(grpcRetryDelay)),
-			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(

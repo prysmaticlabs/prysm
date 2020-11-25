@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 var failedPreBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
@@ -82,4 +83,16 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 		return errors.Wrap(err, "failed to save updated proposal history")
 	}
 	return nil
+}
+
+func blockLogFields(pubKey [48]byte, blk *ethpb.BeaconBlock, sig []byte) logrus.Fields {
+	fields := logrus.Fields{
+		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
+		"proposerIndex":     blk.ProposerIndex,
+		"blockSlot":         blk.Slot,
+	}
+	if sig != nil {
+		fields["signature"] = fmt.Sprintf("%#x", sig)
+	}
+	return fields
 }

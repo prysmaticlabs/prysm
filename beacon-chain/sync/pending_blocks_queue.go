@@ -36,7 +36,7 @@ func (s *Service) processPendingBlocksQueue() {
 	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
 		if err := s.processPendingBlocks(s.ctx); err != nil {
-			log.WithError(err).Debug("Failed to process pending blocks")
+			log.WithError(err).Debug("Could not process pending blocks")
 		}
 		locker.Unlock()
 	})
@@ -134,19 +134,27 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				log.Debugf("Could not validate block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
 			}
 
 			if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
 			}
 
 			s.setSeenBlockIndexSlot(b.Block.Slot, b.Block.ProposerIndex)
 
 			// Broadcasting the block again once a node is able to process it.
 			if err := s.p2p.Broadcast(ctx, b); err != nil {
-				log.WithError(err).Debug("Failed to broadcast block")
+				log.WithError(err).Debug("Could not broadcast block")
 			}
 
 			s.pendingQueueLock.Lock()

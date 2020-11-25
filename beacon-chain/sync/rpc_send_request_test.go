@@ -256,7 +256,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 						}
 					}
 					_, err := stream.Write([]byte{0x00})
-					assert.NoError(t, err, "Failed to write to stream")
+					assert.NoError(t, err, "Could not write to stream")
 					_, err = p2pProvider.Encoding().EncodeWithMaxLength(stream, blk)
 					assert.NoError(t, err, "Could not send response back")
 				}

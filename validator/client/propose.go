@@ -67,7 +67,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
-		log.WithField("slot", b.Slot).WithError(err).Error("Failed block safety check")
+		log.WithFields(
+			blockLogFields(pubKey, b, nil),
+		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
@@ -86,7 +88,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
-		log.WithField("slot", blk.Block.Slot).WithError(err).Error("Failed post block signing validations")
+		log.WithFields(
+			blockLogFields(pubKey, b, sig),
+		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 

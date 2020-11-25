@@ -480,7 +480,6 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	}
 
 	r.validateBeaconBlockPubSub(context.Background(), "", m)
-	require.LogsContain(t, hook, "Block slot older/equal than last finalized epoch start slot, rejecting it")
 
 	hook.Reset()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
@@ -495,7 +494,6 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	}
 
 	r.validateBeaconBlockPubSub(context.Background(), "", m)
-	require.LogsDoNotContain(t, hook, "Block slot older/equal than last finalized epoch start slot, rejecting itt")
 }
 
 func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
