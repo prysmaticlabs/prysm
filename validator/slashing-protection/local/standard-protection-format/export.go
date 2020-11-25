@@ -30,14 +30,42 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		if err != nil {
 			return nil, err
 		}
+		signedBlocks, err := getSignedBlocksByPubKey(ctx, validatorDB, pubKey)
 		data = append(data, &ProtectionData{
 			Pubkey:             pubKeyHex,
-			SignedBlocks:       nil,
+			SignedBlocks:       signedBlocks,
 			SignedAttestations: nil,
 		})
 	}
 	interchangeJSON.Data = data
 	return interchangeJSON, nil
+}
+
+func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedBlock, error) {
+	lowestSignedSlot, err := validatorDB.LowestSignedProposal(ctx, pubKey[:])
+	if err != nil {
+		return nil, err
+	}
+	highestSignedSlot, err := validatorDB.HighestSignedProposal(ctx, pubKey[:])
+	if err != nil {
+		return nil, err
+	}
+	signedBlocks := make([]*SignedBlock, 0)
+	for i := lowestSignedSlot; i < highestSignedSlot; i++ {
+		signingRoot, err := validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], i)
+		if err != nil {
+			return nil, err
+		}
+		signingRootHex, err := rootToHex(signingRoot)
+		if err != nil {
+			return nil, err
+		}
+		signedBlocks = append(signedBlocks, &SignedBlock{
+			Slot:        fmt.Sprintf("%d", i),
+			SigningRoot: signingRootHex,
+		})
+	}
+	return signedBlocks, nil
 }
 
 func rootToHex(root []byte) (string, error) {

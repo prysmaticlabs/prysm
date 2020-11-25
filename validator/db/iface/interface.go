@@ -24,6 +24,8 @@ type ValidatorDB interface {
 	// Proposer protection related methods.
 	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
 	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
+	LowestSignedProposal(ctx context.Context, publicKey []byte) (uint64, error)
+	HighestSignedProposal(ctx context.Context, publicKey []byte) (uint64, error)
 	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
 
 	// New data structure methods
