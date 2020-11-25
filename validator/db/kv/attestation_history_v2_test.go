@@ -307,3 +307,25 @@ func TestStore_UpdateAttestationProtectionDb(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, shouldImport, "Proposals should not be re-imported")
 }
+
+func TestStore_AttestedPublicKeys(t *testing.T) {
+	ctx := context.Background()
+	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, validatorDB.Close(), "Failed to close database")
+		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+	})
+
+	keys, err := validatorDB.AttestedPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, make([][48]byte, 0), keys)
+
+	pubKey := [48]byte{1}
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, NewAttestationHistoryArray(0))
+	require.NoError(t, err)
+
+	keys, err = validatorDB.AttestedPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][48]byte{pubKey}, keys)
+}
