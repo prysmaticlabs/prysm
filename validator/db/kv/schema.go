@@ -6,6 +6,10 @@ var (
 	// Genesis validators root key.
 	genesisValidatorsRootKey = []byte("genesis-val-root")
 
+	// Key to the lowest signed proposal in a validator bucket.
+	lowestSignedProposalKey  = []byte("lowest-signed-proposal")
+	highestSignedProposalKey = []byte("highest-signed-proposal")
+
 	// Validator slashing protection from double proposals.
 	historicProposalsBucket = []byte("proposal-history-bucket")
 	// Validator slashing protection from double proposals.

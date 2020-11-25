@@ -73,8 +73,12 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
-	if err = validatorDB.SaveProposalHistoryForPubKeysV2(ctx, proposalHistoryByPubKey); err != nil {
-		return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+	for pubKey, proposalHistory := range proposalHistoryByPubKey {
+		for _, proposal := range proposalHistory.Proposals {
+			if err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
+				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+			}
+		}
 	}
 	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
