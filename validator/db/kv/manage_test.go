@@ -164,7 +164,7 @@ func prepareStoreProposals(store *Store, pubKeys [][48]byte) (map[[48]byte][]byt
 
 	for i, key := range pubKeys {
 		signingRoot := bytesutil.PadTo([]byte{byte(i)}, 32)
-		if err := store.SaveProposalHistoryForSlot(context.Background(), key[:], 0, signingRoot); err != nil {
+		if err := store.SaveProposalHistoryForSlot(context.Background(), key, 0, signingRoot); err != nil {
 			return nil, errors.Wrapf(err, "Saving proposal history failed")
 		}
 		proposals[key] = signingRoot
@@ -196,7 +196,7 @@ func prepareStoreAttestations(store *Store, pubKeys [][48]byte) (map[[48]byte]ma
 
 func assertStore(t *testing.T, store *Store, pubKeys [][48]byte, expectedHistory *storeHistory) {
 	for _, key := range pubKeys {
-		proposalHistory, err := store.ProposalHistoryForSlot(context.Background(), key[:], 0)
+		proposalHistory, err := store.ProposalHistoryForSlot(context.Background(), key, 0)
 		require.NoError(t, err, "Retrieving proposal history failed for public key %v", key)
 		expectedProposals := expectedHistory.Proposals[key]
 		require.DeepEqual(t, expectedProposals, proposalHistory, "Proposals are incorrect")

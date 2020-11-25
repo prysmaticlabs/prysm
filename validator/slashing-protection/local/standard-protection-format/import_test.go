@@ -86,7 +86,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
+			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
@@ -131,7 +131,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
+			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
