@@ -48,6 +48,7 @@ type Flags struct {
 	EnablePruningDepositProofs            bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 	EnableSyncBacktracking                bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
 	EnableLargerGossipHistory             bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
+	WriteWalletPasswordOnWebOnboarding    bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableStrictRemoteSlashingProtection bool // DisableStrictRemoteSlashing protection allows submitting attestations and blocks if slasher is unavailable.
 
 	// Logging related toggles.
@@ -206,6 +207,11 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
 		cfg.SlasherProtection = true
+	}
+	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
+		log.Warn("Enabled full web mode, wallet password will be written to disk at the wallet directory " +
+			"upon completing web onboarding.")
+		cfg.WriteWalletPasswordOnWebOnboarding = true
 	}
 	if ctx.Bool(disableStrictRemoteSlashingProtection.Name) {
 		log.Warn("Disabling strict remote slashing protection. Blocks and attestations will still be " +

@@ -90,6 +90,11 @@ var (
 		Name:  "enable-larger-gossip-history",
 		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
 	}
+	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
+		Name: "write-wallet-password-on-web-onboarding",
+		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
+			"We recommend against this flag unless you are an advanced user.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -100,6 +105,7 @@ var devModeFlags = []cli.Flag{
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	ToledoTestnet,
 	PyrmontTestnet,

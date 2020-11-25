@@ -4,6 +4,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -337,6 +338,9 @@ func (s *Service) Stop() error {
 
 // Status returns nil or credentialError
 func (s *Service) Status() error {
+	if s.syncService.Syncing() {
+		return errors.New("syncing")
+	}
 	if s.credentialError != nil {
 		return s.credentialError
 	}

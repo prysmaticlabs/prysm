@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
@@ -57,11 +58,13 @@ type validator struct {
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
+	attesterHistoryByPubKeyLock        sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	genesisTime                        uint64
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
+	attesterHistoryByPubKey            map[[48]byte]kv.EncHistoryData
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
@@ -70,8 +73,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	localSlashingProtector             slashingprotection.Protector
-	remoteSlashingProtector            slashingprotection.Protector
+	protector                          slashingprotection.Protector
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
@@ -200,7 +202,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
 	defer span.End()
 	if featureconfig.Get().SlasherProtection {
-		err := v.remoteSlashingProtector.Status()
+		err := v.protector.Status()
 		if err == nil {
 			return nil
 		}
@@ -210,7 +212,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 			select {
 			case <-ticker.C:
 				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
-				err = v.remoteSlashingProtector.Status()
+				err = v.protector.Status()
 				if err != nil {
 					continue
 				}
@@ -501,6 +503,44 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]Va
 		rolesAt[pubKey] = roles
 	}
 	return rolesAt, nil
+}
+
+// UpdateProtections goes through the duties of the given slot and fetches the required validator history,
+// assigning it in validator.
+func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
+	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
+	for _, duty := range v.duties.CurrentEpochDuties {
+		if duty == nil || duty.AttesterSlot != slot {
+			continue
+		}
+		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
+	}
+	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
+	if err != nil {
+		return errors.Wrap(err, "could not get attester history")
+	}
+	v.attesterHistoryByPubKeyLock.Lock()
+	v.attesterHistoryByPubKey = attHistoryByPubKey
+	v.attesterHistoryByPubKeyLock.Unlock()
+	return nil
+}
+
+// ResetAttesterProtectionData reset validators protection data.
+func (v *validator) ResetAttesterProtectionData() {
+	v.attesterHistoryByPubKeyLock.Lock()
+	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
+	v.attesterHistoryByPubKeyLock.Unlock()
+}
+
+// SaveProtection saves the attestation information currently in validator state.
+func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
+	v.attesterHistoryByPubKeyLock.RLock()
+	defer v.attesterHistoryByPubKeyLock.RUnlock()
+	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
+		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
+	}
+
+	return nil
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:

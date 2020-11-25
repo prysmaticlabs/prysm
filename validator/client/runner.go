@@ -27,11 +27,13 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
+	UpdateProtections(ctx context.Context, slot uint64) error
 	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
+	ResetAttesterProtectionData()
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
@@ -112,6 +114,12 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 
+			if err := v.UpdateProtections(ctx, slot); err != nil {
+				log.WithError(err).Error("Could not update validator protection")
+				span.End()
+				continue
+			}
+
 			// Start fetching domain data for the next epoch.
 			if helpers.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
@@ -146,10 +154,11 @@ func run(ctx context.Context, v Validator) {
 				}
 			}
 			// Wait for all processes to complete, then report span complete.
+
 			go func() {
 				wg.Wait()
-				v.LogAttestationsSubmitted()
 				// Log this client performance in the previous epoch
+				v.LogAttestationsSubmitted()
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 					log.WithError(err).Error("Could not report validator's rewards/penalties")
 				}

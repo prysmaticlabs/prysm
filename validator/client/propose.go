@@ -1,5 +1,6 @@
 package client
 
+// Validator client proposer functions.
 import (
 	"context"
 	"fmt"
@@ -11,10 +12,8 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/remote"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -67,6 +66,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, &ethpb.SignedBeaconBlock{Block: b}, [32]byte{}),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
 	// Sign returned block from beacon node
 	sig, signingRoot, err := v.signBlock(ctx, pubKey, b)
 	if err != nil {
@@ -81,43 +87,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	locallySlashable, err := v.localSlashingProtector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
-	if err != nil {
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, blk),
-		).WithError(err).Error("Could not check block safety with local slashing protection, not submitting")
+			blockLogFields(pubKey, blk, signingRoot),
+		).WithError(err).Error("Failed block slashing protection check")
 		return
-	}
-	if locallySlashable {
-		log.WithFields(
-			blockLogFields(pubKey, blk),
-		).Warn("Attempted to submit a slashable block, blocked by local slashing protection")
-		return
-	}
-	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
-		remoteSlashable, err := v.remoteSlashingProtector.IsSlashableBlock(ctx, blk, pubKey, signingRoot)
-		if err != nil {
-			if featureconfig.Get().DisableStrictRemoteSlashingProtection {
-				if !errors.Is(err, remote.ErrSlasherUnavailable) {
-					// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
-					log.WithFields(
-						blockLogFields(pubKey, blk),
-					).WithError(err).Warn("Could not check block safety with remote slashing protection, not submitting")
-					return
-				}
-			} else {
-				log.WithFields(
-					blockLogFields(pubKey, blk),
-				).WithError(err).Warn("Could not check block safety with remote slashing protection, not submitting")
-				return
-			}
-		}
-		if remoteSlashable {
-			log.WithFields(
-				blockLogFields(pubKey, blk),
-			).Warn("Attempted to submit a slashable block, blocked by remote slashing protection")
-			return
-		}
 	}
 
 	// Propose and broadcast block via beacon node
@@ -288,11 +262,12 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-func blockLogFields(pubKey [48]byte, sBlock *ethpb.SignedBeaconBlock) logrus.Fields {
+func blockLogFields(pubKey [48]byte, sBlock *ethpb.SignedBeaconBlock, signingRoot [32]byte) logrus.Fields {
 	return logrus.Fields{
 		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
 		"proposerIndex":     sBlock.Block.ProposerIndex,
 		"blockSlot":         sBlock.Block.Slot,
+		"signingRoot":       signingRoot,
 		"signature":         fmt.Sprintf("%#x", sBlock.Signature),
 	}
 }

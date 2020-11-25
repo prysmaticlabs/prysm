@@ -12,12 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/remote"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -65,6 +63,13 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		AttestingIndices: []uint64{duty.ValidatorIndex},
 		Data:             data,
 	}
+	if err := v.preAttSignValidations(ctx, indexedAtt, pubKey); err != nil {
+		log.WithError(err).Error("Failed attestation slashing protection check")
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).Debug("Attempted slashable attestation details")
+		return
+	}
 
 	sig, signingRoot, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
@@ -73,45 +78,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
-	}
-	indexedAtt.Signature = sig
-	locallySlashable, err := v.localSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
-	if err != nil {
-		log.WithFields(
-			attestationLogFields(pubKey, indexedAtt),
-		).WithError(err).Error("Could not check attestation safety with local slashing protection, not submitting")
-		return
-	}
-	if locallySlashable {
-		log.WithFields(
-			attestationLogFields(pubKey, indexedAtt),
-		).Warn("Attempted to submit a slashable attestation, blocked by local slashing protection")
-		return
-	}
-	if remoteProtector, ok := v.remoteSlashingProtector.(*remote.Service); ok && remoteProtector != nil {
-		remoteSlashable, err := v.remoteSlashingProtector.IsSlashableAttestation(ctx, indexedAtt, pubKey, signingRoot)
-		if err != nil {
-			if featureconfig.Get().DisableStrictRemoteSlashingProtection {
-				if !errors.Is(err, remote.ErrSlasherUnavailable) {
-					// If slasher is unavailable, trust local protection and proceed with submitting the attestation.
-					log.WithFields(
-						attestationLogFields(pubKey, indexedAtt),
-					).WithError(err).Warn("Could not check attestation safety with remote slashing protection, not submitting")
-					return
-				}
-			} else {
-				log.WithFields(
-					attestationLogFields(pubKey, indexedAtt),
-				).WithError(err).Warn("Could not check attestation safety with remote slashing protection, not submitting")
-				return
-			}
-		}
-		if remoteSlashable {
-			log.WithFields(
-				attestationLogFields(pubKey, indexedAtt),
-			).Warn("Attempted to submit a slashable attestation, blocked by remote slashing protection")
-			return
-		}
 	}
 
 	var indexInCommittee uint64
@@ -139,6 +105,17 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Signature:       sig,
 	}
 
+	indexedAtt.Signature = sig
+	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey, signingRoot); err != nil {
+		log.WithError(err).Error("Failed attestation slashing protection check")
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).Debug("Attempted slashable attestation details")
+		return
+	}
+	if err := v.SaveProtection(ctx, pubKey); err != nil {
+		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
+	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -146,6 +123,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
+	}
+	if err := v.SaveProtection(ctx, pubKey); err != nil {
+		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
 	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {

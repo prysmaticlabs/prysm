@@ -22,7 +22,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	m, ok := msg.(*types.SSZUint64)
 	if !ok {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
@@ -38,20 +38,20 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidSequenceNum.Error(), stream)
 		}
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 		return err
 	}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 		return err
 	}
 	sq := types.SSZUint64(s.p2p.MetadataSeq())
 	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 		return err
 	}
@@ -59,7 +59,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if valid {
 		// If the sequence number was valid we're done.
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 		return nil
 	}
@@ -68,7 +68,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	go func() {
 		defer func() {
 			if err := stream.Close(); err != nil {
-				log.WithError(err).Debug("Failed to close stream")
+				log.WithError(err).Debug("Could not close stream")
 			}
 		}()
 		// New context so the calling function doesn't cancel on us.
@@ -80,7 +80,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 			// type isn't compatible with the error we have, so a direct
 			// equality checks fails.
 			if !strings.Contains(err.Error(), types.ErrIODeadline.Error()) {
-				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
+				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Could not send metadata request")
 			}
 			return
 		}
@@ -103,7 +103,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	currentTime := timeutils.Now()
 	defer func() {
 		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 

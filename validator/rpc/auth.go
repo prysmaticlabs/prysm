@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,8 +33,8 @@ const (
 // a sufficiently strong password check.
 func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
-	if strings.TrimSpace(req.WalletDir) != "" {
-		walletDir = req.WalletDir
+	if req.Password != req.PasswordConfirmation {
+		return nil, status.Error(codes.InvalidArgument, "Password confirmation does not match")
 	}
 	// First, we check if the validator already has a password. In this case,
 	// the user should be logged in as normal.
@@ -65,9 +65,6 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 // Login to authenticate with the validator RPC API using a password.
 func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
-	if strings.TrimSpace(req.WalletDir) != "" {
-		walletDir = req.WalletDir
-	}
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
@@ -86,6 +83,19 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 		return nil, status.Error(codes.Unauthenticated, "Incorrect validator RPC password")
 	}
 	return s.sendAuthResponse()
+}
+
+// HasUsedWeb checks if the user has authenticated via the web interface.
+func (s *Server) HasUsedWeb(ctx context.Context, _ *ptypes.Empty) (*pb.HasUsedWebResponse, error) {
+	walletExists, err := wallet.Exists(s.walletDir)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
+	}
+	hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
+	return &pb.HasUsedWebResponse{
+		HasSignedUp: fileutil.FileExists(hashedPasswordPath),
+		HasWallet:   walletExists,
+	}, nil
 }
 
 // Logout a user by invalidating their JWT key.
@@ -164,10 +174,12 @@ func (s *Server) checkUserSignup(ctx context.Context) {
 			if fileutil.FileExists(hashedPasswordPath) {
 				return
 			}
-			log.Warn(
-				"You are using the --web option but have not yet signed via a browser. " +
-					"If your web host and port are exposed to the Internet, someone else can attempt to sign up " +
-					"for you!",
+			log.Warnf(
+				"You are using the --web option but have not yet signed via a browser. "+
+					"If your web host and port are exposed to the Internet, someone else can attempt to sign up "+
+					"for you! You can visit http://%s:%d to view the Prysm web interface",
+				s.validatorGatewayHost,
+				s.validatorGatewayPort,
 			)
 		case <-s.ctx.Done():
 			return

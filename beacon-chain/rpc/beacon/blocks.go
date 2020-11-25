@@ -38,7 +38,7 @@ func (bs *Server) ListBlocks(
 	case *ethpb.ListBlocksRequest_Epoch:
 		blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Failed to get blocks: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not get blocks: %v", err)
 		}
 
 		numBlks := len(blks)
@@ -194,12 +194,12 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 				}
 				headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
 				if err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get head state to verify block signature")
+					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
 					continue
 				}
 
 				if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not verify block signature")
+					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
 					continue
 				}
 				if err := stream.Send(data.SignedBlock); err != nil {
