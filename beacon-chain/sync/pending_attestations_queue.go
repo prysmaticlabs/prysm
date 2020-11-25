@@ -122,7 +122,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			log.WithFields(logrus.Fields{
 				"blockRoot":        hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
 				"pendingAttsCount": len(attestations),
-			}).Info("Verified and saved pending attestations to pool")
+			}).Debug("Verified and saved pending attestations to pool")
 
 			// Delete the missing block root key from pending attestation queue so a node will not request for the block again.
 			s.pendingAttsLock.Lock()
