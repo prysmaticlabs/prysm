@@ -172,7 +172,7 @@ func MarkAllAsAttestedSinceLatestWrittenEpoch(
 
 // AttestedPublicKeys retrieves all public keys in our attestation history bucket.
 func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
+	ctx, span := trace.StartSpan(ctx, "Validator.AttestedPublicKeys")
 	defer span.End()
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
