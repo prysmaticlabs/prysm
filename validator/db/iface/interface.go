@@ -24,12 +24,13 @@ type ValidatorDB interface {
 	// Proposer protection related methods.
 	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
 	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
-	HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
-	LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
 
 	// New data structure methods
+	HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
+	LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
 	ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([]byte, error)
 	SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot uint64, signingRoot []byte) error
+	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
 
 	// Attester protection related methods.
 	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
@@ -39,4 +40,5 @@ type ValidatorDB interface {
 	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
 	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
 	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
+	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 }

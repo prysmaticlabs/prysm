@@ -170,6 +170,24 @@ func MarkAllAsAttestedSinceLatestWrittenEpoch(
 	return newHD, nil
 }
 
+// AttestedPublicKeys retrieves all public keys in our attestation history bucket.
+func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.AttestedPublicKeys")
+	defer span.End()
+	var err error
+	attestedPublicKeys := make([][48]byte, 0)
+	err = store.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		return bucket.ForEach(func(key []byte, _ []byte) error {
+			pubKeyBytes := [48]byte{}
+			copy(pubKeyBytes[:], key)
+			attestedPublicKeys = append(attestedPublicKeys, pubKeyBytes)
+			return nil
+		})
+	})
+	return attestedPublicKeys, err
+}
+
 // AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
 func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeysV2")
