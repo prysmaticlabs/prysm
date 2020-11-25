@@ -7,37 +7,76 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db"
 )
 
-// ExportStandardProtectionJSON --
+// ExportStandardProtectionJSON extracts all slashing protection data from a validator database
+// and packages it into an EIP-3076 compliant, standard
 func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) (*EIPSlashingProtectionFormat, error) {
 	interchangeJSON := &EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
-	genesisRootHex, err := rootToHex(genesisValidatorsRoot)
+	genesisRootHex, err := rootToHexString(genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
 	interchangeJSON.Metadata.InterchangeFormatVersion = INTERCHANGE_FORMAT_VERSION
+
+	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
 	if err != nil {
 		return nil, err
 	}
-	data := make([]*ProtectionData, 0)
+	attestedPublicKeys, err := validatorDB.AttestedPublicKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	dataByPubKey := make(map[[48]byte]*ProtectionData)
+
+	// Extract the signed proposals by public keys.
 	for _, pubKey := range proposedPublicKeys {
-		pubKeyHex, err := pubKeyToHex(pubKey[:])
+		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, err
 		}
 		signedBlocks, err := getSignedBlocksByPubKey(ctx, validatorDB, pubKey)
-		data = append(data, &ProtectionData{
+		if err != nil {
+			return nil, err
+		}
+		dataByPubKey[pubKey] = &ProtectionData{
 			Pubkey:             pubKeyHex,
 			SignedBlocks:       signedBlocks,
 			SignedAttestations: nil,
-		})
+		}
 	}
-	interchangeJSON.Data = data
+
+	// Extract the signed attestations by public keys.
+	for _, pubKey := range attestedPublicKeys {
+		pubKeyHex, err := pubKeyToHexString(pubKey[:])
+		if err != nil {
+			return nil, err
+		}
+		signedAttestations, err := getSignedAttestationsByPubKey(ctx, validatorDB, pubKey)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := dataByPubKey[pubKey]; ok {
+			dataByPubKey[pubKey].SignedAttestations = signedAttestations
+		} else {
+			dataByPubKey[pubKey] = &ProtectionData{
+				Pubkey:             pubKeyHex,
+				SignedBlocks:       nil,
+				SignedAttestations: signedAttestations,
+			}
+		}
+	}
+
+	// Next we turn our map into a slice as expected by the EIP-3076 JSON standard.
+	dataList := make([]*ProtectionData, 0)
+	for _, item := range dataByPubKey {
+		dataList = append(dataList, item)
+	}
+	interchangeJSON.Data = dataList
 	return interchangeJSON, nil
 }
 
@@ -51,12 +90,15 @@ func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKe
 		return nil, err
 	}
 	signedBlocks := make([]*SignedBlock, 0)
-	for i := lowestSignedSlot; i < highestSignedSlot; i++ {
+	for i := lowestSignedSlot; i <= highestSignedSlot; i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		signingRoot, err := validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], i)
 		if err != nil {
 			return nil, err
 		}
-		signingRootHex, err := rootToHex(signingRoot)
+		signingRootHex, err := rootToHexString(signingRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -83,11 +125,14 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 	}
 	signedAtts := make([]*SignedAttestation, 0)
 	for i := uint64(0); i < highestWritten; i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		historicalAtt, err := history.GetTargetData(ctx, i)
 		if err != nil {
 			return nil, err
 		}
-		signingRootHex, err := rootToHex(historicalAtt.SigningRoot)
+		signingRootHex, err := rootToHexString(historicalAtt.SigningRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -100,14 +145,18 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 	return signedAtts, nil
 }
 
-func rootToHex(root []byte) (string, error) {
+func rootToHexString(root []byte) (string, error) {
+	// Nil signing roots are allowed in EIP-3076.
+	if root == nil {
+		return "", nil
+	}
 	if len(root) != 32 {
 		return "", fmt.Errorf("wanted length 32, received %d", len(root))
 	}
 	return fmt.Sprintf("%#x", root), nil
 }
 
-func pubKeyToHex(pubKey []byte) (string, error) {
+func pubKeyToHexString(pubKey []byte) (string, error) {
 	if len(pubKey) != 48 {
 		return "", fmt.Errorf("wanted length 48, received %d", len(pubKey))
 	}
