@@ -34,14 +34,18 @@ func TestNewProposalHistoryForSlot_NilDB(t *testing.T) {
 func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 	pubkey := [48]byte{3}
 	db := setupDB(t, [][48]byte{pubkey})
+	emptySigningRoot := make([]byte, 32)
 
 	slot := uint64(2)
-
-	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
-	require.NoError(t, err, "Saving proposal history failed: %v")
+	// test min slot that is not set doesnt block
 	signingRoot, min, err := db.ProposalHistoryForSlot(context.Background(), pubkey[:], slot)
 	require.NoError(t, err, "Failed to get proposal history")
-
+	require.DeepEqual(t, emptySigningRoot, signingRoot)
+	require.Equal(t, uint64(0), min)
+	err = db.SaveProposalHistoryForSlot(context.Background(), pubkey[:], slot, []byte{1})
+	require.NoError(t, err, "Saving proposal history failed: %v")
+	signingRoot, min, err = db.ProposalHistoryForSlot(context.Background(), pubkey[:], slot)
+	require.NoError(t, err, "Failed to get proposal history")
 	require.NotNil(t, signingRoot)
 	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot, "Expected DB to keep object the same")
 	require.Equal(t, slot, min)
