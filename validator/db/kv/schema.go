@@ -13,19 +13,10 @@ var (
 	// New Validator slashing protection from slashable attestations.
 	newHistoricAttestationsBucket = []byte("attestation-history-bucket-interchange")
 
-	// Bolt bucket keys.
+	// Lowest and highest signed proposals.
+	lowestSignedProposalsBucket  = []byte("lowest-signed-proposals-bucket")
+	highestSignedProposalsBucket = []byte("highest-signed-proposals-bucket")
 
-	// Genesis validators root key.
+	// Genesis validators root bucket key.
 	genesisValidatorsRootKey = []byte("genesis-val-root")
-
-	// Key to the lowest signed proposal in a validator bucket.
-	lowestSignedProposalKey  = []byte("lowest-signed-proposal")
-	highestSignedProposalKey = []byte("highest-signed-proposal")
-
-	// All bucket keys must be placed in the slice below.
-	bucketKeys = [][]byte{
-		genesisValidatorsRootKey,
-		lowestSignedProposalKey,
-		highestSignedProposalKey,
-	}
 )

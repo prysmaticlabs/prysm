@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -24,12 +23,6 @@ func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
-			for _, bucketKey := range bucketKeys {
-				// Ignore special keys. Everything else is a validator public key.
-				if bytes.Equal(key, bucketKey) {
-					return nil
-				}
-			}
 			pubKeyBytes := [48]byte{}
 			copy(pubKeyBytes[:], key)
 			proposedPublicKeys = append(proposedPublicKeys, pubKeyBytes)
@@ -81,25 +74,27 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 		}
 
 		// If the incoming slot is lower than the lowest signed proposal slot, override.
-		lowestSignedProposalBytes := valBucket.Get(lowestSignedProposalKey)
+		lowestSignedBkt := tx.Bucket(lowestSignedProposalsBucket)
+		lowestSignedProposalBytes := lowestSignedBkt.Get(pubKey[:])
 		var lowestSignedProposalSlot uint64
 		if len(lowestSignedProposalBytes) != 0 {
 			lowestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(lowestSignedProposalBytes)
 		}
 		if len(lowestSignedProposalBytes) == 0 || slot < lowestSignedProposalSlot {
-			if err := valBucket.Put(lowestSignedProposalKey, bytesutil.Uint64ToBytesBigEndian(slot)); err != nil {
+			if err := lowestSignedBkt.Put(pubKey[:], bytesutil.Uint64ToBytesBigEndian(slot)); err != nil {
 				return err
 			}
 		}
 
 		// If the incoming slot is higher than the highest signed proposal slot, override.
-		highestSignedProposalBytes := valBucket.Get(highestSignedProposalKey)
+		highestSignedBkt := tx.Bucket(highestSignedProposalsBucket)
+		highestSignedProposalBytes := highestSignedBkt.Get(pubKey[:])
 		var highestSignedProposalSlot uint64
 		if len(highestSignedProposalBytes) != 0 {
 			highestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(highestSignedProposalBytes)
 		}
 		if len(highestSignedProposalBytes) == 0 || slot > highestSignedProposalSlot {
-			if err := valBucket.Put(highestSignedProposalKey, bytesutil.Uint64ToBytesBigEndian(slot)); err != nil {
+			if err := highestSignedBkt.Put(pubKey[:], bytesutil.Uint64ToBytesBigEndian(slot)); err != nil {
 				return err
 			}
 		}
@@ -121,12 +116,8 @@ func (store *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte
 	var err error
 	var lowestSignedProposalSlot uint64
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
-		valBucket := bucket.Bucket(publicKey[:])
-		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
-		}
-		lowestSignedProposalBytes := valBucket.Get(lowestSignedProposalKey)
+		bucket := tx.Bucket(lowestSignedProposalsBucket)
+		lowestSignedProposalBytes := bucket.Get(publicKey[:])
 		if len(lowestSignedProposalBytes) == 0 {
 			return nil
 		}
@@ -145,12 +136,8 @@ func (store *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byt
 	var err error
 	var highestSignedProposalSlot uint64
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
-		valBucket := bucket.Bucket(publicKey[:])
-		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
-		}
-		highestSignedProposalBytes := valBucket.Get(highestSignedProposalKey)
+		bucket := tx.Bucket(highestSignedProposalsBucket)
+		highestSignedProposalBytes := bucket.Get(publicKey[:])
 		if len(highestSignedProposalBytes) == 0 {
 			return nil
 		}

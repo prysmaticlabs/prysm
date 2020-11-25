@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -180,12 +179,6 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
-			for _, bucketKey := range bucketKeys {
-				// Ignore special keys. Everything else is a validator public key.
-				if bytes.Equal(key, bucketKey) {
-					return nil
-				}
-			}
 			pubKeyBytes := [48]byte{}
 			copy(pubKeyBytes[:], key)
 			attestedPublicKeys = append(attestedPublicKeys, pubKeyBytes)
