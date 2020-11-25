@@ -124,6 +124,7 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	}
 	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
 	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
+
 	return hd, nil
 }
 
@@ -229,6 +230,7 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKe
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		return bucket.Put(pubKey[:], history)
 	})
+
 	return err
 }
 
@@ -259,6 +261,8 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 		return errors.Wrapf(err, "could not retrieve data for public keys %v", allKeys)
 	}
 	dataMap := make(map[[48]byte]EncHistoryData)
+	validatorHighestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested source epoch.
+	validatorHighestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested target epoch.
 	for key, atts := range attMap {
 		dataMap[key] = NewAttestationHistoryArray(atts.LatestEpochWritten)
 		dataMap[key], err = dataMap[key].SetLatestEpochWritten(ctx, atts.LatestEpochWritten)
@@ -273,8 +277,52 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to set target data while migrating attestations to v2")
 			}
+			// Cache highest source and target epoch so we can write them to the DB later.
+			se, ok := validatorHighestSourceEpoch[key]
+			if !ok {
+				validatorHighestSourceEpoch[key] = source
+			} else if source > se {
+				validatorHighestSourceEpoch[key] = source
+			}
+			te, ok := validatorHighestTargetEpoch[key]
+			if !ok {
+				validatorHighestTargetEpoch[key] = target
+			} else if source > te {
+				validatorHighestTargetEpoch[key] = target
+			}
 		}
 	}
+
+	// This should not happen but I feel better with this check for the DB writes below.
+	if len(validatorHighestTargetEpoch) != len(validatorHighestSourceEpoch) {
+		return errors.New("incorrect source and target map length")
+	}
+
+	// Save highest source and target epoch to DB for every validator in the map.
+	err = store.update(func(tx *bolt.Tx) error {
+		for key, sourceEpoch := range validatorHighestSourceEpoch {
+			bucket := tx.Bucket(newHistoricAttestationsBucket)
+			valBucket, err := bucket.CreateBucketIfNotExists(key[:])
+			if err != nil {
+				return fmt.Errorf("could not create bucket for public key %#x", key)
+			}
+			if err := valBucket.Put(highestSignedSourceKey, bytesutil.Uint64ToBytesBigEndian(sourceEpoch)); err != nil {
+				return err
+			}
+			targetEpoch, ok := validatorHighestTargetEpoch[key]
+			if !ok {
+				return errors.New("target epoch key not found")
+			}
+			if err := valBucket.Put(highestSignedSourceKey, bytesutil.Uint64ToBytesBigEndian(targetEpoch)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	err = store.SaveAttestationHistoryForPubKeysV2(ctx, dataMap)
 	return err
 }
@@ -321,4 +369,106 @@ func (store *Store) shouldMigrateAttestations() (bool, error) {
 		return nil
 	})
 	return importAttestations, err
+}
+
+// HighestSignedSourceEpoch returns the highest signed source epoch for a validator public key.
+// If no data exists, returning 0 is a sensible default.
+func (store *Store) HighestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.HighestSignedSourceEpoch")
+	defer span.End()
+
+	var err error
+	var highestSignedSourceEpoch uint64
+	err = store.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		valBucket := bucket.Bucket(publicKey[:])
+		if valBucket == nil {
+			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
+		}
+		highestSignedSourceBytes := valBucket.Get(highestSignedSourceKey)
+		if len(highestSignedSourceBytes) == 0 {
+			return nil
+		}
+		highestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(highestSignedSourceBytes)
+		return nil
+	})
+	return highestSignedSourceEpoch, err
+}
+
+// HighestSignedTargetEpoch returns the highest signed target epoch for a validator public key.
+// If no data exists, returning 0 is a sensible default.
+func (store *Store) HighestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.HighestSignedTargetEpoch")
+	defer span.End()
+
+	var err error
+	var highestSignedTargetEpoch uint64
+	err = store.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		valBucket := bucket.Bucket(publicKey[:])
+		if valBucket == nil {
+			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
+		}
+		highestSignedTargetBytes := valBucket.Get(highestSignedTargetKey)
+		if len(highestSignedTargetBytes) == 0 {
+			return nil
+		}
+		highestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(highestSignedTargetBytes)
+		return nil
+	})
+	return highestSignedTargetEpoch, err
+}
+
+// SaveHighestSignedSourceEpoch saves the highest signed source epoch for a validator public key.
+func (store *Store) SaveHighestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveHighestSignedSourceEpoch")
+	defer span.End()
+
+	return store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
+		if err != nil {
+			return fmt.Errorf("could not create bucket for public key %#x", publicKey)
+		}
+
+		// If the incoming epoch is higher than the highest signed epoch, override.
+		highestSignedSourceBytes := valBucket.Get(highestSignedSourceKey)
+		var highestSignedSourceEpoch uint64
+		if len(highestSignedSourceBytes) != 0 {
+			highestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(highestSignedSourceBytes)
+		}
+		if len(highestSignedSourceBytes) == 0 || epoch > highestSignedSourceEpoch {
+			if err := valBucket.Put(highestSignedProposalKey, bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// SaveHighestSignedTargetEpoch saves the highest signed target epoch for a validator public key.
+func (store *Store) SaveHighestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveHighestSignedTargetEpoch")
+	defer span.End()
+
+	return store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
+		if err != nil {
+			return fmt.Errorf("could not create bucket for public key %#x", publicKey)
+		}
+
+		// If the incoming epoch is higher than the highest signed epoch, override.
+		highestSignedTargetBytes := valBucket.Get(highestSignedTargetKey)
+		var highestSignedTargetEpoch uint64
+		if len(highestSignedTargetBytes) != 0 {
+			highestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(highestSignedTargetBytes)
+		}
+		if len(highestSignedTargetBytes) == 0 || epoch > highestSignedTargetEpoch {
+			if err := valBucket.Put(highestSignedProposalKey, bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
