@@ -54,6 +54,7 @@ var WalletCommands = &cli.Command{
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.GrpcRemoteAddressFlag,
+				flags.DisableRemoteSignerTlsFlag,
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
