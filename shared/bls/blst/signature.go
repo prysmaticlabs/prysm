@@ -36,6 +36,10 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 	if signature == nil {
 		return nil, errors.New("could not unmarshal bytes into signature")
 	}
+	// Group check signature
+	if !signature.SigValidate(false) {
+		return nil, errors.New("signature not in group")
+	}
 	return &Signature{s: signature}, nil
 }
 
@@ -52,7 +56,8 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	return s.s.Verify(pubKey.(*PublicKey).p, msg, dst)
+	// Signature and PKs are assumed to be already validated!
+	return s.s.Verify(false, pubKey.(*PublicKey).p, false, msg, dst)
 }
 
 // AggregateVerify verifies each public key against its respective message.
@@ -85,7 +90,8 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 		msgSlices[i] = msgs[i][:]
 		rawKeys[i] = pubKeys[i].(*PublicKey).p
 	}
-	return s.s.AggregateVerify(rawKeys, msgSlices, dst)
+	// Signature and PKs are assumed to be already validated!
+	return s.s.AggregateVerify(false, rawKeys, false, msgSlices, dst)
 }
 
 // FastAggregateVerify verifies all the provided public keys with their aggregated signature.
@@ -133,7 +139,9 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 		rawSigs[i] = sigs[i].(*Signature).s
 	}
 
-	signature := new(blstAggregateSignature).Aggregate(rawSigs)
+	// Signature and PKs are assumed to be already validated!
+	signature := new(blstAggregateSignature)
+	signature.Aggregate(rawSigs, false)
 	if signature == nil {
 		return nil
 	}
@@ -192,7 +200,10 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 		scalar.FromBEndian(rbytes[:])
 	}
 	dummySig := new(blstSignature)
-	return dummySig.MultipleAggregateVerify(rawSigs, mulP1Aff, rawMsgs, dst, randFunc, randBitsEntropy), nil
+
+	// Validate signatures sincd we just uncompressed them
+	// Do not validate public keys
+	return dummySig.MultipleAggregateVerify(rawSigs, true, mulP1Aff, false, rawMsgs, dst, randFunc, randBitsEntropy), nil
 }
 
 // Marshal a signature into a LittleEndian byte slice.
@@ -213,5 +224,6 @@ func (s *Signature) Copy() common.Signature {
 // VerifyCompressed verifies that the compressed signature and pubkey
 // are valid from the message provided.
 func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
-	return new(blstSignature).VerifyCompressed(signature, pub, msg, dst)
+	// Validate signature and PKs since we will uncompress them here
+	return new(blstSignature).VerifyCompressed(signature, true, pub, true, msg, dst)
 }
