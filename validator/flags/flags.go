@@ -240,7 +240,7 @@ var (
 	// DisableRemoteSignerTlsFlag disables TLS when connecting to a remote signer.
 	DisableRemoteSignerTlsFlag = &cli.BoolFlag{
 		Name:  "disable-remote-signer-tls",
-		Usage: "Disables TLS when connecting to a remote signer. (WARNING! This may result in insecure requests!)",
+		Usage: "Disables TLS when connecting to a remote signer. (WARNING! This will result in insecure requests!)",
 		Value: false,
 	}
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
