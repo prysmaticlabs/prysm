@@ -25,7 +25,9 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 		Slot:          10,
 		ProposerIndex: 0,
 	}
-	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorKey.PublicKey().Marshal(), 10, []byte{1})
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
+	err := validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, 10, []byte{1})
 	require.NoError(t, err)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
