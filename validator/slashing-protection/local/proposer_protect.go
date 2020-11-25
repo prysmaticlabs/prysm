@@ -24,8 +24,8 @@ func (s *Service) IsSlashableBlock(
 		return false, errors.Wrap(err, "failed to get proposal history")
 	}
 	// Check if we are performing a double block proposal.
-	same := existingSigningRoot != nil && bytes.Equal(existingSigningRoot, signingRoot[:])
-	if existingSigningRoot != nil && !same {
+	hasSameSigningRoot := existingSigningRoot != nil && bytes.Equal(existingSigningRoot, signingRoot[:])
+	if !hasSameSigningRoot {
 		slashingprotection.LocalSlashableProposalsTotal.Inc()
 		return true, nil
 	}
