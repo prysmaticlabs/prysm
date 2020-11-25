@@ -86,11 +86,11 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
+			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
-				params.BeaconConfig().ZeroHash[:],
+				params.BeaconConfig().ZeroHash,
 				receivedProposalSigningRoot,
 				"Imported proposal signing root is different than the empty default",
 			)
@@ -131,11 +131,11 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
+			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
-				receivedProposalSigningRoot,
+				receivedProposalSigningRoot[:],
 				proposal.SigningRoot,
 				"Imported proposals are different then the generated ones",
 			)
