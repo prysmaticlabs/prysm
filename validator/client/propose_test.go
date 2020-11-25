@@ -303,7 +303,8 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey[:], 0, []byte{1})
+	require.NoError(t, err)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
