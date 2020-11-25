@@ -279,8 +279,6 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 		return errors.Wrapf(err, "could not retrieve data for public keys %v", allKeys)
 	}
 	dataMap := make(map[[48]byte]EncHistoryData)
-	validatorHighestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested source epoch.
-	validatorHighestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested target epoch.
 	for key, atts := range attMap {
 		dataMap[key] = NewAttestationHistoryArray(atts.LatestEpochWritten)
 		dataMap[key], err = dataMap[key].SetLatestEpochWritten(ctx, atts.LatestEpochWritten)
@@ -295,50 +293,7 @@ func (store *Store) MigrateV2AttestationProtection(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to set target data while migrating attestations to v2")
 			}
-			// Cache highest source and target epoch so we can write them to the DB later.
-			se, ok := validatorHighestSourceEpoch[key]
-			if !ok {
-				validatorHighestSourceEpoch[key] = source
-			} else if source > se {
-				validatorHighestSourceEpoch[key] = source
-			}
-			te, ok := validatorHighestTargetEpoch[key]
-			if !ok {
-				validatorHighestTargetEpoch[key] = target
-			} else if source > te {
-				validatorHighestTargetEpoch[key] = target
-			}
 		}
-	}
-
-	// This should not happen but I feel better with this check for the DB writes below.
-	if len(validatorHighestTargetEpoch) != len(validatorHighestSourceEpoch) {
-		return errors.New("incorrect source and target map length")
-	}
-
-	// Save highest source and target epoch to DB for every validator in the map.
-	err = store.update(func(tx *bolt.Tx) error {
-		for key, sourceEpoch := range validatorHighestSourceEpoch {
-			bucket := tx.Bucket(newHistoricAttestationsBucket)
-			valBucket, err := bucket.CreateBucketIfNotExists(key[:])
-			if err != nil {
-				return fmt.Errorf("could not create bucket for public key %#x", key)
-			}
-			if err := valBucket.Put(highestSignedSourceKey, bytesutil.Uint64ToBytesBigEndian(sourceEpoch)); err != nil {
-				return err
-			}
-			targetEpoch, ok := validatorHighestTargetEpoch[key]
-			if !ok {
-				return errors.New("target epoch key not found")
-			}
-			if err := valBucket.Put(highestSignedSourceKey, bytesutil.Uint64ToBytesBigEndian(targetEpoch)); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	err = store.SaveAttestationHistoryForPubKeysV2(ctx, dataMap)

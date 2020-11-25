@@ -37,8 +37,8 @@ type ValidatorDB interface {
 	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
 	HighestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
 	HighestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
-	SaveHighestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) uint64
-	SaveHighestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) uint64
+	SaveHighestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
+	SaveHighestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 
 	// New attestation store methods.
 	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
