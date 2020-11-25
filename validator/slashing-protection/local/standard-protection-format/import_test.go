@@ -51,11 +51,12 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	numValidators := 10
 	publicKeys := createRandomPubKeys(t, numValidators)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
+	min := uint64(10)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators)
-	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
+	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators, min)
+	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory, min)
 
 	// We replace a slot of one of the blocks with junk data.
 	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
@@ -86,7 +87,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
+			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
@@ -103,11 +104,12 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 	numValidators := 10
 	publicKeys := createRandomPubKeys(t, numValidators)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
+	min := uint64(10)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators)
-	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
+	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators, min)
+	standardProtectionFormat := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory, min)
 
 	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(standardProtectionFormat)
@@ -131,13 +133,18 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
+			receivedProposalSigningRoot, minimalSlot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
 				receivedProposalSigningRoot,
 				proposal.SigningRoot,
-				"Imported proposals are different then the generated ones",
+				"Imported proposals are different then the generated ones for slot %d public key %#x", proposal.Slot, publicKeys[i][:],
+			)
+			require.Equal(
+				t, min, minimalSlot,
+				proposal.SigningRoot,
+				"Minimal proposal slot was not set right",
 			)
 		}
 	}
@@ -750,6 +757,7 @@ func mockSlashingProtectionJSON(
 	publicKeys [][48]byte,
 	attestingHistories []kv.EncHistoryData,
 	proposalHistories []kv.ProposalHistoryForPubkey,
+	min uint64,
 ) *EIPSlashingProtectionFormat {
 	standardProtectionFormat := &EIPSlashingProtectionFormat{}
 	standardProtectionFormat.Metadata.GenesisValidatorsRoot = hex.EncodeToString(bytesutil.PadTo([]byte{32}, 32))
@@ -770,7 +778,7 @@ func mockSlashingProtectionJSON(
 				SigningRoot: hex.EncodeToString(hd.SigningRoot),
 			})
 		}
-		for target := uint64(0); target < highestEpochWritten; target++ {
+		for target := uint64(0); target <= highestEpochWritten-min; target++ {
 			proposal := proposalHistories[i].Proposals[target]
 			block := &SignedBlock{
 				Slot:        strconv.FormatUint(proposal.Slot, 10),
@@ -784,7 +792,7 @@ func mockSlashingProtectionJSON(
 	return standardProtectionFormat
 }
 
-func mockAttestingAndProposalHistories(t *testing.T, numValidators int) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey) {
+func mockAttestingAndProposalHistories(t *testing.T, numValidators int, min uint64) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey) {
 	// deduplicate and transform them into our internal format.
 	attData := make([]kv.EncHistoryData, numValidators)
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
@@ -792,10 +800,10 @@ func mockAttestingAndProposalHistories(t *testing.T, numValidators int) ([]kv.En
 	ctx := context.Background()
 	for v := 0; v < numValidators; v++ {
 		var err error
-		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 100)
+		latestTarget := uint64(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod)/100)) + min
 		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
 		proposals := make([]kv.Proposal, 0)
-		for i := 1; i < latestTarget; i++ {
+		for i := min; i < latestTarget; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
@@ -803,20 +811,20 @@ func mockAttestingAndProposalHistories(t *testing.T, numValidators int) ([]kv.En
 				Source:      uint64(gen.Intn(100000)),
 				SigningRoot: signingRoot[:],
 			}
-			hd, err = hd.SetTargetData(ctx, uint64(i), historyData)
+			hd, err = hd.SetTargetData(ctx, i, historyData)
 			require.NoError(t, err)
 		}
-		for i := 1; i <= latestTarget; i++ {
+		for i := min; i <= latestTarget; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			proposals = append(proposals, kv.Proposal{
-				Slot:        uint64(i),
+				Slot:        i,
 				SigningRoot: signingRoot[:],
 			})
 		}
 		proposalData[v] = kv.ProposalHistoryForPubkey{Proposals: proposals}
-		hd, err = hd.SetLatestEpochWritten(ctx, uint64(latestTarget))
+		hd, err = hd.SetLatestEpochWritten(ctx, latestTarget)
 		require.NoError(t, err)
 		attData[v] = hd
 	}

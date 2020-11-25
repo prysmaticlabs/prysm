@@ -20,12 +20,17 @@ var failedPostBlockSignErr = "made a double proposal, considered slashable by re
 
 func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	signingRoot, err := v.db.ProposalHistoryForSlot(ctx, pubKey[:], block.Slot)
+	signingRoot, minSlot, err := v.db.ProposalHistoryForSlot(ctx, pubKey[:], block.Slot)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return errors.Wrap(err, "failed to get proposal history")
+	}
+	// Dont allow blocks with minimal slot lower then the minimal imported slot to be signed.
+	if block.Slot < minSlot {
+		ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
+		return errors.New(failedPreBlockSignLocalErr)
 	}
 	// If the bit for the current slot is marked, do not propose.
 	if !bytes.Equal(signingRoot, params.BeaconConfig().ZeroHash[:]) {

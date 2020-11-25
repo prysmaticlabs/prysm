@@ -14,4 +14,6 @@ var (
 	historicAttestationsBucket = []byte("attestation-history-bucket")
 	// New Validator slashing protection from slashable attestations.
 	newHistoricAttestationsBucket = []byte("attestation-history-bucket-interchange")
+	// Key to minimal proposal signing slot in proposal bucket.
+	minimalProposalSlotKey = []byte("minimal-proposal-signing-slot")
 )

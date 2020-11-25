@@ -20,20 +20,24 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 	defer reset()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
-
+	slot := uint64(10)
 	block := &ethpb.BeaconBlock{
-		Slot:          10,
+		Slot:          slot,
 		ProposerIndex: 0,
 	}
 	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorKey.PublicKey().Marshal(), 10, []byte{1})
 	require.NoError(t, err)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
+	err = validator.preBlockSignValidations(ctx, pubKey, block)
 	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
-	block.Slot = 9
-	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
+	block.Slot = slot + 1
+	err = validator.preBlockSignValidations(ctx, pubKey, block)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	// Change the slot and now we should get a slashable block becuse it is below the min signed block.
+	block.Slot = slot - 1
+	err = validator.preBlockSignValidations(ctx, pubKey, block)
+	require.ErrorContains(t, "attempted to sign a double proposal", err)
 }
 
 func TestPreBlockSignValidation(t *testing.T) {
@@ -46,7 +50,6 @@ func TestPreBlockSignValidation(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
 	block := &ethpb.BeaconBlock{
 		Slot:          10,
 		ProposerIndex: 0,

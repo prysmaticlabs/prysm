@@ -16,18 +16,22 @@ import (
 
 // ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error) {
+func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
 	defer span.End()
 
 	var err error
 	signingRoot := make([]byte, 32)
+	var minimalSlot uint64
+
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		valBucket := bucket.Bucket(publicKey)
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
+		min := valBucket.Get(minimalProposalSlotKey)
+		minimalSlot = bytesutil.BytesToUint64BigEndian(min)
 		sr := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if len(sr) == 0 {
 			return nil
@@ -35,7 +39,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 		copy(signingRoot, sr)
 		return nil
 	})
-	return signingRoot, err
+	return signingRoot, minimalSlot, err
 }
 
 // SaveProposalHistoryForPubKeysV2 saves the proposal histories for the provided validator public keys.
@@ -46,6 +50,7 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForPubKeysV2")
 	defer span.End()
 
+	minimalProposalSlot := make(map[[48]byte]uint64)
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
 		for pubKey, history := range historyByPubKeys {
@@ -54,6 +59,13 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 				return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 			}
 			for _, proposal := range history.Proposals {
+				minimalSlot, ok := minimalProposalSlot[pubKey]
+				if !ok || (ok && proposal.Slot < minimalSlot) {
+					minimalProposalSlot[pubKey] = proposal.Slot
+					if err = valBucket.Put(minimalProposalSlotKey, bytesutil.Uint64ToBytesBigEndian(proposal.Slot)); err != nil {
+						return err
+					}
+				}
 				if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(proposal.Slot), proposal.SigningRoot); err != nil {
 					return err
 				}
@@ -66,7 +78,7 @@ func (store *Store) SaveProposalHistoryForPubKeysV2(
 
 // SaveProposalHistoryForSlot saves the proposal history for the requested validator public key.
 func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForSlot")
 	defer span.End()
 
 	err := store.update(func(tx *bolt.Tx) error {
@@ -74,6 +86,16 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 		valBucket, err := bucket.CreateBucketIfNotExists(pubKey)
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
+		}
+		enc := valBucket.Get(minimalProposalSlotKey)
+		var minSlot uint64
+		if len(enc) != 0 {
+			minSlot = bytesutil.BytesToUint64BigEndian(enc)
+		}
+		if len(enc) == 0 || slot < minSlot {
+			if err := valBucket.Put(minimalProposalSlotKey, bytesutil.Uint64ToBytesBigEndian(slot)); err != nil {
+				return err
+			}
 		}
 		if err := valBucket.Put(bytesutil.Uint64ToBytesBigEndian(slot), signingRoot); err != nil {
 			return err
