@@ -20,7 +20,7 @@ var failedPostBlockSignErr = "made a double proposal, considered slashable by re
 
 func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	signingRoot, err := v.db.ProposalHistoryForSlot(ctx, pubKey[:], block.Slot)
+	signingRoot, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -76,7 +76,7 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 		}
 		return errors.Wrap(err, "failed to compute signing root for block")
 	}
-	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey[:], block.Block.Slot, signingRoot[:]); err != nil {
+	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Block.Slot, signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
