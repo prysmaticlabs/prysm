@@ -227,9 +227,75 @@ func TestStore_UpdateProposalsProtectionDb(t *testing.T) {
 func TestStore_LowestSignedProposal(t *testing.T) {
 	ctx := context.Background()
 	pubkey := [48]byte{3}
-	validatorDB := setupDB(t, nil)
+	dummySigningRoot := [32]byte{}
+	validatorDB := setupDB(t, [][48]byte{pubkey})
 
 	slot, err := validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
-	assert.Equal(t, true, slot)
+	assert.Equal(t, uint64(0), slot)
+
+	// We save our first proposal history.
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 2 /* slot */, dummySigningRoot[:])
+	require.NoError(t, err)
+
+	// We expect the lowest signed slot is what we just saved.
+	slot, err = validatorDB.LowestSignedProposal(ctx, pubkey)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(2), slot)
+
+	// We save a higher proposal history.
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 3 /* slot */, dummySigningRoot[:])
+	require.NoError(t, err)
+
+	// We expect the lowest signed slot did not change.
+	slot, err = validatorDB.LowestSignedProposal(ctx, pubkey)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(2), slot)
+
+	// We save a lower proposal history.
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 1 /* slot */, dummySigningRoot[:])
+	require.NoError(t, err)
+
+	// We expect the lowest signed slot indeed changed.
+	slot, err = validatorDB.LowestSignedProposal(ctx, pubkey)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(1), slot)
+}
+
+func TestStore_HighestSignedProposal(t *testing.T) {
+	ctx := context.Background()
+	pubkey := [48]byte{3}
+	dummySigningRoot := [32]byte{}
+	validatorDB := setupDB(t, [][48]byte{pubkey})
+
+	slot, err := validatorDB.HighestSignedProposal(ctx, pubkey)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0), slot)
+
+	// We save our first proposal history.
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 2 /* slot */, dummySigningRoot[:])
+	require.NoError(t, err)
+
+	// We expect the highest signed slot is what we just saved.
+	slot, err = validatorDB.HighestSignedProposal(ctx, pubkey)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(2), slot)
+
+	// We save a lower proposal history.
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 1 /* slot */, dummySigningRoot[:])
+	require.NoError(t, err)
+
+	// We expect the lowest signed slot did not change.
+	slot, err = validatorDB.HighestSignedProposal(ctx, pubkey)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(2), slot)
+
+	// We save a higher proposal history.
+	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 3 /* slot */, dummySigningRoot[:])
+	require.NoError(t, err)
+
+	// We expect the highest signed slot indeed changed.
+	slot, err = validatorDB.HighestSignedProposal(ctx, pubkey)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(3), slot)
 }
