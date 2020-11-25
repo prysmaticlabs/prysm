@@ -36,3 +36,21 @@ func rootFromHex(str string) ([32]byte, error) {
 	copy(root[:], rootHexBytes[:32])
 	return root, nil
 }
+
+func rootToHexString(root []byte) (string, error) {
+	// Nil signing roots are allowed in EIP-3076.
+	if root == nil {
+		return "", nil
+	}
+	if len(root) != 32 {
+		return "", fmt.Errorf("wanted length 32, received %d", len(root))
+	}
+	return fmt.Sprintf("%#x", root), nil
+}
+
+func pubKeyToHexString(pubKey []byte) (string, error) {
+	if len(pubKey) != 48 {
+		return "", fmt.Errorf("wanted length 48, received %d", len(pubKey))
+	}
+	return fmt.Sprintf("%#x", pubKey), nil
+}

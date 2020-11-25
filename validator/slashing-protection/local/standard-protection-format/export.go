@@ -56,11 +56,11 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 }
 
 func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedBlock, error) {
-	lowestSignedSlot, err := validatorDB.LowestSignedProposal(ctx, pubKey[:])
+	lowestSignedSlot, err := validatorDB.LowestSignedProposal(ctx, pubKey)
 	if err != nil {
 		return nil, err
 	}
-	highestSignedSlot, err := validatorDB.HighestSignedProposal(ctx, pubKey[:])
+	highestSignedSlot, err := validatorDB.HighestSignedProposal(ctx, pubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -69,36 +69,20 @@ func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKe
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		signingRoot, err := validatorDB.ProposalHistoryForSlot(ctx, pubKey[:], i)
+		signingRoot, exists, err := validatorDB.ProposalHistoryForSlot(ctx, pubKey, i)
 		if err != nil {
 			return nil, err
 		}
-		signingRootHex, err := rootToHexString(signingRoot)
-		if err != nil {
-			return nil, err
+		if exists {
+			signingRootHex, err := rootToHexString(signingRoot[:])
+			if err != nil {
+				return nil, err
+			}
+			signedBlocks = append(signedBlocks, &SignedBlock{
+				Slot:        fmt.Sprintf("%d", i),
+				SigningRoot: signingRootHex,
+			})
 		}
-		signedBlocks = append(signedBlocks, &SignedBlock{
-			Slot:        fmt.Sprintf("%d", i),
-			SigningRoot: signingRootHex,
-		})
 	}
 	return signedBlocks, nil
-}
-
-func rootToHexString(root []byte) (string, error) {
-	// Nil signing roots are allowed in EIP-3076.
-	if root == nil {
-		return "", nil
-	}
-	if len(root) != 32 {
-		return "", fmt.Errorf("wanted length 32, received %d", len(root))
-	}
-	return fmt.Sprintf("%#x", root), nil
-}
-
-func pubKeyToHexString(pubKey []byte) (string, error) {
-	if len(pubKey) != 48 {
-		return "", fmt.Errorf("wanted length 48, received %d", len(pubKey))
-	}
-	return fmt.Sprintf("%#x", pubKey), nil
 }
