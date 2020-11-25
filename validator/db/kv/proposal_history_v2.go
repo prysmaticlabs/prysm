@@ -16,7 +16,7 @@ import (
 
 // ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root.
 // Returns nil if there is no proposal history for the validator at this slot.
-func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error) {
+func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
 	defer span.End()
 
@@ -24,7 +24,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 	signingRoot := make([]byte, 32)
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
-		valBucket := bucket.Bucket(publicKey)
+		valBucket := bucket.Bucket(publicKey[:])
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
@@ -41,13 +41,13 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey []byte
 // SaveProposalHistoryForSlot saves the proposal history for the requested validator public key.
 // We also check if the incoming proposal slot is lower than the lowest signed proposal slot
 // for the validator and override its value on disk.
-func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error {
+func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot uint64, signingRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
-		valBucket, err := bucket.CreateBucketIfNotExists(pubKey)
+		valBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 		}
@@ -86,7 +86,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey []byt
 
 // LowestSignedProposal returns the lowest signed proposal slot for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) LowestSignedProposal(ctx context.Context, publicKey []byte) (uint64, error) {
+func (store *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedProposal")
 	defer span.End()
 
@@ -94,7 +94,7 @@ func (store *Store) LowestSignedProposal(ctx context.Context, publicKey []byte) 
 	var lowestSignedProposalSlot uint64
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
-		valBucket := bucket.Bucket(publicKey)
+		valBucket := bucket.Bucket(publicKey[:])
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
@@ -110,7 +110,7 @@ func (store *Store) LowestSignedProposal(ctx context.Context, publicKey []byte) 
 
 // HighestSignedProposal returns the highest signed proposal slot for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) HighestSignedProposal(ctx context.Context, publicKey []byte) (uint64, error) {
+func (store *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.HighestSignedProposal")
 	defer span.End()
 
@@ -118,7 +118,7 @@ func (store *Store) HighestSignedProposal(ctx context.Context, publicKey []byte)
 	var highestSignedProposalSlot uint64
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newhistoricProposalsBucket)
-		valBucket := bucket.Bucket(publicKey)
+		valBucket := bucket.Bucket(publicKey[:])
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
 		}
