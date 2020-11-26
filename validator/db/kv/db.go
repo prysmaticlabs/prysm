@@ -90,8 +90,8 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 			historicAttestationsBucket,
 			newHistoricAttestationsBucket,
 			newHistoricProposalsBucket,
-			highestSignedSourceBucket,
-			highestSignedTargetBucket,
+			lowestSignedSourceBucket,
+			lowestSignedTargetBucket,
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
 		)

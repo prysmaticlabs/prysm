@@ -330,7 +330,7 @@ func TestStore_AttestedPublicKeys(t *testing.T) {
 	assert.DeepEqual(t, [][48]byte{pubKey}, keys)
 }
 
-func TestHighestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
+func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 	validatorDB, err := NewKVStore(t.TempDir(), nil)
 	require.NoError(t, err, "Failed to instantiate DB")
@@ -341,37 +341,37 @@ func TestHighestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	p0 := [48]byte{0}
 	p1 := [48]byte{1}
 	// Can save.
-	require.NoError(t, validatorDB.SaveHighestSignedSourceEpoch(ctx, p0, 100))
-	require.NoError(t, validatorDB.SaveHighestSignedSourceEpoch(ctx, p1, 200))
-	got, err := validatorDB.HighestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, validatorDB.SaveLowestSignedSourceEpoch(ctx, p0, 100))
+	require.NoError(t, validatorDB.SaveLowestSignedSourceEpoch(ctx, p1, 200))
+	got, err := validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(100), got)
-	got, err = validatorDB.HighestSignedSourceEpoch(ctx, p1)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
 	require.NoError(t, err)
 	require.Equal(t, uint64(200), got)
 
 	// Can replace.
-	require.NoError(t, validatorDB.SaveHighestSignedSourceEpoch(ctx, p0, 300))
-	require.NoError(t, validatorDB.SaveHighestSignedSourceEpoch(ctx, p1, 400))
-	got, err = validatorDB.HighestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, validatorDB.SaveLowestSignedSourceEpoch(ctx, p0, 99))
+	require.NoError(t, validatorDB.SaveLowestSignedSourceEpoch(ctx, p1, 199))
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(300), got)
-	got, err = validatorDB.HighestSignedSourceEpoch(ctx, p1)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(400), got)
+	require.Equal(t, uint64(199), got)
 
 	// Can not replace.
-	require.NoError(t, validatorDB.SaveHighestSignedSourceEpoch(ctx, p0, 1))
-	require.NoError(t, validatorDB.SaveHighestSignedSourceEpoch(ctx, p1, 2))
-	got, err = validatorDB.HighestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, validatorDB.SaveLowestSignedSourceEpoch(ctx, p0, 100))
+	require.NoError(t, validatorDB.SaveLowestSignedSourceEpoch(ctx, p1, 200))
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(300), got)
-	got, err = validatorDB.HighestSignedSourceEpoch(ctx, p1)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(400), got)
+	require.Equal(t, uint64(199), got)
 }
 
-func TestHighestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
+func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	ctx := context.Background()
 	validatorDB, err := NewKVStore(t.TempDir(), nil)
 	require.NoError(t, err, "Failed to instantiate DB")
@@ -382,32 +382,32 @@ func TestHighestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	p0 := [48]byte{0}
 	p1 := [48]byte{1}
 	// Can save.
-	require.NoError(t, validatorDB.SaveHighestSignedTargetEpoch(ctx, p0, 100))
-	require.NoError(t, validatorDB.SaveHighestSignedTargetEpoch(ctx, p1, 200))
-	got, err := validatorDB.HighestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, validatorDB.SaveLowestSignedTargetEpoch(ctx, p0, 100))
+	require.NoError(t, validatorDB.SaveLowestSignedTargetEpoch(ctx, p1, 200))
+	got, err := validatorDB.LowestSignedTargetEpoch(ctx, p0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(100), got)
-	got, err = validatorDB.HighestSignedTargetEpoch(ctx, p1)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
 	require.NoError(t, err)
 	require.Equal(t, uint64(200), got)
 
 	// Can replace.
-	require.NoError(t, validatorDB.SaveHighestSignedTargetEpoch(ctx, p0, 300))
-	require.NoError(t, validatorDB.SaveHighestSignedTargetEpoch(ctx, p1, 400))
-	got, err = validatorDB.HighestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, validatorDB.SaveLowestSignedTargetEpoch(ctx, p0, 99))
+	require.NoError(t, validatorDB.SaveLowestSignedTargetEpoch(ctx, p1, 199))
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(300), got)
-	got, err = validatorDB.HighestSignedTargetEpoch(ctx, p1)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(400), got)
+	require.Equal(t, uint64(199), got)
 
 	// Can not replace.
-	require.NoError(t, validatorDB.SaveHighestSignedTargetEpoch(ctx, p0, 1))
-	require.NoError(t, validatorDB.SaveHighestSignedTargetEpoch(ctx, p1, 2))
-	got, err = validatorDB.HighestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, validatorDB.SaveLowestSignedTargetEpoch(ctx, p0, 100))
+	require.NoError(t, validatorDB.SaveLowestSignedTargetEpoch(ctx, p1, 200))
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(300), got)
-	got, err = validatorDB.HighestSignedTargetEpoch(ctx, p1)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(400), got)
+	require.Equal(t, uint64(199), got)
 }

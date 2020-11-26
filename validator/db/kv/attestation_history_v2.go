@@ -344,63 +344,63 @@ func (store *Store) shouldMigrateAttestations() (bool, error) {
 	return importAttestations, err
 }
 
-// HighestSignedSourceEpoch returns the highest signed source epoch for a validator public key.
+// LowestSignedSourceEpoch returns the lowest signed source epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) HighestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.HighestSignedSourceEpoch")
+func (store *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
 	defer span.End()
 
 	var err error
-	var highestSignedSourceEpoch uint64
+	var lowestSignedSourceEpoch uint64
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(highestSignedSourceBucket)
-		highestSignedSourceBytes := bucket.Get(publicKey[:])
+		bucket := tx.Bucket(lowestSignedSourceBucket)
+		lowestSignedSourceBytes := bucket.Get(publicKey[:])
 		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
-		if len(highestSignedSourceBytes) < 8 {
+		if len(lowestSignedSourceBytes) < 8 {
 			return nil
 		}
-		highestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(highestSignedSourceBytes)
+		lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
 		return nil
 	})
-	return highestSignedSourceEpoch, err
+	return lowestSignedSourceEpoch, err
 }
 
-// HighestSignedTargetEpoch returns the highest signed target epoch for a validator public key.
+// LowestSignedTargetEpoch returns the lowest signed target epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) HighestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.HighestSignedTargetEpoch")
+func (store *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedTargetEpoch")
 	defer span.End()
 
 	var err error
-	var highestSignedTargetEpoch uint64
+	var lowestSignedTargetEpoch uint64
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(highestSignedTargetBucket)
-		highestSignedTargetBytes := bucket.Get(publicKey[:])
+		bucket := tx.Bucket(lowestSignedTargetBucket)
+		lowestSignedTargetBytes := bucket.Get(publicKey[:])
 		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
-		if len(highestSignedTargetBytes) < 8 {
+		if len(lowestSignedTargetBytes) < 8 {
 			return nil
 		}
-		highestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(highestSignedTargetBytes)
+		lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
 		return nil
 	})
-	return highestSignedTargetEpoch, err
+	return lowestSignedTargetEpoch, err
 }
 
-// SaveHighestSignedSourceEpoch saves the highest signed source epoch for a validator public key.
-func (store *Store) SaveHighestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveHighestSignedSourceEpoch")
+// SaveLowestSignedSourceEpoch saves the lowest signed source epoch for a validator public key.
+func (store *Store) SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveLowestSignedSourceEpoch")
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(highestSignedSourceBucket)
+		bucket := tx.Bucket(lowestSignedSourceBucket)
 
-		// If the incoming epoch is higher than the highest signed epoch, override.
-		highestSignedSourceBytes := bucket.Get(publicKey[:])
-		var highestSignedSourceEpoch uint64
-		if len(highestSignedSourceBytes) >= 8 {
-			highestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(highestSignedSourceBytes)
+		// If the incoming epoch is higher than the lowest signed epoch, override.
+		lowestSignedSourceBytes := bucket.Get(publicKey[:])
+		var lowestSignedSourceEpoch uint64
+		if len(lowestSignedSourceBytes) >= 8 {
+			lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
 		}
-		if len(highestSignedSourceBytes) == 0 || epoch > highestSignedSourceEpoch {
+		if len(lowestSignedSourceBytes) == 0 || epoch < lowestSignedSourceEpoch {
 			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
 				return err
 			}
@@ -409,21 +409,21 @@ func (store *Store) SaveHighestSignedSourceEpoch(ctx context.Context, publicKey 
 	})
 }
 
-// SaveHighestSignedTargetEpoch saves the highest signed target epoch for a validator public key.
-func (store *Store) SaveHighestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveHighestSignedTargetEpoch")
+// SaveLowestSignedTargetEpoch saves the lowest signed target epoch for a validator public key.
+func (store *Store) SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveLowestSignedTargetEpoch")
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(highestSignedTargetBucket)
+		bucket := tx.Bucket(lowestSignedTargetBucket)
 
-		// If the incoming epoch is higher than the highest signed epoch, override.
-		highestSignedTargetBytes := bucket.Get(publicKey[:])
-		var highestSignedTargetEpoch uint64
-		if len(highestSignedTargetBytes) >= 8 {
-			highestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(highestSignedTargetBytes)
+		// If the incoming epoch is higher than the lowest signed epoch, override.
+		lowestSignedTargetBytes := bucket.Get(publicKey[:])
+		var lowestSignedTargetEpoch uint64
+		if len(lowestSignedTargetBytes) >= 8 {
+			lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
 		}
-		if len(highestSignedTargetBytes) == 0 || epoch > highestSignedTargetEpoch {
+		if len(lowestSignedTargetBytes) == 0 || epoch < lowestSignedTargetEpoch {
 			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
 				return err
 			}
