@@ -139,7 +139,7 @@ var AccountCommands = &cli.Command{
 				flags.BeaconRPCProviderFlag,
 				cmd.GrpcMaxCallRecvMsgSizeFlag,
 				flags.CertFlag,
-				validator/slashing - protection/local/standard - protection - format/import_test.goflags.GrpcHeadersFlag,
+				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
 				featureconfig.Mainnet,
