@@ -262,13 +262,13 @@ func saveLowestSourceTargetToDB(ctx context.Context, validatorDB db.Database, si
 			se, ok := validatorLowestSourceEpoch[pubKey]
 			if !ok {
 				validatorLowestSourceEpoch[pubKey] = source
-			} else if source > se {
+			} else if source < se {
 				validatorLowestSourceEpoch[pubKey] = source
 			}
 			te, ok := validatorLowestTargetEpoch[pubKey]
 			if !ok {
 				validatorLowestTargetEpoch[pubKey] = target
-			} else if target > te {
+			} else if target < te {
 				validatorLowestTargetEpoch[pubKey] = target
 			}
 		}

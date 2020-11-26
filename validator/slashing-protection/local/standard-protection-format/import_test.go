@@ -758,16 +758,16 @@ func Test_saveLowestSourceTargetToDBt_Ok(t *testing.T) {
 
 	got, err := validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[0])
 	require.NoError(t, err)
-	require.Equal(t, uint64(4), got)
+	require.Equal(t, uint64(2), got)
 	got, err = validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[1])
 	require.NoError(t, err)
-	require.Equal(t, uint64(7), got)
+	require.Equal(t, uint64(5), got)
 	got, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[0])
 	require.NoError(t, err)
-	require.Equal(t, uint64(3), got)
+	require.Equal(t, uint64(1), got)
 	got, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[1])
 	require.NoError(t, err)
-	require.Equal(t, uint64(8), got)
+	require.Equal(t, uint64(6), got)
 }
 
 func mockSlashingProtectionJSON(
