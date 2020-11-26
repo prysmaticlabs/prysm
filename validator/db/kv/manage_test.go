@@ -86,7 +86,7 @@ func TestSplit(t *testing.T) {
 	require.NotNil(t, keyStore2, "No store created for public key %v", encodedKey2)
 
 	err = keyStore1.view(func(tx *bolt.Tx) error {
-		otherKeyProposalsBucket := tx.Bucket(newhistoricProposalsBucket).Bucket(pubKey2[:])
+		otherKeyProposalsBucket := tx.Bucket(newHistoricProposalsBucket).Bucket(pubKey2[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey2)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey2[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey2)
@@ -95,7 +95,7 @@ func TestSplit(t *testing.T) {
 	require.NoError(t, err)
 
 	err = keyStore2.view(func(tx *bolt.Tx) error {
-		otherKeyProposalsBucket := tx.Bucket(newhistoricProposalsBucket).Bucket(pubKey1[:])
+		otherKeyProposalsBucket := tx.Bucket(newHistoricProposalsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey1)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey1)
@@ -129,7 +129,7 @@ func TestSplit_AttestationsWithoutMatchingProposalsAreSplit(t *testing.T) {
 	require.NotNil(t, attestationsOnlyKeyStore, "No store created for public key %v", encodedKey2)
 
 	err = attestationsOnlyKeyStore.view(func(tx *bolt.Tx) error {
-		otherKeyProposalsBucket := tx.Bucket(newhistoricProposalsBucket).Bucket(pubKey1[:])
+		otherKeyProposalsBucket := tx.Bucket(newHistoricProposalsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey1)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey1)
@@ -164,7 +164,7 @@ func prepareStoreProposals(store *Store, pubKeys [][48]byte) (map[[48]byte][]byt
 
 	for i, key := range pubKeys {
 		signingRoot := bytesutil.PadTo([]byte{byte(i)}, 32)
-		if err := store.SaveProposalHistoryForSlot(context.Background(), key[:], 0, signingRoot); err != nil {
+		if err := store.SaveProposalHistoryForSlot(context.Background(), key, 0, signingRoot); err != nil {
 			return nil, errors.Wrapf(err, "Saving proposal history failed")
 		}
 		proposals[key] = signingRoot
@@ -196,10 +196,10 @@ func prepareStoreAttestations(store *Store, pubKeys [][48]byte) (map[[48]byte]ma
 
 func assertStore(t *testing.T, store *Store, pubKeys [][48]byte, expectedHistory *storeHistory) {
 	for _, key := range pubKeys {
-		proposalHistory, err := store.ProposalHistoryForSlot(context.Background(), key[:], 0)
+		proposalHistory, _, err := store.ProposalHistoryForSlot(context.Background(), key, 0)
 		require.NoError(t, err, "Retrieving proposal history failed for public key %v", key)
 		expectedProposals := expectedHistory.Proposals[key]
-		require.DeepEqual(t, expectedProposals, proposalHistory, "Proposals are incorrect")
+		require.DeepEqual(t, expectedProposals, proposalHistory[:], "Proposals are incorrect")
 	}
 
 	attestationHistory, err := store.AttestationHistoryForPubKeys(context.Background(), pubKeys)

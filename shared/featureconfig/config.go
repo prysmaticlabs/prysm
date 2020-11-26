@@ -212,6 +212,11 @@ func ConfigureValidator(ctx *cli.Context) {
 			"upon completing web onboarding.")
 		cfg.WriteWalletPasswordOnWebOnboarding = true
 	}
+	cfg.EnableBlst = true
+	if ctx.Bool(disableBlst.Name) {
+		log.Warn("Disabling new BLS library blst")
+		cfg.EnableBlst = false
+	}
 	Init(cfg)
 }
 
