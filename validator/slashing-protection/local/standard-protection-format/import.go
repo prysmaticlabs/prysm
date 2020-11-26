@@ -268,7 +268,7 @@ func saveHighestSourceTargetToDB(ctx context.Context, validatorDB db.Database, s
 			te, ok := validatorHighestTargetEpoch[pubKey]
 			if !ok {
 				validatorHighestTargetEpoch[pubKey] = target
-			} else if source > te {
+			} else if target > te {
 				validatorHighestTargetEpoch[pubKey] = target
 			}
 		}
