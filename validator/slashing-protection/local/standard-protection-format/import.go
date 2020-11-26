@@ -81,7 +81,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		)
 		for _, proposal := range proposalHistory.Proposals {
 			if err := bar.Add(1); err != nil {
-				log.Debug("Could not increase progress bar")
+				log.WithError(err).Debug("Could not increase progress bar")
 			}
 			if err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
 				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
