@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"golang.org/pkg/errors"
 )
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
@@ -53,6 +54,35 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	}
 	interchangeJSON.Data = dataList
 	return interchangeJSON, nil
+}
+
+func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) error {
+	attHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
+	if err != nil {
+		return err
+	}
+	history, ok := attHistory[pubKey]
+	if !ok {
+		return errors.New("no history found for pubkey")
+	}
+	lowestEpoch, err := validatorDB.HighestSignedTargetEpoch(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	highestEpoch, err := history.GetLatestEpochWritten(ctx)
+	if err != nil {
+		return err
+	}
+	for i := lowestEpoch; i <= highestEpoch; i++ {
+		historyAtTarget, err := history.GetTargetData(ctx, i)
+		if err != nil {
+			return err
+		}
+		if historyAtTarget != nil {
+			return nil
+		}
+	}
+	return nil
 }
 
 func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedBlock, error) {
