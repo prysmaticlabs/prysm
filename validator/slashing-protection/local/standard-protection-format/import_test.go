@@ -744,7 +744,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	}
 }
 
-func Test_saveHighestSourceTargetToDBt_Ok(t *testing.T) {
+func Test_saveLowestSourceTargetToDBt_Ok(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 2
 	publicKeys := createRandomPubKeys(t, numValidators)
@@ -753,20 +753,20 @@ func Test_saveHighestSourceTargetToDBt_Ok(t *testing.T) {
 	m := make(map[[48]byte][]*SignedAttestation)
 	m[publicKeys[0]] = []*SignedAttestation{{SourceEpoch: "1", TargetEpoch: "2"}, {SourceEpoch: "3", TargetEpoch: "4"}}
 	m[publicKeys[1]] = []*SignedAttestation{{SourceEpoch: "8", TargetEpoch: "7"}, {SourceEpoch: "6", TargetEpoch: "5"}}
-	require.NoError(t, saveHighestSourceTargetToDB(ctx, validatorDB, m))
+	require.NoError(t, saveLowestSourceTargetToDB(ctx, validatorDB, m))
 
-	got, err := validatorDB.HighestSignedTargetEpoch(ctx, publicKeys[0])
+	got, err := validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[0])
 	require.NoError(t, err)
-	require.Equal(t, uint64(4), got)
-	got, err = validatorDB.HighestSignedTargetEpoch(ctx, publicKeys[1])
+	require.Equal(t, uint64(2), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[1])
 	require.NoError(t, err)
-	require.Equal(t, uint64(7), got)
-	got, err = validatorDB.HighestSignedSourceEpoch(ctx, publicKeys[0])
+	require.Equal(t, uint64(5), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[0])
 	require.NoError(t, err)
-	require.Equal(t, uint64(3), got)
-	got, err = validatorDB.HighestSignedSourceEpoch(ctx, publicKeys[1])
+	require.Equal(t, uint64(1), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[1])
 	require.NoError(t, err)
-	require.Equal(t, uint64(8), got)
+	require.Equal(t, uint64(6), got)
 }
 
 func mockSlashingProtectionJSON(
