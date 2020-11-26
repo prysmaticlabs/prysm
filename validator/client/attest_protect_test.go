@@ -54,6 +54,24 @@ func TestPreSignatureValidation(t *testing.T) {
 	mockProtector.AllowAttestation = true
 	err = validator.preAttSignValidations(context.Background(), att, pubKey)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
+
+	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), e)
+	e, err = validator.db.LowestSignedTargetEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), e)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	require.NoError(t, validator.db.SaveLowestSignedTargetEpoch(context.Background(), pubKey, att.Data.Target.Epoch+1))
+	err = validator.preAttSignValidations(context.Background(), att, pubKey)
+	require.ErrorContains(t, "could not sign attestation lower than lowest target epoch in db", err)
+	require.NoError(t, validator.db.SaveLowestSignedSourceEpoch(context.Background(), pubKey, att.Data.Source.Epoch+1))
+	err = validator.preAttSignValidations(context.Background(), att, pubKey)
+	require.ErrorContains(t, "could not sign attestation lower than lowest source epoch in db", err)
 }
 
 func TestPreSignatureValidation_NilLocal(t *testing.T) {
@@ -129,6 +147,13 @@ func TestPostSignatureUpdate(t *testing.T) {
 	mockProtector.AllowAttestation = true
 	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
+
+	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(4), e)
+	e, err = validator.db.LowestSignedTargetEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(10), e)
 }
 
 func TestPostSignatureUpdate_NilLocal(t *testing.T) {
