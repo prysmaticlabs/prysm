@@ -122,6 +122,7 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	}
 	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
 	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
+
 	return hd, nil
 }
 
