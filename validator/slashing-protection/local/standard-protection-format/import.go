@@ -92,7 +92,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
 
-	return saveHighestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
+	return SaveHighestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
 }
 
 func ValidateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
