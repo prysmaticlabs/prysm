@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -777,12 +776,12 @@ func mockSlashingProtectionJSON(
 	proposalHistories []kv.ProposalHistoryForPubkey,
 ) *EIPSlashingProtectionFormat {
 	standardProtectionFormat := &EIPSlashingProtectionFormat{}
-	standardProtectionFormat.Metadata.GenesisValidatorsRoot = hex.EncodeToString(bytesutil.PadTo([]byte{32}, 32))
-	standardProtectionFormat.Metadata.InterchangeFormatVersion = "5"
+	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{32}, 32))
+	standardProtectionFormat.Metadata.InterchangeFormatVersion = INTERCHANGE_FORMAT_VERSION
 	ctx := context.Background()
 	for i := 0; i < len(publicKeys); i++ {
 		data := &ProtectionData{
-			Pubkey: hex.EncodeToString(publicKeys[i][:]),
+			Pubkey: fmt.Sprintf("%#x", publicKeys[i]),
 		}
 		highestEpochWritten, err := attestingHistories[i].GetLatestEpochWritten(ctx)
 		require.NoError(t, err)
@@ -790,16 +789,16 @@ func mockSlashingProtectionJSON(
 			hd, err := attestingHistories[i].GetTargetData(ctx, target)
 			require.NoError(t, err)
 			data.SignedAttestations = append(data.SignedAttestations, &SignedAttestation{
-				TargetEpoch: strconv.FormatUint(target, 10),
-				SourceEpoch: strconv.FormatUint(hd.Source, 10),
-				SigningRoot: hex.EncodeToString(hd.SigningRoot),
+				TargetEpoch: fmt.Sprintf("%d", target),
+				SourceEpoch: fmt.Sprintf("%d", hd.Source),
+				SigningRoot: fmt.Sprintf("%#x", hd.SigningRoot),
 			})
 		}
 		for target := uint64(0); target < highestEpochWritten; target++ {
 			proposal := proposalHistories[i].Proposals[target]
 			block := &SignedBlock{
-				Slot:        strconv.FormatUint(proposal.Slot, 10),
-				SigningRoot: hex.EncodeToString(proposal.SigningRoot),
+				Slot:        fmt.Sprintf("%d", proposal.Slot),
+				SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
 			}
 			data.SignedBlocks = append(data.SignedBlocks, block)
 
@@ -817,7 +816,7 @@ func mockAttestingAndProposalHistories(t *testing.T, numValidators int) ([]kv.En
 	ctx := context.Background()
 	for v := 0; v < numValidators; v++ {
 		var err error
-		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 100)
+		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000)
 		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
 		proposals := make([]kv.Proposal, 0)
 		for i := 1; i < latestTarget; i++ {
