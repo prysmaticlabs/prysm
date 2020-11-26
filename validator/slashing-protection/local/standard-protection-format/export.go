@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	"golang.org/pkg/errors"
 )
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
@@ -28,9 +28,13 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	if err != nil {
 		return nil, err
 	}
+	attestedPublicKeys, err := validatorDB.AttestedPublicKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
 	dataByPubKey := make(map[[48]byte]*ProtectionData)
 
-	// Extract the signed proposals by public keys.
+	// Extract the signed proposals by public key.
 	for _, pubKey := range proposedPublicKeys {
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
@@ -47,6 +51,27 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		}
 	}
 
+	// Extract the signed attestations by public key.
+	for _, pubKey := range attestedPublicKeys {
+		pubKeyHex, err := pubKeyToHexString(pubKey[:])
+		if err != nil {
+			return nil, err
+		}
+		signedAttestations, err := getSignedAttestationsByPubKey(ctx, validatorDB, pubKey)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := dataByPubKey[pubKey]; ok {
+			dataByPubKey[pubKey].SignedAttestations = signedAttestations
+		} else {
+			dataByPubKey[pubKey] = &ProtectionData{
+				Pubkey:             pubKeyHex,
+				SignedBlocks:       nil,
+				SignedAttestations: signedAttestations,
+			}
+		}
+	}
+
 	// Next we turn our map into a slice as expected by the EIP-3076 JSON standard.
 	dataList := make([]*ProtectionData, 0)
 	for _, item := range dataByPubKey {
@@ -56,33 +81,45 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	return interchangeJSON, nil
 }
 
-func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) error {
+func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedAttestation, error) {
 	attHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if attHistory == nil {
+		return nil, nil
 	}
 	history, ok := attHistory[pubKey]
 	if !ok {
-		return errors.New("no history found for pubkey")
+		return nil, errors.New("no history found for pubkey")
 	}
+	signedAttestations := make([]*SignedAttestation, 0)
 	lowestEpoch, err := validatorDB.HighestSignedTargetEpoch(ctx, pubKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	highestEpoch, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for i := lowestEpoch; i <= highestEpoch; i++ {
 		historyAtTarget, err := history.GetTargetData(ctx, i)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if historyAtTarget != nil {
-			return nil
+			root, err := rootToHexString(historyAtTarget.SigningRoot)
+			if err != nil {
+				return nil, err
+			}
+			signedAttestations = append(signedAttestations, &SignedAttestation{
+				TargetEpoch: fmt.Sprintf("%d", i),
+				SourceEpoch: fmt.Sprintf("%d", historyAtTarget.Source),
+				SigningRoot: root,
+			})
 		}
 	}
-	return nil
+	return signedAttestations, nil
 }
 
 func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedBlock, error) {
