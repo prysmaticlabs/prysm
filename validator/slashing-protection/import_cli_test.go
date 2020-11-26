@@ -80,7 +80,7 @@ func TestImportSlashingProtectionCLI(t *testing.T) {
 		)
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i][:], proposal.Slot)
+			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,

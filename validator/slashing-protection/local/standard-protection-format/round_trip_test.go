@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
@@ -13,13 +15,13 @@ import (
 func TestImportExport_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 5
-	publicKeys := createRandomPubKeys(t, numValidators)
+	publicKeys := spTest.CreateRandomPubKeys(t, numValidators)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := mockAttestingAndProposalHistories(t, numValidators)
-	wanted := mockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
+	attestingHistory, proposalHistory := spTest.MockAttestingAndProposalHistories(t, numValidators)
+	wanted := spTest.MockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
 
 	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(wanted)
