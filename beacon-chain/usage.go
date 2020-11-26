@@ -112,6 +112,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WeakSubjectivityCheckpt,
 			flags.EnableBackupWebhookFlag,
 			flags.BackupWebhookOutputDir,
+			flags.Eth1HeaderReqLimit,
 		},
 	},
 	{

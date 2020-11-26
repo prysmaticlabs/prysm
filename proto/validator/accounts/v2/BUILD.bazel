@@ -1,7 +1,6 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
-load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 # gazelle:ignore
 proto_library(
@@ -16,14 +15,6 @@ proto_library(
         "@com_google_protobuf//:empty_proto",
         "@go_googleapis//google/api:annotations_proto",
         "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
-    ],
-)
-
-ssz_gen_marshal(
-    name = "ssz_generated_files",
-    go_proto = ":ethereum_validator_account_go_proto",
-    objs = [
-        "DepositMessage",
     ],
 )
 
@@ -61,9 +52,7 @@ go_proto_library(
 
 go_library(
     name = "go_default_library",
-    srcs = [":ssz_generated_files"],
     embed = [":ethereum_validator_account_go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2",
     visibility = ["//visibility:public"],
-    deps = SSZ_DEPS,
 )

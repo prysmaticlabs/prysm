@@ -486,12 +486,13 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoint:    b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(depAddress),
-		BeaconDB:        b.db,
-		DepositCache:    b.depositCache,
-		StateNotifier:   b,
-		StateGen:        b.stateGen,
+		HTTPEndPoint:       b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
+		DepositContract:    common.HexToAddress(depAddress),
+		BeaconDB:           b.db,
+		DepositCache:       b.depositCache,
+		StateNotifier:      b,
+		StateGen:           b.stateGen,
+		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
@@ -507,7 +508,10 @@ func (b *BeaconNode) registerPOWChainService() error {
 		}
 	}
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
+		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
+			"you are trying to run on a different network than what the database contains. You can run once with "+
+			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
+			knownContract, cfg.DepositContract.Bytes())
 	}
 
 	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())

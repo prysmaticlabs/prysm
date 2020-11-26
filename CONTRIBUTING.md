@@ -4,7 +4,7 @@ Note: The latest and most up to date documenation can be found on our [docs port
 
 Excited by our work and want to get involved in building out our sharding releases? Or maybe you haven't learned as much about the Ethereum protocol but are a savvy developer? 
 
-You can explore our [Open Issues](https://github.com/prysmaticlabs/prysm/issues) in-the works for our different releases. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Discord](https://discord.gg/che9auJ) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding) drop us a line there if you want to get more involved or have any questions on our implementation!
+You can explore our [Open Issues](https://github.com/prysmaticlabs/prysm/issues) in-the works for our different releases. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Discord](https://discord.gg/CTYGPUJ) drop us a line there if you want to get more involved or have any questions on our implementation!
 
 ## Contribution Steps
 
@@ -60,12 +60,6 @@ Changes that only affect a single file can be tested with
 
 ```
 $ go test <file_you_are_working_on>
-```
-
-Changes that affect multiple files can be tested with ...
-
-```
-$ golangci-lint run && bazel test //...
 ```
 
 **10. Stage the file or files that you want to commit.**
@@ -181,7 +175,7 @@ We consider two types of contributions to our repo and categorize them as follow
 
 ### Part-Time Contributors
 
-Anyone can become a part-time contributor and help out on implementing sharding. The responsibilities of a part-time contributor include:
+Anyone can become a part-time contributor and help out on implementing eth2. The responsibilities of a part-time contributor include:
 
 -   Engaging in Gitter conversations, asking the questions on how to begin contributing to the project
 -   Opening up github issues to express interest in code to implement
@@ -191,8 +185,6 @@ Anyone can become a part-time contributor and help out on implementing sharding.
 -   Proper labels, milestones, and projects (see other closed PRs for reference)
 -   Follow up on open PRs
     -   Have an estimated timeframe to completion and let the core contributors know if a PR will take longer than expected
-
-We do not expect all part-time contributors to be experts on all the latest sharding documentation, but all contributors should at least be familiarized with our sharding [README.md](https://github.com/prysmaticlabs/prysm/blob/master/validator/README.md) and have gone through the required Ethereum readings as posted on our [READINGS.md](https://github.com/prysmaticlabs/prysm/blob/master/docs/READINGS.md) document.
 
 ### Core Contributors
 

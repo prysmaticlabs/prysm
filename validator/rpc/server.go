@@ -33,6 +33,8 @@ func init() {
 
 // Config options for the gRPC server.
 type Config struct {
+	ValidatorGatewayHost  string
+	ValidatorGatewayPort  int
 	Host                  string
 	Port                  string
 	CertFlag              string
@@ -70,6 +72,8 @@ type Server struct {
 	walletInitializedFeed *event.Feed
 	walletInitialized     bool
 	nodeGatewayEndpoint   string
+	validatorGatewayHost  string
+	validatorGatewayPort  int
 }
 
 // NewServer instantiates a new gRPC server.
@@ -92,6 +96,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		wallet:                cfg.Wallet,
 		keymanager:            cfg.Keymanager,
 		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
+		validatorGatewayHost:  cfg.ValidatorGatewayHost,
+		validatorGatewayPort:  cfg.ValidatorGatewayPort,
 	}
 }
 

@@ -35,7 +35,7 @@ var backOffTime = map[types.SSZUint64]time.Duration{
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			log.WithError(err).Debug("Could not close stream")
 		}
 	}()
 	SetRPCStreamDeadlines(stream)
@@ -93,7 +93,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code types.RPCGoodbyeC
 	}
 	defer func() {
 		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 	log := log.WithField("Reason", goodbyeMessage(code))
