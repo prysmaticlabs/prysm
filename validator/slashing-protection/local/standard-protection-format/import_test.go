@@ -791,7 +791,7 @@ func mockAttestingAndProposalHistories(t *testing.T, numValidators int) ([]kv.En
 	ctx := context.Background()
 	for v := 0; v < numValidators; v++ {
 		var err error
-		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 100)
+		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000)
 		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
 		proposals := make([]kv.Proposal, 0)
 		for i := 1; i < latestTarget; i++ {

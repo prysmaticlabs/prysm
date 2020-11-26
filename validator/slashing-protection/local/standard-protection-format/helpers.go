@@ -5,7 +5,28 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/k0kubun/go-ansi"
+	"github.com/schollz/progressbar/v3"
 )
+
+func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
+	return progressbar.NewOptions(
+		numItems,
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		progressbar.OptionSetDescription(msg),
+	)
+}
 
 func uint64FromString(str string) (uint64, error) {
 	return strconv.ParseUint(str, 10, 64)

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -39,7 +40,6 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 
 	// We need to handle duplicate public keys in the JSON file, with potentially
 	// different signing histories for both attestations and blocks.
-	fmt.Println("Getting unique signed blocks")
 	signedBlocksByPubKey, err := parseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
@@ -48,9 +48,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
-	fmt.Println("Got unique signed")
 
-	fmt.Println("Transforming data...")
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
@@ -72,15 +70,19 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		}
 		attestingHistoryByPubKey[pubKey] = *attestingHistory
 	}
-	fmt.Println("Transformed data...")
 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
-	fmt.Println("Importing proposals by pubkey")
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
-		for i, proposal := range proposalHistory.Proposals {
-			fmt.Printf("Importing individual proposal...%d/%d\n", i, len(proposalHistory.Proposals))
+		bar := initializeProgressBar(
+			len(proposalHistory.Proposals),
+			fmt.Sprintf("Importing past proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
+		)
+		for _, proposal := range proposalHistory.Proposals {
+			if err := bar.Add(1); err != nil {
+				log.Debug("Could not increase progress bar")
+			}
 			if err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
 				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 			}
