@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -73,13 +74,25 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
-	if err = validatorDB.SaveProposalHistoryForPubKeysV2(ctx, proposalHistoryByPubKey); err != nil {
-		return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+	for pubKey, proposalHistory := range proposalHistoryByPubKey {
+		bar := initializeProgressBar(
+			len(proposalHistory.Proposals),
+			fmt.Sprintf("Importing past proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
+		)
+		for _, proposal := range proposalHistory.Proposals {
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
+			if err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
+				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+			}
+		}
 	}
 	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
-	return nil
+
+	return saveHighestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
 }
 
 func ValidateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
@@ -238,4 +251,52 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 		return nil, errors.Wrap(err, "could not set latest epoch written")
 	}
 	return &attestingHistory, nil
+}
+
+// SaveHighestSourceTargetToDB saves the highest source and target epoch from the individual validator to the DB.
+func SaveHighestSourceTargetToDB(ctx context.Context, validatorDB db.Database, signedAttsByPubKey map[[48]byte][]*SignedAttestation) error {
+	validatorHighestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested source epoch.
+	validatorHighestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested target epoch.
+	for pubKey, signedAtts := range signedAttsByPubKey {
+		for _, att := range signedAtts {
+			source, err := uint64FromString(att.SourceEpoch)
+			if err != nil {
+				return fmt.Errorf("%d is not a valid source: %v", source, err)
+			}
+			target, err := uint64FromString(att.TargetEpoch)
+			if err != nil {
+				return fmt.Errorf("%d is not a valid target: %v", target, err)
+			}
+			se, ok := validatorHighestSourceEpoch[pubKey]
+			if !ok {
+				validatorHighestSourceEpoch[pubKey] = source
+			} else if source > se {
+				validatorHighestSourceEpoch[pubKey] = source
+			}
+			te, ok := validatorHighestTargetEpoch[pubKey]
+			if !ok {
+				validatorHighestTargetEpoch[pubKey] = target
+			} else if target > te {
+				validatorHighestTargetEpoch[pubKey] = target
+			}
+		}
+	}
+
+	// This should not happen.
+	if len(validatorHighestTargetEpoch) != len(validatorHighestSourceEpoch) {
+		return errors.New("incorrect source and target map length")
+	}
+
+	// Save highest source and target epoch to DB for every validator in the map.
+	for k, v := range validatorHighestSourceEpoch {
+		if err := validatorDB.SaveHighestSignedSourceEpoch(ctx, k, v); err != nil {
+			return err
+		}
+	}
+	for k, v := range validatorHighestTargetEpoch {
+		if err := validatorDB.SaveHighestSignedTargetEpoch(ctx, k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }

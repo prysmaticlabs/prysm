@@ -36,18 +36,19 @@ type Flags struct {
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
-	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
-	SkipBLSVerify              bool // Skips BLS verification across the runtime.
-	EnableBlst                 bool // Enables new BLS library from supranational.
-	PruneEpochBoundaryStates   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression  bool // EnableSnappyDBCompression in the database.
-	SlasherProtection          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	EnableNoise                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	EnableEth1DataMajorityVote bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
-	EnablePeerScorer           bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnablePruningDepositProofs bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
-	EnableSyncBacktracking     bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
-	EnableLargerGossipHistory  bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
+	WriteSSZStateTransitions           bool // WriteSSZStateTransitions to tmp directory.
+	SkipBLSVerify                      bool // Skips BLS verification across the runtime.
+	EnableBlst                         bool // Enables new BLS library from supranational.
+	PruneEpochBoundaryStates           bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression          bool // EnableSnappyDBCompression in the database.
+	SlasherProtection                  bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	EnableNoise                        bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	EnableEth1DataMajorityVote         bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
+	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnablePruningDepositProofs         bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
+	EnableSyncBacktracking             bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
+	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
+	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -205,6 +206,16 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
 		cfg.SlasherProtection = true
+	}
+	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
+		log.Warn("Enabled full web mode, wallet password will be written to disk at the wallet directory " +
+			"upon completing web onboarding.")
+		cfg.WriteWalletPasswordOnWebOnboarding = true
+	}
+	cfg.EnableBlst = true
+	if ctx.Bool(disableBlst.Name) {
+		log.Warn("Disabling new BLS library blst")
+		cfg.EnableBlst = false
 	}
 	Init(cfg)
 }

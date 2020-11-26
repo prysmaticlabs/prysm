@@ -358,7 +358,7 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 	if deposit.block != nil {
 		info.Status = ethpb.ValidatorStatus_DEPOSITED
 		if queueTimestamp, err := is.depositQueueTimestamp(deposit.block); err != nil {
-			log.WithError(err).Error("Failed to obtain queue activation timestamp")
+			log.WithError(err).Error("Could not obtain queue activation timestamp")
 		} else {
 			info.TransitionTimestamp = queueTimestamp
 		}
@@ -415,7 +415,7 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 	for curEpoch := epoch + 1; len(sortedIndices) > 0 && len(pendingValidators) > 0; curEpoch++ {
 		toProcess, err := helpers.ValidatorChurnLimit(numAttestingValidators)
 		if err != nil {
-			log.WithError(err).Error("Failed to determine validator churn limit")
+			log.WithError(err).Error("Could not determine validator churn limit")
 		}
 		if toProcess > uint64(len(sortedIndices)) {
 			toProcess = uint64(len(sortedIndices))
@@ -456,7 +456,7 @@ func (is *infostream) handleBlockProcessed() {
 	is.currentEpoch = blockEpoch
 	if err := is.sendValidatorsInfo(is.pubKeys); err != nil {
 		// Client probably disconnected.
-		log.WithError(err).Debug("Failed to send infostream response")
+		log.WithError(err).Debug("Could not send infostream response")
 	}
 }
 

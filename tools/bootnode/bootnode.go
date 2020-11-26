@@ -66,9 +66,6 @@ type handler struct {
 }
 
 func main() {
-	// Using Medalla as the default configuration.
-	params.UsePyrmontConfig()
-
 	flag.Parse()
 
 	if *logFileName != "" {

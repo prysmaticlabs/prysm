@@ -284,7 +284,7 @@ func (s *Service) registerHandlers() {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():
-			log.WithError(err).Error("Subscription to state notifier failed")
+			log.WithError(err).Error("Could not subscribe to state notifier")
 			return
 		}
 	}
