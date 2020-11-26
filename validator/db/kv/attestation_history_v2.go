@@ -394,7 +394,7 @@ func (store *Store) SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [
 	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedSourceBucket)
 
-		// If the incoming epoch is higher than the lowest signed epoch, override.
+		// If the incoming epoch is lower than the lowest signed epoch, override.
 		lowestSignedSourceBytes := bucket.Get(publicKey[:])
 		var lowestSignedSourceEpoch uint64
 		if len(lowestSignedSourceBytes) >= 8 {
