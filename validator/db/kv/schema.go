@@ -10,10 +10,6 @@ var (
 	lowestSignedProposalKey  = []byte("lowest-signed-proposal")
 	highestSignedProposalKey = []byte("highest-signed-proposal")
 
-	// Key to the highest signed source and target epoch in a validator bucket.
-	highestSignedSourceKey = []byte("highest-signed-source-epoch")
-	highestSignedTargetKey = []byte("highest-signed-target-epoch")
-
 	// Validator slashing protection from double proposals.
 	historicProposalsBucket = []byte("proposal-history-bucket")
 	// Validator slashing protection from double proposals.
@@ -22,4 +18,8 @@ var (
 	historicAttestationsBucket = []byte("attestation-history-bucket")
 	// New Validator slashing protection from slashable attestations.
 	newHistoricAttestationsBucket = []byte("attestation-history-bucket-interchange")
+
+	// Buckets for highest signed source and target epoch for individual validator.
+	highestSignedSourceBucket = []byte("highest-signed-source-bucket")
+	highestSignedTargetBucket = []byte("highest-signed-target-bucket")
 )

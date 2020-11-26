@@ -353,12 +353,8 @@ func (store *Store) HighestSignedSourceEpoch(ctx context.Context, publicKey [48]
 	var err error
 	var highestSignedSourceEpoch uint64
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		valBucket := bucket.Bucket(publicKey[:])
-		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
-		}
-		highestSignedSourceBytes := valBucket.Get(highestSignedSourceKey)
+		bucket := tx.Bucket(highestSignedSourceBucket)
+		highestSignedSourceBytes := bucket.Get(publicKey[:])
 		if len(highestSignedSourceBytes) == 0 {
 			return nil
 		}
@@ -377,12 +373,8 @@ func (store *Store) HighestSignedTargetEpoch(ctx context.Context, publicKey [48]
 	var err error
 	var highestSignedTargetEpoch uint64
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		valBucket := bucket.Bucket(publicKey[:])
-		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
-		}
-		highestSignedTargetBytes := valBucket.Get(highestSignedTargetKey)
+		bucket := tx.Bucket(highestSignedTargetBucket)
+		highestSignedTargetBytes := bucket.Get(publicKey[:])
 		if len(highestSignedTargetBytes) == 0 {
 			return nil
 		}
@@ -398,20 +390,16 @@ func (store *Store) SaveHighestSignedSourceEpoch(ctx context.Context, publicKey 
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
-		if err != nil {
-			return fmt.Errorf("could not create bucket for public key %#x: %v", publicKey, err)
-		}
+		bucket := tx.Bucket(highestSignedSourceBucket)
 
 		// If the incoming epoch is higher than the highest signed epoch, override.
-		highestSignedSourceBytes := valBucket.Get(highestSignedSourceKey)
+		highestSignedSourceBytes := bucket.Get(publicKey[:])
 		var highestSignedSourceEpoch uint64
 		if len(highestSignedSourceBytes) != 0 {
 			highestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(highestSignedSourceBytes)
 		}
 		if len(highestSignedSourceBytes) == 0 || epoch > highestSignedSourceEpoch {
-			if err := valBucket.Put(highestSignedSourceKey, bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
 				return err
 			}
 		}
@@ -425,20 +413,16 @@ func (store *Store) SaveHighestSignedTargetEpoch(ctx context.Context, publicKey 
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
-		if err != nil {
-			return fmt.Errorf("could not create bucket for public key %#x: %v", publicKey, err)
-		}
+		bucket := tx.Bucket(highestSignedTargetBucket)
 
 		// If the incoming epoch is higher than the highest signed epoch, override.
-		highestSignedTargetBytes := valBucket.Get(highestSignedTargetKey)
+		highestSignedTargetBytes := bucket.Get(publicKey[:])
 		var highestSignedTargetEpoch uint64
 		if len(highestSignedTargetBytes) != 0 {
 			highestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(highestSignedTargetBytes)
 		}
 		if len(highestSignedTargetBytes) == 0 || epoch > highestSignedTargetEpoch {
-			if err := valBucket.Put(highestSignedTargetKey, bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
 				return err
 			}
 		}
