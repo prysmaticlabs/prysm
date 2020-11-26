@@ -274,7 +274,7 @@ func saveHighestSourceTargetToDB(ctx context.Context, validatorDB db.Database, s
 		}
 	}
 
-	// This should not happen but I feel better with this check for the DB writes below.
+	// This should not happen.
 	if len(validatorHighestTargetEpoch) != len(validatorHighestSourceEpoch) {
 		return errors.New("incorrect source and target map length")
 	}
