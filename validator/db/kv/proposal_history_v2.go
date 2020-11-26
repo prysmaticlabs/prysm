@@ -21,7 +21,7 @@ func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	var err error
 	proposedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
+		bucket := tx.Bucket(newHistoricProposalsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			pubKeyBytes := [48]byte{}
 			copy(pubKeyBytes[:], key)
@@ -43,7 +43,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]by
 	var proposalExists bool
 	signingRoot := [32]byte{}
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
+		bucket := tx.Bucket(newHistoricProposalsBucket)
 		valBucket := bucket.Bucket(publicKey[:])
 		if valBucket == nil {
 			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
@@ -67,7 +67,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 	defer span.End()
 
 	err := store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
+		bucket := tx.Bucket(newHistoricProposalsBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
@@ -77,7 +77,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 		lowestSignedBkt := tx.Bucket(lowestSignedProposalsBucket)
 		lowestSignedProposalBytes := lowestSignedBkt.Get(pubKey[:])
 		var lowestSignedProposalSlot uint64
-		if len(lowestSignedProposalBytes) != 0 {
+		if len(lowestSignedProposalBytes) >= 8 {
 			lowestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(lowestSignedProposalBytes)
 		}
 		if len(lowestSignedProposalBytes) == 0 || slot < lowestSignedProposalSlot {
@@ -90,7 +90,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 		highestSignedBkt := tx.Bucket(highestSignedProposalsBucket)
 		highestSignedProposalBytes := highestSignedBkt.Get(pubKey[:])
 		var highestSignedProposalSlot uint64
-		if len(highestSignedProposalBytes) != 0 {
+		if len(highestSignedProposalBytes) >= 8 {
 			highestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(highestSignedProposalBytes)
 		}
 		if len(highestSignedProposalBytes) == 0 || slot > highestSignedProposalSlot {
@@ -118,7 +118,8 @@ func (store *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedProposalsBucket)
 		lowestSignedProposalBytes := bucket.Get(publicKey[:])
-		if len(lowestSignedProposalBytes) == 0 {
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		if len(lowestSignedProposalBytes) < 8 {
 			return nil
 		}
 		lowestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(lowestSignedProposalBytes)
@@ -138,7 +139,8 @@ func (store *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byt
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestSignedProposalsBucket)
 		highestSignedProposalBytes := bucket.Get(publicKey[:])
-		if len(highestSignedProposalBytes) == 0 {
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		if len(highestSignedProposalBytes) < 8 {
 			return nil
 		}
 		highestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(highestSignedProposalBytes)
@@ -186,7 +188,7 @@ func (store *Store) MigrateV2ProposalFormat(ctx context.Context) error {
 		return err
 	}
 	err = store.db.Update(func(tx *bolt.Tx) error {
-		newProposalsBucket := tx.Bucket(newhistoricProposalsBucket)
+		newProposalsBucket := tx.Bucket(newHistoricProposalsBucket)
 		for _, pr := range prs {
 			valBucket, err := newProposalsBucket.CreateBucketIfNotExists(pr.PubKey[:])
 			if err != nil {
@@ -222,7 +224,7 @@ func (store *Store) MigrateV2ProposalFormat(ctx context.Context) error {
 // UpdatePublicKeysBuckets for a specified list of keys.
 func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
+		bucket := tx.Bucket(newHistoricProposalsBucket)
 		for _, pubKey := range pubKeys {
 			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
 				return errors.Wrap(err, "failed to create proposal history bucket")
