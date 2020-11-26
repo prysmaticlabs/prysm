@@ -101,7 +101,7 @@ func createMergeTargetStore(
 	}
 
 	err = newStore.update(func(tx *bolt.Tx) error {
-		allProposalsBucket := tx.Bucket(newhistoricProposalsBucket)
+		allProposalsBucket := tx.Bucket(newHistoricProposalsBucket)
 		for _, pubKeyProposals := range allProposals {
 			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey[:])
 			if err != nil {
@@ -155,7 +155,7 @@ func createSplitTargetStores(
 		storesToClose = append(storesToClose, newStore)
 
 		if err := newStore.update(func(tx *bolt.Tx) error {
-			allProposalsBucket := tx.Bucket(newhistoricProposalsBucket)
+			allProposalsBucket := tx.Bucket(newHistoricProposalsBucket)
 			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey[:])
 			if err != nil {
 				return err
@@ -220,7 +220,7 @@ func getAllProposalsAndAllAttestations(stores []*Store) ([]pubKeyProposals, []pu
 		var allKeys [][48]byte
 
 		if err := store.db.View(func(tx *bolt.Tx) error {
-			proposalsBucket := tx.Bucket(newhistoricProposalsBucket)
+			proposalsBucket := tx.Bucket(newHistoricProposalsBucket)
 			if err := proposalsBucket.ForEach(func(pubKey, _ []byte) error {
 				var pubKeyCopy [48]byte
 				copy(pubKeyCopy[:], pubKey)
@@ -249,7 +249,7 @@ func getAllProposalsAndAllAttestations(stores []*Store) ([]pubKeyProposals, []pu
 
 		for _, pubKey := range allKeys {
 			if err := store.db.View(func(tx *bolt.Tx) error {
-				proposalsBucket := tx.Bucket(newhistoricProposalsBucket)
+				proposalsBucket := tx.Bucket(newHistoricProposalsBucket)
 				pubKeyProposals, err := getPubKeyProposals(pubKey, proposalsBucket)
 				if err != nil {
 					return err
