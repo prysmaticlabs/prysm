@@ -132,7 +132,7 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/supranational/blst => github.com/dot-asm/blst v0.1.1-0.20201124220033-ca1a955c5926
+replace github.com/supranational/blst => github.com/dot-asm/blst v0.1.1-0.20201125201929-e19e51bfe050
 
 replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201116135122-233538bfc3d8
 
