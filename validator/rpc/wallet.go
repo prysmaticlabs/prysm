@@ -167,11 +167,15 @@ func (s *Server) ImportKeystores(
 	if strings.TrimSpace(req.WalletPath) != "" {
 		walletDir = req.WalletPath
 	}
+
 	if err := s.initializeWallet(ctx, &wallet.Config{
 		WalletDir:      walletDir,
 		WalletPassword: req.WalletPassword,
 	}); err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not initialize wallet: %v", err)
+	}
+	if err := writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
+		return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
 	}
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
