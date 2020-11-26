@@ -13,9 +13,9 @@ var (
 	// New Validator slashing protection from slashable attestations.
 	newHistoricAttestationsBucket = []byte("attestation-history-bucket-interchange")
 
-	// Buckets for highest signed source and target epoch for individual validator.
-	highestSignedSourceBucket = []byte("highest-signed-source-bucket")
-	highestSignedTargetBucket = []byte("highest-signed-target-bucket")
+	// Buckets for lowest signed source and target epoch for individual validator.
+	lowestSignedSourceBucket = []byte("lowest-signed-source-bucket")
+	lowestSignedTargetBucket = []byte("lowest-signed-target-bucket")
 
 	// Lowest and highest signed proposals.
 	lowestSignedProposalsBucket  = []byte("lowest-signed-proposals-bucket")
