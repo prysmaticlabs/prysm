@@ -86,7 +86,7 @@ func TestSplit(t *testing.T) {
 	require.NotNil(t, keyStore2, "No store created for public key %v", encodedKey2)
 
 	err = keyStore1.view(func(tx *bolt.Tx) error {
-		otherKeyProposalsBucket := tx.Bucket(newhistoricProposalsBucket).Bucket(pubKey2[:])
+		otherKeyProposalsBucket := tx.Bucket(newHistoricProposalsBucket).Bucket(pubKey2[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey2)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey2[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey2)
@@ -95,7 +95,7 @@ func TestSplit(t *testing.T) {
 	require.NoError(t, err)
 
 	err = keyStore2.view(func(tx *bolt.Tx) error {
-		otherKeyProposalsBucket := tx.Bucket(newhistoricProposalsBucket).Bucket(pubKey1[:])
+		otherKeyProposalsBucket := tx.Bucket(newHistoricProposalsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey1)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey1)
@@ -129,7 +129,7 @@ func TestSplit_AttestationsWithoutMatchingProposalsAreSplit(t *testing.T) {
 	require.NotNil(t, attestationsOnlyKeyStore, "No store created for public key %v", encodedKey2)
 
 	err = attestationsOnlyKeyStore.view(func(tx *bolt.Tx) error {
-		otherKeyProposalsBucket := tx.Bucket(newhistoricProposalsBucket).Bucket(pubKey1[:])
+		otherKeyProposalsBucket := tx.Bucket(newHistoricProposalsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyProposalsBucket, "Store for public key %v contains proposals for another key", encodedKey1)
 		otherKeyAttestationsBucket := tx.Bucket(historicAttestationsBucket).Bucket(pubKey1[:])
 		require.Equal(t, (*bolt.Bucket)(nil), otherKeyAttestationsBucket, "Store for public key %v contains attestations for another key", encodedKey1)

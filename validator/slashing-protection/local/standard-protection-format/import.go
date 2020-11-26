@@ -83,7 +83,8 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
-	return nil
+
+	return saveHighestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
 }
 
 func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
@@ -242,4 +243,52 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 		return nil, errors.Wrap(err, "could not set latest epoch written")
 	}
 	return &attestingHistory, nil
+}
+
+// This saves the highest source and target epoch from the individual validator to the DB.
+func saveHighestSourceTargetToDB(ctx context.Context, validatorDB db.Database, signedAttsByPubKey map[[48]byte][]*SignedAttestation) error {
+	validatorHighestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested source epoch.
+	validatorHighestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to highest attested target epoch.
+	for pubKey, signedAtts := range signedAttsByPubKey {
+		for _, att := range signedAtts {
+			source, err := uint64FromString(att.SourceEpoch)
+			if err != nil {
+				return fmt.Errorf("%d is not a valid source: %v", source, err)
+			}
+			target, err := uint64FromString(att.TargetEpoch)
+			if err != nil {
+				return fmt.Errorf("%d is not a valid target: %v", target, err)
+			}
+			se, ok := validatorHighestSourceEpoch[pubKey]
+			if !ok {
+				validatorHighestSourceEpoch[pubKey] = source
+			} else if source > se {
+				validatorHighestSourceEpoch[pubKey] = source
+			}
+			te, ok := validatorHighestTargetEpoch[pubKey]
+			if !ok {
+				validatorHighestTargetEpoch[pubKey] = target
+			} else if target > te {
+				validatorHighestTargetEpoch[pubKey] = target
+			}
+		}
+	}
+
+	// This should not happen.
+	if len(validatorHighestTargetEpoch) != len(validatorHighestSourceEpoch) {
+		return errors.New("incorrect source and target map length")
+	}
+
+	// Save highest source and target epoch to DB for every validator in the map.
+	for k, v := range validatorHighestSourceEpoch {
+		if err := validatorDB.SaveHighestSignedSourceEpoch(ctx, k, v); err != nil {
+			return err
+		}
+	}
+	for k, v := range validatorHighestTargetEpoch {
+		if err := validatorDB.SaveHighestSignedTargetEpoch(ctx, k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
