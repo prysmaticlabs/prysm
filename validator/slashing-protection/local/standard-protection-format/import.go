@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -74,7 +75,14 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
+		bar := initializeProgressBar(
+			len(proposalHistory.Proposals),
+			fmt.Sprintf("Importing past proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
+		)
 		for _, proposal := range proposalHistory.Proposals {
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
 			if err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
 				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 			}
