@@ -116,7 +116,7 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 		rawKeys[i] = pubKeys[i].(*PublicKey).p
 	}
 
-	return s.s.FastAggregateVerify(rawKeys, msg[:], dst)
+	return s.s.FastAggregateVerify(false, rawKeys, msg[:], dst)
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
