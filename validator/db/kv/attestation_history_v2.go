@@ -355,7 +355,8 @@ func (store *Store) HighestSignedSourceEpoch(ctx context.Context, publicKey [48]
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestSignedSourceBucket)
 		highestSignedSourceBytes := bucket.Get(publicKey[:])
-		if len(highestSignedSourceBytes) == 0 {
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		if len(highestSignedSourceBytes) < 8 {
 			return nil
 		}
 		highestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(highestSignedSourceBytes)
@@ -375,7 +376,8 @@ func (store *Store) HighestSignedTargetEpoch(ctx context.Context, publicKey [48]
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestSignedTargetBucket)
 		highestSignedTargetBytes := bucket.Get(publicKey[:])
-		if len(highestSignedTargetBytes) == 0 {
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		if len(highestSignedTargetBytes) < 8 {
 			return nil
 		}
 		highestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(highestSignedTargetBytes)
@@ -395,7 +397,7 @@ func (store *Store) SaveHighestSignedSourceEpoch(ctx context.Context, publicKey 
 		// If the incoming epoch is higher than the highest signed epoch, override.
 		highestSignedSourceBytes := bucket.Get(publicKey[:])
 		var highestSignedSourceEpoch uint64
-		if len(highestSignedSourceBytes) != 0 {
+		if len(highestSignedSourceBytes) >= 8 {
 			highestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(highestSignedSourceBytes)
 		}
 		if len(highestSignedSourceBytes) == 0 || epoch > highestSignedSourceEpoch {
@@ -418,7 +420,7 @@ func (store *Store) SaveHighestSignedTargetEpoch(ctx context.Context, publicKey 
 		// If the incoming epoch is higher than the highest signed epoch, override.
 		highestSignedTargetBytes := bucket.Get(publicKey[:])
 		var highestSignedTargetEpoch uint64
-		if len(highestSignedTargetBytes) != 0 {
+		if len(highestSignedTargetBytes) >= 8 {
 			highestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(highestSignedTargetBytes)
 		}
 		if len(highestSignedTargetBytes) == 0 || epoch > highestSignedTargetEpoch {

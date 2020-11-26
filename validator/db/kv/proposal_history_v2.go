@@ -77,7 +77,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 		lowestSignedBkt := tx.Bucket(lowestSignedProposalsBucket)
 		lowestSignedProposalBytes := lowestSignedBkt.Get(pubKey[:])
 		var lowestSignedProposalSlot uint64
-		if len(lowestSignedProposalBytes) != 0 {
+		if len(lowestSignedProposalBytes) >= 8 {
 			lowestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(lowestSignedProposalBytes)
 		}
 		if len(lowestSignedProposalBytes) == 0 || slot < lowestSignedProposalSlot {
@@ -90,7 +90,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 		highestSignedBkt := tx.Bucket(highestSignedProposalsBucket)
 		highestSignedProposalBytes := highestSignedBkt.Get(pubKey[:])
 		var highestSignedProposalSlot uint64
-		if len(highestSignedProposalBytes) != 0 {
+		if len(highestSignedProposalBytes) >= 8 {
 			highestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(highestSignedProposalBytes)
 		}
 		if len(highestSignedProposalBytes) == 0 || slot > highestSignedProposalSlot {
@@ -118,7 +118,8 @@ func (store *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedProposalsBucket)
 		lowestSignedProposalBytes := bucket.Get(publicKey[:])
-		if len(lowestSignedProposalBytes) == 0 {
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		if len(lowestSignedProposalBytes) < 8 {
 			return nil
 		}
 		lowestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(lowestSignedProposalBytes)
@@ -138,7 +139,8 @@ func (store *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byt
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestSignedProposalsBucket)
 		highestSignedProposalBytes := bucket.Get(publicKey[:])
-		if len(highestSignedProposalBytes) == 0 {
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		if len(highestSignedProposalBytes) < 8 {
 			return nil
 		}
 		highestSignedProposalSlot = bytesutil.BytesToUint64BigEndian(highestSignedProposalBytes)
