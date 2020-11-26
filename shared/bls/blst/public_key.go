@@ -44,7 +44,7 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	// Subgroup and infinity check
 	if !p.KeyValidate() {
 		// NOTE: the error is not quite accurate since it includes group check
-		return nil, common.ErrInfinitePubKey 
+		return nil, common.ErrInfinitePubKey
 	}
 	pubKeyObj := &PublicKey{p: p}
 	copiedKey := pubKeyObj.Copy()
@@ -68,7 +68,7 @@ func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
 	}
 	// No group check needed here since it is done in PublicKeyFromBytes
 	// Note the checks could be moved from PublicKeyFromBytes into Aggregate
-	// and take advantage of multi-threading. 
+	// and take advantage of multi-threading.
 	agg.Aggregate(mulP1, false)
 	return &PublicKey{p: agg.ToAffine()}, nil
 }

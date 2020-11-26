@@ -37,7 +37,7 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 		return nil, errors.New("could not unmarshal bytes into signature")
 	}
 	// Group check signature. Do not check for infinity since an aggregated signature
-	// could be infinite. 
+	// could be infinite.
 	if !signature.SigValidate(false) {
 		return nil, errors.New("signature not in group")
 	}
