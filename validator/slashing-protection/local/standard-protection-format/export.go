@@ -56,13 +56,19 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 }
 
 func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedBlock, error) {
-	lowestSignedSlot, err := validatorDB.LowestSignedProposal(ctx, pubKey)
+	lowestSignedSlot, exists, err := validatorDB.LowestSignedProposal(ctx, pubKey)
 	if err != nil {
 		return nil, err
 	}
-	highestSignedSlot, err := validatorDB.HighestSignedProposal(ctx, pubKey)
+	if !exists {
+		return nil, nil
+	}
+	highestSignedSlot, exists, err := validatorDB.HighestSignedProposal(ctx, pubKey)
 	if err != nil {
 		return nil, err
+	}
+	if !exists {
+		return nil, nil
 	}
 	signedBlocks := make([]*SignedBlock, 0)
 	for i := lowestSignedSlot; i <= highestSignedSlot; i++ {
