@@ -8,10 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestAttestationHistoryForPubKeysNew_EmptyVals(t *testing.T) {
+func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := setupDB(t, pubkeys)
-	historyForPubKeys, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
+	historyForPubKeys, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 	cleanAttHistoryForPubKeys := make(map[[48]byte]EncHistoryData)
 	clean := NewAttestationHistoryArray(0)
@@ -21,12 +21,12 @@ func TestAttestationHistoryForPubKeysNew_EmptyVals(t *testing.T) {
 	require.DeepEqual(t, cleanAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
 
-func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
+func TestAttestationHistoryForPubKeys_OK(t *testing.T) {
 	ctx := context.Background()
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := setupDB(t, pubkeys)
 
-	_, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
+	_, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
 	setAttHistoryForPubKeys := make(map[[48]byte]EncHistoryData)
@@ -41,9 +41,9 @@ func TestAttestationHistoryForPubKeysNew_OK(t *testing.T) {
 		require.NoError(t, err)
 		setAttHistoryForPubKeys[pubKey] = enc
 	}
-	err = db.SaveAttestationHistoryForPubKeysV2(context.Background(), setAttHistoryForPubKeys)
+	err = db.SaveAttestationHistoryForPubKeys(context.Background(), setAttHistoryForPubKeys)
 	require.NoError(t, err)
-	historyForPubKeys, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
+	historyForPubKeys, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 	require.DeepEqual(t, setAttHistoryForPubKeys, historyForPubKeys, "Expected attestation history epoch bits to be empty")
 }
@@ -53,7 +53,7 @@ func TestAttestationHistoryForPubKey_OK(t *testing.T) {
 	pubkeys := [][48]byte{{30}}
 	db := setupDB(t, pubkeys)
 
-	_, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
+	_, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 
 	history := NewAttestationHistoryArray(53999)
@@ -66,9 +66,9 @@ func TestAttestationHistoryForPubKey_OK(t *testing.T) {
 		})
 	require.NoError(t, err)
 
-	err = db.SaveAttestationHistoryForPubKeyV2(context.Background(), pubkeys[0], history)
+	err = db.SaveAttestationHistoryForPubKey(context.Background(), pubkeys[0], history)
 	require.NoError(t, err)
-	historyForPubKeys, err := db.AttestationHistoryForPubKeysV2(context.Background(), pubkeys)
+	historyForPubKeys, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
 	require.NoError(t, err)
 	require.DeepEqual(t, history, historyForPubKeys[pubkeys[0]], "Expected attestation history epoch bits to be empty")
 }
@@ -87,7 +87,7 @@ func TestStore_AttestedPublicKeys(t *testing.T) {
 	assert.DeepEqual(t, make([][48]byte, 0), keys)
 
 	pubKey := [48]byte{1}
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, NewAttestationHistoryArray(0))
+	err = validatorDB.SaveAttestationHistoryForPubKey(ctx, pubKey, NewAttestationHistoryArray(0))
 	require.NoError(t, err)
 
 	keys, err = validatorDB.AttestedPublicKeys(ctx)

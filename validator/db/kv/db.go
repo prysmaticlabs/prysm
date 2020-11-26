@@ -119,7 +119,7 @@ func (store *Store) Size() (int64, error) {
 // UpdatePublicKeysBuckets for a specified list of keys.
 func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newhistoricProposalsBucket)
+		bucket := tx.Bucket(newHistoricProposalsBucket)
 		for _, pubKey := range pubKeys {
 			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
 				return errors.Wrap(err, "failed to create proposal history bucket")
