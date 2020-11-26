@@ -755,17 +755,21 @@ func Test_saveLowestSourceTargetToDBt_Ok(t *testing.T) {
 	m[publicKeys[1]] = []*SignedAttestation{{SourceEpoch: "8", TargetEpoch: "7"}, {SourceEpoch: "6", TargetEpoch: "5"}}
 	require.NoError(t, saveLowestSourceTargetToDB(ctx, validatorDB, m))
 
-	got, err := validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[0])
+	got, e, err := validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[0])
 	require.NoError(t, err)
+	require.Equal(t, true, e)
 	require.Equal(t, uint64(2), got)
-	got, err = validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[1])
+	got, e, err= validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[1])
 	require.NoError(t, err)
+	require.Equal(t, true, e)
 	require.Equal(t, uint64(5), got)
-	got, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[0])
+	got, e, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[0])
 	require.NoError(t, err)
+	require.Equal(t, true, e)
 	require.Equal(t, uint64(1), got)
-	got, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[1])
+	got, e, err= validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[1])
 	require.NoError(t, err)
+	require.Equal(t, true, e)
 	require.Equal(t, uint64(6), got)
 }
 
