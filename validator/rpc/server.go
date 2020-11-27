@@ -46,6 +46,7 @@ type Config struct {
 	ValidatorService        *client.ValidatorService
 	SyncChecker             client.SyncChecker
 	GenesisFetcher          client.GenesisFetcher
+	BeaconNodeInfoFetcher   client.BeaconNodeInfoFetcher
 	WalletInitializedFeed   *event.Feed
 	NodeGatewayEndpoint     string
 	Wallet                  *wallet.Wallet
@@ -69,6 +70,7 @@ type Server struct {
 	validatorService        *client.ValidatorService
 	syncChecker             client.SyncChecker
 	genesisFetcher          client.GenesisFetcher
+	beaconNodeInfoFetcher   client.BeaconNodeInfoFetcher
 	walletDir               string
 	wallet                  *wallet.Wallet
 	walletInitializedFeed   *event.Feed
@@ -93,6 +95,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		valDB:                   cfg.ValDB,
 		validatorService:        cfg.ValidatorService,
 		syncChecker:             cfg.SyncChecker,
+		beaconNodeInfoFetcher:   cfg.BeaconNodeInfoFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		walletDir:               cfg.WalletDir,
 		walletInitializedFeed:   cfg.WalletInitializedFeed,

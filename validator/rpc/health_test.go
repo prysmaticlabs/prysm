@@ -33,6 +33,14 @@ func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, err
 	}, nil
 }
 
+type mockBeaconInfoFetcher struct {
+	endpoint string
+}
+
+func (m *mockBeaconInfoFetcher) BeaconLogsEndpoint(_ context.Context) (string, error) {
+	return m.endpoint, nil
+}
+
 func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	ctx := context.Background()
 	endpoint := "localhost:90210"
@@ -61,10 +69,12 @@ func TestServer_GetLogsEndpoints(t *testing.T) {
 	s := &Server{
 		validatorMonitoringHost: "localhost",
 		validatorMonitoringPort: 8081,
+		beaconNodeInfoFetcher:   &mockBeaconInfoFetcher{endpoint: "localhost:8080"},
 	}
 	got, err := s.GetLogsEndpoints(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 	want := &pb.LogsEndpointResponse{
+		BeaconLogsEndpoint:    "localhost:8080",
 		ValidatorLogsEndpoint: "localhost:8081",
 	}
 	require.DeepEqual(t, want, got)

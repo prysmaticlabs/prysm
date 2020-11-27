@@ -36,7 +36,12 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (
 
 // GetLogsEndpoints for the beacon and validator client.
 func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.LogsEndpointResponse, error) {
+	beaconLogsEndpoint, err := s.beaconNodeInfoFetcher.BeaconLogsEndpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &pb.LogsEndpointResponse{
+		BeaconLogsEndpoint:    beaconLogsEndpoint,
 		ValidatorLogsEndpoint: fmt.Sprintf("%s:%d", s.validatorMonitoringHost, s.validatorMonitoringPort),
 	}, nil
 }
