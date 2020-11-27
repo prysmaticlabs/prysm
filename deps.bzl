@@ -2466,7 +2466,7 @@ def prysm_deps():
         ],
         strip_prefix = "blst-5c0e1b736df8abc171e46197d44930d4d2585a69",
         build_file = "//third_party:blst/blst.BUILD",
-    #    sha256 = "4e03c7d673fdf9f8f2ddd3e64edc31001a86ad380a8e9266c197cff70856d054",
+        #    sha256 = "4e03c7d673fdf9f8f2ddd3e64edc31001a86ad380a8e9266c197cff70856d054",
     )
     go_repository(
         name = "com_github_syndtr_goleveldb",
