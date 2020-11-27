@@ -143,9 +143,6 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	// Signature and PKs are assumed to have been validated upon decompression!
 	signature := new(blstAggregateSignature)
 	signature.Aggregate(rawSigs, false)
-	if signature == nil {
-		return nil
-	}
 	return &Signature{s: signature.ToAffine()}
 }
 
