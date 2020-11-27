@@ -486,12 +486,13 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoint:    b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(depAddress),
-		BeaconDB:        b.db,
-		DepositCache:    b.depositCache,
-		StateNotifier:   b,
-		StateGen:        b.stateGen,
+		HTTPEndPoint:       b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
+		DepositContract:    common.HexToAddress(depAddress),
+		BeaconDB:           b.db,
+		DepositCache:       b.depositCache,
+		StateNotifier:      b,
+		StateGen:           b.stateGen,
+		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
