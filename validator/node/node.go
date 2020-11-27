@@ -405,24 +405,28 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	}
 	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
 	validatorGatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
+	validatorMonitoringHost := cliCtx.String(cmd.MonitoringHostFlag.Name)
+	validatorMonitoringPort := cliCtx.Int(cmd.MonitoringHostFlag.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
-		ValDB:                 s.db,
-		Host:                  rpcHost,
-		Port:                  fmt.Sprintf("%d", rpcPort),
-		WalletInitializedFeed: s.walletInitialized,
-		ValidatorService:      vs,
-		SyncChecker:           vs,
-		GenesisFetcher:        vs,
-		NodeGatewayEndpoint:   nodeGatewayEndpoint,
-		WalletDir:             walletDir,
-		Wallet:                s.wallet,
-		Keymanager:            km,
-		ValidatorGatewayHost:  validatorGatewayHost,
-		ValidatorGatewayPort:  validatorGatewayPort,
+		ValDB:                   s.db,
+		Host:                    rpcHost,
+		Port:                    fmt.Sprintf("%d", rpcPort),
+		WalletInitializedFeed:   s.walletInitialized,
+		ValidatorService:        vs,
+		SyncChecker:             vs,
+		GenesisFetcher:          vs,
+		NodeGatewayEndpoint:     nodeGatewayEndpoint,
+		WalletDir:               walletDir,
+		Wallet:                  s.wallet,
+		Keymanager:              km,
+		ValidatorGatewayHost:    validatorGatewayHost,
+		ValidatorGatewayPort:    validatorGatewayPort,
+		ValidatorMonitoringHost: validatorMonitoringHost,
+		ValidatorMonitoringPort: validatorMonitoringPort,
 	})
 	return s.services.RegisterService(server)
 }

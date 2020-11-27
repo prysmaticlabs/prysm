@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -30,5 +31,12 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (
 		BeaconNodeEndpoint:     s.nodeGatewayEndpoint,
 		Connected:              true,
 		Syncing:                syncStatus,
+	}, nil
+}
+
+// GetLogsEndpoints for the beacon and validator client.
+func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.LogsEndpointResponse, error) {
+	return &pb.LogsEndpointResponse{
+		ValidatorLogsEndpoint: fmt.Sprintf("%s:%d", s.validatorMonitoringHost, s.validatorMonitoringPort),
 	}, nil
 }

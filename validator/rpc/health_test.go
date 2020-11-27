@@ -55,3 +55,17 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	}
 	require.DeepEqual(t, want, got)
 }
+
+func TestServer_GetLogsEndpoints(t *testing.T) {
+	ctx := context.Background()
+	s := &Server{
+		validatorMonitoringHost: "localhost",
+		validatorMonitoringPort: 8081,
+	}
+	got, err := s.GetLogsEndpoints(ctx, &ptypes.Empty{})
+	require.NoError(t, err)
+	want := &pb.LogsEndpointResponse{
+		ValidatorLogsEndpoint: "localhost:8081",
+	}
+	require.DeepEqual(t, want, got)
+}
