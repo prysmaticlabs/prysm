@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mdlayher/prombolt"
+	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
