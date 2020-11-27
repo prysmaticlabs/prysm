@@ -89,6 +89,7 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 
 		require.NotNil(t, signingRoot)
 		require.DeepEqual(t, tt.signingRoot, signingRoot[:], "Expected DB to keep object the same")
+		require.NoError(t, db.Close(), "Failed to close database")
 	}
 }
 
@@ -151,6 +152,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 			require.NoError(t, err, "Failed to get proposal history")
 			require.DeepEqual(t, signedRoot, sr[:], "Unexpected difference in bytes for epoch %d", slot)
 		}
+		require.NoError(t, db.Close(), "Failed to close database")
 	}
 }
 
