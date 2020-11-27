@@ -12,6 +12,9 @@ import (
 )
 
 var _ shared.Service = (*ValidatorService)(nil)
+var _ BeaconNodeInfoFetcher = (*ValidatorService)(nil)
+var _ GenesisFetcher = (*ValidatorService)(nil)
+var _ SyncChecker = (*ValidatorService)(nil)
 
 func TestStop_CancelsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
