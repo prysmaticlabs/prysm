@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
