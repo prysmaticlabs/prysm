@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var maxKeys = int64(100000)
+var maxKeys = int64(1000000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
-	MaxCost:     1 << 22, // ~4mb is cache max size
+	MaxCost:     1 << 26, // ~64mb is cache max size
 	BufferItems: 64,
 })
 
