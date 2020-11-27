@@ -256,13 +256,15 @@ func (s *Service) Start() {
 		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
-		BeaconDB:           s.beaconDB,
-		Server:             s.grpcServer,
-		SyncChecker:        s.syncService,
-		GenesisTimeFetcher: s.genesisTimeFetcher,
-		PeersFetcher:       s.peersFetcher,
-		PeerManager:        s.peerManager,
-		GenesisFetcher:     s.genesisFetcher,
+		BeaconDB:             s.beaconDB,
+		Server:               s.grpcServer,
+		SyncChecker:          s.syncService,
+		GenesisTimeFetcher:   s.genesisTimeFetcher,
+		PeersFetcher:         s.peersFetcher,
+		PeerManager:          s.peerManager,
+		GenesisFetcher:       s.genesisFetcher,
+		BeaconMonitoringHost: s.beaconMonitoringHost,
+		BeaconMonitoringPort: s.beaconMonitoringPort,
 	}
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,

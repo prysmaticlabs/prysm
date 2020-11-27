@@ -406,7 +406,7 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
 	validatorGatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	validatorMonitoringHost := cliCtx.String(cmd.MonitoringHostFlag.Name)
-	validatorMonitoringPort := cliCtx.Int(cmd.MonitoringHostFlag.Name)
+	validatorMonitoringPort := cliCtx.Int(flags.MonitoringPortFlag.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)

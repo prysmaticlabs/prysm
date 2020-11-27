@@ -603,7 +603,7 @@ func (b *BeaconNode) registerRPCService() error {
 	host := b.cliCtx.String(flags.RPCHost.Name)
 	port := b.cliCtx.String(flags.RPCPort.Name)
 	beaconMonitoringHost := b.cliCtx.String(cmd.MonitoringHostFlag.Name)
-	beaconMonitoringPort := b.cliCtx.Int(cmd.MonitoringPortFlag.Name)
+	beaconMonitoringPort := b.cliCtx.Int(flags.MonitoringPortFlag.Name)
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
@@ -614,7 +614,7 @@ func (b *BeaconNode) registerRPCService() error {
 		Host:                    host,
 		Port:                    port,
 		BeaconMonitoringHost:    beaconMonitoringHost,
-		beaconMonitoringPort:    beaconMonitoringPort,
+		BeaconMonitoringPort:    beaconMonitoringPort,
 		CertFlag:                cert,
 		KeyFlag:                 key,
 		BeaconDB:                b.db,
