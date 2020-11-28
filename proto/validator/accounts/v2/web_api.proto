@@ -225,9 +225,6 @@ message ImportKeystoresRequest {
 
     // Password to unlock imported keystore files.
     string keystores_password = 2;
-
-    // Password for the wallet.
-    string wallet_password = 3;
 }
 
 message ImportKeystoresResponse {
