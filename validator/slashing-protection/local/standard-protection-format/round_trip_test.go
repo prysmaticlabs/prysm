@@ -6,10 +6,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
 )
 
 func TestImportExport_RoundTrip(t *testing.T) {
