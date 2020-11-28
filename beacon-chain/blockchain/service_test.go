@@ -446,6 +446,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cancel:         cancel,
 		beaconDB:       db,
 		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		stateGen:       stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	b := testutil.NewBeaconBlock()
 	r, err := b.Block.HashTreeRoot()
@@ -453,6 +454,25 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	s.saveInitSyncBlock(r, b)
 	require.NoError(t, s.Stop())
 	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
+}
+
+func TestServiceStop_SaveCachedStateSummaries(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	db, _ := testDB.SetupDB(t)
+	c := cache.NewStateSummaryCache()
+	s := &Service{
+		ctx:            ctx,
+		cancel:         cancel,
+		beaconDB:       db,
+		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		stateGen:       stategen.New(db, c),
+	}
+
+	r := [32]byte{'a'}
+	ss := &pb.StateSummary{Root: r[:], Slot: 1}
+	c.Put(r, ss)
+	require.NoError(t, s.Stop())
+	require.Equal(t, true, s.beaconDB.HasStateSummary(ctx, r))
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
