@@ -746,17 +746,10 @@ func Test_saveLowestSourceTargetToDBt_Ok(t *testing.T) {
 	publicKeys := spTest.CreateRandomPubKeys(t, numValidators)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
-<<<<<<< HEAD
 	m := make(map[[48]byte][]*interchangeformat.SignedAttestation)
 	m[publicKeys[0]] = []*interchangeformat.SignedAttestation{{SourceEpoch: "1", TargetEpoch: "2"}, {SourceEpoch: "3", TargetEpoch: "4"}}
 	m[publicKeys[1]] = []*interchangeformat.SignedAttestation{{SourceEpoch: "8", TargetEpoch: "7"}, {SourceEpoch: "6", TargetEpoch: "5"}}
-	require.NoError(t, interchangeformat.SaveHighestSourceTargetToDB(ctx, validatorDB, m))
-=======
-	m := make(map[[48]byte][]*SignedAttestation)
-	m[publicKeys[0]] = []*SignedAttestation{{SourceEpoch: "1", TargetEpoch: "2"}, {SourceEpoch: "3", TargetEpoch: "4"}}
-	m[publicKeys[1]] = []*SignedAttestation{{SourceEpoch: "8", TargetEpoch: "7"}, {SourceEpoch: "6", TargetEpoch: "5"}}
-	require.NoError(t, saveLowestSourceTargetToDB(ctx, validatorDB, m))
->>>>>>> b243665d3ef6ce588c77e16bb694c4ee6c7eb3db
+	require.NoError(t, interchangeformat.SaveLowestSourceTargetToDB(ctx, validatorDB, m))
 
 	got, err := validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[0])
 	require.NoError(t, err)
