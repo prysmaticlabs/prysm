@@ -156,13 +156,7 @@ func TestCreateWallet_Imported(t *testing.T) {
 
 	// We attempt to create the wallet.
 	_, err := CreateAndSaveWalletCli(cliCtx)
-	require.NoError(t, err)
-
-	// We attempt to open the newly created wallet.
-	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir: walletDir,
-	})
-	assert.NoError(t, err)
+	require.ErrorContains(t, "could not initialize wallet for imported accounts", err)
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
@@ -202,17 +196,6 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to create another wallet of the same type at the same location. We expect an error.
-	_, err = CreateAndSaveWalletCli(cliCtx)
-	require.ErrorContains(t, "already exists", err)
-
-	cliCtx = setupWalletCtx(t, &testWalletConfig{
-		walletDir:          walletDir,
-		passwordsDir:       passwordsDir,
-		walletPasswordFile: passwordFile,
-		keymanagerKind:     keymanager.Imported,
-	})
-
-	// We attempt to create another wallet of different type at the same location. We expect an error.
 	_, err = CreateAndSaveWalletCli(cliCtx)
 	require.ErrorContains(t, "already exists", err)
 }
