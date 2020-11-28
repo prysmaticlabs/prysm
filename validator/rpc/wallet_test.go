@@ -47,7 +47,39 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err = s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "could not initialize wallet for imported accounts.", err)
+	require.NoError(t, err)
+
+	importReq := &pb.ImportKeystoresRequest{
+		KeystoresPassword: strongPass,
+		KeystoresImported: []string{"badjson"},
+	}
+	_, err = s.ImportKeystores(ctx, importReq)
+	require.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
+
+	encryptor := keystorev4.New()
+	keystores := make([]string, 3)
+	for i := 0; i < len(keystores); i++ {
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
+		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
+		id, err := uuid.NewRandom()
+		require.NoError(t, err)
+		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
+		require.NoError(t, err)
+		item := &keymanager.Keystore{
+			Crypto:  cryptoFields,
+			ID:      id.String(),
+			Version: encryptor.Version(),
+			Pubkey:  pubKey,
+			Name:    encryptor.Name(),
+		}
+		encodedFile, err := json.MarshalIndent(item, "", "\t")
+		require.NoError(t, err)
+		keystores[i] = string(encodedFile)
+	}
+	importReq.KeystoresImported = keystores
+	_, err = s.ImportKeystores(ctx, importReq)
+	require.NoError(t, err)
 }
 
 func TestServer_CreateWallet_Derived(t *testing.T) {
@@ -102,7 +134,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -117,7 +149,7 @@ func TestServer_WalletConfig(t *testing.T) {
 
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
 		WalletPath:     localWalletDir,
-		KeymanagerKind: pb.KeymanagerKind_DERIVED,
+		KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 	})
 }
 

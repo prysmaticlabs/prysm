@@ -108,34 +108,6 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	return walletDir, passwordsDir, passwordFilePath
 }
 
-func setupRemoteWalletCtx(
-	t testing.TB,
-	walletDir string,
-	walletPasswordFile string,
-	wantCfg *remote.KeymanagerOpts,
-) *cli.Context {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	keymanagerKind := "remote"
-	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.WalletPasswordFileFlag.Name, walletDir, "")
-	set.String(flags.KeymanagerKindFlag.Name, keymanagerKind, "")
-	set.String(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr, "")
-	set.String(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath, "")
-	set.String(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath, "")
-	set.String(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath, "")
-	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
-	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, walletPasswordFile))
-	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanagerKind))
-	assert.NoError(t, set.Set(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr))
-	assert.NoError(t, set.Set(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath))
-	assert.NoError(t, set.Set(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath))
-	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
-	cliCtx := cli.NewContext(&app, set, nil)
-
-	return cliCtx
-}
-
 func TestCreateOrOpenWallet(t *testing.T) {
 	hook := logTest.NewGlobal()
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
@@ -171,6 +143,26 @@ func TestCreateOrOpenWallet(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, createdWallet.KeymanagerKind(), openedWallet.KeymanagerKind())
 	assert.Equal(t, createdWallet.AccountsDir(), openedWallet.AccountsDir())
+}
+
+func TestCreateWallet_Imported(t *testing.T) {
+	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		keymanagerKind:     keymanager.Imported,
+		walletPasswordFile: walletPasswordFile,
+	})
+
+	// We attempt to create the wallet.
+	_, err := CreateAndSaveWalletCli(cliCtx)
+	require.NoError(t, err)
+
+	// We attempt to open the newly created wallet.
+	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+		WalletDir: walletDir,
+	})
+	assert.NoError(t, err)
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
@@ -213,15 +205,12 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 	_, err = CreateAndSaveWalletCli(cliCtx)
 	require.ErrorContains(t, "already exists", err)
 
-	wantCfg := &remote.KeymanagerOpts{
-		RemoteCertificate: &remote.CertificateConfig{
-			ClientCertPath: "/tmp/client.crt",
-			ClientKeyPath:  "/tmp/client.key",
-			CACertPath:     "/tmp/ca.crt",
-		},
-		RemoteAddr: "host.example.com:4000",
-	}
-	cliCtx = setupRemoteWalletCtx(t, walletDir, passwordFile, wantCfg)
+	cliCtx = setupWalletCtx(t, &testWalletConfig{
+		walletDir:          walletDir,
+		passwordsDir:       passwordsDir,
+		walletPasswordFile: passwordFile,
+		keymanagerKind:     keymanager.Imported,
+	})
 
 	// We attempt to create another wallet of different type at the same location. We expect an error.
 	_, err = CreateAndSaveWalletCli(cliCtx)
@@ -229,6 +218,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 }
 
 func TestCreateWallet_Remote(t *testing.T) {
+	walletDir, _, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
 			ClientCertPath: "/tmp/client.crt",
@@ -237,8 +227,25 @@ func TestCreateWallet_Remote(t *testing.T) {
 		},
 		RemoteAddr: "host.example.com:4000",
 	}
-	walletDir, _, walletPasswordFile := setupWalletAndPasswordsDir(t)
-	cliCtx := setupRemoteWalletCtx(t, walletDir, walletPasswordFile, wantCfg)
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	keymanagerKind := "remote"
+	set.String(flags.WalletDirFlag.Name, walletDir, "")
+	set.String(flags.WalletPasswordFileFlag.Name, walletDir, "")
+	set.String(flags.KeymanagerKindFlag.Name, keymanagerKind, "")
+	set.String(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr, "")
+	set.String(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath, "")
+	set.String(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath, "")
+	set.String(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath, "")
+	assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
+	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, walletPasswordFile))
+	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanagerKind))
+	assert.NoError(t, set.Set(flags.GrpcRemoteAddressFlag.Name, wantCfg.RemoteAddr))
+	assert.NoError(t, set.Set(flags.RemoteSignerCertPathFlag.Name, wantCfg.RemoteCertificate.ClientCertPath))
+	assert.NoError(t, set.Set(flags.RemoteSignerKeyPathFlag.Name, wantCfg.RemoteCertificate.ClientKeyPath))
+	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
+	cliCtx := cli.NewContext(&app, set, nil)
+
 	// We attempt to create the wallet.
 	_, err := CreateAndSaveWalletCli(cliCtx)
 	require.NoError(t, err)

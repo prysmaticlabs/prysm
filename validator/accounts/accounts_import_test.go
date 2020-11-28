@@ -39,16 +39,14 @@ func TestImport_Noninteractive(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
-	require.NoError(t, err)
-	w := wallet.New(&wallet.Config{
-		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
-		WalletDir:      cfg.WalletCfg.WalletDir,
-		WalletPassword: cfg.WalletCfg.WalletPassword,
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
 	})
-	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
-
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
@@ -97,16 +95,14 @@ func TestImport_DuplicateKeys(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
-	require.NoError(t, err)
-	w := wallet.New(&wallet.Config{
-		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
-		WalletDir:      cfg.WalletCfg.WalletDir,
-		WalletPassword: cfg.WalletCfg.WalletPassword,
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
 	})
-	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
-
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
@@ -186,16 +182,14 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
-	require.NoError(t, err)
-	w := wallet.New(&wallet.Config{
-		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
-		WalletDir:      cfg.WalletCfg.WalletDir,
-		WalletPassword: cfg.WalletCfg.WalletPassword,
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
 	})
-	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
-
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
@@ -244,14 +238,13 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
-	require.NoError(t, err)
-	w := wallet.New(&wallet.Config{
-		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
-		WalletDir:      cfg.WalletCfg.WalletDir,
-		WalletPassword: cfg.WalletCfg.WalletPassword,
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
 	})
-	err = createImportedKeymanagerWallet(cliCtx.Context, w)
 	require.NoError(t, err)
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
@@ -366,14 +359,13 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		privateKeyFile:     privKeyFileName,
 	})
 	walletPass := "Passwordz0320$"
-	cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
-	require.NoError(t, err)
-	wallet := wallet.New(&wallet.Config{
-		KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
-		WalletDir:      cfg.WalletCfg.WalletDir,
-		WalletPassword: walletPass,
+	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: walletPass,
+		},
 	})
-	err = createImportedKeymanagerWallet(cliCtx.Context, wallet)
 	require.NoError(t, err)
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,

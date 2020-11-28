@@ -59,7 +59,33 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	}
 	switch req.Keymanager {
 	case pb.KeymanagerKind_IMPORTED:
-		return nil, status.Error(codes.InvalidArgument, "could not initialize wallet for imported accounts. Please use `import accounts` instead")
+		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+			WalletCfg: &wallet.Config{
+				WalletDir:      walletDir,
+				KeymanagerKind: keymanager.Imported,
+				WalletPassword: req.WalletPassword,
+			},
+			SkipMnemonicConfirm: true,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if err := s.initializeWallet(ctx, &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: req.WalletPassword,
+		}); err != nil {
+			return nil, err
+		}
+		if err := writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
+			return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
+		}
+		return &pb.CreateWalletResponse{
+			Wallet: &pb.WalletResponse{
+				WalletPath:     walletDir,
+				KeymanagerKind: pb.KeymanagerKind_IMPORTED,
+			},
+		}, nil
 	case pb.KeymanagerKind_DERIVED:
 		if req.NumAccounts < 1 {
 			return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
@@ -162,15 +188,12 @@ func (s *Server) GenerateMnemonic(_ context.Context, _ *ptypes.Empty) (*pb.Gener
 func (s *Server) ImportKeystores(
 	ctx context.Context, req *pb.ImportKeystoresRequest,
 ) (*pb.ImportKeystoresResponse, error) {
-	walletDir := s.walletDir
-	if err := s.initializeWallet(ctx, &wallet.Config{
-		WalletDir:      walletDir,
-		WalletPassword: req.WalletPassword,
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not initialize wallet: %v", err)
+	if s.wallet == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
-	if err := writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
-		return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
+	km, ok := s.keymanager.(*imported.Keymanager)
+	if !ok {
+		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import more keystores")
 	}
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
@@ -196,7 +219,7 @@ func (s *Server) ImportKeystores(
 	}
 	// Import the uploaded accounts.
 	if err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
-		Keymanager:      s.keymanager.(*imported.Keymanager),
+		Keymanager:      km,
 		Keystores:       keystores,
 		AccountPassword: req.KeystoresPassword,
 	}); err != nil {
