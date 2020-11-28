@@ -50,6 +50,11 @@ service Health {
             get: "/v2/validator/health/node_connection"
         };
     }
+    rpc GetLogsEndpoints(google.protobuf.Empty) returns (LogsEndpointResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/health/logs/endpoints"
+        };
+    }
 }
 
 service Auth {
@@ -196,6 +201,11 @@ message NodeConnectionResponse {
     uint64 genesis_time = 4;
     // Address of the validator deposit contract in the eth1 chain.
     bytes deposit_contract_address = 5;
+}
+
+message LogsEndpointResponse {
+	string validator_logs_endpoint = 1;
+	string beacon_logs_endpoint = 2;
 }
 
 message ChangePasswordRequest {
