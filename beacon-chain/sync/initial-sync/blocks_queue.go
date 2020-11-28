@@ -58,7 +58,6 @@ type syncMode uint8
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	startSlot           uint64
 	highestExpectedSlot uint64
 	p2p                 p2p.P2P
 	db                  db.ReadOnlyDatabase
@@ -102,7 +101,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		})
 	}
 	highestExpectedSlot := cfg.highestExpectedSlot
-	if highestExpectedSlot <= cfg.startSlot {
+	if highestExpectedSlot == 0 {
 		if cfg.mode == modeStopOnFinalizedEpoch {
 			highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
 		} else {
