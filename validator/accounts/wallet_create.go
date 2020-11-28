@@ -244,6 +244,6 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	if err != nil {
 		return keymanager.Imported, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
 	}
-	// +1 as we are skipping Imported Accounts
+	// +1 as we are skipping Imported kind
 	return keymanager.Kind(selection + 1), nil
 }
