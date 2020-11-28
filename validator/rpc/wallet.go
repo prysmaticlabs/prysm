@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -164,10 +163,6 @@ func (s *Server) ImportKeystores(
 	ctx context.Context, req *pb.ImportKeystoresRequest,
 ) (*pb.ImportKeystoresResponse, error) {
 	walletDir := s.walletDir
-	if strings.TrimSpace(req.WalletPath) != "" {
-		walletDir = req.WalletPath
-	}
-
 	if err := s.initializeWallet(ctx, &wallet.Config{
 		WalletDir:      walletDir,
 		WalletPassword: req.WalletPassword,
