@@ -13,11 +13,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// limit for rate limiter when processing new inbound dials.
-const ipLimit = 4
+const (
+	// limit for rate limiter when processing new inbound dials.
+	ipLimit = 4
 
-// burst limit for inbound dials.
-const ipBurst = 8
+	// burst limit for inbound dials.
+	ipBurst = 8
+
+	// high watermark buffer signifies the buffer till which
+	// we will handle inbound requests.
+	highWatermarkBuffer = 10
+)
 
 // InterceptPeerDial tests whether we're permitted to Dial the specified peer.
 func (s *Service) InterceptPeerDial(_ peer.ID) (allow bool) {
@@ -44,7 +50,7 @@ func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 			"reason": "exceeded dial limit"}).Trace("Not accepting inbound dial from ip address")
 		return false
 	}
-	if s.isPeerAtLimit() {
+	if s.isPeerAtLimit(true) {
 		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
 			"reason": "at peer limit"}).Trace("Not accepting inbound dial")
 		return false

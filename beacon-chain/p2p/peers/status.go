@@ -59,6 +59,9 @@ const (
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
+
+	// The period a new peer is allowed to live in our buffer before we start ranking them.
+	timeBuffer = 2 * time.Minute
 )
 
 // Status is the structure holding the peer status information.
@@ -120,8 +123,9 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 		return
 	}
 	peerData := &peerdata.PeerData{
-		Address:   address,
-		Direction: direction,
+		Address:        address,
+		Direction:      direction,
+		FirstAddedTime: timeutils.Now(),
 		// Peers start disconnected; state will be updated when the handshake process begins.
 		ConnState: PeerDisconnected,
 	}
@@ -418,6 +422,36 @@ func (p *Status) All() []peer.ID {
 	return pids
 }
 
+// RankPeers by their response scores and first added times.
+func (p *Status) RankPeers() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	peersToRank := make([]peer.ID, 0)
+	// Select connected peers and rank them by newly added time.
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected {
+			peersToRank = append(peersToRank, pid)
+		}
+	}
+
+	sort.Slice(peersToRank, func(i, j int) bool {
+		peerI, ok := p.store.PeerData(peersToRank[i])
+		if !ok {
+			return true
+		}
+		peerJ, ok := p.store.PeerData(peersToRank[j])
+		if !ok {
+			return false
+		}
+		if peerI.BadResponses == peerJ.BadResponses {
+			return peerI.FirstAddedTime.After(peerJ.FirstAddedTime)
+		}
+		return peerI.BadResponses > peerJ.BadResponses
+	})
+	return peersToRank
+}
+
 // Prune clears out and removes outdated and disconnected peers.
 func (p *Status) Prune() {
 	p.store.Lock()
@@ -603,6 +637,16 @@ func (p *Status) isfromBadIP(pid peer.ID) bool {
 		}
 	}
 	return false
+}
+
+// ConnectedPeerLimit returns the peer limit of
+// concurrent peers connected to the beacon-node.
+func (p *Status) ConnectedPeerLimit() uint64 {
+	maxLim := p.MaxPeerLimit()
+	if maxLim <= maxLimitBuffer {
+		return 0
+	}
+	return uint64(maxLim) - maxLimitBuffer
 }
 
 func (p *Status) addIpToTracker(pid peer.ID) {
