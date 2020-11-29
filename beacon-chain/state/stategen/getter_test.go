@@ -232,7 +232,7 @@ func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	r := [32]byte{'a'}
 	summary := &pb.StateSummary{Slot: 100}
 	_, err := service.stateSummary(ctx, r)
-	require.ErrorContains(t, errUnknownStateSummary.Error(), err)
+	require.ErrorContains(t, "could not find block in DB", err)
 
 	service.stateSummaryCache.Put(r, summary)
 	got, err := service.stateSummary(ctx, r)
