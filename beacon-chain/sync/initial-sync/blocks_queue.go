@@ -36,6 +36,10 @@ const (
 	noRequiredPeersErrRefreshInterval = 15 * time.Second
 	// maxResetAttempts number of times stale FSM is reset, before backtracking is triggered.
 	maxResetAttempts = 4
+	// startBackSlots defines number of slots before the current head, which defines a start position
+	// of the initial machine. This allows more robustness in case of normal sync sets head to some
+	// orphaned block: in that case starting earlier and re-fetching blocks allows to reorganize chain.
+	startBackSlots = 32
 )
 
 var (
@@ -173,6 +177,9 @@ func (q *blocksQueue) loop() {
 
 	// Define initial state machines.
 	startSlot := q.chain.HeadSlot()
+	if startSlot > startBackSlots {
+		startSlot -= startBackSlots
+	}
 	blocksPerRequest := q.blocksFetcher.blocksPerSecond
 	for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
 		q.smm.addStateMachine(i)
