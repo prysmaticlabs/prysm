@@ -41,7 +41,7 @@ func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.Log
 		return nil, err
 	}
 	return &pb.LogsEndpointResponse{
-		BeaconLogsEndpoint:    beaconLogsEndpoint,
-		ValidatorLogsEndpoint: fmt.Sprintf("%s:%d", s.validatorMonitoringHost, s.validatorMonitoringPort),
+		BeaconLogsEndpoint:    beaconLogsEndpoint + "/logs",
+		ValidatorLogsEndpoint: fmt.Sprintf("%s:%d/logs", s.validatorMonitoringHost, s.validatorMonitoringPort),
 	}, nil
 }

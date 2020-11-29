@@ -74,8 +74,8 @@ func TestServer_GetLogsEndpoints(t *testing.T) {
 	got, err := s.GetLogsEndpoints(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 	want := &pb.LogsEndpointResponse{
-		BeaconLogsEndpoint:    "localhost:8080",
-		ValidatorLogsEndpoint: "localhost:8081",
+		BeaconLogsEndpoint:    "localhost:8080/logs",
+		ValidatorLogsEndpoint: "localhost:8081/logs",
 	}
 	require.DeepEqual(t, want, got)
 }
