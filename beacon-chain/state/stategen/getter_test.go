@@ -244,7 +244,7 @@ func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	r = [32]byte{'b'}
 	summary = &pb.StateSummary{Root: r[:], Slot: 101}
 	_, err = service.stateSummary(ctx, r)
-	require.ErrorContains(t, errUnknownStateSummary.Error(), err)
+	require.ErrorContains(t, "could not find block in DB", err)
 
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, summary))
 	got, err = service.stateSummary(ctx, r)
