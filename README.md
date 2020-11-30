@@ -15,8 +15,15 @@ A detailed set of installation and usage instructions as well as breakdowns of e
 
 To participate in staking, you can join the [official eth2 launchpad](https://launchpad.ethereum.org). The launchpad is the only recommended way to become a validator on mainnet. You can visualize the nodes in the network on [eth2stats.io](https://eth2stats.io), explore validator rewards/penalties via Bitfly's block explorer: [beaconcha.in](https://beaconcha.in), and follow the latest blocks added to the chain on [beaconscan](https://beaconscan.com).
 
-## Contributing
 
+## Contributing
+### Branches
+Prysm maintains two permanent branches:
+
+* master: This points to the latest stable release. It is ideal for most users.
+* develop: This is used for development, it contains the latest PRs. Developers should base thier PRs on this branch.
+
+### Guide
 Want to get involved? Check out our [Contribution Guide](https://docs.prylabs.network/docs/contribute/contribution-guidelines/) to learn more!
 
 ## License
