@@ -109,7 +109,7 @@ func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset
 }
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
-func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num int, offset int, partial bool) error {
+func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int, partial bool) error {
 	txOps, err := bind.NewTransactor(bytes.NewReader(keystoreBytes), "" /*password*/)
 	if err != nil {
 		return err

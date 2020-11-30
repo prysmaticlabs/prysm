@@ -1,4 +1,4 @@
-package rpc
+package ipc
 
 import (
 	"context"
@@ -282,7 +282,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	return nil
 }
 
-func writeWalletPasswordToDisk(walletDir string, password string) error {
+func writeWalletPasswordToDisk(walletDir, password string) error {
 	if !featureconfig.Get().WriteWalletPasswordOnWebOnboarding {
 		return nil
 	}
