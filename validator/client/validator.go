@@ -264,7 +264,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 					continue
 				}
 				validatingKeys = keys
-				break
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting fetching validating keys")
 				return ctx.Err()
