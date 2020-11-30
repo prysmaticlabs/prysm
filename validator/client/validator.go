@@ -40,6 +40,15 @@ import (
 // slasher connection when the slasher client connection is not ready.
 var reconnectPeriod = 5 * time.Second
 
+// keyFetchPeriod is the frequency that we try to refetch validating keys
+// in case no keys were fetched previously.
+var keyRefetchPeriod = 30 * time.Second
+
+var (
+	msgCouldNotFetchKeys = "could not fetch validating keys"
+	msgNoKeysFetched     = "No validating keys fetched. Trying again"
+)
+
 // ValidatorRole defines the validator role.
 type ValidatorRole int8
 
@@ -236,8 +245,34 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 
 	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not fetch validating keys")
+		return errors.Wrap(err, msgCouldNotFetchKeys)
 	}
+	if len(validatingKeys) == 0 {
+		log.Warn(msgNoKeysFetched)
+
+		ticker := time.NewTicker(keyRefetchPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				keys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+				if err != nil {
+					return errors.Wrap(err, msgCouldNotFetchKeys)
+				}
+				if len(keys) == 0 {
+					log.Warn(msgNoKeysFetched)
+					continue
+				}
+				validatingKeys = keys
+				break
+			case <-ctx.Done():
+				log.Debug("Context closed, exiting fetching validating keys")
+				return errors.New("context closed, no longer attempting to fetch validating keys")
+			}
+			break
+		}
+	}
+
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
