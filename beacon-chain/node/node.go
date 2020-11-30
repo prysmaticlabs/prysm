@@ -486,12 +486,13 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoint:    b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(depAddress),
-		BeaconDB:        b.db,
-		DepositCache:    b.depositCache,
-		StateNotifier:   b,
-		StateGen:        b.stateGen,
+		HTTPEndPoint:       b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
+		DepositContract:    common.HexToAddress(depAddress),
+		BeaconDB:           b.db,
+		DepositCache:       b.depositCache,
+		StateNotifier:      b,
+		StateGen:           b.stateGen,
+		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
@@ -601,6 +602,8 @@ func (b *BeaconNode) registerRPCService() error {
 
 	host := b.cliCtx.String(flags.RPCHost.Name)
 	port := b.cliCtx.String(flags.RPCPort.Name)
+	beaconMonitoringHost := b.cliCtx.String(cmd.MonitoringHostFlag.Name)
+	beaconMonitoringPort := b.cliCtx.Int(flags.MonitoringPortFlag.Name)
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
@@ -610,6 +613,8 @@ func (b *BeaconNode) registerRPCService() error {
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
 		Port:                    port,
+		BeaconMonitoringHost:    beaconMonitoringHost,
+		BeaconMonitoringPort:    beaconMonitoringPort,
 		CertFlag:                cert,
 		KeyFlag:                 key,
 		BeaconDB:                b.db,

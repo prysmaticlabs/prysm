@@ -62,6 +62,7 @@ func (g *Gateway) Start() {
 		ethpb.RegisterNodeHandler,
 		ethpb.RegisterBeaconChainHandler,
 		ethpb.RegisterBeaconNodeValidatorHandler,
+		pbrpc.RegisterHealthHandler,
 	}
 	if g.enableDebugRPCEndpoints {
 		handlers = append(handlers, pbrpc.RegisterDebugHandler)

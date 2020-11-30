@@ -57,6 +57,7 @@ var appFlags = []cli.Flag{
 	flags.ChainID,
 	flags.NetworkID,
 	flags.WeakSubjectivityCheckpt,
+	flags.Eth1HeaderReqLimit,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,

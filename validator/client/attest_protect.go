@@ -123,6 +123,16 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 			return errors.New(failedPostAttSignExternalErr)
 		}
 	}
+
+	// Save source and target epochs to satisfy EIP3076 requirements.
+	// The DB methods below will replace the lowest epoch in DB if necessary.
+	if err := v.db.SaveLowestSignedSourceEpoch(ctx, pubKey, indexedAtt.Data.Source.Epoch); err != nil {
+		return err
+	}
+	if err := v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch); err != nil {
+		return err
+	}
+
 	return nil
 }
 
