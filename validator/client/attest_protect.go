@@ -65,24 +65,6 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		}
 	}
 
-	// Based on EIP3076, validator should refuse to sign any attestation with source epoch less
-	// than the minimum source epoch present in that signer’s attestations.
-	lowestSourceEpoch, exists, err := v.db.LowestSignedSourceEpoch(ctx, pubKey)
-	if err != nil {
-		return err
-	}
-	if exists && lowestSourceEpoch > indexedAtt.Data.Source.Epoch {
-		return fmt.Errorf("could not sign attestation lower than lowest source epoch in db, %d > %d", lowestSourceEpoch, indexedAtt.Data.Source.Epoch)
-	}
-	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
-	// than or equal to the minimum target epoch present in that signer’s attestations.
-	lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, pubKey)
-	if err != nil {
-		return err
-	}
-	if exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
-		return fmt.Errorf("could not sign attestation lower than lowest target epoch in db, %d >= %d", lowestTargetEpoch, indexedAtt.Data.Target.Epoch)
-	}
 	return nil
 }
 
