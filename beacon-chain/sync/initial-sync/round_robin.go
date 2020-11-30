@@ -110,7 +110,7 @@ func (s *Service) processFetchedData(
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
-		log.WithField("error", err.Error()).Warn("Batch is not processed")
+		log.WithError(err).Warn("Batch is not processed")
 	}
 }
 
@@ -125,13 +125,13 @@ func (s *Service) processFetchedDataRegSync(
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
 			switch {
 			case errors.Is(err, errBlockAlreadyProcessed):
-				log.WithField("error", err.Error()).Debug("Block is not processed")
+				log.WithError(err).Debug("Block is not processed")
 				invalidBlocks++
 			case errors.Is(err, errParentDoesNotExist):
-				log.WithField("error", err.Error()).Debug("Block is not processed")
+				log.WithError(err).Debug("Block is not processed")
 				invalidBlocks++
 			default:
-				log.WithField("error", err.Error()).Warn("Block is not processed")
+				log.WithError(err).Warn("Block is not processed")
 			}
 			continue
 		}
