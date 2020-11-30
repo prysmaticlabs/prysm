@@ -229,7 +229,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 				return nil
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting reconnect external protection")
-				return errors.New("context closed, no longer attempting to restart external protection")
+				return ctx.Err()
 			}
 		}
 	}
@@ -267,7 +267,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 				break
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting fetching validating keys")
-				return errors.New("context closed, no longer attempting to fetch validating keys")
+				return ctx.Err()
 			}
 			break
 		}
