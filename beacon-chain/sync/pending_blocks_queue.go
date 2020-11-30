@@ -312,7 +312,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 		return nil
 	}
 
-	// Decrease exp itme in proportion to how many blocks are still in the cache for slot key.
+	// Decrease exp time in proportion to how many blocks are still in the cache for slot key.
 	d := pendingBlockExpTime / time.Duration(len(newBlks))
 	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, d); err != nil {
 		return err
