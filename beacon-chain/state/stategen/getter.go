@@ -131,13 +131,13 @@ func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*pb.State
 		}
 	}
 	if summary == nil {
-		return s.recoverStateSummary(ctx, blockRoot)
+		return s.RecoverStateSummary(ctx, blockRoot)
 	}
 	return summary, nil
 }
 
-// This recovers state summary object of a given block root by using the saved block in DB.
-func (s *State) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+// RecoverStateSummary recovers state summary object of a given block root by using the saved block in DB.
+func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	if s.beaconDB.HasBlock(ctx, blockRoot) {
 		b, err := s.beaconDB.Block(ctx, blockRoot)
 		if err != nil {
@@ -149,7 +149,7 @@ func (s *State) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (*p
 		}
 		return summary, nil
 	}
-	return nil, errUnknownStateSummary
+	return nil, errors.New("could not find block in DB")
 }
 
 // This loads a beacon state from either the cache or DB then replay blocks up the requested block root.
