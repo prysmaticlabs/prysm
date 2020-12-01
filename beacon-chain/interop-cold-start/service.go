@@ -97,7 +97,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		// Generated genesis time; fetch it
 		s.genesisTime = genesisTrie.GenesisTime()
 	}
-	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.genesisTime), 0), s.numValidators)
+	gRoot, err := genesisTrie.HashTreeRoot(s.ctx)
+	if err != nil {
+		log.Fatalf("Could not hash tree root genesis state: %v", err)
+	}
+	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.genesisTime), 0), s.numValidators, gRoot)
 
 	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
