@@ -675,13 +675,11 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			}
 		}
 	}
-
-	total := strconv.FormatUint(totalAttestingKeys, 10)
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
 				"slot":      slotOffset + i,
-				"attesters": strconv.FormatInt(int64(len(attesterKeys[i])), 10) + "/" + total,
+				"attesters": fmt.Sprintf("%d / %d", len(attesterKeys[i]), totalAttestingKeys),
 				"pubKeys":   attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
