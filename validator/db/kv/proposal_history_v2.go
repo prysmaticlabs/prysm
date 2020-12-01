@@ -53,9 +53,9 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]by
 	signingRoot := [32]byte{}
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricProposalsBucket)
-		valBucket := bucket.Bucket(publicKey[:])
-		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
+		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
+		if err != nil {
+			return fmt.Errorf("could not create bucket for public key %#x", publicKey[:])
 		}
 		signingRootBytes := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if signingRootBytes == nil {
