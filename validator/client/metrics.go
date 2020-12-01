@@ -317,6 +317,12 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		}
 	}
 
+	// Return early if no attestation got included from previous epoch.
+	// This happens when validators joined half way through epoch and already passed its assigned slot.
+	if included == 0 {
+		return
+	}
+
 	summary.totalAttestedCount += uint64(len(resp.InclusionSlots))
 	summary.totalSources += included
 	summary.totalTargets += included

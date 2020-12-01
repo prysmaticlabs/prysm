@@ -62,7 +62,7 @@ func (dr *Keymanager) ImportKeystores(
 }
 
 // ImportKeypairs directly into the keymanager.
-func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys [][]byte, pubKeys [][]byte) error {
+func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]byte) error {
 	// Write the accounts to disk into a single keystore.
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
