@@ -72,9 +72,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 
 	if sourceEpoch > targetEpoch { //Prevent underflow and handle source > target slashable cases.
 		dis = sourceEpoch - targetEpoch
-		tmp := sourceEpoch
-		sourceEpoch = targetEpoch
-		targetEpoch = tmp
+		sourceEpoch, targetEpoch = targetEpoch, sourceEpoch
 		sourceLargerThenTargetObserved.Inc()
 	}
 
@@ -241,9 +239,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	}
 	// handle source > target well
 	if source > target {
-		tmp := source
-		source = target
-		target = tmp
+		source, target = target, source
 	}
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
@@ -319,9 +315,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 	target := att.Data.Target.Epoch
 	// handle source > target well
 	if source > target {
-		tmp := source
-		source = target
-		target = tmp
+		source, target = target, source
 	}
 	latestMaxSpanDistanceObserved.Set(float64(target - source))
 	valIndices := make([]uint64, len(att.AttestingIndices))

@@ -158,7 +158,7 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trieutil.SparseM
 
 func signedDeposit(
 	secretKey bls.SecretKey,
-	publicKey []byte,
+	publicKey,
 	withdrawalKey []byte,
 	balance uint64,
 ) (*ethpb.Deposit, error) {
