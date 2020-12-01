@@ -3,7 +3,6 @@ package logutil
 import (
 	"io"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -31,7 +30,7 @@ var (
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			// Only allow requests from localhost.
-			return strings.Contains(r.Host, "localhost")
+			return true
 		},
 	}
 )
