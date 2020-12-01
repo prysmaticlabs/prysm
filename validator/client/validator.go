@@ -644,7 +644,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	}
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
 	slotOffset := slot - (slot % params.BeaconConfig().SlotsPerEpoch)
-	var totalAttestingKeys int
+	var totalAttestingKeys uint64
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
@@ -676,11 +676,12 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 		}
 	}
 
+	total := strconv.FormatUint(totalAttestingKeys,10)
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
 				"slot":      slotOffset + i,
-				"attesters": string(len(attesterKeys[i])) + "/" + string(totalAttestingKeys),
+				"attesters": strconv.FormatInt(int64(len(attesterKeys[i])),10) + "/" + total,
 				"pubKeys":   attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
