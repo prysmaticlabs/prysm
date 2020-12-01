@@ -107,10 +107,9 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	}
 
 	// Migrate all state summary objects from state summary cache to DB.
-	if err := s.beaconDB.SaveStateSummaries(ctx, s.stateSummaryCache.GetAll()); err != nil {
+	if err := s.SaveStateSummariesToDB(ctx); err != nil {
 		return err
 	}
-	s.stateSummaryCache.Clear()
 
 	// Update finalized info in memory.
 	fInfo, ok, err := s.epochBoundaryStateCache.getByRoot(fRoot)
