@@ -11,7 +11,7 @@ fi
 
 
 while read -r line ; do     
-linenum=`expr $line : '^\([0-9]*:\)'` 
+linenum=$(expr $line : '^\([0-9]*:\)')
 issueNum=${line//$linenum}
 issueState=$(curl https://api.github.com/repos/prysmaticlabs/prysm/issues/$issueNum | grep -o '"state":"closed"');
 
