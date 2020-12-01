@@ -22,12 +22,13 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 	}
 }
 
-func TestNewProposalHistoryForSlot_NilDB(t *testing.T) {
+func TestNewProposalHistoryForSlot_ReturnsNilIfNoHistory(t *testing.T) {
 	valPubkey := [48]byte{1, 2, 3}
 	db := setupDB(t, [][48]byte{})
 
-	_, _, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
-	require.ErrorContains(t, "validator history empty for public key", err, "Unexpected error for nil DB")
+	_, proposalExists, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
+	require.NoError(t, err)
+	assert.Equal(t, false, proposalExists)
 }
 
 func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
@@ -89,6 +90,7 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 
 		require.NotNil(t, signingRoot)
 		require.DeepEqual(t, tt.signingRoot, signingRoot[:], "Expected DB to keep object the same")
+		require.NoError(t, db.Close(), "Failed to close database")
 	}
 }
 
@@ -151,6 +153,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 			require.NoError(t, err, "Failed to get proposal history")
 			require.DeepEqual(t, signedRoot, sr[:], "Unexpected difference in bytes for epoch %d", slot)
 		}
+		require.NoError(t, db.Close(), "Failed to close database")
 	}
 }
 

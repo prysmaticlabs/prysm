@@ -15,7 +15,7 @@ arraylength=${#file_list[@]}
 searchstring="prysmaticlabs/prysm/"
 
 # Copy pb.go files from bazel-bin to original folder where .proto is.
-for ((i = 0; i < ${arraylength}; i++)); do
+for ((i = 0; i < arraylength; i++)); do
     color "34" $destination
     destination=${file_list[i]#*$searchstring}
     chmod 755 "$destination"
