@@ -51,7 +51,7 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]by
 	var err error
 	var proposalExists bool
 	signingRoot := [32]byte{}
-	err = store.view(func(tx *bolt.Tx) error {
+	err = store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricProposalsBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
 		if err != nil {
