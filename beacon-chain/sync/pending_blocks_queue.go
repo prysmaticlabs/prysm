@@ -35,10 +35,10 @@ func (s *Service) processPendingBlocksQueue() {
 	locker := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
-		defer locker.Unlock()
 		if err := s.processPendingBlocks(s.ctx); err != nil {
 			log.WithError(err).Debug("Could not process pending blocks")
 		}
+		locker.Unlock()
 	})
 }
 
