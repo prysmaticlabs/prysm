@@ -663,12 +663,12 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 		panic(err)
 	}
 
-	if cliCtx.IsSet(flags.EnableBackupWebhookFlag.Name) {
+	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
 		additionalHandlers = append(
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backuputil.BackupHandler(b.db, cliCtx.String(flags.BackupWebhookOutputDir.Name)),
+				Handler: backuputil.BackupHandler(b.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
