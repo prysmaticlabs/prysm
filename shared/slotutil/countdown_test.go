@@ -26,6 +26,7 @@ func TestCountdownToGenesis(t *testing.T) {
 			context.Background(),
 			timeutils.Now().Add(2*time.Second),
 			params.BeaconConfig().MinGenesisActiveValidatorCount,
+			[32]byte{},
 		)
 		require.LogsContain(t, hook, firstStringResult)
 		require.LogsContain(t, hook, genesisReached)
@@ -43,6 +44,7 @@ func TestCountdownToGenesis(t *testing.T) {
 			ctx,
 			timeutils.Now().Add(5*time.Second),
 			params.BeaconConfig().MinGenesisActiveValidatorCount,
+			[32]byte{},
 		)
 		require.LogsContain(t, hook, "4s until chain genesis")
 		require.LogsContain(t, hook, "Context closed, exiting routine")

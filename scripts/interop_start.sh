@@ -43,7 +43,7 @@ do
             IDENTITY=$VALUE
             ;;
         --peers)
-            [ ! -z "$PEERS"] && PEERS+=","
+            [ -z "$PEERS" ] && PEERS+=","
            PEERS+="$VALUE"
             ;;
         --validator-keys)
