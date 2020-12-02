@@ -9,7 +9,6 @@ import (
 	"time"
 
 	noise "github.com/libp2p/go-libp2p-noise"
-
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p"
