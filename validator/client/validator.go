@@ -298,12 +298,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 			log.Info("Waiting for deposit to be observed by beacon node")
 		case ethpb.ValidatorStatus_DEPOSITED:
-			if status.Status.DepositInclusionSlot != 0 {
-				log.WithFields(logrus.Fields{
-					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
-					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
-				}).Info("Deposit for validator received but not processed into the beacon state")
-			} else {
+			if status.Status.PositionInActivationQueue != 0 {
 				log.WithField(
 					"positionInActivationQueue", status.Status.PositionInActivationQueue,
 				).Info("Deposit processed, entering activation queue after finalization")
@@ -674,7 +669,6 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			}
 		}
 	}
-
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
 			log.WithField("slot", slotOffset+i).WithField("attesters", len(attesterKeys[i])).WithField("pubKeys", attesterKeys[i]).Info("Attestation schedule")
