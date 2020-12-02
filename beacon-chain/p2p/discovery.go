@@ -68,7 +68,7 @@ func (s *Service) listenForNewNodes() {
 		if s.ctx.Err() != nil {
 			break
 		}
-		if s.isPeerAtLimit() {
+		if s.isPeerAtLimit(false) {
 			// Pause the main loop for a period to stop looking
 			// for new peers.
 			log.Trace("Not looking for peers, at peer limit")
@@ -276,9 +276,14 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 // This checks our set max peers in our config, and
 // determines whether our currently connected and
 // active peers are above our set max peer limit.
-func (s *Service) isPeerAtLimit() bool {
+func (s *Service) isPeerAtLimit(inbound bool) bool {
 	numOfConns := len(s.host.Network().Peers())
 	maxPeers := int(s.cfg.MaxPeers)
+	// If we are measuring the limit for inbound peers
+	// we apply the high watermark buffer.
+	if inbound {
+		maxPeers += highWatermarkBuffer
+	}
 	activePeers := len(s.Peers().Active())
 
 	return activePeers >= maxPeers || numOfConns >= maxPeers
