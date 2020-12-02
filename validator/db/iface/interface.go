@@ -27,10 +27,12 @@ type ValidatorDB interface {
 	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
 
 	// Attester protection related methods.
-	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
-	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
+	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
+	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
+
+	// New attestation store methods.
 	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
 	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
 	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error

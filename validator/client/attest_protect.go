@@ -64,6 +64,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 			return errors.New(failedPreAttSignExternalErr)
 		}
 	}
+
 	return nil
 }
 
