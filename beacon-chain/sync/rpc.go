@@ -63,9 +63,16 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 	s.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
+
+		// Resetting after closing is a no-op so defer a reset in case something goes wrong.
+		// It's up to the handler to Close the stream (send an EOF) if
+		// it successfully writes a response. We don't blindly call
+		// Close here because we may have only written a partial
+		// response.
 		defer func() {
-			closeStream(stream, log)
+			_ = stream.Reset()
 		}()
+
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
 		span.AddAttributes(trace.StringAttribute("topic", topic))
@@ -73,7 +80,6 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		log := log.WithField("peer", stream.Conn().RemotePeer().Pretty())
 		// Check before hand that peer is valid.
 		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
-			closeStream(stream, log)
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
 				log.Debugf("Could not disconnect from peer: %v", err)
 			}
@@ -147,6 +153,5 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				traceutil.AnnotateError(span, err)
 			}
 		}
-
 	})
 }

@@ -6,8 +6,6 @@ import (
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -33,11 +31,6 @@ var backOffTime = map[types.SSZUint64]time.Duration{
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	defer func() {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Could not close stream")
-		}
-	}()
 	SetRPCStreamDeadlines(stream)
 
 	m, ok := msg.(*types.SSZUint64)
@@ -91,13 +84,21 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code types.RPCGoodbyeC
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
+
 	log := log.WithField("Reason", goodbyeMessage(code))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Sending Goodbye message to peer")
+
+	// Wait up to the response timeout for the peer to receive the goodbye
+	// and close the stream (or disconnect). We usually don't bother waiting
+	// around for an EOF, but we're going to close this connection
+	// immediately after we say goodbye.
+	//
+	// NOTE: we don't actually check the response as there's nothing we can
+	// do if something fails. We just need to wait for it.
+	SetStreamReadDeadline(stream, respTimeout)
+	_, _ = stream.Read([]byte{0})
+
 	return nil
 }
 
