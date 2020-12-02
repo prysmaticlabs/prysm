@@ -799,7 +799,6 @@ def prysm_deps():
         sum = "h1:RYi2hDdss1u4YE7GwixGzWwVo47T8UQwnTLB6vQiq+o=",
         version = "v2.1.0+incompatible",
     )
-
     go_repository(
         name = "com_github_golang_freetype",
         importpath = "github.com/golang/freetype",
