@@ -50,7 +50,7 @@ func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 			"reason": "exceeded dial limit"}).Trace("Not accepting inbound dial from ip address")
 		return false
 	}
-	if s.isPeerAtLimit(true) {
+	if s.isPeerAtLimit(true /* inbound */) {
 		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
 			"reason": "at peer limit"}).Trace("Not accepting inbound dial")
 		return false
