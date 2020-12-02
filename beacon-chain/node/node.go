@@ -36,6 +36,7 @@ import (
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -667,7 +668,7 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: db.BackupHandler(b.db, cliCtx.String(flags.BackupWebhookOutputDir.Name)),
+				Handler: backuputil.BackupHandler(b.db, cliCtx.String(flags.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
