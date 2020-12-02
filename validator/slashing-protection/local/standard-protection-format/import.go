@@ -49,6 +49,15 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
+	// We validate and filter out blocks and attestations parsed from JSON to ensure we are
+	// not importing those which are slashable with respect to other data within the same JSON.
+	if err := filterSlashableBlocksByPubKey(ctx, signedBlocksByPubKey); err != nil {
+		return err
+	}
+	if err := filterSlashableAttestationsByPubKey(ctx, signedAttsByPubKey); err != nil {
+		return err
+	}
+
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
@@ -187,6 +196,15 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 		}
 	}
 	return signedAttestationsByPubKey, nil
+}
+
+func filterSlashableBlocksByPubKey(ctx context.Context, blocksByPubkey map[[48]byte][]*SignedBlock) error {
+	return nil
+}
+
+func filterSlashableAttestationsByPubKey(ctx context.Context, attsByPubKey map[[48]byte][]*SignedAttestation) error {
+	// TODO(#7813): Implement.
+	return nil
 }
 
 func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
