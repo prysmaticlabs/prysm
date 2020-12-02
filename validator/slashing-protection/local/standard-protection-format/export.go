@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/db"
 )
 
@@ -82,6 +81,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 }
 
 func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedAttestation, error) {
+	// If a key does not have an attestation history in our database, we return nil.
+	// This way, a user will be able to export their slashing protection history
+	// even if one of their keys does not have a history of signed blocks.
 	attHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
 	if err != nil {
 		return nil, err
@@ -91,7 +93,7 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 	}
 	history, ok := attHistory[pubKey]
 	if !ok {
-		return nil, errors.New("no history found for pubkey")
+		return nil, nil
 	}
 	signedAttestations := make([]*SignedAttestation, 0)
 	lowestEpoch, err := validatorDB.HighestSignedTargetEpoch(ctx, pubKey)
