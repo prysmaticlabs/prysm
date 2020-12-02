@@ -134,6 +134,14 @@ func TestService_Status_NotRunning(t *testing.T) {
 }
 
 func TestListenForNewNodes(t *testing.T) {
+	// Reset the high watermark value
+	// at the end test.
+	originalVal := highWatermarkBuffer
+	highWatermarkBuffer = 0
+	defer func() {
+		highWatermarkBuffer = originalVal
+	}()
+
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
 	cfg := &Config{StateNotifier: notifier}

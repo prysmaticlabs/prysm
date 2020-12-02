@@ -14,13 +14,15 @@ import (
 )
 
 const (
-	// limit for rate limiter when processing new inbound dials.
+	// Limit for rate limiter when processing new inbound dials.
 	ipLimit = 4
 
-	// burst limit for inbound dials.
+	// Burst limit for inbound dials.
 	ipBurst = 8
+)
 
-	// high watermark buffer signifies the buffer till which
+var (
+	// High watermark buffer signifies the buffer till which
 	// we will handle inbound requests.
 	highWatermarkBuffer = 10
 )
