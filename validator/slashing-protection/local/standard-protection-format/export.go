@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/db"
 )
 
@@ -83,10 +84,10 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedAttestation, error) {
 	// If a key does not have an attestation history in our database, we return nil.
 	// This way, a user will be able to export their slashing protection history
-	// even if one of their keys does not have a history of signed blocks.
+	// even if one of their keys does not have a history of signed attestations.
 	attHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot get attestation history for public key")
 	}
 	if attHistory == nil {
 		return nil, nil
@@ -96,9 +97,12 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 		return nil, nil
 	}
 	signedAttestations := make([]*SignedAttestation, 0)
-	lowestEpoch, err := validatorDB.HighestSignedTargetEpoch(ctx, pubKey)
+	lowestEpoch, exists, err := validatorDB.LowestSignedTargetEpoch(ctx, pubKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot get lowest signed target epoch for public key")
+	}
+	if !exists {
+		return nil, nil
 	}
 	highestEpoch, err := history.GetLatestEpochWritten(ctx)
 	if err != nil {

@@ -10,6 +10,19 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
+func Test_getSignedAttestationsByPubKey(t *testing.T) {
+	pubKeys := [][48]byte{
+		{1},
+	}
+	ctx := context.Background()
+	validatorDB := dbtest.SetupDB(t, pubKeys)
+
+	// No attestation history stored should return empty.
+	signedAttestations, err := getSignedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(signedAttestations))
+}
+
 func Test_getSignedBlocksByPubKey(t *testing.T) {
 	pubKeys := [][48]byte{
 		{1},
