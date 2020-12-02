@@ -122,6 +122,7 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/p2p/encoder:go_default_library",
         "//beacon-chain/p2p/peers:go_default_library",
+        "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/p2p/peers/scorers:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
