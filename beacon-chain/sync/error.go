@@ -106,7 +106,8 @@ func closeStream(stream network.Stream, log *logrus.Entry) {
 
 func closeStreamAndWait(stream network.Stream, log *logrus.Entry) {
 	if err := stream.CloseWrite(); err != nil {
-		_ = stream.Reset()
+		_err := stream.Reset()
+		_ = _err
 		if isValidStreamError(err) {
 			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
 		}
@@ -121,6 +122,8 @@ func closeStreamAndWait(stream network.Stream, log *logrus.Entry) {
 	//
 	// However, regardless of what happens, we just close the stream and
 	// walk away. We only read to wait for a response, we close regardless.
-	_, _ = stream.Read([]byte{0})
-	_ = stream.Close()
+	_, _err := stream.Read([]byte{0})
+	_ = _err
+	_err = stream.Close()
+	_ = _err
 }

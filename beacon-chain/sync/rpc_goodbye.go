@@ -97,7 +97,8 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code types.RPCGoodbyeC
 	// NOTE: we don't actually check the response as there's nothing we can
 	// do if something fails. We just need to wait for it.
 	SetStreamReadDeadline(stream, respTimeout)
-	_, _ = stream.Read([]byte{0})
+	_, _err := stream.Read([]byte{0})
+	_ = _err
 
 	return nil
 }

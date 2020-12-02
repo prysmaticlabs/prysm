@@ -70,7 +70,8 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// Close here because we may have only written a partial
 		// response.
 		defer func() {
-			_ = stream.Reset()
+			_err := stream.Reset()
+			_ = _err
 		}()
 
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")

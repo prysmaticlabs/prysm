@@ -36,7 +36,8 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 	if baseTopic != RPCMetaDataTopic {
 		if _, err := s.Encoding().EncodeWithMaxLength(stream, message); err != nil {
 			traceutil.AnnotateError(span, err)
-			_ = stream.Reset()
+			_err := stream.Reset()
+			_ = _err
 			return nil, err
 		}
 	}
@@ -44,7 +45,8 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 	// Close stream for writing.
 	if err := stream.CloseWrite(); err != nil {
 		traceutil.AnnotateError(span, err)
-		_ = stream.Reset()
+		_err := stream.Reset()
+		_ = _err
 		return nil, err
 	}
 
