@@ -19,9 +19,7 @@ const (
 
 	// Burst limit for inbound dials.
 	ipBurst = 8
-)
 
-var (
 	// High watermark buffer signifies the buffer till which
 	// we will handle inbound requests.
 	highWatermarkBuffer = 10

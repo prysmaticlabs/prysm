@@ -20,14 +20,6 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr2, pkey2 := createAddrAndPrivKey(t)
 
-	// Reset the high watermark value
-	// at the end test.
-	originalVal := highWatermarkBuffer
-	highWatermarkBuffer = 0
-	defer func() {
-		highWatermarkBuffer = originalVal
-	}()
-
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{
@@ -51,6 +43,10 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 		err := h1.Close()
 		require.NoError(t, err)
 	}()
+
+	for i := 0; i < highWatermarkBuffer; i++ {
+		addPeer(t, s.peers, peers.PeerConnected)
+	}
 
 	// create alternate host
 	listen, err = multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))

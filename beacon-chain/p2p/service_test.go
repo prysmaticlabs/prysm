@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	noise "github.com/libp2p/go-libp2p-noise"
+
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p"
@@ -72,7 +74,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	ipAddr := net.ParseIP("127.0.0.1")
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
 	require.NoError(t, err, "Failed to p2p listen")
-	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen)}...)
+	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.Security(noise.ID, noise.New)}...)
 	require.NoError(t, err)
 	return h, pkey, ipAddr
 }
@@ -134,14 +136,6 @@ func TestService_Status_NotRunning(t *testing.T) {
 }
 
 func TestListenForNewNodes(t *testing.T) {
-	// Reset the high watermark value
-	// at the end test.
-	originalVal := highWatermarkBuffer
-	highWatermarkBuffer = 0
-	defer func() {
-		highWatermarkBuffer = originalVal
-	}()
-
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
 	cfg := &Config{StateNotifier: notifier}

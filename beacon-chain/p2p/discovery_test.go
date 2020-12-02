@@ -165,13 +165,6 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-	// Reset the high watermark value
-	// at the end test.
-	originalVal := highWatermarkBuffer
-	highWatermarkBuffer = 0
-	defer func() {
-		highWatermarkBuffer = originalVal
-	}()
 	cfg := &Config{
 		MaxPeers: 30,
 	}
@@ -225,12 +218,6 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 }
 
 func TestHostIsResolved(t *testing.T) {
-	originalVal := highWatermarkBuffer
-	highWatermarkBuffer = 0
-	defer func() {
-		highWatermarkBuffer = originalVal
-	}()
-
 	// As defined in RFC 2606 , example.org is a
 	// reserved example domain name.
 	exampleHost := "example.org"
