@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	noise "github.com/libp2p/go-libp2p-noise"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	noise "github.com/libp2p/go-libp2p-noise"
 	"github.com/multiformats/go-multiaddr"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
