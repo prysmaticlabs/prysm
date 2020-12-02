@@ -1498,16 +1498,16 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p",
-        sum = "h1:VQOo/Pbj9Ijco9jiMYN5ImAg236IjTXfnUPJ2OvbpLM=",
-        version = "v0.10.2",
+        sum = "h1:+xai9RQnQ9l5elFOKvp5wRyjyWisSwEx+6nU2+onpUA=",
+        version = "v0.12.0",
     )
 
     go_repository(
         name = "com_github_libp2p_go_libp2p_autonat",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-autonat",
-        sum = "h1:60sc3NuQz+RxEb4ZVCRp/7uPtD7gnlLcOIKYNulzSIo=",
-        version = "v0.3.1",
+        sum = "h1:3y8XQbpr+ssX8QfZUHekjHCYK64sj6/4hnf/awD4+Ug=",
+        version = "v0.4.0",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_blankhost",
@@ -1519,8 +1519,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_circuit",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-circuit",
-        sum = "h1:69ENDoGnNN45BNDnBd+8SXSetDuw0eJFcGmOvvtOgBw=",
-        version = "v0.3.1",
+        sum = "h1:eqQ3sEYkGTtybWgr6JLqJY6QLtPWRErvFjFDfAOO1wc=",
+        version = "v0.4.0",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_connmgr",
@@ -1532,8 +1532,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_core",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-core",
-        sum = "h1:XS+Goh+QegCDojUZp00CaPMfiEADCrLjNZskWE7pvqs=",
-        version = "v0.6.1",
+        sum = "h1:4a0TMjrWNTZlNvcqxZmrMRDi/NQWrhwO2pkTuLSQ/IQ=",
+        version = "v0.7.0",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_crypto",
@@ -1557,8 +1557,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_mplex",
         importpath = "github.com/libp2p/go-libp2p-mplex",
-        sum = "h1:XFFXaN4jhqnIuJVjYOR3k6bnRj0mFfJOlIuDVww+4Zo=",
-        version = "v0.2.4",
+        sum = "h1:CZyqqKP0BSGQyPLvpRQougbfXaaaJZdGgzhCpJNuNSk=",
+        version = "v0.3.0",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_nat",
@@ -1578,8 +1578,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_noise",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-noise",
-        sum = "h1:vqYQWvnIcHpIoWJKC7Al4D6Hgj0H012TuXRhPwSMGpQ=",
-        version = "v0.1.1",
+        sum = "h1:IH9GRihQJTx56obm+GnpdPX4KeVIlvpXrP6xnJ0wxWk=",
+        version = "v0.1.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_peer",
@@ -1604,8 +1604,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_pubsub",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-pubsub",
-        sum = "h1:9oO8W7qIWCYQYyz5z8nUsPcb3rrFehBlkbqvbSVjBxY=",
-        version = "v0.3.6",
+        sum = "h1:YNVRyXqBgv9i4RG88jzoTtkSOaSB45CqHkL29NNBZb4=",
+        version = "v0.4.0",
     )
 
     go_repository(
@@ -1619,14 +1619,14 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_swarm",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-swarm",
-        sum = "h1:cIUUvytBzNQmGSjnXFlI6UpoBGsaud82mJPIJVfkDlg=",
-        version = "v0.2.8",
+        sum = "h1:UTobu+oQHGdXTOGpZ4RefuVqYoJXcT0EBtSR74m2LkI=",
+        version = "v0.3.1",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_testing",
         importpath = "github.com/libp2p/go-libp2p-testing",
-        sum = "h1:v4dvk7YEW8buwCdIVWnhpv0Hp/AAJKRWIxBhmLRZrsk=",
-        version = "v0.1.2-0.20200422005655-8775583591d8",
+        sum = "h1:ZiBYstPamsi7y6NJZebRudUzsYmVkt998hltyLqf8+g=",
+        version = "v0.3.0",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_tls",
@@ -1635,8 +1635,8 @@ def prysm_deps():
         patches = [
             "@prysm//third_party:libp2p_tls.patch",  # See: https://github.com/libp2p/go-libp2p-tls/issues/66
         ],
-        sum = "h1:Ge/2CYttU7XdkPPqQ7e3TiuMFneLie1rM/UjRxPPGsI=",
-        version = "v0.1.4-0.20200421131144-8a8ad624a291",
+        sum = "h1:twKMhMu44jQO+HgQK9X8NHO5HkeJu2QbhLzLJpa8oNM=",
+        version = "v0.1.3",
     )
 
     go_repository(
@@ -1648,8 +1648,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_yamux",
         importpath = "github.com/libp2p/go-libp2p-yamux",
-        sum = "h1:0s3ELSLu2O7hWKfX1YjzudBKCP0kZ+m9e2+0veXzkn4=",
-        version = "v0.2.8",
+        sum = "h1:TJxRVPY9SjH7TNrNC80l1OJMBiWhs1qpKmeB+1Ug3xU=",
+        version = "v0.4.1",
     )
     go_repository(
         name = "com_github_libp2p_go_maddr_filter",
@@ -1660,8 +1660,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_mplex",
         importpath = "github.com/libp2p/go-mplex",
-        sum = "h1:noyLUCtHtSsPOLACCo0AO0q79H4pba1UHlLxbfBPv2w=",
-        version = "v0.1.3",
+        sum = "h1:Ov/D+8oBlbRkjBs1R1Iua8hJ8cUfbdiW8EOdZuxcgaI=",
+        version = "v0.2.0",
     )
     go_repository(
         name = "com_github_libp2p_go_msgio",
@@ -1722,8 +1722,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_tcp_transport",
         importpath = "github.com/libp2p/go-tcp-transport",
-        sum = "h1:YoThc549fzmNJIh7XjHVtMIFaEDRtIrtWciG5LyYAPo=",
-        version = "v0.2.0",
+        sum = "h1:ExZiVQV+h+qL16fzCWtd1HSzPsqWottJ8KXwWaVi8Ns=",
+        version = "v0.2.1",
     )
 
     go_repository(
@@ -1735,8 +1735,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_yamux",
         importpath = "github.com/libp2p/go-yamux",
-        sum = "h1:aw0ZXyawL//qvrshGT9v/Mc82sKiD6hBYZ6OBHWXe5s=",
-        version = "v1.3.8",
+        sum = "h1:P1Fe9vF4th5JOxxgQvfbOHkrGqIZniTLf+ddhZp8YTI=",
+        version = "v1.4.1",
     )
 
     go_repository(
@@ -1826,8 +1826,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_miekg_dns",
         importpath = "github.com/miekg/dns",
-        sum = "h1:Qww6FseFn8PRfw07jueqIXqodm0JKiiKuK0DeXSqfyo=",
-        version = "v1.1.30",
+        sum = "h1:sJFOl9BgwbYAWOGEwr61FU28pqsBNdpRBnhGXtO06Oo=",
+        version = "v1.1.31",
     )
 
     go_repository(
@@ -1951,8 +1951,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_multiformats_go_multistream",
         importpath = "github.com/multiformats/go-multistream",
-        sum = "h1:knyamLYMPFPngQjGQ0lhnlys3jtVR/3xV6TREUJr+fE=",
-        version = "v0.1.2",
+        sum = "h1:6AuNmQVKUkRnddw2YiDjt5Elit40SFxMJkVnhmETXtU=",
+        version = "v0.2.0",
     )
     go_repository(
         name = "com_github_multiformats_go_varint",
