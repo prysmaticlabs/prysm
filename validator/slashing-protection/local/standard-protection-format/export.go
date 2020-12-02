@@ -56,13 +56,23 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 }
 
 func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedBlock, error) {
-	lowestSignedSlot, err := validatorDB.LowestSignedProposal(ctx, pubKey)
+	// If a key does not have a lowest or highest signed proposal history
+	// in our database, we return nil. This way, a user will be able to export their
+	// slashing protection history even if one of their keys does not have a history
+	// of signed blocks.
+	lowestSignedSlot, exists, err := validatorDB.LowestSignedProposal(ctx, pubKey)
 	if err != nil {
 		return nil, err
 	}
-	highestSignedSlot, err := validatorDB.HighestSignedProposal(ctx, pubKey)
+	if !exists {
+		return nil, nil
+	}
+	highestSignedSlot, exists, err := validatorDB.HighestSignedProposal(ctx, pubKey)
 	if err != nil {
 		return nil, err
+	}
+	if !exists {
+		return nil, nil
 	}
 	signedBlocks := make([]*SignedBlock, 0)
 	for i := lowestSignedSlot; i <= highestSignedSlot; i++ {

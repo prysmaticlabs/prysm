@@ -20,8 +20,8 @@ type ValidatorDB interface {
 	SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error
 
 	// Proposer protection related methods.
-	HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
-	LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, error)
+	HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
+	LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([32]byte, bool, error)
 	SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot uint64, signingRoot []byte) error
 	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
