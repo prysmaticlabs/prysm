@@ -504,3 +504,26 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	assert.Equal(t, followBlock-conf.Eth1FollowDistance, blk, "unexpected earliest voting block")
 
 }
+
+func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	beaconDB, _ := dbutil.SetupDB(t)
+
+	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+	assert.Equal(t, defaultEth1HeaderReqLimit, s1.eth1HeaderReqLimit, "default eth1 header request limit not set")
+
+	s2, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:       endpoint,
+		DepositContract:    testAcc.ContractAddr,
+		BeaconDB:           beaconDB,
+		Eth1HeaderReqLimit: uint64(150),
+	})
+	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+	assert.Equal(t, uint64(150), s2.eth1HeaderReqLimit, "unable to set eth1HeaderRequestLimit")
+}
