@@ -130,11 +130,13 @@ func TestPostSignatureUpdate(t *testing.T) {
 	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 
-	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
+	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	require.Equal(t, uint64(4), e)
-	e, err = validator.db.LowestSignedTargetEpoch(context.Background(), pubKey)
+	e, exists, err = validator.db.LowestSignedTargetEpoch(context.Background(), pubKey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	require.Equal(t, uint64(10), e)
 }
 
