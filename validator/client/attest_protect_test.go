@@ -206,12 +206,12 @@ func TestPrePostSignatureUpdate_NilLocalGenesis(t *testing.T) {
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 	err = validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
-	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), fakePubkey)
+	_, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), fakePubkey)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0), e)
-	e, err = validator.db.LowestSignedTargetEpoch(context.Background(), fakePubkey)
+	require.Equal(t, false, exists)
+	_, exists, err = validator.db.LowestSignedTargetEpoch(context.Background(), fakePubkey)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0), e)
+	require.Equal(t, false, exists)
 }
 
 func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
