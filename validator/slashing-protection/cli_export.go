@@ -29,8 +29,8 @@ const (
 // from the validator's db into an EIP standard slashing protection format
 // 4. Format and save the JSON file to a user's specified output directory.
 func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
-	datadir := cliCtx.StringFlag(cmd.DataDirFlag.Name)
-	validatorDB, err := kv.NewStore(datadir, nil)
+	datadir := cliCtx.String(cmd.DataDirFlag.Name)
+	validatorDB, err := kv.NewKVStore(datadir, nil)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	outputDir := cliCtx.StringFlag(flags.SlashingProtectionExportDirFlag.Name)
+	outputDir := cliCtx.String(flags.SlashingProtectionExportDirFlag.Name)
 	exists, err := fileutil.HasDir(outputDir)
 	if err != nil {
 		return err

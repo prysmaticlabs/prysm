@@ -5,7 +5,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,7 +29,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				return slashingprotection.ExportSlashingProtectionJSONCli(cliCtx)
+				return ExportSlashingProtectionJSONCli(cliCtx)
 			},
 		},
 	},
