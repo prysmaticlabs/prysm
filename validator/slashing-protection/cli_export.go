@@ -2,9 +2,7 @@ package slashingprotection
 
 import (
 	"encoding/json"
-	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -15,7 +13,7 @@ import (
 )
 
 const (
-	jsonExportFileName = "slashing_protection_%d.json"
+	jsonExportFileName = "slashing_protection.json"
 )
 
 // ExportSlashingProtectionJSONCli extracts a validator's slashing protection
@@ -48,8 +46,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	outputFileFmt := fmt.Sprintf(jsonExportFileName, time.Now().Unix())
-	outputFilePath := filepath.Join(outputDir, outputFileFmt)
+	outputFilePath := filepath.Join(outputDir, jsonExportFileName)
 	encoded, err := json.Marshal(eipJSON)
 	if err != nil {
 		return err
