@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var appFlags = []cli.Flag{
@@ -124,13 +125,12 @@ func main() {
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":
-			formatter := new(logrus.TextFormatter)
+			formatter := new(prefixed.TextFormatter)
 			formatter.TimestampFormat = "2006-01-02 15:04:05"
 			formatter.FullTimestamp = true
 			// If persistent log files are written - we disable the log messages coloring because
 			// the colors are ANSI codes and seen as gibberish in the log files.
 			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
-			formatter.PadLevelText = true
 			logrus.SetFormatter(formatter)
 		case "fluentd":
 			f := joonix.NewFormatter()
