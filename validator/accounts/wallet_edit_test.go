@@ -30,6 +30,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 
 	originalCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
+			RequireTls:     true,
 			ClientCertPath: "/tmp/a.crt",
 			ClientKeyPath:  "/tmp/b.key",
 			CACertPath:     "/tmp/c.crt",
@@ -42,6 +43,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
+			RequireTls:     true,
 			ClientCertPath: "/tmp/client.crt",
 			ClientKeyPath:  "/tmp/client.key",
 			CACertPath:     "/tmp/ca.crt",
