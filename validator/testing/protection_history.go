@@ -3,7 +3,6 @@ package testing
 import (
 	"context"
 	"fmt"
-	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -14,6 +13,8 @@ import (
 	protectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 )
 
+// MockSlashingProtectionJSON creates a mock, full slashing protection JSON struct
+// using attesting and proposing histories provided.
 func MockSlashingProtectionJSON(
 	publicKeys [][48]byte,
 	attestingHistories []kv.EncHistoryData,
@@ -56,8 +57,9 @@ func MockSlashingProtectionJSON(
 	return standardProtectionFormat, nil
 }
 
+// MockAttestingAndProposalHistories given a number of validators, creates mock attesting
+// and proposing histories within WEAK_SUBJECTIVITY_PERIOD bounds.
 func MockAttestingAndProposalHistories(numValidators int) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey, error) {
-	// deduplicate and transform them into our internal format.
 	attData := make([]kv.EncHistoryData, numValidators)
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
@@ -99,7 +101,8 @@ func MockAttestingAndProposalHistories(numValidators int) ([]kv.EncHistoryData, 
 	return attData, proposalData, nil
 }
 
-func CreateRandomPubKeys(t *testing.T, numValidators int) ([][48]byte, error) {
+// CreateRandomPubKeys --
+func CreateRandomPubKeys(numValidators int) ([][48]byte, error) {
 	pubKeys := make([][48]byte, numValidators)
 	for i := 0; i < numValidators; i++ {
 		randKey, err := bls.RandKey()
@@ -111,7 +114,8 @@ func CreateRandomPubKeys(t *testing.T, numValidators int) ([][48]byte, error) {
 	return pubKeys, nil
 }
 
-func CreateRandomRoots(t *testing.T, numRoots int) [][32]byte {
+// CreateRandomRoots --
+func CreateRandomRoots(numRoots int) [][32]byte {
 	roots := make([][32]byte, numRoots)
 	for i := 0; i < numRoots; i++ {
 		roots[i] = hashutil.Hash([]byte(fmt.Sprintf("%d", i)))

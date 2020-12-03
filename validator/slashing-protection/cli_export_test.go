@@ -39,7 +39,7 @@ func TestExportSlashingProtectionCli(t *testing.T) {
 	numValidators := 10
 
 	// Create some mock slashing protection history. and JSON file
-	pubKeys, err := mocks.CreateRandomPubKeys(t, numValidators)
+	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(numValidators)
 	require.NoError(t, err)
@@ -73,7 +73,8 @@ func TestExportSlashingProtectionCli(t *testing.T) {
 	require.NoError(t, err)
 
 	// We verify the parsed JSON file matches. Given there is no guarantee of order,
-	// we will have to carefully compare and sort values as needed. First, we compare
-	// basic data such as the GenesisValidatorsRoot value in the JSON file.
-	require.DeepEqual(t, mockJSON.Metadata.GenesisValidatorsRoot, receivedJSON.Metadata.GenesisValidatorsRoot)
+	// we will have to carefully compare and sort values as needed.
+	//
+	// First, we compare basic data such as the Metadata value in the JSON file.
+	require.DeepEqual(t, mockJSON.Metadata, receivedJSON.Metadata)
 }
