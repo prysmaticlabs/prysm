@@ -58,6 +58,8 @@ var appFlags = []cli.Flag{
 	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
+	cmd.EnableBackupWebhookFlag,
+	cmd.BackupWebhookOutputDir,
 	cmd.LogFileName,
 	cmd.LogFormat,
 	cmd.ClearDB,

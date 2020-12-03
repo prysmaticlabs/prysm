@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"time"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -16,9 +16,9 @@ import (
 const backupsDirectoryName = "backups"
 
 // Backup the database to the datadir backup directory.
-// Example for backup at slot 345: $DATADIR/backups/prysm_beacondb_at_slot_0000345.backup
+// Example for backup: $DATADIR/backups/prysm_slasherdb_10291092.backup
 func (s *Store) Backup(ctx context.Context, outputDir string) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.Backup")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.Backup")
 	defer span.End()
 
 	var backupsDir string
@@ -31,19 +31,12 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	} else {
 		backupsDir = path.Join(s.databasePath, backupsDirectoryName)
 	}
-	head, err := s.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
-	if head == nil {
-		return errors.New("no head block")
-	}
 	// Ensure the backups directory exists.
 	if err := fileutil.MkdirAll(backupsDir); err != nil {
 		return err
 	}
-	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
-	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
+	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_slasherdb_%d.backup", time.Now().Unix()))
+	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database")
 
 	copyDB, err := bolt.Open(
 		backupPath,
