@@ -48,7 +48,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		}
 	}
 	outputFilePath := filepath.Join(outputDir, jsonExportFileName)
-	encoded, err := json.Marshal(eipJSON)
+	encoded, err := json.MarshalIndent(eipJSON, "", "\t")
 	if err != nil {
 		return errors.Wrap(err, "could not JSON marshal slashing protection history")
 	}
