@@ -129,36 +129,6 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		cancel()
 		assert.NoError(t, queue.stop())
 	})
-
-	t.Run("start is higher than expected slot", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		p := p2pt.NewTestP2P(t)
-		connectPeers(t, p, []*peerData{
-			{blocks: makeSequence(500, 628), finalizedEpoch: 16, headSlot: 600},
-		}, p.Peers())
-		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-			chain: mc,
-			p2p:   p,
-		})
-		// Mode 1: stop on finalized.
-		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			blocksFetcher:       fetcher,
-			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
-			startSlot:           128,
-		})
-		assert.Equal(t, uint64(512), queue.highestExpectedSlot)
-		// Mode 2: unconstrained.
-		queue = newBlocksQueue(ctx, &blocksQueueConfig{
-			blocksFetcher:       fetcher,
-			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
-			startSlot:           128,
-			mode:                modeNonConstrained,
-		})
-		assert.Equal(t, uint64(576), queue.highestExpectedSlot)
-	})
 }
 
 func TestBlocksQueue_Loop(t *testing.T) {

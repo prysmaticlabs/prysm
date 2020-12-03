@@ -83,6 +83,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	if exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
 		return fmt.Errorf("could not sign attestation lower than lowest target epoch in db, %d >= %d", lowestTargetEpoch, indexedAtt.Data.Target.Epoch)
 	}
+
 	return nil
 }
 
@@ -148,11 +149,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	if err := v.db.SaveLowestSignedSourceEpoch(ctx, pubKey, indexedAtt.Data.Source.Epoch); err != nil {
 		return err
 	}
-	if err := v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch); err != nil {
-		return err
-	}
-
-	return nil
+	return v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
 }
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
