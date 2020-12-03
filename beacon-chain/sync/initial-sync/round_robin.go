@@ -69,10 +69,6 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 	if err != nil {
 		return err
 	}
-	// Step back one slot, to the last slot of the finalized epoch (we're at first slot of the next epoch).
-	if highestFinalizedSlot > 0 {
-		highestFinalizedSlot--
-	}
 	if s.chain.HeadSlot() >= highestFinalizedSlot {
 		// No need to sync, already synced to the finalized slot.
 		log.Debug("Already synced to finalized epoch")
