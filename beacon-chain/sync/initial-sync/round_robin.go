@@ -70,8 +70,11 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 	if err != nil {
 		return err
 	}
+	// Set to the last slot of the finalized epoch.
+	highestFinalizedSlot--
 	if s.chain.HeadSlot() >= highestFinalizedSlot {
 		// No need to sync, already synced to the finalized slot.
+		log.Debug("Already synced to finalized epoch")
 		return nil
 	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
