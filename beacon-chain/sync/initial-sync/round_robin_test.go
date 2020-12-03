@@ -3,7 +3,9 @@ package initialsync
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/paulbellamy/ratecounter"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -13,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_roundRobinSync(t *testing.T) {
@@ -560,4 +563,68 @@ func TestService_blockProviderScoring(t *testing.T) {
 	assert.Equal(t, true, score1 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score1, peer1, score3)
 	assert.Equal(t, true, score2 < score3, "Incorrect score (%v) for peer: %v (must be lower than %v)", score2, peer2, score3)
 	assert.Equal(t, true, scorer.ProcessedBlocks(peer3) > 100, "Not enough blocks returned by healthy peer: %d", scorer.ProcessedBlocks(peer3))
+}
+
+func TestService_syncToFinalizedEpoch(t *testing.T) {
+	cache.initializeRootCache(makeSequence(1, 640), t)
+
+	p := p2pt.NewTestP2P(t)
+	beaconDB, _ := dbtest.SetupDB(t)
+	cache.RLock()
+	genesisRoot := cache.rootCache[0]
+	cache.RUnlock()
+
+	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
+	require.NoError(t, err)
+
+	st := testutil.NewBeaconState()
+	require.NoError(t, err)
+	mc := &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+		FinalizedCheckPoint: &eth.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		},
+	}
+	s := &Service{
+		ctx:          context.Background(),
+		chain:        mc,
+		p2p:          p,
+		db:           beaconDB,
+		synced:       abool.New(),
+		chainStarted: abool.NewBool(true),
+		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
+	}
+	expectedBlockSlots := makeSequence(1, 191)
+	currentSlot := uint64(191)
+
+	// Sync to finalized epoch.
+	hook := logTest.NewGlobal()
+	connectPeer(t, p, &peerData{
+		blocks:         makeSequence(1, 240),
+		finalizedEpoch: 5,
+		headSlot:       195,
+	}, p.Peers())
+	genesis := makeGenesisTime(currentSlot)
+	assert.NoError(t, s.syncToFinalizedEpoch(context.Background(), genesis))
+	if s.chain.HeadSlot() < currentSlot {
+		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
+	}
+	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
+	var receivedBlockSlots []uint64
+	for _, blk := range mc.BlocksReceived {
+		receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
+	}
+	missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
+	if len(missing) > 0 {
+		t.Errorf("Missing blocks at slots %v", missing)
+	}
+	assert.LogsDoNotContain(t, hook, "Already synced to finalized epoch")
+
+	// Try to re-sync, should be exited immediately (node is already synced to finalized epoch).
+	hook.Reset()
+	assert.NoError(t, s.syncToFinalizedEpoch(context.Background(), genesis))
+	assert.LogsContain(t, hook, "Already synced to finalized epoch")
 }
