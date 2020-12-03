@@ -674,7 +674,6 @@ func (s *Service) initPOWService() {
 			return
 		default:
 			ctx := s.ctx
-
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
@@ -721,6 +720,11 @@ func (s *Service) run(done <-chan struct{}) {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.headTicker.C:
+			if s.eth1DataFetcher == nil {
+				log.Info("Could not reach eth1 node. retrying...")
+				s.retryETH1Node(errors.New("nil eth1 node fetcher"))
+				continue
+			}
 			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
