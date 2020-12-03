@@ -2,8 +2,10 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
-	"path"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -26,7 +28,22 @@ func TestStore_Backup(t *testing.T) {
 
 	require.NoError(t, db.Backup(ctx, ""))
 
-	files, err := ioutil.ReadDir(path.Join(db.databasePath, backupsDirectoryName))
+	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
+	files, err := ioutil.ReadDir(backupsPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, len(files), "No backups created")
+	require.NoError(t, db.Close(), "Failed to close database")
+
+	fmt.Println(files[0].Name())
+	fmt.Println(files[0].Size())
+	oldFilePath := filepath.Join(backupsPath, files[0].Name())
+	newFilePath := filepath.Join(backupsPath, databaseFileName)
+	require.NoError(t, os.Rename(oldFilePath, newFilePath))
+
+	backedDB, err := NewKVStore(backupsPath, nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, backedDB.Close(), "Failed to close database")
+	})
+	require.Equal(t, true, backedDB.HasState(ctx, root))
 }

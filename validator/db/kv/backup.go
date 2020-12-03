@@ -44,11 +44,11 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 		&bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout},
 	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer func() {
 		if err := copyDB.Close(); err != nil {
-			logrus.WithError(err).Error("Failed to close destination database")
+			logrus.WithError(err).Error("Failed to close backup database")
 		}
 	}()
 
