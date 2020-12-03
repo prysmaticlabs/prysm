@@ -60,7 +60,6 @@ require (
 	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-noise v0.1.1
 	github.com/libp2p/go-libp2p-pubsub v0.3.6
-	github.com/libp2p/go-libp2p-secio v0.2.2
 	github.com/libp2p/go-libp2p-swarm v0.2.8
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-mplex v0.1.3 // indirect
@@ -74,7 +73,6 @@ require (
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.3.1
-	github.com/multiformats/go-multiaddr-net v0.2.0
 	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d
 	github.com/olekukonko/tablewriter v0.0.4 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
