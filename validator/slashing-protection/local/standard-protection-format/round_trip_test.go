@@ -35,12 +35,6 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	eipStandard, err := ExportStandardProtectionJSON(ctx, validatorDB)
 	require.NoError(t, err)
 
-	// TODO(#7813): We have only implemented the export functionality
-	// for proposals history at the moment, so we do not check attesting history.
-	for i := range wanted.Data {
-		wanted.Data[i].SignedAttestations = nil
-	}
-
 	// We compare the metadata fields from import to export.
 	require.Equal(t, wanted.Metadata, eipStandard.Metadata)
 
