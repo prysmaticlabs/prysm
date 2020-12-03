@@ -44,6 +44,10 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	for i := 0; i < highWatermarkBuffer; i++ {
+		addPeer(t, s.peers, peers.PeerConnected)
+	}
+
 	// create alternate host
 	listen, err = multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
