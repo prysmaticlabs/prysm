@@ -199,6 +199,20 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 }
 
 func filterSlashableBlocksByPubKey(ctx context.Context, blocksByPubkey map[[48]byte][]*SignedBlock) error {
+	// We behave as strict as possible and consider blocks with the same
+	// slot as slashable, as signing roots are optional in the EIP standard JSON file.
+	for pubKey, signedBlocks := range blocksByPubkey {
+		filteredBlocks := make([]*SignedBlock, 0, len(signedBlocks))
+		seenSlots := make(map[string]bool)
+		for _, blk := range signedBlocks {
+			if ok := seenSlots[blk.Slot]; ok {
+				continue
+			}
+			filteredBlocks = append(filteredBlocks, blk)
+			seenSlots[blk.Slot] = true
+		}
+		blocksByPubkey[pubKey] = filteredBlocks
+	}
 	return nil
 }
 
