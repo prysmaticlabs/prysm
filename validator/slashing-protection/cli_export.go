@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -30,26 +31,26 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
 	validatorDB, err := kv.NewKVStore(datadir, nil)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "could not open database at %s", datadir)
 	}
 	eipJSON, err := export.ExportStandardProtectionJSON(cliCtx.Context, validatorDB)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not export slashing protection history")
 	}
 	outputDir := cliCtx.String(flags.SlashingProtectionExportDirFlag.Name)
 	exists, err := fileutil.HasDir(outputDir)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "could not check if output directory %s already exists", outputDir)
 	}
 	if !exists {
 		if err := fileutil.MkdirAll(outputDir); err != nil {
-			return err
+			return errors.Wrapf(err, "could not create output directory %s", outputDir)
 		}
 	}
 	outputFilePath := filepath.Join(outputDir, jsonExportFileName)
 	encoded, err := json.Marshal(eipJSON)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not JSON marshal slashing protection history")
 	}
 	return fileutil.WriteFile(outputFilePath, encoded)
 }
