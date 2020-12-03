@@ -102,7 +102,7 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 	return nil
 }
 
-// syncToBestKnownHead sync from heat to best known non-finalized epoch supported by majority
+// syncToNonFinalizedEpoch sync from head to best known non-finalized epoch supported by majority
 // of peers (no less than MinimumSyncPeers*2 peers).
 func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time) error {
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
