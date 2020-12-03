@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attester_slashings.go",
+        "backup.go",
         "block_header.go",
         "chain_data.go",
         "highest_attestation.go",
@@ -42,6 +43,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attester_slashings_test.go",
+        "backup_test.go",
         "benchmark_test.go",
         "block_header_test.go",
         "chain_data_test.go",
