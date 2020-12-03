@@ -4,6 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = ["parse_graffiti.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/graffiti",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = ["@in_gopkg_yaml_v2//:go_default_library"],
 )
