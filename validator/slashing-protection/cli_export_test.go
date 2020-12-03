@@ -77,4 +77,18 @@ func TestExportSlashingProtectionCli(t *testing.T) {
 	//
 	// First, we compare basic data such as the Metadata value in the JSON file.
 	require.DeepEqual(t, mockJSON.Metadata, receivedJSON.Metadata)
+	wantedHistoryByPublicKey := make(map[string]*protectionFormat.ProtectionData)
+	for _, item := range mockJSON.Data {
+		wantedHistoryByPublicKey[item.Pubkey] = item
+	}
+
+	// Next, we compare all the data for each validator public key.
+	for _, item := range receivedJSON.Data {
+		wanted, ok := wantedHistoryByPublicKey[item.Pubkey]
+		require.Equal(t, true, ok)
+		require.Equal(t, len(wanted.SignedBlocks), len(item.SignedBlocks))
+		require.Equal(t, len(wanted.SignedAttestations), len(item.SignedAttestations))
+		require.DeepEqual(t, wanted.SignedBlocks, item.SignedBlocks)
+		require.DeepEqual(t, wanted.SignedAttestations, item.SignedAttestations)
+	}
 }
