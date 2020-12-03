@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -108,97 +107,6 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 }
 
 func TestBlocksFetcher_filterPeers(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		EnablePeerScorer: false,
-	})
-	defer resetCfg()
-
-	type weightedPeer struct {
-		peer.ID
-		usedCapacity int64
-	}
-	type args struct {
-		peers           []weightedPeer
-		peersPercentage float64
-	}
-	fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
-	tests := []struct {
-		name string
-		args args
-		want []peer.ID
-	}{
-		{
-			name: "no peers available",
-			args: args{
-				peers:           []weightedPeer{},
-				peersPercentage: 1.0,
-			},
-			want: []peer.ID{},
-		},
-		{
-			name: "single peer",
-			args: args{
-				peers: []weightedPeer{
-					{"a", 10},
-				},
-				peersPercentage: 1.0,
-			},
-			want: []peer.ID{"a"},
-		},
-		{
-			name: "multiple peers same capacity",
-			args: args{
-				peers: []weightedPeer{
-					{"a", 10},
-					{"b", 10},
-					{"c", 10},
-				},
-				peersPercentage: 1.0,
-			},
-			want: []peer.ID{"a", "b", "c"},
-		},
-		{
-			name: "multiple peers different capacity",
-			args: args{
-				peers: []weightedPeer{
-					{"a", 20},
-					{"b", 15},
-					{"c", 10},
-					{"d", 90},
-					{"e", 20},
-				},
-				peersPercentage: 1.0,
-			},
-			want: []peer.ID{"c", "b", "a", "e", "d"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Non-leaking bucket, with initial capacity of 100.
-			fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 100, false)
-			pids := make([]peer.ID, 0)
-			for _, pid := range tt.args.peers {
-				pids = append(pids, pid.ID)
-				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
-			}
-			pids = fetcher.filterPeers(context.Background(), pids, tt.args.peersPercentage)
-			// Re-arrange peers with the same remaining capacity, deterministically .
-			// They are deliberately shuffled - so that on the same capacity any of
-			// such peers can be selected. That's why they are sorted here.
-			sort.SliceStable(pids, func(i, j int) bool {
-				cap1 := fetcher.rateLimiter.Remaining(pids[i].String())
-				cap2 := fetcher.rateLimiter.Remaining(pids[j].String())
-				if cap1 == cap2 {
-					return pids[i].String() < pids[j].String()
-				}
-				return i < j
-			})
-			assert.DeepEqual(t, tt.want, pids)
-		})
-	}
-}
-
-func TestBlocksFetcher_filterScoredPeers(t *testing.T) {
 	type weightedPeer struct {
 		peer.ID
 		usedCapacity int64

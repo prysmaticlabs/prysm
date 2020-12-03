@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -264,7 +263,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
 func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
-	if !featureconfig.Get().EnablePeerScorer || pid == "" {
+	if pid == "" {
 		return
 	}
 	headSlot := s.chain.HeadSlot()
