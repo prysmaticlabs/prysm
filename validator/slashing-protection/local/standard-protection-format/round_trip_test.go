@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -49,7 +48,6 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	}
 	for _, item := range eipStandard.Data {
 		want, ok := dataByPubKey[item.Pubkey]
-		fmt.Println(len(want.SignedAttestations), len(item.SignedAttestations))
 		require.Equal(t, true, ok)
 		require.DeepEqual(t, want, item)
 	}
