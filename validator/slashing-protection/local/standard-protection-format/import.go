@@ -49,13 +49,15 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
-	// We validate and filter out blocks and attestations parsed from JSON to ensure we are
+	// We validate and filter out public keys parsed from JSON to ensure we are
 	// not importing those which are slashable with respect to other data within the same JSON.
-	if err := filterSlashableBlocksByPubKey(ctx, signedBlocksByPubKey); err != nil {
-		return err
+	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, signedBlocksByPubKey)
+	slashableAttesterKeys := filterSlashablePubKeysFromAttestations(ctx, signedAttsByPubKey)
+	for _, pubKey := range slashableProposerKeys {
+		delete(signedBlocksByPubKey, pubKey)
 	}
-	if err := filterSlashableAttestationsByPubKey(ctx, signedAttsByPubKey); err != nil {
-		return err
+	for _, pubKey := range slashableAttesterKeys {
+		delete(signedAttsByPubKey, pubKey)
 	}
 
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
@@ -198,25 +200,24 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 	return signedAttestationsByPubKey, nil
 }
 
-func filterSlashableBlocksByPubKey(ctx context.Context, blocksByPubkey map[[48]byte][]*SignedBlock) error {
-	// We behave as strict as possible and consider blocks with the same
+func filterSlashablePubKeysFromBlocks(ctx context.Context, blocksByPubkey map[[48]byte][]*SignedBlock) [][48]byte {
+	// We behave as strictly as possible and consider blocks with the same
 	// slot as slashable, as signing roots are optional in the EIP standard JSON file.
+	slashablePubKeys := make([][48]byte, 0)
 	for pubKey, signedBlocks := range blocksByPubkey {
-		filteredBlocks := make([]*SignedBlock, 0, len(signedBlocks))
 		seenSlots := make(map[string]bool)
 		for _, blk := range signedBlocks {
 			if ok := seenSlots[blk.Slot]; ok {
-				continue
+				slashablePubKeys = append(slashablePubKeys, pubKey)
+				break
 			}
-			filteredBlocks = append(filteredBlocks, blk)
 			seenSlots[blk.Slot] = true
 		}
-		blocksByPubkey[pubKey] = filteredBlocks
 	}
-	return nil
+	return slashablePubKeys
 }
 
-func filterSlashableAttestationsByPubKey(ctx context.Context, attsByPubKey map[[48]byte][]*SignedAttestation) error {
+func filterSlashablePubKeysFromAttestations(ctx context.Context, attsByPubKey map[[48]byte][]*SignedAttestation) [][48]byte {
 	// TODO(#7813): Implement.
 	return nil
 }
