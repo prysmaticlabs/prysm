@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
@@ -77,6 +78,7 @@ type validator struct {
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
+	graffitiStruct                     *graffiti.Graffiti
 }
 
 // Done cleans up the validator.

@@ -4,6 +4,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -52,11 +54,19 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	g, err := v.getGraffiti(ctx, pubKey)
+	if err != nil {
+		// Graffiti is not a critical enough to fail block production and cause
+		// proposer to miss block submission. In this case, validator should continue on
+		// to produce the block.
+		log.WithError(err).Warn("Could not get graffiti")
+	}
+
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
-		Graffiti:     v.graffiti,
+		Graffiti:     g,
 	})
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
@@ -256,4 +266,39 @@ func signVoluntaryExit(
 		return nil, errors.Wrap(err, signExitErr)
 	}
 	return sig.Marshal(), nil
+}
+
+// graffiti gets the graffiti from the validator public key.
+func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, error) {
+	// If specified, default graffiti from the command line takes the first priority.
+	if v.graffiti != nil {
+		return v.graffiti, nil
+	}
+
+	// If specified, default graffiti from the file takes the second priority.
+
+	if v.graffitiStruct.DefaultGraffiti != "" {
+		return []byte(v.graffitiStruct.DefaultGraffiti), nil
+	}
+
+	// If specified, random graffiti(s) from the file take third priority.
+	// A random one will be chosen from the list.
+	if len(v.graffitiStruct.RandomGraffiti) != 0 {
+		r := rand.NewGenerator()
+		r.Seed(time.Now().Unix())
+		i := uint64(len(v.graffitiStruct.RandomGraffiti)) % r.Uint64()
+		return []byte(v.graffitiStruct.RandomGraffiti[i]), nil
+	}
+
+	// Last and if specified, individual validator specified graffiti will be used.
+	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
+	if err != nil {
+		return []byte{}, err
+	}
+	g, ok := v.graffitiStruct.ValidatorGraffiti[idx.Index]
+	if ok {
+		return []byte(g), nil
+	}
+
+	return []byte{}, nil
 }

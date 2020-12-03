@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -74,6 +75,7 @@ type ValidatorService struct {
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
+	graffitiStruct        *graffiti.Graffiti
 }
 
 // Config for the validator service.
@@ -94,6 +96,7 @@ type Config struct {
 	CertFlag                   string
 	DataDir                    string
 	GrpcHeadersFlag            string
+	GraffitiStruct             *graffiti.Graffiti
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -119,6 +122,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		useWeb:                cfg.UseWeb,
+		graffitiStruct:        cfg.GraffitiStruct,
 	}, nil
 }
 
@@ -195,6 +199,7 @@ func (v *ValidatorService) Start() {
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
+		graffitiStruct:                 v.graffitiStruct,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
