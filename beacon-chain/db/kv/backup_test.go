@@ -35,6 +35,8 @@ func TestStore_Backup(t *testing.T) {
 
 	oldFilePath := filepath.Join(backupsPath, files[0].Name())
 	newFilePath := filepath.Join(backupsPath, databaseFileName)
+	// We rename the file to match the database file name
+	// our NewKVStore function expects when opening a database.
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
 	backedDB, err := NewKVStore(backupsPath, nil)
