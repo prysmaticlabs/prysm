@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -67,7 +68,7 @@ func (db *Store) ClearDB() error {
 	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.Remove(db.databasePath)
+	return os.Remove(filepath.Join(db.databasePath, databaseFileName))
 }
 
 // DatabasePath at which this database writes files.
@@ -106,7 +107,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		}
 		return nil, err
 	}
-	kv := &Store{db: boltDB, databasePath: datafile}
+	kv := &Store{db: boltDB, databasePath: dirPath}
 	kv.EnableSpanCache(true)
 	kv.EnableHighestAttestationCache(true)
 	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistFlatSpanMapsOnEviction(kv))
