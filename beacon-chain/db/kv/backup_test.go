@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -34,8 +33,6 @@ func TestStore_Backup(t *testing.T) {
 	require.NotEqual(t, 0, len(files), "No backups created")
 	require.NoError(t, db.Close(), "Failed to close database")
 
-	fmt.Println(files[0].Name())
-	fmt.Println(files[0].Size())
 	oldFilePath := filepath.Join(backupsPath, files[0].Name())
 	newFilePath := filepath.Join(backupsPath, databaseFileName)
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
