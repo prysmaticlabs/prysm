@@ -845,7 +845,14 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			slashablePubKeys := filterSlashablePubKeysFromBlocks(context.Background(), tt.given)
+			ctx := context.Background()
+			historyByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
+			for pubKey, signedBlocks := range tt.given {
+				proposalHistory, err := transformSignedBlocks(ctx, signedBlocks)
+				require.NoError(t, err)
+				historyByPubKey[pubKey] = *proposalHistory
+			}
+			slashablePubKeys := filterSlashablePubKeysFromBlocks(context.Background(), historyByPubKey)
 			require.DeepEqual(t, tt.expected, slashablePubKeys)
 		})
 	}

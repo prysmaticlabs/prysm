@@ -75,9 +75,12 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// We validate and filter out public keys parsed from JSON to ensure we are
 	// not importing those which are slashable with respect to other data within the same JSON.
 	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, proposalHistoryByPubKey)
-	slashableAttesterKeys := filterSlashablePubKeysFromAttestations(
+	slashableAttesterKeys, err := filterSlashablePubKeysFromAttestations(
 		ctx, attestingHistoryByPubKey, signedAttsByPubKey,
 	)
+	if err != nil {
+		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
+	}
 	for _, pubKey := range slashableProposerKeys {
 		delete(proposalHistoryByPubKey, pubKey)
 	}
@@ -224,25 +227,31 @@ func filterSlashablePubKeysFromAttestations(
 	ctx context.Context,
 	historyByPubKey map[[48]byte]kv.EncHistoryData,
 	signedAttsByPubKey map[[48]byte][]*SignedAttestation,
-) [][48]byte {
+) ([][48]byte, error) {
 	slashablePubKeys := make([][48]byte, 0)
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		history, ok := historyByPubKey[pubKey]
 		if !ok {
-			return nil
+			// This should not happen, as the map is populated prior to calling this function.
+			return nil, fmt.Errorf("could not find history for public key %#x", pubKey)
 		}
 		for _, att := range signedAtts {
+			// Malformed data should not prevent us from completing this function.
 			source, err := uint64FromString(att.SourceEpoch)
 			if err != nil {
-				return nil
+				continue
 			}
 			target, err := uint64FromString(att.TargetEpoch)
 			if err != nil {
-				return nil
+				continue
 			}
-			slashable, err := client.IsNewAttSlashable(ctx, history, source, target, [32]byte{})
+			signingRoot, err := rootFromHex(att.SigningRoot)
 			if err != nil {
-				return nil
+				continue
+			}
+			slashable, err := client.IsNewAttSlashable(ctx, history, source, target, signingRoot)
+			if err != nil {
+				continue
 			}
 			if slashable {
 				slashablePubKeys = append(slashablePubKeys, pubKey)
@@ -250,7 +259,7 @@ func filterSlashablePubKeysFromAttestations(
 			}
 		}
 	}
-	return slashablePubKeys
+	return slashablePubKeys, nil
 }
 
 func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {

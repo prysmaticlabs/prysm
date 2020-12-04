@@ -237,7 +237,7 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	sr2 := [32]byte{2}
 	newAttSource = uint64(1)
 	newAttTarget = uint64(3)
-	slashable, err := isNewAttSlashable(ctx, history, newAttSource, newAttTarget, sr2)
+	slashable, err := IsNewAttSlashable(ctx, history, newAttSource, newAttTarget, sr2)
 	require.NoError(t, err)
 	if !slashable {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
@@ -356,7 +356,7 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	history := kv.NewAttestationHistoryArray(0)
 
 	// Try an attestation on totally unmarked history, should not be slashable.
-	slashable, err := isNewAttSlashable(ctx, history, 0, wsPeriod+5, signingRoot)
+	slashable, err := IsNewAttSlashable(ctx, history, 0, wsPeriod+5, signingRoot)
 	require.NoError(t, err)
 	require.Equal(t, false, slashable, "Should not be slashable")
 
@@ -402,19 +402,19 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	require.Equal(t, farNewAttSource, histAtt.Source, "Unexpectedly marked attestation")
 
 	// Try an attestation from existing source to outside prune, should slash.
-	slashable, err = isNewAttSlashable(ctx, history, newAttSource, farNewAttTarget, signingRoot4)
+	slashable, err = IsNewAttSlashable(ctx, history, newAttSource, farNewAttTarget, signingRoot4)
 	require.NoError(t, err)
 	if !slashable {
 		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttSource, farNewAttTarget)
 	}
 	// Try an attestation from before existing target to outside prune, should slash.
-	slashable, err = isNewAttSlashable(ctx, history, newAttTarget-1, farNewAttTarget, signingRoot4)
+	slashable, err = IsNewAttSlashable(ctx, history, newAttTarget-1, farNewAttTarget, signingRoot4)
 	require.NoError(t, err)
 	if !slashable {
 		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttTarget-1, farNewAttTarget)
 	}
 	// Try an attestation larger than pruning amount, should slash.
-	slashable, err = isNewAttSlashable(ctx, history, 0, farNewAttTarget+5, signingRoot4)
+	slashable, err = IsNewAttSlashable(ctx, history, 0, farNewAttTarget+5, signingRoot4)
 	require.NoError(t, err)
 	if !slashable {
 		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
@@ -442,7 +442,7 @@ func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	// Try an attestation that should be slashable (being surrounded) spanning epochs 1 to 2.
 	newAttSource = uint64(1)
 	newAttTarget = uint64(2)
-	slashable, err := isNewAttSlashable(ctx, history, newAttSource, newAttTarget, signingRoot)
+	slashable, err := IsNewAttSlashable(ctx, history, newAttSource, newAttTarget, signingRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, slashable, "Expected slashable attestation")
 }
@@ -471,7 +471,7 @@ func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	// Try an attestation that should be slashable (surrounding) spanning epochs 0 to 3.
 	newAttSource = uint64(0)
 	newAttTarget = uint64(3)
-	slashable, err := isNewAttSlashable(ctx, history, newAttSource, newAttTarget, signingRoot)
+	slashable, err := IsNewAttSlashable(ctx, history, newAttSource, newAttTarget, signingRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, slashable)
 }
