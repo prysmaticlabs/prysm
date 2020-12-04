@@ -268,7 +268,7 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-// graffiti gets the graffiti from cli or file for the validator public key.
+// Gets the graffiti from cli or file for the validator public key.
 func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, error) {
 	// When specified, default graffiti from the command line takes the first priority.
 	if len(v.graffiti) != 0 {
