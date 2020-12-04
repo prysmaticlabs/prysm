@@ -378,7 +378,7 @@ func (s *ValidatorClient) registerClientService(
 		n := s.cliCtx.String(flags.GraffitiFileFlag.Name)
 		gStruct, err = g.ParseGraffitiFile(n)
 		if err != nil {
-			return err
+			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
 
