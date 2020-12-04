@@ -29,6 +29,8 @@ const (
 	maxFileBufferSize   = 1024 * 1024
 )
 
+var Graffiti = []string{"Sushi", "Ramen", "Takoyaki"}
+
 // DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
 // If not, it just creates the requested file.
 func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
@@ -81,6 +83,20 @@ func WaitForTextInFile(file *os.File, text string) error {
 			}
 		}
 	}
+}
+
+func GraffitiYamlFile(testDir string) (string, error) {
+	b := []byte(`default: "Rice"
+random: 
+  - "Sushi"
+  - "Ramen"
+  - "Takoyaki"
+`)
+	f := filepath.Join(testDir, "graffiti.yaml")
+	if err := ioutil.WriteFile(f, b, os.ModePerm); err != nil {
+		return "", err
+	}
+	return f, nil
 }
 
 // LogOutput logs the output of all log files made.
