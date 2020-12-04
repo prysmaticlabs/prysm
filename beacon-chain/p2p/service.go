@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
@@ -55,9 +54,6 @@ const lookupLimit = 15
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
 
-// Exclusion list cache config values.
-const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
-
 // maxDialTimeout is the timeout for a single peer dial.
 var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 
@@ -73,7 +69,6 @@ type Service struct {
 	addrFilter            *filter.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
-	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
@@ -96,21 +91,12 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
-	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: cacheNumCounters,
-		MaxCost:     cacheMaxCost,
-		BufferItems: cacheBufferItems,
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	s := &Service{
 		ctx:           ctx,
 		stateNotifier: cfg.StateNotifier,
 		cancel:        cancel,
 		cfg:           cfg,
-		exclusionList: cache,
 		isPreGenesis:  true,
 		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
 		subnetsLock:   make(map[uint64]*sync.RWMutex),
