@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sort"
 	"testing"
 
@@ -22,16 +21,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	run := func() int {
-		logrus.SetLevel(logrus.DebugLevel)
-		logrus.SetOutput(ioutil.Discard)
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-			AttestationAggregationStrategy: string(MaxCoverAggregation),
-		})
-		defer resetCfg()
-		return m.Run()
-	}
-	os.Exit(run())
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		AttestationAggregationStrategy: string(MaxCoverAggregation),
+	})
+	defer resetCfg()
+	m.Run()
 }
 
 func TestAggregateAttestations_AggregatePair(t *testing.T) {
@@ -289,11 +285,23 @@ func TestAggregateAttestations_PerformanceComparison(t *testing.T) {
 		sort.Slice(atts, func(i, j int) bool {
 			return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
 		})
-		// Count only the top-performing att (which should be the best aggregate).
+		// Score the best aggregate.
 		if len(atts) > 0 {
 			score = atts[0].AggregationBits.Count()
 		}
 		return score
+	}
+
+	generateAtts := func(bitsList [][]byte) []*ethpb.Attestation {
+		sign := bls.NewAggregateSignature().Marshal()
+		atts := make([]*ethpb.Attestation, 0)
+		for _, b := range bitsList {
+			atts = append(atts, &ethpb.Attestation{
+				AggregationBits: b,
+				Signature:       sign,
+			})
+		}
+		return atts
 	}
 
 	for _, tt := range tests {
@@ -307,7 +315,7 @@ func TestAggregateAttestations_PerformanceComparison(t *testing.T) {
 			score2 := scoreAtts(atts)
 
 			t.Logf("native = %d, max-cover: %d\n", score1, score2)
-			assert.Equal(t, true, score1 < score2,
+			assert.Equal(t, true, score1 <= score2,
 				"max-cover failed to produce higher score (naive: %d, max-cover: %d)", score1, score2)
 		})
 	}

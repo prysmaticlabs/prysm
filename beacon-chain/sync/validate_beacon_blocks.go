@@ -123,6 +123,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block.Slot, blk, blockRoot); err != nil {
+			s.pendingQueueLock.Unlock()
 			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 			return pubsub.ValidationIgnore
 		}
@@ -152,7 +153,10 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 	hasStateSummaryDB := s.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	hasStateSummaryCache := s.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if !hasStateSummaryDB && !hasStateSummaryCache {
-		return errors.New("no access to parent state")
+		_, err := s.stateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+		if err != nil {
+			return err
+		}
 	}
 	parentState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {

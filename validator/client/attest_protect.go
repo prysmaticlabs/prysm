@@ -123,7 +123,13 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 			return errors.New(failedPostAttSignExternalErr)
 		}
 	}
-	return nil
+
+	// Save source and target epochs to satisfy EIP3076 requirements.
+	// The DB methods below will replace the lowest epoch in DB if necessary.
+	if err := v.db.SaveLowestSignedSourceEpoch(ctx, pubKey, indexedAtt.Data.Source.Epoch); err != nil {
+		return err
+	}
+	return v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
 }
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch

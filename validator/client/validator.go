@@ -298,12 +298,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 			log.Info("Waiting for deposit to be observed by beacon node")
 		case ethpb.ValidatorStatus_DEPOSITED:
-			if status.Status.DepositInclusionSlot != 0 {
-				log.WithFields(logrus.Fields{
-					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
-					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
-				}).Info("Deposit for validator received but not processed into the beacon state")
-			} else {
+			if status.Status.PositionInActivationQueue != 0 {
 				log.WithField(
 					"positionInActivationQueue", status.Status.PositionInActivationQueue,
 				).Info("Deposit processed, entering activation queue after finalization")
@@ -644,7 +639,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	}
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
 	slotOffset := slot - (slot % params.BeaconConfig().SlotsPerEpoch)
-
+	var totalAttestingKeys uint64
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
@@ -663,6 +658,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			log.WithField("duty", duty).Warn("Invalid attester slot")
 		} else {
 			attesterKeys[duty.AttesterSlot-slotOffset] = append(attesterKeys[duty.AttesterSlot-slotOffset], validatorKey)
+			totalAttestingKeys++
 		}
 
 		for _, proposerSlot := range duty.ProposerSlots {
@@ -674,10 +670,13 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			}
 		}
 	}
-
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
-			log.WithField("slot", slotOffset+i).WithField("attesters", len(attesterKeys[i])).WithField("pubKeys", attesterKeys[i]).Info("Attestation schedule")
+			log.WithFields(logrus.Fields{
+				"slot":      slotOffset + i,
+				"attesters": fmt.Sprintf("%d/%d", len(attesterKeys[i]), totalAttestingKeys),
+				"pubKeys":   attesterKeys[i],
+			}).Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {
 			log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")

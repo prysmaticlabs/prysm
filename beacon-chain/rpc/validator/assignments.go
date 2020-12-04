@@ -39,6 +39,9 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	// If we are post-genesis time, then set the current epoch to
 	// the number epochs since the genesis time, otherwise 0 by default.
 	genesisTime := vs.GenesisTimeFetcher.GenesisTime()
+	if genesisTime.IsZero() {
+		return status.Error(codes.Unavailable, "genesis time is not set")
+	}
 	var currentEpoch uint64
 	if genesisTime.Before(timeutils.Now()) {
 		currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())

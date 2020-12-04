@@ -129,6 +129,13 @@ func TestPostSignatureUpdate(t *testing.T) {
 	mockProtector.AllowAttestation = true
 	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
+
+	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(4), e)
+	e, err = validator.db.LowestSignedTargetEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(10), e)
 }
 
 func TestPostSignatureUpdate_NilLocal(t *testing.T) {
@@ -160,6 +167,49 @@ func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
 	err := validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
+}
+
+func TestPrePostSignatureUpdate_NilLocalGenesis(t *testing.T) {
+	config := &featureconfig.Flags{
+		SlasherProtection: false,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
+	ctx := context.Background()
+	validator, m, _, finish := setup(t)
+	defer finish()
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("great block root"), 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("great root"), 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("great root"), 32),
+			},
+		},
+	}
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch2
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	sr := [32]byte{1}
+	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	err := validator.preAttSignValidations(ctx, att, fakePubkey)
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	err = validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
+	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), fakePubkey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), e)
+	e, err = validator.db.LowestSignedTargetEpoch(context.Background(), fakePubkey)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), e)
 }
 
 func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {

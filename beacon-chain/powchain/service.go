@@ -149,16 +149,18 @@ type Service struct {
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
 	stateGen                *stategen.State
+	eth1HeaderReqLimit      uint64
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HTTPEndPoint    string
-	DepositContract common.Address
-	BeaconDB        db.HeadAccessDatabase
-	DepositCache    *depositcache.DepositCache
-	StateNotifier   statefeed.Notifier
-	StateGen        *stategen.State
+	HTTPEndPoint       string
+	DepositContract    common.Address
+	BeaconDB           db.HeadAccessDatabase
+	DepositCache       *depositcache.DepositCache
+	StateNotifier      statefeed.Notifier
+	StateGen           *stategen.State
+	Eth1HeaderReqLimit uint64
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -174,6 +176,11 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	genState, err := state.EmptyGenesisState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not setup genesis state")
+	}
+
+	eth1HeaderReqLimit := config.Eth1HeaderReqLimit
+	if eth1HeaderReqLimit == 0 {
+		eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
 	s := &Service{
@@ -201,6 +208,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		preGenesisState:         genState,
 		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
 		stateGen:                config.StateGen,
+		eth1HeaderReqLimit:      eth1HeaderReqLimit,
 	}
 
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
@@ -377,20 +385,38 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 		return nil, nil, err
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
-
+	// Add a method to clean-up and close clients in the event
+	// of any connection failure.
+	closeClients := func() {
+		httpRPCClient.Close()
+		httpClient.Close()
+	}
+	syncProg, err := httpClient.SyncProgress(s.ctx)
+	if err != nil {
+		closeClients()
+		return nil, nil, err
+	}
+	if syncProg != nil {
+		closeClients()
+		return nil, nil, errors.New("eth1 node has not finished syncing yet")
+	}
 	// Make a simple call to ensure we are actually connected to a working node.
 	cID, err := httpClient.ChainID(s.ctx)
 	if err != nil {
+		closeClients()
 		return nil, nil, err
 	}
 	nID, err := httpClient.NetworkID(s.ctx)
 	if err != nil {
+		closeClients()
 		return nil, nil, err
 	}
 	if cID.Uint64() != params.BeaconNetworkConfig().ChainID {
+		closeClients()
 		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconNetworkConfig().ChainID)
 	}
 	if nID.Uint64() != params.BeaconNetworkConfig().NetworkID {
+		closeClients()
 		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconNetworkConfig().NetworkID)
 	}
 
