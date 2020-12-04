@@ -40,7 +40,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 		log.WithError(err).Error("Could not get domain and signing root from attestation")
 		return err
 	}
-	slashable, err := isNewAttSlashable(
+	slashable, err := IsNewAttSlashable(
 		ctx,
 		attesterHistory,
 		indexedAtt.Data.Source.Epoch,
@@ -86,7 +86,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	} else {
 		AttestationMapHit.Inc()
 	}
-	slashable, err := isNewAttSlashable(
+	slashable, err := IsNewAttSlashable(
 		ctx,
 		attesterHistory,
 		indexedAtt.Data.Source.Epoch,
@@ -133,9 +133,9 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	return v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
 }
 
-// isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
+// IsNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
 // and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
-func isNewAttSlashable(
+func IsNewAttSlashable(
 	ctx context.Context,
 	history kv.EncHistoryData,
 	sourceEpoch,
