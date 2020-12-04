@@ -279,19 +279,17 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 		return nil, errors.New("graffitiStruct can't be nil")
 	}
 
-	// When specified, default graffiti from the file takes the second priority.
-	if v.graffitiStruct.Default != "" {
-		return []byte(v.graffitiStruct.Default), nil
+	// When specified, individual validator specified graffiti takes the second priority.
+	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
+	if err != nil {
+		return []byte{}, err
+	}
+	g, ok := v.graffitiStruct.Specific[idx.Index]
+	if ok {
+		return []byte(g), nil
 	}
 
-	// When specified, a graffiti from the sequential list in the file will take third priority.
-	if len(v.graffitiStruct.Sequential) != 0 {
-		g := []byte(v.graffitiStruct.Sequential[0])
-		v.graffitiStruct.Sequential = v.graffitiStruct.Sequential[1:]
-		return g, nil
-	}
-
-	// When specified, a graffiti from the random list in the file take fourth priority.
+	// When specified, a graffiti from the random list in the file take third priority.
 	if len(v.graffitiStruct.Random) != 0 {
 		r := rand.NewGenerator()
 		r.Seed(time.Now().Unix())
@@ -299,14 +297,9 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 		return []byte(v.graffitiStruct.Random[i]), nil
 	}
 
-	// Last and when specified, individual validator specified graffiti will be used.
-	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
-	if err != nil {
-		return []byte{}, err
-	}
-	g, ok := v.graffitiStruct.Validator[idx.Index]
-	if ok {
-		return []byte(g), nil
+	// Finally, default graffiti if specified in the file will be used.
+	if v.graffitiStruct.Default != "" {
+		return []byte(v.graffitiStruct.Default), nil
 	}
 
 	return []byte{}, nil

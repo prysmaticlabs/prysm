@@ -640,10 +640,9 @@ func TestGetGraffiti_Ok(t *testing.T) {
 			v: &validator{
 				graffiti: []byte{'b'},
 				graffitiStruct: &graffiti.Graffiti{
-					Default:    "c",
-					Sequential: []string{"x", "y"},
-					Random:     []string{"d", "e"},
-					Validator: map[uint64]string{
+					Default: "c",
+					Random:  []string{"d", "e"},
+					Specific: map[uint64]string{
 						1: "f",
 						2: "g",
 					},
@@ -653,39 +652,19 @@ func TestGetGraffiti_Ok(t *testing.T) {
 		},
 		{name: "use default file graffiti",
 			v: &validator{
+				validatorClient: m.validatorClient,
 				graffitiStruct: &graffiti.Graffiti{
-					Default:    "c",
-					Sequential: []string{"x", "y"},
-					Random:     []string{"d", "e"},
-					Validator: map[uint64]string{
-						1: "f",
-						2: "g",
-					},
+					Default: "c",
 				},
 			},
 			want: []byte{'c'},
 		},
-		{name: "use sequential file graffiti",
-			v: &validator{
-				graffitiStruct: &graffiti.Graffiti{
-					Sequential: []string{"x", "y"},
-					Random:     []string{"d"},
-					Validator: map[uint64]string{
-						1: "f",
-						2: "g",
-					},
-				},
-			},
-			want: []byte{'x'},
-		},
 		{name: "use random file graffiti",
 			v: &validator{
+				validatorClient: m.validatorClient,
 				graffitiStruct: &graffiti.Graffiti{
-					Random: []string{"d"},
-					Validator: map[uint64]string{
-						1: "f",
-						2: "g",
-					},
+					Random:  []string{"d"},
+					Default: "c",
 				},
 			},
 			want: []byte{'d'},
@@ -694,7 +673,9 @@ func TestGetGraffiti_Ok(t *testing.T) {
 			v: &validator{
 				validatorClient: m.validatorClient,
 				graffitiStruct: &graffiti.Graffiti{
-					Validator: map[uint64]string{
+					Random:  []string{"d"},
+					Default: "c",
+					Specific: map[uint64]string{
 						1: "f",
 						2: "g",
 					},
@@ -713,7 +694,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if strings.Contains(tt.name, "use validator file graffiti") {
+			if !strings.Contains(tt.name, "use default cli graffiti") {
 				m.validatorClient.EXPECT().
 					ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
 					Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
@@ -723,28 +704,4 @@ func TestGetGraffiti_Ok(t *testing.T) {
 			require.DeepEqual(t, tt.want, got)
 		})
 	}
-}
-
-func TestGetGraffiti_SequentialToRandom(t *testing.T) {
-	v := &validator{
-		graffitiStruct: &graffiti.Graffiti{
-			Sequential: []string{"x", "y", "z"},
-			Random:     []string{"d"},
-		},
-	}
-	got, err := v.getGraffiti(context.Background(), [48]byte{})
-	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'x'}, got)
-	got, err = v.getGraffiti(context.Background(), [48]byte{})
-	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'y'}, got)
-	got, err = v.getGraffiti(context.Background(), [48]byte{})
-	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'z'}, got)
-	got, err = v.getGraffiti(context.Background(), [48]byte{})
-	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'d'}, got)
-	got, err = v.getGraffiti(context.Background(), [48]byte{})
-	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'d'}, got)
 }
