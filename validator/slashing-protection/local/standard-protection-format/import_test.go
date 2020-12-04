@@ -671,6 +671,84 @@ func Test_saveLowestSourceTargetToDBt_Ok(t *testing.T) {
 	require.Equal(t, uint64(6), got)
 }
 
+func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
+	var tests = []struct {
+		name     string
+		expected [][48]byte
+		given    map[[48]byte][]*SignedBlock
+	}{
+		{
+			name:     "No slashable keys returns empty",
+			expected: make([][48]byte, 0),
+			given: map[[48]byte][]*SignedBlock{
+				{1}: {
+					{
+						Slot: "1",
+					},
+					{
+						Slot: "2",
+					},
+				},
+				{2}: {
+					{
+						Slot: "2",
+					},
+					{
+						Slot: "3",
+					},
+				},
+			},
+		},
+		{
+			name:     "Empty data returns empty",
+			expected: make([][48]byte, 0),
+			given:    make(map[[48]byte][]*SignedBlock),
+		},
+		{
+			name: "Properly finds public keys with slashable data",
+			expected: [][48]byte{
+				{1}, {3},
+			},
+			given: map[[48]byte][]*SignedBlock{
+				{1}: {
+					{
+						Slot: "1",
+					},
+					{
+						Slot: "1",
+					},
+					{
+						Slot: "2",
+					},
+				},
+				{2}: {
+					{
+						Slot: "2",
+					},
+					{
+						Slot: "3",
+					},
+				},
+				{3}: {
+					{
+						Slot: "3",
+					},
+					{
+						Slot: "3",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			slashablePubKeys := filterSlashablePubKeysFromBlocks(context.Background(), tt.given)
+			require.DeepEqual(t, tt.expected, slashablePubKeys)
+		})
+	}
+}
+
 func createRandomPubKeys(t *testing.T, numValidators int) [][48]byte {
 	pubKeys := make([][48]byte, numValidators)
 	for i := 0; i < numValidators; i++ {
