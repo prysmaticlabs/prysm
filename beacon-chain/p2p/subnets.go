@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/go-bitfield"
 	"go.opencensus.io/trace"
 
@@ -21,7 +20,7 @@ var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
 // with those peers.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
+func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index uint64) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
@@ -32,51 +31,66 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, 
 		return false, nil
 	}
 	iterator := s.dv5Listener.RandomNodes()
-	nodes := enode.ReadNodes(iterator, lookupLimit)
+	s.dv5Listener.RandomNodes()
+	iterator = enode.Filter(iterator, s.filterPeer)
+	topic += s.Encoding().ProtocolSuffix()
+
+	defer iterator.Close()
 	exists := false
-	for _, node := range nodes {
+
+	currNum := len(s.pubsub.ListPeers(topic))
+	wg := new(sync.WaitGroup)
+	for i := 0; ; {
 		if err := ctx.Err(); err != nil {
-			return false, err
+			return false, nil
+		}
+		if !iterator.Next() {
+			return false, nil
+		}
+		node := iterator.Node()
+		if currNum > 6 {
+			break
+		}
+		if node == nil {
+			continue
 		}
 		if node.IP() == nil {
 			continue
 		}
-		// do not look for nodes with no tcp port set
-		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
-			if !enr.IsNotFound(err) {
-				log.WithError(err).Debug("Could not retrieve tcp port")
-			}
-			continue
+		info, _, err := convertToAddrInfo(node)
+		if err != nil {
+			return false, err
 		}
 		subnets, err := retrieveAttSubnets(node.Record())
 		if err != nil {
 			log.Debugf("could not retrieve subnets: %v", err)
 			continue
 		}
+		indExists := false
 		for _, comIdx := range subnets {
 			if comIdx == index {
-				info, multiAddr, err := convertToAddrInfo(node)
-				if err != nil {
-					return false, err
-				}
-				if s.peers.IsActive(info.ID) {
-					exists = true
-					continue
-				}
-				if s.host.Network().Connectedness(info.ID) == network.Connected {
-					exists = true
-					continue
-				}
-				if !s.peers.IsReadyToDial(info.ID) {
-					continue
-				}
-				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
-				if err := s.connectWithPeer(ctx, *info); err != nil {
-					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
-					continue
-				}
-				exists = true
+				indExists = true
+				break
 			}
+		}
+		if !indExists {
+			continue
+		}
+		go func() {
+			wg.Add(1)
+			i++
+			if err := s.connectWithPeer(ctx, *info); err != nil {
+				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+			}
+			wg.Done()
+		}()
+
+		if i%30 == 0 {
+			wg.Wait()
+			i = 0
+			peers := s.pubsub.ListPeers(topic)
+			log.Errorf("num of peers for topic %s, %d", topic, len(peers))
+			currNum = len(peers)
 		}
 	}
 	return exists, nil

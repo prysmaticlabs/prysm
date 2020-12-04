@@ -93,7 +93,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 				if err := ctx.Err(); err != nil {
 					return err
 				}
-				ok, err := s.FindPeersWithSubnet(ctx, subnet)
+				ok, err := s.FindPeersWithSubnet(ctx, attestationToTopic(subnet, forkDigest), subnet)
 				if err != nil {
 					return err
 				}
