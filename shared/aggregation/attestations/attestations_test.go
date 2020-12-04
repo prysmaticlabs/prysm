@@ -3,7 +3,6 @@ package attestations
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sort"
 	"testing"
 
@@ -20,16 +19,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	run := func() int {
-		logrus.SetLevel(logrus.DebugLevel)
-		logrus.SetOutput(ioutil.Discard)
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-			AttestationAggregationStrategy: string(MaxCoverAggregation),
-		})
-		defer resetCfg()
-		return m.Run()
-	}
-	os.Exit(run())
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		AttestationAggregationStrategy: string(MaxCoverAggregation),
+	})
+	defer resetCfg()
+	m.Run()
 }
 
 func TestAggregateAttestations_AggregatePair(t *testing.T) {
