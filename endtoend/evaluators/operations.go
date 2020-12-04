@@ -46,7 +46,7 @@ var ProcessesDepositsInBlocks = types.Evaluator{
 	Evaluation: processesDepositsInBlocks,
 }
 
-// VerifyBlockGraffiti ensures the block graffiti is not empty.
+// VerifyBlockGraffiti ensures the block graffiti is one of the random list.
 var VerifyBlockGraffiti = types.Evaluator{
 	Name:       "verify_graffiti_in_blocks_epoch_%d",
 	Policy:     policies.AfterNthEpoch(0),
