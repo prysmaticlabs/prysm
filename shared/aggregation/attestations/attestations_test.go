@@ -292,18 +292,6 @@ func TestAggregateAttestations_PerformanceComparison(t *testing.T) {
 		return score
 	}
 
-	generateAtts := func(bitsList [][]byte) []*ethpb.Attestation {
-		sign := bls.NewAggregateSignature().Marshal()
-		atts := make([]*ethpb.Attestation, 0)
-		for _, b := range bitsList {
-			atts = append(atts, &ethpb.Attestation{
-				AggregationBits: b,
-				Signature:       sign,
-			})
-		}
-		return atts
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			atts, err := NaiveAttestationAggregation(generateAtts(tt.bitsList))
