@@ -57,7 +57,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	g, err := v.getGraffiti(ctx, pubKey)
 	if err != nil {
 		// Graffiti is not a critical enough to fail block production and cause
-		// proposer to miss block submission. In this case, validator should continue on
+		// validator to miss block reward. When failed, validator should continue
 		// to produce the block.
 		log.WithError(err).Warn("Could not get graffiti")
 	}
@@ -268,15 +268,18 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-// graffiti gets the graffiti from the validator public key.
+// graffiti gets the graffiti from cli or file for the validator public key.
 func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, error) {
 	// If specified, default graffiti from the command line takes the first priority.
 	if v.graffiti != nil {
 		return v.graffiti, nil
 	}
 
-	// If specified, default graffiti from the file takes the second priority.
+	if v.graffitiStruct == nil {
+		return nil, errors.New("graffitiStruct can't be nil")
+	}
 
+	// If specified, default graffiti from the file takes the second priority.
 	if v.graffitiStruct.DefaultGraffiti != "" {
 		return []byte(v.graffitiStruct.DefaultGraffiti), nil
 	}
@@ -286,7 +289,7 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 	if len(v.graffitiStruct.RandomGraffiti) != 0 {
 		r := rand.NewGenerator()
 		r.Seed(time.Now().Unix())
-		i := uint64(len(v.graffitiStruct.RandomGraffiti)) % r.Uint64()
+		i := r.Uint64() % uint64(len(v.graffitiStruct.RandomGraffiti))
 		return []byte(v.graffitiStruct.RandomGraffiti[i]), nil
 	}
 
