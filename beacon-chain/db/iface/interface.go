@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 )
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
@@ -100,11 +101,9 @@ type HeadAccessDatabase interface {
 // Database interface with full access.
 type Database interface {
 	io.Closer
+	backuputil.BackupExporter
 	HeadAccessDatabase
 
 	DatabasePath() string
 	ClearDB() error
-
-	// Backup and restore methods
-	Backup(ctx context.Context, outputDir string) error
 }
