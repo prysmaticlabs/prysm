@@ -144,11 +144,11 @@ func (v *ValidatorService) Start() {
 	for _, hdr := range v.grpcHeaders {
 		if hdr != "" {
 			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+			if len(ss) < 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", ss[0])
 				continue
 			}
-			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], ss[1])
+			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], strings.Join(ss[1:], "="))
 		}
 	}
 
