@@ -625,7 +625,7 @@ func TestSignBlock(t *testing.T) {
 	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }
 
-func TestGetGraffiti(t *testing.T) {
+func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
@@ -640,9 +640,10 @@ func TestGetGraffiti(t *testing.T) {
 			v: &validator{
 				graffiti: []byte{'b'},
 				graffitiStruct: &graffiti.Graffiti{
-					DefaultGraffiti: "c",
-					RandomGraffiti:  []string{"d", "e"},
-					ValidatorGraffiti: map[uint64]string{
+					Default:    "c",
+					Sequential: []string{"x", "y"},
+					Random:     []string{"d", "e"},
+					Validator: map[uint64]string{
 						1: "f",
 						2: "g",
 					},
@@ -653,9 +654,10 @@ func TestGetGraffiti(t *testing.T) {
 		{name: "use default file graffiti",
 			v: &validator{
 				graffitiStruct: &graffiti.Graffiti{
-					DefaultGraffiti: "c",
-					RandomGraffiti:  []string{"d", "e"},
-					ValidatorGraffiti: map[uint64]string{
+					Default:    "c",
+					Sequential: []string{"x", "y"},
+					Random:     []string{"d", "e"},
+					Validator: map[uint64]string{
 						1: "f",
 						2: "g",
 					},
@@ -663,11 +665,24 @@ func TestGetGraffiti(t *testing.T) {
 			},
 			want: []byte{'c'},
 		},
+		{name: "use sequential file graffiti",
+			v: &validator{
+				graffitiStruct: &graffiti.Graffiti{
+					Sequential: []string{"x", "y"},
+					Random:     []string{"d"},
+					Validator: map[uint64]string{
+						1: "f",
+						2: "g",
+					},
+				},
+			},
+			want: []byte{'x'},
+		},
 		{name: "use random file graffiti",
 			v: &validator{
 				graffitiStruct: &graffiti.Graffiti{
-					RandomGraffiti: []string{"d"},
-					ValidatorGraffiti: map[uint64]string{
+					Random: []string{"d"},
+					Validator: map[uint64]string{
 						1: "f",
 						2: "g",
 					},
@@ -679,7 +694,7 @@ func TestGetGraffiti(t *testing.T) {
 			v: &validator{
 				validatorClient: m.validatorClient,
 				graffitiStruct: &graffiti.Graffiti{
-					ValidatorGraffiti: map[uint64]string{
+					Validator: map[uint64]string{
 						1: "f",
 						2: "g",
 					},
@@ -708,4 +723,28 @@ func TestGetGraffiti(t *testing.T) {
 			require.DeepEqual(t, tt.want, got)
 		})
 	}
+}
+
+func TestGetGraffiti_SequentialToRandom(t *testing.T) {
+	v := &validator{
+		graffitiStruct: &graffiti.Graffiti{
+			Sequential: []string{"x", "y", "z"},
+			Random:     []string{"d"},
+		},
+	}
+	got, err := v.getGraffiti(context.Background(), [48]byte{})
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte{'x'}, got)
+	got, err = v.getGraffiti(context.Background(), [48]byte{})
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte{'y'}, got)
+	got, err = v.getGraffiti(context.Background(), [48]byte{})
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte{'z'}, got)
+	got, err = v.getGraffiti(context.Background(), [48]byte{})
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte{'d'}, got)
+	got, err = v.getGraffiti(context.Background(), [48]byte{})
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte{'d'}, got)
 }

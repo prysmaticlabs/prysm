@@ -270,7 +270,7 @@ func signVoluntaryExit(
 
 // graffiti gets the graffiti from cli or file for the validator public key.
 func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, error) {
-	// If specified, default graffiti from the command line takes the first priority.
+	// When specified, default graffiti from the command line takes the first priority.
 	if v.graffiti != nil {
 		return v.graffiti, nil
 	}
@@ -279,26 +279,32 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 		return nil, errors.New("graffitiStruct can't be nil")
 	}
 
-	// If specified, default graffiti from the file takes the second priority.
-	if v.graffitiStruct.DefaultGraffiti != "" {
-		return []byte(v.graffitiStruct.DefaultGraffiti), nil
+	// When specified, default graffiti from the file takes the second priority.
+	if v.graffitiStruct.Default != "" {
+		return []byte(v.graffitiStruct.Default), nil
 	}
 
-	// If specified, random graffiti(s) from the file take third priority.
-	// A random one will be chosen from the list.
-	if len(v.graffitiStruct.RandomGraffiti) != 0 {
+	// When specified, a graffiti from the sequential list in the file will take third priority.
+	if len(v.graffitiStruct.Sequential) != 0 {
+		g := []byte(v.graffitiStruct.Sequential[0])
+		v.graffitiStruct.Sequential = v.graffitiStruct.Sequential[1:]
+		return g, nil
+	}
+
+	// When specified, a graffiti from the random list in the file take fourth priority.
+	if len(v.graffitiStruct.Random) != 0 {
 		r := rand.NewGenerator()
 		r.Seed(time.Now().Unix())
-		i := r.Uint64() % uint64(len(v.graffitiStruct.RandomGraffiti))
-		return []byte(v.graffitiStruct.RandomGraffiti[i]), nil
+		i := r.Uint64() % uint64(len(v.graffitiStruct.Random))
+		return []byte(v.graffitiStruct.Random[i]), nil
 	}
 
-	// Last and if specified, individual validator specified graffiti will be used.
+	// Last and when specified, individual validator specified graffiti will be used.
 	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
 	if err != nil {
 		return []byte{}, err
 	}
-	g, ok := v.graffitiStruct.ValidatorGraffiti[idx.Index]
+	g, ok := v.graffitiStruct.Validator[idx.Index]
 	if ok {
 		return []byte(g), nil
 	}

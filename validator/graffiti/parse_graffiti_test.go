@@ -22,7 +22,7 @@ func TestParseGraffitiFile_Default(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		DefaultGraffiti: "Mr T was here",
+		Default: "Mr T was here",
 	}
 	require.DeepEqual(t, wanted, got)
 }
@@ -43,10 +43,35 @@ func TestParseGraffitiFile_Random(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		RandomGraffiti: []string{
+		Random: []string{
 			"Mr A was here",
 			"Mr B was here",
 			"Mr C was here",
+		},
+	}
+	require.DeepEqual(t, wanted, got)
+}
+
+func TestParseGraffitiFile_Sequential(t *testing.T) {
+	input := []byte(`sequential: 
+  - "Mr D was here"
+  - "Mr E was here"
+  - "Mr F was here"`)
+
+	dirName := t.TempDir() + "somedir"
+	err := os.MkdirAll(dirName, os.ModePerm)
+	require.NoError(t, err)
+	someFileName := filepath.Join(dirName, "somefile.txt")
+	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+
+	got, err := ParseGraffitiFile(someFileName)
+	require.NoError(t, err)
+
+	wanted := &Graffiti{
+		Sequential: []string{
+			"Mr D was here",
+			"Mr E was here",
+			"Mr F was here",
 		},
 	}
 	require.DeepEqual(t, wanted, got)
@@ -69,7 +94,7 @@ validators:
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		ValidatorGraffiti: map[uint64]string{
+		Validator: map[uint64]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",
@@ -80,6 +105,12 @@ validators:
 
 func TestParseGraffitiFile_AllFields(t *testing.T) {
 	input := []byte(`default: "Mr T was here"
+
+sequential: 
+  - "Mr D was here"
+  - "Mr E was here"
+  - "Mr F was here"
+
 random: 
   - "Mr A was here"
   - "Mr B was here"
@@ -100,13 +131,18 @@ validators:
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		DefaultGraffiti: "Mr T was here",
-		RandomGraffiti: []string{
+		Default: "Mr T was here",
+		Sequential: []string{
+			"Mr D was here",
+			"Mr E was here",
+			"Mr F was here",
+		},
+		Random: []string{
 			"Mr A was here",
 			"Mr B was here",
 			"Mr C was here",
 		},
-		ValidatorGraffiti: map[uint64]string{
+		Validator: map[uint64]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",

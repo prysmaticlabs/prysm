@@ -7,9 +7,10 @@ import (
 )
 
 type Graffiti struct {
-	DefaultGraffiti   string            `yaml:"default,omitempty"`
-	RandomGraffiti    []string          `yaml:"random,omitempty"`
-	ValidatorGraffiti map[uint64]string `yaml:"validators,omitempty"`
+	Default    string            `yaml:"default,omitempty"`
+	Random     []string          `yaml:"random,omitempty"`
+	Sequential []string          `yaml:"sequential,omitempty"`
+	Validator  map[uint64]string `yaml:"validators,omitempty"`
 }
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
