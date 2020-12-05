@@ -282,6 +282,11 @@ var (
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
 	}
+	// GraffitiFileFlag specifies the file path to load graffiti values.
+	GraffitiFileFlag = &cli.StringFlag{
+		Name:  "graffiti-file",
+		Usage: "The path to a YAML file with graffiti values",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
