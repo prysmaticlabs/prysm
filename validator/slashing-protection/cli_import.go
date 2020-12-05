@@ -16,7 +16,6 @@ import (
 
 // ImportSlashingProtectionCLI is the CLI command for importing slashing protection into a JSON.
 func ImportSlashingProtectionCLI(cliCtx *cli.Context, valDB db.Database) error {
-	var err error
 	if valDB == nil {
 		return errors.New("validator database cannot be nil")
 	}

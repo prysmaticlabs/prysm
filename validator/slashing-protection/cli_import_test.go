@@ -84,7 +84,7 @@ func TestImportSlashingProtectionCLI(t *testing.T) {
 			require.NoError(t, err)
 			require.DeepEqual(
 				t,
-				receivedProposalSigningRoot,
+				receivedProposalSigningRoot[:],
 				proposal.SigningRoot,
 				"Imported proposals are different then the generated ones",
 			)
