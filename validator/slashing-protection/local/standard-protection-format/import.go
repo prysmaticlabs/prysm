@@ -40,7 +40,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 
 	// We need to handle duplicate public keys in the JSON file, with potentially
 	// different signing histories for both attestations and blocks.
-	signedBlocksByPubKey, err := ParseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
+	signedBlocksByPubKey, err := parseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
 	}
@@ -142,7 +142,7 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 
 // We create a map of pubKey -> []*SignedBlock. Then, we keep a map of observed hashes of
 // signed blocks. If we observe a new hash, we insert those signed blocks for processing.
-func ParseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
+func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
 	seenHashes := make(map[[32]byte]bool)
 	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
 	for _, validatorData := range data {

@@ -382,13 +382,13 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseUniqueSignedBlocksByPubKey(tt.data)
+			got, err := parseUniqueSignedBlocksByPubKey(tt.data)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseUniqueSignedBlocksByPubKey() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseUniqueSignedBlocksByPubKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseUniqueSignedBlocksByPubKey() got = %v, want %v", got, tt.want)
+				t.Errorf("parseUniqueSignedBlocksByPubKey() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
