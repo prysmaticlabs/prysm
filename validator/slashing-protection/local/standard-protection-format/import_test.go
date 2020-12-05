@@ -9,9 +9,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -161,8 +162,8 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 
 func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	numValidators := 4
-	pubKeys := spTest.CreateRandomPubKeys(t, numValidators)
-	roots := spTest.CreateRandomRoots(t, numValidators)
+	pubKeys := createRandomPubKeys(t, numValidators)
+	roots := createRandomRoots(t, numValidators)
 	tests := []struct {
 		name    string
 		data    []*ProtectionData
@@ -396,8 +397,8 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 
 func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	numValidators := 4
-	pubKeys := spTest.CreateRandomPubKeys(t, numValidators)
-	roots := spTest.CreateRandomRoots(t, numValidators)
+	pubKeys := createRandomPubKeys(t, numValidators)
+	roots := createRandomRoots(t, numValidators)
 	tests := []struct {
 		name    string
 		data    []*ProtectionData
@@ -642,7 +643,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 func Test_saveLowestSourceTargetToDBt_Ok(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 2
-	publicKeys := spTest.CreateRandomPubKeys(t, numValidators)
+	publicKeys := createRandomPubKeys(t, numValidators)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	m := make(map[[48]byte][]*SignedAttestation)
@@ -744,4 +745,22 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 			require.DeepEqual(t, tt.expected, slashablePubKeys)
 		})
 	}
+}
+
+func createRandomPubKeys(t *testing.T, numValidators int) [][48]byte {
+	pubKeys := make([][48]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		randKey, err := bls.RandKey()
+		require.NoError(t, err)
+		copy(pubKeys[i][:], randKey.PublicKey().Marshal())
+	}
+	return pubKeys
+}
+
+func createRandomRoots(t *testing.T, numRoots int) [][32]byte {
+	roots := make([][32]byte, numRoots)
+	for i := 0; i < numRoots; i++ {
+		roots[i] = hashutil.Hash([]byte(fmt.Sprintf("%d", i)))
+	}
+	return roots
 }
