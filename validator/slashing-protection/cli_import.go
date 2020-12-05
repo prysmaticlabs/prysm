@@ -26,7 +26,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context, valDB db.Database) error {
 		return errors.Wrap(err, "could not get slashing protection json file")
 	}
 	if protectionFilePath == "" {
-		return errors.Wrap(err, "invalid protection json path")
+		return errors.Wrap(err, "empty protection json path")
 	}
 
 	fullPath, err := fileutil.ExpandPath(protectionFilePath)

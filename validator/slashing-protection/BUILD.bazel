@@ -5,9 +5,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cli_export.go",
+        "cli_import.go",
         "cmd.go",
         "external.go",
-        "import_cli.go",
         "protector.go",
         "slasher_client.go",
     ],
@@ -45,8 +45,8 @@ go_test(
     name = "go_default_test",
     srcs = [
         "cli_export_test.go",
+        "cli_import_test.go",
         "external_test.go",
-        "import_cli_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

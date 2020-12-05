@@ -34,7 +34,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	}
 
 	// We validate the `Metadata` field of the slashing protection JSON file.
-	if err := ValidateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
+	if err := validateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
 		return errors.Wrap(err, "slashing protection JSON metadata was incorrect")
 	}
 
@@ -44,7 +44,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
 	}
-	signedAttsByPubKey, err := ParseUniqueSignedAttestationsByPubKey(interchangeJSON.Data)
+	signedAttsByPubKey, err := parseUniqueSignedAttestationsByPubKey(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
@@ -103,10 +103,10 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
 
-	return SaveLowestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
+	return saveLowestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
 }
 
-func ValidateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
+func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
 	// We need to ensure the version in the metadata field matches the one we support.
 	version := interchangeJSON.Metadata.InterchangeFormatVersion
 	if version != INTERCHANGE_FORMAT_VERSION {
@@ -172,7 +172,7 @@ func ParseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*Si
 
 // We create a map of pubKey -> []*SignedAttestation. Then, we keep a map of observed hashes of
 // signed attestations. If we observe a new hash, we insert those signed attestations for processing.
-func ParseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
+func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
 	seenHashes := make(map[[32]byte]bool)
 	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
 	for _, validatorData := range data {
@@ -286,8 +286,8 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 	return &attestingHistory, nil
 }
 
-// SaveLowestSourceTargetToDB saves the lowest source and target epoch from the individual validator to the DB.
-func SaveLowestSourceTargetToDB(ctx context.Context, validatorDB db.Database, signedAttsByPubKey map[[48]byte][]*SignedAttestation) error {
+// This saves the lowest source and target epoch from the individual validator to the DB.
+func saveLowestSourceTargetToDB(ctx context.Context, validatorDB db.Database, signedAttsByPubKey map[[48]byte][]*SignedAttestation) error {
 	validatorLowestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested source epoch.
 	validatorLowestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested target epoch.
 	for pubKey, signedAtts := range signedAttsByPubKey {
