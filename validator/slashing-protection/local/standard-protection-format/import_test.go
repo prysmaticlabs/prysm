@@ -45,9 +45,11 @@ func Test_validateMetadata(t *testing.T) {
 	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
 	hex.Encode(goodStr, goodRoot[:])
 	tests := []struct {
-		name            string
-		interchangeJSON *EIPSlashingProtectionFormat
-		wantErr         bool
+		name                   string
+		interchangeJSON        *EIPSlashingProtectionFormat
+		dbGenesisValidatorRoot []byte
+		wantErr                bool
+		wantFatal              string
 	}{
 		{
 			name: "Incorrect version for EIP format should fail",
