@@ -279,7 +279,6 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	assert.ErrorContains(t, want, err)
 }
 
-
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

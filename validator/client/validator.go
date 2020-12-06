@@ -229,8 +229,6 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	return nil
 }
 
-
-
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) bool {
 	nonexistentIndex := ^uint64(0)
 	var validatorActivated bool

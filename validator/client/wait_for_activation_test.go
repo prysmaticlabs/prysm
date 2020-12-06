@@ -183,4 +183,3 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	)
 	require.NoError(t, v.WaitForActivation(context.Background()))
 }
-
