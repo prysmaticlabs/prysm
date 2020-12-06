@@ -38,7 +38,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		log.WithError(err).WithField("attempts", attempts).
 			Error("Stream broken while waiting for activation. Reconnecting...")
 		// Reconnection attempt backoff, up to 60s.
-		time.Sleep(time.Second * time.Duration(mathutil.Max(uint64(attempts), 60)))
+		time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
 		return v.WaitForActivation(incrementRetries(ctx))
 	}
 	for {
@@ -57,7 +57,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			log.WithError(err).WithField("attempts", attempts).
 				Error("Stream broken while waiting for activation. Reconnecting...")
 			// Reconnection attempt backoff, up to 60s.
-			time.Sleep(time.Second * time.Duration(mathutil.Max(uint64(attempts), 60)))
+			time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
 			return v.WaitForActivation(incrementRetries(ctx))
 		}
 		valActivated := v.checkAndLogValidatorStatus(res.Statuses)
