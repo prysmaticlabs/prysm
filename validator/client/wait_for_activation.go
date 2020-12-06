@@ -80,7 +80,10 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	return nil
 }
 
-const waitForActivationAttemptsContextKey = "WaitForActivation-attempts"
+// Preferred way to use context keys is with a non built-in type. See: RVV-B0003
+type waitForActivationContextKey string
+
+const waitForActivationAttemptsContextKey = waitForActivationContextKey("WaitForActivation-attempts")
 
 func getStreamAttempts(ctx context.Context) int {
 	attempts, ok := ctx.Value(waitForActivationAttemptsContextKey).(int)
