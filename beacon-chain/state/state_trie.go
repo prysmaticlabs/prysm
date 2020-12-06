@@ -18,8 +18,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// There are 21 fields in the beacon state.
-const fieldCount = 21
+// There are 23 fields in the beacon state.
+const fieldCount = 23
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
@@ -107,6 +107,8 @@ func (b *BeaconState) Copy() *BeaconState {
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.finalizedCheckpoint(),
 			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+			CurrentSyncCommittee:        b.CurrentSyncCommittee(),
+			NextSyncCommittee:           b.NextSyncCommittee(),
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
@@ -362,6 +364,10 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
+	case currentSyncCommittee:
+		return stateutil.SyncCommitteeRoot(b.state.CurrentSyncCommittee)
+	case nextSyncCommittee:
+		return stateutil.SyncCommitteeRoot(b.state.NextSyncCommittee)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

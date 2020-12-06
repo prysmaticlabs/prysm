@@ -12,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -400,4 +402,105 @@ func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uin
 	}
 
 	return proposerIndices, nil
+}
+
+// SyncCommittee returns the sync committee for a given state and epoch.
+//
+// def get_sync_committee(state: BeaconState, epoch: Epoch) -> SyncCommittee:
+//    """
+//    Return the sync committee for a given state and epoch.
+//    """
+//    indices = get_sync_committee_indices(state, epoch)
+//    validators = [state.validators[index] for index in indices]
+//    pubkeys = [validator.pubkey for validator in validators]
+//    aggregates = [
+//        bls.AggregatePKs(pubkeys[i:i + SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE])
+//        for i in range(0, len(pubkeys), SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE)
+//    ]
+//    return SyncCommittee(pubkeys, aggregates)
+func SyncCommittee(state *stateTrie.BeaconState, epoch uint64) (*pb.SyncCommittee, error) {
+	indices, err := SyncCommitteeIndices(state, epoch)
+	if err != nil {
+		return nil, err
+	}
+	pubkeys := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
+	for i, index := range indices {
+		p := state.PubkeyAtIndex(index)
+		pubkeys[i] = p[:]
+	}
+	aggregates := make([][]byte, 0, params.BeaconConfig().SyncCommitteeAggregateSize)
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i += params.BeaconConfig().SyncCommitteeAggregateSize {
+		a, err := bls.AggregatePublicKeys(pubkeys[i : i+params.BeaconConfig().SyncCommitteeAggregateSize])
+		if err != nil {
+			return nil, err
+		}
+		aggregates = append(aggregates, a.Marshal())
+	}
+	return &pb.SyncCommittee{
+		Pubkeys:          pubkeys,
+		PubkeyAggregates: aggregates,
+	}, nil
+}
+
+// SyncCommitteeIndices returns the sync committee indices for a given state and epoch.
+//
+// def get_sync_committee_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
+//    """
+//    Return the sync committee indices for a given state and epoch.
+//    """
+//    base_epoch = Epoch((max(epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD, 1) - 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+//    active_validator_indices = get_active_validator_indices(state, base_epoch)
+//    active_validator_count = uint64(len(active_validator_indices))
+//    seed = get_seed(state, base_epoch, DOMAIN_SYNC_COMMITTEE)
+//    i, sync_committee_indices = 0, []
+//    while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
+//        shuffled_index = compute_shuffled_index(uint64(i % active_validator_count), active_validator_count, seed)
+//        candidate_index = active_validator_indices[shuffled_index]
+//        random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
+//        effective_balance = state.validators[candidate_index].effective_balance
+//        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
+//            sync_committee_indices.append(candidate_index)
+//        i += 1
+//    return sync_committee_indices
+func SyncCommitteeIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, error) {
+	b := uint64(1)
+	p := params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	if epoch/p > 1 {
+		b = epoch / p
+	}
+	baseEpoch := (b - 1) * p
+	aIndices, err := ActiveValidatorIndices(state, baseEpoch)
+	if err != nil {
+		return nil, err
+	}
+	aCount := uint64(len(aIndices))
+	seed, err := Seed(state, baseEpoch, params.BeaconConfig().DomainSyncCommittee)
+	if err != nil {
+		return nil, err
+	}
+	i := uint64(0)
+	cIndices := make([]uint64, 0, params.BeaconConfig().SyncCommitteeSize)
+	hashFunc := hashutil.CustomSHA256Hasher()
+	maxRandomByte := uint64(1<<8 - 1)
+	for uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize {
+		sIndex, err := ComputeShuffledIndex(i%aCount, aCount, seed, true)
+		if err != nil {
+			return nil, err
+		}
+
+		b := append(seed[:], bytesutil.Bytes8(i/32)...)
+		randomByte := hashFunc(b)[i%32]
+		cIndex := aIndices[sIndex]
+		v, err := state.ValidatorAtIndexReadOnly(cIndex)
+		if err != nil {
+			return nil, err
+		}
+
+		effectiveBal := v.EffectiveBalance()
+		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
+			i++
+			cIndices = append(cIndices, cIndex)
+		}
+	}
+	return cIndices, nil
 }

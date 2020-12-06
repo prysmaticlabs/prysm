@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -37,6 +38,8 @@ func TestBlockBodyRoot_NilIsSameAsEmpty(t *testing.T) {
 			DepositCount: 0,
 			DepositRoot:  make([]byte, 32),
 		},
+		LightClientBits:      bitfield.NewBitvector64(),
+		LightClientSignature: make([]byte, 96),
 	}).HashTreeRoot()
 	require.NoError(t, err)
 	b, err := stateutil.BlockBodyRoot(nil)

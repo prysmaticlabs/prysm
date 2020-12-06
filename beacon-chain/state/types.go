@@ -56,6 +56,8 @@ const (
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
 	finalizedCheckpoint
+	currentSyncCommittee
+	nextSyncCommittee
 )
 
 // List of current data types the state supports.

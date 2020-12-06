@@ -86,6 +86,7 @@ type BeaconChainConfig struct {
 	DomainVoluntaryExit     [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`      // DomainVoluntaryExit defines the BLS signature domain for exit verification.
 	DomainSelectionProof    [4]byte `yaml:"DOMAIN_SELECTION_PROOF"`     // DomainSelectionProof defines the BLS signature domain for selection proof.
 	DomainAggregateAndProof [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF"` // DomainAggregateAndProof defines the BLS signature domain for aggregate and proof.
+	DomainSyncCommittee     [4]byte `yaml:"DOMAIN_SYNC_COMMITTEE"`      // DOMAIN_SYNC_COMMITTEE defines the BLS signature domain for sync committee.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -112,6 +113,11 @@ type BeaconChainConfig struct {
 	NextForkVersion     []byte            `yaml:"NEXT_FORK_VERSION"`    // NextForkVersion is used to track the upcoming fork version, if any.
 	NextForkEpoch       uint64            `yaml:"NEXT_FORK_EPOCH"`      // NextForkEpoch is used to track the epoch of the next fork, if any.
 	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
+
+	// Light client values.
+	EpochsPerSyncCommitteePeriod uint64 `yaml:"EPOCHS_PER_SYNC_COMMITTEE_PERIOD"`      // EpochsPerSyncCommitteePeriod defines the epochs per sync committee period.
+	SyncCommitteeSize            uint64 `yaml:"SYNC_COMMITTEE_SIZE"`                   // SyncCommitteeSize defines the size of a sync committee.
+	SyncCommitteeAggregateSize   uint64 `yaml:"SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE"` // SyncCommitteeAggregateSize defines the size of sync committee aggregate.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.

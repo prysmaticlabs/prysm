@@ -136,6 +136,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainVoluntaryExit:     bytesutil.ToBytes4(bytesutil.Bytes4(4)),
 	DomainSelectionProof:    bytesutil.ToBytes4(bytesutil.Bytes4(5)),
 	DomainAggregateAndProof: bytesutil.ToBytes4(bytesutil.Bytes4(6)),
+	DomainSyncCommittee:     bytesutil.ToBytes4(bytesutil.Bytes4(7)),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
@@ -159,6 +160,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Weak subjectivity values.
 	SafetyDecay: 10,
+
+	// Light client values.
+	EpochsPerSyncCommitteePeriod: 256,
+	SyncCommitteeSize:            1024,
+	SyncCommitteeAggregateSize:   16,
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},

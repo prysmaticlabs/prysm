@@ -9,10 +9,12 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -194,7 +196,9 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
 		},
-		Graffiti: make([]byte, 32),
+		Graffiti:             make([]byte, 32),
+		LightClientBits:      bitfield.NewBitvector64(),
+		LightClientSignature: make([]byte, 96),
 	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
@@ -204,6 +208,23 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 		ParentRoot: zeroHash,
 		StateRoot:  zeroHash,
 		BodyRoot:   bodyRoot[:],
+	}
+
+	var pubKeys [][]byte
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
+		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
+	}
+	var aggregatedKeys [][]byte
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeAggregateSize; i++ {
+		aggregatedKeys = append(aggregatedKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
+	}
+	state.CurrentSyncCommittee = &pb.SyncCommittee{
+		Pubkeys:          pubKeys,
+		PubkeyAggregates: aggregatedKeys,
+	}
+	state.NextSyncCommittee = &pb.SyncCommittee{
+		Pubkeys:          bytesutil.Copy2dBytes(pubKeys),
+		PubkeyAggregates: bytesutil.Copy2dBytes(aggregatedKeys),
 	}
 
 	return stateTrie.InitializeFromProto(state)

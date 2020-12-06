@@ -18,6 +18,7 @@ import (
 // when it was not in actuality.
 // See: https://github.com/sigp/beacon-fuzz/issues/91
 func TestVerifyProposerSlashing_BeaconFuzzIssue91(t *testing.T) {
+	t.Skip("This test is no longer valid beyond phase 0")
 	file, err := ioutil.ReadFile("testdata/beaconfuzz_91_beacon.ssz")
 	require.NoError(t, err)
 	rawState := &pb.BeaconState{}

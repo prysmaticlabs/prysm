@@ -399,3 +399,30 @@ func BaseReward(state *stateTrie.BeaconState, index uint64) (uint64, error) {
 		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
 	return baseReward, nil
 }
+
+// ProcessSyncClientCommitteeUpdates processes sync client committee updates for the beacon state.
+//
+// Spec code:
+// def process_sync_client_committee_updates(state: BeaconState) -> None:
+//    """
+//    Update sync client committees.
+//    """
+//    next_epoch = get_current_epoch(state) + Epoch(1)
+//    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0:
+//        state.current_sync_committee = state.next_sync_committee
+//        state.next_sync_committee = get_sync_committee(state, next_epoch + EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+func ProcessLightClientCommitteeUpdates(beaconState *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+	if helpers.CurrentEpoch(beaconState)+1%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
+		if err := beaconState.SetCurrentSyncCommittee(beaconState.NextSyncCommittee()); err != nil {
+			return nil, err
+		}
+		nextCommittee, err := helpers.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+		if err != nil {
+			return nil, err
+		}
+		if err := beaconState.SetNextSyncCommittee(nextCommittee); err != nil {
+			return nil, err
+		}
+	}
+	return beaconState, nil
+}

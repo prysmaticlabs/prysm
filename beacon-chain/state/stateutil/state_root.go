@@ -21,7 +21,7 @@ var nocachedHasher *stateRootHasher
 var cachedHasher *stateRootHasher
 
 // There are 21 fields in the beacon state.
-const fieldCount = 21
+const fieldCount = 23
 
 func init() {
 	rootsCache, err := ristretto.NewCache(&ristretto.Config{
@@ -192,5 +192,18 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
 	fieldRoots[20] = finalRoot[:]
+
+	currentLightRoot, err := SyncCommitteeRoot(state.CurrentSyncCommittee)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
+	}
+	fieldRoots[21] = currentLightRoot[:]
+
+	nextLightRoot, err := SyncCommitteeRoot(state.NextSyncCommittee)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
+	}
+	fieldRoots[22] = nextLightRoot[:]
+
 	return fieldRoots, nil
 }

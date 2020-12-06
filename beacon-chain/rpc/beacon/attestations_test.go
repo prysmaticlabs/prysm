@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strconv"
 	"testing"
@@ -189,7 +190,9 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 						DepositRoot: make([]byte, 32),
 						BlockHash:   make([]byte, 32),
 					},
-					Graffiti: make([]byte, 32),
+					Graffiti:             make([]byte, 32),
+					LightClientBits:      bitfield.NewBitvector64(),
+					LightClientSignature: make([]byte, 96),
 				},
 			},
 		},
@@ -223,7 +226,9 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 						DepositRoot: make([]byte, 32),
 						BlockHash:   make([]byte, 32),
 					},
-					Graffiti: make([]byte, 32),
+					Graffiti:             make([]byte, 32),
+					LightClientBits:      bitfield.NewBitvector64(),
+					LightClientSignature: make([]byte, 96),
 				},
 			},
 		},
@@ -257,7 +262,9 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 						DepositRoot: make([]byte, 32),
 						BlockHash:   make([]byte, 32),
 					},
-					Graffiti: make([]byte, 32),
+					Graffiti:             make([]byte, 32),
+					LightClientBits:      bitfield.NewBitvector64(),
+					LightClientSignature: make([]byte, 96),
 				},
 			},
 		},
@@ -383,7 +390,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := bs.ListAttestations(ctx, test.req)
 			require.NoError(t, err)
-			if !proto.Equal(res, test.res) {
+			if !reflect.DeepEqual(res, test.res) {
 				t.Errorf("Incorrect attestations response, wanted \n%v, received \n%v", test.res, res)
 			}
 		})
@@ -420,7 +427,9 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 						DepositRoot: make([]byte, 32),
 						BlockHash:   make([]byte, 32),
 					},
-					Graffiti: make([]byte, 32),
+					Graffiti:             make([]byte, 32),
+					LightClientBits:      bitfield.NewBitvector64(),
+					LightClientSignature: make([]byte, 96),
 				},
 			},
 		}

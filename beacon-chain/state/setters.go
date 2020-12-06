@@ -727,6 +727,32 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	return nil
 }
 
+// SetCurrentSyncCommittee for the beacon state.
+func (b *BeaconState) SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.CurrentSyncCommittee = val
+	b.markFieldAsDirty(currentSyncCommittee)
+	return nil
+}
+
+// SetNextSyncCommittee for the beacon state.
+func (b *BeaconState) SetNextSyncCommittee(val *pbp2p.SyncCommittee) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.NextSyncCommittee = val
+	b.markFieldAsDirty(nextSyncCommittee)
+	return nil
+}
+
 // Recomputes the branch up the index in the Merkle trie representation
 // of the beacon state. This method performs map reads and the caller MUST
 // hold the lock before calling this method.

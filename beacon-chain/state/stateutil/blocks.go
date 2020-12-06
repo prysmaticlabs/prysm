@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -86,7 +87,7 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 		}
 	}
 	hasher := hashutil.CustomSHA256Hasher()
-	fieldRoots := make([][32]byte, 8)
+	fieldRoots := make([][32]byte, 10)
 	rawRandao := bytesutil.ToBytes96(body.RandaoReveal)
 	packedRandao, err := htrutils.Pack([][]byte{rawRandao[:]})
 	if err != nil {
@@ -134,6 +135,28 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	fieldRoots[7] = exitRoot
+
+	lightChunks, err := htrutils.Pack([][]byte{body.LightClientBits.Bytes()})
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
+	}
+	syncBitsRoot, err := htrutils.BitwiseMerkleize(hasher, lightChunks, uint64(len(lightChunks)), 1)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	fieldRoots[8] = syncBitsRoot
+
+	syncSig := bytesutil.ToBytes96(body.LightClientSignature)
+	packedSyncSig, err := htrutils.Pack([][]byte{syncSig[:]})
+	if err != nil {
+		return [32]byte{}, err
+	}
+	syncSigRoot, err := htrutils.BitwiseMerkleize(hasher, packedSyncSig, uint64(len(packedSyncSig)), uint64(len(packedSyncSig)))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	fieldRoots[9] = syncSigRoot
+
 	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
@@ -237,4 +260,12 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	rootBufRoot := make([]byte, 32)
 	copy(rootBufRoot, rootBuf.Bytes())
 	return htrutils.MixInLength(root, rootBufRoot), nil
+}
+
+// SyncCommitteeRoot computes the HashTreeRoot Merkleization of
+// a SyncCommitteeRoot struct according to the eth2
+// Simple Serialize specification.
+func SyncCommitteeRoot(committee *ethereum_beacon_p2p_v1.SyncCommittee) ([32]byte, error) {
+	// TODO(0): Implement light client root
+	return ssz.HashTreeRoot(committee)
 }

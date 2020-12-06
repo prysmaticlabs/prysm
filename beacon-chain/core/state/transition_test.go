@@ -507,6 +507,8 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 					DepositRoot: bytesutil.PadTo([]byte{2}, 32),
 					BlockHash:   bytesutil.PadTo([]byte{3}, 32),
 				},
+				LightClientBits:      bitfield.NewBitvector64(),
+				LightClientSignature: make([]byte, 96),
 			},
 		},
 	}

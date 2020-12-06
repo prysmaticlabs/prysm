@@ -10,6 +10,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -192,8 +193,10 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
+							LightClientBits:      bitfield.NewBitvector64(),
+							LightClientSignature: make([]byte, 96),
+							RandaoReveal:         make([]byte, 96),
+							Graffiti:             make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
 								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),
@@ -214,8 +217,10 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
+							LightClientBits:      bitfield.NewBitvector64(),
+							LightClientSignature: make([]byte, 96),
+							RandaoReveal:         make([]byte, 96),
+							Graffiti:             make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
 								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),
@@ -232,8 +237,10 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
+							LightClientBits:      bitfield.NewBitvector64(),
+							LightClientSignature: make([]byte, 96),
+							RandaoReveal:         make([]byte, 96),
+							Graffiti:             make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
 								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),

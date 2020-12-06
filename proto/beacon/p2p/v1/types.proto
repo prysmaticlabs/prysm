@@ -46,8 +46,8 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
 
   // Light client support [9001-10000]
-  SyncCommittee current_light_committee = 9000;
-  SyncCommittee next_light_committee = 9001;
+  SyncCommittee current_sync_committee = 9000;
+  SyncCommittee next_sync_committee = 9001;
 }
 
 message Fork {

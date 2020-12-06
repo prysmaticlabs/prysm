@@ -100,14 +100,16 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		return nil
 	}
 	return &ethpb.BeaconBlockBody{
-		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
-		Eth1Data:          CopyETH1Data(body.Eth1Data),
-		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
-		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:      CopyAttestations(body.Attestations),
-		Deposits:          CopyDeposits(body.Deposits),
-		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		RandaoReveal:         bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:             CopyETH1Data(body.Eth1Data),
+		Graffiti:             bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings:    CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:    CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:         CopyAttestations(body.Attestations),
+		Deposits:             CopyDeposits(body.Deposits),
+		VoluntaryExits:       CopySignedVoluntaryExits(body.VoluntaryExits),
+		LightClientBits:      bytesutil.SafeCopyBytes(body.LightClientBits),
+		LightClientSignature: bytesutil.SafeCopyBytes(body.LightClientSignature),
 	}
 }
 
@@ -282,5 +284,16 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 		ActivationEpoch:            val.ActivationEpoch,
 		ExitEpoch:                  val.ExitEpoch,
 		WithdrawableEpoch:          val.WithdrawableEpoch,
+	}
+}
+
+// CopySyncCommittee copies the provided sync committee object.
+func CopySyncCommittee(data *pbp2p.SyncCommittee) *pbp2p.SyncCommittee {
+	if data == nil {
+		return nil
+	}
+	return &pbp2p.SyncCommittee{
+		Pubkeys:          bytesutil.Copy2dBytes(data.Pubkeys),
+		PubkeyAggregates: bytesutil.Copy2dBytes(data.PubkeyAggregates),
 	}
 }

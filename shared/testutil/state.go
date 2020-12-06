@@ -35,6 +35,14 @@ var st, _ = stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{
 	PreviousEpochAttestations:   make([]*pb.PendingAttestation, 0),
 	CurrentEpochAttestations:    make([]*pb.PendingAttestation, 0),
 	PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+	CurrentSyncCommittee: &pb.SyncCommittee{
+		Pubkeys:          filledByteSlice2D(params.BeaconConfig().SyncCommitteeSize, uint64(params.BeaconConfig().BLSPubkeyLength)),
+		PubkeyAggregates: filledByteSlice2D(params.BeaconConfig().SyncCommitteeAggregateSize, uint64(params.BeaconConfig().BLSPubkeyLength)),
+	},
+	NextSyncCommittee: &pb.SyncCommittee{
+		Pubkeys:          filledByteSlice2D(params.BeaconConfig().SyncCommitteeSize, uint64(params.BeaconConfig().BLSPubkeyLength)),
+		PubkeyAggregates: filledByteSlice2D(params.BeaconConfig().SyncCommitteeAggregateSize, uint64(params.BeaconConfig().BLSPubkeyLength)),
+	},
 })
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.

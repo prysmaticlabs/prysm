@@ -4,6 +4,7 @@ package blocks
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -21,7 +22,9 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 					DepositRoot: make([]byte, 32),
 					BlockHash:   make([]byte, 32),
 				},
-				Graffiti: make([]byte, 32),
+				Graffiti:             make([]byte, 32),
+				LightClientBits:      bitfield.NewBitvector64(),
+				LightClientSignature: make([]byte, 96),
 			},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
