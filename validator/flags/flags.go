@@ -237,6 +237,12 @@ var (
 		Usage: "Host:port of a gRPC server for a remote keymanager",
 		Value: "",
 	}
+	// DisableRemoteSignerTlsFlag disables TLS when connecting to a remote signer.
+	DisableRemoteSignerTlsFlag = &cli.BoolFlag{
+		Name:  "disable-remote-signer-tls",
+		Usage: "Disables TLS when connecting to a remote signer. (WARNING! This will result in insecure requests!)",
+		Value: false,
+	}
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
 	// a secure signer via TLS and gRPC.
 	RemoteSignerCertPathFlag = &cli.StringFlag{
@@ -275,6 +281,11 @@ var (
 		Name:  "web",
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
+	}
+	// GraffitiFileFlag specifies the file path to load graffiti values.
+	GraffitiFileFlag = &cli.StringFlag{
+		Name:  "graffiti-file",
+		Usage: "The path to a YAML file with graffiti values",
 	}
 )
 

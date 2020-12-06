@@ -102,6 +102,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				// Remove block from queue.
 				s.pendingQueueLock.Lock()
 				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+					s.pendingQueueLock.Unlock()
 					return err
 				}
 				s.pendingQueueLock.Unlock()
@@ -134,12 +135,20 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				log.Debugf("Could not validate block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
 			}
 
 			if err := s.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
 				s.setBadBlock(ctx, blkRoot)
 				traceutil.AnnotateError(span, err)
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
 			}
 
 			s.setSeenBlockIndexSlot(b.Block.Slot, b.Block.ProposerIndex)
@@ -303,7 +312,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 		return nil
 	}
 
-	// Decrease exp itme in proportion to how many blocks are still in the cache for slot key.
+	// Decrease exp time in proportion to how many blocks are still in the cache for slot key.
 	d := pendingBlockExpTime / time.Duration(len(newBlks))
 	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, d); err != nil {
 		return err

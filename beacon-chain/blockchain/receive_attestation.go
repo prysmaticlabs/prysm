@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -99,6 +100,14 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	subscribedToStateEvents <- struct{}{}
 	<-stateChannel
 	stateSub.Unsubscribe()
+
+	if s.genesisTime.IsZero() {
+		log.Warn("ProcessAttestations routine waiting for genesis time")
+		for s.genesisTime.IsZero() {
+			time.Sleep(1 * time.Second)
+		}
+		log.Warn("Genesis time received, now available to process attestations")
+	}
 
 	st := slotutil.GetSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {

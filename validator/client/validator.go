@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
@@ -77,6 +78,7 @@ type validator struct {
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
+	graffitiStruct                     *graffiti.Graffiti
 }
 
 // Done cleans up the validator.
@@ -298,12 +300,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 			log.Info("Waiting for deposit to be observed by beacon node")
 		case ethpb.ValidatorStatus_DEPOSITED:
-			if status.Status.DepositInclusionSlot != 0 {
-				log.WithFields(logrus.Fields{
-					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
-					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
-				}).Info("Deposit for validator received but not processed into the beacon state")
-			} else {
+			if status.Status.PositionInActivationQueue != 0 {
 				log.WithField(
 					"positionInActivationQueue", status.Status.PositionInActivationQueue,
 				).Info("Deposit processed, entering activation queue after finalization")
@@ -525,20 +522,6 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	return nil
 }
 
-// SaveProtections saves the attestation information currently in validator state.
-func (v *validator) SaveProtections(ctx context.Context) error {
-	v.attesterHistoryByPubKeyLock.RLock()
-	if err := v.db.SaveAttestationHistoryForPubKeysV2(ctx, v.attesterHistoryByPubKey); err != nil {
-		return errors.Wrap(err, "could not save attester history to DB")
-	}
-	v.attesterHistoryByPubKeyLock.RUnlock()
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
-	v.attesterHistoryByPubKeyLock.Unlock()
-
-	return nil
-}
-
 // ResetAttesterProtectionData reset validators protection data.
 func (v *validator) ResetAttesterProtectionData() {
 	v.attesterHistoryByPubKeyLock.Lock()
@@ -549,11 +532,11 @@ func (v *validator) ResetAttesterProtectionData() {
 // SaveProtection saves the attestation information currently in validator state.
 func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
 	v.attesterHistoryByPubKeyLock.RLock()
-
+	defer v.attesterHistoryByPubKeyLock.RUnlock()
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
 		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
 	}
-	v.attesterHistoryByPubKeyLock.RUnlock()
+
 	return nil
 }
 
@@ -658,7 +641,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	}
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
 	slotOffset := slot - (slot % params.BeaconConfig().SlotsPerEpoch)
-
+	var totalAttestingKeys uint64
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
@@ -677,6 +660,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			log.WithField("duty", duty).Warn("Invalid attester slot")
 		} else {
 			attesterKeys[duty.AttesterSlot-slotOffset] = append(attesterKeys[duty.AttesterSlot-slotOffset], validatorKey)
+			totalAttestingKeys++
 		}
 
 		for _, proposerSlot := range duty.ProposerSlots {
@@ -688,10 +672,13 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			}
 		}
 	}
-
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
-			log.WithField("slot", slotOffset+i).WithField("attesters", len(attesterKeys[i])).WithField("pubKeys", attesterKeys[i]).Info("Attestation schedule")
+			log.WithFields(logrus.Fields{
+				"slot":      slotOffset + i,
+				"attesters": fmt.Sprintf("%d/%d", len(attesterKeys[i]), totalAttestingKeys),
+				"pubKeys":   attesterKeys[i],
+			}).Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {
 			log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")

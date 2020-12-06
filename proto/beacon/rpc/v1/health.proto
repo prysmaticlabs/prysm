@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package ethereum.beacon.rpc.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+// Health service API
+//
+// The health service is able to return important metadata about a beacon node
+// such as the address of the logs websocket endpoint used by web clients.
+service Health {
+    // Returns the websocket endpoint which can be reached to subscribe
+	// to logs from the beacon node.
+    rpc GetLogsEndpoint(google.protobuf.Empty) returns (LogsEndpointResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/health/logs/endpoint"
+        };
+    }
+}
+
+message LogsEndpointResponse {
+	string beacon_logs_endpoint = 1;
+}

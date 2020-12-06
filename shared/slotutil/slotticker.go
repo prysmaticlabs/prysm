@@ -40,7 +40,7 @@ func (s *SlotTicker) Done() {
 
 // GetSlotTicker is the constructor for SlotTicker.
 func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
-	if genesisTime.Unix() == 0 {
+	if genesisTime.IsZero() {
 		panic("zero genesis time")
 	}
 	ticker := &SlotTicker{
