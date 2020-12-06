@@ -43,7 +43,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	wg := new(sync.WaitGroup)
 	for {
 		if err := ctx.Err(); err != nil {
-			return false, nil
+			return false, err
 		}
 		if currNum >= threshold {
 			break
