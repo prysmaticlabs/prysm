@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -105,11 +107,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// look up 3 different subnets
 	ctx := context.Background()
-	exists, err := s.FindPeersWithSubnet(ctx, 1)
+	exists, err := s.FindPeersWithSubnet(ctx, "", 1, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
-	exists2, err := s.FindPeersWithSubnet(ctx, 2)
+	exists2, err := s.FindPeersWithSubnet(ctx, "", 2, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
-	exists3, err := s.FindPeersWithSubnet(ctx, 3)
+	exists3, err := s.FindPeersWithSubnet(ctx, "", 3, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
 	if !exists || !exists2 || !exists3 {
 		t.Fatal("Peer with subnet doesn't exist")
@@ -126,7 +128,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	testService.RefreshENR()
 	time.Sleep(2 * time.Second)
 
-	exists, err = s.FindPeersWithSubnet(ctx, 2)
+	exists, err = s.FindPeersWithSubnet(ctx, "", 2, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
 
 	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")
