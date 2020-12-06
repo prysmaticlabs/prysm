@@ -54,8 +54,8 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 			if err != nil {
 				continue
 			}
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				if err := s.connectWithPeer(ctx, *info); err != nil {
 					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 				}
@@ -65,7 +65,6 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		// Wait for all dials to be completed.
 		wg.Wait()
 		currNum = uint64(len(s.pubsub.ListPeers(topic)))
-		log.Errorf("num of peers for topic %s, %d", topic, currNum)
 	}
 	return true, nil
 }
