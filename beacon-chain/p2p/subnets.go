@@ -21,8 +21,10 @@ const peersRequiredInSubnetSearch = 20
 
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
-// with those peers.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index, threshold uint64) (bool, error) {
+// with those peers. This method will block until the required amount of
+// peers are found, the method only exits in the event of context timeouts.
+func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
+	index, threshold uint64) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
@@ -62,9 +64,8 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index, 
 		}
 		// Wait for all dials to be completed.
 		wg.Wait()
-		peers := s.pubsub.ListPeers(topic)
-		log.Errorf("num of peers for topic %s, %d", topic, len(peers))
-		currNum = uint64(len(peers))
+		currNum = uint64(len(s.pubsub.ListPeers(topic)))
+		log.Errorf("num of peers for topic %s, %d", topic, currNum)
 	}
 	return true, nil
 }
