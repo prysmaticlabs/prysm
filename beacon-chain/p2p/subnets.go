@@ -17,10 +17,12 @@ var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
 
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 
+const peersRequiredInSubnetSearch = 20
+
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
 // with those peers.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index uint64) (bool, error) {
+func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index, threshold uint64) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
@@ -30,41 +32,52 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index u
 		// return if discovery isn't set
 		return false, nil
 	}
-	iterator := s.dv5Listener.RandomNodes()
-	s.dv5Listener.RandomNodes()
-	iterator = enode.Filter(iterator, s.filterPeer)
+
 	topic += s.Encoding().ProtocolSuffix()
+	iterator := s.dv5Listener.RandomNodes()
+	iterator = enode.Filter(iterator, s.filterPeerForSubnet(index))
 
-	defer iterator.Close()
-	exists := false
-
-	currNum := len(s.pubsub.ListPeers(topic))
+	currNum := uint64(len(s.pubsub.ListPeers(topic)))
 	wg := new(sync.WaitGroup)
-	for i := 0; ; {
+	for {
 		if err := ctx.Err(); err != nil {
 			return false, nil
 		}
-		if !iterator.Next() {
-			return false, nil
-		}
-		node := iterator.Node()
-		if currNum > 6 {
+		if currNum >= threshold {
 			break
 		}
-		if node == nil {
-			continue
+		nodes := enode.ReadNodes(iterator, peersRequiredInSubnetSearch)
+		for _, node := range nodes {
+			info, _, err := convertToAddrInfo(node)
+			if err != nil {
+				continue
+			}
+			go func() {
+				wg.Add(1)
+				if err := s.connectWithPeer(ctx, *info); err != nil {
+					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+				}
+				wg.Done()
+			}()
 		}
-		if node.IP() == nil {
-			continue
-		}
-		info, _, err := convertToAddrInfo(node)
-		if err != nil {
-			return false, err
+		// Wait for all dials to be completed.
+		wg.Wait()
+		peers := s.pubsub.ListPeers(topic)
+		log.Errorf("num of peers for topic %s, %d", topic, len(peers))
+		currNum = uint64(len(peers))
+	}
+	return true, nil
+}
+
+// returns a method with filters peers specifically for a particular attestation subnet.
+func (s *Service) filterPeerForSubnet(index uint64) func(node *enode.Node) bool {
+	return func(node *enode.Node) bool {
+		if !s.filterPeer(node) {
+			return false
 		}
 		subnets, err := retrieveAttSubnets(node.Record())
 		if err != nil {
-			log.Debugf("could not retrieve subnets: %v", err)
-			continue
+			return false
 		}
 		indExists := false
 		for _, comIdx := range subnets {
@@ -73,31 +86,15 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index u
 				break
 			}
 		}
-		if !indExists {
-			continue
-		}
-		go func() {
-			wg.Add(1)
-			i++
-			if err := s.connectWithPeer(ctx, *info); err != nil {
-				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
-			}
-			wg.Done()
-		}()
-
-		if i%30 == 0 {
-			wg.Wait()
-			i = 0
-			peers := s.pubsub.ListPeers(topic)
-			log.Errorf("num of peers for topic %s, %d", topic, len(peers))
-			currNum = len(peers)
-		}
+		return indExists
 	}
-	return exists, nil
 }
 
-func (s *Service) hasPeerWithSubnet(subnet uint64) bool {
-	return len(s.Peers().SubscribedToSubnet(subnet)) > 0
+// lower threshold to broadcast object compared to searching
+// for a subnet. So that even in the event of poor peer
+// connectivity, we can still broadcast an attestation.
+func (s *Service) hasPeerWithSubnet(topic string) bool {
+	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= 1
 }
 
 // Updates the service's discv5 listener record's attestation subnet

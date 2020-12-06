@@ -423,17 +423,14 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 	defer span.End()
 
 	if info.ID == s.host.ID() {
-		log.Info("self")
 		return nil
 	}
 	if s.Peers().IsBad(info.ID) {
-		log.Infof("bad peer: %s", info.ID.String())
 		return errors.New("refused to connect to bad peer")
 	}
 	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 	if err := s.host.Connect(ctx, info); err != nil {
-		log.Errorf("unable to connect: %v", err)
 		s.Peers().Scorers().BadResponsesScorer().Increment(info.ID)
 		return err
 	}
