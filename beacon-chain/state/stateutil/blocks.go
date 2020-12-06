@@ -136,7 +136,7 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	}
 	fieldRoots[7] = exitRoot
 
-	lightChunks, err := htrutils.Pack([][]byte{body.LightClientBits.Bytes()})
+	lightChunks, err := htrutils.Pack([][]byte{body.SyncCommitteeBits.Bytes()})
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
@@ -146,7 +146,7 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	}
 	fieldRoots[8] = syncBitsRoot
 
-	syncSig := bytesutil.ToBytes96(body.LightClientSignature)
+	syncSig := bytesutil.ToBytes96(body.SyncCommitteeSignature)
 	packedSyncSig, err := htrutils.Pack([][]byte{syncSig[:]})
 	if err != nil {
 		return [32]byte{}, err

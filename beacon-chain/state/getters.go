@@ -136,8 +136,8 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         b.finalizedCheckpoint(),
-		CurrentSyncCommittee:        b.CurrentSyncCommittee(),
-		NextSyncCommittee:           b.NextSyncCommittee(),
+		CurrentSyncCommittee:        b.currentSyncCommittee(),
+		NextSyncCommittee:           b.nextSyncCommittee(),
 	}
 }
 
@@ -1057,6 +1057,26 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	return b.state.FinalizedCheckpoint.Epoch
 }
 
+// currentSyncCommittee of the current sync committee in beacon chain state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) currentSyncCommittee() *pbp2p.SyncCommittee {
+	if !b.HasInnerState() {
+		return nil
+	}
+
+	return CopySyncCommittee(b.state.CurrentSyncCommittee)
+}
+
+// nextSyncCommittee of the next sync committee in beacon chain state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) nextSyncCommittee() *pbp2p.SyncCommittee {
+	if !b.HasInnerState() {
+		return nil
+	}
+
+	return CopySyncCommittee(b.state.NextSyncCommittee)
+}
+
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
 func (b *BeaconState) CurrentSyncCommittee() *pbp2p.SyncCommittee {
 	if !b.HasInnerState() {
@@ -1070,7 +1090,7 @@ func (b *BeaconState) CurrentSyncCommittee() *pbp2p.SyncCommittee {
 		return nil
 	}
 
-	return CopySyncCommittee(b.state.CurrentSyncCommittee)
+	return b.currentSyncCommittee()
 }
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
@@ -1086,7 +1106,7 @@ func (b *BeaconState) NextSyncCommittee() *pbp2p.SyncCommittee {
 		return nil
 	}
 
-	return CopySyncCommittee(b.state.NextSyncCommittee)
+	return b.nextSyncCommittee()
 }
 
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {

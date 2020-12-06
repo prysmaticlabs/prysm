@@ -42,7 +42,7 @@ func ProcessLightClientAggregate(state *state.BeaconState, body *ethpb.BeaconBlo
 	pPubKeys := make([]bls.PublicKey, 0, len(indices))
 	pIndices := make([]uint64, 0, len(indices))
 	for i, index := range indices {
-		if body.LightClientBits.BitAt(uint64(i)) {
+		if body.SyncCommitteeBits.BitAt(uint64(i)) {
 			v, err := state.ValidatorAtIndex(index)
 			if err != nil {
 				return nil, err
@@ -68,7 +68,7 @@ func ProcessLightClientAggregate(state *state.BeaconState, body *ethpb.BeaconBlo
 	if err != nil {
 		return nil, err
 	}
-	sig, err := bls.SignatureFromBytes(body.LightClientSignature)
+	sig, err := bls.SignatureFromBytes(body.SyncCommitteeSignature)
 	if err != nil {
 		return nil, err
 	}

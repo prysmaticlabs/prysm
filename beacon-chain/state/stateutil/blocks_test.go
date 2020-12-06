@@ -38,8 +38,8 @@ func TestBlockBodyRoot_NilIsSameAsEmpty(t *testing.T) {
 			DepositCount: 0,
 			DepositRoot:  make([]byte, 32),
 		},
-		LightClientBits:      bitfield.NewBitvector64(),
-		LightClientSignature: make([]byte, 96),
+		SyncCommitteeBits:      bitfield.NewBitvector64(),
+		SyncCommitteeSignature: make([]byte, 96),
 	}).HashTreeRoot()
 	require.NoError(t, err)
 	b, err := stateutil.BlockBodyRoot(nil)

@@ -193,10 +193,10 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							LightClientBits:      bitfield.NewBitvector64(),
-							LightClientSignature: make([]byte, 96),
-							RandaoReveal:         make([]byte, 96),
-							Graffiti:             make([]byte, 32),
+							SyncCommitteeBits:      bitfield.NewBitvector64(),
+							SyncCommitteeSignature: make([]byte, 96),
+							RandaoReveal:           make([]byte, 96),
+							Graffiti:               make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
 								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),
@@ -217,10 +217,10 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							LightClientBits:      bitfield.NewBitvector64(),
-							LightClientSignature: make([]byte, 96),
-							RandaoReveal:         make([]byte, 96),
-							Graffiti:             make([]byte, 32),
+							SyncCommitteeBits:      bitfield.NewBitvector64(),
+							SyncCommitteeSignature: make([]byte, 96),
+							RandaoReveal:           make([]byte, 96),
+							Graffiti:               make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
 								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),
@@ -237,10 +237,10 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							LightClientBits:      bitfield.NewBitvector64(),
-							LightClientSignature: make([]byte, 96),
-							RandaoReveal:         make([]byte, 96),
-							Graffiti:             make([]byte, 32),
+							SyncCommitteeBits:      bitfield.NewBitvector64(),
+							SyncCommitteeSignature: make([]byte, 96),
+							RandaoReveal:           make([]byte, 96),
+							Graffiti:               make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
 								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),

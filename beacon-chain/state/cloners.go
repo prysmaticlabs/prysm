@@ -100,16 +100,16 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		return nil
 	}
 	return &ethpb.BeaconBlockBody{
-		RandaoReveal:         bytesutil.SafeCopyBytes(body.RandaoReveal),
-		Eth1Data:             CopyETH1Data(body.Eth1Data),
-		Graffiti:             bytesutil.SafeCopyBytes(body.Graffiti),
-		ProposerSlashings:    CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:    CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:         CopyAttestations(body.Attestations),
-		Deposits:             CopyDeposits(body.Deposits),
-		VoluntaryExits:       CopySignedVoluntaryExits(body.VoluntaryExits),
-		LightClientBits:      bytesutil.SafeCopyBytes(body.LightClientBits),
-		LightClientSignature: bytesutil.SafeCopyBytes(body.LightClientSignature),
+		RandaoReveal:           bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:               CopyETH1Data(body.Eth1Data),
+		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings:      CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:      CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:           CopyAttestations(body.Attestations),
+		Deposits:               CopyDeposits(body.Deposits),
+		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncCommitteeBits:      bytesutil.SafeCopyBytes(body.SyncCommitteeBits),
+		SyncCommitteeSignature: bytesutil.SafeCopyBytes(body.SyncCommitteeSignature),
 	}
 }
 
