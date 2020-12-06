@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
