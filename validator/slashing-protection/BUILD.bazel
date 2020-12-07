@@ -7,7 +7,6 @@ go_library(
         "cli_export.go",
         "cmd.go",
         "external.go",
-        "protector.go",
         "slasher_client.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection",

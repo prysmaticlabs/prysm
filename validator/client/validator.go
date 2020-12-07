@@ -31,7 +31,7 @@ import (
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -73,7 +73,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          slashingprotection.Protector
+	protector                          iface.Protector
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
