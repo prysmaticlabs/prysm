@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	slashingProtectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
