@@ -475,8 +475,6 @@ func (s *Service) waitForConnection() {
 		}
 		logCounter++
 	}
-	// Use next endpoint, if we have provided a fallback.
-	s.fallbackToNextEndpoint()
 
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
@@ -847,6 +845,10 @@ func (s *Service) fallbackToNextEndpoint() {
 	nextIndex := currIndex + 1
 	if nextIndex >= totalEndpoints {
 		nextIndex = 0
+	}
+	// Exit early if we have the same index.
+	if nextIndex == currIndex {
+		return
 	}
 	s.currHttpEndpoint = s.httpEndpoints[nextIndex]
 	log.Infof("Falling back to alternative endpoint: %s", s.currHttpEndpoint)

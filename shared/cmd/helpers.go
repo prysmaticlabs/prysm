@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -75,12 +74,12 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 }
 
 // ExpandWeb3EndpointIfFile expands the path for --http-web3provider if specified as a file.
-func ExpandWeb3EndpointIfFile(ctx *cli.Context, flags *cli.StringSliceFlag) error {
+func ExpandWeb3EndpointIfFile(ctx *cli.Context, flags *cli.StringFlag) error {
 	// Return early if no flag value is set.
 	if !ctx.IsSet(flags.Name) {
 		return nil
 	}
-	rawFlags := sliceutil.SplitCommaSeparated(ctx.StringSlice(flags.Name))
+	rawFlags := strings.Split(ctx.String(flags.Name), ",")
 	for i, rawValue := range rawFlags {
 		switch {
 		case strings.HasPrefix(rawValue, "http://"):
@@ -93,7 +92,7 @@ func ExpandWeb3EndpointIfFile(ctx *cli.Context, flags *cli.StringSliceFlag) erro
 				return errors.Wrapf(err, "could not expand path for %s", rawValue)
 			}
 			rawFlags[i] = web3endpoint
-			if err := ctx.Set(flags.Name, fmt.Sprintf("%s", rawFlags)); err != nil {
+			if err := ctx.Set(flags.Name, strings.Join(rawFlags, ",")); err != nil {
 				return errors.Wrapf(err, "could not set %s to %s", flags.Name, rawFlags)
 			}
 		}

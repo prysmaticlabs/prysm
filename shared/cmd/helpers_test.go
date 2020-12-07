@@ -83,10 +83,9 @@ func TestEnterPassword(t *testing.T) {
 func TestExpandWeb3EndpointIfFile(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	HTTPWeb3ProviderFlag := &cli.StringFlag{Name: "http-web3provider", Value: ""}
+	HTTPWeb3ProviderFlag := &cli.StringFlag{Name: "http-web3provider"}
 	set.String(HTTPWeb3ProviderFlag.Name, "", "")
 	context := cli.NewContext(&app, set, nil)
-
 	// with nothing set
 	require.NoError(t, ExpandWeb3EndpointIfFile(context, HTTPWeb3ProviderFlag))
 	require.Equal(t, "", context.String(HTTPWeb3ProviderFlag.Name))
