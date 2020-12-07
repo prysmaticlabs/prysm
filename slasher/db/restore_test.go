@@ -21,6 +21,9 @@ func TestRestore(t *testing.T) {
 	ctx := context.Background()
 
 	backupDb, err := kv.NewKVStore(t.TempDir(), &kv.Config{})
+	defer func() {
+		require.NoError(t, backupDb.Close())
+	}()
 	require.NoError(t, err)
 	pubKey := []byte("hello")
 	require.NoError(t, backupDb.SavePubKey(ctx, uint64(1), pubKey))

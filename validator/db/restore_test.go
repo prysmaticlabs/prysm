@@ -22,6 +22,9 @@ func TestRestore(t *testing.T) {
 	ctx := context.Background()
 
 	backupDb, err := kv.NewKVStore(t.TempDir(), nil)
+	defer func() {
+		require.NoError(t, backupDb.Close())
+	}()
 	require.NoError(t, err)
 	root := [32]byte{1}
 	require.NoError(t, backupDb.SaveGenesisValidatorsRoot(ctx, root[:]))
