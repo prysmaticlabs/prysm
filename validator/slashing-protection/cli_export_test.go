@@ -22,7 +22,7 @@ import (
 
 func setupCliCtx(
 	tb testing.TB,
-	dbPath string,
+	dbPath,
 	outputDir string,
 ) *cli.Context {
 	app := cli.App{}

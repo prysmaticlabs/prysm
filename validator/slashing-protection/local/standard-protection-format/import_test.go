@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
