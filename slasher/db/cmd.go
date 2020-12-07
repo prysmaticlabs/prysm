@@ -20,9 +20,7 @@ var DatabaseCommands = &cli.Command{
 				cmd.RestoreSourceFileFlag,
 				cmd.RestoreTargetDirFlag,
 			}),
-			Before: func(cliCtx *cli.Context) error {
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
+			Before: tos.VerifyTosAcceptedOrPrompt,
 			Action: func(cliCtx *cli.Context) error {
 				if err := restore(cliCtx); err != nil {
 					logrus.Fatalf("Could not restore database: %v", err)
