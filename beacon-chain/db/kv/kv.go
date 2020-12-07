@@ -27,9 +27,10 @@ const (
 	NumOfVotes = 1 << 20
 	// BeaconNodeDbDirName is the name of the directory containing the beacon node database.
 	BeaconNodeDbDirName = "beaconchaindata"
+	// DatabaseFileName is the name of the beacon node database.
+	DatabaseFileName = "beaconchain.db"
 
-	databaseFileName = "beaconchain.db"
-	boltAllocSize    = 8 * 1024 * 1024
+	boltAllocSize = 8 * 1024 * 1024
 )
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which
@@ -59,7 +60,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			return nil, err
 		}
 	}
-	datafile := path.Join(dirPath, databaseFileName)
+	datafile := path.Join(dirPath, DatabaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {
@@ -137,7 +138,7 @@ func (s *Store) ClearDB() error {
 		return nil
 	}
 	prometheus.Unregister(createBoltCollector(s.db))
-	if err := os.Remove(path.Join(s.databasePath, databaseFileName)); err != nil {
+	if err := os.Remove(path.Join(s.databasePath, DatabaseFileName)); err != nil {
 		return errors.Wrap(err, "could not remove database file")
 	}
 	return nil

@@ -70,7 +70,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ChainConfigFileFlag,
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
-			cmd.RestoreFromFileFlag,
+			cmd.RestoreSourceFileFlag,
+			cmd.RestoreTargetDirFlag,
 		},
 	},
 	{

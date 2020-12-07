@@ -101,7 +101,8 @@ var appFlags = []cli.Flag{
 	cmd.ChainConfigFileFlag,
 	cmd.GrpcMaxCallRecvMsgSizeFlag,
 	cmd.AcceptTosFlag,
-	cmd.RestoreFromFileFlag,
+	cmd.RestoreSourceFileFlag,
+	cmd.RestoreTargetDirFlag,
 }
 
 func init() {
