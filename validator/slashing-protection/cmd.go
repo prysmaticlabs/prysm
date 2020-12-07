@@ -34,7 +34,7 @@ var Commands = &cli.Command{
 		},
 		{
 			Name:        "import",
-			Description: `import a selected EIP-3076 compliant slashing protection JSON to the validator database`,
+			Description: `imports a selected EIP-3076 compliant slashing protection JSON to the validator database`,
 			Flags: cmd.WrapFlags([]cli.Flag{
 				cmd.DataDirFlag,
 				flags.SlashingProtectionJSONFileFlag,

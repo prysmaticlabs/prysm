@@ -1,8 +1,6 @@
 package slashingprotection
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"flag"
 	"os"
@@ -23,20 +21,26 @@ import (
 func setupCliCtx(
 	tb testing.TB,
 	dbPath string,
+	protectionFilePath string,
 	outputDir string,
 ) *cli.Context {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(cmd.DataDirFlag.Name, dbPath, "")
+	set.String(flags.SlashingProtectionJSONFileFlag.Name, protectionFilePath, "")
 	set.String(flags.SlashingProtectionExportDirFlag.Name, outputDir, "")
+	require.NoError(tb, set.Set(flags.SlashingProtectionJSONFileFlag.Name, protectionFilePath))
 	assert.NoError(tb, set.Set(cmd.DataDirFlag.Name, dbPath))
 	assert.NoError(tb, set.Set(flags.SlashingProtectionExportDirFlag.Name, outputDir))
 	return cli.NewContext(&app, set, nil)
 }
 
-func TestExportSlashingProtectionCli(t *testing.T) {
-	ctx := context.Background()
+func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	numValidators := 10
+	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
+	err := fileutil.MkdirAll(outputPath)
+	require.NoError(t, err)
+	protectionFileName := "slashing_history_import.json"
 
 	// Create some mock slashing protection history. and JSON file
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
@@ -49,18 +53,22 @@ func TestExportSlashingProtectionCli(t *testing.T) {
 	// We JSON encode the protection file and import it into our database.
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
-	buf := bytes.NewBuffer(encoded)
+
+	protectionFilePath := filepath.Join(outputPath, protectionFileName)
+	err = fileutil.WriteFile(protectionFilePath, encoded)
+	require.NoError(t, err)
 
 	validatorDB := dbTest.SetupDB(t, pubKeys)
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
-	require.NoError(t, err)
-	require.NoError(t, validatorDB.Close())
 
 	// We export our slashing protection history by creating a CLI context
 	// with the required values, such as the database datadir and output directory.
 	dbPath := validatorDB.DatabasePath()
-	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
-	cliCtx := setupCliCtx(t, dbPath, outputPath)
+	require.NoError(t, validatorDB.Close())
+	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)
+
+	err = ImportSlashingProtectionCLI(cliCtx)
+	require.NoError(t, err)
+
 	err = ExportSlashingProtectionJSONCli(cliCtx)
 	require.NoError(t, err)
 
