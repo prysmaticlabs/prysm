@@ -24,6 +24,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	pubKey := []byte("hello")
 	require.NoError(t, backupDb.SavePubKey(ctx, uint64(1), pubKey))
+	require.NoError(t, backupDb.Close())
 	// We rename the backup file so that we can later verify
 	// whether the restored db has been renamed correctly.
 	require.NoError(t, os.Rename(
