@@ -18,7 +18,22 @@ var failedPostBlockSignErr = "made a double proposal, considered slashable by re
 
 func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	_, exists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
+
+	// Based on EIP3076, validator should refuse to sign any proposal with slot less
+	// than or equal to the minimum signed proposal present in the DB for that public key.
+	lowestSignedProposalSlot, exists, err := v.db.LowestSignedProposal(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	if exists && lowestSignedProposalSlot >= block.Slot {
+		return fmt.Errorf(
+			"could not sign block lower than lowest signed proposal in db, lowest signed proposal: %d >= block slot: %d",
+			lowestSignedProposalSlot,
+			block.Slot,
+		)
+	}
+
+	_, exists, err = v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
