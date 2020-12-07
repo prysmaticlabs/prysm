@@ -47,13 +47,33 @@ func TestPreSignatureValidation(t *testing.T) {
 	validator.protector = mockProtector
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
-		gomock.Any(), // epoch
+		&ethpb.DomainRequest{Epoch: 10, Domain: []byte{1, 0, 0, 0}},
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	err := validator.preAttSignValidations(context.Background(), att, pubKey)
 	require.ErrorContains(t, failedPreAttSignExternalErr, err)
 	mockProtector.AllowAttestation = true
 	err = validator.preAttSignValidations(context.Background(), att, pubKey)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
+
+	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, false, exists)
+	require.Equal(t, uint64(0), e)
+	e, exists, err = validator.db.LowestSignedTargetEpoch(context.Background(), pubKey)
+	require.NoError(t, err)
+	require.Equal(t, false, exists)
+	require.Equal(t, uint64(0), e)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		&ethpb.DomainRequest{Epoch: 10, Domain: []byte{1, 0, 0, 0}},
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	require.NoError(t, validator.db.SaveLowestSignedTargetEpoch(context.Background(), pubKey, att.Data.Target.Epoch+1))
+	err = validator.preAttSignValidations(context.Background(), att, pubKey)
+	require.ErrorContains(t, "could not sign attestation lower than lowest target epoch in db", err)
+	require.NoError(t, validator.db.SaveLowestSignedSourceEpoch(context.Background(), pubKey, att.Data.Source.Epoch+1))
+	err = validator.preAttSignValidations(context.Background(), att, pubKey)
+	require.ErrorContains(t, "could not sign attestation lower than lowest source epoch in db", err)
 }
 
 func TestPreSignatureValidation_NilLocal(t *testing.T) {
@@ -120,7 +140,7 @@ func TestPostSignatureUpdate(t *testing.T) {
 	validator.protector = mockProtector
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
-		gomock.Any(), // epoch2
+		&ethpb.DomainRequest{Epoch: 10, Domain: []byte{1, 0, 0, 0}},
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
 	require.NoError(t, err)
