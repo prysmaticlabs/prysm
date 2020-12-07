@@ -36,8 +36,6 @@ import (
 
 var log = logrus.WithField("prefix", "node")
 
-const slasherDBName = "slasherdata"
-
 // SlasherNode defines a struct that handles the services running a slashing detector
 // for eth2. It handles the lifecycle of the entire system and registers
 // services to a service registry.
@@ -186,7 +184,7 @@ func (s *SlasherNode) startDB() error {
 	baseDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	clearDB := s.cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := s.cliCtx.Bool(cmd.ForceClearDB.Name)
-	dbPath := path.Join(baseDir, slasherDBName)
+	dbPath := path.Join(baseDir, kv.SlasherDbDirName)
 	spanCacheSize := s.cliCtx.Int(flags.SpanCacheSize.Name)
 	highestAttCacheSize := s.cliCtx.Int(flags.HighestAttCacheSize.Name)
 	cfg := &kv.Config{SpanCacheSize: spanCacheSize, HighestAttestationCacheSize: highestAttCacheSize}
