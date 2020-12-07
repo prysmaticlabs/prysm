@@ -255,6 +255,10 @@ func (s *Service) Start() {
 	}
 	go func() {
 		s.waitForConnection()
+		if s.ctx.Err() != nil {
+			log.Info("pow chain service was stopped")
+			return
+		}
 		s.run(s.ctx.Done())
 	}()
 }
@@ -720,11 +724,6 @@ func (s *Service) run(done <-chan struct{}) {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.headTicker.C:
-			if s.eth1DataFetcher == nil {
-				log.Info("Could not reach eth1 node. retrying...")
-				s.retryETH1Node(errors.New("nil eth1 node fetcher"))
-				continue
-			}
 			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
