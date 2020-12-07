@@ -256,7 +256,7 @@ func (s *Service) Start() {
 	go func() {
 		s.waitForConnection()
 		if s.ctx.Err() != nil {
-			log.Info("pow chain service was stopped")
+			log.Info("Context closed, exiting pow goroutine")
 			return
 		}
 		s.run(s.ctx.Done())
