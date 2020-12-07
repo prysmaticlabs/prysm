@@ -40,6 +40,7 @@ func restore(cliCtx *cli.Context) error {
 	if err := fileutil.CopyFile(sourceFile, path.Join(restoreDir, kv.DatabaseFileName)); err != nil {
 		return err
 	}
+
 	logrus.Info("Restore completed successfully")
 	return nil
 }

@@ -82,7 +82,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
 	github.com/prometheus/client_golang v1.7.1
-	github.com/prometheus/tsdb v0.10.0 // indirect
+	github.com/prometheus/tsdb v0.10.0
 	github.com/protolambda/zssz v0.1.5
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20201117145913-073714f478fb
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
