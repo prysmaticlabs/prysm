@@ -11,6 +11,47 @@ import (
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
+func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) {
+	ctx := context.Background()
+	validator, _, validatorKey, finish := setup(t)
+	defer finish()
+	lowestSignedSlot := uint64(10)
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
+
+	// We save a proposal at the lowest signed slot in the DB.
+	err := validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, lowestSignedSlot, []byte{1})
+	require.NoError(t, err)
+	require.NoError(t, err)
+
+	// We expect the same block with a slot lower than the lowest
+	// signed slot to fail validation.
+	block := &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot - 1,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block)
+	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
+
+	// We expect the same block with a slot equal to the lowest
+	// signed slot to fail validation.
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block)
+	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
+
+	// We expect the same block with a slot > than the lowest
+	// signed slot to pass validation.
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot + 1,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block)
+	require.NoError(t, err)
+}
+
 func TestPreBlockSignLocalValidation(t *testing.T) {
 	ctx := context.Background()
 	config := &featureconfig.Flags{

@@ -27,7 +27,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 	}
 	if exists && lowestSignedProposalSlot >= block.Slot {
 		return fmt.Errorf(
-			"could not sign block lower than lowest signed proposal in db, lowest signed proposal: %d >= block slot: %d",
+			"could not sign block with slot <= lowest signed slot in db, lowest signed slot: %d >= block slot: %d",
 			lowestSignedProposalSlot,
 			block.Slot,
 		)
