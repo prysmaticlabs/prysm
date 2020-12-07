@@ -1,23 +1,40 @@
 package slashingprotection
 
 import (
-	"fmt"
-	"os"
+	"bytes"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	slashingProtectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
-// ImportSlashingProtectionCLI is the CLI command for importing slashing protection into a JSON.
-func ImportSlashingProtectionCLI(cliCtx *cli.Context, valDB db.Database) error {
-	if valDB == nil {
-		return errors.New("validator database cannot be nil")
+// ImportSlashingProtectionCLI reads an input slashing protection EIP-3076
+// standard JSON file and attempts to insert its data into our validator DB.
+//
+// Steps:
+// 1. Parse a path to the validator's datadir from the CLI context.
+// 2. Open the validator database.
+// 3. Read the JSON file from user input.
+// 4. Call the function which actually imports the data from
+// from the standard slashing protection JSON file into our database.
+func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
+	var err error
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	if !cliCtx.IsSet(cmd.DataDirFlag.Name) {
+		dataDir, err = prompt.InputDirectory(cliCtx, prompt.DataDirDirPromptText, cmd.DataDirFlag)
+		if err != nil {
+			return err
+		}
+	}
+	valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
+	if err != nil {
+		return errors.Wrapf(err, "could not access validator database at path: %s", dataDir)
 	}
 	protectionFilePath, err := prompt.InputDirectory(cliCtx, prompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
 	if err != nil {
@@ -26,19 +43,14 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context, valDB db.Database) error {
 	if protectionFilePath == "" {
 		return errors.Wrap(err, "empty protection json path")
 	}
-
-	fullPath, err := fileutil.ExpandPath(protectionFilePath)
+	enc, err := fileutil.ReadFileAsBytes(protectionFilePath)
 	if err != nil {
-		return errors.Wrapf(err, "could not expand file path for %s", protectionFilePath)
+		return err
 	}
-	if !fileutil.FileExists(fullPath) {
-		return fmt.Errorf("file %s does not exist", fullPath)
-	}
-	protectionJSON, err := os.Open(fullPath)
-	if err != nil {
-		return errors.Wrapf(err, "could not read private key file at path %s", fullPath)
-	}
-	if err := slashingProtectionFormat.ImportStandardProtectionJSON(cliCtx.Context, valDB, protectionJSON); err != nil {
+	buf := bytes.NewBuffer(enc)
+	if err := slashingProtectionFormat.ImportStandardProtectionJSON(
+		cliCtx.Context, valDB, buf,
+	); err != nil {
 		return err
 	}
 	log.Info("Slashing protection JSON successfully imported")

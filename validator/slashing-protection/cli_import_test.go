@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	spTest "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/testing"
+	spTest "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/urfave/cli/v2"
 )
 
@@ -24,7 +24,8 @@ func TestImportSlashingProtectionCLI(t *testing.T) {
 
 	ctx := context.Background()
 	numValidators := 10
-	publicKeys := spTest.CreateRandomPubKeys(t, numValidators)
+	publicKeys, err := spTest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
 	validatorDB, err := kv.NewKVStore(protectionDir, publicKeys)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
@@ -40,8 +41,10 @@ func TestImportSlashingProtectionCLI(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := spTest.MockAttestingAndProposalHistories(t, numValidators)
-	standardProtectionFormat := spTest.MockSlashingProtectionJSON(t, publicKeys, attestingHistory, proposalHistory)
+	attestingHistory, proposalHistory, err := spTest.MockAttestingAndProposalHistories(numValidators)
+	require.NoError(t, err)
+	standardProtectionFormat, err := spTest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
 
 	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(standardProtectionFormat)
