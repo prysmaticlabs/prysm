@@ -50,7 +50,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
-	// We JSON encode the protection file and import it into our database.
+	// We JSON encode the protection file and save it to disk as a JSON file.
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
 
@@ -58,17 +58,17 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	err = fileutil.WriteFile(protectionFilePath, encoded)
 	require.NoError(t, err)
 
+	// We create a CLI context with the required values, such as the database datadir and output directory.
 	validatorDB := dbTest.SetupDB(t, pubKeys)
-
-	// We export our slashing protection history by creating a CLI context
-	// with the required values, such as the database datadir and output directory.
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
 	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)
 
+	// We import the slashing protection history file via CLI.
 	err = ImportSlashingProtectionCLI(cliCtx)
 	require.NoError(t, err)
 
+	// We export the slashing protection history file via CLI.
 	err = ExportSlashingProtectionJSONCli(cliCtx)
 	require.NoError(t, err)
 
