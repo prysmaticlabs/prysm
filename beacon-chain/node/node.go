@@ -481,13 +481,13 @@ func (b *BeaconNode) registerPOWChainService() error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	if b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
+	if len(b.cliCtx.StringSlice(flags.HTTPWeb3ProviderFlag.Name)) == 0 {
 		log.Error("No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
 		log.Error("You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoint:       b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
+		HTTPEndPoints:      sliceutil.SplitCommaSeparated(b.cliCtx.StringSlice(flags.HTTPWeb3ProviderFlag.Name)),
 		DepositContract:    common.HexToAddress(depAddress),
 		BeaconDB:           b.db,
 		DepositCache:       b.depositCache,

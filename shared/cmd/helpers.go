@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -74,24 +75,27 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 }
 
 // ExpandWeb3EndpointIfFile expands the path for --http-web3provider if specified as a file.
-func ExpandWeb3EndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
+func ExpandWeb3EndpointIfFile(ctx *cli.Context, flags *cli.StringSliceFlag) error {
 	// Return early if no flag value is set.
-	if !ctx.IsSet(flag.Name) {
+	if !ctx.IsSet(flags.Name) {
 		return nil
 	}
-	web3endpoint := ctx.String(flag.Name)
-	switch {
-	case strings.HasPrefix(web3endpoint, "http://"):
-	case strings.HasPrefix(web3endpoint, "https://"):
-	case strings.HasPrefix(web3endpoint, "ws://"):
-	case strings.HasPrefix(web3endpoint, "wss://"):
-	default:
-		web3endpoint, err := fileutil.ExpandPath(ctx.String(flag.Name))
-		if err != nil {
-			return errors.Wrapf(err, "could not expand path for %s", web3endpoint)
-		}
-		if err := ctx.Set(flag.Name, web3endpoint); err != nil {
-			return errors.Wrapf(err, "could not set %s to %s", flag.Name, web3endpoint)
+	rawFlags := sliceutil.SplitCommaSeparated(ctx.StringSlice(flags.Name))
+	for i, rawValue := range rawFlags {
+		switch {
+		case strings.HasPrefix(rawValue, "http://"):
+		case strings.HasPrefix(rawValue, "https://"):
+		case strings.HasPrefix(rawValue, "ws://"):
+		case strings.HasPrefix(rawValue, "wss://"):
+		default:
+			web3endpoint, err := fileutil.ExpandPath(rawValue)
+			if err != nil {
+				return errors.Wrapf(err, "could not expand path for %s", rawValue)
+			}
+			rawFlags[i] = web3endpoint
+			if err := ctx.Set(flags.Name, fmt.Sprintf("%s", rawFlags)); err != nil {
+				return errors.Wrapf(err, "could not set %s to %s", flags.Name, rawFlags)
+			}
 		}
 	}
 	return nil

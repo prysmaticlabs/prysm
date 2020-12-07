@@ -32,7 +32,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndPoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
@@ -70,8 +70,8 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
@@ -97,8 +97,8 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
@@ -113,8 +113,8 @@ func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
@@ -144,8 +144,8 @@ func TestBlockExists_ValidHash(t *testing.T) {
 func TestBlockExists_InvalidHash(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
@@ -158,8 +158,8 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	// nil eth1DataFetcher would panic if cached value not used
@@ -181,8 +181,8 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
@@ -202,8 +202,8 @@ func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 func TestBlockExistsWithCache_HeaderNotCached(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
@@ -218,8 +218,8 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
@@ -245,8 +245,8 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
@@ -278,8 +278,8 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
@@ -309,8 +309,8 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 func TestService_BlockTimeByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndPoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 

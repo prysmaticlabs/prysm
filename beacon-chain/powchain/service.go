@@ -57,10 +57,10 @@ var (
 )
 
 // time to wait before trying to reconnect with the eth1 node.
-var backOffPeriod = 6 * time.Second
+var backOffPeriod = 15 * time.Second
 
 // Amount of times before we log the status of the eth1 dial attempt.
-var logThreshold = 20
+var logThreshold = 8
 
 // period to log chainstart related information
 var logPeriod = 1 * time.Minute
@@ -133,7 +133,8 @@ type Service struct {
 	cancel                  context.CancelFunc
 	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
-	httpEndpoint            string
+	currHttpEndpoint        string
+	httpEndpoints           []string
 	stateNotifier           statefeed.Notifier
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
@@ -154,7 +155,7 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HTTPEndPoint       string
+	HTTPEndPoints      []string
 	DepositContract    common.Address
 	BeaconDB           db.HeadAccessDatabase
 	DepositCache       *depositcache.DepositCache
@@ -183,11 +184,18 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
+	endpoints := dedupEndpoints(config.HTTPEndPoints)
+	// Select first http endpoint in the provided list.
+	currEndpoint := ""
+	if len(endpoints) > 0 {
+		currEndpoint = endpoints[0]
+	}
 	s := &Service{
-		ctx:          ctx,
-		cancel:       cancel,
-		headerChan:   make(chan *gethTypes.Header),
-		httpEndpoint: config.HTTPEndPoint,
+		ctx:              ctx,
+		cancel:           cancel,
+		headerChan:       make(chan *gethTypes.Header),
+		httpEndpoints:    endpoints,
+		currHttpEndpoint: currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
 			BlockTime:          0,
@@ -237,7 +245,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && s.httpEndpoint == "" {
+	if !s.chainStartData.Chainstarted && s.currHttpEndpoint == "" {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
 		genState, err := s.beaconDB.GenesisState(s.ctx)
@@ -250,7 +258,7 @@ func (s *Service) Start() {
 	}
 
 	// Exit early if eth1 endpoint is not set.
-	if s.httpEndpoint == "" {
+	if s.currHttpEndpoint == "" {
 		return
 	}
 	go func() {
@@ -384,7 +392,7 @@ func (s *Service) connectToPowChain() error {
 }
 
 func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
-	httpRPCClient, err := gethRPC.Dial(s.httpEndpoint)
+	httpRPCClient, err := gethRPC.Dial(s.currHttpEndpoint)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -446,7 +454,7 @@ func (s *Service) waitForConnection() {
 		if synced {
 			s.connectedETH1 = true
 			log.WithFields(logrus.Fields{
-				"endpoint": s.httpEndpoint,
+				"endpoint": s.currHttpEndpoint,
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -467,6 +475,9 @@ func (s *Service) waitForConnection() {
 		}
 		logCounter++
 	}
+	// Use next endpoint, if we have provided a fallback.
+	s.fallbackToNextEndpoint()
+
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 	for {
@@ -475,17 +486,19 @@ func (s *Service) waitForConnection() {
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
+				s.fallbackToNextEndpoint()
 				continue
 			}
 			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
 				errorLogger(errSynced, "Could not check sync status of eth1 chain")
+				s.fallbackToNextEndpoint()
 				continue
 			}
 			if synced {
 				s.connectedETH1 = true
 				log.WithFields(logrus.Fields{
-					"endpoint": s.httpEndpoint,
+					"endpoint": s.currHttpEndpoint,
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
@@ -816,4 +829,38 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		return 0, err
 	}
 	return blkNum.Uint64(), nil
+}
+
+// This is an inefficient way to search for the next endpoint, but given N is expected to be
+// small ( < 25), it is fine to search this way.
+func (s *Service) fallbackToNextEndpoint() {
+	currEndpoint := s.currHttpEndpoint
+	currIndex := 0
+	totalEndpoints := len(s.httpEndpoints)
+
+	for i, endpoint := range s.httpEndpoints {
+		if endpoint == currEndpoint {
+			currIndex = i
+			break
+		}
+	}
+	nextIndex := currIndex + 1
+	if nextIndex >= totalEndpoints {
+		nextIndex = 0
+	}
+	s.currHttpEndpoint = s.httpEndpoints[nextIndex]
+	log.Infof("Falling back to alternative endpoint: %s", s.currHttpEndpoint)
+}
+
+func dedupEndpoints(endpoints []string) []string {
+	selectionMap := make(map[string]bool)
+	newEndpoints := make([]string, 0, len(endpoints))
+	for _, point := range endpoints {
+		if selectionMap[point] {
+			continue
+		}
+		newEndpoints = append(newEndpoints, point)
+		selectionMap[point] = true
+	}
+	return newEndpoints
 }
