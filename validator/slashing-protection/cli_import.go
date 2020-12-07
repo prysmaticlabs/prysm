@@ -45,7 +45,12 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not get slashing protection json file")
 	}
 	if protectionFilePath == "" {
-		return errors.Wrap(err, "empty protection json path")
+		return errors.Wrapf(
+			err,
+			"No path to a slashing_protection.json file specified, please retry. "+
+				"You can also specify it with the %s flag",
+			flags.SlashingProtectionJSONFileFlag.Name,
+		)
 	}
 	enc, err := fileutil.ReadFileAsBytes(protectionFilePath)
 	if err != nil {
