@@ -101,6 +101,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableAccountMetricsFlag,
 			flags.WalletDirFlag,
 			flags.WalletPasswordFileFlag,
+			flags.GraffitiFileFlag,
 		},
 	},
 	{
