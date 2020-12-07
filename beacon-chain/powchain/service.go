@@ -255,6 +255,10 @@ func (s *Service) Start() {
 	}
 	go func() {
 		s.waitForConnection()
+		if s.ctx.Err() != nil {
+			log.Info("Context closed, exiting pow goroutine")
+			return
+		}
 		s.run(s.ctx.Done())
 	}()
 }
@@ -674,7 +678,6 @@ func (s *Service) initPOWService() {
 			return
 		default:
 			ctx := s.ctx
-
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
