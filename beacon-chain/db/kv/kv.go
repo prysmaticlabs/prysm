@@ -24,7 +24,10 @@ const (
 	// VotesCacheSize with 1M validators will be 8MB.
 	VotesCacheSize = 1 << 23
 	// NumOfVotes specifies the vote cache size.
-	NumOfVotes       = 1 << 20
+	NumOfVotes = 1 << 20
+	// BeaconNodeDbDirName is the name of the directory containing the beacon node database.
+	BeaconNodeDbDirName = "beaconchaindata"
+
 	databaseFileName = "beaconchain.db"
 	boltAllocSize    = 8 * 1024 * 1024
 )

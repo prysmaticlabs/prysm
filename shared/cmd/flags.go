@@ -219,6 +219,12 @@ var (
 		Name:  "accept-terms-of-use",
 		Usage: "Accept Terms and Conditions (for non-interactive environments)",
 	}
+	// RestoreFromFileFlag specifies the filepath to the backed-up database file
+	// which will be used to restore the database.
+	RestoreFromFileFlag = &cli.StringFlag{
+		Name:  "from-file",
+		Usage: "Filepath to the backed-up database file which will be used to restore the database",
+	}
 )
 
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
