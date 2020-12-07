@@ -3,10 +3,11 @@ package db
 import (
 	"context"
 	"flag"
+	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 
-	"github.com/prometheus/tsdb/fileutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -35,7 +36,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, backupDb.Close())
 	// We rename the backup file so that we can later verify
 	// whether the restored db has been renamed correctly.
-	require.NoError(t, fileutil.Rename(
+	require.NoError(t, os.Rename(
 		path.Join(backupDb.DatabasePath(), kv.DatabaseFileName),
 		path.Join(backupDb.DatabasePath(), "backup.db")))
 
@@ -50,10 +51,10 @@ func TestRestore(t *testing.T) {
 
 	assert.NoError(t, restore(cliCtx))
 
-	files, err := fileutil.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
+	files, err := ioutil.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(files))
-	assert.Equal(t, kv.DatabaseFileName, files[0])
+	assert.Equal(t, kv.DatabaseFileName, files[0].Name())
 	restoredDb, err := kv.NewKVStore(path.Join(restoreDir, kv.BeaconNodeDbDirName), nil)
 	defer func() {
 		require.NoError(t, restoredDb.Close())
