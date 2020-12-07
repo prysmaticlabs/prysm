@@ -5,12 +5,11 @@ import (
 	"path"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/slasher/db/kv"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
