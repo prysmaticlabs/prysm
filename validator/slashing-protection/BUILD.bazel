@@ -4,8 +4,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "cli_export.go",
         "cli_import.go",
-        "cli_import_export.go",
         "cmd.go",
         "external.go",
         "protector.go",

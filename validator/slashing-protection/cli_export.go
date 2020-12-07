@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	export "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -41,6 +42,11 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not access validator database at path %s", dataDir)
 	}
+	defer func() {
+		if err := validatorDB.Close(); err != nil {
+			log.WithError(err).Errorf("Could not close validator DB")
+		}
+	}()
 	eipJSON, err := export.ExportStandardProtectionJSON(cliCtx.Context, validatorDB)
 	if err != nil {
 		return errors.Wrap(err, "could not export slashing protection history")

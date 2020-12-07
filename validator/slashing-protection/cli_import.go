@@ -36,6 +36,11 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not access validator database at path: %s", dataDir)
 	}
+	defer func() {
+		if err := valDB.Close(); err != nil {
+			log.WithError(err).Errorf("Could not close validator DB")
+		}
+	}()
 	protectionFilePath, err := prompt.InputDirectory(cliCtx, prompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not get slashing protection json file")
