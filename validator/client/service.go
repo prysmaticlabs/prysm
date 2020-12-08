@@ -244,10 +244,10 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 	if err != nil {
 		log.WithError(err).Debug("Could not fetch validating keys")
 	}
-	if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+	if err = v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
 		log.WithError(err).Debug("Could not update public keys buckets")
 	}
-	go recheckValidatingKeysBucket(ctx, v.db, v.keyManager)
+	go v.handleAccountChanges(ctx)
 	for _, key := range validatingKeys {
 		log.WithField(
 			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
@@ -337,10 +337,9 @@ func (v *ValidatorService) BeaconLogsEndpoint(ctx context.Context) (string, erro
 	return resp.BeaconLogsEndpoint, nil
 }
 
-// to accounts changes in the keymanager, then updates those keys'
-// buckets in bolt DB if a bucket for a key does not exist.
-func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keymanager.IKeymanager) {
-	importedKeymanager, ok := km.(*imported.Keymanager)
+// handleAccountChanges subscribes to key changes in the keymanager
+func (v *ValidatorService) handleAccountChanges(ctx context.Context) {
+	importedKeymanager, ok := v.keyManager.(*imported.Keymanager)
 	if !ok {
 		return
 	}
@@ -350,9 +349,11 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 	for {
 		select {
 		case keys := <-validatingPubKeysChan:
-			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
+			if err := v.db.UpdatePublicKeysBuckets(keys); err != nil {
 				log.WithError(err).Debug("Could not update public keys buckets")
-				continue
+			}
+			if err := v.validator.WaitForActivation(ctx); err != nil {
+				log.WithError(err).Debug("Could not update validator statuses")
 			}
 		case <-ctx.Done():
 			return

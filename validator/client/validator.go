@@ -229,9 +229,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	return nil
 }
 
-// WaitForActivation checks whether the validator pubkey is in the active
-// validator set. If not, this operation will block until an activation message is
-// received.
+// WaitForActivation block until at least one of validator's pubkeys is in the active validator set.
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
