@@ -59,7 +59,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not get slashing protection json file")
 	}
 	if outputDir == "" {
-		return errors.Wrap(err, "output directory not specified")
+		return errors.New("output directory not specified")
 	}
 	exists, err := fileutil.HasDir(outputDir)
 	if err != nil {
