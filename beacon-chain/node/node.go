@@ -489,11 +489,11 @@ func (b *BeaconNode) registerPOWChainService() error {
 	authProvider := strings.Split(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name), ",")
 	if len(authProvider) == 2 {
 		httpProvider = authProvider[0]
-		jwt = authProvider[0]
+		jwt = authProvider[1]
 	} else if len(authProvider) == 1 {
 		httpProvider = b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)
 	} else {
-		log.Error("Web 3 provider string can contain one comma for specifying the jwt key to access the provider. String contains too many commas: %d", len(authProvider))
+		log.Errorf("Web 3 provider string can contain one comma for specifying the jwt key to access the provider. String contains too many commas: %d", len(authProvider))
 	}
 	cfg := &powchain.Web3ServiceConfig{
 		HTTPEndPoint:       httpProvider,

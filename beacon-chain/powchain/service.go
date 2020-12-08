@@ -392,7 +392,8 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 		return nil, nil, err
 	}
 	if s.jwt != "" {
-		httpRPCClient.SetHeader("Authorization", "Bearer "+s.jwt)
+		httpRPCClient.SetHeader("Authorization", s.jwt)
+		log.Infof("using web 3 Authorization: %s", s.jwt)
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
 	// Add a method to clean-up and close clients in the event
