@@ -1313,7 +1313,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	select {
 	case <-time.After(3 * time.Second):
-		t.Fatal("test takes to long to complete")
+		t.Fatal("test takes too long to complete")
 	case data := <-queue.fetchedData:
 		for _, blk := range data.blocks {
 			blkRoot, err := blk.Block.HashTreeRoot()
