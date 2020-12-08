@@ -226,6 +226,11 @@ var (
 		Usage: "Path to a directory where accounts will be backed up into a zip file",
 		Value: DefaultValidatorDir(),
 	}
+	// SlashingProtectionJSONFileFlag is used to enter the file path of the slashing protection JSON.
+	SlashingProtectionJSONFileFlag = &cli.StringFlag{
+		Name:  "slashing-protection-json-file",
+		Usage: "Path to an EIP-3076 compliant JSON file containing a user's slashing protection history",
+	}
 	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
 	KeysDirFlag = &cli.StringFlag{
 		Name:  "keys-dir",
