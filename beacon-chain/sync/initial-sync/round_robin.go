@@ -56,11 +56,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	// Step 2 - sync to head from majority of peers (from no less than MinimumSyncPeers*2 peers)
 	// having the same world view on non-finalized epoch.
-	if err := s.syncToNonFinalizedEpoch(ctx, genesis); err != nil {
-		return err
-	}
-
-	return nil
+	return s.syncToNonFinalizedEpoch(ctx, genesis)
 }
 
 // syncToFinalizedEpoch sync from head to best known finalized epoch.
