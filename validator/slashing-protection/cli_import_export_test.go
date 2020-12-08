@@ -37,6 +37,7 @@ func setupCliCtx(
 
 func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	numValidators := 10
+	numEpochs := 20
 	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
 	err := fileutil.MkdirAll(outputPath)
 	require.NoError(t, err)
@@ -45,7 +46,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	// Create some mock slashing protection history. and JSON file
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(pubKeys, numEpochs)
 	require.NoError(t, err)
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
