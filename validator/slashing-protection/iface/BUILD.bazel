@@ -4,6 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = ["protector.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = ["@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library"],
 )
