@@ -5,8 +5,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
+
+var log = logrus.WithField("prefix", "slashing-protection")
 
 // Commands for slashing protection.
 var Commands = &cli.Command{
@@ -30,6 +33,28 @@ var Commands = &cli.Command{
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
 				return ExportSlashingProtectionJSONCli(cliCtx)
+			},
+		},
+		{
+			Name:        "import",
+			Description: `imports a selected EIP-3076 compliant slashing protection JSON to the validator database`,
+			Flags: cmd.WrapFlags([]cli.Flag{
+				cmd.DataDirFlag,
+				flags.SlashingProtectionJSONFileFlag,
+				featureconfig.Mainnet,
+				featureconfig.PyrmontTestnet,
+				featureconfig.ToledoTestnet,
+				cmd.AcceptTosFlag,
+			}),
+			Before: func(cliCtx *cli.Context) error {
+				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+					return err
+				}
+				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				featureconfig.ConfigureValidator(cliCtx)
+				return ImportSlashingProtectionCLI(cliCtx)
 			},
 		},
 	},
