@@ -134,6 +134,7 @@ type Service struct {
 	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
 	httpEndpoint            string
+	jwt                     string
 	stateNotifier           statefeed.Notifier
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
@@ -155,6 +156,7 @@ type Service struct {
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
 	HTTPEndPoint       string
+	JWT                string
 	DepositContract    common.Address
 	BeaconDB           db.HeadAccessDatabase
 	DepositCache       *depositcache.DepositCache
@@ -188,6 +190,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		cancel:       cancel,
 		headerChan:   make(chan *gethTypes.Header),
 		httpEndpoint: config.HTTPEndPoint,
+		jwt:          config.JWT,
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
 			BlockTime:          0,
@@ -383,6 +386,9 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 	httpRPCClient, err := gethRPC.Dial(s.httpEndpoint)
 	if err != nil {
 		return nil, nil, err
+	}
+	if s.jwt != "" {
+		httpRPCClient.SetHeader("Authorization", "Bearer "+s.jwt)
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
 	// Add a method to clean-up and close clients in the event

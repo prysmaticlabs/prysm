@@ -485,9 +485,19 @@ func (b *BeaconNode) registerPOWChainService() error {
 		log.Error("No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
 		log.Error("You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
 	}
-
+	var httpProvider, jwt string
+	authProvider := strings.Split(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name), ",")
+	if len(authProvider) == 2 {
+		httpProvider = authProvider[0]
+		jwt = authProvider[0]
+	} else if len(authProvider) == 1 {
+		httpProvider = b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)
+	} else {
+		log.Error("Web 3 provider string can contain one comma for specifying the jwt key to access the provider. String contains too many commas: %d", len(authProvider))
+	}
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoint:       b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
+		HTTPEndPoint:       httpProvider,
+		JWT:                jwt,
 		DepositContract:    common.HexToAddress(depAddress),
 		BeaconDB:           b.db,
 		DepositCache:       b.depositCache,
