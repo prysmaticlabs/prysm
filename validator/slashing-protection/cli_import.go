@@ -2,6 +2,7 @@ package slashingprotection
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
