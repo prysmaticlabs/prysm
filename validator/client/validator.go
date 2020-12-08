@@ -229,7 +229,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	return nil
 }
 
-// WaitForActivation block until at least one of validator's pubkeys is in the active validator set.
+// WaitForActivation blocks until at least one of validator's pubkeys is in the active validator set.
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
