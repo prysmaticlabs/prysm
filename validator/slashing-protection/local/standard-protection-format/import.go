@@ -11,9 +11,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -249,7 +249,7 @@ func filterSlashablePubKeysFromAttestations(
 			if err != nil {
 				continue
 			}
-			slashable, err := client.IsNewAttSlashable(ctx, history, source, target, signingRoot)
+			slashable, err := attestinghistory.IsNewAttSlashable(ctx, history, source, target, signingRoot)
 			if err != nil {
 				continue
 			}
