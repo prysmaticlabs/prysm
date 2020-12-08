@@ -112,5 +112,5 @@ func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
 	}
 	_, err := SignedBeaconBlockHeaderFromBlock(blk)
-	require.ErrorContains(t, "nil block ", err)
+	require.ErrorContains(t, "nil block", err)
 }
