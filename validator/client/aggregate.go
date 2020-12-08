@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -152,7 +153,22 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	time.Sleep(timeutils.Until(finalTime))
+	t := time.NewTimer(timeutils.Until(finalTime))
+	defer func() {
+		if !t.Stop() {
+			// Drain channel, if it wasn't empty.
+			<-t.C
+		}
+	}()
+	for {
+		select {
+		case <-ctx.Done():
+			traceutil.AnnotateError(span, ctx.Err())
+			return
+		case <-t.C:
+			return
+		}
+	}
 }
 
 // This returns the signature of validator signing over aggregate and
