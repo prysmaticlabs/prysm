@@ -60,6 +60,7 @@ type validator struct {
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	attesterHistoryByPubKeyLock        sync.RWMutex
+	slashableKeysLock                  sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	genesisTime                        uint64
 	domainDataCache                    *ristretto.Cache
@@ -79,6 +80,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	graffitiStruct                     *graffiti.Graffiti
+	slashablePublicKeys                map[[48]byte]bool
 }
 
 // Done cleans up the validator.
@@ -375,9 +377,24 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	if err != nil {
 		return err
 	}
+
+	// Filter out the slashable public keys from the duties request.
+	filteredKeys := make([][48]byte, 0, len(validatingKeys))
+	v.slashableKeysLock.RLock()
+	for _, pubKey := range validatingKeys {
+		if ok := v.slashablePublicKeys[pubKey]; !ok {
+			filteredKeys = append(filteredKeys, pubKey)
+		} else {
+			log.WithField(
+				"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
+			).Warn("Not including slashable public key in request to update validator duties")
+		}
+	}
+	v.slashableKeysLock.RUnlock()
+
 	req := &ethpb.DutiesRequest{
 		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
+		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
 	}
 
 	// If duties is nil it means we have had no prior duties and just started up.
