@@ -1,0 +1,34 @@
+package kv
+
+import (
+	"context"
+	"fmt"
+
+	bolt "go.etcd.io/bbolt"
+)
+
+func (s *Store) SlashablePublicKeys(ctx context.Context) ([][48]byte, error) {
+	var genValRoot []byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(genesisInfoBucket)
+		enc := bkt.Get(genesisValidatorsRootKey)
+		if len(enc) == 0 {
+			return nil
+		}
+		genValRoot = enc
+		return nil
+	})
+	return nil, err
+}
+func (s *Store) SaveSlashablePublicKeys(ctx context.Context) ([][48]byte, error) {
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(genesisInfoBucket)
+		enc := bkt.Get(genesisValidatorsRootKey)
+		if len(enc) != 0 {
+			return fmt.Errorf("cannot overwite existing genesis validators root: %#x", enc)
+		}
+		return bkt.Put(genesisValidatorsRootKey, nil)
+	})
+	_ = err
+	return nil, nil
+}
