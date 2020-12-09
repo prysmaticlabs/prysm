@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -69,6 +70,7 @@ var appFlags = []cli.Flag{
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
+	flags.GraffitiFileFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,
@@ -109,6 +111,7 @@ func main() {
 		accounts.WalletCommands,
 		accounts.AccountCommands,
 		slashingprotection.Commands,
+		db.DatabaseCommands,
 	}
 
 	app.Flags = appFlags

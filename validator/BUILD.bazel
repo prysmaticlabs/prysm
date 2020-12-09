@@ -23,6 +23,7 @@ go_library(
         "//shared/tos:go_default_library",
         "//shared/version:go_default_library",
         "//validator/accounts:go_default_library",
+        "//validator/db:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/node:go_default_library",
         "//validator/slashing-protection:go_default_library",

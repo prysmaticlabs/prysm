@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
@@ -100,9 +101,16 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		return ValidatorClient, nil
 	}
+
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+		params.LoadChainConfigFile(chainConfigFileName)
+	}
+
 	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
+
 	return ValidatorClient, nil
 }
 
@@ -364,6 +372,17 @@ func (s *ValidatorClient) registerClientService(
 	if err := s.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
+
+	gStruct := &g.Graffiti{}
+	var err error
+	if s.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
+		n := s.cliCtx.String(flags.GraffitiFileFlag.Name)
+		gStruct, err = g.ParseGraffitiFile(n)
+		if err != nil {
+			log.WithError(err).Warn("Could not parse graffiti file")
+		}
+	}
+
 	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -380,6 +399,7 @@ func (s *ValidatorClient) registerClientService(
 		ValDB:                      s.db,
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,
+		GraffitiStruct:             gStruct,
 	})
 
 	if err != nil {
