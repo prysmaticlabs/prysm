@@ -113,6 +113,12 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 						// This ensures we initialize a new (empty) slashing protection database.
 						validator, m, _, _ := setup(t)
 
+						if test.GenesisValidatorsRoot != "" {
+							r, err := interchangeformat.RootFromHex(test.GenesisValidatorsRoot)
+							require.NoError(t, validator.db.SaveGenesisValidatorsRoot(context.Background(), r[:]))
+							require.NoError(t, err)
+						}
+
 						// The test config contains the interchange config in json.
 						// This loads the interchange data via ImportStandardProtectionJSON.
 						interchangeBytes, err := json.Marshal(step.Interchange)
