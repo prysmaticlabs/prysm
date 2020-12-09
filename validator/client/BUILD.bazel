@@ -99,6 +99,7 @@ go_test(
         "//validator/db/kv:go_default_library",
         "//validator/db/testing:go_default_library",
         "//validator/graffiti:go_default_library",
+        "//validator/keymanager/imported:go_default_library",
         "//validator/testing:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
