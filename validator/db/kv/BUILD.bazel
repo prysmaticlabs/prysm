@@ -11,6 +11,7 @@ go_library(
         "historical_attestations.go",
         "proposal_history_v2.go",
         "schema.go",
+        "slashable_keys.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
     visibility = ["//validator:__subpackages__"],
@@ -37,6 +38,7 @@ go_test(
         "genesis_test.go",
         "historical_attestations_test.go",
         "proposal_history_v2_test.go",
+        "slashable_keys_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
