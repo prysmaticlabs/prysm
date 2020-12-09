@@ -33,7 +33,7 @@ func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHea
 		return nil, errors.New("nil block body")
 	}
 
-  bodyRoot, err := block.Body.HashTreeRoot()
+	bodyRoot, err := block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
