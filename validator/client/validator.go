@@ -502,44 +502,6 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]Va
 	return rolesAt, nil
 }
 
-// UpdateProtections goes through the duties of the given slot and fetches the required validator history,
-// assigning it in validator.
-func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
-	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
-	for _, duty := range v.duties.CurrentEpochDuties {
-		if duty == nil || duty.AttesterSlot != slot {
-			continue
-		}
-		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
-	}
-	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
-	if err != nil {
-		return errors.Wrap(err, "could not get attester history")
-	}
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = attHistoryByPubKey
-	v.attesterHistoryByPubKeyLock.Unlock()
-	return nil
-}
-
-// ResetAttesterProtectionData reset validators protection data.
-func (v *validator) ResetAttesterProtectionData() {
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
-	v.attesterHistoryByPubKeyLock.Unlock()
-}
-
-// SaveProtection saves the attestation information currently in validator state.
-func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
-	v.attesterHistoryByPubKeyLock.RLock()
-	defer v.attesterHistoryByPubKeyLock.RUnlock()
-	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
-		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
-	}
-
-	return nil
-}
-
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey [48]byte) (bool, error) {

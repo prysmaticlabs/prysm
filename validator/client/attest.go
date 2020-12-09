@@ -113,9 +113,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		).Debug("Attempted slashable attestation details")
 		return
 	}
-	if err := v.SaveProtection(ctx, pubKey); err != nil {
-		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
-	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
