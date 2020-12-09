@@ -728,7 +728,8 @@ func TestUpdateDuties_OK(t *testing.T) {
 	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
 }
 
-func TestUpdateDuties_OK_FilterSlahablePublicKeys_AllKeys(t *testing.T) {
+func TestUpdateDuties_OK_FilterSlahablePublicKeys(t *testing.T) {
+	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
@@ -736,34 +737,26 @@ func TestUpdateDuties_OK_FilterSlahablePublicKeys_AllKeys(t *testing.T) {
 
 	numValidators := 10
 	keysMap := make(map[[48]byte]bls.SecretKey)
+	slashablePublicKeys := make(map[[48]byte]bool)
 	for i := 0; i < numValidators; i++ {
 		priv, err := bls.RandKey()
 		require.NoError(t, err)
 		pubKey := [48]byte{}
 		copy(pubKey[:], priv.PublicKey().Marshal())
 		keysMap[pubKey] = priv
+		slashablePublicKeys[pubKey] = true
 	}
-
-	slashablePublicKeys :=
 
 	km := &mockKeymanager{
 		keysMap: keysMap,
 	}
 	resp := &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
-			{
-				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
-				ValidatorIndex: 200,
-				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
-				PublicKey:      []byte("testPubKey_1"),
-				ProposerSlots:  []uint64{params.BeaconConfig().SlotsPerEpoch + 1},
-			},
-		},
+		Duties: []*ethpb.DutiesResponse_Duty{},
 	}
 	v := validator{
-		keyManager:      km,
-		validatorClient: client,
+		keyManager:          km,
+		validatorClient:     client,
+		slashablePublicKeys: slashablePublicKeys,
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
@@ -781,10 +774,9 @@ func TestUpdateDuties_OK_FilterSlahablePublicKeys_AllKeys(t *testing.T) {
 	).Return(nil, nil)
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
-	assert.Equal(t, resp.Duties[0].CommitteeIndex, v.duties.Duties[0].CommitteeIndex, "Unexpected validator assignments")
-	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
+	for range slashablePublicKeys {
+		assert.LogsContain(t, hook, "Not including slashable public key in request")
+	}
 }
 
 func TestUpdateProtections_OK(t *testing.T) {
