@@ -29,6 +29,7 @@ func TestStore_SlashablePublicKeys(t *testing.T) {
 	err = validatorDB.SaveSlashablePublicKeys(ctx, publicKeys[:50])
 	require.NoError(t, err)
 	received, err = validatorDB.SlashablePublicKeys(ctx)
+	require.NoError(t, err)
 
 	// Keys are not guaranteed to be ordered, so we create a map for comparisons.
 	want := make(map[[48]byte]bool)
