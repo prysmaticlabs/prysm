@@ -10,7 +10,8 @@ func SignedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.Si
 	if block.Block == nil || block.Block.Body == nil {
 		return nil, errors.New("nil block")
 	}
-	bodyRoot, err := block.Block.Body.HashTreeRoot()
+
+	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
@@ -31,7 +32,8 @@ func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHea
 	if block.Body == nil {
 		return nil, errors.New("nil block body")
 	}
-	bodyRoot, err := block.Body.HashTreeRoot()
+
+  bodyRoot, err := block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}

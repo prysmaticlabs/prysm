@@ -47,6 +47,18 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 	assert.DeepEqual(t, want, bh)
 }
 
+func TestBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
+	hashLen := 32
+	blk := &eth.BeaconBlock{
+		Slot:          200,
+		ProposerIndex: 2,
+		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
+		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
+	}
+	_, err := BeaconBlockHeaderFromBlock(blk)
+	require.ErrorContains(t, "nil block body", err)
+}
+
 func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 	hashLen := 32
 	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
@@ -86,4 +98,18 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 	bh, err := SignedBeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
+}
+
+func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
+	hashLen := 32
+	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
+		Slot:          200,
+		ProposerIndex: 2,
+		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
+		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
+	},
+		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
+	}
+	_, err := SignedBeaconBlockHeaderFromBlock(blk)
+	require.ErrorContains(t, "nil block", err)
 }
