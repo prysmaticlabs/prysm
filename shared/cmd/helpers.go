@@ -74,12 +74,12 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 }
 
 // ExpandWeb3EndpointIfFile expands the path for --http-web3provider if specified as a file.
-func ExpandWeb3EndpointIfFile(ctx *cli.Context, flags *cli.StringFlag) error {
+func ExpandWeb3EndpointIfFile(ctx *cli.Context, flags *cli.StringSliceFlag) error {
 	// Return early if no flag value is set.
 	if !ctx.IsSet(flags.Name) {
 		return nil
 	}
-	rawFlags := strings.Split(ctx.String(flags.Name), ",")
+	rawFlags := ctx.StringSlice(flags.Name)
 	for i, rawValue := range rawFlags {
 		switch {
 		case strings.HasPrefix(rawValue, "http://"):
@@ -91,10 +91,11 @@ func ExpandWeb3EndpointIfFile(ctx *cli.Context, flags *cli.StringFlag) error {
 			if err != nil {
 				return errors.Wrapf(err, "could not expand path for %s", rawValue)
 			}
+			// Given that rawFlags is a pointer this will replace the unexpanded path
+			// with the expanded one. Also there is no easy way to replace the string
+			// slice flag value compared to other flag types. This is why we resort to
+			// replacing it like this.
 			rawFlags[i] = web3endpoint
-			if err := ctx.Set(flags.Name, strings.Join(rawFlags, ",")); err != nil {
-				return errors.Wrapf(err, "could not set %s to %s", flags.Name, rawFlags)
-			}
 		}
 	}
 	return nil
