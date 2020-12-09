@@ -23,8 +23,8 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	v.pkLocks[pubKey].Lock()
-	defer v.pkLocks[pubKey].Unlock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
+	v.pkLocks[pubKey].Unlock()
 	if !ok {
 		AttestationMapMiss.Inc()
 		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
