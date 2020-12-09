@@ -7,6 +7,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// SlashablePublicKeys returns keys that were marked as slashable during EIP-3076 slashing
+// protection imports, ensuring that we can prevent these keys from having duties at runtime.
 func (s *Store) SlashablePublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.SlashablePublicKeys")
 	defer span.End()
@@ -26,6 +28,8 @@ func (s *Store) SlashablePublicKeys(ctx context.Context) ([][48]byte, error) {
 	return publicKeys, err
 }
 
+// SaveSlashablePublicKeys stores a list of slashable public keys that
+// were determined during EIP-3076 slashing protection imports.
 func (s *Store) SaveSlashablePublicKeys(ctx context.Context, publicKeys [][48]byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveSlashablePublicKeys")
 	defer span.End()
