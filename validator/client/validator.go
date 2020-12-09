@@ -524,12 +524,10 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	}
 	for _, lock := range v.pkLocks {
 		lock.Lock()
+		defer lock.Unlock()
 	}
 	v.attesterHistoryByPubKey = attHistoryByPubKey
 	v.pkLocks = newLocks
-	for _, lock := range v.pkLocks {
-		lock.Unlock()
-	}
 	return nil
 }
 
