@@ -158,12 +158,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 		return
 	}
 	t := time.NewTimer(wait)
-	defer func() {
-		if t.Stop() {
-			// Drain channel, if it wasn't empty.
-			<-t.C
-		}
-	}()
+	defer t.Stop()
 	select {
 	case <-ctx.Done():
 		traceutil.AnnotateError(span, ctx.Err())
