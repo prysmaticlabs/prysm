@@ -237,15 +237,15 @@ func filterSlashablePubKeysFromAttestations(
 		}
 		for _, att := range signedAtts {
 			// Malformed data should not prevent us from completing this function.
-			source, err := uint64FromString(att.SourceEpoch)
+			source, err := Uint64FromString(att.SourceEpoch)
 			if err != nil {
 				continue
 			}
-			target, err := uint64FromString(att.TargetEpoch)
+			target, err := Uint64FromString(att.TargetEpoch)
 			if err != nil {
 				continue
 			}
-			signingRoot, err := rootFromHex(att.SigningRoot)
+			signingRoot, err := RootFromHex(att.SigningRoot)
 			if err != nil {
 				continue
 			}
