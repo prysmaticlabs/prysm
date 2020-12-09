@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/sirupsen/logrus"
@@ -23,9 +22,8 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 	ctx, span := trace.StartSpan(ctx, "validator.preAttSignUpdate")
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	lock := mputil.NewMultilock(string(pubKey[:]))
-	lock.Lock()
-	defer lock.Unlock()
+	v.pkLocks[pubKey].Lock()
+	defer v.pkLocks[pubKey].Unlock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if !ok {
 		AttestationMapMiss.Inc()
@@ -77,9 +75,8 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	defer span.End()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	lock := mputil.NewMultilock(string(pubKey[:]))
-	lock.Lock()
-	defer lock.Unlock()
+	v.pkLocks[pubKey].Lock()
+	defer v.pkLocks[pubKey].Unlock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if !ok {
 		AttestationMapMiss.Inc()

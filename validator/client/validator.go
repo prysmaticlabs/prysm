@@ -66,6 +66,7 @@ type validator struct {
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
 	attesterHistoryByPubKey            map[[48]byte]kv.EncHistoryData
+	pkLocks                            map[[48]byte]*mputil.Lock
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
@@ -516,14 +517,17 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
-	locks := make([]*mputil.Lock, len(attestingPubKeys))
-	for i, pubKey := range attestingPubKeys {
+	newLocks := make(map[[48]byte]*mputil.Lock, len(attestingPubKeys))
+	for _, pubKey := range attestingPubKeys {
 		lock := mputil.NewMultilock(string(pubKey[:]))
-		locks[i] = lock
+		newLocks[pubKey] = lock
+	}
+	for _, lock := range v.pkLocks {
 		lock.Lock()
 	}
 	v.attesterHistoryByPubKey = attHistoryByPubKey
-	for _, lock := range locks {
+	v.pkLocks = newLocks
+	for _, lock := range v.pkLocks {
 		lock.Unlock()
 	}
 	return nil
