@@ -178,13 +178,18 @@ func TestHandleAccountChanges(t *testing.T) {
 
 	// Assert
 	pubKeys, err := db.ProposedPublicKeys(ctx)
-	found := false
+	originalFound := false
+	newFound := false
 	for _, key := range pubKeys {
-		if key == bytesutil.ToBytes48(newPubKeyBytes) {
-			found = true
+		if key == bytesutil.ToBytes48(originalPubKeyBytes) {
+			originalFound = true
+		} else if key == bytesutil.ToBytes48(newPubKeyBytes) {
+			newFound = true
 		}
 	}
-	assert.Equal(t, true, found, "new key was not added to the database")
+	assert.Equal(t, true, originalFound, "original key was removed from the database")
+	assert.Equal(t, true, newFound, "new key was not added to the database")
+	assert.LogsContain(t, logHook, fmt.Sprintf("%#x", bytesutil.Trunc(originalPubKeyBytes)))
 	assert.LogsContain(t, logHook, fmt.Sprintf("%#x", bytesutil.Trunc(newPubKeyBytes)))
 	assert.LogsContain(t, logHook, "Waiting for deposit to be observed by beacon node")
 }
