@@ -117,8 +117,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200",
-	}
+		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200,http://0.0.0.0:4242,http://0.0.0.0:4200"}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
@@ -227,6 +226,11 @@ var (
 		Usage: "Path to a directory where accounts will be backed up into a zip file",
 		Value: DefaultValidatorDir(),
 	}
+	// SlashingProtectionJSONFileFlag is used to enter the file path of the slashing protection JSON.
+	SlashingProtectionJSONFileFlag = &cli.StringFlag{
+		Name:  "slashing-protection-json-file",
+		Usage: "Path to an EIP-3076 compliant JSON file containing a user's slashing protection history",
+	}
 	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
 	KeysDirFlag = &cli.StringFlag{
 		Name:  "keys-dir",
@@ -237,6 +241,12 @@ var (
 		Name:  "grpc-remote-address",
 		Usage: "Host:port of a gRPC server for a remote keymanager",
 		Value: "",
+	}
+	// DisableRemoteSignerTlsFlag disables TLS when connecting to a remote signer.
+	DisableRemoteSignerTlsFlag = &cli.BoolFlag{
+		Name:  "disable-remote-signer-tls",
+		Usage: "Disables TLS when connecting to a remote signer. (WARNING! This will result in insecure requests!)",
+		Value: false,
 	}
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
 	// a secure signer via TLS and gRPC.
@@ -276,6 +286,13 @@ var (
 		Name:  "web",
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
+	}
+	// SlashingProtectionExportDirFlag allows specifying the outpt directory
+	// for a validator's slashing protection history.
+	SlashingProtectionExportDirFlag = &cli.StringFlag{
+		Name:  "slashing-protection-export-dir",
+		Usage: "Allows users to specify the output directory to export their slashing protection EIP-3076 standard JSON File",
+		Value: "",
 	}
 )
 

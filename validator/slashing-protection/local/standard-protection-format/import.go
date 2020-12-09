@@ -1,6 +1,7 @@
 package interchangeformat
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -47,6 +49,17 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
+	// We validate and filter out public keys parsed from JSON to ensure we are
+	// not importing those which are slashable with respect to other data within the same JSON.
+	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, signedBlocksByPubKey)
+	slashableAttesterKeys := filterSlashablePubKeysFromAttestations(ctx, signedAttsByPubKey)
+	for _, pubKey := range slashableProposerKeys {
+		delete(signedBlocksByPubKey, pubKey)
+	}
+	for _, pubKey := range slashableAttesterKeys {
+		delete(signedAttsByPubKey, pubKey)
+	}
+
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
@@ -72,13 +85,25 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
-	if err = validatorDB.SaveProposalHistoryForPubKeysV2(ctx, proposalHistoryByPubKey); err != nil {
-		return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+	for pubKey, proposalHistory := range proposalHistoryByPubKey {
+		bar := initializeProgressBar(
+			len(proposalHistory.Proposals),
+			fmt.Sprintf("Importing past proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
+		)
+		for _, proposal := range proposalHistory.Proposals {
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
+			if err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
+				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+			}
+		}
 	}
 	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 	}
-	return nil
+
+	return saveLowestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
 }
 
 func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
@@ -94,7 +119,24 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 
 	// We need to verify the genesis validators root matches that of our chain data, otherwise
 	// the imported slashing protection JSON was created on a different chain.
-	// TODO(#7813): Add this check, very important!
+	gvr, err := RootFromHex(interchangeJSON.Metadata.GenesisValidatorsRoot)
+	if err != nil {
+		return fmt.Errorf("%#x is not a valid root: %v", interchangeJSON.Metadata.GenesisValidatorsRoot, err)
+	}
+	dbGvr, err := validatorDB.GenesisValidatorsRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve genesis validator root to db")
+	}
+	if dbGvr == nil {
+		if err = validatorDB.SaveGenesisValidatorsRoot(ctx, gvr[:]); err != nil {
+			return errors.Wrap(err, "could not save genesis validator root to db")
+		}
+		return nil
+	}
+	if !bytes.Equal(dbGvr, gvr[:]) {
+		return errors.New("genesis validator root doesnt match the one that is stored in slashing protection db. " +
+			"Please make sure you import the protection data that is relevant to the chain you are on")
+	}
 	return nil
 }
 
@@ -156,6 +198,28 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 		}
 	}
 	return signedAttestationsByPubKey, nil
+}
+
+func filterSlashablePubKeysFromBlocks(ctx context.Context, blocksByPubkey map[[48]byte][]*SignedBlock) [][48]byte {
+	// We behave as strictly as possible and consider blocks with the same
+	// slot as slashable, as signing roots are optional in the EIP standard JSON file.
+	slashablePubKeys := make([][48]byte, 0)
+	for pubKey, signedBlocks := range blocksByPubkey {
+		seenSlots := make(map[string]bool)
+		for _, blk := range signedBlocks {
+			if ok := seenSlots[blk.Slot]; ok {
+				slashablePubKeys = append(slashablePubKeys, pubKey)
+				break
+			}
+			seenSlots[blk.Slot] = true
+		}
+	}
+	return slashablePubKeys
+}
+
+func filterSlashablePubKeysFromAttestations(ctx context.Context, attsByPubKey map[[48]byte][]*SignedAttestation) [][48]byte {
+	// TODO(#7813): Implement.
+	return nil
 }
 
 func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
@@ -220,4 +284,52 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 		return nil, errors.Wrap(err, "could not set latest epoch written")
 	}
 	return &attestingHistory, nil
+}
+
+// This saves the lowest source and target epoch from the individual validator to the DB.
+func saveLowestSourceTargetToDB(ctx context.Context, validatorDB db.Database, signedAttsByPubKey map[[48]byte][]*SignedAttestation) error {
+	validatorLowestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested source epoch.
+	validatorLowestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested target epoch.
+	for pubKey, signedAtts := range signedAttsByPubKey {
+		for _, att := range signedAtts {
+			source, err := Uint64FromString(att.SourceEpoch)
+			if err != nil {
+				return fmt.Errorf("%d is not a valid source: %v", source, err)
+			}
+			target, err := Uint64FromString(att.TargetEpoch)
+			if err != nil {
+				return fmt.Errorf("%d is not a valid target: %v", target, err)
+			}
+			se, ok := validatorLowestSourceEpoch[pubKey]
+			if !ok {
+				validatorLowestSourceEpoch[pubKey] = source
+			} else if source < se {
+				validatorLowestSourceEpoch[pubKey] = source
+			}
+			te, ok := validatorLowestTargetEpoch[pubKey]
+			if !ok {
+				validatorLowestTargetEpoch[pubKey] = target
+			} else if target < te {
+				validatorLowestTargetEpoch[pubKey] = target
+			}
+		}
+	}
+
+	// This should not happen.
+	if len(validatorLowestTargetEpoch) != len(validatorLowestSourceEpoch) {
+		return errors.New("incorrect source and target map length")
+	}
+
+	// Save lowest source and target epoch to DB for every validator in the map.
+	for k, v := range validatorLowestSourceEpoch {
+		if err := validatorDB.SaveLowestSignedSourceEpoch(ctx, k, v); err != nil {
+			return err
+		}
+	}
+	for k, v := range validatorLowestTargetEpoch {
+		if err := validatorDB.SaveLowestSignedTargetEpoch(ctx, k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }

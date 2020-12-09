@@ -47,7 +47,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Error("Failed to decode message")
+		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -107,7 +107,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	preState, err := s.chain.AttestationPreState(ctx, att)
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve pre state")
+		log.WithError(err).Error("Could not to retrieve pre state")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -148,7 +148,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
 	digest, err := s.forkDigest()
 	if err != nil {
-		log.WithError(err).Error("Failed to compute fork digest")
+		log.WithError(err).Error("Could not compute fork digest")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -184,7 +184,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	}
 
 	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
-		log.WithError(err).Error("Could not verify attestation")
+		log.WithError(err).Debug("Could not verify attestation")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}

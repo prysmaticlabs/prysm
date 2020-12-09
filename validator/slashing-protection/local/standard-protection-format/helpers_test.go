@@ -163,3 +163,97 @@ func Test_rootFromHex(t *testing.T) {
 		})
 	}
 }
+
+func Test_rootToHexString(t *testing.T) {
+	mockRoot := [32]byte{1}
+	tests := []struct {
+		name    string
+		root    []byte
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "nil roots return empty string",
+			root:    nil,
+			want:    "",
+			wantErr: false,
+		},
+		{
+			name:    "len(root) == 0 returns empty string",
+			root:    make([]byte, 0),
+			want:    "",
+			wantErr: false,
+		},
+		{
+			name:    "non-empty root with incorrect size returns error",
+			root:    make([]byte, 20),
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "non-empty root with correct size returns expected value",
+			root:    mockRoot[:],
+			want:    "0x0100000000000000000000000000000000000000000000000000000000000000",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := rootToHexString(tt.root)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("rootToHexString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("rootToHexString() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_pubKeyToHexString(t *testing.T) {
+	mockPubKey := [48]byte{1}
+	tests := []struct {
+		name    string
+		pubKey  []byte
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "nil pubkey should return error",
+			pubKey:  nil,
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "empty pubkey should return error",
+			pubKey:  make([]byte, 0),
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "wrong length pubkey should return error",
+			pubKey:  make([]byte, 3),
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "non-empty pubkey with correct size returns expected value",
+			pubKey:  mockPubKey[:],
+			want:    "0x010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := pubKeyToHexString(tt.pubKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("pubKeyToHexString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("pubKeyToHexString() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

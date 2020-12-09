@@ -13,11 +13,14 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	noise "github.com/libp2p/go-libp2p-noise"
 	"github.com/multiformats/go-multiaddr"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -70,7 +73,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	ipAddr := net.ParseIP("127.0.0.1")
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
 	require.NoError(t, err, "Failed to p2p listen")
-	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen)}...)
+	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.Security(noise.ID, noise.New)}...)
 	require.NoError(t, err)
 	return h, pkey, ipAddr
 }
@@ -312,4 +315,49 @@ func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.
 	time.Sleep(50 * time.Millisecond) // wait for pubsub filter to initialize.
 
 	return fd
+}
+
+func TestService_connectWithPeer(t *testing.T) {
+	tests := []struct {
+		name    string
+		peers   *peers.Status
+		info    peer.AddrInfo
+		wantErr string
+	}{
+		{
+			name: "bad peer",
+			peers: func() *peers.Status {
+				ps := peers.NewStatus(context.Background(), &peers.StatusConfig{
+					ScorerParams: &scorers.Config{},
+				})
+				for i := 0; i < 10; i++ {
+					ps.Scorers().BadResponsesScorer().Increment("bad")
+				}
+				return ps
+			}(),
+			info:    peer.AddrInfo{ID: "bad"},
+			wantErr: "refused to connect to bad peer",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, _, _ := createHost(t, 34567)
+			defer func() {
+				if err := h.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}()
+			ctx := context.Background()
+			s := &Service{
+				host:  h,
+				peers: tt.peers,
+			}
+			err := s.connectWithPeer(ctx, tt.info)
+			if len(tt.wantErr) > 0 {
+				require.ErrorContains(t, tt.wantErr, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

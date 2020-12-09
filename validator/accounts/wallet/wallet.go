@@ -33,7 +33,9 @@ const (
 	WalletPasswordPromptText = "Wallet password"
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"
-	hashCost                  = 8
+	// DefaultWalletPasswordFile used to store a wallet password with appropriate permissions
+	// if a user signs up via the Prysm web UI via RPC.
+	DefaultWalletPasswordFile = "walletpassword.txt"
 	// CheckExistsErrMsg for when there is an error while checking for a wallet
 	CheckExistsErrMsg = "could not check if wallet exists"
 	// CheckValidityErrMsg for when there is an error while checking wallet validity
@@ -45,7 +47,7 @@ const (
 var (
 	// ErrNoWalletFound signifies there was no wallet directory found on-disk.
 	ErrNoWalletFound = errors.New(
-		"no wallet found. You can create a new wallet with validator wallet create." +
+		"no wallet found. You can create a new wallet with validator wallet create. " +
 			"If you already did, perhaps you created a wallet in a custom directory, which you can specify using " +
 			"--wallet-dir=/path/to/my/wallet",
 	)

@@ -20,6 +20,13 @@ type MockSlasher struct {
 	IsSlashableBlockNoUpdateCalled       bool
 }
 
+// HighestAttestations will return an empty array of attestations.
+func (ms MockSlasher) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest, _ ...grpc.CallOption) (*slashpb.HighestAttestationResponse, error) {
+	return &slashpb.HighestAttestationResponse{
+		Attestations: nil,
+	}, nil
+}
+
 // IsSlashableAttestation returns slashbale attestation if slash attestation is set to true.
 func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.AttesterSlashingResponse, error) {
 	ms.IsSlashableAttestationCalled = true

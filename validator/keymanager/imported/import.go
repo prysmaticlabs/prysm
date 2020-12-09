@@ -62,7 +62,7 @@ func (dr *Keymanager) ImportKeystores(
 }
 
 // ImportKeypairs directly into the keymanager.
-func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys [][]byte, pubKeys [][]byte) error {
+func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]byte) error {
 	// Write the accounts to disk into a single keystore.
 	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
@@ -88,7 +88,7 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	doesNotDecrypt := err != nil && strings.Contains(err.Error(), "invalid checksum")
 	for doesNotDecrypt {
 		password, err = promptutil.PasswordPrompt(
-			"Password incorrect for keystore, input correct password", promptutil.NotEmpty,
+			fmt.Sprintf("Password incorrect for key 0x%s, input correct password", keystore.Pubkey), promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, nil, "", fmt.Errorf("could not read keystore password: %w", err)

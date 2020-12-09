@@ -11,6 +11,7 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	gcache "github.com/patrickmn/go-cache"
 	"github.com/protolambda/zssz"
 	"github.com/protolambda/zssz/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -105,7 +106,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		slotToPendingBlocks: make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
 		rateLimiter:         newRateLimiter(p1),
@@ -126,7 +127,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
 		for _, blk := range response {
 			_, err := stream.Write([]byte{responseCodeSuccess})
-			assert.NoError(t, err, "Failed to write to stream")
+			assert.NoError(t, err, "Could not write to stream")
 			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
 			assert.NoError(t, err, "Could not send response back")
 		}

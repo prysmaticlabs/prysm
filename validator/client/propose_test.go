@@ -188,15 +188,22 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
+	// Save a dummy proposal history at slot 0.
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
+	require.NoError(t, err)
+
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
+	testBlock := testutil.NewBeaconBlock()
+	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
+	testBlock.Block.Slot = slot
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Times(2).Return(testutil.NewBeaconBlock().Block, nil /*err*/)
+	).Times(2).Return(testBlock.Block, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -208,7 +215,6 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	validator.ProposeBlock(context.Background(), slot, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
@@ -223,15 +229,22 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
+	// Save a dummy proposal history at slot 0.
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
+	require.NoError(t, err)
+
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
+	testBlock := testutil.NewBeaconBlock()
+	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	testBlock.Block.Slot = farFuture
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Times(2).Return(testutil.NewBeaconBlock().Block, nil /*err*/)
+	).Times(2).Return(testBlock.Block, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -243,7 +256,6 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
@@ -257,6 +269,10 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+
+	// Save a dummy proposal history at slot 0.
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
+	require.NoError(t, err)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -301,6 +317,10 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+
+	// Save a dummy proposal history at slot 0.
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
+	require.NoError(t, err)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx

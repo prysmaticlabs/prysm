@@ -232,7 +232,7 @@ func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	r := [32]byte{'a'}
 	summary := &pb.StateSummary{Slot: 100}
 	_, err := service.stateSummary(ctx, r)
-	require.ErrorContains(t, errUnknownStateSummary.Error(), err)
+	require.ErrorContains(t, "could not find block in DB", err)
 
 	service.stateSummaryCache.Put(r, summary)
 	got, err := service.stateSummary(ctx, r)
@@ -244,7 +244,7 @@ func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	r = [32]byte{'b'}
 	summary = &pb.StateSummary{Root: r[:], Slot: 101}
 	_, err = service.stateSummary(ctx, r)
-	require.ErrorContains(t, errUnknownStateSummary.Error(), err)
+	require.ErrorContains(t, "could not find block in DB", err)
 
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, summary))
 	got, err = service.stateSummary(ctx, r)
@@ -269,6 +269,33 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 
 	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
 		t.Error("Did not correctly cache state")
+	}
+}
+
+func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
+	ctx := context.Background()
+	db, _ := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 0, Root: gRoot[:]}))
+
+	service.finalizedInfo.state = beaconState
+	service.finalizedInfo.slot = beaconState.Slot()
+	service.finalizedInfo.root = gRoot
+
+	// This tests where hot state was already cached.
+	loadedState, err := service.loadStateByRoot(ctx, gRoot)
+	require.NoError(t, err)
+
+	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not correctly retrieve finalized state")
 	}
 }
 

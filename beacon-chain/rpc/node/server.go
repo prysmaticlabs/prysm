@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -27,13 +28,15 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type Server struct {
-	SyncChecker        sync.Checker
-	Server             *grpc.Server
-	BeaconDB           db.ReadOnlyDatabase
-	PeersFetcher       p2p.PeersProvider
-	PeerManager        p2p.PeerManager
-	GenesisTimeFetcher blockchain.TimeFetcher
-	GenesisFetcher     blockchain.GenesisFetcher
+	SyncChecker          sync.Checker
+	Server               *grpc.Server
+	BeaconDB             db.ReadOnlyDatabase
+	PeersFetcher         p2p.PeersProvider
+	PeerManager          p2p.PeerManager
+	GenesisTimeFetcher   blockchain.TimeFetcher
+	GenesisFetcher       blockchain.GenesisFetcher
+	BeaconMonitoringHost string
+	BeaconMonitoringPort int
 }
 
 // GetSyncStatus checks the current network sync status of the node.
@@ -114,6 +117,13 @@ func (ns *Server) GetHost(_ context.Context, _ *ptypes.Empty) (*ethpb.HostData, 
 		Addresses: stringAddr,
 		PeerId:    ns.PeerManager.PeerID().String(),
 		Enr:       enr,
+	}, nil
+}
+
+// GetLogsEndpoint
+func (ns *Server) GetLogsEndpoint(_ context.Context, _ *ptypes.Empty) (*pbrpc.LogsEndpointResponse, error) {
+	return &pbrpc.LogsEndpointResponse{
+		BeaconLogsEndpoint: fmt.Sprintf("%s:%d", ns.BeaconMonitoringHost, ns.BeaconMonitoringPort),
 	}, nil
 }
 

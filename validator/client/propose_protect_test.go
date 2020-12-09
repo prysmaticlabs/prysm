@@ -11,6 +11,47 @@ import (
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
+func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) {
+	ctx := context.Background()
+	validator, _, validatorKey, finish := setup(t)
+	defer finish()
+	lowestSignedSlot := uint64(10)
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
+
+	// We save a proposal at the lowest signed slot in the DB.
+	err := validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, lowestSignedSlot, []byte{1})
+	require.NoError(t, err)
+	require.NoError(t, err)
+
+	// We expect the same block with a slot lower than the lowest
+	// signed slot to fail validation.
+	block := &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot - 1,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block)
+	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
+
+	// We expect the same block with a slot equal to the lowest
+	// signed slot to fail validation.
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block)
+	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
+
+	// We expect the same block with a slot > than the lowest
+	// signed slot to pass validation.
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot + 1,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block)
+	require.NoError(t, err)
+}
+
 func TestPreBlockSignLocalValidation(t *testing.T) {
 	ctx := context.Background()
 	config := &featureconfig.Flags{
@@ -25,15 +66,38 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 		Slot:          10,
 		ProposerIndex: 0,
 	}
-	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorKey.PublicKey().Marshal(), 10, []byte{1})
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
+
+	// We save a proposal at slot 1 as our lowest proposal.
+	err := validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, 1, []byte{1})
+	require.NoError(t, err)
+
+	// We save a proposal at slot 10 with a dummy signing root.
+	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, 10, []byte{1})
 	require.NoError(t, err)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+
+	// We expect the same block sent out should return slashable error.
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
+
+	// We save a proposal at slot 11 with a nil signing root.
+	block.Slot = 11
+	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, block.Slot, nil)
+	require.NoError(t, err)
+
+	// We expect the same block sent out should return slashable error even
+	// if we had a nil signing root stored in the database.
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
+	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
+
+	// A block with a different slot for which we do not have a proposing history
+	// should not be failing validation.
 	block.Slot = 9
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	require.NoError(t, err, "Expected allowed block not to throw error")
 }
 
 func TestPreBlockSignValidation(t *testing.T) {

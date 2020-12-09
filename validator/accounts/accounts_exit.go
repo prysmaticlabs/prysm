@@ -173,7 +173,6 @@ func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *eth
 	dialOpts := client.ConstructDialOptions(
 		cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 		cliCtx.String(flags.CertFlag.Name),
-		strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
 		cliCtx.Uint(flags.GrpcRetriesFlag.Name),
 		cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
 	)

@@ -12,23 +12,8 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnablePruningDepositProofs = &cli.BoolFlag{
-		Name:   "enable-pruning-deposit-proofs",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedEnableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:   "enable-eth1-data-majority-vote",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedEnableBlst = &cli.BoolFlag{
-		Name:   "blst",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedWaitForSyncedFlag = &cli.BoolFlag{
-		Name:   "wait-for-synced",
+	deprecatedDisableSyncBacktracking = &cli.StringFlag{
+		Name:   "enable-sync-backtracking",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -36,8 +21,5 @@ var (
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
-	deprecatedEnablePruningDepositProofs,
-	deprecatedEnableEth1DataMajorityVote,
-	deprecatedEnableBlst,
-	deprecatedWaitForSyncedFlag,
+	deprecatedDisableSyncBacktracking,
 }

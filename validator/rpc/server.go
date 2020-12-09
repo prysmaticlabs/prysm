@@ -33,65 +33,80 @@ func init() {
 
 // Config options for the gRPC server.
 type Config struct {
-	Host                  string
-	Port                  string
-	CertFlag              string
-	KeyFlag               string
-	ValDB                 db.Database
-	WalletDir             string
-	ValidatorService      *client.ValidatorService
-	SyncChecker           client.SyncChecker
-	GenesisFetcher        client.GenesisFetcher
-	WalletInitializedFeed *event.Feed
-	NodeGatewayEndpoint   string
-	Wallet                *wallet.Wallet
-	Keymanager            keymanager.IKeymanager
+	ValidatorGatewayHost    string
+	ValidatorGatewayPort    int
+	ValidatorMonitoringHost string
+	ValidatorMonitoringPort int
+	Host                    string
+	Port                    string
+	CertFlag                string
+	KeyFlag                 string
+	ValDB                   db.Database
+	WalletDir               string
+	ValidatorService        *client.ValidatorService
+	SyncChecker             client.SyncChecker
+	GenesisFetcher          client.GenesisFetcher
+	BeaconNodeInfoFetcher   client.BeaconNodeInfoFetcher
+	WalletInitializedFeed   *event.Feed
+	NodeGatewayEndpoint     string
+	Wallet                  *wallet.Wallet
+	Keymanager              keymanager.IKeymanager
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	valDB                 db.Database
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	host                  string
-	port                  string
-	listener              net.Listener
-	keymanager            keymanager.IKeymanager
-	withCert              string
-	withKey               string
-	credentialError       error
-	grpcServer            *grpc.Server
-	jwtKey                []byte
-	validatorService      *client.ValidatorService
-	syncChecker           client.SyncChecker
-	genesisFetcher        client.GenesisFetcher
-	walletDir             string
-	wallet                *wallet.Wallet
-	walletInitializedFeed *event.Feed
-	walletInitialized     bool
-	nodeGatewayEndpoint   string
+	valDB                   db.Database
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	host                    string
+	port                    string
+	listener                net.Listener
+	keymanager              keymanager.IKeymanager
+	withCert                string
+	withKey                 string
+	credentialError         error
+	grpcServer              *grpc.Server
+	jwtKey                  []byte
+	validatorService        *client.ValidatorService
+	syncChecker             client.SyncChecker
+	genesisFetcher          client.GenesisFetcher
+	beaconNodeInfoFetcher   client.BeaconNodeInfoFetcher
+	walletDir               string
+	wallet                  *wallet.Wallet
+	walletInitializedFeed   *event.Feed
+	walletInitialized       bool
+	nodeGatewayEndpoint     string
+	validatorMonitoringHost string
+	validatorMonitoringPort int
+	validatorGatewayHost    string
+	validatorGatewayPort    int
 }
 
 // NewServer instantiates a new gRPC server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Server{
-		ctx:                   ctx,
-		cancel:                cancel,
-		host:                  cfg.Host,
-		port:                  cfg.Port,
-		withCert:              cfg.CertFlag,
-		withKey:               cfg.KeyFlag,
-		valDB:                 cfg.ValDB,
-		validatorService:      cfg.ValidatorService,
-		syncChecker:           cfg.SyncChecker,
-		genesisFetcher:        cfg.GenesisFetcher,
-		walletDir:             cfg.WalletDir,
-		walletInitializedFeed: cfg.WalletInitializedFeed,
-		walletInitialized:     cfg.Wallet != nil,
-		wallet:                cfg.Wallet,
-		keymanager:            cfg.Keymanager,
-		nodeGatewayEndpoint:   cfg.NodeGatewayEndpoint,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		host:                    cfg.Host,
+		port:                    cfg.Port,
+		withCert:                cfg.CertFlag,
+		withKey:                 cfg.KeyFlag,
+		valDB:                   cfg.ValDB,
+		validatorService:        cfg.ValidatorService,
+		syncChecker:             cfg.SyncChecker,
+		beaconNodeInfoFetcher:   cfg.BeaconNodeInfoFetcher,
+		genesisFetcher:          cfg.GenesisFetcher,
+		walletDir:               cfg.WalletDir,
+		walletInitializedFeed:   cfg.WalletInitializedFeed,
+		walletInitialized:       cfg.Wallet != nil,
+		wallet:                  cfg.Wallet,
+		keymanager:              cfg.Keymanager,
+		nodeGatewayEndpoint:     cfg.NodeGatewayEndpoint,
+		validatorMonitoringHost: cfg.ValidatorMonitoringHost,
+		validatorMonitoringPort: cfg.ValidatorMonitoringPort,
+		validatorGatewayHost:    cfg.ValidatorGatewayHost,
+		validatorGatewayPort:    cfg.ValidatorGatewayPort,
 	}
 }
 

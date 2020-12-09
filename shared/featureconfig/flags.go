@@ -76,19 +76,29 @@ var (
 		Usage: "Disables pruning deposit proofs when they are no longer needed." +
 			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
-	enableSyncBacktracking = &cli.BoolFlag{
-		Name:  "enable-sync-backtracking",
-		Usage: "Enable experimental fork exploration backtracking algorithm",
+	disableSyncBacktracking = &cli.BoolFlag{
+		Name:  "disable-sync-backtracking",
+		Usage: "Disable alternative fork exploration backtracking algorithm",
+	}
+	enableLargerGossipHistory = &cli.BoolFlag{
+		Name:  "enable-larger-gossip-history",
+		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
+	}
+	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
+		Name: "write-wallet-password-on-web-onboarding",
+		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
+			"We recommend against this flag unless you are an advanced user.",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableSyncBacktracking,
+	enableLargerGossipHistory,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	ToledoTestnet,
 	PyrmontTestnet,
@@ -121,9 +131,10 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBlst,
 	disableEth1DataMajorityVote,
 	enablePeerScorer,
+	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
-	enableSyncBacktracking,
+	disableSyncBacktracking,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

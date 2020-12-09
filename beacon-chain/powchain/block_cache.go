@@ -45,12 +45,17 @@ type headerInfo struct {
 	Time   uint64
 }
 
-func headerToHeaderInfo(hdr *gethTypes.Header) *headerInfo {
+func headerToHeaderInfo(hdr *gethTypes.Header) (*headerInfo, error) {
+	if hdr.Number == nil {
+		// A nil number will panic when calling *big.Int.Set(...)
+		return nil, errors.New("cannot convert block header with nil block number")
+	}
+
 	return &headerInfo{
 		Hash:   hdr.Hash(),
 		Number: new(big.Int).Set(hdr.Number),
 		Time:   hdr.Time,
-	}
+	}, nil
 }
 
 // hashKeyFn takes the hex string representation as the key for a headerInfo.
@@ -151,7 +156,10 @@ func (b *headerCache) AddHeader(hdr *gethTypes.Header) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	hInfo := headerToHeaderInfo(hdr)
+	hInfo, err := headerToHeaderInfo(hdr)
+	if err != nil {
+		return err
+	}
 
 	if err := b.hashCache.AddIfNotPresent(hInfo); err != nil {
 		return err

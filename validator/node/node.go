@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -99,12 +100,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		return ValidatorClient, nil
 	}
 	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := ValidatorClient.db.MigrateV2ProposalsProtectionDb(cliCtx.Context); err != nil {
-		return nil, err
-	}
-	if err := ValidatorClient.db.MigrateV2AttestationProtectionDb(cliCtx.Context); err != nil {
 		return nil, err
 	}
 	return ValidatorClient, nil
@@ -221,7 +216,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	}
 	s.db = valDB
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := s.registerPrometheusService(); err != nil {
+		if err := s.registerPrometheusService(cliCtx); err != nil {
 			return err
 		}
 	}
@@ -247,6 +242,13 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
+	if fileutil.FileExists(defaultWalletPasswordFilePath) {
+		if err := cliCtx.Set(flags.WalletPasswordFileFlag.Name, defaultWalletPasswordFilePath); err != nil {
+			return errors.Wrap(err, "could not set default wallet password file path")
+		}
+	}
 	// Read the wallet from the specified path.
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, nil
@@ -297,7 +299,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	s.db = valDB
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := s.registerPrometheusService(); err != nil {
+		if err := s.registerPrometheusService(cliCtx); err != nil {
 			return err
 		}
 	}
@@ -324,10 +326,21 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (s *ValidatorClient) registerPrometheusService() error {
+func (s *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
+	var additionalHandlers []prometheus.Handler
+	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
+		additionalHandlers = append(
+			additionalHandlers,
+			prometheus.Handler{
+				Path:    "/db/backup",
+				Handler: backuputil.BackupHandler(s.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+			},
+		)
+	}
 	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		s.services,
+		additionalHandlers...,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
 	return s.services.RegisterService(service)
@@ -402,22 +415,31 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	if err := s.services.FetchService(&vs); err != nil {
 		return err
 	}
+	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+	validatorGatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
+	validatorMonitoringHost := cliCtx.String(cmd.MonitoringHostFlag.Name)
+	validatorMonitoringPort := cliCtx.Int(flags.MonitoringPortFlag.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
-		ValDB:                 s.db,
-		Host:                  rpcHost,
-		Port:                  fmt.Sprintf("%d", rpcPort),
-		WalletInitializedFeed: s.walletInitialized,
-		ValidatorService:      vs,
-		SyncChecker:           vs,
-		GenesisFetcher:        vs,
-		NodeGatewayEndpoint:   nodeGatewayEndpoint,
-		WalletDir:             walletDir,
-		Wallet:                s.wallet,
-		Keymanager:            km,
+		ValDB:                   s.db,
+		Host:                    rpcHost,
+		Port:                    fmt.Sprintf("%d", rpcPort),
+		WalletInitializedFeed:   s.walletInitialized,
+		ValidatorService:        vs,
+		SyncChecker:             vs,
+		GenesisFetcher:          vs,
+		BeaconNodeInfoFetcher:   vs,
+		NodeGatewayEndpoint:     nodeGatewayEndpoint,
+		WalletDir:               walletDir,
+		Wallet:                  s.wallet,
+		Keymanager:              km,
+		ValidatorGatewayHost:    validatorGatewayHost,
+		ValidatorGatewayPort:    validatorGatewayPort,
+		ValidatorMonitoringHost: validatorMonitoringHost,
+		ValidatorMonitoringPort: validatorMonitoringPort,
 	})
 	return s.services.RegisterService(server)
 }

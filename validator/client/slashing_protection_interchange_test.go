@@ -6,12 +6,14 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -106,11 +108,10 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 			// invalid test file.
 			if test.Name != "" {
 				t.Run(test.Name, func(t *testing.T) {
-
-					// Set up validator client, one new validator client per test.
-					// This ensures we initialize a new (empty) slashing protection database.
-					validator, _, _, _ := setup(t)
 					for _, step := range test.Steps {
+						// Set up validator client, one new validator client per test.
+						// This ensures we initialize a new (empty) slashing protection database.
+						validator, m, _, _ := setup(t)
 
 						// The test config contains the interchange config in json.
 						// This loads the interchange data via ImportStandardProtectionJSON.
@@ -135,18 +136,22 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 							require.NoError(t, err)
 							b := testutil.NewBeaconBlock()
 							b.Block.Slot = bSlot
+
 							err = validator.preBlockSignValidations(context.Background(), pk, b.Block)
 							if sb.ShouldSucceed {
 								require.NoError(t, err)
 							} else {
-								require.NotNil(t, err, "pre validation should have failed for block at slot %d", bSlot)
+								require.NotEqual(t, nil, err, "pre validation should have failed for block at slot %d", bSlot)
 							}
 
-							err = validator.postBlockSignUpdate(context.Background(), pk, b, &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)})
-							if sb.ShouldSucceed {
-								require.NoError(t, err)
-							} else {
-								require.NotNil(t, err, "post validation should have failed for block at slot %d", bSlot)
+							// Only proceed post update if pre validation did not error.
+							if err == nil {
+								err = validator.postBlockSignUpdate(context.Background(), pk, b, &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)})
+								if sb.ShouldSucceed {
+									require.NoError(t, err)
+								} else {
+									require.NotEqual(t, nil, err, "post validation should have failed for block at slot %d", bSlot)
+								}
 							}
 						}
 
@@ -160,24 +165,36 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 							require.NoError(t, err)
 							ia := &ethpb.IndexedAttestation{
 								Data: &ethpb.AttestationData{
-									Target: &ethpb.Checkpoint{Epoch: target},
-									Source: &ethpb.Checkpoint{Epoch: source},
+									BeaconBlockRoot: make([]byte, 32),
+									Target:          &ethpb.Checkpoint{Epoch: target, Root: make([]byte, 32)},
+									Source:          &ethpb.Checkpoint{Epoch: source, Root: make([]byte, 32)},
 								},
+								Signature: make([]byte, 96),
 							}
+							m.validatorClient.EXPECT().DomainData(
+								gomock.Any(), // ctx
+								gomock.Any(),
+							).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
 							err = validator.preAttSignValidations(context.Background(), ia, pk)
 							if sa.ShouldSucceed {
+								fmt.Println(ia)
 								require.NoError(t, err)
 							} else {
 								require.NotNil(t, err, "pre validation should have failed for attestation at source epoch %d", sa.SourceEpoch)
 							}
 
-							err = validator.postAttSignUpdate(context.Background(), ia, pk, [32]byte{}) // TODO: what signing root should we use here?
-							if sa.ShouldSucceed {
-								require.NoError(t, err)
-							} else {
-								require.NotNil(t, err, "post validation should have failed for attestation at source peoch %d", sa.SourceEpoch)
+							// Only proceed post update if pre validation did not error.
+							if err == nil {
+								err = validator.postAttSignUpdate(context.Background(), ia, pk, [32]byte{}) // TODO: what signing root should we use here?
+								if sa.ShouldSucceed {
+									require.NoError(t, err)
+								} else {
+									require.NotNil(t, err, "post validation should have failed for attestation at source epoch %d", sa.SourceEpoch)
+								}
 							}
 						}
+						require.NoError(t, err, validator.db.Close())
 					}
 				})
 			}

@@ -3,6 +3,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/hex"
@@ -134,6 +135,27 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not receive ChainStart from stream")
 		}
 		v.genesisTime = chainStartRes.GenesisTime
+		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get current genesis validators root")
+		}
+		if len(curGenValRoot) == 0 {
+			if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
+				return errors.Wrap(err, "could not save genesis validator root")
+			}
+		} else {
+			if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
+				log.Errorf("The genesis validators root received from the beacon node does not match what is in " +
+					"your validator database. This could indicate that this is a database meant for another network. If " +
+					"you were previously running this validator database on another network, please run --clear-db to " +
+					"clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues")
+				return fmt.Errorf(
+					"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
+					chainStartRes.GenesisValidatorsRoot,
+					curGenValRoot,
+				)
+			}
+		}
 	}
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
@@ -276,12 +298,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 			log.Info("Waiting for deposit to be observed by beacon node")
 		case ethpb.ValidatorStatus_DEPOSITED:
-			if status.Status.DepositInclusionSlot != 0 {
-				log.WithFields(logrus.Fields{
-					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
-					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
-				}).Info("Deposit for validator received but not processed into the beacon state")
-			} else {
+			if status.Status.PositionInActivationQueue != 0 {
 				log.WithField(
 					"positionInActivationQueue", status.Status.PositionInActivationQueue,
 				).Info("Deposit processed, entering activation queue after finalization")
@@ -503,20 +520,6 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	return nil
 }
 
-// SaveProtections saves the attestation information currently in validator state.
-func (v *validator) SaveProtections(ctx context.Context) error {
-	v.attesterHistoryByPubKeyLock.RLock()
-	if err := v.db.SaveAttestationHistoryForPubKeysV2(ctx, v.attesterHistoryByPubKey); err != nil {
-		return errors.Wrap(err, "could not save attester history to DB")
-	}
-	v.attesterHistoryByPubKeyLock.RUnlock()
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
-	v.attesterHistoryByPubKeyLock.Unlock()
-
-	return nil
-}
-
 // ResetAttesterProtectionData reset validators protection data.
 func (v *validator) ResetAttesterProtectionData() {
 	v.attesterHistoryByPubKeyLock.Lock()
@@ -527,11 +530,11 @@ func (v *validator) ResetAttesterProtectionData() {
 // SaveProtection saves the attestation information currently in validator state.
 func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
 	v.attesterHistoryByPubKeyLock.RLock()
-
+	defer v.attesterHistoryByPubKeyLock.RUnlock()
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
 		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
 	}
-	v.attesterHistoryByPubKeyLock.RUnlock()
+
 	return nil
 }
 
@@ -666,7 +669,6 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			}
 		}
 	}
-
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
 			log.WithField("slot", slotOffset+i).WithField("attesters", len(attesterKeys[i])).WithField("pubKeys", attesterKeys[i]).Info("Attestation schedule")
