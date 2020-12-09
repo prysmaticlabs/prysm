@@ -294,6 +294,11 @@ var (
 		Usage: "Allows users to specify the output directory to export their slashing protection EIP-3076 standard JSON File",
 		Value: "",
 	}
+	// GraffitiFileFlag specifies the file path to load graffiti values.
+	GraffitiFileFlag = &cli.StringFlag{
+		Name:  "graffiti-file",
+		Usage: "The path to a YAML file with graffiti values",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

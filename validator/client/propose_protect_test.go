@@ -114,6 +114,7 @@ func TestPreBlockSignValidation(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot:          10,
 		ProposerIndex: 0,
+		Body:          &ethpb.BeaconBlockBody{},
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector

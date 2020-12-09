@@ -102,6 +102,7 @@ type BeaconChainConfig struct {
 	SlotsPerArchivedPoint     uint64        // SlotsPerArchivedPoint defines the number of slots per one archived point.
 	GenesisCountdownInterval  time.Duration // How often to log the countdown until the genesis time is reached.
 	NetworkName               string        // NetworkName for allowing an easy human-readable way of knowing what chain is being used.
+	BeaconStateFieldCount     int           // BeaconStateFieldCount defines how many fields are in beacon state.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
