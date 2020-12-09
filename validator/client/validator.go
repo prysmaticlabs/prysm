@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -59,7 +60,6 @@ type validator struct {
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
-	attesterHistoryByPubKeyLock        sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	genesisTime                        uint64
 	domainDataCache                    *ristretto.Cache
@@ -516,27 +516,18 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
-	v.attesterHistoryByPubKeyLock.Lock()
 	v.attesterHistoryByPubKey = attHistoryByPubKey
-	v.attesterHistoryByPubKeyLock.Unlock()
 	return nil
-}
-
-// ResetAttesterProtectionData reset validators protection data.
-func (v *validator) ResetAttesterProtectionData() {
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
-	v.attesterHistoryByPubKeyLock.Unlock()
 }
 
 // SaveProtection saves the attestation information currently in validator state.
 func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
-	v.attesterHistoryByPubKeyLock.RLock()
-	defer v.attesterHistoryByPubKeyLock.RUnlock()
+	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
 		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
 	}
-
 	return nil
 }
 

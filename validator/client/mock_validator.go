@@ -119,11 +119,6 @@ func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ uint64)
 	return nil
 }
 
-// ResetAttesterProtectionData for mocking.
-func (fv *FakeValidator) ResetAttesterProtectionData() {
-	fv.DeleteProtectionCalled = true
-}
-
 // RolesAt for mocking.
 func (fv *FakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
 	fv.RoleAtCalled = true

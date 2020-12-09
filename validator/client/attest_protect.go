@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/sirupsen/logrus"
@@ -21,11 +22,11 @@ var failedPostAttSignExternalErr = "external slasher service detected a submitte
 func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.preAttSignUpdate")
 	defer span.End()
-
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	v.attesterHistoryByPubKeyLock.RLock()
+	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
-	v.attesterHistoryByPubKeyLock.RUnlock()
 	if !ok {
 		AttestationMapMiss.Inc()
 		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
@@ -76,8 +77,9 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	defer span.End()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	v.attesterHistoryByPubKeyLock.Lock()
-	defer v.attesterHistoryByPubKeyLock.Unlock()
+	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	if !ok {
 		AttestationMapMiss.Inc()
