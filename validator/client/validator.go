@@ -516,7 +516,16 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
+	locks := make([]*mputil.Lock, len(attestingPubKeys))
+	for i, pubKey := range attestingPubKeys {
+		lock := mputil.NewMultilock(string(pubKey[:]))
+		locks[i] = lock
+		lock.Lock()
+	}
 	v.attesterHistoryByPubKey = attHistoryByPubKey
+	for _, lock := range locks {
+		lock.Unlock()
+	}
 	return nil
 }
 
