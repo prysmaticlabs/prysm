@@ -153,6 +153,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SlotsPerArchivedPoint:     2048,
 	GenesisCountdownInterval:  time.Minute,
 	NetworkName:               "Mainnet",
+	BeaconStateFieldCount:     21,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
