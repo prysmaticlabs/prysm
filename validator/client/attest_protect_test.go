@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -165,6 +166,8 @@ func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 	}
 	sr := [32]byte{1}
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	validator.pkLocks = make(map[[48]byte]*mputil.Lock)
+	validator.pkLocks[fakePubkey] = mputil.NewMultilock(string(fakePubkey[:]))
 	err := validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
