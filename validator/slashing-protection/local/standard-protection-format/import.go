@@ -207,17 +207,23 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 }
 
 func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[48]byte]kv.ProposalHistoryForPubkey) [][48]byte {
-	// We behave as strictly as possible and consider blocks with the same
-	// slot as slashable, as signing roots are optional in the EIP standard JSON file.
+	// Given signing roots are optional in the EIP standard, we behave as follows:
+	// For a given block:
+	//   If we have a previous block with the same slot in our history:
+	//     If signing root is nil, we consider that proposer public key as slashable
+	//     If signing root is not nil , then we compare signing roots. If they are different,
+	//     then we consider that proposer public key as slashable.
 	slashablePubKeys := make([][48]byte, 0)
 	for pubKey, proposals := range historyByPubKey {
-		seenSlots := make(map[uint64]bool)
+		seenSigningRootsBySlot := make(map[uint64][]byte)
 		for _, blk := range proposals.Proposals {
-			if ok := seenSlots[blk.Slot]; ok {
-				slashablePubKeys = append(slashablePubKeys, pubKey)
-				break
+			if signingRoot, ok := seenSigningRootsBySlot[blk.Slot]; ok {
+				if signingRoot == nil || !bytes.Equal(signingRoot, blk.SigningRoot) {
+					slashablePubKeys = append(slashablePubKeys, pubKey)
+					break
+				}
 			}
-			seenSlots[blk.Slot] = true
+			seenSigningRootsBySlot[blk.Slot] = blk.SigningRoot
 		}
 	}
 	return slashablePubKeys
