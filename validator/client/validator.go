@@ -533,9 +533,8 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 
 // SaveProtection saves the attestation information currently in validator state.
 func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
-	lock := mputil.NewMultilock(string(pubKey[:]))
-	lock.Lock()
-	defer lock.Unlock()
+	v.pkLocks[pubKey].Lock()
+	defer v.pkLocks[pubKey].Unlock()
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
 		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
 	}
