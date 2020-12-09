@@ -7,8 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	protectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 )
@@ -17,25 +15,28 @@ import (
 // using attesting and proposing histories provided.
 func MockSlashingProtectionJSON(
 	publicKeys [][48]byte,
-	attestingHistories []kv.EncHistoryData,
-	proposalHistories []kv.ProposalHistoryForPubkey,
+	attestingHistories map[[48]byte]kv.EncHistoryData,
+	proposalHistories map[[48]byte]kv.ProposalHistoryForPubkey,
 ) (*protectionFormat.EIPSlashingProtectionFormat, error) {
 	standardProtectionFormat := &protectionFormat.EIPSlashingProtectionFormat{}
 	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{32}, 32))
 	standardProtectionFormat.Metadata.InterchangeFormatVersion = protectionFormat.INTERCHANGE_FORMAT_VERSION
 	ctx := context.Background()
-	for i := 0; i < len(publicKeys); i++ {
+	for _, pubKey := range publicKeys {
 		data := &protectionFormat.ProtectionData{
-			Pubkey: fmt.Sprintf("%#x", publicKeys[i]),
+			Pubkey: fmt.Sprintf("%#x", pubKey),
 		}
-		highestEpochWritten, err := attestingHistories[i].GetLatestEpochWritten(ctx)
+		highestEpochWritten, err := attestingHistories[pubKey].GetLatestEpochWritten(ctx)
 		if err != nil {
 			return nil, err
 		}
 		for target := uint64(0); target <= highestEpochWritten; target++ {
-			hd, err := attestingHistories[i].GetTargetData(ctx, target)
+			hd, err := attestingHistories[pubKey].GetTargetData(ctx, target)
 			if err != nil {
 				return nil, err
+			}
+			if hd.IsEmpty() {
+				continue
 			}
 			data.SignedAttestations = append(data.SignedAttestations, &protectionFormat.SignedAttestation{
 				TargetEpoch: fmt.Sprintf("%d", target),
@@ -44,7 +45,7 @@ func MockSlashingProtectionJSON(
 			})
 		}
 		for target := uint64(0); target < highestEpochWritten; target++ {
-			proposal := proposalHistories[i].Proposals[target]
+			proposal := proposalHistories[pubKey].Proposals[target]
 			block := &protectionFormat.SignedBlock{
 				Slot:        fmt.Sprintf("%d", proposal.Slot),
 				SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
@@ -59,22 +60,23 @@ func MockSlashingProtectionJSON(
 
 // MockAttestingAndProposalHistories given a number of validators, creates mock attesting
 // and proposing histories within WEAK_SUBJECTIVITY_PERIOD bounds.
-func MockAttestingAndProposalHistories(numValidators int) ([]kv.EncHistoryData, []kv.ProposalHistoryForPubkey, error) {
-	attData := make([]kv.EncHistoryData, numValidators)
-	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
-	gen := rand.NewGenerator()
+func MockAttestingAndProposalHistories(
+	pubKeys [][48]byte, highestEpoch int,
+) (map[[48]byte]kv.EncHistoryData, map[[48]byte]kv.ProposalHistoryForPubkey, error) {
+	attData := make(map[[48]byte]kv.EncHistoryData, len(pubKeys))
+	proposalData := make(map[[48]byte]kv.ProposalHistoryForPubkey, len(pubKeys))
 	ctx := context.Background()
-	for v := 0; v < numValidators; v++ {
+	for v := 0; v < len(pubKeys); v++ {
 		var err error
-		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000)
+		latestTarget := highestEpoch
 		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
 		proposals := make([]kv.Proposal, 0)
-		for i := 1; i < latestTarget; i++ {
+		for i := 1; i <= latestTarget; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			historyData := &kv.HistoryData{
-				Source:      uint64(gen.Intn(100000)),
+				Source:      uint64(i - 1),
 				SigningRoot: signingRoot[:],
 			}
 			hd, err = hd.SetTargetData(ctx, uint64(i), historyData)
@@ -91,12 +93,12 @@ func MockAttestingAndProposalHistories(numValidators int) ([]kv.EncHistoryData, 
 				SigningRoot: signingRoot[:],
 			})
 		}
-		proposalData[v] = kv.ProposalHistoryForPubkey{Proposals: proposals}
+		proposalData[pubKeys[v]] = kv.ProposalHistoryForPubkey{Proposals: proposals}
 		hd, err = hd.SetLatestEpochWritten(ctx, uint64(latestTarget))
 		if err != nil {
 			return nil, nil, err
 		}
-		attData[v] = hd
+		attData[pubKeys[v]] = hd
 	}
 	return attData, proposalData, nil
 }

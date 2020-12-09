@@ -11,7 +11,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -743,8 +745,163 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			slashablePubKeys := filterSlashablePubKeysFromBlocks(context.Background(), tt.given)
-			require.DeepEqual(t, tt.expected, slashablePubKeys)
+			ctx := context.Background()
+			historyByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
+			for pubKey, signedBlocks := range tt.given {
+				proposalHistory, err := transformSignedBlocks(ctx, signedBlocks)
+				require.NoError(t, err)
+				historyByPubKey[pubKey] = *proposalHistory
+			}
+			slashablePubKeys := filterSlashablePubKeysFromBlocks(context.Background(), historyByPubKey)
+			wantedPubKeys := make(map[[48]byte]bool)
+			for _, pk := range tt.expected {
+				wantedPubKeys[pk] = true
+			}
+			for _, pk := range slashablePubKeys {
+				ok := wantedPubKeys[pk]
+				require.Equal(t, true, ok)
+			}
+		})
+	}
+}
+
+func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name                 string
+		previousAttsByPubKey map[[48]byte][]*SignedAttestation
+		incomingAttsByPubKey map[[48]byte][]*SignedAttestation
+		want                 map[[48]byte]bool
+		wantErr              bool
+	}{
+		{
+			name: "Properly filters out double voting attester keys",
+			previousAttsByPubKey: map[[48]byte][]*SignedAttestation{
+				{1}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+				},
+				{2}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "5",
+					},
+				},
+				{3}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+				},
+			},
+			want: map[[48]byte]bool{
+				{1}: true,
+				{3}: true,
+			},
+		},
+		{
+			name: "Returns empty if no keys are slashable",
+			previousAttsByPubKey: map[[48]byte][]*SignedAttestation{
+				{1}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+				},
+				{2}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "5",
+					},
+				},
+				{3}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+					{
+						SourceEpoch: "3",
+						TargetEpoch: "6",
+					},
+				},
+			},
+			want: map[[48]byte]bool{},
+		},
+		{
+			name: "Properly filters out surround voting attester keys",
+			previousAttsByPubKey: map[[48]byte][]*SignedAttestation{
+				{1}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+					{
+						SourceEpoch: "1",
+						TargetEpoch: "5",
+					},
+				},
+				{2}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "4",
+					},
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "5",
+					},
+				},
+				{3}: {
+					{
+						SourceEpoch: "2",
+						TargetEpoch: "5",
+					},
+					{
+						SourceEpoch: "3",
+						TargetEpoch: "4",
+					},
+				},
+			},
+			want: map[[48]byte]bool{
+				{1}: true,
+				{3}: true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
+			for pubKey, signedAtts := range tt.incomingAttsByPubKey {
+				attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
+				require.NoError(t, err)
+				attestingHistoryByPubKey[pubKey] = *attestingHistory
+			}
+			got, err := filterSlashablePubKeysFromAttestations(ctx, attestingHistoryByPubKey, tt.incomingAttsByPubKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("filterSlashablePubKeysFromAttestations() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			for _, pubKey := range got {
+				ok := tt.want[pubKey]
+				assert.Equal(t, true, ok)
+			}
 		})
 	}
 }
