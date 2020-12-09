@@ -530,7 +530,7 @@ func extractAuthStringFromFlag(flag string) (string, string) {
 	} else if len(authProvider) == 1 {
 		httpProvider = flag
 	} else {
-		log.Errorf("Web 3 provider string can contain one comma for specifying the jwt key to access the provider. String contains too many commas: %d", len(authProvider))
+		log.Errorf("Web 3 provider string can contain one comma for specifying the authorization header to access the provider. String contains too many commas: %d", len(authProvider))
 	}
 	return httpProvider, auth
 }
