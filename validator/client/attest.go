@@ -219,7 +219,7 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 // waitToSlotOneThird waits until one third through the current slot period
 // such that head block for beacon node can get updated.
 func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
+	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
 
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)

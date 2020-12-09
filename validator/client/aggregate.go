@@ -144,7 +144,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 // such that any attestations from this slot have time to reach the beacon node
 // before creating the aggregated attestation.
 func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
+	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
 	defer span.End()
 
 	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
