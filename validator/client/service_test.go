@@ -2,13 +2,21 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/metadata"
 )
@@ -104,4 +112,79 @@ func TestStart_GrpcHeaders(t *testing.T) {
 			require.DeepEqual(t, md, metadata.Pairs(output...))
 		}
 	}
+}
+
+func TestHandleAccountChanges(t *testing.T) {
+	logHook := logTest.NewGlobal()
+	ctx := context.Background()
+
+	// Prepare keys
+	originalPrivKey, err := bls.RandKey()
+	require.NoError(t, err)
+	originalPubKeyBytes := originalPrivKey.PublicKey().Marshal()
+	newPrivKey, err := bls.RandKey()
+	require.NoError(t, err)
+	newPubKeyBytes := newPrivKey.PublicKey().Marshal()
+
+	// Prepare database
+	db := dbTest.SetupDB(t, [][48]byte{bytesutil.ToBytes48(originalPubKeyBytes)})
+
+	// Prepare validator client mock
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	validatorClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	validatorClient.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&ethpb.ValidatorActivationRequest{
+			PublicKeys: [][]byte{originalPubKeyBytes, newPubKeyBytes},
+		},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.ValidatorActivationResponse{
+			Statuses: []*ethpb.ValidatorActivationResponse_Status{
+				{
+					PublicKey: originalPubKeyBytes,
+					Status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+				},
+				{
+					PublicKey: newPubKeyBytes,
+					Status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_UNKNOWN_STATUS},
+				},
+			},
+		},
+		nil,
+	)
+
+	// Prepare keymanager
+	km := &imported.Keymanager{}
+	imported.PrepareKeymanagerForKeystoreReload(km)
+
+	// Prepare validator service
+	validatorService := &ValidatorService{
+		ctx: ctx,
+		db:  db,
+		validator: &validator{
+			keyManager:      km,
+			validatorClient: validatorClient,
+		},
+		keyManager: km,
+	}
+
+	// Run the test: subscribe to account changes and simulate such changes
+	go validatorService.handleAccountChanges(ctx)
+	require.NoError(t, imported.SimulateReloadingAccountsFromKeystore(km, []bls.SecretKey{originalPrivKey, newPrivKey}))
+	time.Sleep(time.Second * 1) // Allow code subscribed to account changes to run
+
+	// Assert
+	pubKeys, err := db.ProposedPublicKeys(ctx)
+	found := false
+	for _, key := range pubKeys {
+		if key == bytesutil.ToBytes48(newPubKeyBytes) {
+			found = true
+		}
+	}
+	assert.Equal(t, true, found, "new key was not added to the database")
+	assert.LogsContain(t, logHook, fmt.Sprintf("%#x", bytesutil.Trunc(newPubKeyBytes)))
+	assert.LogsContain(t, logHook, "Waiting for deposit to be observed by beacon node")
 }
