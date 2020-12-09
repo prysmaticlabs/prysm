@@ -507,7 +507,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]Va
 func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
 	for _, duty := range v.duties.CurrentEpochDuties {
-		if duty == nil || duty.AttesterSlot != slot {
+		if duty == nil || duty.AttesterSlot != slot-1 {
 			continue
 		}
 		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))

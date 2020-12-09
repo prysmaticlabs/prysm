@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +16,9 @@ var failedPreBlockSignLocalErr = "attempted to sign a double proposal, block rej
 var failedPreBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
 var failedPostBlockSignErr = "made a double proposal, considered slashable by remote slashing protection"
 
-func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
+func (v *validator) preBlockSignValidations(
+	ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock, signingRoot [32]byte,
+) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
 	// Based on EIP3076, validator should refuse to sign any proposal with slot less
@@ -33,17 +35,19 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 		)
 	}
 
-	_, exists, err = v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
+	prevSigningRoot, exists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return errors.Wrap(err, "failed to get proposal history")
 	}
-	// If a proposal exists in our history for the slot, we assume it is slashable.
-	// TODO(#7848): Add a more sophisticated strategy where if we indeed have the signing root,
-	// only blocks that have a conflicting signing root with a historical proposal are slashable.
-	if exists {
+
+	// If a proposal exists in our history for the slot, we check the following:
+	// If the signing root is nil, then we consider it slashable. If signing root is not nil,
+	// we check if it is different than the incoming block's signing root. If that is the case,
+	// we consider that proposal slashable.
+	if exists && (prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot) {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -66,7 +70,12 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 	return nil
 }
 
-func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, block *ethpb.SignedBeaconBlock, domain *ethpb.DomainResponse) error {
+func (v *validator) postBlockSignUpdate(
+	ctx context.Context,
+	pubKey [48]byte,
+	block *ethpb.SignedBeaconBlock,
+	signingRoot [32]byte,
+) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
@@ -83,13 +92,6 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 			}
 			return fmt.Errorf(failedPostBlockSignErr)
 		}
-	}
-	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain.SignatureDomain)
-	if err != nil {
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return errors.Wrap(err, "failed to compute signing root for block")
 	}
 	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Block.Slot, signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
