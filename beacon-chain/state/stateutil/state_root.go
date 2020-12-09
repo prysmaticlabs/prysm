@@ -20,9 +20,6 @@ const cacheSize = 100000
 var nocachedHasher *stateRootHasher
 var cachedHasher *stateRootHasher
 
-// There are 21 fields in the beacon state.
-const fieldCount = 21
-
 func init() {
 	rootsCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cacheSize, // number of keys to track frequency of (1M).
@@ -56,7 +53,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 		return nil, errors.New("nil state")
 	}
 	hasher := hashutil.CustomSHA256Hasher()
-	fieldRoots := make([][]byte, fieldCount)
+	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateFieldCount)
 
 	// Genesis time root.
 	genesisRoot := htrutils.Uint64Root(state.GenesisTime)

@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -109,6 +110,7 @@ func main() {
 	app.Commands = []*cli.Command{
 		accounts.WalletCommands,
 		accounts.AccountCommands,
+		db.DatabaseCommands,
 	}
 
 	app.Flags = appFlags
