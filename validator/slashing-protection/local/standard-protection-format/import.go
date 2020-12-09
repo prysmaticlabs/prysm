@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -49,17 +50,6 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
-	// We validate and filter out public keys parsed from JSON to ensure we are
-	// not importing those which are slashable with respect to other data within the same JSON.
-	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, signedBlocksByPubKey)
-	slashableAttesterKeys := filterSlashablePubKeysFromAttestations(ctx, signedAttsByPubKey)
-	for _, pubKey := range slashableProposerKeys {
-		delete(signedBlocksByPubKey, pubKey)
-	}
-	for _, pubKey := range slashableAttesterKeys {
-		delete(signedAttsByPubKey, pubKey)
-	}
-
 	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
@@ -80,6 +70,22 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
 		attestingHistoryByPubKey[pubKey] = *attestingHistory
+	}
+
+	// We validate and filter out public keys parsed from JSON to ensure we are
+	// not importing those which are slashable with respect to other data within the same JSON.
+	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, proposalHistoryByPubKey)
+	slashableAttesterKeys, err := filterSlashablePubKeysFromAttestations(
+		ctx, attestingHistoryByPubKey, signedAttsByPubKey,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
+	}
+	for _, pubKey := range slashableProposerKeys {
+		delete(proposalHistoryByPubKey, pubKey)
+	}
+	for _, pubKey := range slashableAttesterKeys {
+		delete(attestingHistoryByPubKey, pubKey)
 	}
 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
@@ -200,13 +206,13 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 	return signedAttestationsByPubKey, nil
 }
 
-func filterSlashablePubKeysFromBlocks(ctx context.Context, blocksByPubkey map[[48]byte][]*SignedBlock) [][48]byte {
+func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[48]byte]kv.ProposalHistoryForPubkey) [][48]byte {
 	// We behave as strictly as possible and consider blocks with the same
 	// slot as slashable, as signing roots are optional in the EIP standard JSON file.
 	slashablePubKeys := make([][48]byte, 0)
-	for pubKey, signedBlocks := range blocksByPubkey {
-		seenSlots := make(map[string]bool)
-		for _, blk := range signedBlocks {
+	for pubKey, proposals := range historyByPubKey {
+		seenSlots := make(map[uint64]bool)
+		for _, blk := range proposals.Proposals {
 			if ok := seenSlots[blk.Slot]; ok {
 				slashablePubKeys = append(slashablePubKeys, pubKey)
 				break
@@ -217,9 +223,43 @@ func filterSlashablePubKeysFromBlocks(ctx context.Context, blocksByPubkey map[[4
 	return slashablePubKeys
 }
 
-func filterSlashablePubKeysFromAttestations(ctx context.Context, attsByPubKey map[[48]byte][]*SignedAttestation) [][48]byte {
-	// TODO(#7813): Implement.
-	return nil
+func filterSlashablePubKeysFromAttestations(
+	ctx context.Context,
+	historyByPubKey map[[48]byte]kv.EncHistoryData,
+	signedAttsByPubKey map[[48]byte][]*SignedAttestation,
+) ([][48]byte, error) {
+	slashablePubKeys := make([][48]byte, 0)
+	for pubKey, signedAtts := range signedAttsByPubKey {
+		history, ok := historyByPubKey[pubKey]
+		if !ok {
+			// This should not happen, as the map is populated prior to calling this function.
+			return nil, fmt.Errorf("could not find history for public key %#x", pubKey)
+		}
+		for _, att := range signedAtts {
+			// Malformed data should not prevent us from completing this function.
+			source, err := uint64FromString(att.SourceEpoch)
+			if err != nil {
+				continue
+			}
+			target, err := uint64FromString(att.TargetEpoch)
+			if err != nil {
+				continue
+			}
+			signingRoot, err := rootFromHex(att.SigningRoot)
+			if err != nil {
+				continue
+			}
+			slashable, err := attestinghistory.IsNewAttSlashable(ctx, history, source, target, signingRoot)
+			if err != nil {
+				continue
+			}
+			if slashable {
+				slashablePubKeys = append(slashablePubKeys, pubKey)
+				break
+			}
+		}
+	}
+	return slashablePubKeys, nil
 }
 
 func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {

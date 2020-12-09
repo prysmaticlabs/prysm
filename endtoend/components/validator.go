@@ -60,9 +60,14 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 	if err != nil {
 		t.Fatal(err)
 	}
+	gFile, err := helpers.GraffitiYamlFile(e2e.TestParams.TestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	args := []string{
 		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--log-file=%s", file.Name()),
+		fmt.Sprintf("--graffiti-file=%s", gFile),
 		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
 		fmt.Sprintf("--interop-start-index=%d", offset),
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),

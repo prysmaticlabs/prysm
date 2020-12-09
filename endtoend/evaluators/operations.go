@@ -10,9 +10,11 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"golang.org/x/exp/rand"
@@ -42,6 +44,13 @@ var ProcessesDepositsInBlocks = types.Evaluator{
 	Name:       "processes_deposits_in_blocks_epoch_%d",
 	Policy:     policies.OnEpoch(depositsInBlockStart), // We expect all deposits to enter in one epoch.
 	Evaluation: processesDepositsInBlocks,
+}
+
+// VerifyBlockGraffiti ensures the block graffiti is one of the random list.
+var VerifyBlockGraffiti = types.Evaluator{
+	Name:       "verify_graffiti_in_blocks_epoch_%d",
+	Policy:     policies.AfterNthEpoch(0),
+	Evaluation: verifyGraffitiInBlocks,
 }
 
 // ActivatesDepositedValidators ensures the expected amount of validator deposits are activated into the state.
@@ -106,6 +115,36 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	if deposits != depositValCount {
 		return fmt.Errorf("expected %d deposits to be processed, received %d", depositValCount, deposits)
 	}
+	return nil
+}
+
+func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	client := eth.NewBeaconChainClient(conn)
+
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get chain head")
+	}
+
+	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBlocks(context.Background(), req)
+	if err != nil {
+		return errors.Wrap(err, "failed to get blocks from beacon-chain")
+	}
+	for _, blk := range blks.BlockContainers {
+		var e bool
+		for _, graffiti := range helpers.Graffiti {
+			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), blk.Block.Block.Body.Graffiti) {
+				e = true
+				break
+			}
+		}
+		if !e && blk.Block.Block.Slot != 0 {
+			return errors.New("could not get graffiti from the list")
+		}
+	}
+
 	return nil
 }
 

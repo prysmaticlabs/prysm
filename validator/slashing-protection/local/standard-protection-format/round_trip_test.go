@@ -17,14 +17,15 @@ import (
 
 func TestImportExport_RoundTrip(t *testing.T) {
 	ctx := context.Background()
-	numValidators := 5
+	numValidators := 10
+	numEpochs := 20
 	publicKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(publicKeys, numEpochs)
 	require.NoError(t, err)
 	wanted, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
@@ -64,13 +65,14 @@ func TestImportExport_RoundTrip(t *testing.T) {
 func TestImportInterchangeData_OK(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
+	numEpochs := 20
 	publicKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(publicKeys, numEpochs)
 	require.NoError(t, err)
 	standardProtectionFormat, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
@@ -89,13 +91,8 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
 	require.NoError(t, err)
 	for i := 0; i < len(publicKeys); i++ {
-		require.DeepEqual(
-			t,
-			attestingHistory[i],
-			receivedAttestingHistory[publicKeys[i]],
-			"We should have stored any attesting history",
-		)
-		proposals := proposalHistory[i].Proposals
+		require.DeepEqual(t, attestingHistory[publicKeys[i]], receivedAttestingHistory[publicKeys[i]])
+		proposals := proposalHistory[publicKeys[i]].Proposals
 		for _, proposal := range proposals {
 			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
 			require.NoError(t, err)
@@ -112,13 +109,14 @@ func TestImportInterchangeData_OK(t *testing.T) {
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
+	numEpochs := 20
 	publicKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(publicKeys, numEpochs)
 	require.NoError(t, err)
 	standardProtectionFormat, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
@@ -150,7 +148,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 			receivedAttestingHistory[publicKeys[i]],
 			"Imported attestation protection history is different than the empty default",
 		)
-		proposals := proposalHistory[i].Proposals
+		proposals := proposalHistory[publicKeys[i]].Proposals
 		for _, proposal := range proposals {
 			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
 			require.NoError(t, err)
