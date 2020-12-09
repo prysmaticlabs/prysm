@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -134,6 +135,9 @@ func MarkAllAsAttestedSinceLatestWrittenEpoch(
 	incomingTarget uint64,
 	incomingAtt *HistoryData,
 ) (EncHistoryData, error) {
+	ctx, span := trace.StartSpan(ctx, "kv.MarkAllAttestedSinceLastWrittenEpoch")
+	defer span.End()
+
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	latestEpochWritten, err := hist.GetLatestEpochWritten(ctx)
 	if err != nil {

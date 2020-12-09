@@ -16,7 +16,6 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/sirupsen/logrus"
@@ -289,9 +288,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	}
 	for i := 0; i < len(peers); i++ {
 		if blocks, err := f.requestBlocks(ctx, req, peers[i]); err == nil {
-			if featureconfig.Get().EnablePeerScorer {
-				f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
-			}
+			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
 			return blocks, peers[i], err
 		}
 	}

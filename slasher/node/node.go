@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -34,8 +35,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "node")
-
-const slasherDBName = "slasherdata"
 
 // SlasherNode defines a struct that handles the services running a slashing detector
 // for eth2. It handles the lifecycle of the entire system and registers
@@ -91,7 +90,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := slasher.registerPrometheusService(); err != nil {
+		if err := slasher.registerPrometheusService(cliCtx); err != nil {
 			return nil, err
 		}
 	}
@@ -161,10 +160,21 @@ func (s *SlasherNode) Close() {
 	close(s.stop)
 }
 
-func (s *SlasherNode) registerPrometheusService() error {
+func (s *SlasherNode) registerPrometheusService(cliCtx *cli.Context) error {
+	var additionalHandlers []prometheus.Handler
+	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
+		additionalHandlers = append(
+			additionalHandlers,
+			prometheus.Handler{
+				Path:    "/db/backup",
+				Handler: backuputil.BackupHandler(s.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+			},
+		)
+	}
 	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		s.services,
+		additionalHandlers...,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
 	return s.services.RegisterService(service)
@@ -174,7 +184,7 @@ func (s *SlasherNode) startDB() error {
 	baseDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	clearDB := s.cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := s.cliCtx.Bool(cmd.ForceClearDB.Name)
-	dbPath := path.Join(baseDir, slasherDBName)
+	dbPath := path.Join(baseDir, kv.SlasherDbDirName)
 	spanCacheSize := s.cliCtx.Int(flags.SpanCacheSize.Name)
 	highestAttCacheSize := s.cliCtx.Int(flags.HighestAttCacheSize.Name)
 	cfg := &kv.Config{SpanCacheSize: spanCacheSize, HighestAttestationCacheSize: highestAttCacheSize}

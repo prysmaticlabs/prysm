@@ -10,6 +10,7 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -51,13 +52,13 @@ var appFlags = []cli.Flag{
 	flags.SlotsPerArchivedPoint,
 	flags.EnableDebugRPCEndpoints,
 	flags.SubscribeToAllSubnets,
-	flags.EnableBackupWebhookFlag,
-	flags.BackupWebhookOutputDir,
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
 	flags.WeakSubjectivityCheckpt,
 	flags.Eth1HeaderReqLimit,
+	cmd.EnableBackupWebhookFlag,
+	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,
@@ -100,6 +101,8 @@ var appFlags = []cli.Flag{
 	cmd.ChainConfigFileFlag,
 	cmd.GrpcMaxCallRecvMsgSizeFlag,
 	cmd.AcceptTosFlag,
+	cmd.RestoreSourceFileFlag,
+	cmd.RestoreTargetDirFlag,
 }
 
 func init() {
@@ -113,6 +116,9 @@ func main() {
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
 	app.Version = version.GetVersion()
+	app.Commands = []*cli.Command{
+		db.DatabaseCommands,
+	}
 
 	app.Flags = appFlags
 

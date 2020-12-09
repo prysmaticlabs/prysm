@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
@@ -18,6 +19,9 @@ var failedPreAttSignExternalErr = "attempted to make slashable attestation, reje
 var failedPostAttSignExternalErr = "external slasher service detected a submitted slashable attestation"
 
 func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
+	ctx, span := trace.StartSpan(ctx, "validator.preAttSignUpdate")
+	defer span.End()
+
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
@@ -68,6 +72,9 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 }
 
 func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
+	defer span.End()
+
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	v.attesterHistoryByPubKeyLock.Lock()
 	defer v.attesterHistoryByPubKeyLock.Unlock()
@@ -129,11 +136,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	if err := v.db.SaveLowestSignedSourceEpoch(ctx, pubKey, indexedAtt.Data.Source.Epoch); err != nil {
 		return err
 	}
-	if err := v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch); err != nil {
-		return err
-	}
-
-	return nil
+	return v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
 }
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
@@ -145,6 +148,9 @@ func isNewAttSlashable(
 	targetEpoch uint64,
 	signingRoot [32]byte,
 ) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "isNewAttSlashable")
+	defer span.End()
+
 	if history == nil {
 		return false, nil
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -36,6 +37,7 @@ import (
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -53,7 +55,6 @@ import (
 
 var log = logrus.WithField("prefix", "node")
 
-const beaconChainDBName = "beaconchaindata"
 const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -290,7 +291,7 @@ func (b *BeaconNode) startForkChoice() {
 
 func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dbPath := filepath.Join(baseDir, beaconChainDBName)
+	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
@@ -662,12 +663,12 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 		panic(err)
 	}
 
-	if cliCtx.IsSet(flags.EnableBackupWebhookFlag.Name) {
+	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
 		additionalHandlers = append(
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: db.BackupHandler(b.db, cliCtx.String(flags.BackupWebhookOutputDir.Name)),
+				Handler: backuputil.BackupHandler(b.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}

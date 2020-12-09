@@ -172,9 +172,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling pruning deposit proofs")
 		cfg.EnablePruningDepositProofs = false
 	}
-	if ctx.Bool(enableSyncBacktracking.Name) {
-		log.Warn("Enabling init-sync backtracking algorithm")
-		cfg.EnableSyncBacktracking = true
+	cfg.EnableSyncBacktracking = true
+	if ctx.Bool(disableSyncBacktracking.Name) {
+		log.Warn("Disabling init-sync backtracking algorithm")
+		cfg.EnableSyncBacktracking = false
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		log.Warn("Using a larger gossip history for the node")
