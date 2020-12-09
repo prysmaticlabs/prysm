@@ -225,7 +225,11 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	t := time.NewTimer(timeutils.Until(finalTime))
+	wait := timeutils.Until(finalTime)
+	if wait <= 0 {
+		return
+	}
+	t := time.NewTimer(wait)
 	defer func() {
 		if t.Stop() {
 			// Drain channel, if it wasn't empty.
