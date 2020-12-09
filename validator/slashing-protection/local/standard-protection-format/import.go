@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -81,19 +81,11 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
 	}
-	slashableKeys := make([][48]byte, 0, len(slashableAttesterKeys)+len(slashableProposerKeys))
 	for _, pubKey := range slashableProposerKeys {
 		delete(proposalHistoryByPubKey, pubKey)
-		slashableKeys = append(slashableKeys, pubKey)
 	}
 	for _, pubKey := range slashableAttesterKeys {
 		delete(attestingHistoryByPubKey, pubKey)
-		slashableKeys = append(slashableKeys, pubKey)
-	}
-
-	// Save keys that were found to be slashable.
-	if err := validatorDB.SaveSlashablePublicKeys(ctx, slashableKeys); err != nil {
-		return err
 	}
 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
