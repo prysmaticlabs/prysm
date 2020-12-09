@@ -148,6 +148,9 @@ func isNewAttSlashable(
 	targetEpoch uint64,
 	signingRoot [32]byte,
 ) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "isNewAttSlashable")
+	defer span.End()
+
 	if history == nil {
 		return false, nil
 	}
