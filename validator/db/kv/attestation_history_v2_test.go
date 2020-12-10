@@ -37,7 +37,7 @@ func TestAttestationHistoryForPubKey_OK(t *testing.T) {
 
 func TestStore_AttestedPublicKeys(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
@@ -59,7 +59,7 @@ func TestStore_AttestedPublicKeys(t *testing.T) {
 
 func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
@@ -100,7 +100,7 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 
 func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")

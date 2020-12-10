@@ -2,8 +2,10 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,8 +21,10 @@ var ProtectionDbFileName = "validator.db"
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db           *bolt.DB
-	databasePath string
+	db                         *bolt.DB
+	databasePath               string
+	lock                       sync.Mutex
+	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
 }
 
 // Close closes the underlying boltdb database.
@@ -62,7 +66,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store, error) {
 	hasDir, err := fileutil.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -81,7 +85,11 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 		return nil, err
 	}
 
-	kv := &Store{db: boltDB, databasePath: dirPath}
+	kv := &Store{
+		db:                         boltDB,
+		databasePath:               dirPath,
+		attestingHistoriesByPubKey: make(map[[48]byte]EncHistoryData),
+	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
@@ -107,9 +115,18 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 		}
 	}
 
-	err = prometheus.Register(createBoltCollector(kv.db))
-
-	return kv, err
+	// We then fetch the attestation histories for each public key
+	// and store them in a map for usage at runtime.
+	kv.lock.Lock()
+	defer kv.lock.Unlock()
+	for _, pubKey := range pubKeys {
+		history, err := kv.AttestationHistoryForPubKeyV2(ctx, pubKey)
+		if err != nil {
+			return nil, err
+		}
+		kv.attestingHistoriesByPubKey[pubKey] = history
+	}
+	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
 
 // UpdatePublicKeysBuckets for a specified list of keys.
