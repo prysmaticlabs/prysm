@@ -111,7 +111,7 @@ func TestExpandSingleEndpointIfFile(t *testing.T) {
 	require.Equal(t, curentdir+"/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
 }
 
-func TestExpandWeb3EndpointIfFile(t *testing.T) {
+func TestExpandWeb3EndpointsIfFile(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	HTTPWeb3ProviderFlag := &cli.StringSliceFlag{Name: "fallback-web3provider", Value: cli.NewStringSlice()}
