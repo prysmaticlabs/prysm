@@ -140,6 +140,21 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
 }
 
+func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
+	validator, _, _, finish := setup(t)
+	defer finish()
+	currentTime := timeutils.Now()
+	numOfSlots := uint64(4)
+	validator.genesisTime = uint64(currentTime.Unix()) - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
+
+	expectedTime := timeutils.Now()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	validator.waitToSlotTwoThirds(ctx, numOfSlots)
+	currentTime = timeutils.Now()
+	assert.Equal(t, expectedTime.Unix(), currentTime.Unix())
+}
+
 func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
