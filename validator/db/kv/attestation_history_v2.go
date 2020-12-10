@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -83,10 +82,9 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 		return updateLowestTarget(tx, pubKey, lowestTargetEpoch)
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
-		lock := mputil.NewMultilock(string(pubKey[:]))
-		lock.Lock()
-		defer lock.Unlock()
+		store.lock.Lock()
 		store.attestingHistoriesByPubKey[pubKey] = history
+		store.lock.Unlock()
 	}
 	return err
 }
