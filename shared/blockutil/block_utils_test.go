@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -33,7 +32,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
 		},
 	}
-	bodyRoot, err := stateutil.BlockBodyRoot(blk.Body)
+	bodyRoot, err := blk.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.BeaconBlockHeader{
 		Slot:          blk.Slot,
@@ -84,7 +83,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
 	}
-	bodyRoot, err := stateutil.BlockBodyRoot(blk.Block.Body)
+	bodyRoot, err := blk.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.SignedBeaconBlockHeader{Header: &eth.BeaconBlockHeader{
 		Slot:          blk.Block.Slot,
