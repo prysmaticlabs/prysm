@@ -568,3 +568,10 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
 }
+
+func TestDedupEndpoints(t *testing.T) {
+	assert.DeepEqual(t, []string{"A"}, dedupEndpoints([]string{"A"}), "did not dedup correctly")
+	assert.DeepEqual(t, []string{"A", "B"}, dedupEndpoints([]string{"A", "B"}), "did not dedup correctly")
+	assert.DeepEqual(t, []string{"A", "B"}, dedupEndpoints([]string{"A", "A", "A", "B"}), "did not dedup correctly")
+	assert.DeepEqual(t, []string{"A", "B"}, dedupEndpoints([]string{"A", "A", "A", "B", "B"}), "did not dedup correctly")
+}

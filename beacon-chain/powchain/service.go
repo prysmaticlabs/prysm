@@ -65,6 +65,9 @@ var logThreshold = 8
 // period to log chainstart related information
 var logPeriod = 1 * time.Minute
 
+// error when eth1 node is not synced.
+var errNotSynced = errors.New("eth1 node is still syncing")
+
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
@@ -262,6 +265,7 @@ func (s *Service) Start() {
 		return
 	}
 	go func() {
+		s.isRunning = true
 		s.waitForConnection()
 		if s.ctx.Err() != nil {
 			log.Info("Context closed, exiting pow goroutine")
@@ -279,6 +283,7 @@ func (s *Service) Stop() error {
 	if s.headerChan != nil {
 		defer close(s.headerChan)
 	}
+	s.closeClients()
 	return nil
 }
 
@@ -373,7 +378,7 @@ func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
 }
 
 func (s *Service) connectToPowChain() error {
-	httpClient, rpcClient, err := s.dialETH1Nodes()
+	httpClient, rpcClient, err := s.dialETH1Nodes(s.currHttpEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial eth1 nodes")
 	}
@@ -391,8 +396,8 @@ func (s *Service) connectToPowChain() error {
 	return nil
 }
 
-func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
-	httpRPCClient, err := gethRPC.Dial(s.currHttpEndpoint)
+func (s *Service) dialETH1Nodes(endpoint string) (*ethclient.Client, *gethRPC.Client, error) {
+	httpRPCClient, err := gethRPC.Dial(endpoint)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -446,6 +451,18 @@ func (s *Service) initializeConnection(
 	s.rpcClient = rpcClient
 }
 
+// closes down our active eth1 clients.
+func (s *Service) closeClients() {
+	gethClient, ok := s.rpcClient.(*gethRPC.Client)
+	if ok {
+		gethClient.Close()
+	}
+	httpClient, ok := s.eth1DataFetcher.(*ethclient.Client)
+	if ok {
+		httpClient.Close()
+	}
+}
+
 func (s *Service) waitForConnection() {
 	errConnect := s.connectToPowChain()
 	if errConnect == nil {
@@ -453,16 +470,19 @@ func (s *Service) waitForConnection() {
 		// Resume if eth1 node is synced.
 		if synced {
 			s.connectedETH1 = true
+			s.runError = nil
 			log.WithFields(logrus.Fields{
 				"endpoint": s.currHttpEndpoint,
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
 		if errSynced != nil {
+			s.runError = errSynced
 			log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
 		}
 	}
 	if errConnect != nil {
+		s.runError = errConnect
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 	}
 	// Use a custom logger to only log errors
@@ -481,25 +501,30 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
+			log.Debugf("Trying to dial endpoint: %s", s.currHttpEndpoint)
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
+				s.runError = errConnect
 				s.fallbackToNextEndpoint()
 				continue
 			}
 			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
 				errorLogger(errSynced, "Could not check sync status of eth1 chain")
+				s.runError = errSynced
 				s.fallbackToNextEndpoint()
 				continue
 			}
 			if synced {
 				s.connectedETH1 = true
+				s.runError = nil
 				log.WithFields(logrus.Fields{
 					"endpoint": s.currHttpEndpoint,
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
+			s.runError = errNotSynced
 			log.Debug("Eth1 node is currently syncing")
 		case <-s.ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")
@@ -718,7 +743,6 @@ func (s *Service) initPOWService() {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (s *Service) run(done <-chan struct{}) {
-	s.isRunning = true
 	s.runError = nil
 
 	s.initPOWService()
@@ -743,6 +767,7 @@ func (s *Service) run(done <-chan struct{}) {
 			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
+			s.checkDefaultEndpoint()
 		case <-chainstartTicker.C:
 			if s.chainStartData.Chainstarted {
 				chainstartTicker.Stop()
@@ -827,6 +852,36 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		return 0, err
 	}
 	return blkNum.Uint64(), nil
+}
+
+// This performs a health check on our primary endpoint, and if it
+// is ready to serve we connect to it again. This method is only
+// relevant if we are on our backup endpoint.
+func (s *Service) checkDefaultEndpoint() {
+	primaryEndpoint := s.httpEndpoints[0]
+	// Return early if we are running on our primary
+	// endpoint.
+	if s.currHttpEndpoint == primaryEndpoint {
+		return
+	}
+
+	httpClient, rpcClient, err := s.dialETH1Nodes(primaryEndpoint)
+	if err != nil {
+		log.Debugf("Primary endpoint not ready: %v", err)
+		return
+	}
+	log.Info("Primary endpoint ready again, switching back to it")
+	// Close the clients and let our main connection routine
+	// properly connect with it.
+	httpClient.Close()
+	rpcClient.Close()
+	// Close current active clients.
+	s.closeClients()
+
+	// Switch back to primary endpoint and try connecting
+	// to it again.
+	s.currHttpEndpoint = primaryEndpoint
+	s.retryETH1Node(nil)
 }
 
 // This is an inefficient way to search for the next endpoint, but given N is expected to be
