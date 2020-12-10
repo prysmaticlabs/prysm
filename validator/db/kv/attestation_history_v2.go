@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
-	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -70,33 +69,26 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
 	defer span.End()
-	go func() {
+
+	err := store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		err := bucket.Put(pubKey[:], history)
+		if err != nil {
+			return err
+		}
+		err = updateLowestSource(tx, pubKey, lowestSourceEpoch)
+		if err != nil {
+			return err
+		}
+		return updateLowestTarget(tx, pubKey, lowestTargetEpoch)
+	})
+	if !featureconfig.Get().DisableAttestingHistoryDBCache {
 		lock := mputil.NewMultilock(string(pubKey[:]))
 		lock.Lock()
 		defer lock.Unlock()
-		err := store.update(func(tx *bolt.Tx) error {
-			bucket := tx.Bucket(newHistoricAttestationsBucket)
-			err := bucket.Put(pubKey[:], history)
-			if err != nil {
-				return err
-			}
-			err = updateLowestSource(tx, pubKey, lowestSourceEpoch)
-			if err != nil {
-				return err
-			}
-			return updateLowestTarget(tx, pubKey, lowestTargetEpoch)
-		})
-		if err != nil {
-			log.WithError(err)
-		}
-	}()
-
-	if !featureconfig.Get().DisableAttestingHistoryDBCache {
-		store.lock.Lock()
 		store.attestingHistoriesByPubKey[pubKey] = history
-		store.lock.Unlock()
 	}
-	return nil
+	return err
 }
 
 // LowestSignedSourceEpoch returns the lowest signed source epoch for a validator public key.

@@ -3,7 +3,6 @@ package kv
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -73,7 +72,6 @@ func TestLowestSignedSourceAndTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	require.NoError(t, err)
 	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), 200, 200)
 	require.NoError(t, err)
-	time.Sleep(50 * time.Millisecond)
 	got, err := validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(100), got)
@@ -92,7 +90,6 @@ func TestLowestSignedSourceAndTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	require.NoError(t, err)
 	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), 199, 199)
 	require.NoError(t, err)
-	time.Sleep(50 * time.Millisecond)
 	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(99), got)
@@ -111,7 +108,6 @@ func TestLowestSignedSourceAndTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	require.NoError(t, err)
 	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), 200, 200)
 	require.NoError(t, err)
-	time.Sleep(50 * time.Millisecond)
 	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(99), got)
