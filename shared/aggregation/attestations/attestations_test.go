@@ -1,7 +1,6 @@
 package attestations
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"sort"
@@ -292,6 +291,18 @@ func TestAggregateAttestations_PerformanceComparison(t *testing.T) {
 		return score
 	}
 
+	generateAtts := func(bitsList [][]byte) []*ethpb.Attestation {
+		sign := bls.NewAggregateSignature().Marshal()
+		atts := make([]*ethpb.Attestation, 0)
+		for _, b := range bitsList {
+			atts = append(atts, &ethpb.Attestation{
+				AggregationBits: b,
+				Signature:       sign,
+			})
+		}
+		return atts
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			atts, err := NaiveAttestationAggregation(generateAtts(tt.bitsList))
@@ -307,84 +318,4 @@ func TestAggregateAttestations_PerformanceComparison(t *testing.T) {
 				"max-cover failed to produce higher score (naive: %d, max-cover: %d)", score1, score2)
 		})
 	}
-}
-
-func TestAggregateAttestations_ProperSubsetHandling(t *testing.T) {
-	tests := []struct {
-		name  string
-		input [][]byte
-		want  [][]byte
-	}{
-		{
-			name: "no proper sets",
-			input: [][]byte{
-				{0b00000101, 0b1},
-				{0b00000011, 0b1},
-				{0b10000001, 0b1},
-				{0b00011001, 0b1},
-			},
-			want: [][]byte{
-				{0b00000011},
-				{0b00000101},
-				{0b00011001},
-				{0b10000001},
-			},
-		},
-		{
-			name: "proper sets no aggregation",
-			input: [][]byte{
-				{0b00000101, 0b1},
-				{0b10000011, 0b1},
-				{0b10000001, 0b1},
-				{0b00011001, 0b1},
-			},
-			want: [][]byte{
-				{0b00000101},
-				{0b00011001},
-				{0b10000011},
-			},
-		},
-		{
-			name: "proper sets after aggregation",
-			input: [][]byte{
-				{0b00000101, 0b1},
-				{0b10000011, 0b1},
-				{0b01110000, 0b1},
-				{0b10000001, 0b1},
-				{0b00011001, 0b1},
-			},
-			want: [][]byte{
-				{0b00000101},
-				{0b00011001},
-				{0b11110011},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			atts, err := MaxCoverAttestationAggregation(generateAtts(tt.input))
-			require.NoError(t, err)
-			attsBits := make([][]byte, 0, len(atts))
-			for _, att := range atts {
-				attsBits = append(attsBits, att.AggregationBits.Bytes())
-			}
-			sort.Slice(attsBits, func(i, j int) bool {
-				return bytes.Compare(attsBits[i], attsBits[j]) <= 0
-			})
-			assert.DeepEqual(t, tt.want, attsBits)
-		})
-	}
-}
-
-func generateAtts(bitsList [][]byte) []*ethpb.Attestation {
-	sign := bls.NewAggregateSignature().Marshal()
-	atts := make([]*ethpb.Attestation, 0)
-	for _, b := range bitsList {
-		atts = append(atts, &ethpb.Attestation{
-			AggregationBits: b,
-			Signature:       sign,
-		})
-	}
-	return atts
 }
