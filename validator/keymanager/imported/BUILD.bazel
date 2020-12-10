@@ -10,7 +10,6 @@ go_library(
         "import.go",
         "keymanager.go",
         "refresh.go",
-        "test_helper.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/imported",
     visibility = [
@@ -28,7 +27,6 @@ go_library(
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
         "//validator/accounts/iface:go_default_library",
-        "//validator/accounts/testing:go_default_library",
         "//validator/keymanager:go_default_library",
         "@com_github_fsnotify_fsnotify//:go_default_library",
         "@com_github_google_uuid//:go_default_library",

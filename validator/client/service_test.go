@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/uuid"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -15,9 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	wallet2 "github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -117,6 +122,7 @@ func TestStart_GrpcHeaders(t *testing.T) {
 func TestHandleAccountChanges(t *testing.T) {
 	logHook := logTest.NewGlobal()
 	ctx := context.Background()
+	password := "Passw03rdz293**%#2"
 
 	// Prepare keys
 	originalPrivKey, err := bls.RandKey()
@@ -157,8 +163,20 @@ func TestHandleAccountChanges(t *testing.T) {
 	)
 
 	// Prepare keymanager
-	km := &imported.Keymanager{}
-	imported.PrepareKeymanagerForKeystoreReload(km)
+	walletDir := t.TempDir()
+	wallet, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet2.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
+	})
+	require.NoError(t, err)
+	km, err := imported.NewKeymanager(ctx, &imported.SetupConfig{
+		Wallet: wallet,
+	})
+	require.NoError(t, err)
+	require.NoError(t, km.ImportKeystores(ctx, []*keymanager.Keystore{createKeystore(t, password, originalPrivKey)}, password))
 
 	// Prepare validator service
 	validatorService := &ValidatorService{
@@ -171,10 +189,10 @@ func TestHandleAccountChanges(t *testing.T) {
 		keyManager: km,
 	}
 
-	// Run the test: subscribe to account changes and simulate such changes
+	// Run the test: subscribe to account changes and simulate such changes by importing a new keystore
 	go validatorService.handleAccountChanges(ctx)
-	require.NoError(t, imported.SimulateReloadingAccountsFromKeystore(km, []bls.SecretKey{originalPrivKey, newPrivKey}))
-	time.Sleep(time.Second * 1) // Allow code subscribed to account changes to run
+	require.NoError(t, km.ImportKeystores(ctx, []*keymanager.Keystore{createKeystore(t, password, newPrivKey)}, password))
+	time.Sleep(time.Second * 5) // Allow code subscribed to account changes to run
 
 	// Assert
 	pubKeys, err := db.ProposedPublicKeys(ctx)
@@ -192,4 +210,19 @@ func TestHandleAccountChanges(t *testing.T) {
 	assert.LogsContain(t, logHook, fmt.Sprintf("%#x", bytesutil.Trunc(originalPubKeyBytes)))
 	assert.LogsContain(t, logHook, fmt.Sprintf("%#x", bytesutil.Trunc(newPubKeyBytes)))
 	assert.LogsContain(t, logHook, "Waiting for deposit to be observed by beacon node")
+}
+
+func createKeystore(t testing.TB, password string, privKey bls.SecretKey) *keymanager.Keystore {
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), password)
+	require.NoError(t, err)
+	return &keymanager.Keystore{
+		Crypto:  cryptoFields,
+		Pubkey:  fmt.Sprintf("%x", privKey.PublicKey().Marshal()),
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}
 }
