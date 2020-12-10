@@ -117,8 +117,6 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 
 	// We then fetch the attestation histories for each public key
 	// and store them in a map for usage at runtime.
-	kv.lock.Lock()
-	defer kv.lock.Unlock()
 	for _, pubKey := range pubKeys {
 		history, err := kv.AttestationHistoryForPubKeyV2(ctx, pubKey)
 		if err != nil {
