@@ -63,8 +63,8 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 	ctx context.Context,
 	pubKey [48]byte,
 	history EncHistoryData,
-	sourceEpoch,
-	targetEpoch uint64,
+	lowestSourceEpoch,
+	lowestTargetEpoch uint64,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
 	defer span.End()
@@ -74,11 +74,11 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 		if err != nil {
 			return err
 		}
-		err = updateLowestSource(tx, pubKey, sourceEpoch)
+		err = updateLowestSource(tx, pubKey, lowestSourceEpoch)
 		if err != nil {
 			return err
 		}
-		return updateLowestTarget(tx, pubKey, targetEpoch)
+		return updateLowestTarget(tx, pubKey, lowestTargetEpoch)
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
 		store.lock.Lock()
