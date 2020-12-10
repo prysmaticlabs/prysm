@@ -97,7 +97,7 @@ func ExpandSingleEndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
 	return nil
 }
 
-// ExpandWeb3EndpointsIfFile expands the path for --http-web3provider if specified as a file.
+// ExpandWeb3EndpointsIfFile expands the path for --fallback-web3provider if specified as a file.
 func ExpandWeb3EndpointsIfFile(ctx *cli.Context, flags *cli.StringSliceFlag) error {
 	// Return early if no flag value is set.
 	if !ctx.IsSet(flags.Name) {
