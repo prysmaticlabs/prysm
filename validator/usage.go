@@ -50,6 +50,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.DataDirFlag,
 			cmd.ClearDB,
 			cmd.ForceClearDB,
+			cmd.EnableBackupWebhookFlag,
+			cmd.BackupWebhookOutputDir,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
@@ -99,6 +101,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableAccountMetricsFlag,
 			flags.WalletDirFlag,
 			flags.WalletPasswordFileFlag,
+			flags.GraffitiFileFlag,
 		},
 	},
 	{

@@ -799,13 +799,6 @@ def prysm_deps():
         sum = "h1:RYi2hDdss1u4YE7GwixGzWwVo47T8UQwnTLB6vQiq+o=",
         version = "v2.1.0+incompatible",
     )
-
-    go_repository(
-        name = "com_github_gofrs_flock",
-        importpath = "github.com/gofrs/flock",
-        sum = "h1:DP+LD/t0njgoPBvT5MJLeliUIVQR03hiKR6vezdwHlc=",
-        version = "v0.7.1",
-    )
     go_repository(
         name = "com_github_golang_freetype",
         importpath = "github.com/golang/freetype",
@@ -2459,15 +2452,14 @@ def prysm_deps():
         sum = "h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=",
         version = "v1.6.1",
     )
-
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/9b4b16fb42692370ba8a6ccfbca1803691225413.tar.gz",
+            "https://github.com/supranational/blst/archive/97e8ce0396161f306cdc9038af983ae78409213c.tar.gz",
         ],
-        strip_prefix = "blst-9b4b16fb42692370ba8a6ccfbca1803691225413",
+        strip_prefix = "blst-97e8ce0396161f306cdc9038af983ae78409213c",
         build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "4e03c7d673fdf9f8f2ddd3e64edc31001a86ad380a8e9266c197cff70856d054",
+        sha256 = "f86cce48d1c0c393399121034b2190b807e08ba7ad09a4b856e708df01e05c19",
     )
     go_repository(
         name = "com_github_syndtr_goleveldb",

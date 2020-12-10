@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,9 +43,32 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	defer state.SkipSlotCache.Enable()
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
+
+	// Step 1 - Sync to end of finalized epoch.
+	if err := s.syncToFinalizedEpoch(ctx, genesis); err != nil {
+		return err
+	}
+
+	// Already at head, no need for 2nd phase.
+	if s.chain.HeadSlot() == helpers.SlotsSince(genesis) {
+		return nil
+	}
+
+	// Step 2 - sync to head from majority of peers (from no less than MinimumSyncPeers*2 peers)
+	// having the same world view on non-finalized epoch.
+	return s.syncToNonFinalizedEpoch(ctx, genesis)
+}
+
+// syncToFinalizedEpoch sync from head to best known finalized epoch.
+func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) error {
 	highestFinalizedSlot, err := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	if err != nil {
 		return err
+	}
+	if s.chain.HeadSlot() >= highestFinalizedSlot {
+		// No need to sync, already synced to the finalized slot.
+		log.Debug("Already synced to finalized epoch")
+		return nil
 	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
@@ -59,7 +81,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		return err
 	}
 
-	// Step 1 - Sync to end of finalized epoch.
 	for data := range queue.fetchedData {
 		s.processFetchedData(ctx, genesis, s.chain.HeadSlot(), data)
 	}
@@ -72,14 +93,13 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		log.WithError(err).Debug("Error stopping queue")
 	}
 
-	// Already at head, no need for 2nd phase.
-	if s.chain.HeadSlot() == helpers.SlotsSince(genesis) {
-		return nil
-	}
+	return nil
+}
 
-	// Step 2 - sync to head from majority of peers (from no less than MinimumSyncPeers*2 peers) having the same
-	// world view on non-finalized epoch.
-	queue = newBlocksQueue(ctx, &blocksQueueConfig{
+// syncToNonFinalizedEpoch sync from head to best known non-finalized epoch supported by majority
+// of peers (no less than MinimumSyncPeers*2 peers).
+func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time) error {
+	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		db:                  s.db,
 		chain:               s.chain,
@@ -264,7 +284,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
 func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
-	if !featureconfig.Get().EnablePeerScorer || pid == "" {
+	if pid == "" {
 		return
 	}
 	headSlot := s.chain.HeadSlot()
