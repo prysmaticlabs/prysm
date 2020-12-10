@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -59,13 +58,11 @@ type validator struct {
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
-	attesterHistoryByPubKeyLock        sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	genesisTime                        uint64
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
-	attesterHistoryByPubKey            map[[48]byte]kv.EncHistoryData
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
