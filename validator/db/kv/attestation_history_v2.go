@@ -37,7 +37,6 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		enc := bucket.Get(publicKey[:])
-		var attestationHistory EncHistoryData
 		if len(enc) == 0 {
 			attestationHistory = NewAttestationHistoryArray(0)
 		} else {
