@@ -96,7 +96,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		if err := bar.Add(1); err != nil {
 			log.WithError(err).Debug("Could not increase progress bar")
 		}
-		if err := validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history); err != nil {
+		if err := validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history, 0, 0); err != nil {
 			return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 		}
 	}
