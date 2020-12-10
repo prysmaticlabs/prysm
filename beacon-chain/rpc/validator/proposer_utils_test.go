@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"sort"
 	"testing"
 
@@ -34,6 +35,12 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 func TestProposer_ProposerAtts_dedup(t *testing.T) {
 	data1 := &ethpb.AttestationData{
 		Slot:            4,
+		BeaconBlockRoot: make([]byte, 32),
+		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+	}
+	data2 := &ethpb.AttestationData{
+		Slot:            5,
 		BeaconBlockRoot: make([]byte, 32),
 		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -168,7 +175,22 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 			},
 		},
 		{
-			name: "proper subset",
+			name: "no proper subset (same root)",
+			atts: proposerAtts{
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
+			},
+			want: proposerAtts{
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
+			},
+		},
+		{
+			name: "proper subset (same root)",
 			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
@@ -185,11 +207,63 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 			},
 		},
+		{
+			name: "no proper subset (different root)",
+			atts: proposerAtts{
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
+			},
+			want: proposerAtts{
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
+			},
+		},
+		{
+			name: "proper subset (different root 1)",
+			atts: proposerAtts{
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
+			},
+			want: proposerAtts{
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
+			},
+		},
+		{
+			name: "proper subset (different root 2)",
+			atts: proposerAtts{
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
+			},
+			want: proposerAtts{
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
+				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			atts := tt.atts.dedup()
 			sort.Slice(atts, func(i, j int) bool {
+				if atts[i].AggregationBits.Count() == atts[j].AggregationBits.Count() {
+					if atts[i].Data.Slot == atts[i].Data.Slot {
+						return bytes.Compare(atts[i].AggregationBits, atts[j].AggregationBits) <= 0
+					}
+					return atts[i].Data.Slot > atts[i].Data.Slot
+				}
 				return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
 			})
 			assert.DeepEqual(t, tt.want, atts)
