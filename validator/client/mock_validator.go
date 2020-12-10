@@ -152,7 +152,7 @@ func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ uint64, _ 
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
 // LogNextDutyCountDown for mocking.
-func (fv *FakeValidator) LogNextDutyCountDown(slot uint64) error {
+func (fv *FakeValidator) LogNextDutyTimeLeft(slot uint64) error {
 	return nil
 }
 

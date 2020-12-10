@@ -39,7 +39,7 @@ func (v *validator) LogAttestationsSubmitted() {
 	v.attLogs = make(map[[32]byte]*attSubmitted)
 }
 
-func (v *validator) LogNextDutyCountDown(slot uint64) error {
+func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
 	var nextDutySlot uint64
 	var role string
 	for _, duty := range v.duties.CurrentEpochDuties {

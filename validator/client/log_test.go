@@ -17,7 +17,7 @@ func TestLogNextDutyCountDown_NoDuty(t *testing.T) {
 			{AttesterSlot: 120},
 		}},
 	}
-	require.NoError(t, v.LogNextDutyCountDown(121))
+	require.NoError(t, v.LogNextDutyTimeLeft(121))
 	require.LogsContain(t, hook, "No duty until next epoch")
 }
 
@@ -30,7 +30,7 @@ func TestLogNextDutyCountDown_HasDutyAttester(t *testing.T) {
 			{AttesterSlot: 120},
 		}},
 	}
-	require.NoError(t, v.LogNextDutyCountDown(115))
+	require.NoError(t, v.LogNextDutyTimeLeft(115))
 	require.LogsContain(t, hook, "\"Next duty\" currentSlot=115 dutySlot=120 prefix=validator role=attester")
 }
 
@@ -43,6 +43,6 @@ func TestLogNextDutyCountDown_HasDutyProposer(t *testing.T) {
 			{AttesterSlot: 120},
 		}},
 	}
-	require.NoError(t, v.LogNextDutyCountDown(101))
+	require.NoError(t, v.LogNextDutyTimeLeft(101))
 	require.LogsContain(t, hook, "\"Next duty\" currentSlot=101 dutySlot=105 prefix=validator role=proposer")
 }
