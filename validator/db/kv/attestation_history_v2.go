@@ -63,7 +63,7 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 	ctx context.Context,
 	pubKey [48]byte,
 	history EncHistoryData,
-	sourceEpoch uint64,
+	sourceEpoch,
 	targetEpoch uint64,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
