@@ -5,15 +5,15 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	bolt "go.etcd.io/bbolt"
-
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	bolt "go.etcd.io/bbolt"
 )
 
 // ProtectionDbFileName Validator slashing protection db file name.
@@ -24,6 +24,7 @@ var ProtectionDbFileName = "validator.db"
 type Store struct {
 	db                         *bolt.DB
 	databasePath               string
+	lock                       sync.Mutex
 	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
 }
 
