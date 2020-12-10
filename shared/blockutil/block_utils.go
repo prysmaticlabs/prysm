@@ -3,12 +3,15 @@ package blockutil
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 // SignedBeaconBlockHeaderFromBlock function to retrieve signed block header from block.
 func SignedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
+	if block.Block == nil || block.Block.Body == nil {
+		return nil, errors.New("nil block")
+	}
+
+	bodyRoot, err := block.Block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
@@ -26,7 +29,11 @@ func SignedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.Si
 
 // BeaconBlockHeaderFromBlock function to retrieve block header from block.
 func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Body)
+	if block.Body == nil {
+		return nil, errors.New("nil block body")
+	}
+
+	bodyRoot, err := block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}

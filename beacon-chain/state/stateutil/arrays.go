@@ -10,11 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
-	leavesCache = make(map[string][][32]byte, fieldCount)
-	layersCache = make(map[string][][][32]byte, fieldCount)
+	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
+	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
 	lock        sync.RWMutex
 )
 

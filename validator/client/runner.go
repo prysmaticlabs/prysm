@@ -33,6 +33,7 @@ type Validator interface {
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
+	LogNextDutyTimeLeft(slot uint64) error
 	ResetAttesterProtectionData()
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
@@ -161,6 +162,9 @@ func run(ctx context.Context, v Validator) {
 				v.LogAttestationsSubmitted()
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 					log.WithError(err).Error("Could not report validator's rewards/penalties")
+				}
+				if err := v.LogNextDutyTimeLeft(slot); err != nil {
+					log.WithError(err).Error("Could not report next count down")
 				}
 				span.End()
 			}()
