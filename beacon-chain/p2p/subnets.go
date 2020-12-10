@@ -37,7 +37,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 
 	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
-	iterator = enode.Filter(iterator, s.filterPeerForSubnet(index))
+	iterator = filterNodes(ctx, iterator, s.filterPeerForSubnet(index))
 
 	currNum := uint64(len(s.pubsub.ListPeers(topic)))
 	wg := new(sync.WaitGroup)
