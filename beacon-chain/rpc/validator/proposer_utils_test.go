@@ -217,9 +217,9 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 			},
 			want: proposerAtts{
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
+				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
-				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
 			},
 		},
 		{
@@ -259,10 +259,10 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 			atts := tt.atts.dedup()
 			sort.Slice(atts, func(i, j int) bool {
 				if atts[i].AggregationBits.Count() == atts[j].AggregationBits.Count() {
-					if atts[i].Data.Slot == atts[i].Data.Slot {
+					if atts[i].Data.Slot == atts[j].Data.Slot {
 						return bytes.Compare(atts[i].AggregationBits, atts[j].AggregationBits) <= 0
 					}
-					return atts[i].Data.Slot > atts[i].Data.Slot
+					return atts[i].Data.Slot > atts[j].Data.Slot
 				}
 				return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
 			})
