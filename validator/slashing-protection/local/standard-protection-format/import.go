@@ -221,12 +221,15 @@ func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[
 	for pubKey, proposals := range historyByPubKey {
 		seenSlots := make(map[uint64]bool)
 		for _, blk := range proposals.Proposals {
+			fmt.Printf("Checking %d\n", blk.Slot)
 			if ok := seenSlots[blk.Slot]; ok {
+				fmt.Println("seen")
 				slashablePubKeys = append(slashablePubKeys, pubKey)
 				break
 			}
 			seenSlots[blk.Slot] = true
 		}
+		fmt.Println(seenSlots)
 	}
 	return slashablePubKeys
 }
