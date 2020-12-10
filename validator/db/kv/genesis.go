@@ -8,8 +8,8 @@ import (
 )
 
 // SaveGenesisValidatorsRoot saves the genesis validator root to db.
-func (s *Store) SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error {
-	err := s.db.Update(func(tx *bolt.Tx) error {
+func (store *Store) SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error {
+	err := store.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(genesisInfoBucket)
 		enc := bkt.Get(genesisValidatorsRootKey)
 		if len(enc) != 0 {
@@ -21,9 +21,9 @@ func (s *Store) SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte
 }
 
 // GenesisValidatorsRoot retrieves the genesis validator root from db.
-func (s *Store) GenesisValidatorsRoot(ctx context.Context) ([]byte, error) {
+func (store *Store) GenesisValidatorsRoot(ctx context.Context) ([]byte, error) {
 	var genValRoot []byte
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err := store.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(genesisInfoBucket)
 		enc := bkt.Get(genesisValidatorsRootKey)
 		if len(enc) == 0 {

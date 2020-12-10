@@ -74,33 +74,11 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 		if err != nil {
 			return err
 		}
-		//replace lowest source epoch if needed
-		lowestSourceBucket := tx.Bucket(lowestSignedSourceBucket)
-		// If the incoming epoch is lower than the lowest signed epoch, override.
-		lowestSignedSourceBytes := lowestSourceBucket.Get(pubKey[:])
-		var lowestSignedSourceEpoch uint64
-		if len(lowestSignedSourceBytes) >= 8 {
-			lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
+		err = updateLowestSource(tx, pubKey, sourceEpoch)
+		if err != nil {
+			return err
 		}
-		if len(lowestSignedSourceBytes) == 0 || sourceEpoch < lowestSignedSourceEpoch {
-			if err := lowestSourceBucket.Put(pubKey[:], bytesutil.Uint64ToBytesBigEndian(sourceEpoch)); err != nil {
-				return err
-			}
-		}
-		// replace lowest target epoch if needed
-		lowestTargetBucket := tx.Bucket(lowestSignedTargetBucket)
-		// If the incoming epoch is lower than the lowest signed epoch, override.
-		lowestSignedTargetBytes := lowestTargetBucket.Get(pubKey[:])
-		var lowestSignedTargetEpoch uint64
-		if len(lowestSignedTargetBytes) >= 8 {
-			lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
-		}
-		if len(lowestSignedTargetBytes) == 0 || targetEpoch < lowestSignedTargetEpoch {
-			if err := lowestTargetBucket.Put(pubKey[:], bytesutil.Uint64ToBytesBigEndian(targetEpoch)); err != nil {
-				return err
-			}
-		}
-		return nil
+		return updateLowestTarget(tx, pubKey, targetEpoch)
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
 		store.lock.Lock()
@@ -158,21 +136,25 @@ func (store *Store) SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(lowestSignedSourceBucket)
-
-		// If the incoming epoch is lower than the lowest signed epoch, override.
-		lowestSignedSourceBytes := bucket.Get(publicKey[:])
-		var lowestSignedSourceEpoch uint64
-		if len(lowestSignedSourceBytes) >= 8 {
-			lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
-		}
-		if len(lowestSignedSourceBytes) == 0 || epoch < lowestSignedSourceEpoch {
-			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
-				return err
-			}
-		}
-		return nil
+		return updateLowestSource(tx, publicKey, epoch)
 	})
+}
+
+func updateLowestSource(tx *bolt.Tx, publicKey [48]byte, epoch uint64) error {
+	bucket := tx.Bucket(lowestSignedSourceBucket)
+
+	// If the incoming epoch is lower than the lowest signed epoch, override.
+	lowestSignedSourceBytes := bucket.Get(publicKey[:])
+	var lowestSignedSourceEpoch uint64
+	if len(lowestSignedSourceBytes) >= 8 {
+		lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
+	}
+	if len(lowestSignedSourceBytes) == 0 || epoch < lowestSignedSourceEpoch {
+		if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SaveLowestSignedTargetEpoch saves the lowest signed target epoch for a validator public key.
@@ -181,19 +163,23 @@ func (store *Store) SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(lowestSignedTargetBucket)
-
-		// If the incoming epoch is lower than the lowest signed epoch, override.
-		lowestSignedTargetBytes := bucket.Get(publicKey[:])
-		var lowestSignedTargetEpoch uint64
-		if len(lowestSignedTargetBytes) >= 8 {
-			lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
-		}
-		if len(lowestSignedTargetBytes) == 0 || epoch < lowestSignedTargetEpoch {
-			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
-				return err
-			}
-		}
-		return nil
+		return updateLowestTarget(tx, publicKey, epoch)
 	})
+}
+
+func updateLowestTarget(tx *bolt.Tx, publicKey [48]byte, epoch uint64) error {
+	bucket := tx.Bucket(lowestSignedTargetBucket)
+
+	// If the incoming epoch is lower than the lowest signed epoch, override.
+	lowestSignedTargetBytes := bucket.Get(publicKey[:])
+	var lowestSignedTargetEpoch uint64
+	if len(lowestSignedTargetBytes) >= 8 {
+		lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
+	}
+	if len(lowestSignedTargetBytes) == 0 || epoch < lowestSignedTargetEpoch {
+		if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
