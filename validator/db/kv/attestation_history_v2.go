@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -31,10 +32,12 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (EncHistoryData, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeyV2")
 	defer span.End()
-	store.lock.Lock()
-	defer store.lock.Unlock()
-	if history, ok := store.attestingHistoriesByPubKey[publicKey]; ok {
-		return history, nil
+	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.lock.Lock()
+		defer store.lock.Unlock()
+		if history, ok := store.attestingHistoriesByPubKey[publicKey]; ok {
+			return history, nil
+		}
 	}
 	var err error
 	var attestationHistory EncHistoryData
@@ -49,7 +52,9 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		}
 		return nil
 	})
-	store.attestingHistoriesByPubKey[publicKey] = attestationHistory
+	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.attestingHistoriesByPubKey[publicKey] = attestationHistory
+	}
 	return attestationHistory, err
 }
 
@@ -61,9 +66,11 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKe
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		return bucket.Put(pubKey[:], history)
 	})
-	store.lock.Lock()
-	store.attestingHistoriesByPubKey[pubKey] = history
-	defer store.lock.Unlock()
+	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.lock.Lock()
+		store.attestingHistoriesByPubKey[pubKey] = history
+		store.lock.Unlock()
+	}
 	return err
 }
 
