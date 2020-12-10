@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"reflect"
-	"strings"
-	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -223,109 +221,6 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	if !slashable {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
-}
-
-func Test_slashableAttestationCheck_BlocksSurroundAttestationsConcurrently(t *testing.T) {
-	t.Skip()
-	ctx := context.Background()
-	att := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{1, 2},
-		Data: &ethpb.AttestationData{
-			Slot:            5,
-			CommitteeIndex:  2,
-			BeaconBlockRoot: []byte("great block"),
-			Source: &ethpb.Checkpoint{
-				Root: []byte("good source"),
-			},
-			Target: &ethpb.Checkpoint{
-				Root: []byte("good target"),
-			},
-		},
-	}
-
-	v, _, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [48]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	passThrough := 0
-	slashable := 0
-	var wg sync.WaitGroup
-	for i := uint64(0); i < 10; i++ {
-
-		wg.Add(1)
-		// Test surround and surrounded attestations.
-		go func(i uint64) {
-			sr := [32]byte{1}
-			att.Data.Source.Epoch = 110 - i
-			att.Data.Target.Epoch = 111 + i
-			err := v.slashableAttestationCheck(ctx, att, pubKey, sr)
-			if err == nil {
-				passThrough++
-			} else {
-				if strings.Contains(err.Error(), failedAttLocalProtectionErr) {
-					slashable++
-				}
-				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
-				t.Logf("attestation target epoch %d", att.Data.Target.Epoch)
-			}
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-	require.Equal(t, 1, passThrough, "Expecting only one attestations to go through and all others to be found to be slashable")
-	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
-}
-
-func Test_slashableAttestationCheck_BlocksDoubleAttestationsConcurrently(t *testing.T) {
-	t.Skip()
-	ctx := context.Background()
-	att := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{1, 2},
-		Data: &ethpb.AttestationData{
-			Slot:            5,
-			CommitteeIndex:  2,
-			BeaconBlockRoot: []byte("great block"),
-			Source: &ethpb.Checkpoint{
-				Root: []byte("good source"),
-			},
-			Target: &ethpb.Checkpoint{
-				Root: []byte("good target"),
-			},
-		},
-	}
-
-	v, _, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [48]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	passThrough := 0
-	slashable := 0
-	var wg sync.WaitGroup
-	for i := uint64(0); i < 100; i++ {
-
-		wg.Add(1)
-		//Test double attestations.
-		go func(i uint64) {
-			sr := [32]byte{byte(i)}
-			att.Data.Source.Epoch = 110 - i
-			att.Data.Target.Epoch = 111
-			err := v.slashableAttestationCheck(ctx, att, pubKey, sr)
-			if err == nil {
-				passThrough++
-			} else {
-				if strings.Contains(err.Error(), failedAttLocalProtectionErr) {
-					slashable++
-				}
-				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
-				t.Logf("signing root %d", att.Data.Target.Epoch)
-			}
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-	require.Equal(t, 1, passThrough, "Expecting only one attestations to go through and all others to be found to be slashable")
-	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
-
 }
 
 func TestAttestationHistory_Prunes(t *testing.T) {
