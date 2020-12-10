@@ -106,6 +106,64 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	}
 }
 
+func TestImportInterchangeData_OK_SavesSlashableKeys(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 10
+	numEpochs := 20
+	publicKeys, err := mocks.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory, err := mocks.MockAttestingAndProposalHistories(publicKeys, numEpochs)
+	require.NoError(t, err)
+
+	signingRoot1 := [32]byte{1}
+	signingRoot2 := [32]byte{2}
+	proposalHistory[publicKeys[2]].Proposals = append(
+		proposalHistory[publicKeys[2]].Proposals,
+		kv.Proposal{
+			Slot:        5,
+			SigningRoot: signingRoot1[:],
+		},
+	)
+	// We add a slashable block for public keys 2 and 3.
+
+	// We add a slashable attestation for public keys 5 and 6.
+
+	standardProtectionFormat, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
+
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(standardProtectionFormat)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database.
+	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	require.NoError(t, err)
+
+	// Next, we attempt to retrieve the attesting and proposals histories from our database and
+	// verify those indeed match the originally generated mock histories.
+	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
+	require.NoError(t, err)
+	for i := 0; i < len(publicKeys); i++ {
+		require.DeepEqual(t, attestingHistory[publicKeys[i]], receivedAttestingHistory[publicKeys[i]])
+		proposals := proposalHistory[publicKeys[i]].Proposals
+		for _, proposal := range proposals {
+			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
+			require.NoError(t, err)
+			require.DeepEqual(
+				t,
+				receivedProposalSigningRoot[:],
+				proposal.SigningRoot,
+				"Imported proposals are different then the generated ones",
+			)
+		}
+	}
+}
+
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
