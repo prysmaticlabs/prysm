@@ -18,6 +18,9 @@ var failedAttLocalProtectionErr = "attempted to make slashable attestation, reje
 var failedPreAttSignExternalErr = "attempted to make slashable attestation, rejected by external slasher service"
 var failedPostAttSignExternalErr = "external slasher service detected a submitted slashable attestation"
 
+// Checks if an attestation is slashable by comparing it with the attesting
+// history for the given public key in our DB. If it is not, we then update the history
+// with new values and save it to the database.
 func (v *validator) slashableAttestationCheck(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
@@ -61,7 +64,7 @@ func (v *validator) slashableAttestationCheck(
 		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
 	}
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory); err != nil {
-		return errors.Wrapf(err, "could not save attestation history for public key: %#x", pubkey)
+		return errors.Wrapf(err, "could not save attestation history for public key: %#x", pubKey)
 	}
 
 	// Save source and target epochs to satisfy EIP3076 requirements.

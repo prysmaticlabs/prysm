@@ -26,55 +26,27 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	return attestedPublicKeys, err
 }
 
-// AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
-func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeysV2")
+// AttestationHistoryForPubKeyV2 returns the corresponding attesting
+// history for a specified validator public key.
+func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (EncHistoryData, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeyV2")
 	defer span.End()
-
-	if len(publicKeys) == 0 {
-		return make(map[[48]byte]EncHistoryData), nil
-	}
 
 	var err error
-	attestationHistoryForVals := make(map[[48]byte]EncHistoryData)
+	var attestationHistory EncHistoryData
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		for _, key := range publicKeys {
-			enc := bucket.Get(key[:])
-			var attestationHistory EncHistoryData
-			if len(enc) == 0 {
-				attestationHistory = NewAttestationHistoryArray(0)
-			} else {
-				attestationHistory = make(EncHistoryData, len(enc))
-				copy(attestationHistory, enc)
-			}
-			attestationHistoryForVals[key] = attestationHistory
+		enc := bucket.Get(publicKey[:])
+		var attestationHistory EncHistoryData
+		if len(enc) == 0 {
+			attestationHistory = NewAttestationHistoryArray(0)
+		} else {
+			attestationHistory = make(EncHistoryData, len(enc))
+			copy(attestationHistory, enc)
 		}
 		return nil
 	})
-	for pk, ah := range attestationHistoryForVals {
-		ehd := make(EncHistoryData, len(ah))
-		copy(ehd, ah)
-		attestationHistoryForVals[pk] = ehd
-	}
-	return attestationHistoryForVals, err
-}
-
-// SaveAttestationHistoryForPubKeysV2 saves the attestation histories for the requested validator public keys.
-func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]EncHistoryData) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeysV2")
-	defer span.End()
-
-	err := store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		for pubKey, encodedHistory := range historyByPubKeys {
-			if err := bucket.Put(pubKey[:], encodedHistory); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return err
+	return attestationHistory, err
 }
 
 // SaveAttestationHistoryForPubKeyV2 saves the attestation history for the requested validator public key.
@@ -85,7 +57,6 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKe
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		return bucket.Put(pubKey[:], history)
 	})
-
 	return err
 }
 
