@@ -46,7 +46,7 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		enc := bucket.Get(publicKey[:])
 		if len(enc) == 0 {
-			attestationHistory = NewAttestationHistoryArray(53999)
+			attestationHistory = NewAttestationHistoryArray(16000)
 		} else {
 			attestationHistory = make(EncHistoryData, len(enc))
 			copy(attestationHistory, enc)
