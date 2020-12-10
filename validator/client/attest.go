@@ -13,6 +13,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -28,6 +29,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
