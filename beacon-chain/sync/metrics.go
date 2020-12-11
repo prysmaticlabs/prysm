@@ -47,6 +47,7 @@ var (
 			Help: "Count the number of times a node resyncs.",
 		},
 	)
+
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",

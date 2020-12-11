@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -171,6 +172,9 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 // Wrap the pubsub validator with a metric monitoring function. This function increments the
 // appropriate counter if the particular message fails to validate.
 func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
+	count := make(map[uint64]uint64)
+	average := make(map[uint64]uint64)
+	mtx := new(sync.Mutex)
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) (res pubsub.ValidationResult) {
 		defer messagehandler.HandlePanic(ctx, msg)
 		res = pubsub.ValidationIgnore // Default: ignore any message that panics.
@@ -186,9 +190,20 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 			return pubsub.ValidationIgnore
 		}
+		curr := time.Now()
 		b := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+		}
+		since := time.Since(curr)
+		if b == pubsub.ValidationAccept && strings.Contains(topic, s.addDigestToTopic(p2p.BlockSubnetTopicFormat)) && pid != s.p2p.PeerID() {
+			mtx.Lock()
+			mod := msg.ValidatorData.(*pb.SignedBeaconBlock).Block.Slot % params.BeaconConfig().SlotsPerEpoch
+			ct := count[mod]
+			count[mod] = ct + 1
+			average[mod] = ((ct * average[mod]) + uint64(since.Milliseconds())) / (ct + 1)
+			log.Errorf("Average for mod %d is %d ms", mod, average[mod])
+			mtx.Unlock()
 		}
 		return b
 	}
