@@ -62,7 +62,7 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		unaggregated = unaggregated.selectComplementUsingKeys(solution.Keys)
 	}
 
-	return aggregated.merge(unaggregated.filterContained()).dedup(), nil
+	return aggregated.merge(unaggregated.filterContained()), nil
 }
 
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
@@ -177,36 +177,6 @@ func (al attList) filterContained() attList {
 		filtered = append(filtered, al[i])
 	}
 	return filtered
-}
-
-// dedup removes duplicate candidates (ones with the same bits set on).
-// Important: not only exact duplicates are removed, but proper subsets are removed too
-// (their known bits are redundant and are already contained in their supersets).
-func (al attList) dedup() attList {
-	if len(al) < 2 {
-		return al
-	}
-	for i := 0; i < len(al); i++ {
-		a := al[i]
-		for j := i + 1; j < len(al); j++ {
-			b := al[j]
-			if a.AggregationBits.Contains(b.AggregationBits) {
-				// a contains b, b is redundant.
-				al[j] = al[len(al)-1]
-				al[len(al)-1] = nil
-				al = al[:len(al)-1]
-				j--
-			} else if b.AggregationBits.Contains(a.AggregationBits) {
-				// b contains a, a is redundant.
-				al[i] = al[len(al)-1]
-				al[len(al)-1] = nil
-				al = al[:len(al)-1]
-				i--
-				break
-			}
-		}
-	}
-	return al
 }
 
 // validate checks attestation list for validity (equal bitlength, non-nil bitlist etc).
