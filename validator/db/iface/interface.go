@@ -43,7 +43,8 @@ type ValidatorDB interface {
 	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
 	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 
-	// Methods to store and read slashable keys as detected by slashing protection imports.
-	SlashablePublicKeys(ctx context.Context) ([][48]byte, error)
-	SaveSlashablePublicKeys(ctx context.Context, publicKeys [][48]byte) error
+	// Methods to store and read blacklisted public keys from EIP-3076
+	// slashing protection imports.
+	EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error)
+	SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error
 }

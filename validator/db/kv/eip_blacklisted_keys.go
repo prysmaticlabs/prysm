@@ -7,10 +7,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SlashablePublicKeys returns keys that were marked as slashable during EIP-3076 slashing
+// EIPImportBlacklistedPublicKeys returns keys that were marked as blacklisted during EIP-3076 slashing
 // protection imports, ensuring that we can prevent these keys from having duties at runtime.
-func (s *Store) SlashablePublicKeys(ctx context.Context) ([][48]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.SlashablePublicKeys")
+func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.EIPImportBlacklistedPublicKeys")
 	defer span.End()
 	var err error
 	publicKeys := make([][48]byte, 0)
@@ -28,10 +28,10 @@ func (s *Store) SlashablePublicKeys(ctx context.Context) ([][48]byte, error) {
 	return publicKeys, err
 }
 
-// SaveSlashablePublicKeys stores a list of slashable public keys that
+// SaveEIPImportBlacklistedPublicKeys stores a list of blacklisted public keys that
 // were determined during EIP-3076 slashing protection imports.
-func (s *Store) SaveSlashablePublicKeys(ctx context.Context, publicKeys [][48]byte) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveSlashablePublicKeys")
+func (s *Store) SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveEIPImportBlacklistedPublicKeys")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slashablePublicKeysBucket)

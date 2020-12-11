@@ -20,8 +20,8 @@ import (
 
 func setupCliCtx(
 	tb testing.TB,
-	dbPath string,
-	protectionFilePath string,
+	dbPath,
+	protectionFilePath,
 	outputDir string,
 ) *cli.Context {
 	app := cli.App{}

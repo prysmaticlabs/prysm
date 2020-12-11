@@ -80,11 +80,19 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
 	}
+
+	slashablePublicKeys := make([][48]byte, 0, len(slashableAttesterKeys)+len(slashableProposerKeys))
 	for _, pubKey := range slashableProposerKeys {
 		delete(proposalHistoryByPubKey, pubKey)
+		slashablePublicKeys = append(slashablePublicKeys, pubKey)
 	}
 	for _, pubKey := range slashableAttesterKeys {
 		delete(attestingHistoryByPubKey, pubKey)
+		slashablePublicKeys = append(slashablePublicKeys, pubKey)
+	}
+
+	if err := validatorDB.SaveEIPImportBlacklistedPublicKeys(ctx, slashablePublicKeys); err != nil {
+		return errors.Wrap(err, "could not save slashable public keys to database")
 	}
 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
