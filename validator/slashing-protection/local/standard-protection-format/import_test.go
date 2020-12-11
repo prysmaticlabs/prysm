@@ -334,6 +334,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 						Slot:        "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
 					},
+					{
+						Slot:        "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
 				},
 			},
 		},
@@ -378,6 +382,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 						SigningRoot: fmt.Sprintf("%x", roots[1]),
 					},
 					{
+						Slot:        "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+					{
 						Slot:        "3",
 						SigningRoot: fmt.Sprintf("%x", roots[2]),
 					},
@@ -387,13 +395,13 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseUniqueSignedBlocksByPubKey(tt.data)
+			got, err := parseBlocksForUniquePublicKeys(tt.data)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseUniqueSignedBlocksByPubKey() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseBlocksForUniquePublicKeys() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseUniqueSignedBlocksByPubKey() got = %v, want %v", got, tt.want)
+				t.Errorf("parseBlocksForUniquePublicKeys() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -450,7 +458,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			},
 		},
 		{
-			name: "same blocks but different public keys are parsed correctly",
+			name: "same attestations but different public keys are parsed correctly",
 			data: []*ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
@@ -503,7 +511,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			},
 		},
 		{
-			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
+			name: "disjoint sets of signed attestations by the same public key are parsed correctly",
 			data: []*ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
@@ -579,6 +587,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 						SourceEpoch: "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
 					},
+					{
+						SourceEpoch: "1",
+						SigningRoot: fmt.Sprintf("%x", roots[0]),
+					},
 				},
 			},
 		},
@@ -623,6 +635,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 						SigningRoot: fmt.Sprintf("%x", roots[1]),
 					},
 					{
+						SourceEpoch: "2",
+						SigningRoot: fmt.Sprintf("%x", roots[1]),
+					},
+					{
 						SourceEpoch: "3",
 						SigningRoot: fmt.Sprintf("%x", roots[2]),
 					},
@@ -632,13 +648,13 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseUniqueSignedAttestationsByPubKey(tt.data)
+			got, err := parseAttestationsForUniquePublicKeys(tt.data)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseUniqueSignedAttestationsByPubKey() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseAttestationsForUniquePublicKeys() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseUniqueSignedAttestationsByPubKey() got = %v, want %v", got, tt.want)
+				t.Errorf("parseAttestationsForUniquePublicKeys() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
