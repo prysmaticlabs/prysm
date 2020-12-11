@@ -82,7 +82,6 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		attesterHistoryByPubKey:        attHistoryByPubKey,
 	}
 
 	return validator, m, validatorKey, ctrl.Finish
@@ -190,8 +189,9 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
+	dummyRoot := [32]byte{}
 	// Save a dummy proposal history at slot 0.
-	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
 	require.NoError(t, err)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -205,12 +205,22 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Times(2).Return(testBlock.Block, nil /*err*/)
+	).Return(testBlock.Block, nil /*err*/)
+
+	secondTestBlock := testutil.NewBeaconBlock()
+	secondTestBlock.Block.Slot = slot
+	graffiti := [32]byte{}
+	copy(graffiti[:], "someothergraffiti")
+	secondTestBlock.Block.Body.Graffiti = graffiti[:]
+	m.validatorClient.EXPECT().GetBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(secondTestBlock.Block, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -231,8 +241,9 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
+	dummyRoot := [32]byte{}
 	// Save a dummy proposal history at slot 0.
-	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
+	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
 	require.NoError(t, err)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -246,12 +257,22 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Times(2).Return(testBlock.Block, nil /*err*/)
+	).Return(testBlock.Block, nil /*err*/)
+
+	secondTestBlock := testutil.NewBeaconBlock()
+	secondTestBlock.Block.Slot = farFuture
+	graffiti := [32]byte{}
+	copy(graffiti[:], "someothergraffiti")
+	secondTestBlock.Block.Body.Graffiti = graffiti[:]
+	m.validatorClient.EXPECT().GetBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(secondTestBlock.Block, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx

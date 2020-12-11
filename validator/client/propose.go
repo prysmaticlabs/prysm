@@ -13,6 +13,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -36,6 +37,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
+	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
@@ -76,13 +80,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, b, nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		return
-	}
-
 	// Sign returned block from beacon node
 	sig, domain, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
@@ -97,7 +94,23 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
+	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, b, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, b, sig),
 		).WithError(err).Error("Failed block slashing protection check")

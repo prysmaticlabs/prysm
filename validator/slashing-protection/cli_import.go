@@ -32,7 +32,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, make([][48]byte, 0))
 	if err != nil {
 		return errors.Wrapf(err, "could not access validator database at path: %s", dataDir)
 	}
@@ -47,8 +47,8 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 	}
 	if protectionFilePath == "" {
 		return fmt.Errorf(
-			"No path to a slashing_protection.json file specified, please retry. "+
-				"You can also specify it with the %s flag",
+			"no path to a slashing_protection.json file specified, please retry or "+
+				"you can also specify it with the %s flag",
 			flags.SlashingProtectionJSONFileFlag.Name,
 		)
 	}

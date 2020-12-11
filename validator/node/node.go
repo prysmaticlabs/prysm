@@ -4,6 +4,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -206,7 +207,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			}
 
 		}
-		if err := clearDB(dataDir, forceClearFlag); err != nil {
+		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	} else {
@@ -219,7 +220,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(dataDir, nil)
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, nil)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
@@ -297,12 +298,12 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			}
 
 		}
-		if err := clearDB(dataDir, forceClearFlag); err != nil {
+		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, make([][48]byte, 0))
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
@@ -488,7 +489,7 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	return s.services.RegisterService(gatewaySrv)
 }
 
-func clearDB(dataDir string, force bool) error {
+func clearDB(ctx context.Context, dataDir string, force bool) error {
 	var err error
 	clearDBConfirmed := force
 
@@ -503,7 +504,7 @@ func clearDB(dataDir string, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(dataDir, nil)
+		valDB, err := kv.NewKVStore(ctx, dataDir, nil)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}
