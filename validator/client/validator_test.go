@@ -270,7 +270,6 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
