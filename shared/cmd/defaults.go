@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"fmt"
 	"path/filepath"
 	"runtime"
 
@@ -69,7 +68,10 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	}
 	if selectedDirExists {
 		// No need not move anything, destination directory already exists.
-		log.Warnf("Previous data directory found: %q, please make sure it is removed.", prevDataDir)
+		log.Warnf("Outdated data directory is found: %q! Current data folder %q is not empty, "+
+			"so can not copy files automatically. Either remove outdated data directory, or "+
+			"consider specifying non-existent new data directory (files will be copied automatically).",
+			prevDataDir, curDataDir)
 		return nil
 	}
 
@@ -77,20 +79,14 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 		return nil
 	}
 
-	log.Warnf("Previous data directory is found: %q. It is located in '%%APPDATA%%' and "+
-		"needs to be relocated to a non-shared local folder: %q", prevDataDir, curDataDir)
+	log.Warnf("Outdated data directory is found: %q. Copying its contents to the new data folder: %q",
+		prevDataDir, curDataDir)
 
 	if err := fileutil.CopyDir(prevDataDir, curDataDir); err != nil {
 		return err
 	}
-	hasDir, err := fileutil.HasDir(curDataDir)
-	fmt.Printf("After rename, hasDir: %v (err: %v)\n", hasDir, err)
-	fmt.Printf("After rename, tosaccepted: %v\n", fileutil.FileExists(filepath.Join(curDataDir, "tosaccepted")))
-	//if err := os.Chmod(curDataDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
-	//	return err
-	//}
 
-	log.Infof("All files from %q to %q have been copied successfully! You can remove %q now.",
+	log.Infof("All files from the outdated data directory %q has been moved to %q. Consider removing %q now.",
 		prevDataDir, curDataDir, prevDataDir)
 	return nil
 }

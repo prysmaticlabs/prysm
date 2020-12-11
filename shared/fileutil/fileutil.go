@@ -1,7 +1,6 @@
 package fileutil
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -103,14 +102,11 @@ func HasDir(dirPath string) (bool, error) {
 // FileExists returns true if a file is not a directory and exists
 // at the specified path.
 func FileExists(filename string) bool {
-	fmt.Printf("1. FileExists(%v)\n", filename)
 	filePath, err := ExpandPath(filename)
-	fmt.Printf("1. FileExists filepath: %v\n", filePath)
 	if err != nil {
 		return false
 	}
 	info, err := os.Stat(filePath)
-	fmt.Printf("1. FileExists fileinfo: %v, err: %v\n", info, err)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			log.WithError(err).Info("Checking for file existence returned an error")
