@@ -489,7 +489,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	endpoints = append(endpoints, b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoints:      endpoints,
+		HTTPEndpoints:      endpoints,
 		DepositContract:    common.HexToAddress(depAddress),
 		BeaconDB:           b.db,
 		DepositCache:       b.depositCache,

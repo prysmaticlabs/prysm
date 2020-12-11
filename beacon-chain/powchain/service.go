@@ -158,7 +158,7 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HTTPEndPoints      []string
+	HTTPEndpoints      []string
 	DepositContract    common.Address
 	BeaconDB           db.HeadAccessDatabase
 	DepositCache       *depositcache.DepositCache
@@ -187,7 +187,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
-	endpoints := dedupEndpoints(config.HTTPEndPoints)
+	endpoints := dedupEndpoints(config.HTTPEndpoints)
 	// Select first http endpoint in the provided list.
 	currEndpoint := ""
 	if len(endpoints) > 0 {
