@@ -22,6 +22,7 @@ import (
 	"runtime"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // DefaultDataDir is the default data directory to use for the databases and other
@@ -42,28 +43,28 @@ func DefaultDataDir() string {
 	return ""
 }
 
-// CheckDefaultDataDir checks and fixes the issue with default data directory path.
+// FixDefaultDataDir checks if previous data directory is found and can be migrated to a new path.
+// This is used to resolve issue with weak default path (for Windows users) in existing installations.
 // For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.
-func CheckDefaultDataDir(selectedDir string) error {
+func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	if runtime.GOOS != "windows" {
 		return nil
 	}
 
 	// See if shared directory is found (if it is -- we need to move it to non-shared destination).
-	roamingAppDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2")
-	roamingAppDataDirExists, err := fileutil.HasDir(roamingAppDataDir)
+	prevDataDirExists, err := fileutil.HasDir(prevDataDir)
 	if err != nil {
 		return err
 	}
-	if !roamingAppDataDirExists {
+	if !prevDataDirExists {
 		// If no previous "%APPDATA%\Eth2" found, nothing to patch and move to new default location.
 		return nil
 	}
 
-	if selectedDir == "" {
-		selectedDir = DefaultDataDir()
+	if curDataDir == "" {
+		curDataDir = DefaultDataDir()
 	}
-	selectedDirExists, err := fileutil.HasDir(selectedDir)
+	selectedDirExists, err := fileutil.HasDir(curDataDir)
 	if err != nil {
 		return err
 	}
@@ -72,17 +73,20 @@ func CheckDefaultDataDir(selectedDir string) error {
 		return nil
 	}
 
-	if selectedDir == roamingAppDataDir {
+	if curDataDir == prevDataDir {
 		return nil
 	}
 
 	log.Warnf("Previous data directory is found: %q. It is located in '%%APPDATA%%' and "+
-		"needs to be relocated to a non-shared local folder: %q", roamingAppDataDir, selectedDir)
+		"needs to be relocated to a non-shared local folder: %q", prevDataDir, curDataDir)
 
-	if err := os.Rename(roamingAppDataDir, selectedDir); err != nil {
+	if err := os.Rename(prevDataDir, curDataDir); err != nil {
+		return err
+	}
+	if err := os.Chmod(curDataDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return err
 	}
 
-	log.Infof("Data folder moved from %q to %q successfully!", roamingAppDataDir, selectedDir)
+	log.Infof("Data folder moved from %q to %q successfully!", prevDataDir, curDataDir)
 	return nil
 }
