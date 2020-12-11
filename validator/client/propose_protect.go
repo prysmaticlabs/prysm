@@ -44,7 +44,7 @@ func (v *validator) preBlockSignValidations(
 	}
 
 	// If a proposal exists in our history for the slot, we check the following:
-	// If the signing root is nil, then we consider it slashable. If signing root is not nil,
+	// If the signing root is empty (zero hash), then we consider it slashable. If signing root is not empty,
 	// we check if it is different than the incoming block's signing root. If that is the case,
 	// we consider that proposal slashable.
 	if exists && (prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot) {
