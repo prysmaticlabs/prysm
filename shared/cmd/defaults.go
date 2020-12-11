@@ -76,7 +76,7 @@ func CheckDefaultDataDir(selectedDir string) error {
 		return nil
 	}
 
-	log.Warnf("Previous data directory is found: %q. It is located in '%APPDATA%' and "+
+	log.Warnf("Previous data directory is found: %q. It is located in '%%APPDATA%%' and "+
 		"needs to be relocated to a non-shared local folder: %q", roamingAppDataDir, selectedDir)
 
 	if err := os.Rename(roamingAppDataDir, selectedDir); err != nil {
