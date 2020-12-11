@@ -107,10 +107,10 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	}
 }
 
-func TestImportInterchangeData_OK_SavesSlashableKeys(t *testing.T) {
+func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	ctx := context.Background()
-	numValidators := 1
-	numEpochs := 5
+	numValidators := 10
+	numEpochs := 10
 	publicKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
@@ -124,7 +124,7 @@ func TestImportInterchangeData_OK_SavesSlashableKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	// We add a slashable block for public key at index 1.
-	pubKey1 := standardProtectionFormat.Data[0].Pubkey
+	pubKey0 := standardProtectionFormat.Data[0].Pubkey
 	standardProtectionFormat.Data[0].SignedBlocks = append(
 		standardProtectionFormat.Data[0].SignedBlocks,
 		&protectionFormat.SignedBlock{
@@ -137,45 +137,42 @@ func TestImportInterchangeData_OK_SavesSlashableKeys(t *testing.T) {
 			Slot: "700",
 		},
 	)
-	for _, b := range standardProtectionFormat.Data[0].SignedBlocks {
-		fmt.Println(b)
-	}
+
+	// We add a slashable attestation for public key at index 1
+	// representing a double vote event.
+	pubKey1 := standardProtectionFormat.Data[1].Pubkey
+	standardProtectionFormat.Data[1].SignedAttestations = append(
+		standardProtectionFormat.Data[1].SignedAttestations,
+		&protectionFormat.SignedAttestation{
+			TargetEpoch: "700",
+			SourceEpoch: "699",
+		},
+	)
+	standardProtectionFormat.Data[1].SignedAttestations = append(
+		standardProtectionFormat.Data[1].SignedAttestations,
+		&protectionFormat.SignedAttestation{
+			TargetEpoch: "700",
+			SourceEpoch: "699",
+		},
+	)
 
 	// We add a slashable attestation for public key at index 2
-	// representing a double vote event.
-	//pubKey2 := standardProtectionFormat.Data[2].Pubkey
-	//standardProtectionFormat.Data[2].SignedAttestations = append(
-	//	standardProtectionFormat.Data[2].SignedAttestations,
-	//	&protectionFormat.SignedAttestation{
-	//		TargetEpoch: "700",
-	//		SourceEpoch: "699",
-	//	},
-	//)
-	//standardProtectionFormat.Data[2].SignedAttestations = append(
-	//	standardProtectionFormat.Data[2].SignedAttestations,
-	//	&protectionFormat.SignedAttestation{
-	//		TargetEpoch: "700",
-	//		SourceEpoch: "699",
-	//	},
-	//)
-
-	// We add a slashable attestation for public key at index 3
 	// representing a surround vote event.
-	//pubKey3 := standardProtectionFormat.Data[3].Pubkey
-	//standardProtectionFormat.Data[3].SignedAttestations = append(
-	//	standardProtectionFormat.Data[3].SignedAttestations,
-	//	&protectionFormat.SignedAttestation{
-	//		TargetEpoch: "800",
-	//		SourceEpoch: "805",
-	//	},
-	//)
-	//standardProtectionFormat.Data[3].SignedAttestations = append(
-	//	standardProtectionFormat.Data[3].SignedAttestations,
-	//	&protectionFormat.SignedAttestation{
-	//		TargetEpoch: "801",
-	//		SourceEpoch: "804",
-	//	},
-	//)
+	pubKey2 := standardProtectionFormat.Data[2].Pubkey
+	standardProtectionFormat.Data[2].SignedAttestations = append(
+		standardProtectionFormat.Data[2].SignedAttestations,
+		&protectionFormat.SignedAttestation{
+			TargetEpoch: "800",
+			SourceEpoch: "805",
+		},
+	)
+	standardProtectionFormat.Data[2].SignedAttestations = append(
+		standardProtectionFormat.Data[2].SignedAttestations,
+		&protectionFormat.SignedAttestation{
+			TargetEpoch: "801",
+			SourceEpoch: "804",
+		},
+	)
 
 	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(standardProtectionFormat)
@@ -189,18 +186,17 @@ func TestImportInterchangeData_OK_SavesSlashableKeys(t *testing.T) {
 	// Assert the three slashable keys in the imported JSON were saved to the database.
 	sKeys, err := validatorDB.EIPImportBlacklistedPublicKeys(ctx)
 	require.NoError(t, err)
-	fmt.Println(sKeys)
 	slashableKeys := make(map[string]bool)
 	for _, pubKey := range sKeys {
 		pkString := fmt.Sprintf("%#x", pubKey)
 		slashableKeys[pkString] = true
 	}
-	ok := slashableKeys[pubKey1]
+	ok := slashableKeys[pubKey0]
 	assert.Equal(t, true, ok)
-	//ok = slashableKeys[pubKey2]
-	//assert.Equal(t, true, ok)
-	//ok = slashableKeys[pubKey3]
-	//assert.Equal(t, true, ok)
+	ok = slashableKeys[pubKey1]
+	assert.Equal(t, true, ok)
+	ok = slashableKeys[pubKey2]
+	assert.Equal(t, true, ok)
 }
 
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {

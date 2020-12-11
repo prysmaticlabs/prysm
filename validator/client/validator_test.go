@@ -728,7 +728,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
 }
 
-func TestUpdateDuties_OK_FilterSlahablePublicKeys(t *testing.T) {
+func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -737,14 +737,14 @@ func TestUpdateDuties_OK_FilterSlahablePublicKeys(t *testing.T) {
 
 	numValidators := 10
 	keysMap := make(map[[48]byte]bls.SecretKey)
-	slashablePublicKeys := make(map[[48]byte]bool)
+	blacklistedPublicKeys := make(map[[48]byte]bool)
 	for i := 0; i < numValidators; i++ {
 		priv, err := bls.RandKey()
 		require.NoError(t, err)
 		pubKey := [48]byte{}
 		copy(pubKey[:], priv.PublicKey().Marshal())
 		keysMap[pubKey] = priv
-		slashablePublicKeys[pubKey] = true
+		blacklistedPublicKeys[pubKey] = true
 	}
 
 	km := &mockKeymanager{
@@ -756,7 +756,7 @@ func TestUpdateDuties_OK_FilterSlahablePublicKeys(t *testing.T) {
 	v := validator{
 		keyManager:                     km,
 		validatorClient:                client,
-		eipImportBlacklistedPublicKeys: slashablePublicKeys,
+		eipImportBlacklistedPublicKeys: blacklistedPublicKeys,
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
@@ -774,8 +774,8 @@ func TestUpdateDuties_OK_FilterSlahablePublicKeys(t *testing.T) {
 	).Return(nil, nil)
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
-	for range slashablePublicKeys {
-		assert.LogsContain(t, hook, "Not including slashable public key in request")
+	for range blacklistedPublicKeys {
+		assert.LogsContain(t, hook, "Not including slashable public key")
 	}
 }
 
