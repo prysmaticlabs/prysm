@@ -47,8 +47,8 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 	}
 	if protectionFilePath == "" {
 		return fmt.Errorf(
-			"No path to a slashing_protection.json file specified, please retry. "+
-				"You can also specify it with the %s flag",
+			"no path to a slashing_protection.json file specified, please retry or "+
+				"you can also specify it with the %s flag",
 			flags.SlashingProtectionJSONFileFlag.Name,
 		)
 	}

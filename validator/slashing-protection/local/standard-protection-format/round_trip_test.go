@@ -130,9 +130,6 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 		&protectionFormat.SignedBlock{
 			Slot: "700",
 		},
-	)
-	standardProtectionFormat.Data[0].SignedBlocks = append(
-		standardProtectionFormat.Data[0].SignedBlocks,
 		&protectionFormat.SignedBlock{
 			Slot: "700",
 		},
@@ -147,9 +144,6 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 			TargetEpoch: "700",
 			SourceEpoch: "699",
 		},
-	)
-	standardProtectionFormat.Data[1].SignedAttestations = append(
-		standardProtectionFormat.Data[1].SignedAttestations,
 		&protectionFormat.SignedAttestation{
 			TargetEpoch: "700",
 			SourceEpoch: "699",
@@ -165,9 +159,6 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 			TargetEpoch: "800",
 			SourceEpoch: "805",
 		},
-	)
-	standardProtectionFormat.Data[2].SignedAttestations = append(
-		standardProtectionFormat.Data[2].SignedAttestations,
 		&protectionFormat.SignedAttestation{
 			TargetEpoch: "801",
 			SourceEpoch: "804",
