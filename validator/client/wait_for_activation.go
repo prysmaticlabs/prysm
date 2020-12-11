@@ -28,6 +28,33 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating keys")
 	}
+	if len(validatingKeys) == 0 {
+		log.Warn(msgNoKeysFetched)
+
+		ticker := time.NewTicker(keyRefetchPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				keys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+				if err != nil {
+					return errors.Wrap(err, msgCouldNotFetchKeys)
+				}
+				if len(keys) == 0 {
+					log.Warn(msgNoKeysFetched)
+					continue
+				}
+				// after this statement we jump out of `select` and hit `break`,
+				// thus jumping out of `for` into the rest of the function
+				validatingKeys = keys
+			case <-ctx.Done():
+				log.Debug("Context closed, exiting fetching validating keys")
+				return ctx.Err()
+			}
+			break
+		}
+	}
+
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
