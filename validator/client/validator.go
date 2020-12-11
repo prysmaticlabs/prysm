@@ -265,6 +265,8 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 					log.Warn(msgNoKeysFetched)
 					continue
 				}
+				// after this statement we jump out of `select` and hit `break`,
+				// thus jumping out of `for` into the rest of the function
 				validatingKeys = keys
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting fetching validating keys")
