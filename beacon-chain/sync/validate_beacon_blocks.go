@@ -168,10 +168,18 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
-
-	parentState, err = state.ProcessSlots(ctx, parentState, blk.Block.Slot)
-	if err != nil {
-		return err
+	nextEpoch := helpers.CurrentEpoch(parentState)
+	expectedEpoch := helpers.SlotToEpoch(blk.Block.Slot)
+	if expectedEpoch <= nextEpoch {
+		err = parentState.SetSlot(blk.Block.Slot)
+		if err != nil {
+			return err
+		}
+	} else {
+		parentState, err = state.ProcessSlots(ctx, parentState, blk.Block.Slot)
+		if err != nil {
+			return err
+		}
 	}
 	idx, err := helpers.BeaconProposerIndex(parentState)
 	if err != nil {
