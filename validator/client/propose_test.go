@@ -82,7 +82,6 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		attesterHistoryByPubKey:        attHistoryByPubKey,
 	}
 
 	return validator, m, validatorKey, ctrl.Finish
