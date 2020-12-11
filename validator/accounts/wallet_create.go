@@ -35,6 +35,10 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	if keymanagerKind == keymanager.Imported {
+		log.Warning("Creating an imported wallet does not provide anything beneficial. " +
+			"This option will be removed in v1.0.0. Please use `validator accounts import` instead.")
+	}
 	createWalletConfig, err := extractWalletCreationConfigFromCli(cliCtx, keymanagerKind)
 	if err != nil {
 		return nil, err

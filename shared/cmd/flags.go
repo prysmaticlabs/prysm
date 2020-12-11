@@ -36,6 +36,16 @@ var (
 		Usage: "Data directory for the databases and keystore",
 		Value: DefaultDataDir(),
 	}
+	// EnableBackupWebhookFlag for users to trigger db backups via an HTTP webhook.
+	EnableBackupWebhookFlag = &cli.BoolFlag{
+		Name:  "enable-db-backup-webhook",
+		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
+	}
+	// BackupWebhookOutputDir to customize the output directory for db backups.
+	BackupWebhookOutputDir = &cli.StringFlag{
+		Name:  "db-backup-output-dir",
+		Usage: "Output directory for db backups",
+	}
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
 	EnableTracingFlag = &cli.BoolFlag{
 		Name:  "enable-tracing",
@@ -208,6 +218,18 @@ var (
 	AcceptTosFlag = &cli.BoolFlag{
 		Name:  "accept-terms-of-use",
 		Usage: "Accept Terms and Conditions (for non-interactive environments)",
+	}
+	// RestoreSourceFileFlag specifies the filepath to the backed-up database file
+	// which will be used to restore the database.
+	RestoreSourceFileFlag = &cli.StringFlag{
+		Name:  "restore-source-file",
+		Usage: "Filepath to the backed-up database file which will be used to restore the database",
+	}
+	// RestoreTargetDirFlag specifies the target directory of the restored database.
+	RestoreTargetDirFlag = &cli.StringFlag{
+		Name:  "restore-target-dir",
+		Usage: "Target directory of the restored database",
+		Value: DefaultDataDir(),
 	}
 )
 

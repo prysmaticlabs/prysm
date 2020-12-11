@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paulbellamy/ratecounter"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -14,6 +15,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -186,11 +188,17 @@ func TestService_InitStartStop(t *testing.T) {
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
 	newService := func(ctx context.Context, mc *mock.ChainService) *Service {
-		s := NewService(ctx, &Config{
-			Chain:         mc,
-			StateNotifier: mc.StateNotifier(),
-		})
-		require.NotNil(t, s)
+		ctx, cancel := context.WithCancel(ctx)
+		s := &Service{
+			ctx:           ctx,
+			cancel:        cancel,
+			chain:         mc,
+			synced:        abool.New(),
+			chainStarted:  abool.New(),
+			stateNotifier: mc.StateNotifier(),
+			counter:       ratecounter.NewRateCounter(counterSeconds * time.Second),
+			genesisChan:   make(chan time.Time),
+		}
 		return s
 	}
 

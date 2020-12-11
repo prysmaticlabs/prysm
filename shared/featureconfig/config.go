@@ -172,9 +172,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling pruning deposit proofs")
 		cfg.EnablePruningDepositProofs = false
 	}
-	if ctx.Bool(enableSyncBacktracking.Name) {
-		log.Warn("Enabling init-sync backtracking algorithm")
-		cfg.EnableSyncBacktracking = true
+	cfg.EnableSyncBacktracking = true
+	if ctx.Bool(disableSyncBacktracking.Name) {
+		log.Warn("Disabling init-sync backtracking algorithm")
+		cfg.EnableSyncBacktracking = false
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		log.Warn("Using a larger gossip history for the node")
@@ -211,6 +212,11 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Enabled full web mode, wallet password will be written to disk at the wallet directory " +
 			"upon completing web onboarding.")
 		cfg.WriteWalletPasswordOnWebOnboarding = true
+	}
+	cfg.EnableBlst = true
+	if ctx.Bool(disableBlst.Name) {
+		log.Warn("Disabling new BLS library blst")
+		cfg.EnableBlst = false
 	}
 	Init(cfg)
 }

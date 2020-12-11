@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -36,6 +37,7 @@ import (
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -53,7 +55,6 @@ import (
 
 var log = logrus.WithField("prefix", "node")
 
-const beaconChainDBName = "beaconchaindata"
 const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -290,7 +291,7 @@ func (b *BeaconNode) startForkChoice() {
 
 func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dbPath := filepath.Join(baseDir, beaconChainDBName)
+	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
@@ -486,12 +487,13 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoint:    b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(depAddress),
-		BeaconDB:        b.db,
-		DepositCache:    b.depositCache,
-		StateNotifier:   b,
-		StateGen:        b.stateGen,
+		HTTPEndPoint:       b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
+		DepositContract:    common.HexToAddress(depAddress),
+		BeaconDB:           b.db,
+		DepositCache:       b.depositCache,
+		StateNotifier:      b,
+		StateGen:           b.stateGen,
+		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
@@ -507,7 +509,10 @@ func (b *BeaconNode) registerPOWChainService() error {
 		}
 	}
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
+		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
+			"you are trying to run on a different network than what the database contains. You can run once with "+
+			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
+			knownContract, cfg.DepositContract.Bytes())
 	}
 
 	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
@@ -598,6 +603,8 @@ func (b *BeaconNode) registerRPCService() error {
 
 	host := b.cliCtx.String(flags.RPCHost.Name)
 	port := b.cliCtx.String(flags.RPCPort.Name)
+	beaconMonitoringHost := b.cliCtx.String(cmd.MonitoringHostFlag.Name)
+	beaconMonitoringPort := b.cliCtx.Int(flags.MonitoringPortFlag.Name)
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
@@ -607,6 +614,8 @@ func (b *BeaconNode) registerRPCService() error {
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
 		Port:                    port,
+		BeaconMonitoringHost:    beaconMonitoringHost,
+		BeaconMonitoringPort:    beaconMonitoringPort,
 		CertFlag:                cert,
 		KeyFlag:                 key,
 		BeaconDB:                b.db,
@@ -654,12 +663,12 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 		panic(err)
 	}
 
-	if cliCtx.IsSet(flags.EnableBackupWebhookFlag.Name) {
+	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
 		additionalHandlers = append(
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: db.BackupHandler(b.db, cliCtx.String(flags.BackupWebhookOutputDir.Name)),
+				Handler: backuputil.BackupHandler(b.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}

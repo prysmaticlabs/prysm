@@ -25,15 +25,34 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 		Slot:          10,
 		ProposerIndex: 0,
 	}
-	err := validator.db.SaveProposalHistoryForSlot(ctx, validatorKey.PublicKey().Marshal(), 10, []byte{1})
+	pubKeyBytes := [48]byte{}
+	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
+
+	// We save a proposal at slot 10 with a dummy signing root.
+	err := validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, 10, []byte{1})
 	require.NoError(t, err)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+
+	// We expect the same block sent out should return slashable error.
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
 	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
+
+	// We save a proposal at slot 11 with a nil signing root.
+	block.Slot = 11
+	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, block.Slot, nil)
+	require.NoError(t, err)
+
+	// We expect the same block sent out should return slashable error even
+	// if we had a nil signing root stored in the database.
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
+	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
+
+	// A block with a different slot for which we do not have a proposing history
+	// should not be failing validation.
 	block.Slot = 9
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
-	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	require.NoError(t, err, "Expected allowed block not to throw error")
 }
 
 func TestPreBlockSignValidation(t *testing.T) {
@@ -47,16 +66,14 @@ func TestPreBlockSignValidation(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	block := &ethpb.BeaconBlock{
-		Slot:          10,
-		ProposerIndex: 0,
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 10
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
-	err := validator.preBlockSignValidations(context.Background(), pubKey, block)
+	err := validator.preBlockSignValidations(context.Background(), pubKey, block.Block)
 	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
 	mockProtector.AllowBlock = true
-	err = validator.preBlockSignValidations(context.Background(), pubKey, block)
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block.Block)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
@@ -18,37 +19,47 @@ var failedPreAttSignExternalErr = "attempted to make slashable attestation, reje
 var failedPostAttSignExternalErr = "external slasher service detected a submitted slashable attestation"
 
 func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	ctx, span := trace.StartSpan(ctx, "validator.preAttSignUpdate")
+	defer span.End()
 
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
 	v.attesterHistoryByPubKeyLock.RUnlock()
+	if !ok {
+		AttestationMapMiss.Inc()
+		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
+		if err != nil {
+			return errors.Wrap(err, "could not get attester history")
+		}
+		attesterHistory, ok = attesterHistoryMap[pubKey]
+		if !ok {
+			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
+		}
+	} else {
+		AttestationMapHit.Inc()
+	}
 	_, sr, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
 	if err != nil {
 		log.WithError(err).Error("Could not get domain and signing root from attestation")
 		return err
 	}
-	if ok {
-		slashable, err := isNewAttSlashable(
-			ctx,
-			attesterHistory,
-			indexedAtt.Data.Source.Epoch,
-			indexedAtt.Data.Target.Epoch,
-			sr,
-		)
-		if err != nil {
-			return errors.Wrap(err, "could not check if attestation is slashable")
-		}
-		if slashable {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedAttLocalProtectionErr)
-		}
-	} else {
-		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in pre validation")
+	slashable, err := isNewAttSlashable(
+		ctx,
+		attesterHistory,
+		indexedAtt.Data.Source.Epoch,
+		indexedAtt.Data.Target.Epoch,
+		sr,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not check if attestation is slashable")
 	}
-
+	if slashable {
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return errors.New(failedAttLocalProtectionErr)
+	}
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
@@ -61,36 +72,45 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 }
 
 func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte, signingRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
+	defer span.End()
+
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	v.attesterHistoryByPubKeyLock.Lock()
 	defer v.attesterHistoryByPubKeyLock.Unlock()
-	var newHistory kv.EncHistoryData
 	attesterHistory, ok := v.attesterHistoryByPubKey[pubKey]
-	if ok {
-		slashable, err := isNewAttSlashable(
-			ctx,
-			attesterHistory,
-			indexedAtt.Data.Source.Epoch,
-			indexedAtt.Data.Target.Epoch,
-			signingRoot,
-		)
+	if !ok {
+		AttestationMapMiss.Inc()
+		attesterHistoryMap, err := v.db.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
 		if err != nil {
-			return errors.Wrap(err, "could not check if attestation is slashable")
+			return errors.Wrap(err, "could not get attester history")
 		}
-		if slashable {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedAttLocalProtectionErr)
+		attesterHistory, ok = attesterHistoryMap[pubKey]
+		if !ok {
+			log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
 		}
-		newHistory = attesterHistory
 	} else {
-		log.WithField("publicKey", fmtKey).Debug("Could not get local slashing protection data for validator in post validation")
-		newHistory = kv.NewAttestationHistoryArray(indexedAtt.Data.Target.Epoch)
+		AttestationMapHit.Inc()
 	}
-	updatedHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
+	slashable, err := isNewAttSlashable(
 		ctx,
-		newHistory,
+		attesterHistory,
+		indexedAtt.Data.Source.Epoch,
+		indexedAtt.Data.Target.Epoch,
+		signingRoot,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not check if attestation is slashable")
+	}
+	if slashable {
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return errors.New(failedAttLocalProtectionErr)
+	}
+	newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
+		ctx,
+		attesterHistory,
 		indexedAtt.Data.Target.Epoch,
 		&kv.HistoryData{
 			Source:      indexedAtt.Data.Source.Epoch,
@@ -100,7 +120,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 	if err != nil {
 		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
 	}
-	v.attesterHistoryByPubKey[pubKey] = updatedHistory
+	v.attesterHistoryByPubKey[pubKey] = newHistory
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
@@ -110,7 +130,13 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 			return errors.New(failedPostAttSignExternalErr)
 		}
 	}
-	return nil
+
+	// Save source and target epochs to satisfy EIP3076 requirements.
+	// The DB methods below will replace the lowest epoch in DB if necessary.
+	if err := v.db.SaveLowestSignedSourceEpoch(ctx, pubKey, indexedAtt.Data.Source.Epoch); err != nil {
+		return err
+	}
+	return v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
 }
 
 // isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
@@ -122,6 +148,9 @@ func isNewAttSlashable(
 	targetEpoch uint64,
 	signingRoot [32]byte,
 ) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "isNewAttSlashable")
+	defer span.End()
+
 	if history == nil {
 		return false, nil
 	}

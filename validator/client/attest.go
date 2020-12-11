@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -113,11 +114,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		).Debug("Attempted slashable attestation details")
 		return
 	}
-
 	if err := v.SaveProtection(ctx, pubKey); err != nil {
 		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
 	}
-
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -220,13 +219,25 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 // waitToSlotOneThird waits until one third through the current slot period
 // such that head block for beacon node can get updated.
 func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
+	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
 
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	time.Sleep(timeutils.Until(finalTime))
+	wait := timeutils.Until(finalTime)
+	if wait <= 0 {
+		return
+	}
+	t := time.NewTimer(wait)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		traceutil.AnnotateError(span, ctx.Err())
+		return
+	case <-t.C:
+		return
+	}
 }
 
 func attestationLogFields(pubKey [48]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {

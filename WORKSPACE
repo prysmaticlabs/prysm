@@ -89,10 +89,10 @@ http_archive(
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
     ],
-    sha256 = "207fad3e6689135c5d8713e5a17ba9d1290238f47b9ba545b63d9303406209c6",
+    sha256 = "81eff5df9077783b18e93d0c7ff990d8ad7a3b8b3ca5b785e1c483aacdb342d7",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.9/rules_go-v0.24.9.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.9/rules_go-v0.24.9.tar.gz",
     ],
 )
 
@@ -156,7 +156,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.15.5",
+    go_version = "1.15.6",
     nogo = "@//:nogo",
 )
 
@@ -352,9 +352,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "09a8377bd3abf76d3bd14570f001cc7f00ef0e11fe314cee626d3a3ccbae506e",
+    sha256 = "117f5366af9cf009354ed1abe02f906168158473461d69c8056984b9b0292619",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.0/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.2/prysm-web-ui.tar.gz",
     ],
 )
 

@@ -59,6 +59,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
+			cmd.BackupWebhookOutputDir,
+			cmd.EnableBackupWebhookFlag,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
@@ -68,6 +70,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ChainConfigFileFlag,
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
+			cmd.RestoreSourceFileFlag,
+			cmd.RestoreTargetDirFlag,
 		},
 	},
 	{
@@ -110,8 +114,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ChainID,
 			flags.NetworkID,
 			flags.WeakSubjectivityCheckpt,
-			flags.EnableBackupWebhookFlag,
-			flags.BackupWebhookOutputDir,
+			flags.Eth1HeaderReqLimit,
 		},
 	},
 	{

@@ -78,6 +78,8 @@ type Service struct {
 	syncService             chainSync.Checker
 	host                    string
 	port                    string
+	beaconMonitoringHost    string
+	beaconMonitoringPort    int
 	listener                net.Listener
 	withCert                string
 	withKey                 string
@@ -105,6 +107,8 @@ type Config struct {
 	Port                    string
 	CertFlag                string
 	KeyFlag                 string
+	BeaconMonitoringHost    string
+	BeaconMonitoringPort    int
 	BeaconDB                db.HeadAccessDatabase
 	ChainInfoFetcher        blockchain.ChainInfoFetcher
 	HeadFetcher             blockchain.HeadFetcher
@@ -162,6 +166,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		syncService:             cfg.SyncService,
 		host:                    cfg.Host,
 		port:                    cfg.Port,
+		beaconMonitoringHost:    cfg.BeaconMonitoringHost,
+		beaconMonitoringPort:    cfg.BeaconMonitoringPort,
 		withCert:                cfg.CertFlag,
 		withKey:                 cfg.KeyFlag,
 		depositFetcher:          cfg.DepositFetcher,
@@ -250,13 +256,15 @@ func (s *Service) Start() {
 		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
-		BeaconDB:           s.beaconDB,
-		Server:             s.grpcServer,
-		SyncChecker:        s.syncService,
-		GenesisTimeFetcher: s.genesisTimeFetcher,
-		PeersFetcher:       s.peersFetcher,
-		PeerManager:        s.peerManager,
-		GenesisFetcher:     s.genesisFetcher,
+		BeaconDB:             s.beaconDB,
+		Server:               s.grpcServer,
+		SyncChecker:          s.syncService,
+		GenesisTimeFetcher:   s.genesisTimeFetcher,
+		PeersFetcher:         s.peersFetcher,
+		PeerManager:          s.peerManager,
+		GenesisFetcher:       s.genesisFetcher,
+		BeaconMonitoringHost: s.beaconMonitoringHost,
+		BeaconMonitoringPort: s.beaconMonitoringPort,
 	}
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
@@ -298,6 +306,7 @@ func (s *Service) Start() {
 		SyncChecker:         s.syncService,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	if s.enableDebugRPCEndpoints {
