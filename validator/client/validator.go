@@ -80,7 +80,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	graffitiStruct                     *graffiti.Graffiti
-	slashablePublicKeys                map[[48]byte]bool
+	eipImportBlacklistedPublicKeys     map[[48]byte]bool
 }
 
 // Done cleans up the validator.
@@ -382,12 +382,13 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	filteredKeys := make([][48]byte, 0, len(validatingKeys))
 	v.slashableKeysLock.RLock()
 	for _, pubKey := range validatingKeys {
-		if ok := v.slashablePublicKeys[pubKey]; !ok {
+		if ok := v.eipImportBlacklistedPublicKeys[pubKey]; !ok {
 			filteredKeys = append(filteredKeys, pubKey)
 		} else {
 			log.WithField(
 				"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
-			).Warn("Not including slashable public key in request to update validator duties")
+			).Warn("Not including slashable public key from slashing protection import " +
+				"in request to update validator duties")
 		}
 	}
 	v.slashableKeysLock.RUnlock()

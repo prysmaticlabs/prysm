@@ -754,9 +754,9 @@ func TestUpdateDuties_OK_FilterSlahablePublicKeys(t *testing.T) {
 		Duties: []*ethpb.DutiesResponse_Duty{},
 	}
 	v := validator{
-		keyManager:          km,
-		validatorClient:     client,
-		slashablePublicKeys: slashablePublicKeys,
+		keyManager:                     km,
+		validatorClient:                client,
+		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),

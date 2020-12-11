@@ -187,7 +187,7 @@ func TestImportInterchangeData_OK_SavesSlashableKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert the three slashable keys in the imported JSON were saved to the database.
-	sKeys, err := validatorDB.SlashablePublicKeys(ctx)
+	sKeys, err := validatorDB.EIPImportBlacklistedPublicKeys(ctx)
 	require.NoError(t, err)
 	fmt.Println(sKeys)
 	slashableKeys := make(map[string]bool)

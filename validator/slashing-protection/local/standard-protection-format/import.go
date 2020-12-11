@@ -92,7 +92,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		slashablePublicKeys = append(slashablePublicKeys, pubKey)
 	}
 
-	if err := validatorDB.SaveSlashablePublicKeys(ctx, slashablePublicKeys); err != nil {
+	if err := validatorDB.SaveEIPImportBlacklistedPublicKeys(ctx, slashablePublicKeys); err != nil {
 		return errors.Wrap(err, "could not save slashable public keys to database")
 	}
 
