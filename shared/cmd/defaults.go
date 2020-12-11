@@ -86,6 +86,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	}
 	hasDir, err := fileutil.HasDir(curDataDir)
 	fmt.Printf("After rename, hasDir: %v (err: %v)\n", hasDir, err)
+	fmt.Printf("After rename, tosaccepted: %v\n", fileutil.FileExists(filepath.Join(curDataDir, "tosaccepted")))
 	if err := os.Chmod(curDataDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return err
 	}

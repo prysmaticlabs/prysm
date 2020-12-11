@@ -110,7 +110,7 @@ func FileExists(filename string) bool {
 		return false
 	}
 	info, err := os.Stat(filePath)
-	fmt.Printf("1. FileExists fileinfo: %v\n", info)
+	fmt.Printf("1. FileExists fileinfo: %v, err: %v\n", info, err)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			log.WithError(err).Info("Checking for file existence returned an error")
