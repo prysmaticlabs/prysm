@@ -350,15 +350,16 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return err
 	}
+	// Skip cache update if we have an invalid key
+	if r == nil || bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+		return nil
+	}
+	// Skip cache update if the key already exists
 	exists, err := proposerIndicesCache.HasProposerIndices(bytesutil.ToBytes32(r))
 	if err != nil {
 		return err
 	}
 	if exists {
-		return nil
-	}
-	// Skip Cache if we have an invalid key
-	if r == nil || bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
 		return nil
 	}
 
