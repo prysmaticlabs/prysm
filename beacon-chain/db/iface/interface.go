@@ -77,7 +77,8 @@ type NoHeadAccessDatabase interface {
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethereum_beacon_p2p_v1.StateSummary) error
 	SaveStateSummaries(ctx context.Context, summaries []*ethereum_beacon_p2p_v1.StateSummary) error
-	SaveStateSummariesToDB(ctx context.Context) error
+	SaveStateSummaryInCache(ctx context.Context, summary *ethereum_beacon_p2p_v1.StateSummary)
+	SaveStateSummariesFromCacheToDB(ctx context.Context) error
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error

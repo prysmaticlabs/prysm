@@ -203,7 +203,7 @@ func TestEnableSaveHotStateToDB_AlreadyDisabled(t *testing.T) {
 	require.Equal(t, false, service.saveHotStateDB.enabled)
 }
 
-func TestState_SaveStateSummariesToDB(t *testing.T) {
+func TestState_SaveStateSummariesFromCacheToDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
@@ -214,7 +214,7 @@ func TestState_SaveStateSummariesToDB(t *testing.T) {
 	require.Equal(t, false, service.beaconDB.HasStateSummary(ctx, r))
 	require.Equal(t, true, service.stateSummaryCache.Has(r))
 
-	require.NoError(t, service.SaveStateSummariesToDB(ctx))
+	require.NoError(t, service.SaveStateSummariesFromCacheToDB(ctx))
 	require.Equal(t, true, service.beaconDB.HasStateSummary(ctx, r))
 	require.Equal(t, false, service.stateSummaryCache.Has(r))
 }

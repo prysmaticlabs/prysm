@@ -5,9 +5,15 @@ import (
 	"errors"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
+
+// SaveStateSummaryInCache saves a state summary object to the state summary cache.
+func (s *Store) SaveStateSummaryInCache(ctx context.Context, summary *pb.StateSummary) {
+	s.stateSummaryCache.Put(bytesutil.ToBytes32(summary.Root), summary)
+}
 
 // SaveStateSummary saves a state summary object to the DB.
 func (s *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
@@ -37,8 +43,8 @@ func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSum
 	})
 }
 
-// SaveStateSummariesToDB saves state summary objects from cache to the DB.
-func (s *Store) SaveStateSummariesToDB(ctx context.Context) error {
+// SaveStateSummariesFromCacheToDB saves state summary objects from cache to the DB.
+func (s *Store) SaveStateSummariesFromCacheToDB(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
 

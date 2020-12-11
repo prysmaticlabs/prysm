@@ -339,7 +339,7 @@ func (s *Service) Stop() error {
 	}
 
 	// Save cached state summaries to the DB before stop.
-	if err := s.beaconDB.SaveStateSummariesToDB(s.ctx); err != nil {
+	if err := s.beaconDB.SaveStateSummariesFromCacheToDB(s.ctx); err != nil {
 		return err
 	}
 

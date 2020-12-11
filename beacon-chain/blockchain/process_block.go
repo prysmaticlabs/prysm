@@ -304,12 +304,10 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+	s.beaconDB.SaveStateSummaryInCache(ctx, &pb.StateSummary{
 		Root: blockRoot[:],
 		Slot: signed.Block.Slot,
-	}); err != nil {
-		return err
-	}
+	})
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
