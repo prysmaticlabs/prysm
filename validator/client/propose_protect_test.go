@@ -30,17 +30,26 @@ func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) 
 		Slot:          lowestSignedSlot - 1,
 		ProposerIndex: 0,
 	}
-	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{1})
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{4})
 	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
 
 	// We expect the same block with a slot equal to the lowest
-	// signed slot to fail validation.
+	// signed slot to pass validation if signing roots are equal.
 	block = &ethpb.BeaconBlock{
 		Slot:          lowestSignedSlot,
 		ProposerIndex: 0,
 	}
-	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{2})
-	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{1})
+	require.NoError(t, err)
+
+	// We expect the same block with a slot equal to the lowest
+	// signed slot to fail validation if signing roots are different.
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{4})
+	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
 
 	// We expect the same block with a slot > than the lowest
 	// signed slot to pass validation.
