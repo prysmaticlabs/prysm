@@ -71,6 +71,7 @@ func TestService_InterceptBannedIP(t *testing.T) {
 	s := &Service{
 		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			PeerLimit:    20,
 			ScorerParams: &scorers.Config{},
 		}),
 	}
@@ -109,12 +110,17 @@ func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
 	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
 
+	valid := s.validateDial(multiAddress)
+	if !valid {
+		t.Errorf("Expected multiaddress with ip %s to be accepted as it is below the inbound limit", ip)
+	}
+
 	inboundLimit := float64(limit) * peers.InboundRatio
 	// Add in up to inbound peer limit.
 	for i := 0; i < int(inboundLimit); i++ {
 		addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}
-	valid := s.validateDial(multiAddress)
+	valid = s.validateDial(multiAddress)
 	if valid {
 		t.Errorf("Expected multiaddress with ip %s to be rejected as it exceeds the inbound limit", ip)
 	}
