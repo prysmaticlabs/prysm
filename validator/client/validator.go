@@ -58,7 +58,6 @@ type validator struct {
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
-	attesterHistoryByPubKeyLock        sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	genesisTime                        uint64
