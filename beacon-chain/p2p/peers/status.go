@@ -191,9 +191,9 @@ func (p *Status) IsActive(pid peer.ID) bool {
 	return ok && (peerData.ConnState == PeerConnected || peerData.ConnState == PeerConnecting)
 }
 
-// IsAtInboundLimit checks if we have reached our current inbound
+// IsAboveInboundLimit checks if we are above our current inbound
 // peer limit.
-func (p *Status) IsAtInboundLimit() bool {
+func (p *Status) IsAboveInboundLimit() bool {
 	p.store.RLock()
 	defer p.store.RUnlock()
 	totalInbound := 0
@@ -204,7 +204,7 @@ func (p *Status) IsAtInboundLimit() bool {
 		}
 	}
 	inboundLimit := int(float64(p.ConnectedPeerLimit()) * InboundRatio)
-	return totalInbound >= inboundLimit
+	return totalInbound > inboundLimit
 }
 
 // SetMetadata sets the metadata of the given remote peer.

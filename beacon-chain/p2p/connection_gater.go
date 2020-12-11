@@ -79,7 +79,7 @@ func (s *Service) validateDial(addr multiaddr.Multiaddr) bool {
 		return false
 	}
 	s.ipLimiter.Add(ip.String(), 1)
-	return !s.peers.IsAtInboundLimit()
+	return !s.peers.IsAboveInboundLimit()
 }
 
 // configureFilter looks at the provided allow lists and
