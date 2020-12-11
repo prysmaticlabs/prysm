@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -111,7 +112,7 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 					for _, step := range test.Steps {
 						// Set up validator client, one new validator client per test.
 						// This ensures we initialize a new (empty) slashing protection database.
-						validator, m, _, _ := setup(t)
+						validator, _, _, _ := setup(t)
 
 						if test.GenesisValidatorsRoot != "" {
 							r, err := interchangeformat.RootFromHex(test.GenesisValidatorsRoot)
@@ -143,7 +144,14 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 							b := testutil.NewBeaconBlock()
 							b.Block.Slot = bSlot
 
-							err = validator.preBlockSignValidations(context.Background(), pk, b.Block)
+							var signingRoot [32]byte
+							if sb.SigningRoot != "" {
+								signingRootBytes, err := hex.DecodeString(strings.TrimPrefix(sb.SigningRoot, "0x"))
+								require.NoError(t, err)
+								copy(signingRoot[:], signingRootBytes)
+							}
+
+							err = validator.preBlockSignValidations(context.Background(), pk, b.Block, signingRoot)
 							if sb.ShouldSucceed {
 								require.NoError(t, err)
 							} else {
@@ -152,7 +160,7 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 
 							// Only proceed post update if pre validation did not error.
 							if err == nil {
-								err = validator.postBlockSignUpdate(context.Background(), pk, b, &ethpb.DomainResponse{SignatureDomain: make([]byte, 32)})
+								err = validator.postBlockSignUpdate(context.Background(), pk, b, signingRoot)
 								if sb.ShouldSucceed {
 									require.NoError(t, err)
 								} else {
@@ -177,27 +185,24 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 								},
 								Signature: make([]byte, 96),
 							}
-							m.validatorClient.EXPECT().DomainData(
-								gomock.Any(), // ctx
-								gomock.Any(),
-							).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+							//m.validatorClient.EXPECT().DomainData(
+							//	gomock.Any(), // ctx
+							//	gomock.Any(),
+							//).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-							err = validator.preAttSignValidations(context.Background(), ia, pk)
+							var signingRoot [32]byte
+							if sa.SigningRoot != "" {
+								signingRootBytes, err := hex.DecodeString(strings.TrimPrefix(sa.SigningRoot, "0x"))
+								require.NoError(t, err)
+								copy(signingRoot[:], signingRootBytes)
+							}
+
+							err = validator.slashableAttestationCheck(context.Background(), ia, pk, signingRoot)
 							if sa.ShouldSucceed {
 								fmt.Println(ia)
 								require.NoError(t, err)
 							} else {
 								require.NotNil(t, err, "pre validation should have failed for attestation at source epoch %d", sa.SourceEpoch)
-							}
-
-							// Only proceed post update if pre validation did not error.
-							if err == nil {
-								err = validator.postAttSignUpdate(context.Background(), ia, pk, [32]byte{}) // TODO: what signing root should we use here?
-								if sa.ShouldSucceed {
-									require.NoError(t, err)
-								} else {
-									require.NotNil(t, err, "post validation should have failed for attestation at source epoch %d", sa.SourceEpoch)
-								}
 							}
 						}
 						require.NoError(t, err, validator.db.Close())
