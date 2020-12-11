@@ -125,17 +125,14 @@ func TestPreBlockSignValidation(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	block := &ethpb.BeaconBlock{
-		Slot:          10,
-		ProposerIndex: 0,
-		Body:          &ethpb.BeaconBlockBody{},
-	}
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 10
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
-	err := validator.preBlockSignValidations(context.Background(), pubKey, block, [32]byte{2})
+	err := validator.preBlockSignValidations(context.Background(), pubKey, block.Block, [32]byte{2})
 	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
 	mockProtector.AllowBlock = true
-	err = validator.preBlockSignValidations(context.Background(), pubKey, block, [32]byte{2})
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block.Block, [32]byte{2})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }
 

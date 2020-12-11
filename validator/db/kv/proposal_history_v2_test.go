@@ -159,7 +159,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 
 func TestStore_ProposedPublicKeys(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")

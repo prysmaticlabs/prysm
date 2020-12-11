@@ -85,15 +85,11 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 	// If a key does not have an attestation history in our database, we return nil.
 	// This way, a user will be able to export their slashing protection history
 	// even if one of their keys does not have a history of signed attestations.
-	attHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, [][48]byte{pubKey})
+	history, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get attestation history for public key")
 	}
-	if attHistory == nil {
-		return nil, nil
-	}
-	history, ok := attHistory[pubKey]
-	if !ok {
+	if history == nil {
 		return nil, nil
 	}
 	signedAttestations := make([]*SignedAttestation, 0)

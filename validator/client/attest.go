@@ -13,9 +13,11 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -28,6 +30,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
@@ -63,7 +68,17 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		AttestingIndices: []uint64{duty.ValidatorIndex},
 		Data:             data,
 	}
-	if err := v.preAttSignValidations(ctx, indexedAtt, pubKey); err != nil {
+
+	_, signingRoot, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
+	if err != nil {
+		log.WithError(err).Error("Could not get domain and signing root from attestation")
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	if err := v.slashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot); err != nil {
 		log.WithError(err).Error("Failed attestation slashing protection check")
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
@@ -71,7 +86,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	sig, signingRoot, err := v.signAtt(ctx, pubKey, data)
+	sig, _, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
@@ -105,17 +120,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Signature:       sig,
 	}
 
+	// Set the signature of the attestation and send it out to the beacon node.
 	indexedAtt.Signature = sig
-	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey, signingRoot); err != nil {
-		log.WithError(err).Error("Failed attestation slashing protection check")
-		log.WithFields(
-			attestationLogFields(pubKey, indexedAtt),
-		).Debug("Attempted slashable attestation details")
-		return
-	}
-	if err := v.SaveProtection(ctx, pubKey); err != nil {
-		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
-	}
+
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -218,13 +225,25 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 // waitToSlotOneThird waits until one third through the current slot period
 // such that head block for beacon node can get updated.
 func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
+	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
 
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	time.Sleep(timeutils.Until(finalTime))
+	wait := timeutils.Until(finalTime)
+	if wait <= 0 {
+		return
+	}
+	t := time.NewTimer(wait)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		traceutil.AnnotateError(span, ctx.Err())
+		return
+	case <-t.C:
+		return
+	}
 }
 
 func attestationLogFields(pubKey [48]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {

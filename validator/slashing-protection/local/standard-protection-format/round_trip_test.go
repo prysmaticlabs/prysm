@@ -89,10 +89,10 @@ func TestImportInterchangeData_OK(t *testing.T) {
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
 	// verify those indeed match the originally generated mock histories.
-	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
-	require.NoError(t, err)
 	for i := 0; i < len(publicKeys); i++ {
-		require.DeepEqual(t, attestingHistory[publicKeys[i]], receivedAttestingHistory[publicKeys[i]])
+		receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, publicKeys[i])
+		require.NoError(t, err)
+		require.DeepEqual(t, attestingHistory[publicKeys[i]], receivedAttestingHistory)
 		proposals := proposalHistory[publicKeys[i]].Proposals
 		for _, proposal := range proposals {
 			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
@@ -226,14 +226,14 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	// verify nothing was saved to the DB. If there is an error in the import process, we need to make
 	// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
 	// data to our DB, or it does not.
-	receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeysV2(ctx, publicKeys)
-	require.NoError(t, err)
 	for i := 0; i < len(publicKeys); i++ {
+		receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, publicKeys[i])
+		require.NoError(t, err)
 		defaultAttestingHistory := kv.NewAttestationHistoryArray(0)
 		require.DeepEqual(
 			t,
 			defaultAttestingHistory,
-			receivedAttestingHistory[publicKeys[i]],
+			receivedAttestingHistory,
 			"Imported attestation protection history is different than the empty default",
 		)
 		proposals := proposalHistory[publicKeys[i]].Proposals
