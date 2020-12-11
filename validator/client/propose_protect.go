@@ -21,21 +21,7 @@ func (v *validator) preBlockSignValidations(
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
-	// Based on EIP3076, validator should refuse to sign any proposal with slot less
-	// than or equal to the minimum signed proposal present in the DB for that public key.
-	lowestSignedProposalSlot, exists, err := v.db.LowestSignedProposal(ctx, pubKey)
-	if err != nil {
-		return err
-	}
-	if exists && lowestSignedProposalSlot >= block.Slot {
-		return fmt.Errorf(
-			"could not sign block with slot <= lowest signed slot in db, lowest signed slot: %d >= block slot: %d",
-			lowestSignedProposalSlot,
-			block.Slot,
-		)
-	}
-
-	prevSigningRoot, exists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
+	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -43,15 +29,33 @@ func (v *validator) preBlockSignValidations(
 		return errors.Wrap(err, "failed to get proposal history")
 	}
 
+	lowestSignedProposalSlot, lowestProposalExists, err := v.db.LowestSignedProposal(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+
 	// If a proposal exists in our history for the slot, we check the following:
 	// If the signing root is empty (zero hash), then we consider it slashable. If signing root is not empty,
 	// we check if it is different than the incoming block's signing root. If that is the case,
 	// we consider that proposal slashable.
-	if exists && (prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot) {
+	signingRootIsDifferent := prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot
+	if proposalAtSlotExists && signingRootIsDifferent {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return errors.New(failedPreBlockSignLocalErr)
+	}
+
+	// Based on EIP3076, validator should refuse to sign any proposal with slot less
+	// than or equal to the minimum signed proposal present in the DB for that public key.
+	// In the case the slot of the incoming block is equal to the minimum signed proposal, we
+	// then also check the signing root is different.
+	if lowestProposalExists && signingRootIsDifferent && lowestSignedProposalSlot >= block.Slot {
+		return fmt.Errorf(
+			"could not sign block with slot <= lowest signed slot in db, lowest signed slot: %d >= block slot: %d",
+			lowestSignedProposalSlot,
+			block.Slot,
+		)
 	}
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
