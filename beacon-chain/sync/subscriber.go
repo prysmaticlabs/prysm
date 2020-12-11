@@ -224,7 +224,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
 						_, err := s.p2p.FindPeersWithSubnet(s.ctx, s.addDigestAndIndexToTopic(topic, i), i, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 						if err != nil {
-							log.Debugf("Could not search for peers: %v", err)
+							log.WithError(err).Debug("Could not search for peers")
 							return
 						}
 					}
@@ -332,7 +332,7 @@ func (s *Service) subscribeAggregatorSubnet(
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		_, err := s.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 		if err != nil {
-			log.Debugf("Could not search for peers: %v", err)
+			log.WithError(err).Debug("Could not search for peers")
 		}
 	}
 }
@@ -347,7 +347,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 		// perform a search for peers with the desired committee index.
 		_, err := s.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 		if err != nil {
-			log.Debugf("Could not search for peers: %v", err)
+			log.WithError(err).Debug("Could not search for peers")
 		}
 	}
 }
