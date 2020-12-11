@@ -375,7 +375,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+	if err := s.beaconDB.SaveStateByRoot(ctx, genesisBlkRoot, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{

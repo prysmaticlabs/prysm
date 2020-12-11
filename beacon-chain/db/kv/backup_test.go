@@ -22,7 +22,7 @@ func TestStore_Backup(t *testing.T) {
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.saveState(ctx, st, root))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
 	require.NoError(t, db.Backup(ctx, ""))

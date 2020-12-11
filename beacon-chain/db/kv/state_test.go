@@ -26,7 +26,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(100))
 
-	require.NoError(t, db.SaveState(context.Background(), st, r))
+	require.NoError(t, db.saveState(context.Background(), st, r))
 	assert.Equal(t, true, db.HasState(context.Background(), r))
 
 	savedS, err := db.State(context.Background(), r)
@@ -50,7 +50,7 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(1))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), headRoot))
-	require.NoError(t, db.SaveState(context.Background(), st, headRoot))
+	require.NoError(t, db.saveState(context.Background(), st, headRoot))
 
 	savedGenesisS, err := db.GenesisState(context.Background())
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 		require.NoError(t, err)
 		st := testutil.NewBeaconState()
 		require.NoError(t, st.SetSlot(uint64(i)))
-		require.NoError(t, db.SaveState(context.Background(), st, r))
+		require.NoError(t, db.saveState(context.Background(), st, r))
 		blockRoots = append(blockRoots, r)
 		if i%2 == 0 {
 			evenBlockRoots = append(evenBlockRoots, r)
@@ -101,7 +101,7 @@ func TestStore_DeleteGenesisState(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(100))
-	require.NoError(t, db.SaveState(ctx, st, genesisBlockRoot))
+	require.NoError(t, db.saveState(ctx, st, genesisBlockRoot))
 	wantedErr := "cannot delete genesis, finalized, or head state"
 	assert.ErrorContains(t, wantedErr, db.DeleteState(ctx, genesisBlockRoot))
 }
@@ -124,7 +124,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 
 	finalizedState := testutil.NewBeaconState()
 	require.NoError(t, finalizedState.SetSlot(100))
-	require.NoError(t, db.SaveState(ctx, finalizedState, finalizedBlockRoot))
+	require.NoError(t, db.saveState(ctx, finalizedState, finalizedBlockRoot))
 	finalizedCheckpoint := &ethpb.Checkpoint{Root: finalizedBlockRoot[:]}
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, finalizedCheckpoint))
 	wantedErr := "cannot delete genesis, finalized, or head state"
@@ -147,7 +147,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(100))
-	require.NoError(t, db.SaveState(ctx, st, headBlockRoot))
+	require.NoError(t, db.saveState(ctx, st, headBlockRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
 	wantedErr := "cannot delete genesis, finalized, or head state"
 	assert.ErrorContains(t, wantedErr, db.DeleteState(ctx, headBlockRoot))
@@ -164,7 +164,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(1))
 	s0 := st.InnerStateUnsafe()
-	require.NoError(t, db.SaveState(context.Background(), st, r))
+	require.NoError(t, db.saveState(context.Background(), st, r))
 
 	b.Block.Slot = 100
 	r1, err := b.Block.HashTreeRoot()
@@ -173,7 +173,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	st = testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(100))
 	s1 := st.InnerStateUnsafe()
-	require.NoError(t, db.SaveState(context.Background(), st, r1))
+	require.NoError(t, db.saveState(context.Background(), st, r1))
 
 	b.Block.Slot = 1000
 	r2, err := b.Block.HashTreeRoot()
@@ -183,7 +183,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	require.NoError(t, st.SetSlot(1000))
 	s2 := st.InnerStateUnsafe()
 
-	require.NoError(t, db.SaveState(context.Background(), st, r2))
+	require.NoError(t, db.saveState(context.Background(), st, r2))
 
 	highest, err := db.HighestSlotStatesBelow(context.Background(), 2)
 	require.NoError(t, err)
@@ -204,7 +204,7 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	genesisState := testutil.NewBeaconState()
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.saveState(context.Background(), genesisState, genesisRoot))
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
@@ -214,7 +214,7 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(1))
-	require.NoError(t, db.SaveState(context.Background(), st, r))
+	require.NoError(t, db.saveState(context.Background(), st, r))
 
 	highest, err := db.HighestSlotStatesBelow(context.Background(), 2)
 	require.NoError(t, err)
@@ -234,7 +234,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	genesisState := testutil.NewBeaconState()
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.saveState(context.Background(), genesisState, genesisRoot))
 
 	bRoots := make([][32]byte, 0)
 	slotsPerArchivedPoint := uint64(128)
@@ -251,7 +251,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 
 		st := testutil.NewBeaconState()
 		require.NoError(t, st.SetSlot(i))
-		require.NoError(t, db.SaveState(context.Background(), st, r))
+		require.NoError(t, db.saveState(context.Background(), st, r))
 	}
 
 	require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{Root: bRoots[len(bRoots)-1][:], Epoch: slotsPerArchivedPoint / params.BeaconConfig().SlotsPerEpoch}))
@@ -272,7 +272,7 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 	genesisState := testutil.NewBeaconState()
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.saveState(context.Background(), genesisState, genesisRoot))
 
 	for i := uint64(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		b := testutil.NewBeaconBlock()
@@ -283,7 +283,7 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 
 		st := testutil.NewBeaconState()
 		require.NoError(t, st.SetSlot(i))
-		require.NoError(t, db.SaveState(context.Background(), st, r))
+		require.NoError(t, db.saveState(context.Background(), st, r))
 	}
 
 	require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{Root: genesisRoot[:]}))
@@ -297,7 +297,7 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 	genesisState := testutil.NewBeaconState()
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.saveState(context.Background(), genesisState, genesisRoot))
 
 	unfinalizedRoots := [][32]byte{}
 	for i := uint64(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
@@ -310,7 +310,7 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 
 		st := testutil.NewBeaconState()
 		require.NoError(t, st.SetSlot(i))
-		require.NoError(t, db.SaveState(context.Background(), st, r))
+		require.NoError(t, db.saveState(context.Background(), st, r))
 	}
 
 	require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{Root: genesisRoot[:]}))

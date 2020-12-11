@@ -314,7 +314,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.SaveBlock(ctx, gBlk))
 	require.NoError(t, s.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, s.SaveState(ctx, gState, gRoot))
+	require.NoError(t, s.saveState(ctx, gState, gRoot))
 
 	savedState, err := s.lastSavedState(ctx, 0)
 	require.NoError(t, err)
@@ -336,7 +336,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(s.finalizedInfo.slot+10))
 
-	require.NoError(t, s.SaveState(ctx, st, b2Root))
+	require.NoError(t, s.saveState(ctx, st, b2Root))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = s.finalizedInfo.slot + 20
 	require.NoError(t, s.SaveBlock(ctx, b3))

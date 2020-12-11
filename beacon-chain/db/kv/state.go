@@ -24,7 +24,7 @@ func (s *Store) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 
 	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.State(ctx, blockRoot)
+		return s.GenesisState(ctx)
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
 }
@@ -37,7 +37,7 @@ func (s *Store) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 func (s *Store) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.State(ctx, blockRoot)
+		return s.GenesisState(ctx)
 	}
 
 	// To invalidate cache for parent root because pre state will get mutated.
@@ -116,7 +116,7 @@ func (s *Store) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 		return nil, err
 	}
 	if has {
-		return s.State(ctx, blockRoot)
+		return s.stateInDB(ctx, blockRoot)
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
@@ -187,9 +187,8 @@ func (s *Store) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 	return s.ReplayBlocks(ctx, replayStartState, replayBlks, slot)
 }
 
-// State returns the saved state using block's signing root,
-// this particular block was used to generate the state.
-func (s *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+// stateInDB returns the saved state in DB using block's signing root.
+func (s *Store) stateInDB(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	var st *pb.BeaconState
@@ -239,40 +238,26 @@ func (s *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	return state.InitializeFromProtoUnsafe(st)
 }
 
-// SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (s *Store) SaveState(ctx context.Context, st *state.BeaconState, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
-	defer span.End()
-
-	return s.SaveStates(ctx, []*state.BeaconState{st}, [][32]byte{blockRoot})
-}
-
-// SaveStates stores multiple states to the db using the provided corresponding roots.
-func (s *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
+// saveState stores a state to the db.
+func (s *Store) saveState(ctx context.Context, st *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
 	defer span.End()
-	if states == nil {
+	if st == nil {
 		return errors.New("nil state")
 	}
-	var err error
-	multipleEncs := make([][]byte, len(states))
-	for i, st := range states {
-		multipleEncs[i], err = encode(ctx, st.InnerStateUnsafe())
-		if err != nil {
-			return err
-		}
+	enc, err := encode(ctx, st.InnerStateUnsafe())
+	if err != nil {
+		return err
 	}
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
-		for i, rt := range blockRoots {
-			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
-			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
-			}
-			if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
-				return err
-			}
+		indicesByBucket := createStateIndicesFromStateSlot(ctx, st.Slot())
+		if err := updateValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
+			return errors.Wrap(err, "could not update DB indices")
+		}
+		if err := bucket.Put(blockRoot[:], enc); err != nil {
+			return err
 		}
 		return nil
 	})
@@ -464,7 +449,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 	var st *state.BeaconState
 	var err error
 	if best != nil {
-		st, err = s.State(ctx, bytesutil.ToBytes32(best))
+		st, err = s.stateInDB(ctx, bytesutil.ToBytes32(best))
 		if err != nil {
 			return nil, err
 		}
@@ -670,7 +655,7 @@ func (s *Store) ForceCheckpoint(ctx context.Context, root []byte) error {
 		return err
 	}
 
-	return s.SaveState(ctx, fs, root32)
+	return s.saveState(ctx, fs, root32)
 }
 
 // This saves a post beacon state. On the epoch boundary,
@@ -685,7 +670,7 @@ func (s *Store) SaveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 
 	s.saveHotStateDB.lock.Lock()
 	if s.saveHotStateDB.enabled && state.Slot()%duration == 0 {
-		if err := s.SaveState(ctx, state, blockRoot); err != nil {
+		if err := s.saveState(ctx, state, blockRoot); err != nil {
 			s.saveHotStateDB.lock.Unlock()
 			return err
 		}

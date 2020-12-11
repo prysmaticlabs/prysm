@@ -34,7 +34,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 
 	st := testutil.NewBeaconState()
 	// a state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.saveState(ctx, st, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
@@ -98,7 +98,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 
 	st := testutil.NewBeaconState()
 	// A state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
+	require.NoError(t, db.saveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint1))
 	// All blocks in blocks0 and blocks1 should be finalized and canonical.
 	for i, block := range append(blocks0, blocks1...) {
@@ -112,7 +112,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 2,
 	}
 	// A state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint2.Root)))
+	require.NoError(t, db.saveState(ctx, st, bytesutil.ToBytes32(checkpoint2.Root)))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint2))
 	// All blocks in blocks0 and blocks2 should be finalized and canonical.
 	for i, block := range append(blocks0, blocks2...) {
@@ -148,7 +148,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 
 	st := testutil.NewBeaconState()
 	// a state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.saveState(ctx, st, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 
 	// All blocks up to slotsPerEpoch should have a finalized child block.

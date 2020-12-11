@@ -62,8 +62,8 @@ func (s *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 		bucket := tx.Bucket(checkpointBucket)
 		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
 		hasStateSummaryInCache := s.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
-		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+		hasState := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+		if !(hasState || hasStateSummaryInDB || hasStateSummaryInCache) {
 			return errMissingStateForCheckpoint
 		}
 		return bucket.Put(justifiedCheckpointKey, enc)
@@ -83,8 +83,8 @@ func (s *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 		bucket := tx.Bucket(checkpointBucket)
 		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
 		hasStateSummaryInCache := s.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
-		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+		hasState := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+		if !(hasState || hasStateSummaryInDB || hasStateSummaryInCache) {
 			return errMissingStateForCheckpoint
 		}
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {

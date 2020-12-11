@@ -33,7 +33,7 @@ func TestRestore(t *testing.T) {
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	require.NoError(t, backupDb.SaveState(ctx, st, root))
+	require.NoError(t, backupDb.saveState(ctx, st, root))
 	require.NoError(t, backupDb.SaveHeadBlockRoot(ctx, root))
 	require.NoError(t, err)
 	require.NoError(t, backupDb.Close())

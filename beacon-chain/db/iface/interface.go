@@ -28,7 +28,6 @@ type ReadOnlyDatabase interface {
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
 	HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, error)
 	// State related methods.
-	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	GenesisState(ctx context.Context) (*state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
@@ -71,8 +70,7 @@ type NoHeadAccessDatabase interface {
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
-	SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error
-	SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error
+	SaveStateByRoot(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethereum_beacon_p2p_v1.StateSummary) error
@@ -83,7 +81,6 @@ type NoHeadAccessDatabase interface {
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
-	SaveStateByRoot(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
 	// Slashing operations.
 	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error

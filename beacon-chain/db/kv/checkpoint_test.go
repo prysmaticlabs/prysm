@@ -23,7 +23,7 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	}
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(1))
-	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.saveState(ctx, st, root))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 
 	retrieved, err := db.JustifiedCheckpoint(ctx)
@@ -55,7 +55,7 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	st := testutil.NewBeaconState()
 	require.NoError(t, st.SetSlot(1))
 	// a state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.saveState(ctx, st, root))
 
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 

@@ -51,11 +51,6 @@ func (e Exporter) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.HasBlock(ctx, blockRoot)
 }
 
-// State -- passthrough.
-func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
-	return e.db.State(ctx, blockRoot)
-}
-
 // StateSummary -- passthrough.
 func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	return e.db.StateSummary(ctx, blockRoot)
@@ -126,11 +121,6 @@ func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) 
 	return e.db.SaveGenesisBlockRoot(ctx, blockRoot)
 }
 
-// SaveState -- passthrough.
-func (e Exporter) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
-	return e.db.SaveState(ctx, state, blockRoot)
-}
-
 // SaveStateSummary -- passthrough.
 func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
 	return e.db.SaveStateSummary(ctx, summary)
@@ -139,11 +129,6 @@ func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary
 // SaveStateSummaries -- passthrough.
 func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
 	return e.db.SaveStateSummaries(ctx, summaries)
-}
-
-// SaveStates -- passthrough.
-func (e Exporter) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
-	return e.db.SaveStates(ctx, states, blockRoots)
 }
 
 // SaveProposerSlashing -- passthrough.

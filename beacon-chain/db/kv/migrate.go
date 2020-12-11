@@ -103,7 +103,7 @@ func (s *Store) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				continue
 			}
 
-			if err := s.SaveState(ctx, aState, aRoot); err != nil {
+			if err := s.saveState(ctx, aState, aRoot); err != nil {
 				return err
 			}
 			log.WithFields(

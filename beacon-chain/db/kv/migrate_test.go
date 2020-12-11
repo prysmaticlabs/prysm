@@ -70,7 +70,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	assert.NoError(t, service.SaveBlock(ctx, genesis))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	assert.NoError(t, service.SaveState(ctx, beaconState, gRoot))
+	assert.NoError(t, service.saveState(ctx, beaconState, gRoot))
 	assert.NoError(t, service.SaveGenesisBlockRoot(ctx, gRoot))
 
 	b1, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 1)
@@ -121,7 +121,7 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.SaveBlock(ctx, b))
 	require.NoError(t, service.epochBoundaryStateCache.put(fRoot, beaconState))
-	require.NoError(t, service.SaveState(ctx, beaconState, fRoot))
+	require.NoError(t, service.saveState(ctx, beaconState, fRoot))
 
 	service.saveHotStateDB.savedStateRoots = [][32]byte{{1}, {2}, {3}, {4}, fRoot}
 	require.NoError(t, service.MigrateToCold(ctx, fRoot))

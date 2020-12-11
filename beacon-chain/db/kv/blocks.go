@@ -242,8 +242,8 @@ func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	return s.db.Update(func(tx *bolt.Tx) error {
 		hasStateSummaryInCache := s.stateSummaryCache.Has(blockRoot)
 		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
-		hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
-		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+		hasState := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
+		if !(hasState || hasStateSummaryInDB || hasStateSummaryInCache) {
 			return errors.New("no state or state summary found with head block root")
 		}
 
