@@ -18,12 +18,10 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // DefaultDataDir is the default data directory to use for the databases and other
@@ -71,6 +69,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	}
 	if selectedDirExists {
 		// No need not move anything, destination directory already exists.
+		log.Warnf("Previous data directory found: %q, please make sure it is removed.", prevDataDir)
 		return nil
 	}
 
@@ -81,16 +80,17 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	log.Warnf("Previous data directory is found: %q. It is located in '%%APPDATA%%' and "+
 		"needs to be relocated to a non-shared local folder: %q", prevDataDir, curDataDir)
 
-	if err := os.Rename(prevDataDir, curDataDir); err != nil {
+	if err := fileutil.CopyDir(prevDataDir, curDataDir); err != nil {
 		return err
 	}
 	hasDir, err := fileutil.HasDir(curDataDir)
 	fmt.Printf("After rename, hasDir: %v (err: %v)\n", hasDir, err)
 	fmt.Printf("After rename, tosaccepted: %v\n", fileutil.FileExists(filepath.Join(curDataDir, "tosaccepted")))
-	if err := os.Chmod(curDataDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
-		return err
-	}
+	//if err := os.Chmod(curDataDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+	//	return err
+	//}
 
-	log.Infof("Data folder moved from %q to %q successfully!", prevDataDir, curDataDir)
+	log.Infof("All files from %q to %q have been copied successfully! You can remove %q now.",
+		prevDataDir, curDataDir, prevDataDir)
 	return nil
 }

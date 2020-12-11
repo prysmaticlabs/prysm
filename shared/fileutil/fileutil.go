@@ -143,3 +143,31 @@ func CopyFile(src, dst string) error {
 	}
 	return nil
 }
+
+// CopyDir copies contents of one directory into another, recursively.
+func CopyDir(src string, dst string) error {
+	var err error
+	var fds []os.FileInfo
+
+	if err = os.MkdirAll(dst, params.BeaconIoConfig().ReadWritePermissions); err != nil {
+		return err
+	}
+
+	if fds, err = ioutil.ReadDir(src); err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		srcPath := path.Join(src, fd.Name())
+		dstPath := path.Join(dst, fd.Name())
+		if fd.IsDir() {
+			if err = CopyDir(srcPath, dstPath); err != nil {
+				return errors.Wrapf(err, "error copying directory %s -> %s", srcPath, dstPath)
+			}
+		} else {
+			if err = CopyFile(srcPath, dstPath); err != nil {
+				return errors.Wrapf(err, "error copying file %s -> %s", srcPath, dstPath)
+			}
+		}
+	}
+	return nil
+}
