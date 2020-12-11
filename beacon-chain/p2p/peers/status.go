@@ -60,8 +60,8 @@ const (
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
 
-	// The proportion of our connected peer limit at which we will allow inbound peers.
-	inboundRatio = float64(2) / 5
+	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
+	InboundRatio = float64(2) / 5
 )
 
 // Status is the structure holding the peer status information.
@@ -203,8 +203,8 @@ func (p *Status) IsAtInboundLimit() bool {
 			totalInbound += 1
 		}
 	}
-	inboundLimit := int(float64(p.ConnectedPeerLimit()) * inboundRatio)
-	return totalInbound > inboundLimit
+	inboundLimit := int(float64(p.ConnectedPeerLimit()) * InboundRatio)
+	return totalInbound >= inboundLimit
 }
 
 // SetMetadata sets the metadata of the given remote peer.
