@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestStore_SlashablePublicKeys(t *testing.T) {
+func TestStore_EIPBlacklistedPublicKeys(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 100
 	publicKeys := make([][48]byte, numValidators)
@@ -19,16 +19,16 @@ func TestStore_SlashablePublicKeys(t *testing.T) {
 		publicKeys[i] = key
 	}
 
-	// No slashable keys returns empty.
+	// No blacklisted keys returns empty.
 	validatorDB := setupDB(t, publicKeys)
-	received, err := validatorDB.SlashablePublicKeys(ctx)
+	received, err := validatorDB.EIPImportBlacklistedPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(received))
 
-	// Save half of the public keys as as slashable and attempt to retrieve.
-	err = validatorDB.SaveSlashablePublicKeys(ctx, publicKeys[:50])
+	// Save half of the public keys as as blacklisted and attempt to retrieve.
+	err = validatorDB.SaveEIPImportBlacklistedPublicKeys(ctx, publicKeys[:50])
 	require.NoError(t, err)
-	received, err = validatorDB.SlashablePublicKeys(ctx)
+	received, err = validatorDB.EIPImportBlacklistedPublicKeys(ctx)
 	require.NoError(t, err)
 
 	// Keys are not guaranteed to be ordered, so we create a map for comparisons.
