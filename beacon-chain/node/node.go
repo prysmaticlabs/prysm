@@ -169,6 +169,10 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		stateSummaryCache: cache.NewStateSummaryCache(),
 	}
 
+	if err := cmd.PatchDefaultDataDir(cliCtx.String(cmd.DataDirFlag.Name)); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.startDB(cliCtx); err != nil {
 		return nil, err
 	}

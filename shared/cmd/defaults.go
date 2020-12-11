@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -32,11 +33,56 @@ func DefaultDataDir() string {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2")
 		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "Eth2")
+			return filepath.Join(home, "AppData", "Local", "Eth2")
 		} else {
 			return filepath.Join(home, ".eth2")
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later
 	return ""
+}
+
+// PatchDefaultDataDir fixes issue with default data directory path.
+// For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.
+func PatchDefaultDataDir(selectedDir string) error {
+	if runtime.GOOS != "windows" {
+		return nil
+	}
+
+	// See if shared directory is found (if it is -- we need to move it to non-shared destination).
+	roamingAppDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2")
+	roamingAppDataDirExists, err := fileutil.HasDir(roamingAppDataDir)
+	if err != nil {
+		return err
+	}
+	if !roamingAppDataDirExists {
+		// If no previous "%APPDATA%\Eth2" found, nothing to patch and move to new default location.
+		return nil
+	}
+
+	if selectedDir == "" {
+		selectedDir = DefaultDataDir()
+	}
+	selectedDirExists, err := fileutil.HasDir(selectedDir)
+	if err != nil {
+		return err
+	}
+	if selectedDirExists {
+		// No need not move anything, destination directory already exists.
+		return nil
+	}
+
+	if selectedDir == roamingAppDataDir {
+		return nil
+	}
+
+	log.Warnf("Previous data directory is found: %q. It is located in '%APPDATA%' and "+
+		"needs to be relocated to a non-shared local folder: %q", roamingAppDataDir, selectedDir)
+
+	if err := os.Rename(roamingAppDataDir, selectedDir); err != nil {
+		return err
+	}
+
+	log.Infof("Data folder moved from %q to %q successfully!", roamingAppDataDir, selectedDir)
+	return nil
 }
