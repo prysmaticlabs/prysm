@@ -3,8 +3,6 @@ package validator
 import (
 	"context"
 	"errors"
-	"math/big"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -182,11 +180,6 @@ func (vs *Server) validatorStatus(
 		resp.Status = depositStatus(deposit.Data.Amount)
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
-		depositBlockSlot, err := vs.depositBlockSlot(ctx, headState, eth1BlockNumBigInt)
-		if err != nil {
-			return resp, nonExistentIndex
-		}
-		resp.DepositInclusionSlot = depositBlockSlot
 		return resp, nonExistentIndex
 	// Deposited, Pending or Partially Deposited mean the validator has been put into the state.
 	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED:
@@ -263,30 +256,6 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 		return ethpb.ValidatorStatus_EXITING
 	}
 	return ethpb.ValidatorStatus_EXITED
-}
-
-func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.BeaconState, eth1BlockNumBigInt *big.Int) (uint64, error) {
-	var depositBlockSlot uint64
-	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
-	if err != nil {
-		return 0, err
-	}
-	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block) * time.Second
-	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
-	period := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().EpochsPerEth1VotingPeriod
-	votingPeriod := time.Duration(period*params.BeaconConfig().SecondsPerSlot) * time.Second
-	timeToInclusion := eth1UnixTime.Add(votingPeriod)
-
-	eth2Genesis := time.Unix(int64(beaconState.GenesisTime()), 0)
-
-	if eth2Genesis.After(timeToInclusion) {
-		depositBlockSlot = 0
-	} else {
-		eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
-		depositBlockSlot = uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
-	}
-
-	return depositBlockSlot, nil
 }
 
 func depositStatus(depositOrBalance uint64) ethpb.ValidatorStatus {

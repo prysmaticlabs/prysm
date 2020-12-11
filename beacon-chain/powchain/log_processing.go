@@ -31,7 +31,7 @@ var (
 
 const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
-const eth1HeaderReqLimit = 1000
+const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
@@ -276,7 +276,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 	for currentBlockNum < latestFollowHeight {
 		start := currentBlockNum
-		end := currentBlockNum + eth1HeaderReqLimit
+		end := currentBlockNum + s.eth1HeaderReqLimit
 		// Appropriately bound the request, as we do not
 		// want request blocks beyond the current follow distance.
 		if end > latestFollowHeight {

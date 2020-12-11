@@ -119,12 +119,6 @@ func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ uint64)
 	return nil
 }
 
-// SaveProtections for mocking.
-func (fv *FakeValidator) SaveProtections(_ context.Context) error {
-	fv.SaveProtectionsCalled = true
-	return nil
-}
-
 // ResetAttesterProtectionData for mocking.
 func (fv *FakeValidator) ResetAttesterProtectionData() {
 	fv.DeleteProtectionCalled = true
@@ -156,6 +150,11 @@ func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ uint64, _ 
 
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
+
+// LogNextDutyCountDown for mocking.
+func (fv *FakeValidator) LogNextDutyTimeLeft(slot uint64) error {
+	return nil
+}
 
 // UpdateDomainDataCaches for mocking.
 func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}

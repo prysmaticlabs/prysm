@@ -15,12 +15,14 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -45,6 +47,12 @@ type GenesisFetcher interface {
 	GenesisInfo(ctx context.Context) (*ethpb.Genesis, error)
 }
 
+// BeaconNodeInfoFetcher can retrieve information such as the logs endpoint
+// from a beacon node via RPC.
+type BeaconNodeInfoFetcher interface {
+	BeaconLogsEndpoint(ctx context.Context) (string, error)
+}
+
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
@@ -67,6 +75,7 @@ type ValidatorService struct {
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
+	graffitiStruct        *graffiti.Graffiti
 }
 
 // Config for the validator service.
@@ -87,6 +96,7 @@ type Config struct {
 	CertFlag                   string
 	DataDir                    string
 	GrpcHeadersFlag            string
+	GraffitiStruct             *graffiti.Graffiti
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -112,6 +122,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		useWeb:                cfg.UseWeb,
+		graffitiStruct:        cfg.GraffitiStruct,
 	}, nil
 }
 
@@ -137,11 +148,11 @@ func (v *ValidatorService) Start() {
 	for _, hdr := range v.grpcHeaders {
 		if hdr != "" {
 			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+			if len(ss) < 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", ss[0])
 				continue
 			}
-			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], ss[1])
+			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], strings.Join(ss[1:], "="))
 		}
 	}
 
@@ -188,6 +199,7 @@ func (v *ValidatorService) Start() {
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
+		graffitiStruct:                 v.graffitiStruct,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
@@ -312,6 +324,17 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn)
 	return nc.GetGenesis(ctx, &ptypes.Empty{})
+}
+
+// BeaconLogsEndpoint retrieves the websocket endpoint string at which
+// clients can subscribe to for beacon node logs.
+func (v *ValidatorService) BeaconLogsEndpoint(ctx context.Context) (string, error) {
+	hc := pbrpc.NewHealthClient(v.conn)
+	resp, err := hc.GetLogsEndpoint(ctx, &ptypes.Empty{})
+	if err != nil {
+		return "", err
+	}
+	return resp.BeaconLogsEndpoint, nil
 }
 
 // to accounts changes in the keymanager, then updates those keys'

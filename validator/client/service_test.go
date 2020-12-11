@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,9 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/grpc/metadata"
 )
 
 var _ shared.Service = (*ValidatorService)(nil)
+var _ BeaconNodeInfoFetcher = (*ValidatorService)(nil)
+var _ GenesisFetcher = (*ValidatorService)(nil)
+var _ SyncChecker = (*ValidatorService)(nil)
 
 func TestStop_CancelsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -64,4 +69,39 @@ func TestLifecycle_Insecure(t *testing.T) {
 func TestStatus_NoConnectionError(t *testing.T) {
 	validatorService := &ValidatorService{}
 	assert.ErrorContains(t, "no connection", validatorService.Status())
+}
+
+func TestStart_GrpcHeaders(t *testing.T) {
+	hook := logTest.NewGlobal()
+	// Use canceled context so that the run function exits immediately.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for input, output := range map[string][]string{
+		"should-break": []string{},
+		"key=value":    []string{"key", "value"},
+		"":             []string{},
+		",":            []string{},
+		"key=value,Authorization=Q=": []string{
+			"key", "value", "Authorization", "Q=",
+		},
+		"Authorization=this is a valid value": []string{
+			"Authorization", "this is a valid value",
+		},
+	} {
+		validatorService := &ValidatorService{
+			ctx:         ctx,
+			cancel:      cancel,
+			endpoint:    "merkle tries",
+			grpcHeaders: strings.Split(input, ","),
+		}
+		validatorService.Start()
+		md, _ := metadata.FromOutgoingContext(validatorService.ctx)
+		if input == "should-break" {
+			require.LogsContain(t, hook, "Incorrect gRPC header flag format. Skipping should-break")
+		} else if len(output) == 0 {
+			require.DeepEqual(t, md, metadata.MD(nil))
+		} else {
+			require.DeepEqual(t, md, metadata.Pairs(output...))
+		}
+	}
 }
