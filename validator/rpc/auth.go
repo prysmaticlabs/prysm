@@ -44,7 +44,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Could not validate RPC password input")
+		return nil, status.Errorf(codes.InvalidArgument, "Could not validate RPC password input: %v", err)
 	}
 	hasDir, err := fileutil.HasDir(walletDir)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Could not validate RPC password input")
+		return nil, status.Errorf(codes.InvalidArgument, "Could not validate RPC password input: %v", err)
 	}
 	hashedPasswordPath := filepath.Join(walletDir, HashedRPCPassword)
 	if !fileutil.FileExists(hashedPasswordPath) {
@@ -142,7 +142,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
 	}
 	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Could not validate password input")
+		return nil, status.Errorf(codes.InvalidArgument, "Could not validate password input: %v", err)
 	}
 	// Write the new password hash to disk.
 	if err := s.SaveHashedPassword(req.Password); err != nil {
