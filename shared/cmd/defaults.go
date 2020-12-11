@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -83,6 +84,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	if err := os.Rename(prevDataDir, curDataDir); err != nil {
 		return err
 	}
+	fmt.Printf("After rename, hasDir: %v\n", fileutil.HasDir(curDataDir))
 	if err := os.Chmod(curDataDir, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return err
 	}
