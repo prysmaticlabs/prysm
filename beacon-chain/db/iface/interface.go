@@ -30,16 +30,16 @@ type ReadOnlyDatabase interface {
 	// State related methods.
 	GenesisState(ctx context.Context) (*state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
+	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error)
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error)
-	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	Resume(ctx context.Context) (*state.BeaconState, error)
 	SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState)
-	StateSummaryExists(ctx context.Context, blockRoot [32]byte) bool
+
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)

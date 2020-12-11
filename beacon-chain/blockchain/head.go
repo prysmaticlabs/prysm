@@ -93,7 +93,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	if !s.beaconDB.StateSummaryExists(ctx, headRoot) {
+	if !s.beaconDB.HasStateSummary(ctx, headRoot) {
 		return nil
 	}
 
