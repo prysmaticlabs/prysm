@@ -340,7 +340,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return nil
 	}
-	fState, err := s.stateGen.StateByRoot(ctx, fRoot)
+	fState, err := s.beaconDB.StateByRoot(ctx, fRoot)
 	if err != nil {
 		return err
 	}

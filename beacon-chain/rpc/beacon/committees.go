@@ -71,7 +71,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	if err != nil {
 		return nil, nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	requestedState, err := bs.BeaconDB.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -103,7 +103,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 	ctx context.Context,
 	root []byte,
 ) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, []uint64, error) {
-	requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(root))
+	requestedState, err := bs.BeaconDB.StateByRoot(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, fmt.Sprintf("Could not get state: %v", err))
 	}

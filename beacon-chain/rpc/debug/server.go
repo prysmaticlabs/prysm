@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -26,7 +25,6 @@ import (
 type Server struct {
 	BeaconDB           db.NoHeadAccessDatabase
 	GenesisTimeFetcher blockchain.TimeFetcher
-	StateGen           *stategen.State
 	HeadFetcher        blockchain.HeadFetcher
 	PeerManager        p2p.PeerManager
 	PeersFetcher       p2p.PeersProvider

@@ -54,7 +54,7 @@ func (bs *Server) ListValidatorAssignments(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	requestedState, err := bs.BeaconDB.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
 	}

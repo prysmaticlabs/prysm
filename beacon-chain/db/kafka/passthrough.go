@@ -187,7 +187,7 @@ func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 }
 
 // HasState -- passthrough.
-func (e Exporter) HasState(ctx context.Context, blockRoot [32]byte) bool {
+func (e Exporter) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
 	return e.db.HasState(ctx, blockRoot)
 }
 

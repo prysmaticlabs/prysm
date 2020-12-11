@@ -1,4 +1,4 @@
-package stategen
+package kv
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 // MigrateToCold advances the finalized info in between the cold and hot state sections.
 // It moves the recent finalized states from the hot section to the cold section and
 // only preserve the ones that's on archived point.
-func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
+func (s *Store) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
 
@@ -22,7 +22,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	oldFSlot := s.finalizedInfo.slot
 	s.finalizedInfo.lock.RUnlock()
 
-	fBlock, err := s.beaconDB.Block(ctx, fRoot)
+	fBlock, err := s.Block(ctx, fRoot)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				aRoot = cached.root
 				aState = cached.state
 			} else {
-				blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
+				blks, err := s.HighestSlotBlocksBelow(ctx, slot)
 				if err != nil {
 					return err
 				}
@@ -71,7 +71,11 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				aRoot = missingRoot
 				// There's no need to generate the state if the state already exists on the DB.
 				// We can skip saving the state.
-				if !s.beaconDB.HasState(ctx, aRoot) {
+				has, err := s.HasState(ctx, aRoot)
+				if err != nil {
+					return err
+				}
+				if !has {
 					aState, err = s.StateByRoot(ctx, missingRoot)
 					if err != nil {
 						return err
@@ -79,7 +83,11 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				}
 			}
 
-			if s.beaconDB.HasState(ctx, aRoot) {
+			has, err := s.HasState(ctx, aRoot)
+			if err != nil {
+				return err
+			}
+			if has {
 				// Remove hot state DB root to prevent it gets deleted later when we turn hot state save DB mode off.
 				s.saveHotStateDB.lock.Lock()
 				roots := s.saveHotStateDB.savedStateRoots
@@ -95,7 +103,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				continue
 			}
 
-			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
+			if err := s.SaveState(ctx, aState, aRoot); err != nil {
 				return err
 			}
 			log.WithFields(

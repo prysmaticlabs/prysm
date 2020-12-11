@@ -34,7 +34,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
-	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+	baseState, err := s.beaconDB.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
@@ -57,7 +57,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 
 	// To avoid sharing the same state across checkpoint state cache and hot state cache,
 	// we don't add the state to check point cache.
-	has, err := s.stateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
+	has, err := s.beaconDB.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, err
 	}

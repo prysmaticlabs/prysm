@@ -200,9 +200,9 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	}
 
 	if sinceFinality >= uint64(epochsSinceFinalitySaveHotStateDB) {
-		s.stateGen.EnableSaveHotStateToDB(ctx)
+		s.beaconDB.EnableSaveHotStateToDB(ctx)
 		return nil
 	}
 
-	return s.stateGen.DisableSaveHotStateToDB(ctx)
+	return s.beaconDB.DisableSaveHotStateToDB(ctx)
 }

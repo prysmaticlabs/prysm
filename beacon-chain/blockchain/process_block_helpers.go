@@ -33,7 +33,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 		return nil, err
 	}
 
-	preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	preState, err := s.beaconDB.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 	}
@@ -63,7 +63,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
-	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
+	if !s.beaconDB.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
 	}
 
@@ -71,7 +71,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 		return err
 	}
 
-	has, err := s.stateGen.HasState(ctx, parentRoot)
+	has, err := s.beaconDB.HasState(ctx, parentRoot)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	s.finalizedCheckpt = cp
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
-	if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
+	if err := s.beaconDB.MigrateToCold(ctx, fRoot); err != nil {
 		return errors.Wrap(err, "could not migrate to cold")
 	}
 

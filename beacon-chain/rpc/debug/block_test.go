@@ -10,7 +10,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -59,7 +58,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 
 	s, _ := testutil.DeterministicGenesisState(t, 2048)
 	tr := [32]byte{'a'}
-	require.NoError(t, bs.StateGen.SaveState(ctx, tr, s))
+	require.NoError(t, bs.BeaconDB.SaveStateByRoot(ctx, tr, s))
 	c, err := helpers.BeaconCommitteeFromState(s, 1, 0)
 	require.NoError(t, err)
 

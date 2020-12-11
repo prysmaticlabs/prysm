@@ -3,22 +3,27 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 var _ iface.Database = (*Store)(nil)
+var defaultHotStateDBInterval uint64 = 128 // slots
 
 const (
 	// VotesCacheSize with 1M validators will be 8MB.
@@ -40,17 +45,41 @@ var BlockCacheSize = int64(1 << 21)
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                  *bolt.DB
-	databasePath        string
-	blockCache          *ristretto.Cache
-	validatorIndexCache *ristretto.Cache
-	stateSummaryCache   *cache.StateSummaryCache
+	db                      *bolt.DB
+	databasePath            string
+	blockCache              *ristretto.Cache
+	validatorIndexCache     *ristretto.Cache
+	stateSummaryCache       *StateSummaryCache
+	slotsPerArchivedPoint   uint64
+	hotStateCache           *hotStateCache
+	finalizedInfo           *finalizedInfo
+	epochBoundaryStateCache *epochBoundaryState
+	saveHotStateDB          *saveHotStateDbConfig
+}
+
+// This tracks the config in the event of long non-finality,
+// how often does the node save hot states to db? what are
+// the saved hot states in db?... etc
+type saveHotStateDbConfig struct {
+	enabled         bool
+	lock            sync.Mutex
+	duration        uint64
+	savedStateRoots [][32]byte
+}
+
+// This tracks the finalized point. It's also the point where slot and the block root of
+// cold and hot sections of the DB splits.
+type finalizedInfo struct {
+	slot  uint64
+	root  [32]byte
+	state *state.BeaconState
+	lock  sync.RWMutex
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
+func NewKVStore(dirPath string, stateSummaryCache *StateSummaryCache) (*Store, error) {
 	hasDir, err := fileutil.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -88,11 +117,18 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 	}
 
 	kv := &Store{
-		db:                  boltDB,
-		databasePath:        dirPath,
-		blockCache:          blockCache,
-		validatorIndexCache: validatorCache,
-		stateSummaryCache:   stateSummaryCache,
+		db:                      boltDB,
+		databasePath:            dirPath,
+		blockCache:              blockCache,
+		validatorIndexCache:     validatorCache,
+		stateSummaryCache:       stateSummaryCache,
+		hotStateCache:           newHotStateCache(),
+		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
+		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
+		epochBoundaryStateCache: newBoundaryStateCache(),
+		saveHotStateDB: &saveHotStateDbConfig{
+			duration: defaultHotStateDBInterval,
+		},
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
@@ -167,4 +203,56 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
 	return prombolt.New("boltDB", db)
+}
+
+// Resume resumes a new state management object from previously saved finalized check point in DB.
+func (s *Store) Resume(ctx context.Context) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
+	defer span.End()
+
+	c, err := s.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
+	fRoot := bytesutil.ToBytes32(c.Root)
+	// Resume as genesis state if last finalized root is zero hashes.
+	if fRoot == params.BeaconConfig().ZeroHash {
+		return s.GenesisState(ctx)
+	}
+	fState, err := s.StateByRoot(ctx, fRoot)
+	if err != nil {
+		return nil, err
+	}
+	if fState == nil {
+		return nil, errors.New("finalized state not found in disk")
+	}
+
+	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+
+	return fState, nil
+}
+
+// SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.
+// This used for migration at the correct start slot and used for hot state play back to ensure
+// lower bound to start is always at the last finalized state.
+func (s *Store) SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState) {
+	s.finalizedInfo.lock.Lock()
+	defer s.finalizedInfo.lock.Unlock()
+	s.finalizedInfo.root = fRoot
+	s.finalizedInfo.state = fState.Copy()
+	s.finalizedInfo.slot = fSlot
+}
+
+// Returns true if input root equals to cached finalized root.
+func (s *Store) isFinalizedRoot(r [32]byte) bool {
+	s.finalizedInfo.lock.RLock()
+	defer s.finalizedInfo.lock.RUnlock()
+	return r == s.finalizedInfo.root
+}
+
+// Returns the cached and copied finalized state.
+func (s *Store) finalizedState() *state.BeaconState {
+	s.finalizedInfo.lock.RLock()
+	defer s.finalizedInfo.lock.RUnlock()
+	return s.finalizedInfo.state.Copy()
 }

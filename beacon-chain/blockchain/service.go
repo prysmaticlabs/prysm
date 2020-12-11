@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -69,7 +68,6 @@ type Service struct {
 	nextEpochBoundarySlot uint64
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
-	stateGen              *stategen.State
 	opsService            *attestations.Service
 	initSyncBlocks        map[[32]byte]*ethpb.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
@@ -94,7 +92,6 @@ type Config struct {
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
-	StateGen          *stategen.State
 	WspBlockRoot      []byte
 	WspEpoch          uint64
 }
@@ -119,7 +116,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		opsService:           cfg.OpsService,
-		stateGen:             cfg.StateGen,
 		initSyncBlocks:       make(map[[32]byte]*ethpb.SignedBeaconBlock),
 		justifiedBalances:    make([]uint64, 0),
 		wsEpoch:              cfg.WspEpoch,
@@ -153,7 +149,7 @@ func (s *Service) Start() {
 			}
 		}
 	}
-	beaconState, err := s.stateGen.StateByRoot(s.ctx, r)
+	beaconState, err := s.beaconDB.StateByRoot(s.ctx, r)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state by root: %v", err)
 	}
@@ -336,14 +332,14 @@ func (s *Service) initializeBeaconChain(
 func (s *Service) Stop() error {
 	defer s.cancel()
 
-	if s.stateGen != nil && s.head != nil && s.head.state != nil {
-		if err := s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
+	if s.beaconDB != nil && s.head != nil && s.head.state != nil {
+		if err := s.beaconDB.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
 			return err
 		}
 	}
 
 	// Save cached state summaries to the DB before stop.
-	if err := s.stateGen.SaveStateSummariesToDB(s.ctx); err != nil {
+	if err := s.beaconDB.SaveStateSummariesToDB(s.ctx); err != nil {
 		return err
 	}
 
@@ -389,7 +385,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return err
 	}
 
-	s.stateGen.SaveFinalizedState(0, genesisBlkRoot, genesisState)
+	s.beaconDB.SaveFinalizedState(0, genesisBlkRoot, genesisState)
 
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")
@@ -452,7 +448,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	var finalizedState *stateTrie.BeaconState
 
-	finalizedState, err = s.stateGen.Resume(ctx)
+	finalizedState, err = s.beaconDB.Resume(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
@@ -474,13 +470,13 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not hash head block")
 			}
-			finalizedState, err := s.stateGen.Resume(ctx)
+			finalizedState, err := s.beaconDB.Resume(ctx)
 			if err != nil {
 				return errors.Wrap(err, "could not get finalized state from db")
 			}
 			log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
 				"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block.Slot)
-			headState, err := s.stateGen.StateByRoot(ctx, headRoot)
+			headState, err := s.beaconDB.StateByRoot(ctx, headRoot)
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve head state")
 			}

@@ -93,7 +93,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	if !s.stateGen.StateSummaryExists(ctx, headRoot) {
+	if !s.beaconDB.StateSummaryExists(ctx, headRoot) {
 		return nil
 	}
 
@@ -107,7 +107,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	// Get the new head state from cached state or DB.
-	newHeadState, err := s.stateGen.StateByRoot(ctx, headRoot)
+	newHeadState, err := s.beaconDB.StateByRoot(ctx, headRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
@@ -264,7 +264,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 			return err
 		}
 	} else {
-		justifiedState, err = s.stateGen.StateByRoot(ctx, justifiedRoot)
+		justifiedState, err = s.beaconDB.StateByRoot(ctx, justifiedRoot)
 		if err != nil {
 			return err
 		}

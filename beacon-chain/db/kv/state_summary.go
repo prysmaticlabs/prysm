@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"errors"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bolt "go.etcd.io/bbolt"
@@ -20,6 +21,28 @@ func (s *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) 
 func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateSummaryBucket)
+		for _, summary := range summaries {
+			enc, err := encode(ctx, summary)
+			if err != nil {
+				return err
+			}
+			if err := bucket.Put(summary.Root, enc); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// SaveStateSummariesToDB saves state summary objects from cache to the DB.
+func (s *Store) SaveStateSummariesToDB(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
+	defer span.End()
+
+	summaries := s.stateSummaryCache.GetAll()
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
@@ -65,6 +88,12 @@ func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 	return len(enc) > 0
 }
 
+// StateSummaryExists returns true if the corresponding state summary of the input block root either
+// exists in the DB or in the cache.
+func (s *Store) StateSummaryExists(ctx context.Context, blockRoot [32]byte) bool {
+	return s.stateSummaryCache.Has(blockRoot) || s.HasStateSummary(ctx, blockRoot)
+}
+
 func (s *Store) stateSummaryBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateSummaryBytes")
 	defer span.End()
@@ -77,4 +106,20 @@ func (s *Store) stateSummaryBytes(ctx context.Context, blockRoot [32]byte) ([]by
 	})
 
 	return enc, err
+}
+
+// RecoverStateSummary recovers state summary object of a given block root by using the saved block in DB.
+func (s *Store) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+	if s.HasBlock(ctx, blockRoot) {
+		b, err := s.Block(ctx, blockRoot)
+		if err != nil {
+			return nil, err
+		}
+		summary := &pb.StateSummary{Slot: b.Block.Slot, Root: blockRoot[:]}
+		if err := s.SaveStateSummary(ctx, summary); err != nil {
+			return nil, err
+		}
+		return summary, nil
+	}
+	return nil, errors.New("could not find block in DB")
 }

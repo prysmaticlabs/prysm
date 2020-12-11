@@ -153,12 +153,12 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 	hasStateSummaryDB := s.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	hasStateSummaryCache := s.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if !hasStateSummaryDB && !hasStateSummaryCache {
-		_, err := s.stateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+		_, err := s.db.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 		if err != nil {
 			return err
 		}
 	}
-	parentState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+	parentState, err := s.db.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {
 		return err
 	}
