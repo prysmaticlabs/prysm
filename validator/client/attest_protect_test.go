@@ -76,11 +76,11 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
 	require.NoError(t, err)
-	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
-	require.ErrorContains(t, "rejected", err, "Expected error on post signature update is detected as slashable")
 	mockProtector.AllowAttestation = true
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
-	require.NoError(t, err, "Expected allowed attestation not to throw error")
+	require.NoError(t, err)
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
+	require.ErrorContains(t, "could not sign attestation", err)
 
 	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
 	require.NoError(t, err)
