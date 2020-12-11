@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -36,105 +35,6 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		fieldRoots[4] = bodyRoot[:]
 	}
 	return htrutils.BitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-}
-
-// BlockRoot returns the block hash tree root of the provided block.
-func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
-	fieldRoots := make([][32]byte, 5)
-	if blk != nil {
-		headerSlotBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(headerSlotBuf, blk.Slot)
-		headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
-		fieldRoots[0] = headerSlotRoot
-		proposerIdxBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(proposerIdxBuf, blk.ProposerIndex)
-		proposerIndexRoot := bytesutil.ToBytes32(proposerIdxBuf)
-		fieldRoots[1] = proposerIndexRoot
-		parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
-		fieldRoots[2] = parentRoot
-		stateRoot := bytesutil.ToBytes32(blk.StateRoot)
-		fieldRoots[3] = stateRoot
-		bodyRoot, err := BlockBodyRoot(blk.Body)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		fieldRoots[4] = bodyRoot
-	}
-	return htrutils.BitwiseMerkleizeArrays(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-}
-
-// BlockBodyRoot returns the hash tree root of the block body.
-func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
-	if body == nil {
-		// Treat nil body to be the same as empty. This is mostly for test setup purposes and would
-		// be very unlikely to happen in production workflow.
-		emptyRoot := make([]byte, 32)
-		emptyRandao := make([]byte, 96)
-		body = &ethpb.BeaconBlockBody{
-			RandaoReveal: emptyRandao,
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot:  emptyRoot,
-				DepositCount: 0,
-				BlockHash:    emptyRoot,
-			},
-			Graffiti:          emptyRoot,
-			ProposerSlashings: make([]*ethpb.ProposerSlashing, 0),
-			AttesterSlashings: make([]*ethpb.AttesterSlashing, 0),
-			Attestations:      make([]*ethpb.Attestation, 0),
-			Deposits:          make([]*ethpb.Deposit, 0),
-			VoluntaryExits:    make([]*ethpb.SignedVoluntaryExit, 0),
-		}
-	}
-	hasher := hashutil.CustomSHA256Hasher()
-	fieldRoots := make([][32]byte, 8)
-	rawRandao := bytesutil.ToBytes96(body.RandaoReveal)
-	packedRandao, err := htrutils.Pack([][]byte{rawRandao[:]})
-	if err != nil {
-		return [32]byte{}, err
-	}
-	randaoRoot, err := htrutils.BitwiseMerkleize(hasher, packedRandao, uint64(len(packedRandao)), uint64(len(packedRandao)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[0] = randaoRoot
-
-	eth1Root, err := Eth1Root(hasher, body.Eth1Data)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[1] = eth1Root
-
-	graffitiRoot := bytesutil.ToBytes32(body.Graffiti)
-	fieldRoots[2] = graffitiRoot
-
-	proposerSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.ProposerSlashings, params.BeaconConfig().MaxProposerSlashings)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[3] = proposerSlashingsRoot
-	attesterSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.AttesterSlashings, params.BeaconConfig().MaxAttesterSlashings)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[4] = attesterSlashingsRoot
-	attsRoot, err := blockAttestationRoot(body.Attestations)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[5] = attsRoot
-
-	depositRoot, err := ssz.HashTreeRootWithCapacity(body.Deposits, params.BeaconConfig().MaxDeposits)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[6] = depositRoot
-
-	exitRoot, err := ssz.HashTreeRootWithCapacity(body.VoluntaryExits, params.BeaconConfig().MaxVoluntaryExits)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[7] = exitRoot
-	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // Eth1Root computes the HashTreeRoot Merkleization of
