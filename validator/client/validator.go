@@ -40,6 +40,15 @@ import (
 // slasher connection when the slasher client connection is not ready.
 var reconnectPeriod = 5 * time.Second
 
+// keyFetchPeriod is the frequency that we try to refetch validating keys
+// in case no keys were fetched previously.
+var keyRefetchPeriod = 30 * time.Second
+
+var (
+	msgCouldNotFetchKeys = "could not fetch validating keys"
+	msgNoKeysFetched     = "No validating keys fetched. Trying again"
+)
+
 // ValidatorRole defines the validator role.
 type ValidatorRole int8
 
@@ -221,7 +230,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 				return nil
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting reconnect external protection")
-				return errors.New("context closed, no longer attempting to restart external protection")
+				return ctx.Err()
 			}
 		}
 	}
