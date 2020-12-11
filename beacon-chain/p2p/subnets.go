@@ -17,8 +17,6 @@ var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
 
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 
-const peersRequiredInSubnetSearch = 20
-
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
 // with those peers. This method will block until the required amount of
@@ -48,7 +46,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		if currNum >= threshold {
 			break
 		}
-		nodes := enode.ReadNodes(iterator, peersRequiredInSubnetSearch)
+		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
 		for _, node := range nodes {
 			info, _, err := convertToAddrInfo(node)
 			if err != nil {
