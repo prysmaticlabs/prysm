@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +14,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -36,11 +34,13 @@ type test struct {
 			Data []struct {
 				Pubkey       string `json:"pubkey"`
 				SignedBlocks []struct {
-					Slot string `json:"slot"`
+					Slot        string `json:"slot"`
+					SigningRoot string `json:"signing_root"`
 				} `json:"signed_blocks"`
 				SignedAttestations []struct {
 					SourceEpoch string `json:"source_epoch"`
 					TargetEpoch string `json:"target_epoch"`
+					SigningRoot string `json:"signing_root"`
 				} `json:"signed_attestations"`
 			} `json:"data"`
 		} `json:"interchange"`
@@ -155,7 +155,7 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 							if sb.ShouldSucceed {
 								require.NoError(t, err)
 							} else {
-								require.NotEqual(t, nil, err, "pre validation should have failed for block at slot %d", bSlot)
+								require.NotEqual(t, nil, err, "pre validation should have failed for block")
 							}
 
 							// Only proceed post update if pre validation did not error.
@@ -164,7 +164,7 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 								if sb.ShouldSucceed {
 									require.NoError(t, err)
 								} else {
-									require.NotEqual(t, nil, err, "post validation should have failed for block at slot %d", bSlot)
+									require.NotEqual(t, nil, err, "post validation should have failed for block")
 								}
 							}
 						}
@@ -185,10 +185,6 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 								},
 								Signature: make([]byte, 96),
 							}
-							//m.validatorClient.EXPECT().DomainData(
-							//	gomock.Any(), // ctx
-							//	gomock.Any(),
-							//).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 							var signingRoot [32]byte
 							if sa.SigningRoot != "" {
@@ -199,10 +195,9 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 
 							err = validator.slashableAttestationCheck(context.Background(), ia, pk, signingRoot)
 							if sa.ShouldSucceed {
-								fmt.Println(ia)
 								require.NoError(t, err)
 							} else {
-								require.NotNil(t, err, "pre validation should have failed for attestation at source epoch %d", sa.SourceEpoch)
+								require.NotNil(t, err, "pre validation should have failed for attestation")
 							}
 						}
 						require.NoError(t, err, validator.db.Close())
