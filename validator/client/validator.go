@@ -226,57 +226,6 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	return nil
 }
 
-// WaitForActivation checks whether the validator pubkey is in the active
-// validator set. If not, this operation will block until an activation message is
-// received.
-func (v *validator) WaitForActivation(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
-	defer span.End()
-
-	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not fetch validating keys")
-	}
-	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
-	}
-	stream, err := v.validatorClient.WaitForActivation(ctx, req)
-	if err != nil {
-		return errors.Wrap(err, "could not setup validator WaitForActivation streaming client")
-	}
-	for {
-		res, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		// If context is canceled we stop the loop.
-		if ctx.Err() == context.Canceled {
-			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-		}
-		if err != nil {
-			return errors.Wrap(err, "could not receive validator activation from stream")
-		}
-		valActivated := v.checkAndLogValidatorStatus(res.Statuses)
-
-		if valActivated {
-			for _, statusResp := range res.Statuses {
-				if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
-					continue
-				}
-				log.WithFields(logrus.Fields{
-					"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(statusResp.PublicKey)),
-					"index":     statusResp.Index,
-				}).Info("Validator activated")
-			}
-			break
-		}
-	}
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
-
-	return nil
-}
-
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) bool {
 	nonexistentIndex := ^uint64(0)
 	var validatorActivated bool
