@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
@@ -41,11 +40,11 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 
 	// We need to handle duplicate public keys in the JSON file, with potentially
 	// different signing histories for both attestations and blocks.
-	signedBlocksByPubKey, err := parseUniqueSignedBlocksByPubKey(interchangeJSON.Data)
+	signedBlocksByPubKey, err := parseBlocksForUniquePublicKeys(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
 	}
-	signedAttsByPubKey, err := parseUniqueSignedAttestationsByPubKey(interchangeJSON.Data)
+	signedAttsByPubKey, err := parseAttestationsForUniquePublicKeys(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
@@ -154,10 +153,22 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 	return nil
 }
 
-// We create a map of pubKey -> []*SignedBlock. Then, we keep a map of observed hashes of
-// signed blocks. If we observe a new hash, we insert those signed blocks for processing.
-func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
-	seenHashes := make(map[[32]byte]bool)
+// We create a map of pubKey -> []*SignedBlock. Then, for each public key we observe,
+// we append to this map. This allows us to handle valid input JSON data such as:
+//
+// "0x2932232930: {
+//   SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
+//  },
+// "0x2932232930: {
+//   SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
+//  }
+//
+// Which should be properly parsed as:
+//
+// "0x2932232930: {
+//   SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
+//  }
+func parseBlocksForUniquePublicKeys(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
 	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
 	for _, validatorData := range data {
 		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
@@ -168,26 +179,28 @@ func parseUniqueSignedBlocksByPubKey(data []*ProtectionData) (map[[48]byte][]*Si
 			if sBlock == nil {
 				continue
 			}
-			encoded, err := json.Marshal(sBlock)
-			if err != nil {
-				return nil, err
-			}
-			// Namespace the hash by the public key and the encoded block.
-			h := hashutil.Hash(append(pubKey[:], encoded...))
-			if _, ok := seenHashes[h]; ok {
-				continue
-			}
-			seenHashes[h] = true
 			signedBlocksByPubKey[pubKey] = append(signedBlocksByPubKey[pubKey], sBlock)
 		}
 	}
 	return signedBlocksByPubKey, nil
 }
 
-// We create a map of pubKey -> []*SignedAttestation. Then, we keep a map of observed hashes of
-// signed attestations. If we observe a new hash, we insert those signed attestations for processing.
-func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
-	seenHashes := make(map[[32]byte]bool)
+// We create a map of pubKey -> []*SignedAttestation. Then, for each public key we observe,
+// we append to this map. This allows us to handle valid input JSON data such as:
+//
+// "0x2932232930: {
+//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//  },
+// "0x2932232930: {
+//   SignedAttestations: [{Source: 5, Target: 6}],
+//  }
+//
+// Which should be properly parsed as:
+//
+// "0x2932232930: {
+//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//  }
+func parseAttestationsForUniquePublicKeys(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
 	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
 	for _, validatorData := range data {
 		pubKey, err := pubKeyFromHex(validatorData.Pubkey)
@@ -198,16 +211,6 @@ func parseUniqueSignedAttestationsByPubKey(data []*ProtectionData) (map[[48]byte
 			if sAtt == nil {
 				continue
 			}
-			encoded, err := json.Marshal(sAtt)
-			if err != nil {
-				return nil, err
-			}
-			// Namespace the hash by the public key and the encoded block.
-			h := hashutil.Hash(append(pubKey[:], encoded...))
-			if _, ok := seenHashes[h]; ok {
-				continue
-			}
-			seenHashes[h] = true
 			signedAttestationsByPubKey[pubKey] = append(signedAttestationsByPubKey[pubKey], sAtt)
 		}
 	}
