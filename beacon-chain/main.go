@@ -185,6 +185,9 @@ func main() {
 }
 
 func startNode(ctx *cli.Context) error {
+	if err := cmd.CheckDefaultDataDir(ctx.String(cmd.DataDirFlag.Name)); err != nil {
+		return err
+	}
 	// verify if ToS accepted
 	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 		return err

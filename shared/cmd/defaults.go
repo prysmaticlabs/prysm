@@ -42,9 +42,9 @@ func DefaultDataDir() string {
 	return ""
 }
 
-// PatchDefaultDataDir fixes issue with default data directory path.
+// CheckDefaultDataDir checks and fixes the issue with default data directory path.
 // For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.
-func PatchDefaultDataDir(selectedDir string) error {
+func CheckDefaultDataDir(selectedDir string) error {
 	if runtime.GOOS != "windows" {
 		return nil
 	}
