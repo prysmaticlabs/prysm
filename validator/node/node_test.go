@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -56,6 +57,6 @@ func TestNode_Builds(t *testing.T) {
 func TestClearDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 	tmp := filepath.Join(t.TempDir(), "datadirtest")
-	require.NoError(t, clearDB(tmp, true))
+	require.NoError(t, clearDB(context.Background(), tmp, true))
 	require.LogsContain(t, hook, "Removing database")
 }

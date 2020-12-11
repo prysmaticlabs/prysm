@@ -77,6 +77,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		"--force-clear-db",
 		"--e2e-config",
 		"--accept-terms-of-use",
+		"--verbosity=debug",
 	}
 	args = append(args, featureconfig.E2EValidatorFlags...)
 	args = append(args, config.ValidatorFlags...)
