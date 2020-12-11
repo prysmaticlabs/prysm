@@ -757,6 +757,44 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Considers nil signing roots and mismatched signing roots when determining slashable keys",
+			expected: [][48]byte{
+				{2}, {3},
+			},
+			given: map[[48]byte][]*SignedBlock{
+				// Different signing roots and same slot should not be slashable.
+				{1}: {
+					{
+						Slot:        "1",
+						SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
+					},
+					{
+						Slot:        "1",
+						SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
+					},
+				},
+				// No signing root specified but same slot should be slashable.
+				{2}: {
+					{
+						Slot: "2",
+					},
+					{
+						Slot: "2",
+					},
+				},
+				// No signing root in one slot, and same slot with signing root should be slashable.
+				{3}: {
+					{
+						Slot: "3",
+					},
+					{
+						Slot:        "3",
+						SigningRoot: fmt.Sprintf("%#x", [32]byte{3}),
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
