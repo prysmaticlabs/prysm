@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,7 @@ import (
 
 func TestClearDB(t *testing.T) {
 	// Setting up manually is required, since SetupDB() will also register a teardown procedure.
-	testDB, err := kv.NewKVStore(t.TempDir(), [][48]byte{})
+	testDB, err := kv.NewKVStore(context.Background(), t.TempDir(), [][48]byte{})
 	require.NoError(t, err, "Failed to instantiate DB")
 	require.NoError(t, testDB.ClearDB())
 

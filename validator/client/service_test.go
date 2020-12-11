@@ -77,14 +77,14 @@ func TestStart_GrpcHeaders(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	for input, output := range map[string][]string{
-		"should-break": []string{},
-		"key=value":    []string{"key", "value"},
-		"":             []string{},
-		",":            []string{},
-		"key=value,Authorization=Q=": []string{
+		"should-break": {},
+		"key=value":    {"key", "value"},
+		"":             {},
+		",":            {},
+		"key=value,Authorization=Q=": {
 			"key", "value", "Authorization", "Q=",
 		},
-		"Authorization=this is a valid value": []string{
+		"Authorization=this is a valid value": {
 			"Authorization", "this is a valid value",
 		},
 	} {
