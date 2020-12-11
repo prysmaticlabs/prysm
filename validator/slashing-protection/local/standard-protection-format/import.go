@@ -77,7 +77,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
 		bar := initializeProgressBar(
 			len(proposalHistory.Proposals),
-			fmt.Sprintf("Importing past proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
+			fmt.Sprintf("Importing proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
 		)
 		for _, proposal := range proposalHistory.Proposals {
 			if err := bar.Add(1); err != nil {
@@ -88,10 +88,18 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 			}
 		}
 	}
-	if err := validatorDB.SaveAttestationHistoryForPubKeysV2(ctx, attestingHistoryByPubKey); err != nil {
-		return errors.Wrap(err, "could not save attesting history from imported JSON to database")
+	bar := initializeProgressBar(
+		len(attestingHistoryByPubKey),
+		"Importing attesting history for validator public keys",
+	)
+	for pubKey, history := range attestingHistoryByPubKey {
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
+		if err := validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history); err != nil {
+			return errors.Wrap(err, "could not save attesting history from imported JSON to database")
+		}
 	}
-
 	return saveLowestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
 }
 
