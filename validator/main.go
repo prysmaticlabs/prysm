@@ -32,12 +32,6 @@ import (
 var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
-	outdatedDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2Validators")
-	currentDataDir := flags.DefaultValidatorDir()
-	if err := cmd.FixDefaultDataDir(outdatedDataDir, currentDataDir); err != nil {
-		return err
-	}
-
 	// verify if ToS accepted
 	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 		return err
