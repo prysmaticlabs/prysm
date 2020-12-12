@@ -80,9 +80,8 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 		return nil
 	}
 
-	log.Warnf("Outdated data directory is found: %q. Copying its contents to the new data folder: %q",
-		prevDataDir, curDataDir)
-
+	log.Warnf("Outdated data directory is found: %q. "+
+		"Copying its contents to the new data folder: %q", prevDataDir, curDataDir)
 	if err := fileutil.CopyDir(prevDataDir, curDataDir); err != nil {
 		return err
 	}
