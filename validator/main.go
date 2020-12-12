@@ -114,12 +114,6 @@ func main() {
 		accounts.AccountCommands,
 		db.DatabaseCommands,
 	}
-	// Fix data dir for Windows users.
-	outdatedDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2Validators")
-	currentDataDir := flags.DefaultValidatorDir()
-	if err := cmd.FixDefaultDataDir(outdatedDataDir, currentDataDir); err != nil {
-		log.WithError(err).Error("Cannot update data directory")
-	}
 
 	app.Flags = appFlags
 
@@ -177,6 +171,13 @@ func main() {
 			panic(x)
 		}
 	}()
+
+	// Fix data dir for Windows users.
+	outdatedDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2Validators")
+	currentDataDir := flags.DefaultValidatorDir()
+	if err := cmd.FixDefaultDataDir(outdatedDataDir, currentDataDir); err != nil {
+		log.WithError(err).Error("Cannot update data directory")
+	}
 
 	if err := app.Run(os.Args); err != nil {
 		log.Error(err.Error())
