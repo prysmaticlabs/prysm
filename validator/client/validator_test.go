@@ -46,11 +46,18 @@ func genMockKeymanger(numKeys int) *mockKeymanager {
 }
 
 type mockKeymanager struct {
-	lock    sync.RWMutex
-	keysMap map[[48]byte]bls.SecretKey
+	lock        sync.RWMutex
+	keysMap     map[[48]byte]bls.SecretKey
+	fetchNoKeys bool
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	if m.fetchNoKeys {
+		// We set the value to `false` to fetch keys the next time.
+		m.fetchNoKeys = false
+		return make([][48]byte, 0), nil
+	}
+
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	keys := make([][48]byte, 0)

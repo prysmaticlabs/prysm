@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
@@ -182,4 +183,48 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, v.WaitForActivation(context.Background()))
+}
+
+func TestWaitForActivation_RefetchKeys(t *testing.T) {
+	originalPeriod := keyRefetchPeriod
+	defer func() {
+		keyRefetchPeriod = originalPeriod
+	}()
+	keyRefetchPeriod = 5 * time.Second
+
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: privKey,
+		},
+		fetchNoKeys: true,
+	}
+	v := validator{
+		validatorClient: client,
+		keyManager:      km,
+		genesisTime:     1,
+	}
+	resp := generateMockStatusResponse([][]byte{pubKey[:]})
+	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
+	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&ethpb.ValidatorActivationRequest{
+			PublicKeys: [][]byte{pubKey[:]},
+		},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		resp,
+		nil,
+	)
+	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	assert.LogsContain(t, hook, msgNoKeysFetched)
+	assert.LogsContain(t, hook, "Validator activated")
 }
