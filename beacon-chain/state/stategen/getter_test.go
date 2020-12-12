@@ -6,8 +6,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,7 +21,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 	service.finalizedInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
@@ -46,7 +46,7 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(10))
@@ -89,7 +89,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -125,7 +125,7 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -145,7 +145,7 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := testutil.NewBeaconBlock()
@@ -170,7 +170,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 	service.finalizedInfo.slot = service.slotsPerArchivedPoint + 1
 
@@ -205,7 +205,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -227,14 +227,14 @@ func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	r := [32]byte{'a'}
 	summary := &pb.StateSummary{Slot: 100}
 	_, err := service.stateSummary(ctx, r)
 	require.ErrorContains(t, "could not find block in DB", err)
 
-	service.stateSummaryCache.Put(r, summary)
+	service.stateSummaryCache.put(r, summary)
 	got, err := service.stateSummary(ctx, r)
 	require.NoError(t, err)
 	if !proto.Equal(got, summary) {
@@ -257,7 +257,7 @@ func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 func TestLoadeStateByRoot_Cached(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -275,7 +275,7 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -354,7 +354,7 @@ func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
 func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
@@ -372,7 +372,7 @@ func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, db.SaveState(ctx, genesis, genesisBlockRoot))
@@ -400,7 +400,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
@@ -439,7 +439,7 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
@@ -478,7 +478,7 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 func TestState_HasState(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 	s := testutil.NewBeaconState()
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}
@@ -509,7 +509,7 @@ func TestState_HasState(t *testing.T) {
 func TestState_HasStateInCache(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, kv.newStateSummaryCache())
 	s := testutil.NewBeaconState()
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}

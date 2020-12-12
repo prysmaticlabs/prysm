@@ -10,12 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -63,7 +63,7 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 
 var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
-func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummaryCache) *Service {
+func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *kv.stateSummaryCache) *Service {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Service
@@ -446,7 +446,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cancel:         cancel,
 		beaconDB:       db,
 		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
-		stateGen:       stategen.New(db, cache.NewStateSummaryCache()),
+		stateGen:       stategen.New(db, kv.newStateSummaryCache()),
 	}
 	b := testutil.NewBeaconBlock()
 	r, err := b.Block.HashTreeRoot()
@@ -459,7 +459,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 func TestServiceStop_SaveCachedStateSummaries(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	db, _ := testDB.SetupDB(t)
-	c := cache.NewStateSummaryCache()
+	c := kv.newStateSummaryCache()
 	s := &Service{
 		ctx:            ctx,
 		cancel:         cancel,
@@ -470,7 +470,7 @@ func TestServiceStop_SaveCachedStateSummaries(t *testing.T) {
 
 	r := [32]byte{'a'}
 	ss := &pb.StateSummary{Root: r[:], Slot: 1}
-	c.Put(r, ss)
+	c.put(r, ss)
 	require.NoError(t, s.Stop())
 	require.Equal(t, true, s.beaconDB.HasStateSummary(ctx, r))
 }

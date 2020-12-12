@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -59,7 +59,7 @@ func init() {
 		StateNotifier:       (&mock.ChainService{}).StateNotifier(),
 		AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		InitialSync:         &mockSync.Sync{IsSyncing: false},
-		StateSummaryCache:   cache.NewStateSummaryCache(),
+		StateSummaryCache:   kv.newStateSummaryCache(),
 		BlockNotifier:       nil,
 	})
 }

@@ -14,12 +14,11 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -39,7 +38,7 @@ import (
 const topic = p2p.BlockSubnetTopicFormat
 
 var db1 db.Database
-var ssc *cache.StateSummaryCache
+var ssc *kv.stateSummaryCache
 var dbPath = path.Join(os.TempDir(), "fuzz_beacondb", randomHex(6))
 
 func randomHex(n int) string {
@@ -56,7 +55,7 @@ func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	ssc = cache.NewStateSummaryCache()
+	ssc = kv.newStateSummaryCache()
 
 	var err error
 

@@ -339,7 +339,7 @@ func isEligibileForActivationQueue(activationEligibilityEpoch, effectiveBalance 
 //    return (
 //        # Placement in queue is finalized
 //        validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch
-//        # Has not yet been activated
+//        # has not yet been activated
 //        and validator.activation_epoch == FAR_FUTURE_EPOCH
 //    )
 func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Validator) bool {

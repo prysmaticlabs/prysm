@@ -8,7 +8,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -22,7 +21,7 @@ func TestRestore(t *testing.T) {
 	logHook := logTest.NewGlobal()
 	ctx := context.Background()
 
-	backupDb, err := kv.NewKVStore(t.TempDir(), cache.NewStateSummaryCache())
+	backupDb, err := kv.NewKVStore(t.TempDir(), kv.newStateSummaryCache())
 	defer func() {
 		require.NoError(t, backupDb.Close())
 	}()

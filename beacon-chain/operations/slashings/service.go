@@ -130,7 +130,7 @@ func (p *Pool) InsertAttesterSlashing(
 	slashedVal := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
 	cantSlash := make([]uint64, 0, len(slashedVal))
 	for _, val := range slashedVal {
-		// Has this validator index been included recently?
+		// has this validator index been included recently?
 		ok, err := p.validatorSlashingPreconditionCheck(state, val)
 		if err != nil {
 			return err
