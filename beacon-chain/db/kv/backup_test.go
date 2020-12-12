@@ -12,7 +12,8 @@ import (
 )
 
 func TestStore_Backup(t *testing.T) {
-	db := setupDB(t)
+	db, err := NewKVStore(t.TempDir())
+	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
 	head := testutil.NewBeaconBlock()
