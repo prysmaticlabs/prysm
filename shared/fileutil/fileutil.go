@@ -1,7 +1,6 @@
 package fileutil
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -47,7 +46,6 @@ func MkdirAll(dirPath string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("MkdirAll dir: %v, mode: %v, perm: %v\n", dirPath, info.Mode(), info.Mode().Perm())
 		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
 			return errors.New("dir already exists without proper 0700 permissions")
 		}
