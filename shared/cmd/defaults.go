@@ -70,7 +70,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 		// No need not move anything, destination directory already exists.
 		log.Warnf("Outdated data directory is found: %q! Current data folder %q is not empty, "+
 			"so can not copy files automatically. Either remove outdated data directory, or "+
-			"consider specifying non-existent new data directory (files will be copied automatically).\n" +
+			"consider specifying non-existent new data directory (files will be copied automatically).\n"+
 			"For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.",
 			prevDataDir, curDataDir)
 		return nil
