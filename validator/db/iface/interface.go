@@ -37,6 +37,6 @@ type ValidatorDB interface {
 	SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (kv.EncHistoryData, error)
-	SaveAttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte, history kv.EncHistoryData) error
+	SaveAttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte, history kv.EncHistoryData, lowestSourceEpoch, lowestTargetEpoch uint64) error
 	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 }

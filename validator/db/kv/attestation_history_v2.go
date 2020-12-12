@@ -59,16 +59,31 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 }
 
 // SaveAttestationHistoryForPubKeyV2 saves the attestation history for the requested validator public key.
-func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history EncHistoryData) error {
+func (store *Store) SaveAttestationHistoryForPubKeyV2(
+	ctx context.Context,
+	publicKey [48]byte,
+	history EncHistoryData,
+	lowestSourceEpoch,
+	lowestTargetEpoch uint64,
+) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
 	defer span.End()
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		return bucket.Put(pubKey[:], history)
+		err := bucket.Put(publicKey[:], history)
+		if err != nil {
+			return err
+		}
+		err = updateLowestSource(tx, publicKey, lowestSourceEpoch)
+		if err != nil {
+			return err
+		}
+		return updateLowestTarget(tx, publicKey, lowestTargetEpoch)
 	})
+
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
 		store.lock.Lock()
-		store.attestingHistoriesByPubKey[pubKey] = history
+		store.attestingHistoriesByPubKey[publicKey] = history
 		store.lock.Unlock()
 	}
 	return err
@@ -122,21 +137,25 @@ func (store *Store) SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(lowestSignedSourceBucket)
-
-		// If the incoming epoch is lower than the lowest signed epoch, override.
-		lowestSignedSourceBytes := bucket.Get(publicKey[:])
-		var lowestSignedSourceEpoch uint64
-		if len(lowestSignedSourceBytes) >= 8 {
-			lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
-		}
-		if len(lowestSignedSourceBytes) == 0 || epoch < lowestSignedSourceEpoch {
-			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
-				return err
-			}
-		}
-		return nil
+		return updateLowestSource(tx, publicKey, epoch)
 	})
+}
+
+func updateLowestSource(tx *bolt.Tx, publicKey [48]byte, epoch uint64) error {
+	bucket := tx.Bucket(lowestSignedSourceBucket)
+
+	// If the incoming epoch is lower than the lowest signed epoch, override.
+	lowestSignedSourceBytes := bucket.Get(publicKey[:])
+	var lowestSignedSourceEpoch uint64
+	if len(lowestSignedSourceBytes) >= 8 {
+		lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
+	}
+	if len(lowestSignedSourceBytes) == 0 || epoch < lowestSignedSourceEpoch {
+		if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SaveLowestSignedTargetEpoch saves the lowest signed target epoch for a validator public key.
@@ -145,19 +164,23 @@ func (store *Store) SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [
 	defer span.End()
 
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(lowestSignedTargetBucket)
-
-		// If the incoming epoch is lower than the lowest signed epoch, override.
-		lowestSignedTargetBytes := bucket.Get(publicKey[:])
-		var lowestSignedTargetEpoch uint64
-		if len(lowestSignedTargetBytes) >= 8 {
-			lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
-		}
-		if len(lowestSignedTargetBytes) == 0 || epoch < lowestSignedTargetEpoch {
-			if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
-				return err
-			}
-		}
-		return nil
+		return updateLowestTarget(tx, publicKey, epoch)
 	})
+}
+
+func updateLowestTarget(tx *bolt.Tx, publicKey [48]byte, epoch uint64) error {
+	bucket := tx.Bucket(lowestSignedTargetBucket)
+
+	// If the incoming epoch is lower than the lowest signed epoch, override.
+	lowestSignedTargetBytes := bucket.Get(publicKey[:])
+	var lowestSignedTargetEpoch uint64
+	if len(lowestSignedTargetBytes) >= 8 {
+		lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
+	}
+	if len(lowestSignedTargetBytes) == 0 || epoch < lowestSignedTargetEpoch {
+		if err := bucket.Put(publicKey[:], bytesutil.Uint64ToBytesBigEndian(epoch)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
