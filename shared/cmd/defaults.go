@@ -49,6 +49,16 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 		return nil
 	}
 
+	// Clean paths.
+	prevDataDir, err := fileutil.ExpandPath(prevDataDir)
+	if err != nil {
+		return err
+	}
+	curDataDir, err = fileutil.ExpandPath(curDataDir)
+	if err != nil {
+		return err
+	}
+
 	// See if shared directory is found (if it is -- we need to move it to non-shared destination).
 	prevDataDirExists, err := fileutil.HasDir(prevDataDir)
 	if err != nil {
@@ -86,7 +96,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 		return err
 	}
 
-	log.Infof("All files from the outdated data directory %q has been moved to %q. Consider removing %q now.",
+	log.Infof("All files from the outdated data directory %q have been moved to %q. Consider removing %q now.",
 		prevDataDir, curDataDir, prevDataDir)
 	return nil
 }

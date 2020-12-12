@@ -195,6 +195,7 @@ func startNode(ctx *cli.Context) error {
 	if err := cmd.FixDefaultDataDir(outdatedDataDir, currentDataDir); err != nil {
 		return err
 	}
+
 	// verify if ToS accepted
 	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 		return err
