@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -40,6 +39,15 @@ import (
 // reconnectPeriod is the frequency that we try to restart our
 // slasher connection when the slasher client connection is not ready.
 var reconnectPeriod = 5 * time.Second
+
+// keyFetchPeriod is the frequency that we try to refetch validating keys
+// in case no keys were fetched previously.
+var keyRefetchPeriod = 30 * time.Second
+
+var (
+	msgCouldNotFetchKeys = "could not fetch validating keys"
+	msgNoKeysFetched     = "No validating keys fetched. Trying again"
+)
 
 // ValidatorRole defines the validator role.
 type ValidatorRole int8
@@ -59,13 +67,11 @@ type validator struct {
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
-	attesterHistoryByPubKeyLock        sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	genesisTime                        uint64
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
-	attesterHistoryByPubKey            map[[48]byte]kv.EncHistoryData
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
@@ -222,7 +228,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 				return nil
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting reconnect external protection")
-				return errors.New("context closed, no longer attempting to restart external protection")
+				return ctx.Err()
 			}
 		}
 	}
@@ -449,44 +455,6 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]Va
 		rolesAt[pubKey] = roles
 	}
 	return rolesAt, nil
-}
-
-// UpdateProtections goes through the duties of the given slot and fetches the required validator history,
-// assigning it in validator.
-func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
-	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
-	for _, duty := range v.duties.CurrentEpochDuties {
-		if duty == nil || duty.AttesterSlot != slot {
-			continue
-		}
-		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
-	}
-	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
-	if err != nil {
-		return errors.Wrap(err, "could not get attester history")
-	}
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = attHistoryByPubKey
-	v.attesterHistoryByPubKeyLock.Unlock()
-	return nil
-}
-
-// ResetAttesterProtectionData reset validators protection data.
-func (v *validator) ResetAttesterProtectionData() {
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
-	v.attesterHistoryByPubKeyLock.Unlock()
-}
-
-// SaveProtection saves the attestation information currently in validator state.
-func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
-	v.attesterHistoryByPubKeyLock.RLock()
-	defer v.attesterHistoryByPubKeyLock.RUnlock()
-	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
-		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
-	}
-
-	return nil
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
