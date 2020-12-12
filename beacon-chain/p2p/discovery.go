@@ -231,6 +231,10 @@ func (s *Service) startDiscoveryV5(
 // 6) Peer's fork digest in their ENR matches that of
 // 	  our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
+	// Ignore nil node entries passed in.
+	if node == nil {
+		return false
+	}
 	// ignore nodes with no ip address stored.
 	if node.IP() == nil {
 		return false
