@@ -144,14 +144,11 @@ func CopyFile(src, dst string) error {
 
 // CopyDir copies contents of one directory into another, recursively.
 func CopyDir(src string, dst string) error {
-	var err error
-	var fds []os.FileInfo
-
-	if err = os.MkdirAll(dst, params.BeaconIoConfig().ReadWritePermissions); err != nil {
-		return err
+	if err := MkdirAll(dst); err != nil {
+		return errors.Wrapf(err, "error creating directory: %s", dst)
 	}
-
-	if fds, err = ioutil.ReadDir(src); err != nil {
+	fds, err := ioutil.ReadDir(src)
+	if err != nil {
 		return err
 	}
 	for _, fd := range fds {
