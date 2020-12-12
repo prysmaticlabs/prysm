@@ -10,9 +10,8 @@ import (
 )
 
 // SetupDB instantiates and returns database backed by key value store.
-func SetupDB(t testing.TB) (db.Database, *kv.stateSummaryCache) {
-	sc := kv.newStateSummaryCache()
-	s, err := kv.NewKVStore(t.TempDir(), sc)
+func SetupDB(t testing.TB) db.Database {
+	s, err := kv.NewKVStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,5 +20,5 @@ func SetupDB(t testing.TB) (db.Database, *kv.stateSummaryCache) {
 			t.Fatalf("failed to close database: %v", err)
 		}
 	})
-	return s, sc
+	return s
 }

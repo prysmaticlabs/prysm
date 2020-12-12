@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -16,8 +15,8 @@ import (
 
 func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	ctx := context.Background()
-	db, c := testDB.SetupDB(t)
-	service := New(db, c)
+	db := testDB.SetupDB(t)
+	service := New(db)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
@@ -34,9 +33,9 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 func TestMigrateToCold_HappyPath(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	service := New(db, kv.newStateSummaryCache())
+	service := New(db)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
@@ -64,9 +63,9 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	service := New(db, kv.newStateSummaryCache())
+	service := New(db)
 	service.slotsPerArchivedPoint = 1
 	beaconState, pks := testutil.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -114,9 +113,9 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	service := New(db, kv.newStateSummaryCache())
+	service := New(db)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)

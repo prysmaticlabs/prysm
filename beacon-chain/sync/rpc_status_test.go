@@ -154,7 +154,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	db, _ := testingDB.SetupDB(t)
+	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	head := testutil.NewBeaconBlock()
@@ -240,7 +240,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
-	db, _ := testingDB.SetupDB(t)
+	db := testingDB.SetupDB(t)
 
 	p1.LocalMetadata = &pb.MetaData{
 		SeqNumber: 2,
@@ -446,7 +446,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
-	db, _ := testingDB.SetupDB(t)
+	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	head := testutil.NewBeaconBlock()
@@ -531,7 +531,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 }
 
 func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
-	db, _ := testingDB.SetupDB(t)
+	db := testingDB.SetupDB(t)
 	bState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 

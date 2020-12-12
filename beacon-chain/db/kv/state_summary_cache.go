@@ -6,6 +6,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+const stateSummaryCachePruneCount = 128
+
 // stateSummaryCache caches state summary object.
 type stateSummaryCache struct {
 	initSyncStateSummaries     map[[32]byte]*pb.StateSummary
@@ -42,6 +44,13 @@ func (s *stateSummaryCache) get(r [32]byte) *pb.StateSummary {
 	defer s.initSyncStateSummariesLock.RUnlock()
 	b := s.initSyncStateSummaries[r]
 	return b
+}
+
+// len retrieves the state summary count from the state summaries cache.
+func (s *stateSummaryCache) len() int {
+	s.initSyncStateSummariesLock.RLock()
+	defer s.initSyncStateSummariesLock.RUnlock()
+	return len(s.initSyncStateSummaries)
 }
 
 // GetAll retrieves all the beacon state summaries from the initial sync state summaries cache, the returned

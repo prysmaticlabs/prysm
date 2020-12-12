@@ -3,6 +3,7 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path"
 	"time"
@@ -146,6 +147,13 @@ func (s *Store) ClearDB() error {
 // Close closes the underlying BoltDB database.
 func (s *Store) Close() error {
 	prometheus.Unregister(createBoltCollector(s.db))
+
+	// Before DB closes, we should dump the cached state summary objects to DB.
+	// Using context background here because db store doesn't have access to parent context.
+	if err := s.saveCachedStateSummariesDB(context.Background()); err != nil {
+		return err
+	}
+
 	return s.db.Close()
 }
 
