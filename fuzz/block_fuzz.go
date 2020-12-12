@@ -112,7 +112,7 @@ func BeaconFuzzBlock(b []byte) {
 	setupDB()
 
 	p2p := p2pt.NewFuzzTestP2P()
-	sgen := stategen.New(db1, ssc)
+	sgen := stategen.New(db1)
 	sn := &testing.MockStateNotifier{}
 	bn := &testing.MockBlockNotifier{}
 	an := &testing.MockOperationNotifier{}
@@ -153,7 +153,6 @@ func BeaconFuzzBlock(b []byte) {
 		AttPool:             ap,
 		ExitPool:            ep,
 		SlashingPool:        sp,
-		StateSummaryCache:   ssc,
 		StateGen:            sgen,
 	})
 
