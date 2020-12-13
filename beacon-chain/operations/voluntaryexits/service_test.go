@@ -286,8 +286,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 
 func TestPool_MarkIncluded(t *testing.T) {
 	type fields struct {
-		pending  []*ethpb.SignedVoluntaryExit
-		included map[uint64]bool
+		pending []*ethpb.SignedVoluntaryExit
 	}
 	type args struct {
 		exit *ethpb.SignedVoluntaryExit
