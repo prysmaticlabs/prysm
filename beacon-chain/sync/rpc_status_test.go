@@ -828,9 +828,9 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 
 func TestShouldResync(t *testing.T) {
 	type args struct {
-		genesis     time.Time
-		syncing     bool
-		headSlot    uint64
+		genesis  time.Time
+		syncing  bool
+		headSlot uint64
 	}
 	tests := []struct {
 		name string
