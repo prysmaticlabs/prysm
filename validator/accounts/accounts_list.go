@@ -116,7 +116,9 @@ func listImportedKeymanagerAccounts(
 		}
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if showPrivateKeys {
-			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+			if len(privateKeys) > i {
+				fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+			}
 		}
 		if !showDepositData {
 			continue
