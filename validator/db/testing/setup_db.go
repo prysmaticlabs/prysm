@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -9,7 +10,7 @@ import (
 
 // SetupDB instantiates and returns a DB instance for the validator client.
 func SetupDB(t testing.TB, pubkeys [][48]byte) db.Database {
-	db, err := kv.NewKVStore(t.TempDir(), pubkeys)
+	db, err := kv.NewKVStore(context.Background(), t.TempDir(), pubkeys)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
