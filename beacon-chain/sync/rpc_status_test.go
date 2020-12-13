@@ -831,7 +831,6 @@ func TestShouldResync(t *testing.T) {
 		genesis     time.Time
 		syncing     bool
 		headSlot    uint64
-		genesisTime uint64
 	}
 	tests := []struct {
 		name string
