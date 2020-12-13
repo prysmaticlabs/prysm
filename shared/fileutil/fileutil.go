@@ -142,6 +142,13 @@ func CopyFile(src, dst string) error {
 
 // CopyDir copies contents of one directory into another, recursively.
 func CopyDir(src string, dst string) error {
+	dstExists, err := HasDir(dst)
+	if err != nil {
+		return err
+	}
+	if dstExists {
+		return errors.New("destination directory already exists")
+	}
 	if err := MkdirAll(dst); err != nil {
 		return errors.Wrapf(err, "error creating directory: %s", dst)
 	}

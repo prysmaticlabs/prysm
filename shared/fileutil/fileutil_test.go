@@ -114,6 +114,54 @@ func TestCopyFile(t *testing.T) {
 	assert.Equal(t, true, deepCompare(t, fName, fName+"copy"))
 }
 
+func TestCopyDir(t *testing.T) {
+	tmpDir1 := t.TempDir()
+	tmpDir2 := filepath.Join(t.TempDir(), "copyfolder")
+	type fileDesc struct {
+		path    string
+		content []byte
+	}
+	fds := []fileDesc{
+		{
+			path:    "testfile1",
+			content: []byte{1, 2, 3},
+		},
+		{
+			path:    "subfolder1/testfile1",
+			content: []byte{4, 5, 6},
+		},
+		{
+			path:    "subfolder1/testfile2",
+			content: []byte{7, 8, 9},
+		},
+		{
+			path:    "subfolder2/testfile1",
+			content: []byte{10, 11, 12},
+		},
+		{
+			path:    "testfile2",
+			content: []byte{13, 14, 15},
+		},
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder1"), 0777))
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder2"), 0777))
+	for _, fd := range fds {
+		require.NoError(t, fileutil.WriteFile(filepath.Join(tmpDir1, fd.path), fd.content))
+		assert.Equal(t, true, fileutil.FileExists(filepath.Join(tmpDir1, fd.path)))
+		assert.Equal(t, false, fileutil.FileExists(filepath.Join(tmpDir2, fd.path)))
+	}
+
+	// Make sure that files are copied into non-existent directory only. If directory exists function exits.
+	assert.ErrorContains(t, "destination directory already exists", fileutil.CopyDir(tmpDir1, t.TempDir()))
+	require.NoError(t, fileutil.CopyDir(tmpDir1, tmpDir2))
+
+	// Now, all files should have been copied.
+	for _, fd := range fds {
+		assert.Equal(t, true, fileutil.FileExists(filepath.Join(tmpDir2, fd.path)))
+		assert.Equal(t, true, deepCompare(t, filepath.Join(tmpDir1, fd.path), filepath.Join(tmpDir2, fd.path)))
+	}
+}
+
 func deepCompare(t *testing.T, file1, file2 string) bool {
 	sf, err := os.Open(file1)
 	assert.NoError(t, err)
