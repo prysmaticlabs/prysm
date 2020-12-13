@@ -2,7 +2,9 @@ package kv
 
 import (
 	"context"
+	"fmt"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	bolt "go.etcd.io/bbolt"
@@ -63,22 +65,24 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 	ctx context.Context,
 	publicKey [48]byte,
 	history EncHistoryData,
-	lowestSourceEpoch,
-	lowestTargetEpoch uint64,
+	indexedAtt *ethpb.IndexedAttestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
 	defer span.End()
+	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil || indexedAtt.Data.Source == nil {
+		return fmt.Errorf("nil indexed attestation or one of its required fields (source, target epoch): %v", indexedAtt)
+	}
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
 		err := bucket.Put(publicKey[:], history)
 		if err != nil {
 			return err
 		}
-		err = updateLowestSource(tx, publicKey, lowestSourceEpoch)
+		err = updateLowestSource(tx, publicKey, indexedAtt.Data.Source.Epoch)
 		if err != nil {
 			return err
 		}
-		return updateLowestTarget(tx, publicKey, lowestTargetEpoch)
+		return updateLowestTarget(tx, publicKey, indexedAtt.Data.Target.Epoch)
 	})
 
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {

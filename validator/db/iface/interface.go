@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
@@ -37,6 +38,6 @@ type ValidatorDB interface {
 	SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (kv.EncHistoryData, error)
-	SaveAttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte, history kv.EncHistoryData, lowestSourceEpoch, lowestTargetEpoch uint64) error
+	SaveAttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte, history kv.EncHistoryData, attestation *ethpb.IndexedAttestation) error
 	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 }

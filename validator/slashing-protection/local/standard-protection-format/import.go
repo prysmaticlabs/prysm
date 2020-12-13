@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -97,7 +98,17 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		if err := bar.Add(1); err != nil {
 			log.WithError(err).Debug("Could not increase progress bar")
 		}
-		if err := validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history, params.BeaconConfig().FarFutureEpoch, params.BeaconConfig().FarFutureEpoch); err != nil {
+		att := &ethpb.IndexedAttestation{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{
+					Epoch: params.BeaconConfig().FarFutureEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: params.BeaconConfig().FarFutureEpoch,
+				},
+			},
+		}
+		if err := validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history, att); err != nil {
 			return errors.Wrap(err, "could not save attesting history from imported JSON to database")
 		}
 	}

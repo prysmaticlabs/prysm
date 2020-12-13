@@ -63,7 +63,7 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
 	}
-	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch); err != nil {
+	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory, indexedAtt); err != nil {
 		return errors.Wrapf(err, "could not save attestation history for public key: %#x", pubKey)
 	}
 	if featureconfig.Get().SlasherProtection && v.protector != nil {

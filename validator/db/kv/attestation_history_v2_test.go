@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -27,8 +28,17 @@ func TestAttestationHistoryForPubKey_OK(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	err = db.SaveAttestationHistoryForPubKeyV2(context.Background(), pubKey, history, 0, 0)
+	att := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
+	}
+	err = db.SaveAttestationHistoryForPubKeyV2(context.Background(), pubKey, history, att)
 	require.NoError(t, err)
 	got, err := db.AttestationHistoryForPubKeyV2(context.Background(), pubKey)
 	require.NoError(t, err)
@@ -49,7 +59,17 @@ func TestStore_AttestedPublicKeys(t *testing.T) {
 	assert.DeepEqual(t, make([][48]byte, 0), keys)
 
 	pubKey := [48]byte{1}
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, NewAttestationHistoryArray(0), 0, 0)
+	att := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
+	}
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, NewAttestationHistoryArray(0), att)
 	require.NoError(t, err)
 
 	keys, err = validatorDB.AttestedPublicKeys(ctx)
@@ -149,10 +169,22 @@ func TestLowestSignedSourceAndTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	})
 	p0 := [48]byte{0}
 	p1 := [48]byte{1}
+	att := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: 100,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 100,
+			},
+		},
+	}
 	// Can save.
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p0, NewAttestationHistoryArray(0), 100, 100)
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p0, NewAttestationHistoryArray(0), att)
 	require.NoError(t, err)
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), 200, 200)
+	att.Data.Source.Epoch = 200
+	att.Data.Target.Epoch = 200
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), att)
 	require.NoError(t, err)
 	got, err := validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
@@ -168,9 +200,13 @@ func TestLowestSignedSourceAndTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	require.Equal(t, uint64(200), got)
 
 	// Can replace.
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p0, NewAttestationHistoryArray(0), 99, 99)
+	att.Data.Source.Epoch = 99
+	att.Data.Target.Epoch = 99
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p0, NewAttestationHistoryArray(0), att)
 	require.NoError(t, err)
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), 199, 199)
+	att.Data.Source.Epoch = 199
+	att.Data.Target.Epoch = 199
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), att)
 	require.NoError(t, err)
 	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
@@ -186,9 +222,13 @@ func TestLowestSignedSourceAndTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	require.Equal(t, uint64(199), got)
 
 	// Can not replace.
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p0, NewAttestationHistoryArray(0), 100, 100)
+	att.Data.Source.Epoch = 100
+	att.Data.Target.Epoch = 100
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p0, NewAttestationHistoryArray(0), att)
 	require.NoError(t, err)
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), 200, 200)
+	att.Data.Source.Epoch = 200
+	att.Data.Target.Epoch = 200
+	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, p1, NewAttestationHistoryArray(0), att)
 	require.NoError(t, err)
 	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
