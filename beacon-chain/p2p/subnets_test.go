@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -105,11 +106,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// look up 3 different subnets
 	ctx := context.Background()
-	exists, err := s.FindPeersWithSubnet(ctx, 1)
+	exists, err := s.FindPeersWithSubnet(ctx, "", 1, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
-	exists2, err := s.FindPeersWithSubnet(ctx, 2)
+	exists2, err := s.FindPeersWithSubnet(ctx, "", 2, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
-	exists3, err := s.FindPeersWithSubnet(ctx, 3)
+	exists3, err := s.FindPeersWithSubnet(ctx, "", 3, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
 	if !exists || !exists2 || !exists3 {
 		t.Fatal("Peer with subnet doesn't exist")
@@ -126,7 +127,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	testService.RefreshENR()
 	time.Sleep(2 * time.Second)
 
-	exists, err = s.FindPeersWithSubnet(ctx, 2)
+	exists, err = s.FindPeersWithSubnet(ctx, "", 2, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 	require.NoError(t, err)
 
 	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")
