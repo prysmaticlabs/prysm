@@ -34,7 +34,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.2
 	github.com/google/gofuzz v1.2.0
-	github.com/google/gopacket v1.1.18 // indirect
+	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.4.2
@@ -53,19 +53,19 @@ require (
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
+	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0 // indirect
-	github.com/libp2p/go-libp2p v0.10.2
+	github.com/libp2p/go-libp2p v0.12.1-0.20201208224947-3155ff3089c0
 	github.com/libp2p/go-libp2p-blankhost v0.2.0
-	github.com/libp2p/go-libp2p-core v0.6.1
-	github.com/libp2p/go-libp2p-noise v0.1.1
-	github.com/libp2p/go-libp2p-pubsub v0.3.6
-	github.com/libp2p/go-libp2p-swarm v0.2.8
+	github.com/libp2p/go-libp2p-core v0.7.0
+	github.com/libp2p/go-libp2p-noise v0.1.2
+	github.com/libp2p/go-libp2p-pubsub v0.4.0
+	github.com/libp2p/go-libp2p-swarm v0.3.1
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
-	github.com/libp2p/go-mplex v0.1.3 // indirect
-	github.com/libp2p/go-reuseport-transport v0.0.4 // indirect
+	github.com/libp2p/go-libp2p-yamux v0.4.1 // indirect
+	github.com/libp2p/go-netroute v0.1.4 // indirect
 	github.com/libp2p/go-sockaddr v0.1.0 // indirect
-	github.com/libp2p/go-yamux v1.3.8 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/manifoldco/promptui v0.7.0
@@ -106,11 +106,11 @@ require (
 	go.uber.org/automaxprocs v1.3.0
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
+	golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
-	golang.org/x/net v0.0.0-20201027133719-8eef5233e2a1 // indirect
+	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/sys v0.0.0-20201027140754-0fcbb8f4928c // indirect
+	golang.org/x/sys v0.0.0-20201211002650-1f0c578a6b29 // indirect
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.org/x/tools v0.0.0-20200904185747-39188db58858

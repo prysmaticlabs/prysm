@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -179,7 +178,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
 			_, err := stream.Write([]byte{0x01})
 			assert.NoError(t, err)
-			msg := types.ErrorMessage("bad")
+			msg := p2pTypes.ErrorMessage("bad")
 			_, err = p.Encoding().EncodeWithMaxLength(stream, &msg)
 			assert.NoError(t, err)
 			return
@@ -273,7 +272,8 @@ func connectPeerHavingBlocks(
 
 	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy", func(stream network.Stream) {
 		defer func() {
-			assert.NoError(t, stream.Close())
+			_err := stream.Close()
+			_ = _err
 		}()
 
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
@@ -289,7 +289,8 @@ func connectPeerHavingBlocks(
 
 	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy", func(stream network.Stream) {
 		defer func() {
-			assert.NoError(t, stream.Close())
+			_err := stream.Close()
+			_ = _err
 		}()
 
 		req := new(p2pTypes.BeaconBlockByRootsReq)
