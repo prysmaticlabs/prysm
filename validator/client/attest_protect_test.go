@@ -79,7 +79,8 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	mockProtector.AllowAttestation = true
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
 	require.NoError(t, err)
-	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
+	differentSigningRoot := [32]byte{2}
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, differentSigningRoot)
 	require.ErrorContains(t, "could not sign attestation", err)
 
 	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
