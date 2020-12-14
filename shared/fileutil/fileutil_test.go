@@ -161,6 +161,32 @@ func TestCopyDir(t *testing.T) {
 		assert.Equal(t, true, fileutil.FileExists(filepath.Join(tmpDir2, fd.path)))
 		assert.Equal(t, true, deepCompare(t, filepath.Join(tmpDir1, fd.path), filepath.Join(tmpDir2, fd.path)))
 	}
+	assert.Equal(t, true, fileutil.DirsEqual(tmpDir1, tmpDir2))
+}
+
+func TestDirsEqual(t *testing.T) {
+	t.Run("non-existent source directory", func(t *testing.T) {
+		assert.Equal(t, false, fileutil.DirsEqual(filepath.Join(t.TempDir(), "nonexistent"), t.TempDir()))
+	})
+
+	t.Run("non-existent dest directory", func(t *testing.T) {
+		assert.Equal(t, false, fileutil.DirsEqual(t.TempDir(), filepath.Join(t.TempDir(), "nonexistent")))
+	})
+
+	t.Run("non-empty directory", func(t *testing.T) {
+		// Start with directories that do not have the same contents.
+		tmpDir1, tmpFileNames := tmpDirWithContents(t)
+		tmpDir2 := filepath.Join(t.TempDir(), "newfolder")
+		assert.Equal(t, false, fileutil.DirsEqual(tmpDir1, tmpDir2))
+
+		// Copy dir, and retest (hashes should match now).
+		require.NoError(t, fileutil.CopyDir(tmpDir1, tmpDir2))
+		assert.Equal(t, true, fileutil.DirsEqual(tmpDir1, tmpDir2))
+
+		// Tamper the data, make sure that hashes do not match anymore.
+		require.NoError(t, os.Remove(filepath.Join(tmpDir1, tmpFileNames[2])))
+		assert.Equal(t, false, fileutil.DirsEqual(tmpDir1, tmpDir2))
+	})
 }
 
 func TestHashDir(t *testing.T) {

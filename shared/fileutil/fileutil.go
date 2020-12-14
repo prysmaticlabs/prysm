@@ -177,6 +177,23 @@ func CopyDir(src, dst string) error {
 	return nil
 }
 
+// DirsEqual compares whether two directories have the same content.
+func DirsEqual(src, dst string) bool {
+	hash1, err := HashDir(src)
+	if err != nil {
+		return false
+	}
+
+	hash2, err := HashDir(dst)
+	if err != nil {
+		return false
+	}
+
+	return hash1 == hash2
+}
+
+// HashDir calculates and returns hash of directory: each file's hash is calculated and saved along
+// with the file name into the list, after which list is hashed to produce the final signature.
 func HashDir(dir string) (string, error) {
 	files, err := DirFiles(dir)
 	if err != nil {
@@ -187,16 +204,16 @@ func HashDir(dir string) (string, error) {
 	files = append([]string(nil), files...)
 	sort.Strings(files)
 	for _, file := range files {
-		r, err := os.Open(filepath.Join(dir, file))
+		fd, err := os.Open(filepath.Join(dir, file))
 		if err != nil {
 			return "", err
 		}
 		hf := sha256.New()
-		_, err = io.Copy(hf, r)
+		_, err = io.Copy(hf, fd)
 		if err != nil {
 			return "", err
 		}
-		if err := r.Close(); err != nil {
+		if err := fd.Close(); err != nil {
 			return "", err
 		}
 		if _, err := fmt.Fprintf(h, "%x  %s\n", hf.Sum(nil), file); err != nil {
