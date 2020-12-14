@@ -6,12 +6,12 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
-	"go.opencensus.io/trace"
 )
 
 var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
@@ -31,7 +31,6 @@ func (v *validator) slashableAttestationCheck(
 	defer span.End()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	fmt.Printf("Getting attester history for key %#x\n", pubKey)
 	attesterHistory, err := v.db.AttestationHistoryForPubKeyV2(ctx, pubKey)
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
@@ -45,7 +44,6 @@ func (v *validator) slashableAttestationCheck(
 	}
 	var prevSigningRoot [32]byte
 	if !historicalAttestation.IsEmpty() {
-		fmt.Printf("Got hist att for %#x with source %d, target %d\n", bytesutil.Trunc(pubKey[:]), historicalAttestation.Source, indexedAtt.Data.Target.Epoch)
 		copy(prevSigningRoot[:], historicalAttestation.SigningRoot)
 	}
 	signingRootIsDifferent := prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot
@@ -89,7 +87,6 @@ func (v *validator) slashableAttestationCheck(
 		}
 		return errors.New(failedAttLocalProtectionErr)
 	}
-	fmt.Printf("Marking target %d and source %d as attested\n", indexedAtt.Data.Target.Epoch, indexedAtt.Data.Source.Epoch)
 	newHistory, err := attesterHistory.SetTargetData(
 		ctx,
 		indexedAtt.Data.Target.Epoch,
