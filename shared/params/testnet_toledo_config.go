@@ -18,6 +18,8 @@ func UseToledoNetworkConfig() {
 // UseToledoConfig sets the main beacon chain
 // config for Toledo testnet.
 func UseToledoConfig() {
+	lock.Lock()
+	defer lock.Unlock()
 	beaconConfig = ToledoConfig()
 }
 

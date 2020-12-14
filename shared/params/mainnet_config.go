@@ -13,6 +13,8 @@ func MainnetConfig() *BeaconChainConfig {
 
 // UseMainnetConfig for beacon chain services.
 func UseMainnetConfig() {
+	lock.Lock()
+	defer lock.Unlock()
 	beaconConfig = MainnetConfig()
 }
 
