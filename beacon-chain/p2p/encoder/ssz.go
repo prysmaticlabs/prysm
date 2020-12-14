@@ -90,18 +90,27 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
 func (e SszNetworkEncoder) DecodeGossip(b []byte, to interface{}) error {
-	size, err := snappy.DecodedLen(b)
-	if err != nil {
-		return err
-	}
-	if uint64(size) > MaxGossipSize {
-		return errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", size, MaxGossipSize)
-	}
-	b, err = snappy.Decode(nil /*dst*/, b)
+	b, err := DecodeSnappy(b, MaxGossipSize)
 	if err != nil {
 		return err
 	}
 	return e.doDecode(b, to)
+}
+
+// DecodeSnappy decodes a snappy compressed message.
+func DecodeSnappy(msg []byte, maxSize uint64) ([]byte, error) {
+	size, err := snappy.DecodedLen(msg)
+	if err != nil {
+		return nil, err
+	}
+	if uint64(size) > maxSize {
+		return nil, errors.Errorf("snappy message exceeds max size: %d bytes > %d bytes", size, maxSize)
+	}
+	msg, err = snappy.Decode(nil /*dst*/, msg)
+	if err != nil {
+		return nil, err
+	}
+	return msg, nil
 }
 
 // DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
