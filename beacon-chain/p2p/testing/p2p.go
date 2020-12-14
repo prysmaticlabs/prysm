@@ -101,6 +101,8 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 
 	n, err := p.Encoding().EncodeWithMaxLength(s, msg)
 	if err != nil {
+		_err := s.Reset()
+		_ = _err
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 
@@ -287,12 +289,16 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 
 	if topic != "/eth2/beacon_chain/req/metadata/1" {
 		if _, err := p.Encoding().EncodeWithMaxLength(stream, msg); err != nil {
+			_err := stream.Reset()
+			_ = _err
 			return nil, err
 		}
 	}
 
 	// Close stream for writing.
-	if err := stream.Close(); err != nil {
+	if err := stream.CloseWrite(); err != nil {
+		_err := stream.Reset()
+		_ = _err
 		return nil, err
 	}
 	// Delay returning the stream for testing purposes
