@@ -65,7 +65,8 @@ func TestImportExport_RoundTrip(t *testing.T) {
 
 func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	ctx := context.Background()
-	pubKeys, err := mocks.CreateRandomPubKeys(1)
+	numValidators := 1
+	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, pubKeys)
 	wanted := &protectionFormat.EIPSlashingProtectionFormat{
@@ -112,10 +113,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	// The values in the data field of the EIP struct are not guaranteed to be sorted,
 	// so we create a map to verify we have the data we expected.
 	require.Equal(t, len(wanted.Data), len(eipStandard.Data))
-
-	for _, att := range eipStandard.Data[0].SignedAttestations {
-		fmt.Println(att)
-	}
+	require.DeepEqual(t, wanted.Data, eipStandard.Data)
 }
 
 func TestImportInterchangeData_OK(t *testing.T) {

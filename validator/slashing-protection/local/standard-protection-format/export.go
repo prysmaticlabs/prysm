@@ -1,10 +1,12 @@
 package interchangeformat
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db"
 )
 
@@ -109,10 +111,14 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 		if err != nil {
 			return nil, err
 		}
-		if historyAtTarget != nil {
-			root, err := rootToHexString(historyAtTarget.SigningRoot)
-			if err != nil {
-				return nil, err
+		if !historyAtTarget.IsEmpty() {
+			var root string
+			if historyAtTarget.SigningRoot != nil &&
+				!bytes.Equal(historyAtTarget.SigningRoot, params.BeaconConfig().ZeroHash[:]) {
+				root, err = rootToHexString(historyAtTarget.SigningRoot)
+				if err != nil {
+					return nil, err
+				}
 			}
 			signedAttestations = append(signedAttestations, &SignedAttestation{
 				TargetEpoch: fmt.Sprintf("%d", i),
