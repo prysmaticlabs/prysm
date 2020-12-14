@@ -73,6 +73,7 @@ func TestSetTargetData_MarksUnattestedEpochsInBetween(t *testing.T) {
 		Source:      0,
 		SigningRoot: sr1[:],
 	})
+	require.NoError(t, err)
 
 	// We mark target 50, source 49 as attested.
 	sr2 := [32]byte{}
