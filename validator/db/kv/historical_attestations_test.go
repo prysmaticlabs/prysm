@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -60,6 +61,21 @@ func TestGetTargetData(t *testing.T) {
 	require.NoError(t, err)
 	var nilHist *HistoryData
 	require.Equal(t, nilHist, td)
+}
+
+func TestSetTargetData_MarksUnattestedEpochsInBetween(t *testing.T) {
+	ctx := context.Background()
+	h1 := NewAttestationHistoryArray(0)
+	sr2 := [32]byte{}
+	copy(sr2[:], "2")
+	h3, err := h1.SetTargetData(ctx, 5, &HistoryData{
+		Source:      0,
+		SigningRoot: sr2[:],
+	})
+	require.NoError(t, err)
+	data, err := h3.GetTargetData(ctx, 3)
+	require.NoError(t, err)
+	fmt.Println(data)
 }
 
 func TestSetTargetData(t *testing.T) {

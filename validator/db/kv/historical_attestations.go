@@ -115,15 +115,21 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	}
 	// Cursor for the location to write target epoch to.
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
-	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
-
-	if uint64(len(hd)) < cursor+historySize {
-		ext := make([]byte, cursor+historySize-uint64(len(hd)))
+	cursorToWrite := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
+	if uint64(len(hd)) < cursorToWrite+historySize {
+		start := uint64(len(hd))
+		ext := make([]byte, cursorToWrite+historySize-uint64(len(hd)))
 		hd = append(hd, ext...)
+		for i := start; i < uint64(len(hd)); i += historySize {
+			copy(
+				hd[i:i+sourceSize],
+				bytesutil.Uint64ToBytesLittleEndian(params.BeaconConfig().FarFutureEpoch),
+			)
+			copy(hd[i+sourceSize:i+sourceSize+signingRootSize], make([]byte, 32))
+		}
 	}
-	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
-	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
-
+	copy(hd[cursorToWrite:cursorToWrite+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
+	copy(hd[cursorToWrite+sourceSize:cursorToWrite+sourceSize+signingRootSize], historyData.SigningRoot)
 	return hd, nil
 }
 
