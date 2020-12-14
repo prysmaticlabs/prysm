@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -162,6 +163,41 @@ func TestCopyDir(t *testing.T) {
 	}
 }
 
+func TestDirFiles(t *testing.T) {
+	tmpDir, tmpDirFnames := tmpDirWithContents(t)
+	tests := []struct {
+		name     string
+		path     string
+		outFiles []string
+	}{
+		{
+			name:     "empty path",
+			path:     "",
+			outFiles: []string{"BUILD.bazel", "fileutil.go", "fileutil_test.go"},
+		},
+		{
+			name:     "dot path",
+			path:     ".",
+			outFiles: []string{"BUILD.bazel", "fileutil.go", "fileutil_test.go"},
+		},
+		{
+			name:     "non-empty folder",
+			path:     tmpDir,
+			outFiles: tmpDirFnames,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outFiles, err := fileutil.DirFiles(tt.path)
+			require.NoError(t, err)
+
+			sort.Strings(outFiles)
+			assert.DeepEqual(t, tt.outFiles, outFiles)
+		})
+	}
+}
+
 func deepCompare(t *testing.T, file1, file2 string) bool {
 	sf, err := os.Open(file1)
 	assert.NoError(t, err)
@@ -176,4 +212,29 @@ func deepCompare(t *testing.T, file1, file2 string) bool {
 		}
 	}
 	return true
+}
+
+// tmpDirWithContents returns path to temporary directory having some folders/files in it.
+// Directory is automatically removed by internal testing cleanup methods.
+func tmpDirWithContents(t *testing.T) (string, []string) {
+	dir := t.TempDir()
+	fnames := []string{
+		"file1",
+		"file2",
+		"subfolder1/file1",
+		"subfolder1/file2",
+		"subfolder1/subfolder11/file1",
+		"subfolder1/subfolder11/file2",
+		"subfolder1/subfolder12/file1",
+		"subfolder1/subfolder12/file2",
+		"subfolder2/file1",
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder11"), 0777))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder12"), 0777))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder2"), 0777))
+	for _, fname := range fnames {
+		require.NoError(t, ioutil.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))
+	}
+	sort.Strings(fnames)
+	return dir, fnames
 }

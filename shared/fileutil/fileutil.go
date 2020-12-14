@@ -141,7 +141,7 @@ func CopyFile(src, dst string) error {
 }
 
 // CopyDir copies contents of one directory into another, recursively.
-func CopyDir(src string, dst string) error {
+func CopyDir(src, dst string) error {
 	dstExists, err := HasDir(dst)
 	if err != nil {
 		return err
@@ -170,4 +170,30 @@ func CopyDir(src string, dst string) error {
 		}
 	}
 	return nil
+}
+
+// DirFiles returns list of files found within a given directory and its sub-directories.
+// Directory prefix will not be included as a part of returned file string i.e. for a file located
+// in "dir/foo/bar" only "foo/bar" part will be returned.
+func DirFiles(dir string) ([]string, error) {
+	var files []string
+	dir = filepath.Clean(dir)
+	err := filepath.Walk(dir, func(file string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		relFile := file
+		if dir != "." {
+			relFile = file[len(dir)+1:]
+		}
+		files = append(files, filepath.ToSlash(relFile))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }
