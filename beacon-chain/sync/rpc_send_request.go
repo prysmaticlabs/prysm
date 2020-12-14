@@ -4,8 +4,6 @@ import (
 	"context"
 	"io"
 
-	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -31,11 +29,7 @@ func SendBeaconBlocksByRangeRequest(
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Could not close stream with protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
 	blocks := make([]*ethpb.SignedBeaconBlock, 0, req.Count)
@@ -87,11 +81,7 @@ func SendBeaconBlocksByRootRequest(
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
 	blocks := make([]*ethpb.SignedBeaconBlock, 0, len(*req))
