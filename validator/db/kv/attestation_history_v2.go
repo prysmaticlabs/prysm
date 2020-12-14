@@ -167,3 +167,42 @@ func (store *Store) SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [
 		return nil
 	})
 }
+
+func (store *Store) MigrateAttestingHistoryFormat(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.MigrateAttestingHistoryFormat")
+	defer span.End()
+	attestationHistoryByPublicKey := make(map[[48]byte]EncHistoryData)
+	err := store.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		return bucket.ForEach(func(publicKeyBytes []byte, encodedHistory []byte) error {
+			if len(publicKeyBytes) != 48 {
+				return nil
+			}
+			pubKey := [48]byte{}
+			copy(pubKey[:], publicKeyBytes)
+			if len(encodedHistory) == 0 {
+				attestationHistoryByPublicKey[pubKey] = NewAttestationHistoryArray(0)
+			} else {
+				history := make(EncHistoryData, len(encodedHistory))
+				copy(history, encodedHistory)
+				attestationHistoryByPublicKey[pubKey] = history
+			}
+			return nil
+		})
+	})
+
+	// Migrate all the history data correctly.
+	// TODO:
+
+	// Update the history for each public key in the database.
+	err = store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		for publicKey, history := range attestationHistoryByPublicKey {
+			if err := bucket.Put(publicKey[:], history); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
