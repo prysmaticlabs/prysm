@@ -109,21 +109,31 @@ func (hd EncHistoryData) GetTargetData(ctx context.Context, target uint64) (*His
 	return history, nil
 }
 
+// SetTargetDate updates the attesting history since the last written epoch up to and including
+// the one specified in the input arguments. Epochs in between are marked as unattested by setting their
+// source epoch to FAR_FUTURE_EPOCH.
 func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, historyData *HistoryData) (EncHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
 	// Cursor for the location to write target epoch to.
-	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
-	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
-
-	if uint64(len(hd)) < cursor+historySize {
-		ext := make([]byte, cursor+historySize-uint64(len(hd)))
+	cursorToWrite := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
+	if uint64(len(hd)) < cursorToWrite+historySize {
+		start := uint64(len(hd))
+		ext := make([]byte, cursorToWrite+historySize-uint64(len(hd)))
 		hd = append(hd, ext...)
+		// We need to mark the epochs in between the latest written one and the newest one
+		// we are writing as not attested by setting the source epoch to FAR_FUTURE_EPOCH.
+		for i := start; i < uint64(len(hd)); i += historySize {
+			copy(
+				hd[i:i+sourceSize],
+				bytesutil.Uint64ToBytesLittleEndian(params.BeaconConfig().FarFutureEpoch),
+			)
+			copy(hd[i+sourceSize:i+sourceSize+signingRootSize], make([]byte, 32))
+		}
 	}
-	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
-	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
-
+	copy(hd[cursorToWrite:cursorToWrite+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
+	copy(hd[cursorToWrite+sourceSize:cursorToWrite+sourceSize+signingRootSize], historyData.SigningRoot)
 	return hd, nil
 }
 
