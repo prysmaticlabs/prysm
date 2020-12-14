@@ -2,6 +2,8 @@ package params
 
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
+	lock.Lock()
+	defer lock.Unlock()
 	beaconConfig = E2ETestConfig()
 
 	cfg := BeaconNetworkConfig().Copy()
