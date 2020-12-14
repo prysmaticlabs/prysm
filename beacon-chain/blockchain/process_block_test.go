@@ -796,7 +796,6 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	type args struct {
 		parentRoot    [32]byte
 		finalizedRoot [32]byte
-		finalizedSlot uint64
 	}
 	tests := []struct {
 		name      string
