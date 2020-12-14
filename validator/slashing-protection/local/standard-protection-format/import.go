@@ -64,6 +64,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		// Transform the processed signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
+		fmt.Printf("Transforming for pubkey %#x\n", pubKey)
 		attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
@@ -337,6 +338,7 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
 		}
+		fmt.Printf("IMPORT: Setting target %d, source %d\n", target, source)
 		attestingHistory, err = attestingHistory.SetTargetData(
 			ctx, target, &kv.HistoryData{Source: source, SigningRoot: signingRoot[:]},
 		)
@@ -344,6 +346,7 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 			return nil, errors.Wrap(err, "could not set target data for attesting history")
 		}
 	}
+	fmt.Printf("IMPORT: Setting latest written %d\n", highestEpochWritten)
 	attestingHistory, err = attestingHistory.SetLatestEpochWritten(ctx, highestEpochWritten)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set latest epoch written")

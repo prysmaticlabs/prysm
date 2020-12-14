@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -30,6 +31,7 @@ func (v *validator) slashableAttestationCheck(
 	defer span.End()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	fmt.Printf("Getting attester history for key %#x\n", pubKey)
 	attesterHistory, err := v.db.AttestationHistoryForPubKeyV2(ctx, pubKey)
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
@@ -43,6 +45,7 @@ func (v *validator) slashableAttestationCheck(
 	}
 	var prevSigningRoot [32]byte
 	if !historicalAttestation.IsEmpty() {
+		fmt.Printf("Got hist att for %#x with source %d, target %d\n", bytesutil.Trunc(pubKey[:]), historicalAttestation.Source, indexedAtt.Data.Target.Epoch)
 		copy(prevSigningRoot[:], historicalAttestation.SigningRoot)
 	}
 	signingRootIsDifferent := prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot
@@ -86,9 +89,9 @@ func (v *validator) slashableAttestationCheck(
 		}
 		return errors.New(failedAttLocalProtectionErr)
 	}
-	newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
+	fmt.Printf("Marking target %d and source %d as attested\n", indexedAtt.Data.Target.Epoch, indexedAtt.Data.Source.Epoch)
+	newHistory, err := attesterHistory.SetTargetData(
 		ctx,
-		attesterHistory,
 		indexedAtt.Data.Target.Epoch,
 		&kv.HistoryData{
 			Source:      indexedAtt.Data.Source.Epoch,
@@ -97,6 +100,10 @@ func (v *validator) slashableAttestationCheck(
 	)
 	if err != nil {
 		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
+	}
+	newHistory, err = newHistory.SetLatestEpochWritten(ctx, indexedAtt.Data.Target.Epoch)
+	if err != nil {
+		return err
 	}
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory); err != nil {
 		return errors.Wrapf(err, "could not save attestation history for public key: %#x", pubKey)

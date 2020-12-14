@@ -160,3 +160,7 @@ func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	require.Equal(t, true, exists)
 	require.Equal(t, uint64(0), e)
 }
+
+func Test_slashableAttestationCheck_ProperlyDetectsDoubleVotes(t *testing.T) {
+
+}

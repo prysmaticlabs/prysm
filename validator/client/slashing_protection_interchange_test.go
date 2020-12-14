@@ -197,8 +197,10 @@ func TestSlashingInterchangeStandard(t *testing.T) {
 							fmt.Println(sa)
 							err = validator.slashableAttestationCheck(context.Background(), ia, pk, signingRoot)
 							if sa.ShouldSucceed {
+								fmt.Printf("Should succeed %v\n", err)
 								require.NoError(t, err)
 							} else {
+								fmt.Printf("Should not succeed %v\n", err)
 								require.NotNil(t, err, "pre validation should have failed for attestation")
 							}
 						}

@@ -43,6 +43,7 @@ func IsNewAttSlashable(
 		return false, errors.Wrapf(err, "could not get target data for epoch: %d", targetEpoch)
 	}
 	if !hd.IsEmpty() {
+		fmt.Printf("Double detected: source: %d, root %#x\n", hd.Source, hd.SigningRoot)
 		signingRootIsDifferent := bytes.Equal(hd.SigningRoot, params.BeaconConfig().ZeroHash[:]) ||
 			!bytes.Equal(hd.SigningRoot, signingRoot[:])
 		if signingRootIsDifferent {
@@ -80,6 +81,7 @@ func isSurroundVote(
 		prevTarget := i
 		prevSource := historicalAtt.Source
 		if surroundingPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
+			fmt.Printf("Surrounding vote detected, prev t %d, prev s %d, new t %d, new s %d\n", prevTarget, prevSource, targetEpoch, sourceEpoch)
 			// Surrounding attestation caught.
 			log.WithFields(logrus.Fields{
 				"targetEpoch":                   targetEpoch,
@@ -103,6 +105,7 @@ func isSurroundVote(
 		prevTarget := i
 		prevSource := historicalAtt.Source
 		if surroundedByPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
+			fmt.Println("Surrounded vote detected")
 			// Surrounded attestation caught.
 			log.WithFields(logrus.Fields{
 				"targetEpoch":                   targetEpoch,

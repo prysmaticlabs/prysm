@@ -63,6 +63,61 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
+	ctx := context.Background()
+	pubKeys, err := mocks.CreateRandomPubKeys(1)
+	require.NoError(t, err)
+	validatorDB := dbtest.SetupDB(t, pubKeys)
+	wanted := &protectionFormat.EIPSlashingProtectionFormat{
+		Metadata: struct {
+			InterchangeFormatVersion string `json:"interchange_format_version"`
+			GenesisValidatorsRoot    string `json:"genesis_validators_root"`
+		}{
+			InterchangeFormatVersion: protectionFormat.INTERCHANGE_FORMAT_VERSION,
+			GenesisValidatorsRoot:    fmt.Sprintf("%#x", [32]byte{}),
+		},
+		Data: []*protectionFormat.ProtectionData{
+			{
+				Pubkey: fmt.Sprintf("%#x", pubKeys[0]),
+				SignedAttestations: []*protectionFormat.SignedAttestation{
+					{
+						SourceEpoch: "1",
+						TargetEpoch: "2",
+					},
+					{
+						SourceEpoch: "8",
+						TargetEpoch: "9",
+					},
+				},
+			},
+		},
+	}
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(wanted)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database.
+	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	require.NoError(t, err)
+
+	// Next up, we export our slashing protection database into the EIP standard file.
+	// Next, we attempt to import it into our validator database.
+	eipStandard, err := protectionFormat.ExportStandardProtectionJSON(ctx, validatorDB)
+	require.NoError(t, err)
+
+	// We compare the metadata fields from import to export.
+	require.Equal(t, wanted.Metadata, eipStandard.Metadata)
+
+	// The values in the data field of the EIP struct are not guaranteed to be sorted,
+	// so we create a map to verify we have the data we expected.
+	require.Equal(t, len(wanted.Data), len(eipStandard.Data))
+
+	for _, att := range eipStandard.Data[0].SignedAttestations {
+		fmt.Println(att)
+	}
+}
+
 func TestImportInterchangeData_OK(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
