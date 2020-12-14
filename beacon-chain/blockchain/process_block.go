@@ -329,7 +329,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 }
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
-// It updates caches and report epoch metrics at the last slot of the epoch.
 func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.BeaconState) error {
 	if postState.Slot() == s.nextEpochBoundarySlot-1 {
 		// Update caches for the next epoch at epoch boundary slot - 1.
