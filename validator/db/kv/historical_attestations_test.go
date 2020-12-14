@@ -62,6 +62,48 @@ func TestGetTargetData(t *testing.T) {
 	require.Equal(t, nilHist, td)
 }
 
+func TestSetTargetData_MarksUnattestedEpochsInBetween(t *testing.T) {
+	ctx := context.Background()
+	h1 := NewAttestationHistoryArray(0)
+
+	// Write mark target 1, source 0 as attested.
+	sr1 := [32]byte{}
+	copy(sr1[:], "1")
+	h2, err := h1.SetTargetData(ctx, 1, &HistoryData{
+		Source:      0,
+		SigningRoot: sr1[:],
+	})
+	require.NoError(t, err)
+
+	// We mark target 50, source 49 as attested.
+	sr2 := [32]byte{}
+	copy(sr2[:], "50")
+	highestEpoch := uint64(50)
+	h3, err := h2.SetTargetData(ctx, highestEpoch, &HistoryData{
+		Source:      highestEpoch - 1,
+		SigningRoot: sr2[:],
+	})
+	require.NoError(t, err)
+
+	// We verify we have a history for target 1 and for target 50.
+	lowestData, err := h3.GetTargetData(ctx, 1)
+	require.NoError(t, err)
+	require.NotNil(t, lowestData)
+	require.Equal(t, uint64(0), lowestData.Source)
+
+	highestData, err := h3.GetTargetData(ctx, highestEpoch)
+	require.NoError(t, err)
+	require.NotNil(t, highestData)
+	require.Equal(t, highestEpoch-1, highestData.Source)
+
+	// We check all other epochs in between have an empty attesting history.
+	for i := uint64(2); i < highestEpoch; i++ {
+		data, err := h3.GetTargetData(ctx, i)
+		require.NoError(t, err)
+		require.Equal(t, true, data.IsEmpty())
+	}
+}
+
 func TestSetTargetData(t *testing.T) {
 	ctx := context.Background()
 	type testStruct struct {
