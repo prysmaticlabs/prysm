@@ -141,8 +141,6 @@ func OverrideBeaconConfig(c *BeaconChainConfig) {
 
 // Copy returns a copy of the config object.
 func (c *BeaconChainConfig) Copy() *BeaconChainConfig {
-	lock.Lock()
-	defer lock.Unlock()
 	config, ok := deepcopy.Copy(*c).(BeaconChainConfig)
 	if !ok {
 		config = *beaconConfig
