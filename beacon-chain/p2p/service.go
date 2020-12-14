@@ -48,9 +48,6 @@ var pollingPeriod = 6 * time.Second
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
 
-// lookup limit whenever looking up for random nodes.
-const lookupLimit = 15
-
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
 

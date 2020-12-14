@@ -113,37 +113,6 @@ func attestationRoot(hasher htrutils.HashFn, att *ethpb.Attestation) ([32]byte, 
 	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func blockAttestationRoot(atts []*ethpb.Attestation) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
-	roots := make([][]byte, len(atts))
-	for i := 0; i < len(atts); i++ {
-		pendingRoot, err := attestationRoot(hasher, atts[i])
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
-		}
-		roots[i] = pendingRoot[:]
-	}
-
-	attsRootsRoot, err := htrutils.BitwiseMerkleize(
-		hasher,
-		roots,
-		uint64(len(roots)),
-		params.BeaconConfig().MaxAttestations,
-	)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute block attestations merkleization")
-	}
-	attsLenBuf := new(bytes.Buffer)
-	if err := binary.Write(attsLenBuf, binary.LittleEndian, uint64(len(atts))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal epoch attestations length")
-	}
-	// We need to mix in the length of the slice.
-	attsLenRoot := make([]byte, 32)
-	copy(attsLenRoot, attsLenBuf.Bytes())
-	res := htrutils.MixInLength(attsRootsRoot, attsLenRoot)
-	return res, nil
-}
-
 func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 
