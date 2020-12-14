@@ -20,13 +20,14 @@ func UseToledoNetworkConfig() {
 func UseToledoConfig() {
 	lock.Lock()
 	defer lock.Unlock()
-	beaconConfig = ToledoConfig()
+	beaconConfig = toledoConfig()
 }
 
-// ToledoConfig defines the config for the
+// This defines the config for the
 // Toledo testnet.
-func ToledoConfig() *BeaconChainConfig {
-	cfg := MainnetConfig().Copy()
+// This is the lock free version.
+func toledoConfig() *BeaconChainConfig {
+	cfg := MainnetConfig().copy()
 	cfg.MinGenesisTime = 1605009600
 	cfg.GenesisDelay = 86400
 	cfg.GenesisForkVersion = []byte{0x00, 0x70, 0x1E, 0xD0}

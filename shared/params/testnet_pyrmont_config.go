@@ -20,13 +20,14 @@ func UsePyrmontNetworkConfig() {
 func UsePyrmontConfig() {
 	lock.Lock()
 	defer lock.Unlock()
-	beaconConfig = PyrmontConfig()
+	beaconConfig = pyrmontConfig()
 }
 
 // PyrmontConfig defines the config for the
 // Pyrmont testnet.
-func PyrmontConfig() *BeaconChainConfig {
-	cfg := MainnetConfig().Copy()
+// This is the lock free version.
+func pyrmontConfig() *BeaconChainConfig {
+	cfg := MainnetConfig().copy()
 	cfg.MinGenesisTime = 1605700800
 	cfg.GenesisDelay = 432000
 	cfg.NetworkName = "pyrmont"

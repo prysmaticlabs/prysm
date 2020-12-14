@@ -4,7 +4,7 @@ package params
 func UseE2EConfig() {
 	lock.Lock()
 	defer lock.Unlock()
-	beaconConfig = E2ETestConfig()
+	beaconConfig = e2ETestConfig()
 
 	cfg := BeaconNetworkConfig().Copy()
 	// Due to the small number of peers in the e2e test network
@@ -19,7 +19,15 @@ func UseE2EConfig() {
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
 // Warning: This config is only for testing, it is not meant for use outside of E2E.
 func E2ETestConfig() *BeaconChainConfig {
-	e2eConfig := MinimalSpecConfig()
+	lock.RUnlock()
+	defer lock.RUnlock()
+	return e2ETestConfig()
+}
+
+// e2ETestConfig retrieves the configurations made specifically for E2E testing.
+// This is the lock free version.
+func e2ETestConfig() *BeaconChainConfig {
+	e2eConfig := minimalSpecConfig()
 
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256

@@ -4,12 +4,22 @@ import "github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 // UseMinimalConfig for beacon chain services.
 func UseMinimalConfig() {
-	beaconConfig = MinimalSpecConfig()
+	lock.Lock()
+	defer lock.Unlock()
+	beaconConfig = minimalSpecConfig()
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
-	minimalConfig := mainnetBeaconConfig.Copy()
+	lock.RLock()
+	defer lock.RUnlock()
+	return minimalSpecConfig()
+}
+
+// This retrieves the minimal config used in spec tests.
+// It's the lock free version.
+func minimalSpecConfig() *BeaconChainConfig {
+	minimalConfig := mainnetBeaconConfig.copy()
 	// Misc
 	minimalConfig.MaxCommitteesPerSlot = 4
 	minimalConfig.TargetCommitteeSize = 4
