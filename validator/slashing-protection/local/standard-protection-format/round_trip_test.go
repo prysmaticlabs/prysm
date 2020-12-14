@@ -162,10 +162,12 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 		&protectionFormat.SignedAttestation{
 			TargetEpoch: "800",
 			SourceEpoch: "805",
+			SigningRoot: fmt.Sprintf("%#x", [32]byte{4}),
 		},
 		&protectionFormat.SignedAttestation{
 			TargetEpoch: "801",
 			SourceEpoch: "804",
+			SigningRoot: fmt.Sprintf("%#x", [32]byte{5}),
 		},
 	)
 
