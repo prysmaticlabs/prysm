@@ -164,6 +164,17 @@ func TestCopyDir(t *testing.T) {
 }
 
 func TestDirFiles(t *testing.T) {
+	readDir := func(dir string) []string {
+		fds, err := ioutil.ReadDir(dir)
+		require.NoError(t, err)
+		var fnames []string
+		for _, fd := range fds {
+			if !fd.IsDir() {
+				fnames = append(fnames, fd.Name())
+			}
+		}
+		return fnames
+	}
 	tmpDir, tmpDirFnames := tmpDirWithContents(t)
 	tests := []struct {
 		name     string
@@ -173,12 +184,12 @@ func TestDirFiles(t *testing.T) {
 		{
 			name:     "empty path",
 			path:     "",
-			outFiles: []string{"BUILD.bazel", "fileutil.go", "fileutil_test.go"},
+			outFiles: readDir("."),
 		},
 		{
 			name:     "dot path",
 			path:     ".",
-			outFiles: []string{"BUILD.bazel", "fileutil.go", "fileutil_test.go"},
+			outFiles: readDir("."),
 		},
 		{
 			name:     "non-empty folder",
