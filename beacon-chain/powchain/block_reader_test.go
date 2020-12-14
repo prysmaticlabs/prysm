@@ -233,7 +233,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	web3Service.latestEth1Data.BlockHeight = hd.Number.Uint64()
-	bn, err := web3Service.BlockNumberByTimestamp(ctx, 1000 /* time */)
+	bn, err := web3Service.BlockByTimestamp(ctx, 1000 /* time */)
 	require.NoError(t, err)
 	if bn.Cmp(big.NewInt(0)) == 0 {
 		t.Error("Returned a block with zero number, expected to be non zero")

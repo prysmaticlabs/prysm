@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -88,8 +90,8 @@ func (m *POWChain) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64
 	return m.TimesByHeight[h], nil
 }
 
-// BlockNumberByTimestamp --
-func (m *POWChain) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.Int, error) {
+// BlockByTimestamp --
+func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.HeaderInfo, error) {
 	var chosenTime uint64
 	var chosenNumber *big.Int
 	for t, num := range m.BlockNumberByTime {
