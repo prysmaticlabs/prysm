@@ -69,7 +69,6 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		pending  []*PendingAttesterSlashing
 		included map[uint64]bool
 		wantErr  []bool
-		err      string
 	}
 	type args struct {
 		slashings []*ethpb.AttesterSlashing
