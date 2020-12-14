@@ -4,7 +4,6 @@ import (
 	"context"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -13,11 +12,6 @@ import (
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
 func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2pcore.Stream) error {
-	defer func() {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Could not close stream")
-		}
-	}()
 	SetRPCStreamDeadlines(stream)
 
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
@@ -29,7 +23,11 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		return err
 	}
 	_, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.Metadata())
-	return err
+	if err != nil {
+		return err
+	}
+	closeStream(stream, log)
+	return nil
 }
 
 func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaData, error) {
@@ -40,14 +38,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	if err != nil {
 		return nil, err
 	}
-	// we close the stream outside of `send` because
-	// metadata requests send no payload, so closing the
-	// stream early leads it to a reset.
-	defer func() {
-		if err := helpers.FullClose(stream); isValidStreamError(err) {
-			log.WithError(err).Debugf("Could not reset stream for protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
 		return nil, err

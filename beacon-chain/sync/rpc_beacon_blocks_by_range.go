@@ -21,11 +21,6 @@ import (
 func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
 	defer span.End()
-	defer func() {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Could not close stream")
-		}
-	}()
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
@@ -117,6 +112,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		// wait for ticker before resuming streaming blocks to remote peer.
 		<-ticker.C
 	}
+	closeStream(stream, log)
 	return nil
 }
 
