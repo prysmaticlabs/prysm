@@ -84,35 +84,6 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	return enc
 }
 
-func attestationRoot(hasher htrutils.HashFn, att *ethpb.Attestation) ([32]byte, error) {
-	fieldRoots := make([][32]byte, 3)
-
-	// Bitfield.
-	aggregationRoot, err := htrutils.BitlistRoot(hasher, att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[0] = aggregationRoot
-
-	dataRoot, err := attestationDataRoot(hasher, att.Data)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[1] = dataRoot
-
-	signatureBuf := bytesutil.ToBytes96(att.Signature)
-	packedSig, err := htrutils.Pack([][]byte{signatureBuf[:]})
-	if err != nil {
-		return [32]byte{}, err
-	}
-	sigRoot, err := htrutils.BitwiseMerkleize(hasher, packedSig, uint64(len(packedSig)), uint64(len(packedSig)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[2] = sigRoot
-	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-}
-
 func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 
