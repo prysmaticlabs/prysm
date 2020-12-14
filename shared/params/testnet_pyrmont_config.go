@@ -23,7 +23,7 @@ func UsePyrmontConfig() {
 	beaconConfig = pyrmontConfig()
 }
 
-// PyrmontConfig defines the config for the
+// This defines the config for the
 // Pyrmont testnet.
 // This is the lock free version.
 func pyrmontConfig() *BeaconChainConfig {

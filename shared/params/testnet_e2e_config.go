@@ -24,7 +24,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	return e2ETestConfig()
 }
 
-// e2ETestConfig retrieves the configurations made specifically for E2E testing.
+// This retrieves the configurations made specifically for E2E testing.
 // This is the lock free version.
 func e2ETestConfig() *BeaconChainConfig {
 	e2eConfig := minimalSpecConfig()
