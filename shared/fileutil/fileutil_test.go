@@ -163,6 +163,27 @@ func TestCopyDir(t *testing.T) {
 	}
 }
 
+func TestHashDir(t *testing.T) {
+	t.Run("non-existent directory", func(t *testing.T) {
+		hash, err := fileutil.HashDir(filepath.Join(t.TempDir(), "nonexistent"))
+		assert.ErrorContains(t, "no such file or directory", err)
+		assert.Equal(t, "", hash)
+	})
+
+	t.Run("empty directory", func(t *testing.T) {
+		hash, err := fileutil.HashDir(t.TempDir())
+		assert.NoError(t, err)
+		assert.Equal(t, "hashdir:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=", hash)
+	})
+
+	t.Run("non-empty directory", func(t *testing.T) {
+		tmpDir, _ := tmpDirWithContents(t)
+		hash, err := fileutil.HashDir(tmpDir)
+		assert.NoError(t, err)
+		assert.Equal(t, "hashdir:oSp9wRacwTIrnbgJWcwTvihHfv4B2zRbLYa0GZ7DDk0=", hash)
+	})
+}
+
 func TestDirFiles(t *testing.T) {
 	readDir := func(dir string) []string {
 		fds, err := ioutil.ReadDir(dir)

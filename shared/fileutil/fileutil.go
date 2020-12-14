@@ -1,11 +1,16 @@
 package fileutil
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -170,6 +175,35 @@ func CopyDir(src, dst string) error {
 		}
 	}
 	return nil
+}
+
+func HashDir(dir string) (string, error) {
+	files, err := DirFiles(dir)
+	if err != nil {
+		return "", err
+	}
+
+	h := sha256.New()
+	files = append([]string(nil), files...)
+	sort.Strings(files)
+	for _, file := range files {
+		r, err := os.Open(filepath.Join(dir, file))
+		if err != nil {
+			return "", err
+		}
+		hf := sha256.New()
+		_, err = io.Copy(hf, r)
+		if err != nil {
+			return "", err
+		}
+		if err := r.Close(); err != nil {
+			return "", err
+		}
+		if _, err := fmt.Fprintf(h, "%x  %s\n", hf.Sum(nil), file); err != nil {
+			return "", err
+		}
+	}
+	return "hashdir:" + base64.StdEncoding.EncodeToString(h.Sum(nil)), nil
 }
 
 // DirFiles returns list of files found within a given directory and its sub-directories.
