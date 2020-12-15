@@ -42,7 +42,6 @@ func Test_slashableAttestationCheck_Allowed(t *testing.T) {
 }
 
 func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
-	t.Skip("Skipped till #8100, when we will save lowest source and target epochs again.")
 	config := &featureconfig.Flags{
 		SlasherProtection: true,
 	}

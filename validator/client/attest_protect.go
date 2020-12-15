@@ -104,9 +104,14 @@ func (v *validator) slashableAttestationCheck(
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory); err != nil {
 		return errors.Wrapf(err, "could not save attestation history for public key: %#x", pubKey)
 	}
-
-	// TODO(#7813): Add back the saving of lowest target and lowest source epoch
-	// after we have implemented batch saving of attestation metadata.
+	// Save source and target epochs to satisfy EIP3076 requirements.
+	// The DB methods below will replace the lowest epoch in DB if necessary.
+	if err := v.db.SaveLowestSignedSourceEpoch(ctx, pubKey, indexedAtt.Data.Source.Epoch); err != nil {
+		return err
+	}
+	if err := v.db.SaveLowestSignedTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch); err != nil {
+		return err
+	}
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
