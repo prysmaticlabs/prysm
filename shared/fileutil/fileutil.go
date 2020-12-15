@@ -154,12 +154,12 @@ func CopyDir(src, dst string) error {
 	if dstExists {
 		return errors.New("destination directory already exists")
 	}
-	if err := MkdirAll(dst); err != nil {
-		return errors.Wrapf(err, "error creating directory: %s", dst)
-	}
 	fds, err := ioutil.ReadDir(src)
 	if err != nil {
 		return err
+	}
+	if err := MkdirAll(dst); err != nil {
+		return errors.Wrapf(err, "error creating directory: %s", dst)
 	}
 	for _, fd := range fds {
 		srcPath := path.Join(src, fd.Name())
