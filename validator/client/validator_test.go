@@ -839,7 +839,7 @@ func TestAllValidatorsAreExited_NoKeys(t *testing.T) {
 	assert.Equal(t, false, exited)
 }
 
-// TestAllValidatorsAreExited_CorrectRequest is a regression test that checks if the request contains the correct keys
+// TestAllValidatorsAreExited_CorrectRequest is a regression eip3076TestCase that checks if the request contains the correct keys
 func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -873,7 +873,7 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	keysMap[pubKey0] = secretKey
 	keysMap[pubKey1] = secretKey
 
-	// If AllValidatorsAreExited does not create the expected request, this test will fail
+	// If AllValidatorsAreExited does not create the expected request, this eip3076TestCase will fail
 	v := validator{keyManager: &mockKeymanager{keysMap: keysMap}, validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
