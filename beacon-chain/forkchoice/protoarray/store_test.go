@@ -9,6 +9,93 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
+func TestStore_PruneThreshold(t *testing.T) {
+	s := &Store{
+		pruneThreshold: defaultPruneThreshold,
+	}
+	if got := s.PruneThreshold(); got != defaultPruneThreshold {
+		t.Errorf("PruneThreshold() = %v, want %v", got, defaultPruneThreshold)
+	}
+}
+
+func TestStore_JustifiedEpoch(t *testing.T) {
+	j := uint64(100)
+	s := &Store{
+		justifiedEpoch: j,
+	}
+	if got := s.JustifiedEpoch(); got != j {
+		t.Errorf("JustifiedEpoch() = %v, want %v", got, j)
+	}
+}
+
+func TestStore_FinalizedEpoch(t *testing.T) {
+	f := uint64(50)
+	s := &Store{
+		finalizedEpoch: f,
+	}
+	if got := s.FinalizedEpoch(); got != f {
+		t.Errorf("FinalizedEpoch() = %v, want %v", got, f)
+	}
+}
+
+func TestStore_Nodes(t *testing.T) {
+	nodes := []*Node{
+		{slot: 100},
+		{slot: 101},
+	}
+	s := &Store{
+		nodes: nodes,
+	}
+	require.DeepEqual(t, nodes, s.Nodes())
+}
+
+func TestStore_NodesIndices(t *testing.T) {
+	nodeIndices := map[[32]byte]uint64{
+		[32]byte{'a'}: 1,
+		[32]byte{'b'}: 2,
+	}
+	s := &Store{
+		nodesIndices: nodeIndices,
+	}
+	require.DeepEqual(t, nodeIndices, s.NodesIndices())
+}
+
+func TestForkChoice_HasNode(t *testing.T) {
+	nodeIndices := map[[32]byte]uint64{
+		[32]byte{'a'}: 1,
+		[32]byte{'b'}: 2,
+	}
+	s := &Store{
+		nodesIndices: nodeIndices,
+	}
+	f := &ForkChoice{store: s}
+	require.Equal(t, true, f.HasNode([32]byte{'a'}))
+}
+
+func TestForkChoice_Store(t *testing.T) {
+	nodeIndices := map[[32]byte]uint64{
+		[32]byte{'a'}: 1,
+		[32]byte{'b'}: 2,
+	}
+	s := &Store{
+		nodesIndices: nodeIndices,
+	}
+	f := &ForkChoice{store: s}
+	require.DeepEqual(t, s, f.Store())
+}
+
+func TestForkChoice_Nodes(t *testing.T) {
+	nodes := []*Node{
+		{slot: 100},
+		{slot: 101},
+	}
+	s := &Store{
+		nodes: nodes,
+	}
+	f := &ForkChoice{store: s}
+	require.DeepEqual(t, s.nodes, f.Nodes())
+}
+
 func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
 	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
 
