@@ -33,6 +33,9 @@ func TestProposerCache_AddProposerIndicesList(t *testing.T) {
 	if indices != nil {
 		t.Error("Expected committee count not to exist in empty cache")
 	}
+	has, err := cache.HasProposerIndices(bRoot)
+	require.NoError(t, err)
+	assert.Equal(t, false, has)
 	require.NoError(t, cache.AddProposerIndices(&ProposerIndices{
 		ProposerIndices: indices,
 		BlockRoot:       bRoot,
@@ -41,6 +44,9 @@ func TestProposerCache_AddProposerIndicesList(t *testing.T) {
 	received, err := cache.ProposerIndices(bRoot)
 	require.NoError(t, err)
 	assert.DeepEqual(t, received, indices)
+	has, err = cache.HasProposerIndices(bRoot)
+	require.NoError(t, err)
+	assert.Equal(t, true, has)
 
 	item := &ProposerIndices{BlockRoot: [32]byte{'B'}, ProposerIndices: []uint64{1, 2, 3, 4, 5, 6}}
 	require.NoError(t, cache.AddProposerIndices(item))
@@ -48,6 +54,10 @@ func TestProposerCache_AddProposerIndicesList(t *testing.T) {
 	received, err = cache.ProposerIndices(item.BlockRoot)
 	require.NoError(t, err)
 	assert.DeepEqual(t, item.ProposerIndices, received)
+	has, err = cache.HasProposerIndices(bRoot)
+	require.NoError(t, err)
+	assert.Equal(t, true, has)
+
 }
 
 func TestProposerCache_CanRotate(t *testing.T) {
