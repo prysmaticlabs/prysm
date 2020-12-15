@@ -46,7 +46,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx))
+	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx, make(chan struct{})))
 }
 
 func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
@@ -77,7 +77,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background()))
+	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
 }
 
 func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testing.T) {
@@ -112,7 +112,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		nil,
 		errors.New("fails"),
 	).Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background()))
+	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
 }
 
 func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
@@ -147,7 +147,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
 
@@ -182,7 +182,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background()))
+	require.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
 }
 
 func TestWaitForActivation_RefetchKeys(t *testing.T) {
@@ -190,7 +190,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	defer func() {
 		keyRefetchPeriod = originalPeriod
 	}()
-	keyRefetchPeriod = 5 * time.Second
+	keyRefetchPeriod = 1 * time.Second
 
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
@@ -224,7 +224,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
 }
