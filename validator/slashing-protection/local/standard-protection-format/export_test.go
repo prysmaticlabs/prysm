@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -26,8 +28,18 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 	// Storing an attestation history but not the lowest signed target epoch
 	// should then return empty.
 	history := kv.NewAttestationHistoryArray(0)
+	att := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: params.BeaconConfig().FarFutureEpoch,
+			},
+		},
+	}
 	require.NoError(t, validatorDB.SaveAttestationHistoryForPubKeyV2(
-		ctx, pubKeys[0], history,
+		ctx, pubKeys[0], history, att,
 	))
 	signedAttestations, err = getSignedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
@@ -52,7 +64,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		history = newHistory
 	}
 	require.NoError(t, validatorDB.SaveAttestationHistoryForPubKeyV2(
-		ctx, pubKeys[0], history,
+		ctx, pubKeys[0], history, att,
 	))
 
 	// We then retrieve the signed attestations and expect a correct result.
