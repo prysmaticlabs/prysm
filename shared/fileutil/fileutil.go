@@ -154,12 +154,12 @@ func CopyDir(src, dst string) error {
 	if dstExists {
 		return errors.New("destination directory already exists")
 	}
-	if err := MkdirAll(dst); err != nil {
-		return errors.Wrapf(err, "error creating directory: %s", dst)
-	}
 	fds, err := ioutil.ReadDir(src)
 	if err != nil {
 		return err
+	}
+	if err := MkdirAll(dst); err != nil {
+		return errors.Wrapf(err, "error creating directory: %s", dst)
 	}
 	for _, fd := range fds {
 		srcPath := path.Join(src, fd.Name())
@@ -177,7 +177,7 @@ func CopyDir(src, dst string) error {
 	return nil
 }
 
-// DirsEqual compares whether two directories have the same content.
+// DirsEqual checks whether two directories have the same content.
 func DirsEqual(src, dst string) bool {
 	hash1, err := HashDir(src)
 	if err != nil {
@@ -194,6 +194,7 @@ func DirsEqual(src, dst string) bool {
 
 // HashDir calculates and returns hash of directory: each file's hash is calculated and saved along
 // with the file name into the list, after which list is hashed to produce the final signature.
+// Implementation is based on https://github.com/golang/mod/blob/release-branch.go1.15/sumdb/dirhash/hash.go
 func HashDir(dir string) (string, error) {
 	files, err := DirFiles(dir)
 	if err != nil {
