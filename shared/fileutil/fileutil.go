@@ -1,11 +1,16 @@
 package fileutil
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -138,4 +143,108 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 	return nil
+}
+
+// CopyDir copies contents of one directory into another, recursively.
+func CopyDir(src, dst string) error {
+	dstExists, err := HasDir(dst)
+	if err != nil {
+		return err
+	}
+	if dstExists {
+		return errors.New("destination directory already exists")
+	}
+	if err := MkdirAll(dst); err != nil {
+		return errors.Wrapf(err, "error creating directory: %s", dst)
+	}
+	fds, err := ioutil.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		srcPath := path.Join(src, fd.Name())
+		dstPath := path.Join(dst, fd.Name())
+		if fd.IsDir() {
+			if err = CopyDir(srcPath, dstPath); err != nil {
+				return errors.Wrapf(err, "error copying directory %s -> %s", srcPath, dstPath)
+			}
+		} else {
+			if err = CopyFile(srcPath, dstPath); err != nil {
+				return errors.Wrapf(err, "error copying file %s -> %s", srcPath, dstPath)
+			}
+		}
+	}
+	return nil
+}
+
+// DirsEqual compares whether two directories have the same content.
+func DirsEqual(src, dst string) bool {
+	hash1, err := HashDir(src)
+	if err != nil {
+		return false
+	}
+
+	hash2, err := HashDir(dst)
+	if err != nil {
+		return false
+	}
+
+	return hash1 == hash2
+}
+
+// HashDir calculates and returns hash of directory: each file's hash is calculated and saved along
+// with the file name into the list, after which list is hashed to produce the final signature.
+func HashDir(dir string) (string, error) {
+	files, err := DirFiles(dir)
+	if err != nil {
+		return "", err
+	}
+
+	h := sha256.New()
+	files = append([]string(nil), files...)
+	sort.Strings(files)
+	for _, file := range files {
+		fd, err := os.Open(filepath.Join(dir, file))
+		if err != nil {
+			return "", err
+		}
+		hf := sha256.New()
+		_, err = io.Copy(hf, fd)
+		if err != nil {
+			return "", err
+		}
+		if err := fd.Close(); err != nil {
+			return "", err
+		}
+		if _, err := fmt.Fprintf(h, "%x  %s\n", hf.Sum(nil), file); err != nil {
+			return "", err
+		}
+	}
+	return "hashdir:" + base64.StdEncoding.EncodeToString(h.Sum(nil)), nil
+}
+
+// DirFiles returns list of files found within a given directory and its sub-directories.
+// Directory prefix will not be included as a part of returned file string i.e. for a file located
+// in "dir/foo/bar" only "foo/bar" part will be returned.
+func DirFiles(dir string) ([]string, error) {
+	var files []string
+	dir = filepath.Clean(dir)
+	err := filepath.Walk(dir, func(file string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		relFile := file
+		if dir != "." {
+			relFile = file[len(dir)+1:]
+		}
+		files = append(files, filepath.ToSlash(relFile))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }
