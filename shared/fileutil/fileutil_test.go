@@ -211,17 +211,6 @@ func TestHashDir(t *testing.T) {
 }
 
 func TestDirFiles(t *testing.T) {
-	readDir := func(dir string) []string {
-		fds, err := ioutil.ReadDir(dir)
-		require.NoError(t, err)
-		var fnames []string
-		for _, fd := range fds {
-			if !fd.IsDir() {
-				fnames = append(fnames, fd.Name())
-			}
-		}
-		return fnames
-	}
 	tmpDir, tmpDirFnames := tmpDirWithContents(t)
 	tests := []struct {
 		name     string
@@ -229,14 +218,9 @@ func TestDirFiles(t *testing.T) {
 		outFiles []string
 	}{
 		{
-			name:     "empty path",
-			path:     "",
-			outFiles: readDir("."),
-		},
-		{
 			name:     "dot path",
-			path:     ".",
-			outFiles: readDir("."),
+			path:     filepath.Join(tmpDir, "/./"),
+			outFiles: tmpDirFnames,
 		},
 		{
 			name:     "non-empty folder",
