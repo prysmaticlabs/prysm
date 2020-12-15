@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,7 +22,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context) error
+	WaitForActivation(ctx context.Context, accountsChangedChan chan struct{}) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
@@ -67,9 +69,17 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForSync(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
-	if err := v.WaitForActivation(ctx); err != nil {
+
+	val, ok := v.(*validator)
+	if !ok {
+		// TODO
+	}
+	accountsChangedChan := make(chan struct{})
+	go val.handleAccountsChanged(ctx, accountsChangedChan)
+	if err := v.WaitForActivation(ctx, accountsChangedChan); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
+
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)
@@ -170,5 +180,35 @@ func handleAssignmentError(err error, slot uint64) {
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
+	}
+}
+
+func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedChan chan struct{}) {
+	importedKeymanager, ok := v.keyManager.(*imported.Keymanager)
+	if !ok {
+		return
+	}
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	// TODO debug
+	log.Warn("Subscribed")
+	defer func() {
+		sub.Unsubscribe()
+		// TODO debug
+		log.Warn("Unsubscribed")
+	}()
+	for {
+		select {
+		case <-validatingPubKeysChan:
+			// TODO debug
+			log.Warn("Received key reload event")
+			accountsChangedChan <- struct{}{}
+		case <-ctx.Done():
+			return
+		default:
+			if errors.Is(ctx.Err(), context.Canceled) {
+				return
+			}
+		}
 	}
 }

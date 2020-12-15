@@ -65,7 +65,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan struct{}) error {
 	fv.WaitForActivationCalled = true
 	return nil
 }

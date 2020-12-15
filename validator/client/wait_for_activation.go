@@ -20,7 +20,7 @@ import (
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
-func (v *validator) WaitForActivation(ctx context.Context) error {
+func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan struct{}) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
@@ -66,44 +66,52 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 			Error("Stream broken while waiting for activation. Reconnecting...")
 		// Reconnection attempt backoff, up to 60s.
 		time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
-		return v.WaitForActivation(incrementRetries(ctx))
+		return v.WaitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 	for {
-		res, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		// If context is canceled we stop the loop.
-		if ctx.Err() == context.Canceled {
-			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-		}
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			attempts := getStreamAttempts(ctx)
-			log.WithError(err).WithField("attempts", attempts).
-				Error("Stream broken while waiting for activation. Reconnecting...")
-			// Reconnection attempt backoff, up to 60s.
-			time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
-			return v.WaitForActivation(incrementRetries(ctx))
-		}
-		valActivated := v.checkAndLogValidatorStatus(res.Statuses)
-
-		if valActivated {
-			for _, statusResp := range res.Statuses {
-				if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
-					continue
-				}
-				log.WithFields(logrus.Fields{
-					"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(statusResp.PublicKey)),
-					"index":     statusResp.Index,
-				}).Info("Validator activated")
+		select {
+		case <-accountsChangedChan:
+			// a
+			return v.WaitForActivation(ctx, accountsChangedChan)
+		default:
+			res, err := stream.Recv()
+			// If the stream is closed, we stop the loop.
+			if errors.Is(err, io.EOF) {
+				break
 			}
-			break
-		}
-	}
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+			// If context is canceled we stop the loop.
+			if ctx.Err() == context.Canceled {
+				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+			}
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				attempts := getStreamAttempts(ctx)
+				log.WithError(err).WithField("attempts", attempts).
+					Error("Stream broken while waiting for activation. Reconnecting...")
+				// Reconnection attempt backoff, up to 60s.
+				time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
+				return v.WaitForActivation(incrementRetries(ctx), accountsChangedChan)
+			}
+			valActivated := v.checkAndLogValidatorStatus(res.Statuses)
 
+			if valActivated {
+				for _, statusResp := range res.Statuses {
+					if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
+						continue
+					}
+					log.WithFields(logrus.Fields{
+						"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(statusResp.PublicKey)),
+						"index":     statusResp.Index,
+					}).Info("Validator activated")
+				}
+			} else {
+				continue
+			}
+		}
+		break
+	}
+
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	return nil
 }
 
