@@ -283,7 +283,7 @@ func (bs *Server) ListValidators(
 
 	if len(req.PublicKeys) == 0 && len(req.Indices) == 0 {
 		for i := uint64(0); i < uint64(reqState.NumValidators()); i++ {
-			val, err := reqState.ValidatorAtIndex(uint64(i))
+			val, err := reqState.ValidatorAtIndex(i)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 			}
