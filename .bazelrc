@@ -237,3 +237,6 @@ build:remote --remote_timeout=3600
 build:remote --experimental_remote_download_outputs=toplevel --experimental_inmemory_jdeps_files --experimental_inmemory_dotd_files
 
 build:remote --remote_local_fallback
+
+# Ignore GoStdLib with remote caching
+build --modify_execution_info='GoStdlib.*=+no-remote-cache'
