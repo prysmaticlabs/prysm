@@ -36,13 +36,12 @@ func Test_slashableAttestationCheck_Allowed(t *testing.T) {
 			},
 		},
 	}
-	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	fakePubkey := bytesutil.ToBytes48([]byte("eip3076TestCase"))
 	err := validator.slashableAttestationCheck(context.Background(), att, fakePubkey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
-	t.Skip("Skipped till #8100, when we will save lowest source and target epochs again.")
 	config := &featureconfig.Flags{
 		SlasherProtection: true,
 	}
@@ -80,7 +79,8 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	mockProtector.AllowAttestation = true
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
 	require.NoError(t, err)
-	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
+	differentSigningRoot := [32]byte{2}
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, differentSigningRoot)
 	require.ErrorContains(t, "could not sign attestation", err)
 
 	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
