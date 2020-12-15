@@ -632,8 +632,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:FnpkCo1TAj/eq0ETLPhAplYYB4KlFQy3kVb8cLludAc=",
-        version = "v0.0.0-20201020132831-68dc48984fd3",
+        sum = "h1:W2w+U6B6jVYrSAtip8HylYbu0G3XoJLLvggm1kuPKq4=",
+        version = "v0.0.0-20201210095258-318e164fe1dd",
     )
 
     go_repository(
@@ -1864,8 +1864,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mitchellh_mapstructure",
         importpath = "github.com/mitchellh/mapstructure",
-        sum = "h1:SzB1nHZ2Xi+17FP0zVQBHIZqvwRN9408fJO8h+eeNA8=",
-        version = "v1.3.3",
+        sum = "h1:7ks8ZkOP5/ujthUsT07rNv+nkLXCQWKNHuwzOAesEks=",
+        version = "v1.4.0",
     )
 
     go_repository(
@@ -2183,8 +2183,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:OUfQgEA6zB19I66EQ2nPtjdBbk+Vv7eCBf2+x3BTv5w=",
-        version = "v0.0.0-20201117145913-073714f478fb",
+        sum = "h1:WFcT67stHvr1mMzpoDctLBdixgD6GFHZkhqpHnNK57o=",
+        version = "v0.0.0-20201215230959-54fc47142d68",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2863,8 +2863,8 @@ def prysm_deps():
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",
-        sum = "h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=",
-        version = "v2.3.0",
+        sum = "h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=",
+        version = "v2.4.0",
     )
 
     go_repository(
@@ -3006,8 +3006,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_google_genproto",
         importpath = "google.golang.org/genproto",
-        sum = "h1:d4k3uIU763E31Rk4UZPA47oOoBymMsDImV3U4mGhX9E=",
-        version = "v0.0.0-20201026171402-d4b8fe4fd877",
+        sum = "h1:GnJAhasbD8HiT8DZMvsEx3QLVy/X0icq/MGr0MqRJ2M=",
+        version = "v0.0.0-20201211151036-40ec1c210f7a",
     )
 
     go_repository(
@@ -3020,8 +3020,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_google_protobuf",
         importpath = "google.golang.org/protobuf",
-        sum = "h1:Ejskq+SyPohKW+1uil0JJMtmHCgJPJ/qWTxr8qp+R4c=",
-        version = "v1.25.0",
+        sum = "h1:OwhZOOMuf7leLaSCuxtQ9FW7ui2L2L6UKOtKAUqovUQ=",
+        version = "v1.25.1-0.20200805231151-a709e31e5d12",
     )
 
     go_repository(
@@ -3103,8 +3103,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_tools",
         importpath = "golang.org/x/tools",
-        sum = "h1:xLt+iB5ksWcZVxqc+g9K41ZHy+6MKWfXCDsjSThnsPA=",
-        version = "v0.0.0-20200904185747-39188db58858",
+        sum = "h1:SLHKXsC4wI4NdEGVGe/yxcTBkF/mPUS7agW3Qt5smVg=",
+        version = "v0.0.0-20201215192005-fa10ef0b8743",
     )
 
     go_repository(

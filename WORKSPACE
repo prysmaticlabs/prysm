@@ -160,7 +160,35 @@ go_register_toolchains(
     nogo = "@//:nogo",
 )
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+go_repository(
+    name = "com_github_grpc_ecosystem_grpc_gateway_v2",
+    importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
+    sum = "h1:X2vfSnm1WC8HEo0MBHZg2TcuDUHJj6kd1TmEAQncnSA=",
+    version = "v2.0.1",
+)
+
+go_repository(
+    name = "com_github_iancoleman_strcase",
+    importpath = "github.com/iancoleman/strcase",
+    sum = "h1:gnomlvw9tnV3ITTAxzKSgTF+8kFWcU/f+TgttpXGz1U=",
+    version = "v0.1.2",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_protoc_gen_go_cast",
+    importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
+    sum = "h1:VlXlb+7zpzj9X4RFbf7YR84gzIUq6tSBuIGRcAL5954=",
+    version = "v0.0.0-20201215225152-2992501386ab",
+)
+
+go_repository(
+    name = "org_golang_google_grpc_cmd_protoc_gen_go_grpc",
+    importpath = "google.golang.org/grpc/cmd/protoc-gen-go-grpc",
+    sum = "h1:lQ+dE99pFsb8osbJB3oRfE5eW4Hx6a/lZQr8Jh+eoT4=",
+    version = "v1.0.0",
+)
 
 gazelle_dependencies()
 
