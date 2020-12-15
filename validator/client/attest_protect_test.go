@@ -119,7 +119,7 @@ func Test_slashableAttestationCheck_OK(t *testing.T) {
 		},
 	}
 	sr := [32]byte{1}
-	fakePubkey := bytesutil.ToBytes48([]byte("eip3076TestCase"))
+	fakePubkey := bytesutil.ToBytes48([]byte("test"))
 	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
@@ -149,7 +149,7 @@ func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 			},
 		},
 	}
-	fakePubkey := bytesutil.ToBytes48([]byte("eip3076TestCase"))
+	fakePubkey := bytesutil.ToBytes48([]byte("test"))
 	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), fakePubkey)
@@ -160,8 +160,4 @@ func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
 	require.Equal(t, uint64(0), e)
-}
-
-func Test_slashableAttestationCheck_ProperlyDetectsDoubleVotes(t *testing.T) {
-
 }
