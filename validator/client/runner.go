@@ -72,7 +72,7 @@ func run(ctx context.Context, v Validator) {
 
 	val, ok := v.(*validator)
 	if !ok {
-		// TODO
+		log.Fatalf("Could not wait for validator activation: could not instantiate validator")
 	}
 	accountsChangedChan := make(chan struct{})
 	go val.handleAccountsChanged(ctx, accountsChangedChan)
