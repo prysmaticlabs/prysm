@@ -165,5 +165,69 @@ func TestSetTargetData(t *testing.T) {
 
 		})
 	}
+}
 
+func Test_markUnattestedEpochsCorrectly(t *testing.T) {
+	ctx := context.Background()
+	// First we create an EncHistoryData slice that has certain epochs
+	// marked as attested while epochs in between those as empty:
+	// (source: 0, signing root: 0x0).
+	hist1 := NewAttestationHistoryArray(0)
+
+	lowestSignedTargetEpoch := uint64(10)
+	highestSignedTargetEpoch := uint64(100)
+	sr2 := [32]byte{2}
+	hist2, err := oldSetHistoryAtTarget(hist1, lowestSignedTargetEpoch, &HistoryData{
+		Source:      lowestSignedTargetEpoch - 1,
+		SigningRoot: sr2[:],
+	})
+	require.NoError(t, err)
+	hist3, err := hist2.SetLatestEpochWritten(ctx, highestSignedTargetEpoch)
+	require.NoError(t, err)
+	sr3 := [32]byte{3}
+	hist4, err := oldSetHistoryAtTarget(hist3, lowestSignedTargetEpoch, &HistoryData{
+		Source:      highestSignedTargetEpoch - 1,
+		SigningRoot: sr3[:],
+	})
+	require.NoError(t, err)
+	hist5, err := hist4.SetLatestEpochWritten(ctx, highestSignedTargetEpoch)
+	require.NoError(t, err)
+
+	// Now, we check the epochs we expect have source: 0 and signing root: 0x0
+	for i := lowestSignedTargetEpoch + 1; i < highestSignedTargetEpoch; i++ {
+		data, err := hist5.GetTargetData(ctx, i)
+		require.NoError(t, err)
+		//require.Equal(t, false, data.IsEmpty())
+		require.Equal(t, uint64(0), data.Source)
+		require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], data.SigningRoot)
+	}
+
+	// Next, we mark unattested epochs with FAR_FUTURE_EPOCH.
+	hist6, err := markUnattestedEpochsCorrectly(hist5)
+	require.NoError(t, err)
+
+	// Finally, we ensure the history for those epochs indeed return IsEmpty() == true.
+	for i := lowestSignedTargetEpoch + 1; i < highestSignedTargetEpoch; i++ {
+		data, err := hist6.GetTargetData(ctx, i)
+		require.NoError(t, err)
+		require.Equal(t, true, data.IsEmpty())
+	}
+}
+
+func oldSetHistoryAtTarget(hd EncHistoryData, target uint64, historyData *HistoryData) (EncHistoryData, error) {
+	if err := hd.assertSize(); err != nil {
+		return nil, err
+	}
+	// Cursor for the location to write target epoch to.
+	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
+	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
+
+	if uint64(len(hd)) < cursor+historySize {
+		ext := make([]byte, cursor+historySize-uint64(len(hd)))
+		hd = append(hd, ext...)
+	}
+	copy(hd[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
+	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
+
+	return hd, nil
 }

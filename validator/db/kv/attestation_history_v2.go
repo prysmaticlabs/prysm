@@ -196,7 +196,7 @@ func (store *Store) MigrateAttestingHistoryFormat(ctx context.Context) error {
 	// (source epoch: 0, signing root: 0x0) with FAR_FUTURE_EPOCH.
 	newAttestingHistoryByPublicKey := make(map[[48]byte]EncHistoryData)
 	for pubKey, hist := range attestationHistoryByPublicKey {
-		newHist, err := migrateAttestingHistoryFormat(hist)
+		newHist, err := markUnattestedEpochsCorrectly(hist)
 		if err != nil {
 			log.WithError(err).Debugf("Could not migrate attesting history for public key %#x", pubKey)
 			continue
