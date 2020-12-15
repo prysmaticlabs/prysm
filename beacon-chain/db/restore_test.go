@@ -22,7 +22,7 @@ func TestRestore(t *testing.T) {
 	logHook := logTest.NewGlobal()
 	ctx := context.Background()
 
-	backupDb, err := kv.NewKVStore(t.TempDir(), cache.NewStateSummaryCache())
+	backupDb, err := kv.NewKVStore(context.Background(), t.TempDir(), cache.NewStateSummaryCache())
 	defer func() {
 		require.NoError(t, backupDb.Close())
 	}()
@@ -58,7 +58,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 	assert.Equal(t, kv.DatabaseFileName, files[0].Name())
-	restoredDb, err := kv.NewKVStore(path.Join(restoreDir, kv.BeaconNodeDbDirName), nil)
+	restoredDb, err := kv.NewKVStore(context.Background(), path.Join(restoreDir, kv.BeaconNodeDbDirName), nil)
 	defer func() {
 		require.NoError(t, restoredDb.Close())
 	}()
