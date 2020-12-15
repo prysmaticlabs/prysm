@@ -9,8 +9,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -184,24 +186,26 @@ func handleAssignmentError(err error, slot uint64) {
 }
 
 func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedChan chan struct{}) {
-	importedKeymanager, ok := v.keyManager.(*imported.Keymanager)
-	if !ok {
-		return
-	}
 	validatingPubKeysChan := make(chan [][48]byte, 1)
-	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	// TODO debug
-	log.Warn("Subscribed")
+	var sub event.Subscription
+	importedKeymanager, ok := v.keyManager.(*imported.Keymanager)
+	if ok {
+		sub = importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	} else {
+		derivedKeymanager, ok := v.keyManager.(*derived.Keymanager)
+		if ok {
+			sub = derivedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+		} else {
+			return
+		}
+	}
+
 	defer func() {
 		sub.Unsubscribe()
-		// TODO debug
-		log.Warn("Unsubscribed")
 	}()
 	for {
 		select {
 		case <-validatingPubKeysChan:
-			// TODO debug
-			log.Warn("Received key reload event")
 			accountsChangedChan <- struct{}{}
 		case <-ctx.Done():
 			return
