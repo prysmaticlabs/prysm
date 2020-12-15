@@ -3,6 +3,7 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path"
 	"time"
@@ -45,12 +46,13 @@ type Store struct {
 	blockCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
 	stateSummaryCache   *cache.StateSummaryCache
+	ctx                 context.Context
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
 	hasDir, err := fileutil.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -93,6 +95,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 		blockCache:          blockCache,
 		validatorIndexCache: validatorCache,
 		stateSummaryCache:   stateSummaryCache,
+		ctx:                 ctx,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {

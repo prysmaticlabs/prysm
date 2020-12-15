@@ -3,6 +3,7 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -13,7 +14,7 @@ import (
 // SetupDB instantiates and returns database backed by key value store.
 func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
 	sc := cache.NewStateSummaryCache()
-	s, err := kv.NewKVStore(t.TempDir(), sc)
+	s, err := kv.NewKVStore(context.Background(), t.TempDir(), sc)
 	if err != nil {
 		t.Fatal(err)
 	}
