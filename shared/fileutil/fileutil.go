@@ -194,6 +194,7 @@ func DirsEqual(src, dst string) bool {
 
 // HashDir calculates and returns hash of directory: each file's hash is calculated and saved along
 // with the file name into the list, after which list is hashed to produce the final signature.
+// Implementation is based on https://github.com/golang/mod/blob/release-branch.go1.15/sumdb/dirhash/hash.go
 func HashDir(dir string) (string, error) {
 	files, err := DirFiles(dir)
 	if err != nil {
