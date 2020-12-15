@@ -274,7 +274,7 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	mhBytes = append(mhBytes, idBytes...)
 	id, err := peer.IDFromBytes(mhBytes)
 	require.NoError(t, err)
-	p.Add(new(enr.Record), id, nil, network.DirUnknown)
+	p.Add(new(enr.Record), id, nil, network.DirInbound)
 	p.SetConnectionState(id, state)
 	p.SetMetadata(id, &pb.MetaData{
 		SeqNumber: 0,
