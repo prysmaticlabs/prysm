@@ -172,43 +172,48 @@ func Test_markUnattestedEpochsCorrectly(t *testing.T) {
 	// First we create an EncHistoryData slice that has certain epochs
 	// marked as attested while epochs in between those as empty:
 	// (source: 0, signing root: 0x0).
-	hist1 := NewAttestationHistoryArray(0)
+	h1 := NewAttestationHistoryArray(0)
+	sr1 := [32]byte{}
+	copy(sr1[:], "1")
+	h2, err := oldSetHistoryAtTarget(h1, 1, &HistoryData{
+		Source:      0,
+		SigningRoot: sr1[:],
+	})
+	require.NoError(t, err)
 
-	lowestSignedTargetEpoch := uint64(10)
-	highestSignedTargetEpoch := uint64(100)
-	sr2 := [32]byte{2}
-	hist2, err := oldSetHistoryAtTarget(hist1, lowestSignedTargetEpoch, &HistoryData{
-		Source:      lowestSignedTargetEpoch - 1,
+	// We mark target 50, source 49 as attested.
+	sr2 := [32]byte{}
+	copy(sr2[:], "50")
+	highestEpoch := uint64(50)
+	h3, err := oldSetHistoryAtTarget(h2, highestEpoch, &HistoryData{
+		Source:      highestEpoch - 1,
 		SigningRoot: sr2[:],
 	})
 	require.NoError(t, err)
-	hist3, err := hist2.SetLatestEpochWritten(ctx, highestSignedTargetEpoch)
+
+	// We verify we have a history for target 1 and for target 50.
+	lowestData, err := h3.GetTargetData(ctx, 1)
 	require.NoError(t, err)
-	sr3 := [32]byte{3}
-	hist4, err := oldSetHistoryAtTarget(hist3, lowestSignedTargetEpoch, &HistoryData{
-		Source:      highestSignedTargetEpoch - 1,
-		SigningRoot: sr3[:],
-	})
+	require.NotNil(t, lowestData)
+	require.Equal(t, uint64(0), lowestData.Source)
+
+	highestData, err := h3.GetTargetData(ctx, highestEpoch)
 	require.NoError(t, err)
-	hist5, err := hist4.SetLatestEpochWritten(ctx, highestSignedTargetEpoch)
-	require.NoError(t, err)
+	require.NotNil(t, highestData)
+	require.Equal(t, highestEpoch-1, highestData.Source)
 
 	// Now, we check the epochs we expect have source: 0 and signing root: 0x0
-	for i := lowestSignedTargetEpoch + 1; i < highestSignedTargetEpoch; i++ {
-		data, err := hist5.GetTargetData(ctx, i)
+	for i := uint64(2); i < highestEpoch; i++ {
+		data, err := h3.GetTargetData(ctx, i)
 		require.NoError(t, err)
-		//require.Equal(t, false, data.IsEmpty())
-		require.Equal(t, uint64(0), data.Source)
-		require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], data.SigningRoot)
+		require.Equal(t, false, data.IsEmpty())
 	}
 
-	// Next, we mark unattested epochs with FAR_FUTURE_EPOCH.
-	hist6, err := markUnattestedEpochsCorrectly(hist5)
-	require.NoError(t, err)
-
 	// Finally, we ensure the history for those epochs indeed return IsEmpty() == true.
-	for i := lowestSignedTargetEpoch + 1; i < highestSignedTargetEpoch; i++ {
-		data, err := hist6.GetTargetData(ctx, i)
+	newHist, err := markUnattestedEpochsCorrectly(h3)
+	require.NoError(t, err)
+	for i := uint64(2); i < highestEpoch; i++ {
+		data, err := newHist.GetTargetData(ctx, i)
 		require.NoError(t, err)
 		require.Equal(t, true, data.IsEmpty())
 	}
