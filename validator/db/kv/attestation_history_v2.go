@@ -95,11 +95,13 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(
 
 // LowestSignedSourceEpoch returns the lowest signed source epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
+func (store *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
 	defer span.End()
 
 	var err error
+	var exists bool
+
 	var lowestSignedSourceEpoch uint64
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedSourceBucket)
@@ -109,18 +111,21 @@ func (store *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]b
 			return nil
 		}
 		lowestSignedSourceEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedSourceBytes)
+		exists = true
 		return nil
 	})
-	return lowestSignedSourceEpoch, err
+	return lowestSignedSourceEpoch, exists, err
 }
 
 // LowestSignedTargetEpoch returns the lowest signed target epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error) {
+func (store *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedTargetEpoch")
 	defer span.End()
 
 	var err error
+	var exists bool
+
 	var lowestSignedTargetEpoch uint64
 	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedTargetBucket)
@@ -130,9 +135,10 @@ func (store *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]b
 			return nil
 		}
 		lowestSignedTargetEpoch = bytesutil.BytesToUint64BigEndian(lowestSignedTargetBytes)
+		exists = true
 		return nil
 	})
-	return lowestSignedTargetEpoch, err
+	return lowestSignedTargetEpoch, exists, err
 }
 
 // SaveLowestSignedSourceEpoch saves the lowest signed source epoch for a validator public key.

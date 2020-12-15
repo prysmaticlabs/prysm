@@ -226,6 +226,11 @@ var (
 		Usage: "Path to a directory where accounts will be backed up into a zip file",
 		Value: DefaultValidatorDir(),
 	}
+	// SlashingProtectionJSONFileFlag is used to enter the file path of the slashing protection JSON.
+	SlashingProtectionJSONFileFlag = &cli.StringFlag{
+		Name:  "slashing-protection-json-file",
+		Usage: "Path to an EIP-3076 compliant JSON file containing a user's slashing protection history",
+	}
 	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
 	KeysDirFlag = &cli.StringFlag{
 		Name:  "keys-dir",
@@ -281,6 +286,13 @@ var (
 		Name:  "web",
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
+	}
+	// SlashingProtectionExportDirFlag allows specifying the outpt directory
+	// for a validator's slashing protection history.
+	SlashingProtectionExportDirFlag = &cli.StringFlag{
+		Name:  "slashing-protection-export-dir",
+		Usage: "Allows users to specify the output directory to export their slashing protection EIP-3076 standard JSON File",
+		Value: "",
 	}
 	// GraffitiFileFlag specifies the file path to load graffiti values.
 	GraffitiFileFlag = &cli.StringFlag{

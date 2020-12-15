@@ -1,16 +1,14 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/sirupsen/logrus"
+	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 	"go.opencensus.io/trace"
 )
 
@@ -31,11 +29,31 @@ func (v *validator) slashableAttestationCheck(
 	defer span.End()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+
+	// Based on EIP3076, validator should refuse to sign any attestation with source epoch less
+	// than the minimum source epoch present in that signer’s attestations.
+	lowestSourceEpoch, exists, err := v.db.LowestSignedSourceEpoch(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	if exists && lowestSourceEpoch > indexedAtt.Data.Source.Epoch {
+		return fmt.Errorf("could not sign attestation lower than lowest source epoch in db, %d > %d", lowestSourceEpoch, indexedAtt.Data.Source.Epoch)
+	}
+	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
+	// than or equal to the minimum target epoch present in that signer’s attestations.
+	lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	if exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
+		return fmt.Errorf("could not sign attestation lower than lowest target epoch in db, %d >= %d", lowestTargetEpoch, indexedAtt.Data.Target.Epoch)
+	}
+
 	attesterHistory, err := v.db.AttestationHistoryForPubKeyV2(ctx, pubKey)
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
-	slashable, err := isNewAttSlashable(
+	slashable, err := attestinghistory.IsNewAttSlashable(
 		ctx,
 		attesterHistory,
 		indexedAtt.Data.Source.Epoch,
@@ -81,146 +99,4 @@ func (v *validator) slashableAttestationCheck(
 		}
 	}
 	return nil
-}
-
-// isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
-// and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
-func isNewAttSlashable(
-	ctx context.Context,
-	history kv.EncHistoryData,
-	sourceEpoch,
-	targetEpoch uint64,
-	signingRoot [32]byte,
-) (bool, error) {
-	ctx, span := trace.StartSpan(ctx, "isNewAttSlashable")
-	defer span.End()
-
-	if history == nil {
-		return false, nil
-	}
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	// Previously pruned, we should return false.
-	latestEpochWritten, err := history.GetLatestEpochWritten(ctx)
-	if err != nil {
-		log.WithError(err).Error("Could not get latest epoch written from encapsulated data")
-		return false, err
-	}
-
-	if latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod { //Underflow protected older then weak subjectivity check.
-		return false, nil
-	}
-
-	// Check if there has already been a vote for this target epoch.
-	hd, err := history.GetTargetData(ctx, targetEpoch)
-	if err != nil {
-		return false, errors.Wrapf(err, "could not get target data for epoch: %d", targetEpoch)
-	}
-	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
-		log.WithFields(logrus.Fields{
-			"signingRoot":                   fmt.Sprintf("%#x", signingRoot),
-			"targetEpoch":                   targetEpoch,
-			"previouslyAttestedSigningRoot": fmt.Sprintf("%#x", hd.SigningRoot),
-		}).Warn("Attempted to submit a double vote, but blocked by slashing protection")
-		return true, nil
-	}
-
-	isSurround, err := isSurroundVote(ctx, history, latestEpochWritten, sourceEpoch, targetEpoch)
-	if err != nil {
-		return false, errors.Wrap(err, "could not check if attestation is surround vote")
-	}
-	return isSurround, nil
-}
-
-func isSurroundVote(
-	ctx context.Context,
-	history kv.EncHistoryData,
-	latestEpochWritten,
-	sourceEpoch,
-	targetEpoch uint64,
-) (bool, error) {
-	for i := sourceEpoch; i <= targetEpoch; i++ {
-		historicalAtt, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
-		if err != nil {
-			return false, errors.Wrapf(err, "could not check historical attestation at target epoch: %d", i)
-		}
-		if historicalAtt.IsEmpty() {
-			continue
-		}
-		prevTarget := i
-		prevSource := historicalAtt.Source
-		if surroundingPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
-			// Surrounding attestation caught.
-			log.WithFields(logrus.Fields{
-				"targetEpoch":                   targetEpoch,
-				"sourceEpoch":                   sourceEpoch,
-				"previouslyAttestedTargetEpoch": prevTarget,
-				"previouslyAttestedSourceEpoch": prevSource,
-			}).Warn("Attempted to submit a surrounding attestation, but blocked by slashing protection")
-			return true, nil
-		}
-	}
-
-	// Check if the new attestation is being surrounded.
-	for i := targetEpoch; i <= latestEpochWritten; i++ {
-		historicalAtt, err := checkHistoryAtTargetEpoch(ctx, history, latestEpochWritten, i)
-		if err != nil {
-			return false, errors.Wrapf(err, "could not check historical attestation at target epoch: %d", i)
-		}
-		if historicalAtt.IsEmpty() {
-			continue
-		}
-		prevTarget := i
-		prevSource := historicalAtt.Source
-		if surroundedByPrevAttestation(prevSource, prevTarget, sourceEpoch, targetEpoch) {
-			// Surrounded attestation caught.
-			log.WithFields(logrus.Fields{
-				"targetEpoch":                   targetEpoch,
-				"sourceEpoch":                   sourceEpoch,
-				"previouslyAttestedTargetEpoch": prevTarget,
-				"previouslyAttestedSourceEpoch": prevSource,
-			}).Warn("Attempted to submit a surrounded attestation, but blocked by slashing protection")
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func surroundedByPrevAttestation(prevSource, prevTarget, newSource, newTarget uint64) bool {
-	return prevSource < newSource && newTarget < prevTarget
-}
-
-func surroundingPrevAttestation(prevSource, prevTarget, newSource, newTarget uint64) bool {
-	return newSource < prevSource && prevTarget < newTarget
-}
-
-// Checks that the difference between the latest epoch written and
-// target epoch is greater than or equal to the weak subjectivity period.
-func differenceOutsideWeakSubjectivityBounds(latestEpochWritten, targetEpoch uint64) bool {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	return latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod
-}
-
-// safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at
-// returns the "default" nil value.
-// Returns the actual attesting history at a specified target epoch.
-// The response is nil if there was no attesting history at that epoch.
-func checkHistoryAtTargetEpoch(
-	ctx context.Context,
-	history kv.EncHistoryData,
-	latestEpochWritten,
-	targetEpoch uint64,
-) (*kv.HistoryData, error) {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	if differenceOutsideWeakSubjectivityBounds(latestEpochWritten, targetEpoch) {
-		return nil, nil
-	}
-	// Ignore target epoch is > latest written.
-	if targetEpoch > latestEpochWritten {
-		return nil, nil
-	}
-	historicalAtt, err := history.GetTargetData(ctx, targetEpoch%wsPeriod)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get target data for target epoch: %d", targetEpoch)
-	}
-	return historicalAtt, nil
 }

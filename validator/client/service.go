@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -70,7 +70,7 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             Validator
-	protector             slashingprotection.Protector
+	protector             iface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -87,7 +87,7 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingprotection.Protector
+	Protector                  iface.Protector
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
@@ -181,6 +181,16 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
+	if err != nil {
+		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		return
+	}
+	slashablePublicKeys := make(map[[48]byte]bool)
+	for _, pubKey := range sPubKeys {
+		slashablePublicKeys[pubKey] = true
+	}
+
 	v.validator = &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -200,6 +210,7 @@ func (v *ValidatorService) Start() {
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
 		graffitiStruct:                 v.graffitiStruct,
+		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
