@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -135,29 +134,6 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	}
 	copy(hd[cursorToWrite:cursorToWrite+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
 	copy(hd[cursorToWrite+sourceSize:cursorToWrite+sourceSize+signingRootSize], historyData.SigningRoot)
-	return hd, nil
-}
-
-// Migrates to a safer format where unattested epochs (source: 0, signing root: 0x0) are marked by
-// FAR_FUTURE_EPOCH as a better default, allowing us to perform better slashing protection.
-func markUnattestedEpochsCorrectly(hd EncHistoryData) (EncHistoryData, error) {
-	if err := hd.assertSize(); err != nil {
-		return nil, err
-	}
-	// Navigate the history data by HISTORY_SIZE chunks.
-	for i := latestEpochWrittenSize; i < len(hd); i += historySize {
-		sourceEpoch := bytesutil.FromBytes8(hd[i : i+sourceSize])
-		signingRoot := make([]byte, 32)
-		copy(signingRoot, hd[i+sourceSize:i+historySize])
-		// If source is 0 and signing root is 0x0, we replace that source with FAR_FUTURE_EPOCH
-		// which means that epoch in the slice is not yet attested for.
-		if sourceEpoch == 0 && bytes.Equal(signingRoot, params.BeaconConfig().ZeroHash[:]) {
-			copy(
-				hd[i:i+sourceSize],
-				bytesutil.Uint64ToBytesLittleEndian(params.BeaconConfig().FarFutureEpoch),
-			)
-		}
-	}
 	return hd, nil
 }
 

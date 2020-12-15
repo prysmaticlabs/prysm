@@ -41,6 +41,7 @@ go_test(
         "eip_blacklisted_keys_test.go",
         "genesis_test.go",
         "historical_attestations_test.go",
+        "migration_unattested_epochs_test.go",
         "proposal_history_v2_test.go",
     ],
     embed = [":go_default_library"],
