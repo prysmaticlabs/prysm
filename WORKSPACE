@@ -222,7 +222,7 @@ filegroup(
 )
     """,
     sha256 = "b456887b2e4cb4a2dec22e7842ec10850ea8b99b78dcdbb3dcd20892e1aab266",
-    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/tarball/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
+    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
 http_archive(
