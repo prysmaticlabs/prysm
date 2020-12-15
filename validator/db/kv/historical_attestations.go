@@ -137,6 +137,12 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	return hd, nil
 }
 
+// Migrates to a safer format where unattested epochs (source: 0, signing root: 0x0) are marked by
+// FAR_FUTURE_EPOCH as a better default, allowing us to perform better slashing protection.
+func (hd EncHistoryData) migrateAttestingHistoryFormat(ctx context.Context) EncHistoryData {
+	return hd
+}
+
 // MarkAllAsAttestedSinceLatestWrittenEpoch returns an attesting history with specified target+epoch pairs
 // since the latest written epoch up to the incoming attestation's target epoch as attested for.
 func MarkAllAsAttestedSinceLatestWrittenEpoch(

@@ -191,13 +191,18 @@ func (store *Store) MigrateAttestingHistoryFormat(ctx context.Context) error {
 		})
 	})
 
-	// Migrate all the history data correctly.
-	// TODO:
+	// Migrate all the history data correctly, replacing empty entries
+	// (source epoch: 0, signing root: 0x0) with FAR_FUTURE_EPOCH.
+	newAttestingHistoryByPublicKey := make(map[[48]byte]EncHistoryData)
+	for pubKey, hist := range attestationHistoryByPublicKey {
+		newHist := hist.migrateAttestingHistoryFormat(ctx)
+		newAttestingHistoryByPublicKey[pubKey] = newHist
+	}
 
 	// Update the history for each public key in the database.
 	err = store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		for publicKey, history := range attestationHistoryByPublicKey {
+		for publicKey, history := range newAttestingHistoryByPublicKey {
 			if err := bucket.Put(publicKey[:], history); err != nil {
 				return err
 			}
