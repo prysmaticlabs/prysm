@@ -2,7 +2,6 @@
 package params
 
 import (
-	"sync"
 	"time"
 
 	"github.com/mohae/deepcopy"
@@ -120,12 +119,9 @@ type BeaconChainConfig struct {
 }
 
 var beaconConfig = MainnetConfig()
-var lock sync.RWMutex
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
-	lock.RLock()
-	defer lock.RUnlock()
 	return beaconConfig
 }
 
@@ -134,8 +130,6 @@ func BeaconConfig() *BeaconChainConfig {
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
 // return this new configuration.
 func OverrideBeaconConfig(c *BeaconChainConfig) {
-	lock.Lock()
-	defer lock.Unlock()
 	beaconConfig = c
 }
 

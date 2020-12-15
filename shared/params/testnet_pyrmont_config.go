@@ -18,8 +18,6 @@ func UsePyrmontNetworkConfig() {
 // UsePyrmontConfig sets the main beacon chain
 // config for Pyrmont.
 func UsePyrmontConfig() {
-	lock.Lock()
-	defer lock.Unlock()
 	beaconConfig = PyrmontConfig()
 }
 
