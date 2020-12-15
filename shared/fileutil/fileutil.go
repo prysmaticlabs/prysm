@@ -177,7 +177,7 @@ func CopyDir(src, dst string) error {
 	return nil
 }
 
-// DirsEqual compares whether two directories have the same content.
+// DirsEqual checks whether two directories have the same content.
 func DirsEqual(src, dst string) bool {
 	hash1, err := HashDir(src)
 	if err != nil {
