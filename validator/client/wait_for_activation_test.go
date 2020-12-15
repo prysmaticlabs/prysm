@@ -148,7 +148,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		nil,
 	)
 	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
-	require.LogsContain(t, hook, "Validator activated")
+	assert.LogsContain(t, hook, "Validator activated")
 }
 
 func TestWaitForActivation_Exiting(t *testing.T) {
@@ -182,7 +182,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
+	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
 }
 
 func TestWaitForActivation_RefetchKeys(t *testing.T) {
@@ -226,5 +226,72 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	)
 	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
+	assert.LogsContain(t, hook, "Validator activated")
+}
+
+// Regression test for a scenario where you start with an inactive key and then import an active key.
+func TestWaitForActivation_AccountsChanged(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	inactivePrivKey, err := bls.RandKey()
+	require.NoError(t, err)
+	inactivePubKey := [48]byte{}
+	copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
+	activePrivKey, err := bls.RandKey()
+	require.NoError(t, err)
+	activePubKey := [48]byte{}
+	copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			inactivePubKey: inactivePrivKey,
+		},
+	}
+	v := validator{
+		validatorClient: client,
+		keyManager:      km,
+		genesisTime:     1,
+	}
+
+	inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
+	inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
+	inactiveClientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&ethpb.ValidatorActivationRequest{
+			PublicKeys: [][]byte{inactivePubKey[:]},
+		},
+	).Return(inactiveClientStream, nil)
+	inactiveClientStream.EXPECT().Recv().Return(
+		inactiveResp,
+		nil,
+	).AnyTimes()
+
+	activeResp := generateMockStatusResponse([][]byte{inactivePubKey[:], activePubKey[:]})
+	activeResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
+	activeResp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
+	activeClientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&ethpb.ValidatorActivationRequest{
+			PublicKeys: [][]byte{inactivePubKey[:], activePubKey[:]},
+		},
+	).Return(activeClientStream, nil)
+	activeClientStream.EXPECT().Recv().Return(
+		activeResp,
+		nil,
+	)
+
+	channel := make(chan struct{})
+	go func() {
+		// We add the active key into the keymanager and simulate a key refresh.
+		time.Sleep(time.Second * 1)
+		km.keysMap[activePubKey] = activePrivKey
+		channel <- struct{}{}
+	}()
+
+	assert.NoError(t, v.WaitForActivation(context.Background(), channel))
+	assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 	assert.LogsContain(t, hook, "Validator activated")
 }
