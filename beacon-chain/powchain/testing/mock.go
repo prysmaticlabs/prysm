@@ -100,7 +100,7 @@ func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.Head
 			chosenTime = t
 		}
 	}
-	return chosenNumber, nil
+	return &types.HeaderInfo{Number: chosenNumber}, nil
 }
 
 // DepositRoot --
