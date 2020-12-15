@@ -71,7 +71,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 	for {
 		select {
 		case <-accountsChangedChan:
-			// a
+			// Accounts (keys) changed, restart the process.
 			return v.WaitForActivation(ctx, accountsChangedChan)
 		default:
 			res, err := stream.Recv()
@@ -79,7 +79,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			// If context is canceled we stop the loop.
+			// If context is canceled we return from the function.
 			if ctx.Err() == context.Canceled {
 				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 			}
