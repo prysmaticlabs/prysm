@@ -93,14 +93,18 @@ func (s *Store) stateSummaryBytes(ctx context.Context, blockRoot [32]byte) ([]by
 // This saves all cached state summary objects to DB, and clears up the cache.
 func (s *Store) saveCachedStateSummariesDB(ctx context.Context) error {
 	summaries := s.stateSummaryCache.getAll()
+	encs := make([][]byte, len(summaries))
+	for i, s := range summaries {
+		enc, err := encode(ctx, s)
+		if err != nil {
+			return err
+		}
+		encs[i] = enc
+	}
 	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
-		for _, s := range summaries {
-			enc, err := encode(ctx, s)
-			if err != nil {
-				return err
-			}
-			if err := bucket.Put(s.Root, enc); err != nil {
+		for i, s := range summaries {
+			if err := bucket.Put(s.Root, encs[i]); err != nil {
 				return err
 			}
 		}
