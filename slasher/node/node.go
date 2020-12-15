@@ -89,14 +89,14 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		stop:                  make(chan struct{}),
 	}
 
+	if err := slasher.startDB(); err != nil {
+		return nil, err
+	}
+
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := slasher.registerPrometheusService(cliCtx); err != nil {
 			return nil, err
 		}
-	}
-
-	if err := slasher.startDB(); err != nil {
-		return nil, err
 	}
 
 	if err := slasher.registerBeaconClientService(); err != nil {

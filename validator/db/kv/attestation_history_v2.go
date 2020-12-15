@@ -16,7 +16,7 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		bucket := tx.Bucket(historicAttestationsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			pubKeyBytes := [48]byte{}
 			copy(pubKeyBytes[:], key)
@@ -42,7 +42,7 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 	var err error
 	var attestationHistory EncHistoryData
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		bucket := tx.Bucket(historicAttestationsBucket)
 		enc := bucket.Get(publicKey[:])
 		if len(enc) == 0 {
 			attestationHistory = NewAttestationHistoryArray(0)
@@ -63,7 +63,7 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKe
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
 	defer span.End()
 	err := store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		bucket := tx.Bucket(historicAttestationsBucket)
 		return bucket.Put(pubKey[:], history)
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
