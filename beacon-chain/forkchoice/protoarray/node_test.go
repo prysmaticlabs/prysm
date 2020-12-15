@@ -7,34 +7,34 @@ import (
 )
 
 func TestNode_Getters(t *testing.T) {
-	s := uint64(100)
-	r := [32]byte{'a'}
-	p := uint64(10)
-	j := uint64(20)
-	f := uint64(30)
-	w := uint64(10000)
-	bc := uint64(5)
-	bd := uint64(4)
-	g := [32]byte{'b'}
+	slot := uint64(100)
+	root := [32]byte{'a'}
+	parent := uint64(10)
+	jEpoch := uint64(20)
+	fEpoch := uint64(30)
+	weight := uint64(10000)
+	bestChild := uint64(5)
+	bestDescendant := uint64(4)
+	graffiti := [32]byte{'b'}
 	n := &Node{
-		slot:           s,
-		root:           r,
-		parent:         p,
-		justifiedEpoch: j,
-		finalizedEpoch: f,
-		weight:         w,
-		bestChild:      bc,
-		bestDescendant: bd,
-		graffiti:       g,
+		slot:           slot,
+		root:           root,
+		parent:         parent,
+		justifiedEpoch: jEpoch,
+		finalizedEpoch: fEpoch,
+		weight:         weight,
+		bestChild:      bestChild,
+		bestDescendant: bestDescendant,
+		graffiti:       graffiti,
 	}
 
-	require.Equal(t, s, n.Slot())
-	require.Equal(t, r, n.Root())
-	require.Equal(t, p, n.Parent())
-	require.Equal(t, j, n.JustifiedEpoch())
-	require.Equal(t, f, n.FinalizedEpoch())
-	require.Equal(t, w, n.Weight())
-	require.Equal(t, bc, n.BestChild())
-	require.Equal(t, bd, n.BestDescendant())
-	require.Equal(t, g, n.Graffiti())
+	require.Equal(t, slot, n.Slot())
+	require.Equal(t, root, n.Root())
+	require.Equal(t, parent, n.Parent())
+	require.Equal(t, jEpoch, n.JustifiedEpoch())
+	require.Equal(t, fEpoch, n.FinalizedEpoch())
+	require.Equal(t, weight, n.Weight())
+	require.Equal(t, bestChild, n.BestChild())
+	require.Equal(t, bestDescendant, n.BestDescendant())
+	require.Equal(t, graffiti, n.Graffiti())
 }
