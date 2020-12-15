@@ -80,7 +80,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	}
 	if selectedDirExists {
 		// No need not move anything, destination directory already exists.
-		log.Warnf("Outdated data directory is found: %q! The current data folder %q is not empty, "+
+		log.Warnf("Outdated data directory is found: %s! The current data folder %s is not empty, "+
 			"so can not copy files automatically. Either remove outdated data directory, or "+
 			"consider specifying non-existent new data directory (files will be moved automatically).\n"+
 			"For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.",
@@ -92,8 +92,8 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 		return nil
 	}
 
-	log.Warnf("Outdated data directory is found: %q. "+
-		"Copying its contents to the new data folder: %q", prevDataDir, curDataDir)
+	log.Warnf("Outdated data directory is found: %s. "+
+		"Copying its contents to the new data folder: %s", prevDataDir, curDataDir)
 	if err := fileutil.CopyDir(prevDataDir, curDataDir); err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	actionText := "The outdated directory is copied and not needed anymore, so should be deleted. " +
 		"Directory %s and its contents will be removed - do you want to proceed? (Y/N)"
 	deniedText := "Outdated directory will not be deleted. No changes have been made."
-	removeConfirmed, err := ConfirmAction(actionText, deniedText)
+	removeConfirmed, err := ConfirmAction(fmt.Sprintf(actionText, prevDataDir), deniedText)
 	if err != nil {
 		return err
 	}
