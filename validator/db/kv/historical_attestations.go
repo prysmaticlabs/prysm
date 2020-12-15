@@ -141,12 +141,11 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 // Migrates to a safer format where unattested epochs (source: 0, signing root: 0x0) are marked by
 // FAR_FUTURE_EPOCH as a better default, allowing us to perform better slashing protection.
 func markUnattestedEpochsCorrectly(hd EncHistoryData) (EncHistoryData, error) {
-	// Ensure the length is divisible by HISTORY_SIZE chunks.
-	if len(hd)%historySize != 0 {
-		return nil, errors.New("attesting history has malformed size")
+	if err := hd.assertSize(); err != nil {
+		return nil, err
 	}
 	// Navigate the history data by HISTORY_SIZE chunks.
-	for i := 0; i < len(hd); i += historySize {
+	for i := latestEpochWrittenSize; i < len(hd); i += historySize {
 		sourceEpoch := bytesutil.FromBytes8(hd[i : i+sourceSize])
 		signingRoot := make([]byte, 32)
 		copy(signingRoot, hd[i+sourceSize:i+historySize])

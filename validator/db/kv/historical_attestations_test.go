@@ -175,7 +175,7 @@ func Test_markUnattestedEpochsCorrectly(t *testing.T) {
 	h1 := NewAttestationHistoryArray(0)
 	sr1 := [32]byte{}
 	copy(sr1[:], "1")
-	h2, err := oldSetHistoryAtTarget(h1, 1, &HistoryData{
+	h2, err := oldSetHistoryAtTarget(h1, 0, &HistoryData{
 		Source:      0,
 		SigningRoot: sr1[:],
 	})
