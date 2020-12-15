@@ -3,6 +3,7 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -11,7 +12,7 @@ import (
 
 // SetupDB instantiates and returns database backed by key value store.
 func SetupDB(t testing.TB) db.Database {
-	s, err := kv.NewKVStore(t.TempDir())
+	s, err := kv.NewKVStore(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

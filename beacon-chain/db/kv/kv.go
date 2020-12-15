@@ -45,12 +45,13 @@ type Store struct {
 	blockCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
 	stateSummaryCache   *stateSummaryCache
+	ctx                 context.Context
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 	hasDir, err := fileutil.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -93,6 +94,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 		blockCache:          blockCache,
 		validatorIndexCache: validatorCache,
 		stateSummaryCache:   newStateSummaryCache(),
+		ctx:                 ctx,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
@@ -149,8 +151,7 @@ func (s *Store) Close() error {
 	prometheus.Unregister(createBoltCollector(s.db))
 
 	// Before DB closes, we should dump the cached state summary objects to DB.
-	// Using context background here because db store doesn't have access to parent context.
-	if err := s.saveCachedStateSummariesDB(context.Background()); err != nil {
+	if err := s.saveCachedStateSummariesDB(s.ctx); err != nil {
 		return err
 	}
 

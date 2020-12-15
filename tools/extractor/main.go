@@ -23,7 +23,7 @@ func main() {
 	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")
-	d, err := db.NewDB(*datadir)
+	d, err := db.NewDB(context.Background(), *datadir)
 	if err != nil {
 		panic(err)
 	}

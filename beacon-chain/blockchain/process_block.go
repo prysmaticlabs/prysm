@@ -336,7 +336,15 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
 func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.BeaconState) error {
-	if postState.Slot() >= s.nextEpochBoundarySlot {
+	if postState.Slot() == s.nextEpochBoundarySlot-1 {
+		// Update caches for the next epoch at epoch boundary slot - 1.
+		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
+			return err
+		}
+		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.NextEpoch(postState)); err != nil {
+			return err
+		}
+	} else if postState.Slot() >= s.nextEpochBoundarySlot {
 		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
 			return err
 		}
@@ -345,7 +353,9 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err != nil {
 			return err
 		}
-		// Update committees cache at epoch boundary slot.
+
+		// Update caches at epoch boundary slot.
+		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
 		}
@@ -353,6 +363,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 			return err
 		}
 	}
+
 	return nil
 }
 

@@ -55,7 +55,7 @@ func init() {
 
 	var err error
 
-	db1, err = db.NewDB(dbPath)
+	db1, err = db.NewDB(context.Background(), dbPath)
 	if err != nil {
 		panic(err)
 	}
