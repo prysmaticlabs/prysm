@@ -33,7 +33,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
@@ -88,7 +88,7 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 0,
@@ -153,7 +153,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 200,
@@ -216,7 +216,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 0,
@@ -272,7 +272,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 }
 
 func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
 		parentRoot := [32]byte{}
@@ -527,7 +527,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 }
 
 func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	hook := logTest.NewGlobal()
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
@@ -737,7 +737,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 	t.Run("process normal range", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
-		d, _ := db.SetupDB(t)
+		d := db.SetupDB(t)
 
 		p1.Connect(p2)
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
@@ -768,7 +768,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 	t.Run("process non linear blocks", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
-		d, _ := db.SetupDB(t)
+		d := db.SetupDB(t)
 
 		p1.Connect(p2)
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
@@ -803,7 +803,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 	t.Run("process non linear blocks with 2nd bad batch", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
-		d, _ := db.SetupDB(t)
+		d := db.SetupDB(t)
 
 		p1.Connect(p2)
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
@@ -838,7 +838,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 	t.Run("only return finalized blocks", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
-		d, _ := db.SetupDB(t)
+		d := db.SetupDB(t)
 
 		p1.Connect(p2)
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
@@ -878,7 +878,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 	t.Run("reject duplicate and non canonical blocks", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
-		d, _ := db.SetupDB(t)
+		d := db.SetupDB(t)
 
 		p1.Connect(p2)
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")

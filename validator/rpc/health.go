@@ -7,6 +7,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetBeaconNodeConnection retrieves the current beacon node connection
@@ -44,4 +46,14 @@ func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.Log
 		BeaconLogsEndpoint:    beaconLogsEndpoint + "/logs",
 		ValidatorLogsEndpoint: fmt.Sprintf("%s:%d/logs", s.validatorMonitoringHost, s.validatorMonitoringPort),
 	}, nil
+}
+
+// StreamBeaconLogs --
+func (s *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+	return status.Error(codes.Unimplemented, "unimplemented")
+}
+
+// StreamValidatorLogs --
+func (s *Server) StreamValidatorLogs(_ *ptypes.Empty, stream pb.Health_StreamValidatorLogsServer) error {
+	return status.Error(codes.Unimplemented, "unimplemented")
 }

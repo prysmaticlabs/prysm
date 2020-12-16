@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
@@ -21,7 +20,7 @@ func main() {
 
 	fmt.Printf("Reading db at %s and writing ssz output to %s.\n", os.Args[1], os.Args[2])
 
-	d, err := db.NewDB(context.Background(), os.Args[1], cache.NewStateSummaryCache())
+	d, err := db.NewDB(context.Background(), os.Args[1])
 	if err != nil {
 		panic(err)
 	}

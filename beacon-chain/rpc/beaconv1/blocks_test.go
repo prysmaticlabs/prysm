@@ -63,7 +63,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb
 }
 
 func TestServer_GetBlockHeader(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -160,7 +160,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 }
 
 func TestServer_ListBlockHeaders(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -241,7 +241,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 }
 
 func TestServer_ProposeBlock_OK(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -281,7 +281,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 }
 
 func TestServer_GetBlock(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -394,7 +394,7 @@ func TestServer_GetBlock(t *testing.T) {
 }
 
 func TestServer_GetBlockRoot(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
@@ -497,7 +497,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 }
 
 func TestServer_ListBlockAttestations(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	_, blkContainers := fillDBTestBlocks(ctx, t, db)
