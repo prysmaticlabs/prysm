@@ -19,29 +19,29 @@ func (s *Server) GetBeaconStatus(ctx context.Context, _ *ptypes.Empty) (*pb.Beac
 func (s *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "unimplemented")
+	return s.beaconChainClient.GetValidatorParticipation(ctx, req)
 }
 
 func (s *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "unimplemented")
+	return s.beaconChainClient.GetValidatorPerformance(ctx, req)
 }
 
 func (s *Server) GetValidatorBalances(
 	ctx context.Context, req *ethpb.ListValidatorBalancesRequest,
 ) (*ethpb.ValidatorBalances, error) {
-	return nil, status.Error(codes.Unimplemented, "unimplemented")
+	return s.beaconChainClient.ListValidatorBalances(ctx, req)
 }
 
 func (s *Server) GetValidatorQueue(
-	ctx context.Context, _ *ptypes.Empty,
+	ctx context.Context, req *ptypes.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	return nil, status.Error(codes.Unimplemented, "unimplemented")
+	return s.beaconChainClient.GetValidatorQueue(ctx, req)
 }
 
 func (s *Server) GetPeers(
-	ctx context.Context, _ *ptypes.Empty,
+	ctx context.Context, req *ptypes.Empty,
 ) (*ethpb.Peers, error) {
-	return nil, status.Error(codes.Unimplemented, "unimplemented")
+	return s.beaconNodeClient.ListPeers(ctx, req)
 }

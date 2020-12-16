@@ -10,6 +10,7 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -55,6 +56,8 @@ type Config struct {
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
+	beaconChainClient       ethpb.BeaconChainClient
+	beaconNodeClient        ethpb.NodeClient
 	valDB                   db.Database
 	ctx                     context.Context
 	cancel                  context.CancelFunc
