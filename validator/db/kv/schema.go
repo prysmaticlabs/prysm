@@ -19,4 +19,7 @@ var (
 
 	// Genesis validators root bucket key.
 	genesisValidatorsRootKey = []byte("genesis-val-root")
+
+	// Migrations
+	migrationsBucket = []byte("migrations")
 )
