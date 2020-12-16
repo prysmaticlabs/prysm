@@ -90,6 +90,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 						TargetEpoch: "9",
 					},
 				},
+				SignedBlocks: make([]*protectionFormat.SignedBlock, 0),
 			},
 		},
 	}
