@@ -35,10 +35,11 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 	defer span.End()
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
 		store.lock.Lock()
-		defer store.lock.Unlock()
 		if history, ok := store.attestingHistoriesByPubKey[publicKey]; ok {
+			store.lock.Unlock()
 			return history, nil
 		}
+		store.lock.Unlock()
 	}
 	var err error
 	var attestationHistory EncHistoryData
@@ -57,7 +58,9 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		return nil
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.lock.Lock()
 		store.attestingHistoriesByPubKey[publicKey] = attestationHistory
+		store.lock.Unlock()
 	}
 	return attestationHistory, err
 }
