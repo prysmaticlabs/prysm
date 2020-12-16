@@ -61,17 +61,16 @@ func MockSlashingProtectionJSON(
 // MockAttestingAndProposalHistories given a number of validators, creates mock attesting
 // and proposing histories within WEAK_SUBJECTIVITY_PERIOD bounds.
 func MockAttestingAndProposalHistories(
-	pubKeys [][48]byte, highestEpoch int,
+	pubKeys [][48]byte, numberOfProposals, numberOfAttestations int,
 ) (map[[48]byte]kv.EncHistoryData, map[[48]byte]kv.ProposalHistoryForPubkey, error) {
 	attData := make(map[[48]byte]kv.EncHistoryData, len(pubKeys))
 	proposalData := make(map[[48]byte]kv.ProposalHistoryForPubkey, len(pubKeys))
 	ctx := context.Background()
 	for v := 0; v < len(pubKeys); v++ {
 		var err error
-		latestTarget := highestEpoch
-		hd := kv.NewAttestationHistoryArray(uint64(latestTarget))
+		hd := kv.NewAttestationHistoryArray(uint64(numberOfAttestations))
 		proposals := make([]kv.Proposal, 0)
-		for i := 1; i <= latestTarget; i++ {
+		for i := 1; i <= numberOfAttestations; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
@@ -84,7 +83,7 @@ func MockAttestingAndProposalHistories(
 				return nil, nil, err
 			}
 		}
-		for i := 1; i <= latestTarget; i++ {
+		for i := 1; i <= numberOfProposals; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
@@ -94,7 +93,7 @@ func MockAttestingAndProposalHistories(
 			})
 		}
 		proposalData[pubKeys[v]] = kv.ProposalHistoryForPubkey{Proposals: proposals}
-		hd, err = hd.SetLatestEpochWritten(ctx, uint64(latestTarget))
+		hd, err = hd.SetLatestEpochWritten(ctx, uint64(numberOfAttestations))
 		if err != nil {
 			return nil, nil, err
 		}
