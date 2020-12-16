@@ -672,7 +672,7 @@ func TestHasIndexedAttestation(t *testing.T) {
 	for _, tt := range tests {
 		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt)
 		require.NoError(t, err)
-		require.Equal(t, false, exists, "Has indexed attestation should return false for indexed attestations that are not in db")
+		require.Equal(t, false, exists, "has indexed attestation should return false for indexed attestations that are not in db")
 
 		require.NoError(t, db.SaveIndexedAttestation(ctx, tt.idxAtt), "Save indexed attestation failed")
 	}

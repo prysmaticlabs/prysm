@@ -14,10 +14,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -39,7 +37,6 @@ import (
 const topic = p2p.BlockSubnetTopicFormat
 
 var db1 db.Database
-var ssc *cache.StateSummaryCache
 var dbPath = path.Join(os.TempDir(), "fuzz_beacondb", randomHex(6))
 
 func randomHex(n int) string {
@@ -56,11 +53,9 @@ func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	ssc = cache.NewStateSummaryCache()
-
 	var err error
 
-	db1, err = db.NewDB(context.Background(), dbPath, ssc)
+	db1, err = db.NewDB(context.Background(), dbPath)
 	if err != nil {
 		panic(err)
 	}
@@ -117,7 +112,7 @@ func BeaconFuzzBlock(b []byte) {
 	setupDB()
 
 	p2p := p2pt.NewFuzzTestP2P()
-	sgen := stategen.New(db1, ssc)
+	sgen := stategen.New(db1)
 	sn := &testing.MockStateNotifier{}
 	bn := &testing.MockBlockNotifier{}
 	an := &testing.MockOperationNotifier{}
@@ -158,7 +153,6 @@ func BeaconFuzzBlock(b []byte) {
 		AttPool:             ap,
 		ExitPool:            ep,
 		SlashingPool:        sp,
-		StateSummaryCache:   ssc,
 		StateGen:            sgen,
 	})
 

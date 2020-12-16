@@ -13,7 +13,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -96,7 +95,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	att := &ethpb.Attestation{
@@ -124,7 +123,6 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		attPool:              attestations.NewPool(),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 		chain:                &mock.ChainService{},
 	}
 	err = r.initCaches()
@@ -148,7 +146,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -194,7 +192,6 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -233,7 +230,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -298,7 +295,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -364,7 +361,6 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -386,7 +382,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 }
 
 func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -453,7 +449,6 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -492,7 +487,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 
 func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -557,7 +552,6 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -579,7 +573,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -645,7 +639,6 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)

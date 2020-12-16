@@ -35,7 +35,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
@@ -99,7 +99,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
@@ -159,7 +159,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		BeaconDB:        beaconDB,
@@ -207,7 +207,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
@@ -278,7 +278,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
@@ -365,7 +365,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	kvStore, _ := testDB.SetupDB(t)
+	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
@@ -458,7 +458,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	kvStore, _ := testDB.SetupDB(t)
+	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
@@ -561,7 +561,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
@@ -647,7 +647,7 @@ func TestConsistentGenesisState(t *testing.T) {
 	t.Skip("Incorrect test setup")
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service := newPowchainService(t, testAcc, beaconDB)
 
 	testAcc.Backend.Commit()
@@ -689,7 +689,7 @@ func TestConsistentGenesisState(t *testing.T) {
 	}
 
 	// New db to prevent registration error.
-	newBeaconDB, _ := testDB.SetupDB(t)
+	newBeaconDB := testDB.SetupDB(t)
 
 	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
 	go newWeb3Service.run(ctx.Done())
@@ -707,7 +707,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	s := newPowchainService(t, testAcc, beaconDB)
 	s.checkForChainstart([32]byte{}, nil, 0)
 	require.LogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")

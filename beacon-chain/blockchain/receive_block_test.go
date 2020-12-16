@@ -117,7 +117,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, stateSummaryCache := testDB.SetupDB(t)
+			db := testDB.SetupDB(t)
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 			require.NoError(t, db.SaveState(ctx, genesis, genesisBlockRoot))
 
@@ -131,7 +131,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				AttPool:       attestations.NewPool(),
 				ExitPool:      voluntaryexits.NewPool(),
 				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
-				StateGen:      stategen.New(db, stateSummaryCache),
+				StateGen:      stategen.New(db),
 			}
 			s, err := NewService(ctx, cfg)
 			require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
-	db, stateSummaryCache := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, db.SaveState(ctx, genesis, genesisBlockRoot))
 	cfg := &Config{
@@ -172,7 +172,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		AttPool:       attestations.NewPool(),
 		ExitPool:      voluntaryexits.NewPool(),
 		StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
-		StateGen:      stategen.New(db, stateSummaryCache),
+		StateGen:      stategen.New(db),
 	}
 	s, err := NewService(ctx, cfg)
 	require.NoError(t, err)
@@ -242,7 +242,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, stateSummaryCache := testDB.SetupDB(t)
+			db := testDB.SetupDB(t)
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 
 			cfg := &Config{
@@ -253,7 +253,7 @@ func TestService_ReceiveBlockInitialSync(t *testing.T) {
 					genesisBlockRoot,
 				),
 				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
-				StateGen:      stategen.New(db, stateSummaryCache),
+				StateGen:      stategen.New(db),
 			}
 			s, err := NewService(ctx, cfg)
 			require.NoError(t, err)
@@ -323,7 +323,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, stateSummaryCache := testDB.SetupDB(t)
+			db := testDB.SetupDB(t)
 			genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
 			require.NoError(t, err)
 			cfg := &Config{
@@ -334,7 +334,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 					genesisBlockRoot,
 				),
 				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
-				StateGen:      stategen.New(db, stateSummaryCache),
+				StateGen:      stategen.New(db),
 			}
 			s, err := NewService(ctx, cfg)
 			require.NoError(t, err)
@@ -375,9 +375,9 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
-	db, stateSummaryCache := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db)})
 	require.NoError(t, err)
 	st := params.BeaconConfig().SlotsPerEpoch * uint64(epochsSinceFinalitySaveHotStateDB)
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
@@ -388,9 +388,9 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
-	db, stateSummaryCache := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db)})
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
@@ -401,9 +401,9 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
-	db, stateSummaryCache := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db, stateSummaryCache)})
+	s, err := NewService(context.Background(), &Config{StateGen: stategen.New(db)})
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 10000000}
 	s.genesisTime = time.Now()
