@@ -34,12 +34,12 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeyV2")
 	defer span.End()
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
-		store.lock.Lock()
+		store.lock.RLock()
 		if history, ok := store.attestingHistoriesByPubKey[publicKey]; ok {
-			store.lock.Unlock()
+			store.lock.RUnlock()
 			return history, nil
 		}
-		store.lock.Unlock()
+		store.lock.RUnlock()
 	}
 	var err error
 	var attestationHistory EncHistoryData
