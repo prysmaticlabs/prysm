@@ -38,7 +38,7 @@ type node struct {
 
 func main() {
 	flag.Parse()
-	db, err := db.NewDB(*datadir, cache.NewStateSummaryCache())
+	db, err := db.NewDB(context.Background(), *datadir, cache.NewStateSummaryCache())
 	if err != nil {
 		panic(err)
 	}
