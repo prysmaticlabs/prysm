@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"sort"
+	"strings"
 )
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
@@ -79,6 +80,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	for _, item := range dataByPubKey {
 		dataList = append(dataList, item)
 	}
+	sort.Slice(dataList, func(i, j int) bool {
+		return strings.Compare(dataList[i].Pubkey, dataList[j].Pubkey) < 0
+	})
 	interchangeJSON.Data = dataList
 	return interchangeJSON, nil
 }
