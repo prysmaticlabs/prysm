@@ -40,7 +40,7 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 }
 
 func TestNodeServer_GetGenesis(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	addr := common.Address{1, 2, 3}
 	require.NoError(t, db.SaveDepositContractAddress(ctx, addr))

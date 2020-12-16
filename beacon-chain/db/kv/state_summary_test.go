@@ -38,3 +38,26 @@ func TestStateSummary_CanSaveRretrieve(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, s2, saved, "State summary does not equal")
 }
+
+func TestStateSummary_CacheToDB(t *testing.T) {
+	db := setupDB(t)
+
+	summaries := make([]*pb.StateSummary, stateSummaryCachePruneCount-1)
+	for i := range summaries {
+		summaries[i] = &pb.StateSummary{Slot: uint64(i), Root: bytesutil.PadTo(bytesutil.Uint64ToBytesLittleEndian(uint64(i)), 32)}
+	}
+
+	require.NoError(t, db.SaveStateSummaries(context.Background(), summaries))
+	require.Equal(t, db.stateSummaryCache.len(), stateSummaryCachePruneCount-1)
+
+	require.NoError(t, db.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1000, Root: []byte{'a', 'b'}}))
+	require.Equal(t, db.stateSummaryCache.len(), stateSummaryCachePruneCount)
+
+	require.NoError(t, db.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1001, Root: []byte{'c', 'd'}}))
+	require.Equal(t, db.stateSummaryCache.len(), 1)
+
+	for i := range summaries {
+		r := bytesutil.Uint64ToBytesLittleEndian(uint64(i))
+		require.Equal(t, true, db.HasStateSummary(context.Background(), bytesutil.ToBytes32(r)))
+	}
+}

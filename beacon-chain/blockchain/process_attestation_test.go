@@ -21,12 +21,12 @@ import (
 
 func TestStore_OnAttestation(t *testing.T) {
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB:        db,
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
-		StateGen:        stategen.New(db, sc),
+		StateGen:        stategen.New(db),
 	}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
@@ -130,11 +130,11 @@ func TestStore_OnAttestation(t *testing.T) {
 
 func TestStore_SaveCheckpointState(t *testing.T) {
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(db),
 	}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
@@ -201,11 +201,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 func TestStore_UpdateCheckpointState(t *testing.T) {
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(db),
 	}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
@@ -242,7 +242,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -254,7 +254,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -266,7 +266,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 
 func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -279,7 +279,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 
 func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -295,7 +295,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -313,7 +313,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 
 func TestVerifyBeaconBlock_OK(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -331,7 +331,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
@@ -355,7 +355,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
@@ -379,7 +379,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 
 func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
@@ -406,7 +406,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 
 func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
@@ -433,7 +433,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 
 func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
