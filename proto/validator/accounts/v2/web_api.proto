@@ -54,8 +54,8 @@ service Beacon {
         };
     }
     rpc GetValidatorParticipation(
-    ethereum.eth.v1alpha1.GetValidatorParticipationRequest
-        ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
+        ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+    ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/participation"
         };

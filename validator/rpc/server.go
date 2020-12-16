@@ -148,6 +148,9 @@ func (s *Server) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
+	// Register a gRPC client to the beacon node.
+	s.registerBeaconClient()
+
 	// We create a new, random JWT key upon validator startup.
 	jwtKey, err := createRandomJWTKey()
 	if err != nil {
@@ -160,6 +163,7 @@ func (s *Server) Start() {
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
 	pb.RegisterHealthServer(s.grpcServer, s)
+	pb.RegisterBeaconServer(s.grpcServer, s)
 	pb.RegisterAccountsServer(s.grpcServer, s)
 
 	go func() {
