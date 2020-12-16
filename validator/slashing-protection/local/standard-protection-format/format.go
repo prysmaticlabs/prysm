@@ -3,7 +3,10 @@
 // is critical to allow safe interoperability between eth2 clients.
 package interchangeformat
 
-import "github.com/sirupsen/logrus"
+import (
+	"encoding/json"
+	"github.com/sirupsen/logrus"
+)
 
 var log = logrus.WithField("prefix", "slashing-protection-format")
 
@@ -41,4 +44,24 @@ type SignedAttestation struct {
 type SignedBlock struct {
 	Slot        string `json:"slot"`
 	SigningRoot string `json:"signing_root,omitempty"`
+}
+
+// MarshalJSON initializes nil slices and then marshals the bag to JSON
+func (p ProtectionData) MarshalJSON() ([]byte, error) {
+	type Alias ProtectionData
+
+	a := struct {
+		Alias
+	}{
+		Alias: (Alias)(p),
+	}
+
+	if a.SignedBlocks == nil {
+		a.SignedBlocks = make([]*SignedBlock, 0)
+	}
+	if a.SignedAttestations == nil {
+		a.SignedAttestations = make([]*SignedAttestation, 0)
+	}
+
+	return json.Marshal(a)
 }
