@@ -2,13 +2,14 @@ syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/descriptor.proto";
+import "eth/v1alpha1/options.proto";
 
 message Status {
-  bytes fork_digest = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
-  bytes finalized_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes fork_digest = 1 [(ethereum.eth.v1alpha1.ssz_size) = "4"];
+  bytes finalized_root = 2 [(ethereum.eth.v1alpha1.ssz_size) = "32"];
   uint64 finalized_epoch = 3;
-  bytes head_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes head_root = 4 [(ethereum.eth.v1alpha1.ssz_size) = "32"];
   uint64 head_slot = 5;
 }
 
@@ -19,8 +20,8 @@ message BeaconBlocksByRangeRequest {
 }
 
 message ENRForkID {
-  bytes current_fork_digest = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
-  bytes next_fork_version = 2 [(gogoproto.moretags) = "ssz-size:\"4\""];
+  bytes current_fork_digest = 1 [(ethereum.eth.v1alpha1.ssz_size) = "4"];
+  bytes next_fork_version = 2 [(ethereum.eth.v1alpha1.ssz_size) = "4"];
   uint64 next_fork_epoch = 3;
 }
 /*
@@ -32,6 +33,6 @@ message ENRForkID {
  )
 */
 message MetaData {
-  uint64 seq_number =1;
-  bytes attnets = 2 [(gogoproto.moretags) = "ssz-size:\"8\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector64"];
+  uint64 seq_number = 1;
+  bytes attnets = 2 [(ethereum.eth.v1alpha1.ssz_size) = "8", (ethereum.eth.v1alpha1.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector64"];
 }

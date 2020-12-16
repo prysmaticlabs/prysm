@@ -11,7 +11,6 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:timestamp_proto",
-        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",  # gazelle:keep
     ],
 )
 
@@ -21,6 +20,12 @@ go_proto_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/testing",
     proto = ":testing_proto",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_golang_protobuf//ptypes/timestamp:go_default_library",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+    ]
 )
 
 go_library(

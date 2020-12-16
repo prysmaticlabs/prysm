@@ -3,7 +3,6 @@ package ethereum.validator.accounts.v2;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
