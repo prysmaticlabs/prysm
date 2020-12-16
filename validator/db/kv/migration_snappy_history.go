@@ -9,7 +9,6 @@ import (
 
 var migrationSnappyAttestationHistory0Key = []byte("snappy_attestation_history_0")
 
-
 // Migrate the attestation history data to use snappy compression on disk. This paradigm will
 // significantly reduce disk I/O at the cost of a slightly increased CPU usage. Early benchmarks and
 // tests indicate that this compression saves 25% on disk I/O and storage.
@@ -31,4 +30,3 @@ func migrateSnappyAttestationHistory(tx *bolt.Tx) error {
 
 	return mb.Put(migrationSnappyAttestationHistory0Key, migrationCompleted)
 }
-

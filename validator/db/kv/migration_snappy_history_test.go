@@ -19,7 +19,7 @@ func Test_migrateSnappyAttestationHistory(t *testing.T) {
 			name: "only runs once",
 			setup: func(t *testing.T, db *bolt.DB) {
 				if err := db.Update(func(tx *bolt.Tx) error {
-					if err := tx.Bucket(historicAttestationsBucket).Put([]byte("foo"), []byte{1,1,1,1,1,1,1,1,1}); err != nil {
+					if err := tx.Bucket(historicAttestationsBucket).Put([]byte("foo"), []byte{1, 1, 1, 1, 1, 1, 1, 1, 1}); err != nil {
 						return err
 					}
 					return tx.Bucket(migrationsBucket).Put(migrationSnappyAttestationHistory0Key, migrationCompleted)
@@ -30,7 +30,7 @@ func Test_migrateSnappyAttestationHistory(t *testing.T) {
 			eval: func(t *testing.T, db *bolt.DB) {
 				if err := db.View(func(tx *bolt.Tx) error {
 					data := tx.Bucket(historicAttestationsBucket).Get([]byte("foo"))
-					expected := []byte{1,1,1,1,1,1,1,1,1} // unchanged
+					expected := []byte{1, 1, 1, 1, 1, 1, 1, 1, 1} // unchanged
 					if !bytes.Equal(data, expected) {
 						t.Fatalf("expected data did not match reality. Got %x wanted %x", data, expected)
 					}
@@ -44,7 +44,7 @@ func Test_migrateSnappyAttestationHistory(t *testing.T) {
 			name: "compresses data",
 			setup: func(t *testing.T, db *bolt.DB) {
 				if err := db.Update(func(tx *bolt.Tx) error {
-					return tx.Bucket(historicAttestationsBucket).Put([]byte("foo"), []byte{1,1,1,1,1,1,1,1,1})
+					return tx.Bucket(historicAttestationsBucket).Put([]byte("foo"), []byte{1, 1, 1, 1, 1, 1, 1, 1, 1})
 				}); err != nil {
 					t.Fatal(err)
 				}
@@ -52,7 +52,7 @@ func Test_migrateSnappyAttestationHistory(t *testing.T) {
 			eval: func(t *testing.T, db *bolt.DB) {
 				if err := db.View(func(tx *bolt.Tx) error {
 					data := tx.Bucket(historicAttestationsBucket).Get([]byte("foo"))
-					expected := snappy.Encode(nil /*dst*/, []byte{1,1,1,1,1,1,1,1,1})
+					expected := snappy.Encode(nil /*dst*/, []byte{1, 1, 1, 1, 1, 1, 1, 1, 1})
 					if !bytes.Equal(data, expected) {
 						t.Fatalf("expected data did not match reality. Got %x wanted %x", data, expected)
 					}
