@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -30,7 +29,7 @@ import (
 )
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -71,7 +70,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Genesis(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -116,7 +115,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -154,7 +153,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -288,7 +287,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Errors(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{BeaconDB: db}
@@ -330,7 +329,7 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 }
 
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 
 	s := testutil.NewBeaconState()
 	require.NoError(t, s.SetSlot(1))
@@ -367,7 +366,7 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 }
 
 func TestServer_GetChainHead(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
@@ -432,7 +431,7 @@ func TestServer_GetChainHead(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -457,7 +456,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	params.UseMainnetConfig()
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
@@ -553,7 +552,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	chainService := &chainMock.ChainService{}
@@ -615,7 +614,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	params.UseMainnetConfig()
 
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState := testutil.NewBeaconState()
 	b := testutil.NewBeaconBlock()
@@ -630,7 +629,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 		BlockNotifier: chainService.BlockNotifier(),
 		HeadFetcher:   chainService,
 		BeaconDB:      db,
-		StateGen:      stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:      stategen.New(db),
 	}
 
 	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})
