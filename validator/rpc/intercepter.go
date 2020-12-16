@@ -25,6 +25,7 @@ var (
 		"/ethereum.validator.accounts.v2.Beacon/GetValidatorParticipation": true,
 		"/ethereum.validator.accounts.v2.Beacon/GetValidatorPerformance":   true,
 		"/ethereum.validator.accounts.v2.Beacon/GetValidatorBalances":      true,
+		"/ethereum.validator.accounts.v2.Beacon/GetValidators":             true,
 		"/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue":         true,
 		"/ethereum.validator.accounts.v2.Beacon/GetPeers":                  true,
 	}
