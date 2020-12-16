@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -32,11 +34,84 @@ func DefaultDataDir() string {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2")
 		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "Eth2")
+			return filepath.Join(home, "AppData", "Local", "Eth2")
 		} else {
 			return filepath.Join(home, ".eth2")
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later
 	return ""
+}
+
+// FixDefaultDataDir checks if previous data directory is found and can be migrated to a new path.
+// This is used to resolve issue with weak default path (for Windows users) in existing installations.
+// For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.
+func FixDefaultDataDir(prevDataDir, curDataDir string) error {
+	if runtime.GOOS != "windows" {
+		return nil
+	}
+
+	// Clean paths.
+	prevDataDir, err := fileutil.ExpandPath(prevDataDir)
+	if err != nil {
+		return err
+	}
+	curDataDir, err = fileutil.ExpandPath(curDataDir)
+	if err != nil {
+		return err
+	}
+
+	// See if shared directory is found (if it is -- we need to move it to non-shared destination).
+	prevDataDirExists, err := fileutil.HasDir(prevDataDir)
+	if err != nil {
+		return err
+	}
+	if !prevDataDirExists {
+		// If no previous "%APPDATA%\Eth2" found, nothing to patch and move to new default location.
+		return nil
+	}
+
+	if curDataDir == "" {
+		curDataDir = DefaultDataDir()
+	}
+	selectedDirExists, err := fileutil.HasDir(curDataDir)
+	if err != nil {
+		return err
+	}
+	if selectedDirExists {
+		// No need not move anything, destination directory already exists.
+		log.Warnf("Outdated data directory is found: %s! The current data folder %s is not empty, "+
+			"so can not copy files automatically. Either remove outdated data directory, or "+
+			"consider specifying non-existent new data directory (files will be moved automatically).\n"+
+			"For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.",
+			prevDataDir, curDataDir)
+		return nil
+	}
+
+	if curDataDir == prevDataDir {
+		return nil
+	}
+
+	log.Warnf("Outdated data directory is found: %s. "+
+		"Copying its contents to the new data folder: %s", prevDataDir, curDataDir)
+	if err := fileutil.CopyDir(prevDataDir, curDataDir); err != nil {
+		return err
+	}
+	log.Infof("All files from the outdated data directory %s have been moved to %s.", prevDataDir, curDataDir)
+
+	// If directories match, previous data directory can be safely deleted.
+	actionText := "The outdated directory is copied and not needed anymore, so should be deleted. " +
+		"Directory %s and its contents will be removed - do you want to proceed? (Y/N)"
+	deniedText := "Outdated directory will not be deleted. No changes have been made."
+	removeConfirmed, err := ConfirmAction(fmt.Sprintf(actionText, prevDataDir), deniedText)
+	if err != nil {
+		return err
+	}
+	if removeConfirmed && fileutil.DirsEqual(prevDataDir, curDataDir) {
+		if err := os.RemoveAll(prevDataDir); err != nil {
+			return fmt.Errorf("cannot remove outdated directory or one of its files: %w", err)
+		}
+		log.Infof("Successfully removed %s", prevDataDir)
+	}
+	return nil
 }
