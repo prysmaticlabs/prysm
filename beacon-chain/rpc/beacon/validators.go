@@ -506,7 +506,7 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, err
 	}
-	// Keep look back until there's a canonical slot.
+	// Keep looking back until there's a canonical slot.
 	for i := int(startSlot - 1); !canonical && i >= 0; i-- {
 		canonical, err = bs.isSlotCanonical(ctx, uint64(i))
 		if err != nil {
