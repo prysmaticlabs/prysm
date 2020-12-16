@@ -3,7 +3,9 @@
 // is critical to allow safe interoperability between eth2 clients.
 package interchangeformat
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+)
 
 var log = logrus.WithField("prefix", "slashing-protection-format")
 
