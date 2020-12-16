@@ -626,6 +626,7 @@ func (b *BeaconNode) registerRPCService() error {
 		PeerManager:             p2pService,
 		ChainInfoFetcher:        chainService,
 		HeadFetcher:             chainService,
+		CanonicalFetcher:        chainService,
 		ForkFetcher:             chainService,
 		FinalizationFetcher:     chainService,
 		BlockReceiver:           chainService,
