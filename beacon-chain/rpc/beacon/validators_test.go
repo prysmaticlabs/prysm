@@ -1428,7 +1428,7 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 		StateGen: stategen.New(db),
 	}
 
-	wanted := "Could not get state: unknown state"
+	wanted := "failed to initialize precompute: nil inner state"
 	_, err := bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
