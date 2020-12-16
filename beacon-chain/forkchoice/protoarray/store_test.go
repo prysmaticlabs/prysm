@@ -51,8 +51,8 @@ func TestStore_Nodes(t *testing.T) {
 
 func TestStore_NodesIndices(t *testing.T) {
 	nodeIndices := map[[32]byte]uint64{
-		[32]byte{'a'}: 1,
-		[32]byte{'b'}: 2,
+		{'a'}: 1,
+		{'b'}: 2,
 	}
 	s := &Store{
 		nodesIndices: nodeIndices,
@@ -62,8 +62,8 @@ func TestStore_NodesIndices(t *testing.T) {
 
 func TestForkChoice_HasNode(t *testing.T) {
 	nodeIndices := map[[32]byte]uint64{
-		[32]byte{'a'}: 1,
-		[32]byte{'b'}: 2,
+		{'a'}: 1,
+		{'b'}: 2,
 	}
 	s := &Store{
 		nodesIndices: nodeIndices,
@@ -74,8 +74,8 @@ func TestForkChoice_HasNode(t *testing.T) {
 
 func TestForkChoice_Store(t *testing.T) {
 	nodeIndices := map[[32]byte]uint64{
-		[32]byte{'a'}: 1,
-		[32]byte{'b'}: 2,
+		{'a'}: 1,
+		{'b'}: 2,
 	}
 	s := &Store{
 		nodesIndices: nodeIndices,
