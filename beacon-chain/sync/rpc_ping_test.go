@@ -35,7 +35,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,
@@ -90,7 +90,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,
@@ -151,7 +151,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,

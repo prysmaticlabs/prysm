@@ -31,7 +31,7 @@ import (
 //    \- b3
 // Test b1 was missing then received and we can process b0 -> b1 -> b2
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 
 	p1 := p2ptest.NewTestP2P(t)
 	r := &Service{
@@ -44,8 +44,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
-		stateGen:            stategen.New(db, stateSummaryCache),
+		stateGen:            stategen.New(db),
 	}
 	err := r.initCaches()
 	require.NoError(t, err)
@@ -92,7 +91,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 }
 
 func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 
 	p1 := p2ptest.NewTestP2P(t)
 	r := &Service{
@@ -141,7 +140,7 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 //    \- b3 - b4
 // Test b2 and b3 were missed, after receiving them we can process 2 chains.
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -173,8 +172,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
-		stateGen:            stategen.New(db, stateSummaryCache),
+		stateGen:            stategen.New(db),
 	}
 	err := r.initCaches()
 	require.NoError(t, err)
@@ -247,7 +245,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 }
 
 func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -331,7 +329,7 @@ func TestService_sortedPendingSlots(t *testing.T) {
 }
 
 func TestService_BatchRootRequest(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)

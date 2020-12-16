@@ -11,7 +11,7 @@ import (
 )
 
 func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 32

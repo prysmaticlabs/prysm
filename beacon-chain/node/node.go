@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -61,22 +60,21 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx            *cli.Context
-	ctx               context.Context
-	services          *shared.ServiceRegistry
-	lock              sync.RWMutex
-	stop              chan struct{} // Channel to wait for termination notifications.
-	db                db.Database
-	stateSummaryCache *cache.StateSummaryCache
-	attestationPool   attestations.Pool
-	exitPool          *voluntaryexits.Pool
-	slashingsPool     *slashings.Pool
-	depositCache      *depositcache.DepositCache
-	stateFeed         *event.Feed
-	blockFeed         *event.Feed
-	opFeed            *event.Feed
-	forkChoiceStore   forkchoice.ForkChoicer
-	stateGen          *stategen.State
+	cliCtx          *cli.Context
+	ctx             context.Context
+	services        *shared.ServiceRegistry
+	lock            sync.RWMutex
+	stop            chan struct{} // Channel to wait for termination notifications.
+	db              db.Database
+	attestationPool attestations.Pool
+	exitPool        *voluntaryexits.Pool
+	slashingsPool   *slashings.Pool
+	depositCache    *depositcache.DepositCache
+	stateFeed       *event.Feed
+	blockFeed       *event.Feed
+	opFeed          *event.Feed
+	forkChoiceStore forkchoice.ForkChoicer
+	stateGen        *stategen.State
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -156,17 +154,16 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		cliCtx:            cliCtx,
-		ctx:               cliCtx.Context,
-		services:          registry,
-		stop:              make(chan struct{}),
-		stateFeed:         new(event.Feed),
-		blockFeed:         new(event.Feed),
-		opFeed:            new(event.Feed),
-		attestationPool:   attestations.NewPool(),
-		exitPool:          voluntaryexits.NewPool(),
-		slashingsPool:     slashings.NewPool(),
-		stateSummaryCache: cache.NewStateSummaryCache(),
+		cliCtx:          cliCtx,
+		ctx:             cliCtx.Context,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		blockFeed:       new(event.Feed),
+		opFeed:          new(event.Feed),
+		attestationPool: attestations.NewPool(),
+		exitPool:        voluntaryexits.NewPool(),
+		slashingsPool:   slashings.NewPool(),
 	}
 
 	if err := beacon.startDB(cliCtx); err != nil {
@@ -297,7 +294,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath, b.stateSummaryCache)
+	d, err := db.NewDB(b.ctx, dbPath)
 	if err != nil {
 		return err
 	}
@@ -319,7 +316,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath, b.stateSummaryCache)
+		d, err = db.NewDB(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -341,7 +338,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 }
 
 func (b *BeaconNode) startStateGen() {
-	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
+	b.stateGen = stategen.New(b.db)
 }
 
 func readbootNodes(fileName string) ([]string, error) {
@@ -548,7 +545,6 @@ func (b *BeaconNode) registerSyncService() error {
 		AttPool:             b.attestationPool,
 		ExitPool:            b.exitPool,
 		SlashingPool:        b.slashingsPool,
-		StateSummaryCache:   b.stateSummaryCache,
 		StateGen:            b.stateGen,
 	})
 

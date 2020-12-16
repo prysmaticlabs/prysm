@@ -31,7 +31,7 @@ func pubKey(i uint64) []byte {
 }
 
 func TestGetDuties_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -102,7 +102,7 @@ func TestGetDuties_OK(t *testing.T) {
 }
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -145,7 +145,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(64)
@@ -209,7 +209,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestStreamDuties_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -268,7 +268,7 @@ func TestStreamDuties_OK(t *testing.T) {
 }
 
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -359,7 +359,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
-	db, _ := dbutil.SetupDB(b)
+	db := dbutil.SetupDB(b)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)

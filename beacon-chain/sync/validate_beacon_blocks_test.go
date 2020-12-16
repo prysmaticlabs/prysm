@@ -14,7 +14,6 @@ import (
 	gcache "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -40,7 +39,7 @@ import (
 
 func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	msg := testutil.NewBeaconBlock()
 	msg.Block.Slot = 1
 	msg.Block.ParentRoot = testutil.Random32Bytes(t)
@@ -81,7 +80,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	ctx := context.Background()
 
 	p := p2ptest.NewTestP2P(t)
@@ -96,14 +95,13 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
-		db:                db,
-		p2p:               p,
-		initialSync:       &mockSync.Sync{IsSyncing: false},
-		chain:             chainService,
-		seenBlockCache:    c,
-		badBlockCache:     c2,
-		stateSummaryCache: cache.NewStateSummaryCache(),
-		blockNotifier:     chainService.BlockNotifier(),
+		db:             db,
+		p2p:            p,
+		initialSync:    &mockSync.Sync{IsSyncing: false},
+		chain:          chainService,
+		seenBlockCache: c,
+		badBlockCache:  c2,
+		blockNotifier:  chainService.BlockNotifier(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -122,7 +120,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -146,7 +144,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 	require.NoError(t, err)
 	c2, err := lru.New(10)
 	require.NoError(t, err)
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -164,7 +162,6 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
@@ -183,7 +180,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -208,7 +205,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	require.NoError(t, err)
 	c2, err := lru.New(10)
 	require.NoError(t, err)
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -226,7 +223,6 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
@@ -245,7 +241,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -273,7 +269,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	require.NoError(t, err)
 	c2, err := lru.New(10)
 	require.NoError(t, err)
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -289,7 +285,6 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
@@ -308,7 +303,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -336,7 +331,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	require.NoError(t, err)
 	c2, err := lru.New(10)
 	require.NoError(t, err)
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -352,8 +347,8 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
-		stateGen:            stateGen,
+
+		stateGen: stateGen,
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -371,7 +366,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
@@ -409,7 +404,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
@@ -454,7 +449,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	p := p2ptest.NewTestP2P(t)
@@ -502,7 +497,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -542,7 +537,6 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -563,7 +557,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	parent := testutil.NewBeaconBlock()
@@ -622,7 +616,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -647,7 +641,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	require.NoError(t, err)
 	c2, err := lru.New(10)
 	require.NoError(t, err)
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -666,7 +660,6 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
@@ -684,7 +677,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -714,7 +707,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	require.NoError(t, err)
 	c2, err := lru.New(10)
 	require.NoError(t, err)
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -730,7 +723,6 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
@@ -771,7 +763,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 }
 
 func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
-	db, stateSummaryCache := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
@@ -813,7 +805,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	c2, err := lru.New(10)
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{
 		Genesis: time.Unix(genesisTime.Unix()-int64(slotsSinceGenesis*perSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -830,7 +822,6 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateSummaryCache:   stateSummaryCache,
 		stateGen:            stateGen,
 	}
 

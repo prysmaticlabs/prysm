@@ -7,7 +7,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/extractor",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/state/interop:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",

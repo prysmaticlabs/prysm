@@ -96,7 +96,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, _ := dbtest.SetupDB(t)
+			db := dbtest.SetupDB(t)
 			s := &Service{
 				chain: &chainMock.ChainService{
 					DB:   db,
