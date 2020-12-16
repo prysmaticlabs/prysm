@@ -11,7 +11,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -32,7 +31,7 @@ import (
 
 func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -46,7 +45,6 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 		chainStarted:         abool.New(),
 	}
 
@@ -58,7 +56,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 
 func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
 	testutil.ResetCache()
@@ -119,7 +117,6 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 			}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 		seenAttestationCache: c,
 	}
 
@@ -142,7 +139,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 }
 
 func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 
 	r := &Service{
@@ -151,7 +148,6 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 		chain:                &mock.ChainService{Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	priv, err := bls.RandKey()
@@ -235,7 +231,6 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 			}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 		seenAttestationCache: c,
 	}
 
@@ -247,7 +242,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
 	testutil.ResetCache()
@@ -312,7 +307,6 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 			}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 		seenAttestationCache: c,
 	}
 
