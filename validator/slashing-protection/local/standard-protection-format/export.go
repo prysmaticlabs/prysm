@@ -78,6 +78,12 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	// Next we turn our map into a slice as expected by the EIP-3076 JSON standard.
 	dataList := make([]*ProtectionData, 0)
 	for _, item := range dataByPubKey {
+		if item.SignedAttestations == nil {
+			item.SignedAttestations = make([]*SignedAttestation, 0)
+		}
+		if item.SignedBlocks == nil {
+			item.SignedBlocks = make([]*SignedBlock, 0)
+		}
 		dataList = append(dataList, item)
 	}
 	sort.Slice(dataList, func(i, j int) bool {
