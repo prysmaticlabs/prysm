@@ -110,6 +110,13 @@ func (s *Server) GetValidatorBalances(
 	return s.beaconChainClient.ListValidatorBalances(ctx, req)
 }
 
+// GetValidators is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+func (s *Server) GetValidators(
+	ctx context.Context, req *ethpb.ListValidatorsRequest,
+) (*ethpb.Validators, error) {
+	return s.beaconChainClient.ListValidators(ctx, req)
+}
+
 // GetValidatorQueue is a wrapper around the /eth/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidatorQueue(
 	ctx context.Context, req *ptypes.Empty,
