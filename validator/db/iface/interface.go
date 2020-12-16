@@ -19,6 +19,7 @@ type ValidatorDB interface {
 	backuputil.BackupExporter
 	DatabasePath() string
 	ClearDB() error
+	RunMigrations(ctx context.Context) error
 	UpdatePublicKeysBuckets(publicKeys [][48]byte) error
 
 	// Genesis information related methods.

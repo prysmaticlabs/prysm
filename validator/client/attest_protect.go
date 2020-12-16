@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	attestinghistory "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/attesting-history"
 	"go.opencensus.io/trace"
@@ -29,6 +30,22 @@ func (v *validator) slashableAttestationCheck(
 	defer span.End()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	attesterHistory, err := v.db.AttestationHistoryForPubKeyV2(ctx, pubKey)
+	if err != nil {
+		return errors.Wrap(err, "could not get attester history")
+	}
+	if attesterHistory == nil {
+		return nil
+	}
+	historicalAttestation, err := attesterHistory.GetTargetData(ctx, indexedAtt.Data.Target.Epoch)
+	if err != nil {
+		return err
+	}
+	var prevSigningRoot [32]byte
+	if !historicalAttestation.IsEmpty() {
+		copy(prevSigningRoot[:], historicalAttestation.SigningRoot)
+	}
+	signingRootIsDifferent := prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot
 
 	// Based on EIP3076, validator should refuse to sign any attestation with source epoch less
 	// than the minimum source epoch present in that signer’s attestations.
@@ -45,14 +62,14 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return err
 	}
-	if exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
-		return fmt.Errorf("could not sign attestation lower than lowest target epoch in db, %d >= %d", lowestTargetEpoch, indexedAtt.Data.Target.Epoch)
+	if exists && signingRootIsDifferent && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
+		return fmt.Errorf(
+			"could not sign attestation lower than or equal to lowest target epoch in db, %d >= %d",
+			lowestTargetEpoch,
+			indexedAtt.Data.Target.Epoch,
+		)
 	}
 
-	attesterHistory, err := v.db.AttestationHistoryForPubKeyV2(ctx, pubKey)
-	if err != nil {
-		return errors.Wrap(err, "could not get attester history")
-	}
 	slashable, err := attestinghistory.IsNewAttSlashable(
 		ctx,
 		attesterHistory,
@@ -69,9 +86,8 @@ func (v *validator) slashableAttestationCheck(
 		}
 		return errors.New(failedAttLocalProtectionErr)
 	}
-	newHistory, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(
+	newHistory, err := attesterHistory.SetTargetData(
 		ctx,
-		attesterHistory,
 		indexedAtt.Data.Target.Epoch,
 		&kv.HistoryData{
 			Source:      indexedAtt.Data.Source.Epoch,
@@ -80,6 +96,10 @@ func (v *validator) slashableAttestationCheck(
 	)
 	if err != nil {
 		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
+	}
+	newHistory, err = newHistory.SetLatestEpochWritten(ctx, indexedAtt.Data.Target.Epoch)
+	if err != nil {
+		return err
 	}
 	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory, indexedAtt); err != nil {
 		return errors.Wrapf(err, "could not save attestation history for public key: %#x", pubKey)

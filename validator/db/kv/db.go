@@ -105,6 +105,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
 			slashablePublicKeysBucket,
+			migrationsBucket,
 		)
 	}); err != nil {
 		return nil, err
