@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"go.opencensus.io/trace"
@@ -40,6 +41,7 @@ type Validator interface {
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
+	GetKeymanager() keymanager.IKeymanager
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -72,12 +74,8 @@ func run(ctx context.Context, v Validator) {
 		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
 
-	val, ok := v.(*validator)
-	if !ok {
-		log.Fatalf("Could not wait for validator activation: could not instantiate validator")
-	}
 	accountsChangedChan := make(chan struct{})
-	go val.handleAccountsChanged(ctx, accountsChangedChan)
+	go handleAccountsChanged(ctx, v, accountsChangedChan)
 	if err := v.WaitForActivation(ctx, accountsChangedChan); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
@@ -185,23 +183,21 @@ func handleAssignmentError(err error, slot uint64) {
 	}
 }
 
-func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedChan chan struct{}) {
+func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan struct{}) {
 	validatingPubKeysChan := make(chan [][48]byte, 1)
 	var sub event.Subscription
-	importedKeymanager, ok := v.keyManager.(*imported.Keymanager)
-	if ok {
-		sub = importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	} else {
-		derivedKeymanager, ok := v.keyManager.(*derived.Keymanager)
-		if ok {
-			sub = derivedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-		} else {
-			return
-		}
+	switch km := v.GetKeymanager().(type) {
+	case *imported.Keymanager:
+		sub = km.SubscribeAccountChanges(validatingPubKeysChan)
+	case *derived.Keymanager:
+		sub = km.SubscribeAccountChanges(validatingPubKeysChan)
+	default:
+		return
 	}
 
 	defer func() {
 		sub.Unsubscribe()
+		close(validatingPubKeysChan)
 	}()
 	for {
 		select {
