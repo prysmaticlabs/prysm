@@ -47,9 +47,11 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		enc := bucket.Get(publicKey[:])
 		if len(enc) == 0 {
 			attestationHistory = NewAttestationHistoryArray(0)
-		} else if data, err := snappy.Decode(nil /*dst*/, enc); err != nil {
-			return err
 		} else {
+			data, err := snappy.Decode(nil /*dst*/, enc)
+			if err != nil {
+				return err
+			}
 			attestationHistory = data
 		}
 		return nil
@@ -66,7 +68,7 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKe
 	defer span.End()
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
-		enc := snappy.Encode(nil/*dst*/, history)
+		enc := snappy.Encode(nil /*dst*/, history)
 		return bucket.Put(pubKey[:], enc)
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
