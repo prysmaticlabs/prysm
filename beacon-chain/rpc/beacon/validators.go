@@ -501,16 +501,18 @@ func (bs *Server) GetValidatorParticipation(
 	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
 	// This ensures that we don't miss previous attestations when input requested epochs.
 	startSlot += params.BeaconConfig().SlotsPerEpoch - 1
-	// The slot should be a canonical slot.
+	// The start slot should be a canonical slot.
 	canonical, err := bs.isSlotCanonical(ctx, startSlot)
 	if err != nil {
 		return nil, err
 	}
-	for ; !canonical && startSlot >= 0; startSlot-- {
-		canonical, err = bs.isSlotCanonical(ctx, startSlot)
+	// Keep look back until there's a canonical slot.
+	for i := int(startSlot - 1); !canonical && i >= 0; i-- {
+		canonical, err = bs.isSlotCanonical(ctx, uint64(i))
 		if err != nil {
 			return nil, err
 		}
+		startSlot = uint64(i)
 	}
 
 	state, err := bs.StateGen.StateBySlot(ctx, startSlot)
@@ -853,6 +855,9 @@ func (bs *Server) GetIndividualVotes(
 	}, nil
 }
 
+// isSlotCanonical returns true if the input slot has a canonical block in the chain,
+// if the input slot has a skip block, false is returned,
+// if the input slot has more than one block, an error is returned.
 func (bs *Server) isSlotCanonical(ctx context.Context, slot uint64) (bool, error) {
 	filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
 	roots, err := bs.BeaconDB.BlockRoots(ctx, filter)
