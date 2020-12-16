@@ -42,13 +42,17 @@ func IsNewAttSlashable(
 	if err != nil {
 		return false, errors.Wrapf(err, "could not get target data for epoch: %d", targetEpoch)
 	}
-	if !hd.IsEmpty() && !bytes.Equal(signingRoot[:], hd.SigningRoot) {
-		log.WithFields(logrus.Fields{
-			"signingRoot":                   fmt.Sprintf("%#x", signingRoot),
-			"targetEpoch":                   targetEpoch,
-			"previouslyAttestedSigningRoot": fmt.Sprintf("%#x", hd.SigningRoot),
-		}).Warn("Attempted to submit a double vote, but blocked by slashing protection")
-		return true, nil
+	if !hd.IsEmpty() {
+		signingRootIsDifferent := bytes.Equal(hd.SigningRoot, params.BeaconConfig().ZeroHash[:]) ||
+			!bytes.Equal(hd.SigningRoot, signingRoot[:])
+		if signingRootIsDifferent {
+			log.WithFields(logrus.Fields{
+				"signingRoot":                   fmt.Sprintf("%#x", signingRoot),
+				"targetEpoch":                   targetEpoch,
+				"previouslyAttestedSigningRoot": fmt.Sprintf("%#x", hd.SigningRoot),
+			}).Warn("Attempted to submit a double vote, but blocked by slashing protection")
+			return true, nil
+		}
 	}
 
 	isSurround, err := isSurroundVote(ctx, history, latestEpochWritten, sourceEpoch, targetEpoch)
