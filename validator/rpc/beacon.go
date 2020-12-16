@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"strings"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -11,12 +12,11 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/client"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 func (s *Server) registerBeaconClient() error {
@@ -58,7 +58,20 @@ func (s *Server) registerBeaconClient() error {
 }
 
 func (s *Server) GetBeaconStatus(ctx context.Context, _ *ptypes.Empty) (*pb.BeaconStatusResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "unimplemented")
+	genesis, err := s.genesisFetcher.GenesisInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	genesisTime := uint64(time.Unix(genesis.GenesisTime.Seconds, 0).Unix())
+	address := genesis.DepositContractAddress
+	return &pb.BeaconStatusResponse{
+		BeaconNodeEndpoint:     s.beaconClientEndpoint,
+		Connected:              false,
+		Syncing:                false,
+		GenesisTime:            genesisTime,
+		DepositContractAddress: address,
+		ChainHead:              nil,
+	}, nil
 }
 
 func (s *Server) GetValidatorParticipation(
