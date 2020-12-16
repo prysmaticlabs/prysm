@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 
+	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	bolt "go.etcd.io/bbolt"
@@ -47,8 +48,11 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		if len(enc) == 0 {
 			attestationHistory = NewAttestationHistoryArray(0)
 		} else {
-			attestationHistory = make(EncHistoryData, len(enc))
-			copy(attestationHistory, enc)
+			data, err := snappy.Decode(nil /*dst*/, enc)
+			if err != nil {
+				return err
+			}
+			attestationHistory = data
 		}
 		return nil
 	})
@@ -64,7 +68,8 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKe
 	defer span.End()
 	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
-		return bucket.Put(pubKey[:], history)
+		enc := snappy.Encode(nil /*dst*/, history)
+		return bucket.Put(pubKey[:], enc)
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
 		store.lock.Lock()
