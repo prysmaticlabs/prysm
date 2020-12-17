@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -63,7 +62,7 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 
 var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
-func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummaryCache) *Service {
+func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Service
@@ -106,7 +105,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
-		StateGen:          stategen.New(beaconDB, sc),
+		StateGen:          stategen.New(beaconDB),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
 		OpsService:        opsService,
 	}
@@ -124,9 +123,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db, sc)
+	chainService := setupBeaconChain(t, db)
 
 	genesisBlk := testutil.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
@@ -153,9 +152,9 @@ func TestChainStartStop_Initialized(t *testing.T) {
 func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db, sc)
+	chainService := setupBeaconChain(t, db)
 
 	genesisBlk := testutil.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
@@ -178,10 +177,10 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {
 	helpers.ClearCache()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	bc := setupBeaconChain(t, db, sc)
+	bc := setupBeaconChain(t, db)
 	var err error
 
 	// Set up 10 deposits pre chain start for validators to register
@@ -221,9 +220,9 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 
 func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db, sc)
+	chainService := setupBeaconChain(t, db)
 
 	genesisBlk := testutil.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
@@ -247,7 +246,7 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 }
 
 func TestChainService_InitializeChainInfo(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	ctx := context.Background()
 
 	genesis := testutil.NewBeaconBlock()
@@ -269,7 +268,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, db.SaveBlock(ctx, headBlock))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: helpers.SlotToEpoch(finalizedSlot), Root: headRoot[:]}))
-	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
+	c := &Service{beaconDB: db, stateGen: stategen.New(db)}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	headBlk, err := c.HeadBlock(ctx)
 	require.NoError(t, err)
@@ -287,7 +286,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 }
 
 func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	ctx := context.Background()
 
 	genesis := testutil.NewBeaconBlock()
@@ -308,7 +307,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, headRoot))
 	require.NoError(t, db.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, db.SaveBlock(ctx, headBlock))
-	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
+	c := &Service{beaconDB: db, stateGen: stategen.New(db)}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
@@ -328,7 +327,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 
 	hook := logTest.NewGlobal()
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	ctx := context.Background()
 
 	genesisBlock := testutil.NewBeaconBlock()
@@ -364,7 +363,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}))
 
-	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
+	c := &Service{beaconDB: db, stateGen: stategen.New(db)}
 
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err := c.HeadState(ctx)
@@ -399,11 +398,11 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 }
 
 func TestChainService_SaveHeadNoDB(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &Service{
 		beaconDB: db,
-		stateGen: stategen.New(db, sc),
+		stateGen: stategen.New(db),
 	}
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
@@ -422,7 +421,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 
 func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	s := &Service{
 		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
 		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -440,13 +439,13 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 
 func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	s := &Service{
 		ctx:            ctx,
 		cancel:         cancel,
 		beaconDB:       db,
 		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
-		stateGen:       stategen.New(db, cache.NewStateSummaryCache()),
+		stateGen:       stategen.New(db),
 	}
 	b := testutil.NewBeaconBlock()
 	r, err := b.Block.HashTreeRoot()
@@ -456,27 +455,8 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
 }
 
-func TestServiceStop_SaveCachedStateSummaries(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	db, _ := testDB.SetupDB(t)
-	c := cache.NewStateSummaryCache()
-	s := &Service{
-		ctx:            ctx,
-		cancel:         cancel,
-		beaconDB:       db,
-		initSyncBlocks: make(map[[32]byte]*ethpb.SignedBeaconBlock),
-		stateGen:       stategen.New(db, c),
-	}
-
-	r := [32]byte{'a'}
-	ss := &pb.StateSummary{Root: r[:], Slot: 1}
-	c.Put(r, ss)
-	require.NoError(t, s.Stop())
-	require.Equal(t, true, s.beaconDB.HasStateSummary(ctx, r))
-}
-
 func BenchmarkHasBlockDB(b *testing.B) {
-	db, _ := testDB.SetupDB(b)
+	db := testDB.SetupDB(b)
 	ctx := context.Background()
 	s := &Service{
 		beaconDB: db,
@@ -494,7 +474,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 
 func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(b)
+	db := testDB.SetupDB(b)
 	s := &Service{
 		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
 		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},

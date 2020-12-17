@@ -108,28 +108,17 @@ func (s *State) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconStat
 	return s.loadStateBySlot(ctx, slot)
 }
 
-// StateSummaryExists returns true if the corresponding state summary of the input block root either
-// exists in the DB or in the cache.
-func (s *State) StateSummaryExists(ctx context.Context, blockRoot [32]byte) bool {
-	return s.stateSummaryCache.Has(blockRoot) || s.beaconDB.HasStateSummary(ctx, blockRoot)
-}
-
 // This returns the state summary object of a given block root, it first checks the cache
 // then checks the DB. An error is returned if state summary object is nil.
 func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	var summary *pb.StateSummary
 	var err error
-	if s.stateSummaryCache == nil {
-		return nil, errors.New("nil stateSummaryCache")
+
+	summary, err = s.beaconDB.StateSummary(ctx, blockRoot)
+	if err != nil {
+		return nil, err
 	}
-	if s.stateSummaryCache.Has(blockRoot) {
-		summary = s.stateSummaryCache.Get(blockRoot)
-	} else {
-		summary, err = s.beaconDB.StateSummary(ctx, blockRoot)
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	if summary == nil {
 		return s.RecoverStateSummary(ctx, blockRoot)
 	}

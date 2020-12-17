@@ -25,44 +25,44 @@ var _ TimeFetcher = (*Service)(nil)
 var _ ForkFetcher = (*Service)(nil)
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	db := testDB.SetupDB(t)
+	c := setupBeaconChain(t, db)
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], c.FinalizedCheckpt().Root, "Incorrect pre chain start value")
 }
 
 func TestHeadRoot_Nil(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	db := testDB.SetupDB(t)
+	c := setupBeaconChain(t, db)
 	headRoot, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], headRoot, "Incorrect pre chain start value")
 }
 
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, db, sc)
+	c := setupBeaconChain(t, db)
 	c.finalizedCheckpt = cp
 
 	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
 }
 
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db, sc)
+	c := setupBeaconChain(t, db)
 	c.finalizedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.FinalizedCheckpt().Root)
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	c := setupBeaconChain(t, db, sc)
+	c := setupBeaconChain(t, db)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c.justifiedCheckpt = cp
@@ -70,9 +70,9 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 }
 
 func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	c := setupBeaconChain(t, db, sc)
+	c := setupBeaconChain(t, db)
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c.justifiedCheckpt = cp
@@ -81,21 +81,21 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 }
 
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, db, sc)
+	c := setupBeaconChain(t, db)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	c.prevJustifiedCheckpt = cp
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
 
 func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
 	genesisRoot := [32]byte{'C'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db, sc)
+	c := setupBeaconChain(t, db)
 	c.prevJustifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.PreviousJustifiedCheckpt().Root)
@@ -118,7 +118,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadRoot_UseDB(t *testing.T) {
-	db, _ := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 	c := &Service{beaconDB: db}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := testutil.NewBeaconBlock()
@@ -195,8 +195,8 @@ func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadETH1Data_Nil(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	db := testDB.SetupDB(t)
+	c := setupBeaconChain(t, db)
 	assert.DeepEqual(t, &ethpb.Eth1Data{}, c.HeadETH1Data(), "Incorrect pre chain start value")
 }
 
@@ -213,8 +213,8 @@ func TestHeadETH1Data_CanRetrieve(t *testing.T) {
 
 func TestIsCanonical_Ok(t *testing.T) {
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db, sc)
+	db := testDB.SetupDB(t)
+	c := setupBeaconChain(t, db)
 
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 0

@@ -16,7 +16,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -62,7 +61,6 @@ type Config struct {
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
-	StateSummaryCache   *cache.StateSummaryCache
 	StateGen            *stategen.State
 }
 
@@ -113,7 +111,6 @@ type Service struct {
 	seenAttesterSlashingCache *lru.Cache
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
-	stateSummaryCache         *cache.StateSummaryCache
 	stateGen                  *stategen.State
 }
 
@@ -140,7 +137,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
-		stateSummaryCache:    cfg.StateSummaryCache,
 		stateGen:             cfg.StateGen,
 		rateLimiter:          rLimiter,
 	}

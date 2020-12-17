@@ -214,7 +214,7 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot, committeeID uint64, aggregat
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the
 // database or cache.
 func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
-	hasStateSummary := s.stateSummaryCache.Has(blockRoot) || s.db.HasStateSummary(ctx, blockRoot)
+	hasStateSummary := s.db.HasStateSummary(ctx, blockRoot)
 	hasState := hasStateSummary || s.db.HasState(ctx, blockRoot)
 	hasBlock := s.chain.HasInitSyncBlock(blockRoot) || s.db.HasBlock(ctx, blockRoot)
 	return hasState && hasBlock
