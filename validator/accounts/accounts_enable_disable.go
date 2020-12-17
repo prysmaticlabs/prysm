@@ -110,7 +110,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	}
 	disabledPublicKeys := importedKM.DisabledPublicKeys()
 	if len(disabledPublicKeys) == 0 {
-		return errors.New("no accounts are disabled.")
+		return errors.New("no accounts are disabled")
 	}
 	disabledPublicKeys48 := make([][48]byte, len(disabledPublicKeys))
 	for i := range disabledPublicKeys {
