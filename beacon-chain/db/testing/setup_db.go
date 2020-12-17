@@ -6,15 +6,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 )
 
 // SetupDB instantiates and returns database backed by key value store.
-func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
-	sc := cache.NewStateSummaryCache()
-	s, err := kv.NewKVStore(context.Background(), t.TempDir(), sc)
+func SetupDB(t testing.TB) db.Database {
+	s, err := kv.NewKVStore(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,5 +21,5 @@ func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
 			t.Fatalf("failed to close database: %v", err)
 		}
 	})
-	return s, sc
+	return s
 }

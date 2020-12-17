@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -24,7 +23,7 @@ func main() {
 	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")
-	d, err := db.NewDB(context.Background(), *datadir, cache.NewStateSummaryCache())
+	d, err := db.NewDB(context.Background(), *datadir)
 	if err != nil {
 		panic(err)
 	}
