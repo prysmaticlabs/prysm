@@ -13,6 +13,8 @@ import (
 
 func TestLoadConfigFileMainnet(t *testing.T) {
 	assertVals := func(name string, c1, c2 *BeaconChainConfig) {
+		// See https://media.githubusercontent.com/media/ethereum/eth2.0-spec-tests/master/tests/minimal/config/phase0.yaml
+
 		//  Misc params.
 		assert.Equal(t, c1.MaxCommitteesPerSlot, c2.MaxCommitteesPerSlot, "%s: MaxCommitteesPerSlot", name)
 		assert.Equal(t, c1.TargetCommitteeSize, c2.TargetCommitteeSize, "%s: TargetCommitteeSize", name)
@@ -40,6 +42,59 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 		assert.Equal(t, c1.DepositChainID, c2.DepositChainID, "%s: DepositChainID", name)
 		assert.Equal(t, c1.DepositNetworkID, c2.DepositNetworkID, "%s: DepositNetworkID", name)
 		assert.Equal(t, c1.DepositContractAddress, c2.DepositContractAddress, "%s: DepositContractAddress", name)
+
+		// Gwei values.
+		assert.Equal(t, c1.MinDepositAmount, c2.MinDepositAmount, "%s: MinDepositAmount", name)
+		assert.Equal(t, c1.MaxEffectiveBalance, c2.MaxEffectiveBalance, "%s: MaxEffectiveBalance", name)
+		assert.Equal(t, c1.EjectionBalance, c2.EjectionBalance, "%s: EjectionBalance", name)
+		assert.Equal(t, c1.EffectiveBalanceIncrement, c2.EffectiveBalanceIncrement, "%s: EffectiveBalanceIncrement", name)
+
+		// Initial values.
+		assert.DeepEqual(t, c1.GenesisForkVersion, c2.GenesisForkVersion, "%s: GenesisForkVersion", name)
+		assert.DeepEqual(t, c1.BLSWithdrawalPrefixByte, c2.BLSWithdrawalPrefixByte, "%s: BLSWithdrawalPrefixByte", name)
+
+		// Time parameters.
+		assert.Equal(t, c1.GenesisDelay, c2.GenesisDelay, "%s: GenesisDelay", name)
+		assert.Equal(t, c1.SecondsPerSlot, c2.SecondsPerSlot, "%s: SecondsPerSlot", name)
+		assert.Equal(t, c1.MinAttestationInclusionDelay, c2.MinAttestationInclusionDelay, "%s: MinAttestationInclusionDelay", name)
+		assert.Equal(t, c1.SlotsPerEpoch, c2.SlotsPerEpoch, "%s: SlotsPerEpoch", name)
+		assert.Equal(t, c1.MinSeedLookahead, c2.MinSeedLookahead, "%s: MinSeedLookahead", name)
+		assert.Equal(t, c1.MaxSeedLookahead, c2.MaxSeedLookahead, "%s: MaxSeedLookahead", name)
+		assert.Equal(t, c1.EpochsPerEth1VotingPeriod, c2.EpochsPerEth1VotingPeriod, "%s: EpochsPerEth1VotingPeriod", name)
+		assert.Equal(t, c1.SlotsPerHistoricalRoot, c2.SlotsPerHistoricalRoot, "%s: SlotsPerHistoricalRoot", name)
+		assert.Equal(t, c1.MinValidatorWithdrawabilityDelay, c2.MinValidatorWithdrawabilityDelay, "%s: MinValidatorWithdrawabilityDelay", name)
+		assert.Equal(t, c1.ShardCommitteePeriod, c2.ShardCommitteePeriod, "%s: ShardCommitteePeriod", name)
+		assert.Equal(t, c1.MinEpochsToInactivityPenalty, c2.MinEpochsToInactivityPenalty, "%s: MinEpochsToInactivityPenalty", name)
+
+		// State vector lengths.
+		assert.Equal(t, c1.EpochsPerHistoricalVector, c2.EpochsPerHistoricalVector, "%s: EpochsPerHistoricalVector", name)
+		assert.Equal(t, c1.EpochsPerSlashingsVector, c2.EpochsPerSlashingsVector, "%s: EpochsPerSlashingsVector", name)
+		assert.Equal(t, c1.HistoricalRootsLimit, c2.HistoricalRootsLimit, "%s: HistoricalRootsLimit", name)
+		assert.Equal(t, c1.ValidatorRegistryLimit, c2.ValidatorRegistryLimit, "%s: ValidatorRegistryLimit", name)
+
+		// Reward and penalty quotients.
+		assert.Equal(t, c1.BaseRewardFactor, c2.BaseRewardFactor, "%s: BaseRewardFactor", name)
+		assert.Equal(t, c1.WhistleBlowerRewardQuotient, c2.WhistleBlowerRewardQuotient, "%s: WhistleBlowerRewardQuotient", name)
+		assert.Equal(t, c1.ProposerRewardQuotient, c2.ProposerRewardQuotient, "%s: ProposerRewardQuotient", name)
+		assert.Equal(t, c1.InactivityPenaltyQuotient, c2.InactivityPenaltyQuotient, "%s: InactivityPenaltyQuotient", name)
+		assert.Equal(t, c1.MinSlashingPenaltyQuotient, c2.MinSlashingPenaltyQuotient, "%s: MinSlashingPenaltyQuotient", name)
+		assert.Equal(t, c1.ProportionalSlashingMultiplier, c2.ProportionalSlashingMultiplier, "%s: ProportionalSlashingMultiplier", name)
+
+		// Max operations per block.
+		assert.Equal(t, c1.MaxProposerSlashings, c2.MaxProposerSlashings, "%s: MaxProposerSlashings", name)
+		assert.Equal(t, c1.MaxAttesterSlashings, c2.MaxAttesterSlashings, "%s: MaxAttesterSlashings", name)
+		assert.Equal(t, c1.MaxAttestations, c2.MaxAttestations, "%s: MaxAttestations", name)
+		assert.Equal(t, c1.MaxDeposits, c2.MaxDeposits, "%s: MaxDeposits", name)
+		assert.Equal(t, c1.MaxVoluntaryExits, c2.MaxVoluntaryExits, "%s: MaxVoluntaryExits", name)
+
+		// Signature domains.
+		assert.Equal(t, c1.DomainBeaconProposer, c2.DomainBeaconProposer, "%s: DomainBeaconProposer", name)
+		assert.Equal(t, c1.DomainBeaconAttester, c2.DomainBeaconAttester, "%s: DomainBeaconAttester", name)
+		assert.Equal(t, c1.DomainRandao, c2.DomainRandao, "%s: DomainRandao", name)
+		assert.Equal(t, c1.DomainDeposit, c2.DomainDeposit, "%s: DomainDeposit", name)
+		assert.Equal(t, c1.DomainVoluntaryExit, c2.DomainVoluntaryExit, "%s: DomainVoluntaryExit", name)
+		assert.Equal(t, c1.DomainSelectionProof, c2.DomainSelectionProof, "%s: DomainSelectionProof", name)
+		assert.Equal(t, c1.DomainAggregateAndProof, c2.DomainAggregateAndProof, "%s: DomainAggregateAndProof", name)
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
