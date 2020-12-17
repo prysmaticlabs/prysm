@@ -7,34 +7,49 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestLoadConfigFile(t *testing.T) {
-	mainnetConfigFile := ConfigFilePath(t, "mainnet")
-	LoadChainConfigFile(mainnetConfigFile)
-	if BeaconConfig().MaxCommitteesPerSlot != MainnetConfig().MaxCommitteesPerSlot {
-		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
-			MainnetConfig().MaxCommitteesPerSlot,
-			BeaconConfig().MaxCommitteesPerSlot)
+func TestLoadConfigFileMainnet(t *testing.T) {
+	assertVals := func(name string, cfg1, cfg2 *BeaconChainConfig) {
+		//  Misc params.
+		assert.Equal(t, cfg1.MaxCommitteesPerSlot, cfg2.MaxCommitteesPerSlot, "MaxCommitteesPerSlot")
+		assert.Equal(t, cfg1.TargetCommitteeSize, cfg2.TargetCommitteeSize, "TargetCommitteeSize")
+		assert.Equal(t, cfg1.MaxValidatorsPerCommittee, cfg2.MaxValidatorsPerCommittee, "MaxValidatorsPerCommittee")
+		assert.Equal(t, cfg1.MinPerEpochChurnLimit, cfg2.MinPerEpochChurnLimit, "MinPerEpochChurnLimit")
+		assert.Equal(t, cfg1.ChurnLimitQuotient, cfg2.ChurnLimitQuotient, "ChurnLimitQuotient")
+		assert.Equal(t, cfg1.ShuffleRoundCount, cfg2.ShuffleRoundCount, "ShuffleRoundCount")
+		assert.Equal(t, cfg1.MinGenesisActiveValidatorCount, cfg2.MinGenesisActiveValidatorCount, "MinGenesisActiveValidatorCount")
+		assert.Equal(t, cfg1.MinGenesisTime, cfg2.MinGenesisTime, "MinGenesisTime")
+		assert.Equal(t, cfg1.HysteresisQuotient, cfg2.HysteresisQuotient, "HysteresisQuotient")
+		assert.Equal(t, cfg1.HysteresisDownwardMultiplier, cfg2.HysteresisDownwardMultiplier, "HysteresisDownwardMultiplier")
+		assert.Equal(t, cfg1.HysteresisUpwardMultiplier, cfg2.HysteresisUpwardMultiplier, "HysteresisUpwardMultiplier")
+
+		// Fork Choice params.
+		assert.Equal(t, cfg1.SafeSlotsToUpdateJustified, cfg2.SafeSlotsToUpdateJustified, "SafeSlotsToUpdateJustified")
+
+		// Validator params.
+		assert.Equal(t, cfg1.Eth1FollowDistance, cfg2.Eth1FollowDistance, "Eth1FollowDistance")
+		assert.Equal(t, cfg1.TargetAggregatorsPerCommittee, cfg2.TargetAggregatorsPerCommittee,
+			"%s: TargetAggregatorsPerCommittee", name)
+
+		// Deposit contract.
+		assert.Equal(t, cfg1.DepositChainID, cfg2.DepositChainID, "DepositChainID")
+		assert.Equal(t, cfg1.DepositNetworkID, cfg2.DepositNetworkID, "DepositNetworkID")
 	}
-	if BeaconConfig().SecondsPerSlot != MainnetConfig().SecondsPerSlot {
-		t.Errorf("Expected SecondsPerSlot to be set to mainnet value: %d found: %d",
-			MainnetConfig().SecondsPerSlot,
-			BeaconConfig().SecondsPerSlot)
-	}
-	minimalConfigFile := ConfigFilePath(t, "minimal")
-	LoadChainConfigFile(minimalConfigFile)
-	if BeaconConfig().MaxCommitteesPerSlot != MinimalSpecConfig().MaxCommitteesPerSlot {
-		t.Errorf("Expected MaxCommitteesPerSlot to be set to minimal value: %d found: %d",
-			MinimalSpecConfig().MaxCommitteesPerSlot,
-			BeaconConfig().MaxCommitteesPerSlot)
-	}
-	if BeaconConfig().SecondsPerSlot != MinimalSpecConfig().SecondsPerSlot {
-		t.Errorf("Expected SecondsPerSlot to be set to minimal value: %d found: %d",
-			MinimalSpecConfig().SecondsPerSlot,
-			BeaconConfig().SecondsPerSlot)
-	}
+
+	t.Run("mainnet", func(t *testing.T) {
+		mainnetConfigFile := ConfigFilePath(t, "mainnet")
+		LoadChainConfigFile(mainnetConfigFile)
+		assertVals("mainnet", MainnetConfig(), BeaconConfig())
+	})
+
+	t.Run("minimal", func(t *testing.T) {
+		minimalConfigFile := ConfigFilePath(t, "minimal")
+		LoadChainConfigFile(minimalConfigFile)
+		assertVals("minimal", MinimalSpecConfig(), BeaconConfig())
+	})
 }
 
 func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
