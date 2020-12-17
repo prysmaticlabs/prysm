@@ -32,7 +32,6 @@ var mainnetNetworkConfig = &NetworkConfig{
 	MinimumPeersInSubnet:            4,
 	MinimumPeersInSubnetSearch:      20,
 	ContractDeploymentBlock:         11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
-	DepositContractAddress:          "0x00000000219ab540356cBB839Cbe05303d7705Fa",
 	BootstrapNodes: []string{
 		// Teku team's bootnode
 		"enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
@@ -98,8 +97,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafeSlotsToUpdateJustified:       8,
 
 	// Ethereum PoW parameters.
-	DepositChainID:   1, // Chain ID of eth1 mainnet.
-	DepositNetworkID: 1, // Network ID of eth1 mainnet.
+	DepositChainID:         1, // Chain ID of eth1 mainnet.
+	DepositNetworkID:       1, // Network ID of eth1 mainnet.
+	DepositContractAddress: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
 
 	// Validator params.
 	RandomSubnetsPerValidator:         1 << 0,

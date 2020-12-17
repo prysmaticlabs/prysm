@@ -39,6 +39,7 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 		// Deposit contract.
 		assert.Equal(t, c1.DepositChainID, c2.DepositChainID, "%s: DepositChainID", name)
 		assert.Equal(t, c1.DepositNetworkID, c2.DepositNetworkID, "%s: DepositNetworkID", name)
+		assert.Equal(t, c1.DepositContractAddress, c2.DepositContractAddress, "%s: DepositContractAddress", name)
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
