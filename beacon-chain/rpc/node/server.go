@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -120,13 +120,6 @@ func (ns *Server) GetHost(_ context.Context, _ *ptypes.Empty) (*ethpb.HostData, 
 	}, nil
 }
 
-// GetLogsEndpoint
-func (ns *Server) GetLogsEndpoint(_ context.Context, _ *ptypes.Empty) (*pbrpc.LogsEndpointResponse, error) {
-	return &pbrpc.LogsEndpointResponse{
-		BeaconLogsEndpoint: fmt.Sprintf("%s:%d", ns.BeaconMonitoringHost, ns.BeaconMonitoringPort),
-	}, nil
-}
-
 // GetPeer returns the data known about the peer defined by the provided peer id.
 func (ns *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*ethpb.Peer, error) {
 	pid, err := peer.Decode(peerReq.PeerId)
@@ -223,4 +216,38 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers,
 	return &ethpb.Peers{
 		Peers: res,
 	}, nil
+}
+
+// StreamBeaconLogs from the validator client via a gRPC server-side stream.
+func (ns *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+	ch := make(chan []byte, s.streamLogsBufferSize)
+	defer close(ch)
+	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
+	defer sub.Unsubscribe()
+
+	recentLogs := s.logsStreamer.GetLastFewLogs()
+	logStrings := make([]string, len(recentLogs))
+	for i, log := range recentLogs {
+		logStrings[i] = string(log)
+	}
+	if err := stream.Send(&pb.LogsResponse{
+		Logs: logStrings,
+	}); err != nil {
+		return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+	}
+	for {
+		select {
+		case log := <-ch:
+			resp := &pb.LogsResponse{
+				Logs: []string{string(log)},
+			}
+			if err := stream.Send(resp); err != nil {
+				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+			}
+		case <-s.ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }
