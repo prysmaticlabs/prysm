@@ -34,11 +34,12 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeyV2")
 	defer span.End()
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
-		store.lock.Lock()
-		defer store.lock.Unlock()
+		store.lock.RLock()
 		if history, ok := store.attestingHistoriesByPubKey[publicKey]; ok {
+			store.lock.RUnlock()
 			return history, nil
 		}
+		store.lock.RUnlock()
 	}
 	var err error
 	var attestationHistory EncHistoryData
@@ -57,7 +58,9 @@ func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey
 		return nil
 	})
 	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.lock.Lock()
 		store.attestingHistoriesByPubKey[publicKey] = attestationHistory
+		store.lock.Unlock()
 	}
 	return attestationHistory, err
 }

@@ -24,7 +24,7 @@ var ProtectionDbFileName = "validator.db"
 type Store struct {
 	db                         *bolt.DB
 	databasePath               string
-	lock                       sync.Mutex
+	lock                       sync.RWMutex
 	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
 }
 
