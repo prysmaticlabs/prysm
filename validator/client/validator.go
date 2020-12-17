@@ -593,8 +593,8 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
 				"slot":                slotOffset + i,
-				"attesterDutyForSlot": len(attesterKeys[i]),
-				"attesterTotal":       totalAttestingKeys,
+				"attesterDutiesAtSlot": len(attesterKeys[i]),
+				"totalAttestersInEpoch":       totalAttestingKeys,
 				"pubKeys":             attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
