@@ -23,7 +23,7 @@ import (
 )
 
 func TestProposeExit_Notification(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	testutil.ResetCache()
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -93,7 +93,7 @@ func TestProposeExit_Notification(t *testing.T) {
 }
 
 func TestProposeExit_NoPanic(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	testutil.ResetCache()
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)

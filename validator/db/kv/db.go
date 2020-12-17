@@ -24,7 +24,7 @@ var ProtectionDbFileName = "validator.db"
 type Store struct {
 	db                         *bolt.DB
 	databasePath               string
-	lock                       sync.Mutex
+	lock                       sync.RWMutex
 	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
 }
 
@@ -102,6 +102,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 			lowestSignedTargetBucket,
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
+			migrationsBucket,
 		)
 	}); err != nil {
 		return nil, err

@@ -32,7 +32,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
@@ -147,7 +147,7 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 
 	r := &Service{p2p: p1, db: d, rateLimiter: newRateLimiter(p1)}
 	pcl := protocol.ID("/testing")

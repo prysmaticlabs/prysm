@@ -69,7 +69,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	chainService := &mockChain.ChainService{
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
@@ -125,7 +125,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 		Genesis:        time.Now(),
 	}
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := Service{

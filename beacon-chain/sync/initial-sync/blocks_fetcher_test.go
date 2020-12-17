@@ -257,7 +257,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cache.initializeRootCache(tt.expectedBlockSlots, t)
 
-			beaconDB, _ := dbtest.SetupDB(t)
+			beaconDB := dbtest.SetupDB(t)
 
 			p := p2pt.NewTestP2P(t)
 			connectPeers(t, p, tt.peers, p.Peers())

@@ -27,7 +27,7 @@ import (
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	s := &beaconstate.BeaconState{}
@@ -45,7 +45,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -69,7 +69,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -106,7 +106,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -142,7 +142,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -189,7 +189,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -306,7 +306,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	// This test creates 3 attestations. 0 and 2 have the same attestation data and can be
@@ -363,7 +363,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	// This test creates two distinct attestations, neither of which contain the validator's index,

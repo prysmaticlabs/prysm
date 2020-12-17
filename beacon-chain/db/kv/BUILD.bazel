@@ -21,12 +21,12 @@ go_library(
         "slashings.go",
         "state.go",
         "state_summary.go",
+        "state_summary_cache.go",
         "utils.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kv",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/iface:go_default_library",
@@ -75,7 +75,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//proto/beacon/db:go_default_library",
