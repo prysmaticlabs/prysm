@@ -2,7 +2,6 @@ package logutil
 
 import (
 	"io"
-	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -31,7 +30,6 @@ type Streamer interface {
 type StreamServer struct {
 	feed  *event.Feed
 	cache *lru.Cache
-	lock  sync.RWMutex
 }
 
 // NewStreamServer initializes a new stream server capable of
