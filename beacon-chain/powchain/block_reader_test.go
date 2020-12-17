@@ -233,9 +233,9 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	web3Service.latestEth1Data.BlockHeight = hd.Number.Uint64()
-	bn, err := web3Service.BlockNumberByTimestamp(ctx, 1000 /* time */)
+	blk, err := web3Service.BlockByTimestamp(ctx, 1000 /* time */)
 	require.NoError(t, err)
-	if bn.Cmp(big.NewInt(0)) == 0 {
+	if blk.Number.Cmp(big.NewInt(0)) == 0 {
 		t.Error("Returned a block with zero number, expected to be non zero")
 	}
 }
@@ -268,9 +268,9 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	require.ErrorContains(t, context.DeadlineExceeded.Error(), err)
 
 	// Provide an attainable target time
-	bn, err := web3Service.findLessTargetEth1Block(context.Background(), hd.Number, hd.Time-5)
+	blk, err := web3Service.findLessTargetEth1Block(context.Background(), hd.Number, hd.Time-5)
 	require.NoError(t, err)
-	require.NotEqual(t, hd.Number.Uint64(), bn.Uint64(), "retrieved block is not less than the head")
+	require.NotEqual(t, hd.Number.Uint64(), blk.Number.Uint64(), "retrieved block is not less than the head")
 }
 
 func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
@@ -301,9 +301,9 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	require.ErrorContains(t, context.DeadlineExceeded.Error(), err)
 
 	// Provide an attainable target time with respect to head
-	bn, err := web3Service.findMoreTargetEth1Block(context.Background(), big.NewInt(0).Sub(hd.Number, big.NewInt(5)), hd.Time)
+	blk, err := web3Service.findMoreTargetEth1Block(context.Background(), big.NewInt(0).Sub(hd.Number, big.NewInt(5)), hd.Time)
 	require.NoError(t, err)
-	require.Equal(t, hd.Number.Uint64(), bn.Uint64(), "retrieved block is not equal to the head")
+	require.Equal(t, hd.Number.Uint64(), blk.Number.Uint64(), "retrieved block is not equal to the head")
 }
 
 func TestService_BlockTimeByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
