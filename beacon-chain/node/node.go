@@ -141,14 +141,14 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.OverrideBeaconNetworkConfig(networkCfg)
 	}
 	if cliCtx.IsSet(flags.ChainID.Name) {
-		c := params.BeaconNetworkConfig()
-		c.ChainID = cliCtx.Uint64(flags.ChainID.Name)
-		params.OverrideBeaconNetworkConfig(c)
+		c := params.BeaconConfig()
+		c.DepositChainID = cliCtx.Uint64(flags.ChainID.Name)
+		params.OverrideBeaconConfig(c)
 	}
 	if cliCtx.IsSet(flags.NetworkID.Name) {
-		c := params.BeaconNetworkConfig()
-		c.NetworkID = cliCtx.Uint64(flags.NetworkID.Name)
-		params.OverrideBeaconNetworkConfig(c)
+		c := params.BeaconConfig()
+		c.DepositNetworkID = cliCtx.Uint64(flags.NetworkID.Name)
+		params.OverrideBeaconConfig(c)
 	}
 
 	registry := shared.NewServiceRegistry()

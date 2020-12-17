@@ -35,8 +35,6 @@ var mainnetNetworkConfig = &NetworkConfig{
 	MinimumPeersInSubnetSearch:        20,
 	ContractDeploymentBlock:           11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
 	DepositContractAddress:            "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-	ChainID:                           1, // Chain ID of eth1 mainnet.
-	NetworkID:                         1, // Network ID of eth1 mainnet.
 	BootstrapNodes: []string{
 		// Teku team's bootnode
 		"enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
@@ -101,6 +99,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
 
+	// Ethereum PoW parameters.
+	DepositChainID:   1, // Chain ID of eth1 mainnet.
+	DepositNetworkID: 1, // Network ID of eth1 mainnet.
+
 	// While eth1 mainnet block times are closer to 13s, we must conform with other clients in
 	// order to vote on the correct eth1 blocks.
 	//
@@ -164,9 +166,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion:  []byte{0, 0, 0, 0},
-	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
-	NextForkEpoch:       1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
+	GenesisForkVersion: []byte{0, 0, 0, 0},
+	NextForkVersion:    []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
+	NextForkEpoch:      1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
 	ForkVersionSchedule: map[uint64][]byte{
 		// Any further forks must be specified here by their epoch number.
 	},

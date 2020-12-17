@@ -5,8 +5,6 @@ package params
 func UseToledoNetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
 	cfg.ContractDeploymentBlock = 3702432
-	cfg.ChainID = 5
-	cfg.NetworkID = 5
 	cfg.DepositContractAddress = "0x47709dC7a8c18688a1f051761fc34ac253970bC0"
 	cfg.BootstrapNodes = []string{
 		// Prysm Bootnode 1
@@ -30,5 +28,7 @@ func ToledoConfig() *BeaconChainConfig {
 	cfg.GenesisForkVersion = []byte{0x00, 0x70, 0x1E, 0xD0}
 	cfg.NetworkName = "toledo"
 	cfg.SecondsPerETH1Block = 14
+	cfg.DepositChainID = 5
+	cfg.DepositNetworkID = 5
 	return cfg
 }

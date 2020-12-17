@@ -5,8 +5,6 @@ package params
 func UsePyrmontNetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
 	cfg.ContractDeploymentBlock = 3743587
-	cfg.ChainID = 5
-	cfg.NetworkID = 5
 	cfg.DepositContractAddress = "0x8c5fecdC472E27Bc447696F431E425D02dd46a8c"
 	cfg.BootstrapNodes = []string{
 		"enr:-Ku4QOA5OGWObY8ep_x35NlGBEj7IuQULTjkgxC_0G1AszqGEA0Wn2RNlyLFx9zGTNB1gdFBA6ZDYxCgIza1uJUUOj4Dh2F0dG5ldHOIAAAAAAAAAACEZXRoMpDVTPWXAAAgCf__________gmlkgnY0gmlwhDQPSjiJc2VjcDI1NmsxoQM6yTQB6XGWYJbI7NZFBjp4Yb9AYKQPBhVrfUclQUobb4N1ZHCCIyg",
@@ -30,5 +28,7 @@ func PyrmontConfig() *BeaconChainConfig {
 	cfg.NetworkName = "pyrmont"
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x20, 0x09}
 	cfg.SecondsPerETH1Block = 14
+	cfg.DepositChainID = 5
+	cfg.DepositNetworkID = 5
 	return cfg
 }

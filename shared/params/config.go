@@ -57,6 +57,10 @@ type BeaconChainConfig struct {
 	SafeSlotsToUpdateJustified       uint64 `yaml:"SAFE_SLOTS_TO_UPDATE_JUSTIFIED"`      // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
 	SecondsPerETH1Block              uint64 `yaml:"SECONDS_PER_ETH1_BLOCK"`              // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
 
+	// Ethereum PoW parameters.
+	DepositChainID   uint64 `yaml:"DEPOSIT_CHAIN_ID"`   // ChainID of the eth1 network. This used for replay protection.
+	DepositNetworkID uint64 `yaml:"DEPOSIT_NETWORK_ID"` // NetworkID of the eth1 network. This used for replay protection.
+
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
 	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
