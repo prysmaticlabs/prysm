@@ -592,9 +592,10 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
-				"slot":      slotOffset + i,
-				"attesters": fmt.Sprintf("%d/%d", len(attesterKeys[i]), totalAttestingKeys),
-				"pubKeys":   attesterKeys[i],
+				"slot":                slotOffset + i,
+				"attesterDutyForSlot": len(attesterKeys[i]),
+				"attesterTotal":       totalAttestingKeys,
+				"pubKeys":             attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {
