@@ -889,18 +889,6 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 	assert.Equal(t, uint64(5), p.HighestEpoch(), "Expected current epoch to be 5")
 }
 
-func TestConcurrentPeerLimitHolds(t *testing.T) {
-	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
-		PeerLimit: 30,
-		ScorerParams: &scorers.Config{
-			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
-				Threshold: 1,
-			},
-		},
-	})
-	assert.Equal(t, true, uint64(p.MaxPeerLimit()) > p.ConnectedPeerLimit(), "max peer limit doesnt exceed connected peer limit")
-}
-
 // addPeer is a helper to add a peer with a given connection state)
 func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
 	// Set up some peers with different states
