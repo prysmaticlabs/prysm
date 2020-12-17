@@ -197,7 +197,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 			BlockHash:   make([]byte, 32),
 		},
 		Graffiti:               make([]byte, 32),
-		SyncCommitteeBits:      bitfield.NewBitvector64(),
+		SyncCommitteeBits:      bitfield.NewBitvector1024(),
 		SyncCommitteeSignature: make([]byte, 96),
 	}).HashTreeRoot()
 	if err != nil {

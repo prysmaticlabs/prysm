@@ -58,7 +58,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 				Deposits:               []*ethpb.Deposit{},
 				ProposerSlashings:      []*ethpb.ProposerSlashing{},
 				VoluntaryExits:         []*ethpb.SignedVoluntaryExit{},
-				SyncCommitteeBits:      bitfield.NewBitvector64(),
+				SyncCommitteeBits:      bitfield.NewBitvector1024(),
 				SyncCommitteeSignature: make([]byte, 96),
 			},
 		},
@@ -192,7 +192,7 @@ func GenerateFullBlock(
 			VoluntaryExits:         exits,
 			Deposits:               newDeposits,
 			Graffiti:               make([]byte, 32),
-			SyncCommitteeBits:      bitfield.NewBitvector64(),
+			SyncCommitteeBits:      bitfield.NewBitvector1024(),
 			SyncCommitteeSignature: make([]byte, 96),
 		},
 	}

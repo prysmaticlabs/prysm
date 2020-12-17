@@ -193,7 +193,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							SyncCommitteeBits:      bitfield.NewBitvector64(),
+							SyncCommitteeBits:      bitfield.NewBitvector1024(),
 							SyncCommitteeSignature: make([]byte, 96),
 							RandaoReveal:           make([]byte, 96),
 							Graffiti:               make([]byte, 32),
@@ -217,7 +217,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							SyncCommitteeBits:      bitfield.NewBitvector64(),
+							SyncCommitteeBits:      bitfield.NewBitvector1024(),
 							SyncCommitteeSignature: make([]byte, 96),
 							RandaoReveal:           make([]byte, 96),
 							Graffiti:               make([]byte, 32),
@@ -237,7 +237,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 						ParentRoot: make([]byte, 32),
 						StateRoot:  make([]byte, 32),
 						Body: &ethpb.BeaconBlockBody{
-							SyncCommitteeBits:      bitfield.NewBitvector64(),
+							SyncCommitteeBits:      bitfield.NewBitvector1024(),
 							SyncCommitteeSignature: make([]byte, 96),
 							RandaoReveal:           make([]byte, 96),
 							Graffiti:               make([]byte, 32),

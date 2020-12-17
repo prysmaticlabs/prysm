@@ -84,8 +84,8 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20201206223948-ab105dee4fd5
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20201217223737-817add7b9771
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20201217222627-a48494c940af
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
 	github.com/rs/cors v1.7.0
@@ -109,7 +109,6 @@ require (
 	golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11 // indirect
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
 	golang.org/x/sys v0.0.0-20201211002650-1f0c578a6b29 // indirect
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect

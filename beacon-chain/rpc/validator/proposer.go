@@ -121,7 +121,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			AttesterSlashings:      vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
 			VoluntaryExits:         vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:               graffiti[:],
-			SyncCommitteeBits:      bitfield.NewBitvector64(),
+			SyncCommitteeBits:      bitfield.NewBitvector1024(),
 			SyncCommitteeSignature: make([]byte, 96),
 		},
 	}
