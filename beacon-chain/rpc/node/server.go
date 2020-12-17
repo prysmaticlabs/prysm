@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -28,6 +29,8 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type Server struct {
+	LogsStreamer         logutil.Streamer
+	StreamLogsBufferSize int
 	SyncChecker          sync.Checker
 	Server               *grpc.Server
 	BeaconDB             db.ReadOnlyDatabase
@@ -218,14 +221,14 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers,
 	}, nil
 }
 
-// StreamBeaconLogs from the validator client via a gRPC server-side stream.
+// StreamBeaconLogs from the beacon node via a gRPC server-side stream.
 func (ns *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
-	ch := make(chan []byte, s.streamLogsBufferSize)
+	ch := make(chan []byte, ns.StreamLogsBufferSize)
 	defer close(ch)
-	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
+	sub := ns.LogsStreamer.LogsFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
 
-	recentLogs := s.logsStreamer.GetLastFewLogs()
+	recentLogs := ns.LogsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
 	for i, log := range recentLogs {
 		logStrings[i] = string(log)
@@ -244,8 +247,6 @@ func (ns *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaco
 			if err := stream.Send(resp); err != nil {
 				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 			}
-		case <-s.ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
 		case <-stream.Context().Done():
 			return status.Error(codes.Canceled, "Context canceled")
 		}

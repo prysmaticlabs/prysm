@@ -15,7 +15,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
@@ -45,12 +44,6 @@ type SyncChecker interface {
 // the genesis time and the validator deposit contract address.
 type GenesisFetcher interface {
 	GenesisInfo(ctx context.Context) (*ethpb.Genesis, error)
-}
-
-// BeaconNodeInfoFetcher can retrieve information such as the logs endpoint
-// from a beacon node via RPC.
-type BeaconNodeInfoFetcher interface {
-	BeaconLogsEndpoint(ctx context.Context) (string, error)
 }
 
 // ValidatorService represents a service to manage the validator client
@@ -324,17 +317,6 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn)
 	return nc.GetGenesis(ctx, &ptypes.Empty{})
-}
-
-// BeaconLogsEndpoint retrieves the websocket endpoint string at which
-// clients can subscribe to for beacon node logs.
-func (v *ValidatorService) BeaconLogsEndpoint(ctx context.Context) (string, error) {
-	hc := pbrpc.NewHealthClient(v.conn)
-	resp, err := hc.GetLogsEndpoint(ctx, &ptypes.Empty{})
-	if err != nil {
-		return "", err
-	}
-	return resp.BeaconLogsEndpoint, nil
 }
 
 // to accounts changes in the keymanager, then updates those keys'
