@@ -137,7 +137,9 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	opts := &KeymanagerOpts{}
+	opts := &KeymanagerOpts{
+		RemoteCertificate: &CertificateConfig{RequireTls: true},
+	}
 	if err := json.Unmarshal(enc, opts); err != nil {
 		return nil, errors.Wrap(err, "could not JSON unmarshal")
 	}
