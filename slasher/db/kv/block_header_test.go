@@ -116,7 +116,7 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		found := db.HasBlockHeader(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
-		require.Equal(t, false, found, "Has block header should return false for block headers that are not in db")
+		require.Equal(t, false, found, "has block header should return false for block headers that are not in db")
 		err := db.SaveBlockHeader(ctx, tt.bh)
 		require.NoError(t, err, "Save block failed")
 	}

@@ -136,7 +136,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejected block")
 		return pubsub.ValidationReject
 	}
-
+	// Record attribute of valid block.
+	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block.Slot%params.BeaconConfig().SlotsPerEpoch)))
 	msg.ValidatorData = blk // Used in downstream subscriber
 	return pubsub.ValidationAccept
 }
@@ -151,8 +152,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 	}
 
 	hasStateSummaryDB := s.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
-	hasStateSummaryCache := s.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
-	if !hasStateSummaryDB && !hasStateSummaryCache {
+	if !hasStateSummaryDB {
 		_, err := s.stateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 		if err != nil {
 			return err
@@ -167,10 +167,26 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
-
-	parentState, err = state.ProcessSlots(ctx, parentState, blk.Block.Slot)
-	if err != nil {
-		return err
+	// There is an epoch lookahead for validator proposals
+	// for the next epoch from the start of our current epoch. We
+	// use the randao mix at the end of the previous epoch as the seed
+	// to determine proposals.
+	// Seed for Next Epoch => Derived From Randao Mix at the end of the Previous Epoch.
+	// Which is why we simply set the slot over here.
+	nextEpoch := helpers.NextEpoch(parentState)
+	expectedEpoch := helpers.SlotToEpoch(blk.Block.Slot)
+	if expectedEpoch <= nextEpoch {
+		err = parentState.SetSlot(blk.Block.Slot)
+		if err != nil {
+			return err
+		}
+	} else {
+		// In the event the block is more than an epoch ahead from its
+		// parent state, we have to advance the state forward.
+		parentState, err = state.ProcessSlots(ctx, parentState, blk.Block.Slot)
+		if err != nil {
+			return err
+		}
 	}
 	idx, err := helpers.BeaconProposerIndex(parentState)
 	if err != nil {

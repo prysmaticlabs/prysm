@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -47,9 +48,9 @@ func (f *FaultyMockPOWChain) BlockTimeByHeight(_ context.Context, _ *big.Int) (u
 	return 0, errors.New("failed")
 }
 
-// BlockNumberByTimestamp --
-func (f *FaultyMockPOWChain) BlockNumberByTimestamp(_ context.Context, _ uint64) (*big.Int, error) {
-	return big.NewInt(0), nil
+// BlockByTimestamp --
+func (f *FaultyMockPOWChain) BlockByTimestamp(_ context.Context, _ uint64) (*types.HeaderInfo, error) {
+	return &types.HeaderInfo{Number: big.NewInt(0)}, nil
 }
 
 // DepositRoot --

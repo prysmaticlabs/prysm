@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -41,27 +40,6 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	}
 
 	return s.beaconDB.SaveState(ctx, fs, root32)
-}
-
-// SaveStateSummariesToDB saves cached state summaries to DB.
-func (s *State) SaveStateSummariesToDB(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "stateGen.SaveStateSummariesToDB")
-	defer span.End()
-	if err := s.beaconDB.SaveStateSummaries(ctx, s.stateSummaryCache.GetAll()); err != nil {
-		return err
-	}
-	s.stateSummaryCache.Clear()
-	return nil
-}
-
-// SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
-// state summary cache.
-func (s *State) SaveStateSummary(_ context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
-	// Save State summary
-	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
-		Slot: blk.Block.Slot,
-		Root: blockRoot[:],
-	})
 }
 
 // This saves a post beacon state. On the epoch boundary,
@@ -101,11 +79,13 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 		}
 	}
 
-	// On an intermediate slots, save the hot state summary.
-	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
+	// On an intermediate slots, save state summary.
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot: state.Slot(),
 		Root: blockRoot[:],
-	})
+	}); err != nil {
+		return err
+	}
 
 	// Store the copied state in the hot state cache.
 	s.hotStateCache.Put(blockRoot, state)

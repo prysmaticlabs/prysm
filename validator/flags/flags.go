@@ -297,7 +297,7 @@ func DefaultValidatorDir() string {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2Validators")
 		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "Eth2Validators")
+			return filepath.Join(home, "AppData", "Local", "Eth2Validators")
 		} else {
 			return filepath.Join(home, ".eth2validators")
 		}
