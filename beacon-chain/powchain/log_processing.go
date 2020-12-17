@@ -31,6 +31,7 @@ var (
 
 const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
+const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
 
@@ -359,6 +360,11 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	requestedBlock, err := s.followBlockHeight(ctx)
 	if err != nil {
 		return err
+	}
+	if requestedBlock > s.latestEth1Data.LastRequestedBlock &&
+		requestedBlock-s.latestEth1Data.LastRequestedBlock > maxTolerableDifference {
+		log.Infof("Falling back to historical headers and logs sync. Current difference is %d", requestedBlock-s.latestEth1Data.LastRequestedBlock)
+		return s.processPastLogs(ctx)
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
