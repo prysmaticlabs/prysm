@@ -5,6 +5,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -42,8 +43,27 @@ func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.Log
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
-func (s *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
-	return status.Error(codes.Unimplemented, "unimplemented")
+func (s *Server) StreamBeaconLogs(req *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+	client, err := s.beaconNodeHealthClient.StreamBeaconLogs(s.ctx, req)
+	if err != nil {
+		return err
+	}
+	for {
+		select {
+		case <-s.ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		default:
+			resp, err := client.Recv()
+			if err != nil {
+				return errors.Wrap(err, "could not receive beacon logs from stream")
+			}
+			if err := stream.Send(resp); err != nil {
+				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+			}
+		}
+	}
 }
 
 // StreamValidatorLogs from the validator client via a gRPC server-side stream.
