@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -303,7 +304,12 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	s.stateGen.SaveStateSummary(ctx, signed, blockRoot)
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: signed.Block.Slot,
+		Root: blockRoot[:],
+	}); err != nil {
+		return err
+	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
@@ -330,7 +336,15 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed *ethpb
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
 func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.BeaconState) error {
-	if postState.Slot() >= s.nextEpochBoundarySlot {
+	if postState.Slot()+1 == s.nextEpochBoundarySlot {
+		// Update caches for the next epoch at epoch boundary slot - 1.
+		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
+			return err
+		}
+		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.NextEpoch(postState)); err != nil {
+			return err
+		}
+	} else if postState.Slot() >= s.nextEpochBoundarySlot {
 		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
 			return err
 		}
@@ -339,7 +353,9 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err != nil {
 			return err
 		}
-		// Update committees cache at epoch boundary slot.
+
+		// Update caches at epoch boundary slot.
+		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
 		}
@@ -347,6 +363,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 			return err
 		}
 	}
+
 	return nil
 }
 

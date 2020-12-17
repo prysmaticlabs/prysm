@@ -14,18 +14,6 @@ import (
 )
 
 var (
-	// AttestationMapMiss used to track the success rate of historical
-	// attestation map for slashing detection flow.
-	AttestationMapHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "attestation_history_map_hit",
-		Help: "The number of attestation history calls that are present in the map.",
-	})
-	// AttestationMapMiss used to track the use of the fallback db read when
-	// attestation map is being mutated while being used in the slashing detection flow.
-	AttestationMapMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "attestation_history_map_miss",
-		Help: "The number of attestation history calls that are'nt present in the map.",
-	})
 	// ValidatorStatusesGaugeVec used to track validator statuses by public key.
 	ValidatorStatusesGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -315,6 +303,12 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 			correctHead++
 			summary.correctHeads++
 		}
+	}
+
+	// Return early if no attestation got included from previous epoch.
+	// This happens when validators joined half way through epoch and already passed its assigned slot.
+	if included == 0 {
+		return
 	}
 
 	summary.totalAttestedCount += uint64(len(resp.InclusionSlots))

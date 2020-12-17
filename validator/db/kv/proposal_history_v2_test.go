@@ -22,12 +22,13 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 	}
 }
 
-func TestNewProposalHistoryForSlot_NilDB(t *testing.T) {
+func TestNewProposalHistoryForSlot_ReturnsNilIfNoHistory(t *testing.T) {
 	valPubkey := [48]byte{1, 2, 3}
 	db := setupDB(t, [][48]byte{})
 
-	_, _, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
-	require.ErrorContains(t, "validator history empty for public key", err, "Unexpected error for nil DB")
+	_, proposalExists, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
+	require.NoError(t, err)
+	assert.Equal(t, false, proposalExists)
 }
 
 func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
@@ -158,7 +159,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 
 func TestStore_ProposedPublicKeys(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")

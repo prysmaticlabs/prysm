@@ -11,8 +11,11 @@ var (
 	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint",
-		Value: "",
+		Usage: "A mainchain web3 provider string http endpoint. This is our primary web3 provider",
+	}
+	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
+		Name:  "fallback-web3provider",
+		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag maybe used multiple times.",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
@@ -156,16 +159,6 @@ var (
 		Usage: "Input in `block_root:epoch_number` format. This guarantee that syncing leads to the given Weak Subjectivity Checkpoint being in the canonical chain. " +
 			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
 		Value: "",
-	}
-	// EnableBackupWebhookFlag for users to trigger db backups via an HTTP webhook.
-	EnableBackupWebhookFlag = &cli.BoolFlag{
-		Name:  "enable-db-backup-webhook",
-		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
-	}
-	// BackupWebhookOutputDir to customize the output directory for db backups.
-	BackupWebhookOutputDir = &cli.StringFlag{
-		Name:  "db-backup-output-dir",
-		Usage: "Output directory for db backups",
 	}
 	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
 	Eth1HeaderReqLimit = &cli.Uint64Flag{

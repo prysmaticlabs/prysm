@@ -175,7 +175,11 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not retrieve genesis state: %v", err)
 		}
-		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()))
+		gRoot, err := gState.HashTreeRoot(s.ctx)
+		if err != nil {
+			log.Fatalf("Could not hash tree root genesis state: %v", err)
+		}
+		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()), gRoot)
 
 		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(s.ctx)
 		if err != nil {
@@ -202,12 +206,14 @@ func (s *Service) Start() {
 			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
 		}
 		h := s.headBlock().Block
-		log.WithFields(logrus.Fields{
-			"startSlot": ss,
-			"endSlot":   h.Slot,
-		}).Info("Loading blocks to fork choice store, this may take a while.")
-		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.finalizedCheckpt, s.justifiedCheckpt); err != nil {
-			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
+		if h.Slot > ss {
+			log.WithFields(logrus.Fields{
+				"startSlot": ss,
+				"endSlot":   h.Slot,
+			}).Info("Loading blocks to fork choice store, this may take a while.")
+			if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.finalizedCheckpt, s.justifiedCheckpt); err != nil {
+				log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
+			}
 		}
 
 		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
@@ -269,7 +275,11 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	// We start a counter to genesis, if needed.
-	go slotutil.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()))
+	gRoot, err := initializedState.HashTreeRoot(s.ctx)
+	if err != nil {
+		log.Fatalf("Could not hash tree root genesis state: %v", err)
+	}
+	go slotutil.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
 	// We send out a state initialized event to the rest of the services
 	// running in the beacon node.

@@ -8,19 +8,18 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
-	filter "github.com/multiformats/go-multiaddr"
-	manet "github.com/multiformats/go-multiaddr-net"
+	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	// limit for rate limiter when processing new inbound dials.
+	// Limit for rate limiter when processing new inbound dials.
 	ipLimit = 4
 
-	// burst limit for inbound dials.
+	// Burst limit for inbound dials.
 	ipBurst = 8
 
-	// high watermark buffer signifies the buffer till which
+	// High watermark buffer signifies the buffer till which
 	// we will handle inbound requests.
 	highWatermarkBuffer = 10
 )
@@ -50,7 +49,7 @@ func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 			"reason": "exceeded dial limit"}).Trace("Not accepting inbound dial from ip address")
 		return false
 	}
-	if s.isPeerAtLimit(true) {
+	if s.isPeerAtLimit(true /* inbound */) {
 		log.WithFields(logrus.Fields{"peer": n.RemoteMultiaddr(),
 			"reason": "at peer limit"}).Trace("Not accepting inbound dial")
 		return false
@@ -79,20 +78,20 @@ func (s *Service) validateDial(addr multiaddr.Multiaddr) bool {
 		return false
 	}
 	s.ipLimiter.Add(ip.String(), 1)
-	return true
+	return !s.peers.IsAboveInboundLimit()
 }
 
 // configureFilter looks at the provided allow lists and
 // deny lists to appropriately create a filter.
-func configureFilter(cfg *Config) (*filter.Filters, error) {
-	addrFilter := filter.NewFilters()
+func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
+	addrFilter := multiaddr.NewFilters()
 	// Configure from provided allow list in the config.
 	if cfg.AllowListCIDR != "" {
 		_, ipnet, err := net.ParseCIDR(cfg.AllowListCIDR)
 		if err != nil {
 			return nil, err
 		}
-		addrFilter.AddFilter(*ipnet, filter.ActionAccept)
+		addrFilter.AddFilter(*ipnet, multiaddr.ActionAccept)
 	}
 	// Configure from provided deny list in the config.
 	if len(cfg.DenyListCIDR) > 0 {
@@ -101,7 +100,7 @@ func configureFilter(cfg *Config) (*filter.Filters, error) {
 			if err != nil {
 				return nil, err
 			}
-			addrFilter.AddFilter(*ipnet, filter.ActionDeny)
+			addrFilter.AddFilter(*ipnet, multiaddr.ActionDeny)
 		}
 	}
 	return addrFilter, nil
@@ -112,8 +111,8 @@ func configureFilter(cfg *Config) (*filter.Filters, error) {
 // accepts all incoming dials, so if we have an allow list
 // we will reject all inbound dials except for those in the
 // appropriate ip subnets.
-func filterConnections(f *filter.Filters, a filter.Multiaddr) bool {
-	acceptedNets := f.FiltersForAction(filter.ActionAccept)
+func filterConnections(f *multiaddr.Filters, a multiaddr.Multiaddr) bool {
+	acceptedNets := f.FiltersForAction(multiaddr.ActionAccept)
 	restrictConns := len(acceptedNets) != 0
 
 	// If we have an allow list added in, we by default reject all

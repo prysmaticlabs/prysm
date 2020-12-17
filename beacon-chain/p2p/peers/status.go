@@ -55,13 +55,13 @@ const (
 
 const (
 	// ColocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
-	ColocationLimit = 5
+	ColocationLimit = 7
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
 
-	// The period a new peer is allowed to live in our buffer before we start ranking them.
-	timeBuffer = 2 * time.Minute
+	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
+	InboundRatio = float64(2) / 5
 )
 
 // Status is the structure holding the peer status information.
@@ -123,9 +123,8 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 		return
 	}
 	peerData := &peerdata.PeerData{
-		Address:        address,
-		Direction:      direction,
-		FirstAddedTime: timeutils.Now(),
+		Address:   address,
+		Direction: direction,
 		// Peers start disconnected; state will be updated when the handshake process begins.
 		ConnState: PeerDisconnected,
 	}
@@ -190,6 +189,22 @@ func (p *Status) IsActive(pid peer.ID) bool {
 
 	peerData, ok := p.store.PeerData(pid)
 	return ok && (peerData.ConnState == PeerConnected || peerData.ConnState == PeerConnecting)
+}
+
+// IsAboveInboundLimit checks if we are above our current inbound
+// peer limit.
+func (p *Status) IsAboveInboundLimit() bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	totalInbound := 0
+	for _, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected &&
+			peerData.Direction == network.DirInbound {
+			totalInbound += 1
+		}
+	}
+	inboundLimit := int(float64(p.ConnectedPeerLimit()) * InboundRatio)
+	return totalInbound > inboundLimit
 }
 
 // SetMetadata sets the metadata of the given remote peer.
@@ -422,36 +437,6 @@ func (p *Status) All() []peer.ID {
 	return pids
 }
 
-// RankPeers by their response scores and first added times.
-func (p *Status) RankPeers() []peer.ID {
-	p.store.RLock()
-	defer p.store.RUnlock()
-
-	peersToRank := make([]peer.ID, 0)
-	// Select connected peers and rank them by newly added time.
-	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected {
-			peersToRank = append(peersToRank, pid)
-		}
-	}
-
-	sort.Slice(peersToRank, func(i, j int) bool {
-		peerI, ok := p.store.PeerData(peersToRank[i])
-		if !ok {
-			return true
-		}
-		peerJ, ok := p.store.PeerData(peersToRank[j])
-		if !ok {
-			return false
-		}
-		if peerI.BadResponses == peerJ.BadResponses {
-			return peerI.FirstAddedTime.After(peerJ.FirstAddedTime)
-		}
-		return peerI.BadResponses > peerJ.BadResponses
-	})
-	return peersToRank
-}
-
 // Prune clears out and removes outdated and disconnected peers.
 func (p *Status) Prune() {
 	p.store.Lock()
@@ -616,6 +601,16 @@ func (p *Status) HighestEpoch() uint64 {
 	return helpers.SlotToEpoch(highestSlot)
 }
 
+// ConnectedPeerLimit returns the peer limit of
+// concurrent peers connected to the beacon-node.
+func (p *Status) ConnectedPeerLimit() uint64 {
+	maxLim := p.MaxPeerLimit()
+	if maxLim <= maxLimitBuffer {
+		return 0
+	}
+	return uint64(maxLim) - maxLimitBuffer
+}
+
 func (p *Status) isfromBadIP(pid peer.ID) bool {
 	p.store.RLock()
 	defer p.store.RUnlock()
@@ -637,16 +632,6 @@ func (p *Status) isfromBadIP(pid peer.ID) bool {
 		}
 	}
 	return false
-}
-
-// ConnectedPeerLimit returns the peer limit of
-// concurrent peers connected to the beacon-node.
-func (p *Status) ConnectedPeerLimit() uint64 {
-	maxLim := p.MaxPeerLimit()
-	if maxLim <= maxLimitBuffer {
-		return 0
-	}
-	return uint64(maxLim) - maxLimitBuffer
 }
 
 func (p *Status) addIpToTracker(pid peer.ID) {

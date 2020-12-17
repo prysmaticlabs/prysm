@@ -25,7 +25,7 @@ TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_O
 
 
 Type "accept" to accept this terms and conditions [accept/decline]:`
-	acceptTosPromptErrText = `Could not scan text input, if you are trying to run in non-interactive environment, you
+	acceptTosPromptErrText = `could not scan text input, if you are trying to run in non-interactive environment, you
 can use the --accept-terms-of-use flag after reading the terms and conditions here: 
 https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md`
 )
@@ -63,11 +63,18 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 
 // saveTosAccepted creates a file when Tos accepted.
 func saveTosAccepted(ctx *cli.Context) {
-	if err := fileutil.MkdirAll(ctx.String(cmd.DataDirFlag.Name)); err != nil {
-		log.WithError(err).Warnf("error creating directory: %s", ctx.String(cmd.DataDirFlag.Name))
-	}
-	err := fileutil.WriteFile(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""))
+	dataDir := ctx.String(cmd.DataDirFlag.Name)
+	dataDirExists, err := fileutil.HasDir(dataDir)
 	if err != nil {
-		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name, filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename))
+		log.WithError(err).Warnf("error checking directory: %s", dataDir)
+	}
+	if !dataDirExists {
+		if err := fileutil.MkdirAll(dataDir); err != nil {
+			log.WithError(err).Warnf("error creating directory: %s", dataDir)
+		}
+	}
+	if err := fileutil.WriteFile(filepath.Join(dataDir, acceptTosFilename), []byte("")); err != nil {
+		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name,
+			filepath.Join(dataDir, acceptTosFilename))
 	}
 }

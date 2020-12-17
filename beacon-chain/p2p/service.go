@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
@@ -20,22 +19,20 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	filter "github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"go.opencensus.io/trace"
 )
 
 var _ shared.Service = (*Service)(nil)
@@ -49,14 +46,8 @@ var pollingPeriod = 6 * time.Second
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
 
-// lookup limit whenever looking up for random nodes.
-const lookupLimit = 15
-
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
-
-// Exclusion list cache config values.
-const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
 // maxDialTimeout is the timeout for a single peer dial.
 var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
@@ -70,10 +61,9 @@ type Service struct {
 	cancel                context.CancelFunc
 	cfg                   *Config
 	peers                 *peers.Status
-	addrFilter            *filter.Filters
+	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
-	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
@@ -96,21 +86,12 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
-	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: cacheNumCounters,
-		MaxCost:     cacheMaxCost,
-		BufferItems: cacheBufferItems,
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	s := &Service{
 		ctx:           ctx,
 		stateNotifier: cfg.StateNotifier,
 		cancel:        cancel,
 		cfg:           cfg,
-		exclusionList: cache,
 		isPreGenesis:  true,
 		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
 		subnetsLock:   make(map[uint64]*sync.RWMutex),
@@ -416,7 +397,7 @@ func (s *Service) awaitStateInitialized() {
 	}
 }
 
-func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
+func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
 	if err != nil {
 		log.Errorf("Could not convert to peer address info's from multiaddresses: %v", err)

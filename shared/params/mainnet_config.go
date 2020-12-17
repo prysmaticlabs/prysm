@@ -31,6 +31,8 @@ var mainnetNetworkConfig = &NetworkConfig{
 	MessageDomainValidSnappy:          [4]byte{01, 00, 00, 00},
 	ETH2Key:                           "eth2",
 	AttSubnetKey:                      "attnets",
+	MinimumPeersInSubnet:              4,
+	MinimumPeersInSubnetSearch:        20,
 	ContractDeploymentBlock:           11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
 	DepositContractAddress:            "0x00000000219ab540356cBB839Cbe05303d7705Fa",
 	ChainID:                           1, // Chain ID of eth1 mainnet.
@@ -152,6 +154,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SlotsPerArchivedPoint:     2048,
 	GenesisCountdownInterval:  time.Minute,
 	NetworkName:               "Mainnet",
+	BeaconStateFieldCount:     21,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,

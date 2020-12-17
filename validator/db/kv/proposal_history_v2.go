@@ -30,7 +30,7 @@ func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	var err error
 	proposedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricProposalsBucket)
+		bucket := tx.Bucket(historicProposalsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			pubKeyBytes := [48]byte{}
 			copy(pubKeyBytes[:], key)
@@ -51,11 +51,11 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]by
 	var err error
 	var proposalExists bool
 	signingRoot := [32]byte{}
-	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricProposalsBucket)
-		valBucket := bucket.Bucket(publicKey[:])
-		if valBucket == nil {
-			return fmt.Errorf("validator history empty for public key: %#x", publicKey)
+	err = store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicProposalsBucket)
+		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
+		if err != nil {
+			return fmt.Errorf("could not create bucket for public key %#x", publicKey[:])
 		}
 		signingRootBytes := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if signingRootBytes == nil {
@@ -76,7 +76,7 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 	defer span.End()
 
 	err := store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricProposalsBucket)
+		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)

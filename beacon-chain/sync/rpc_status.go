@@ -7,8 +7,6 @@ import (
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
@@ -152,11 +150,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
 
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
@@ -197,11 +191,6 @@ func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
 func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	defer func() {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Could not close stream")
-		}
-	}()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
@@ -232,9 +221,8 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			if err := s.respondWithStatus(ctx, stream); err != nil {
 				return err
 			}
-			if err := stream.Close(); err != nil { // Close before disconnecting.
-				log.WithError(err).Debug("Could not close stream")
-			}
+			// Close before disconnecting, and wait for the other end to ack our response.
+			closeStreamAndWait(stream, log)
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, remotePeer); err != nil {
 				return err
 			}
@@ -252,9 +240,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
 			log.WithError(err).Debug("Could not write to stream")
 		}
-		if err := stream.Close(); err != nil { // Close before disconnecting.
-			log.WithError(err).Debug("Could not close stream")
-		}
+		closeStreamAndWait(stream, log)
 		if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeGenericError, remotePeer); err != nil {
 			return err
 		}
@@ -262,7 +248,11 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}
 	s.p2p.Peers().SetChainState(remotePeer, m)
 
-	return s.respondWithStatus(ctx, stream)
+	if err := s.respondWithStatus(ctx, stream); err != nil {
+		return err
+	}
+	closeStream(stream, log)
+	return nil
 }
 
 func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) error {

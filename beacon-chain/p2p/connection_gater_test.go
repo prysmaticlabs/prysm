@@ -9,7 +9,9 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -44,6 +46,10 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	for i := 0; i < highWatermarkBuffer; i++ {
+		addPeer(t, s.peers, peers.PeerConnected)
+	}
+
 	// create alternate host
 	listen, err = multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
@@ -65,6 +71,7 @@ func TestService_InterceptBannedIP(t *testing.T) {
 	s := &Service{
 		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			PeerLimit:    20,
 			ScorerParams: &scorers.Config{},
 		}),
 	}
@@ -84,6 +91,40 @@ func TestService_InterceptBannedIP(t *testing.T) {
 	valid := s.validateDial(multiAddress)
 	if valid {
 		t.Errorf("Expected multiaddress with ip %s to be rejected as it exceeds the burst limit", ip)
+	}
+}
+
+func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
+	limit := 20
+	s := &Service{
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			PeerLimit:    limit,
+			ScorerParams: &scorers.Config{},
+		}),
+	}
+	var err error
+	s.addrFilter, err = configureFilter(&Config{})
+	require.NoError(t, err)
+	ip := "212.67.10.122"
+	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
+	require.NoError(t, err)
+
+	valid := s.validateDial(multiAddress)
+	if !valid {
+		t.Errorf("Expected multiaddress with ip %s to be accepted as it is below the inbound limit", ip)
+	}
+
+	inboundLimit := float64(limit) * peers.InboundRatio
+	// top off by 1 to trigger it above the limit.
+	inboundLimit += 1
+	// Add in up to inbound peer limit.
+	for i := 0; i < int(inboundLimit); i++ {
+		addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	valid = s.validateDial(multiAddress)
+	if valid {
+		t.Errorf("Expected multiaddress with ip %s to be rejected as it exceeds the inbound limit", ip)
 	}
 }
 

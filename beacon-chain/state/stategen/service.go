@@ -25,7 +25,6 @@ type State struct {
 	slotsPerArchivedPoint   uint64
 	hotStateCache           *cache.HotStateCache
 	finalizedInfo           *finalizedInfo
-	stateSummaryCache       *cache.StateSummaryCache
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
 }
@@ -50,13 +49,12 @@ type finalizedInfo struct {
 }
 
 // New returns a new state management object.
-func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
+func New(db db.NoHeadAccessDatabase) *State {
 	return &State{
 		beaconDB:                db,
 		hotStateCache:           cache.NewHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
-		stateSummaryCache:       stateSummaryCache,
 		epochBoundaryStateCache: newBoundaryStateCache(),
 		saveHotStateDB: &saveHotStateDbConfig{
 			duration: defaultHotStateDBInterval,

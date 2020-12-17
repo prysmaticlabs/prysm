@@ -19,7 +19,7 @@ import (
 )
 
 func TestServer_GetBlock(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	b := testutil.NewBeaconBlock()
@@ -48,11 +48,11 @@ func TestServer_GetBlock(t *testing.T) {
 }
 
 func TestServer_GetAttestationInclusionSlot(t *testing.T) {
-	db, sc := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	bs := &Server{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(db),
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(
 			2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 	}

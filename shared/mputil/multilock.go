@@ -32,44 +32,44 @@ type Lock struct {
 	unlock chan byte
 }
 
-func (self *Lock) Lock() {
-	self.lock <- 1
+func (lk *Lock) Lock() {
+	lk.lock <- 1
 
 	// get the channels and attempt to acquire them
-	self.chans = make([]chan byte, 0, len(self.keys))
-	for i := 0; i < len(self.keys); {
-		ch := getChan(self.keys[i])
+	lk.chans = make([]chan byte, 0, len(lk.keys))
+	for i := 0; i < len(lk.keys); {
+		ch := getChan(lk.keys[i])
 		_, ok := <-ch
 		if ok {
-			self.chans = append(self.chans, ch)
+			lk.chans = append(lk.chans, ch)
 			i++
 		}
 	}
 
-	self.unlock <- 1
+	lk.unlock <- 1
 }
 
 // Unlocks this lock. Must be called after Lock.
 // Can only be invoked if there is a previous call to Lock.
-func (self *Lock) Unlock() {
-	<-self.unlock
+func (lk *Lock) Unlock() {
+	<-lk.unlock
 
-	if self.chans != nil {
-		for _, ch := range self.chans {
+	if lk.chans != nil {
+		for _, ch := range lk.chans {
 			ch <- 1
 		}
-		self.chans = nil
+		lk.chans = nil
 	}
 	// Clean unused channels after the unlock.
 	Clean()
-	<-self.lock
+	<-lk.lock
 }
 
 // Temporarily unlocks, gives up the cpu time to other goroutine, and attempts to lock again.
-func (self *Lock) Yield() {
-	self.Unlock()
+func (lk *Lock) Yield() {
+	lk.Unlock()
 	runtime.Gosched()
-	self.Lock()
+	lk.Lock()
 }
 
 // Creates a new multilock for the specified keys

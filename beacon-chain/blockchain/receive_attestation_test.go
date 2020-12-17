@@ -14,9 +14,9 @@ import (
 
 func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	helpers.ClearCache()
-	db, sc := testDB.SetupDB(t)
+	db := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db, sc)
+	chainService := setupBeaconChain(t, db)
 	chainService.genesisTime = time.Now()
 
 	e := helpers.MaxSlotBuffer/params.BeaconConfig().SlotsPerEpoch + 1

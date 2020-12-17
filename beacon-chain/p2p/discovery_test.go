@@ -14,10 +14,21 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -225,4 +236,49 @@ func TestHostIsResolved(t *testing.T) {
 
 	newIP := list.Self().IP()
 	assert.Equal(t, exampleIP, newIP.String(), "Did not resolve to expected IP")
+}
+
+func TestInboundPeerLimit(t *testing.T) {
+	fakePeer := testp2p.NewTestP2P(t)
+	s := &Service{
+		cfg:       &Config{MaxPeers: 30},
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			PeerLimit:    30,
+			ScorerParams: &scorers.Config{},
+		}),
+		host: fakePeer.BHost,
+	}
+
+	for i := 0; i < 30; i++ {
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	require.Equal(t, true, s.isPeerAtLimit(false), "not at limit for outbound peers")
+	require.Equal(t, false, s.isPeerAtLimit(true), "at limit for inbound peers")
+
+	for i := 0; i < highWatermarkBuffer; i++ {
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	require.Equal(t, true, s.isPeerAtLimit(true), "not at limit for inbound peers")
+}
+
+// addPeer is a helper to add a peer with a given connection state)
+func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
+	// Set up some peers with different states
+	mhBytes := []byte{0x11, 0x04}
+	idBytes := make([]byte, 4)
+	_, err := rand.Read(idBytes)
+	require.NoError(t, err)
+	mhBytes = append(mhBytes, idBytes...)
+	id, err := peer.IDFromBytes(mhBytes)
+	require.NoError(t, err)
+	p.Add(new(enr.Record), id, nil, network.DirInbound)
+	p.SetConnectionState(id, state)
+	p.SetMetadata(id, &pb.MetaData{
+		SeqNumber: 0,
+		Attnets:   bitfield.NewBitvector64(),
+	})
+	return id
 }
