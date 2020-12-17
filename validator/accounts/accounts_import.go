@@ -105,7 +105,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	}
 	k, ok := km.(*imported.Keymanager)
 	if !ok {
-		return errors.New("Only imported wallets can import more keystores")
+		return errors.New("only imported wallets can import more keystores")
 	}
 
 	// Check if the user wishes to import a one-off, private key directly
@@ -184,7 +184,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		return err
 	}
 	fmt.Printf(
-		"Successfully imported %s accounts, view all of them by running accounts list\n",
+		"Successfully imported %s accounts, view all of them by running `accounts list`\n",
 		au.BrightMagenta(strconv.Itoa(len(keystoresImported))),
 	)
 	return nil
@@ -244,7 +244,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *i
 		return errors.Wrap(err, "could not import keystore into wallet")
 	}
 	fmt.Printf(
-		"Imported account with public key %#x, view all accounts by running accounts list\n",
+		"Imported account with public key %#x, view all accounts by running `accounts list`\n",
 		au.BrightMagenta(bytesutil.Trunc(privKey.PublicKey().Marshal())),
 	)
 	return nil
