@@ -66,6 +66,10 @@ type Flags struct {
 
 	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
+
+	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
+	// changed on disk. This feature is for advanced use cases only.
+	KeystoreImportDebounceInterval int
 }
 
 var featureConfig *Flags
@@ -223,6 +227,7 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Disabling new BLS library blst")
 		cfg.EnableBlst = false
 	}
+	cfg.KeystoreImportDebounceInterval = ctx.Int(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)
 }
 

@@ -94,6 +94,11 @@ var (
 		Usage: "(Danger): Disables the cache for attesting history in the validator DB, greatly increasing " +
 			"disk reads and writes as well as increasing time required for attestations to be produced",
 	}
+	dynamicKeyReloadDebounceInterval = &cli.IntFlag{
+		Name:  "dynamic-key-reload-debounce-interval",
+		Usage: "(Advanced): Specifies the time duration in seconds the validator waits to reload new keys if they have changed on disk",
+		Value: 1,
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -111,6 +116,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	Mainnet,
 	disableAccountsV2,
 	disableBlst,
+	dynamicKeyReloadDebounceInterval,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
