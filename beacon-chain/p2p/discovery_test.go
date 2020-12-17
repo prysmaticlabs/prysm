@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -262,6 +263,27 @@ func TestInboundPeerLimit(t *testing.T) {
 	}
 
 	require.Equal(t, true, s.isPeerAtLimit(true), "not at limit for inbound peers")
+}
+
+func TestUDPMultiAddress(t *testing.T) {
+	port := 6500
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	s := &Service{
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	listener, err := s.createListener(ipAddr, pkey)
+	require.NoError(t, err)
+	defer listener.Close()
+	s.dv5Listener = listener
+
+	multiAddress, err := s.DiscoveryAddress()
+	require.NoError(t, err)
+	assert.Equal(t, true, strings.Contains(multiAddress.String(), fmt.Sprintf("%d", port)))
+	assert.Equal(t, true, strings.Contains(multiAddress.String(), "udp"))
 }
 
 // addPeer is a helper to add a peer with a given connection state)

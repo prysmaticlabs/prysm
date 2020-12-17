@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/multiformats/go-multiaddr"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -73,6 +74,7 @@ type PeerManager interface {
 	PeerID() peer.ID
 	Host() host.Host
 	ENR() *enr.Record
+	DiscoveryAddress() (multiaddr.Multiaddr, error)
 	RefreshENR()
 	FindPeersWithSubnet(ctx context.Context, topic string, index, threshold uint64) (bool, error)
 	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
