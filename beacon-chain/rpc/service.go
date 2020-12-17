@@ -62,6 +62,7 @@ type Service struct {
 	beaconDB                db.HeadAccessDatabase
 	chainInfoFetcher        blockchain.ChainInfoFetcher
 	headFetcher             blockchain.HeadFetcher
+	canonicalFetcher        blockchain.CanonicalFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
 	genesisTimeFetcher      blockchain.TimeFetcher
@@ -112,6 +113,7 @@ type Config struct {
 	BeaconDB                db.HeadAccessDatabase
 	ChainInfoFetcher        blockchain.ChainInfoFetcher
 	HeadFetcher             blockchain.HeadFetcher
+	CanonicalFetcher        blockchain.CanonicalFetcher
 	ForkFetcher             blockchain.ForkFetcher
 	FinalizationFetcher     blockchain.FinalizationFetcher
 	AttestationReceiver     blockchain.AttestationReceiver
@@ -150,6 +152,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		headFetcher:             cfg.HeadFetcher,
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
+		canonicalFetcher:        cfg.CanonicalFetcher,
 		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		attestationReceiver:     cfg.AttestationReceiver,
@@ -273,6 +276,7 @@ func (s *Service) Start() {
 		SlashingsPool:               s.slashingsPool,
 		HeadFetcher:                 s.headFetcher,
 		FinalizationFetcher:         s.finalizationFetcher,
+		CanonicalFetcher:            s.canonicalFetcher,
 		ChainStartFetcher:           s.chainStartFetcher,
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,

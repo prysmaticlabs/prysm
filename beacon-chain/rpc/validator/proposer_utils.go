@@ -19,7 +19,7 @@ func (al proposerAtts) filter(ctx context.Context, state *stateTrie.BeaconState)
 	validAtts := make([]*ethpb.Attestation, 0, len(al))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(al))
 	for _, att := range al {
-		if _, err := blocks.ProcessAttestation(ctx, state, att); err == nil {
+		if _, err := blocks.ProcessAttestationNoVerifySignature(ctx, state, att); err == nil {
 			validAtts = append(validAtts, att)
 			continue
 		}
