@@ -12,31 +12,33 @@ import (
 )
 
 func TestLoadConfigFileMainnet(t *testing.T) {
-	assertVals := func(name string, cfg1, cfg2 *BeaconChainConfig) {
+	assertVals := func(name string, c1, c2 *BeaconChainConfig) {
 		//  Misc params.
-		assert.Equal(t, cfg1.MaxCommitteesPerSlot, cfg2.MaxCommitteesPerSlot, "MaxCommitteesPerSlot")
-		assert.Equal(t, cfg1.TargetCommitteeSize, cfg2.TargetCommitteeSize, "TargetCommitteeSize")
-		assert.Equal(t, cfg1.MaxValidatorsPerCommittee, cfg2.MaxValidatorsPerCommittee, "MaxValidatorsPerCommittee")
-		assert.Equal(t, cfg1.MinPerEpochChurnLimit, cfg2.MinPerEpochChurnLimit, "MinPerEpochChurnLimit")
-		assert.Equal(t, cfg1.ChurnLimitQuotient, cfg2.ChurnLimitQuotient, "ChurnLimitQuotient")
-		assert.Equal(t, cfg1.ShuffleRoundCount, cfg2.ShuffleRoundCount, "ShuffleRoundCount")
-		assert.Equal(t, cfg1.MinGenesisActiveValidatorCount, cfg2.MinGenesisActiveValidatorCount, "MinGenesisActiveValidatorCount")
-		assert.Equal(t, cfg1.MinGenesisTime, cfg2.MinGenesisTime, "MinGenesisTime")
-		assert.Equal(t, cfg1.HysteresisQuotient, cfg2.HysteresisQuotient, "HysteresisQuotient")
-		assert.Equal(t, cfg1.HysteresisDownwardMultiplier, cfg2.HysteresisDownwardMultiplier, "HysteresisDownwardMultiplier")
-		assert.Equal(t, cfg1.HysteresisUpwardMultiplier, cfg2.HysteresisUpwardMultiplier, "HysteresisUpwardMultiplier")
+		assert.Equal(t, c1.MaxCommitteesPerSlot, c2.MaxCommitteesPerSlot, "%s: MaxCommitteesPerSlot", name)
+		assert.Equal(t, c1.TargetCommitteeSize, c2.TargetCommitteeSize, "%s: TargetCommitteeSize", name)
+		assert.Equal(t, c1.MaxValidatorsPerCommittee, c2.MaxValidatorsPerCommittee, "%s: MaxValidatorsPerCommittee", name)
+		assert.Equal(t, c1.MinPerEpochChurnLimit, c2.MinPerEpochChurnLimit, "%s: MinPerEpochChurnLimit", name)
+		assert.Equal(t, c1.ChurnLimitQuotient, c2.ChurnLimitQuotient, "%s: ChurnLimitQuotient", name)
+		assert.Equal(t, c1.ShuffleRoundCount, c2.ShuffleRoundCount, "%s: ShuffleRoundCount", name)
+		assert.Equal(t, c1.MinGenesisActiveValidatorCount, c2.MinGenesisActiveValidatorCount, "%s: MinGenesisActiveValidatorCount", name)
+		assert.Equal(t, c1.MinGenesisTime, c2.MinGenesisTime, "%s: MinGenesisTime", name)
+		assert.Equal(t, c1.HysteresisQuotient, c2.HysteresisQuotient, "%s: HysteresisQuotient", name)
+		assert.Equal(t, c1.HysteresisDownwardMultiplier, c2.HysteresisDownwardMultiplier, "%s: HysteresisDownwardMultiplier", name)
+		assert.Equal(t, c1.HysteresisUpwardMultiplier, c2.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
 
 		// Fork Choice params.
-		assert.Equal(t, cfg1.SafeSlotsToUpdateJustified, cfg2.SafeSlotsToUpdateJustified, "SafeSlotsToUpdateJustified")
+		assert.Equal(t, c1.SafeSlotsToUpdateJustified, c2.SafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
 
 		// Validator params.
-		assert.Equal(t, cfg1.Eth1FollowDistance, cfg2.Eth1FollowDistance, "Eth1FollowDistance")
-		assert.Equal(t, cfg1.TargetAggregatorsPerCommittee, cfg2.TargetAggregatorsPerCommittee,
-			"%s: TargetAggregatorsPerCommittee", name)
+		assert.Equal(t, c1.Eth1FollowDistance, c2.Eth1FollowDistance, "%s: Eth1FollowDistance", name)
+		assert.Equal(t, c1.TargetAggregatorsPerCommittee, c2.TargetAggregatorsPerCommittee, "%s: TargetAggregatorsPerCommittee", name)
+		assert.Equal(t, c1.RandomSubnetsPerValidator, c2.RandomSubnetsPerValidator, "%s: RandomSubnetsPerValidator", name)
+		assert.Equal(t, c1.EpochsPerRandomSubnetSubscription, c2.EpochsPerRandomSubnetSubscription, "%s: EpochsPerRandomSubnetSubscription", name)
+		assert.Equal(t, c1.SecondsPerETH1Block, c2.SecondsPerETH1Block, "%s: SecondsPerETH1Block", name)
 
 		// Deposit contract.
-		assert.Equal(t, cfg1.DepositChainID, cfg2.DepositChainID, "DepositChainID")
-		assert.Equal(t, cfg1.DepositNetworkID, cfg2.DepositNetworkID, "DepositNetworkID")
+		assert.Equal(t, c1.DepositChainID, c2.DepositChainID, "%s: DepositChainID", name)
+		assert.Equal(t, c1.DepositNetworkID, c2.DepositNetworkID, "%s: DepositNetworkID", name)
 	}
 
 	t.Run("mainnet", func(t *testing.T) {

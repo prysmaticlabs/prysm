@@ -61,6 +61,10 @@ type BeaconChainConfig struct {
 	DepositChainID   uint64 `yaml:"DEPOSIT_CHAIN_ID"`   // ChainID of the eth1 network. This used for replay protection.
 	DepositNetworkID uint64 `yaml:"DEPOSIT_NETWORK_ID"` // NetworkID of the eth1 network. This used for replay protection.
 
+	// Validator parameters.
+	RandomSubnetsPerValidator         uint64 `yaml:"RANDOM_SUBNETS_PER_VALIDATOR"`          // RandomSubnetsPerValidator specifies the amount of subnets a validator has to be subscribed to at one time.
+	EpochsPerRandomSubnetSubscription uint64 `yaml:"EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION"` // EpochsPerRandomSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
+
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
 	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
