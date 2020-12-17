@@ -98,7 +98,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
+		return nil, errors.Wrapf(err, msgKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return w, nil
 }
