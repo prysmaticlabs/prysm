@@ -74,7 +74,7 @@ func run(ctx context.Context, v Validator) {
 		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
 
-	accountsChangedChan := make(chan struct{})
+	accountsChangedChan := make(chan struct{}, 1)
 	go handleAccountsChanged(ctx, v, accountsChangedChan)
 	if err := v.WaitForActivation(ctx, accountsChangedChan); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
