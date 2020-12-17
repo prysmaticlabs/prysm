@@ -236,6 +236,11 @@ func (p *TestP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
+// DiscoveryAddress --
+func (p *TestP2P) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+	return nil, nil
+}
+
 // AddConnectionHandler handles the connection with a newly connected peer.
 func (p *TestP2P) AddConnectionHandler(f, _ func(ctx context.Context, id peer.ID) error) {
 	p.BHost.Network().Notify(&network.NotifyBundle{
