@@ -594,7 +594,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	return validAtts.sortByProfitability().limitToMaxAttestations(), nil
+	return validAtts.dedup().sortByProfitability().limitToMaxAttestations(), nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -672,7 +672,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			}
 			attsForInclusion = append(attsForInclusion, as...)
 		}
-		atts = attsForInclusion.sortByProfitability().limitToMaxAttestations()
+		atts = attsForInclusion.dedup().sortByProfitability().limitToMaxAttestations()
 	}
 	return atts, nil
 }

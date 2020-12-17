@@ -18,9 +18,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// There are 23 fields in the beacon state.
-const fieldCount = 23
-
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
@@ -33,6 +30,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, errors.New("received nil state")
 	}
 
+	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
@@ -77,6 +75,7 @@ func (b *BeaconState) Copy() *BeaconState {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	dst := &BeaconState{
 		state: &pbp2p.BeaconState{
 			// Primitive types, safe to copy.
@@ -191,7 +190,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, fieldCount)
+		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateFieldCount)
 	}
 
 	for field := range b.dirtyFields {

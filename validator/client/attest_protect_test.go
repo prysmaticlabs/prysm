@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"reflect"
-	"strings"
-	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -17,13 +15,13 @@ import (
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
-func TestPreSignatureValidation(t *testing.T) {
+func Test_slashableAttestationCheck(t *testing.T) {
 	config := &featureconfig.Flags{
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, m, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -45,24 +43,20 @@ func TestPreSignatureValidation(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-	err := validator.preAttSignValidations(context.Background(), att, pubKey)
+	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{})
 	require.ErrorContains(t, failedPreAttSignExternalErr, err)
 	mockProtector.AllowAttestation = true
-	err = validator.preAttSignValidations(context.Background(), att, pubKey)
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
-func TestPreSignatureValidation_NilLocal(t *testing.T) {
+func Test_slashableAttestationCheck_Allowed(t *testing.T) {
 	config := &featureconfig.Flags{
 		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, m, _, finish := setup(t)
+	validator, _, _, finish := setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -81,15 +75,12 @@ func TestPreSignatureValidation_NilLocal(t *testing.T) {
 		},
 	}
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-	err := validator.preAttSignValidations(context.Background(), att, fakePubkey)
+	err := validator.slashableAttestationCheck(context.Background(), att, fakePubkey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
-func TestPostSignatureUpdate(t *testing.T) {
+func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
+	t.Skip("Skipped till #8100, when we will save lowest source and target epochs again.")
 	config := &featureconfig.Flags{
 		SlasherProtection: true,
 	}
@@ -124,10 +115,10 @@ func TestPostSignatureUpdate(t *testing.T) {
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
 	require.NoError(t, err)
-	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
-	require.ErrorContains(t, failedPostAttSignExternalErr, err, "Expected error on post signature update is detected as slashable")
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
+	require.ErrorContains(t, "rejected", err, "Expected error on post signature update is detected as slashable")
 	mockProtector.AllowAttestation = true
-	err = validator.postAttSignUpdate(context.Background(), att, pubKey, sr)
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 
 	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
@@ -138,7 +129,7 @@ func TestPostSignatureUpdate(t *testing.T) {
 	require.Equal(t, uint64(10), e)
 }
 
-func TestPostSignatureUpdate_NilLocal(t *testing.T) {
+func Test_slashableAttestationCheck_OK(t *testing.T) {
 	config := &featureconfig.Flags{
 		SlasherProtection: false,
 	}
@@ -165,18 +156,18 @@ func TestPostSignatureUpdate_NilLocal(t *testing.T) {
 	}
 	sr := [32]byte{1}
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
-	err := validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
+	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
-func TestPrePostSignatureUpdate_NilLocalGenesis(t *testing.T) {
+func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	config := &featureconfig.Flags{
 		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
 	ctx := context.Background()
-	validator, m, _, finish := setup(t)
+	validator, _, _, finish := setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -194,15 +185,8 @@ func TestPrePostSignatureUpdate_NilLocalGenesis(t *testing.T) {
 			},
 		},
 	}
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch2
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-	sr := [32]byte{1}
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
-	err := validator.preAttSignValidations(ctx, att, fakePubkey)
-	require.NoError(t, err, "Expected allowed attestation not to throw error")
-	err = validator.postAttSignUpdate(ctx, att, fakePubkey, sr)
+	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 	e, err := validator.db.LowestSignedSourceEpoch(context.Background(), fakePubkey)
 	require.NoError(t, err)
@@ -238,107 +222,6 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	if !slashable {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
-}
-
-func TestAttestationHistory_BlocksSurroundAttestationPostSignature(t *testing.T) {
-	ctx := context.Background()
-	att := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{1, 2},
-		Data: &ethpb.AttestationData{
-			Slot:            5,
-			CommitteeIndex:  2,
-			BeaconBlockRoot: []byte("great block"),
-			Source: &ethpb.Checkpoint{
-				Root: []byte("good source"),
-			},
-			Target: &ethpb.Checkpoint{
-				Root: []byte("good target"),
-			},
-		},
-	}
-
-	v, _, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [48]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	passThrough := 0
-	slashable := 0
-	var wg sync.WaitGroup
-	for i := uint64(0); i < 100; i++ {
-
-		wg.Add(1)
-		//Test surround and surrounded attestations.
-		go func(i uint64) {
-			sr := [32]byte{1}
-			att.Data.Source.Epoch = 110 - i
-			att.Data.Target.Epoch = 111 + i
-			err := v.postAttSignUpdate(ctx, att, pubKey, sr)
-			if err == nil {
-				passThrough++
-			} else {
-				if strings.Contains(err.Error(), failedAttLocalProtectionErr) {
-					slashable++
-				}
-				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
-				t.Logf("attestation target epoch %d", att.Data.Target.Epoch)
-			}
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-	require.Equal(t, 1, passThrough, "Expecting only one attestations to go through and all others to be found to be slashable")
-	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
-}
-
-func TestAttestationHistory_BlocksDoubleAttestationPostSignature(t *testing.T) {
-	ctx := context.Background()
-	att := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{1, 2},
-		Data: &ethpb.AttestationData{
-			Slot:            5,
-			CommitteeIndex:  2,
-			BeaconBlockRoot: []byte("great block"),
-			Source: &ethpb.Checkpoint{
-				Root: []byte("good source"),
-			},
-			Target: &ethpb.Checkpoint{
-				Root: []byte("good target"),
-			},
-		},
-	}
-
-	v, _, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [48]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	passThrough := 0
-	slashable := 0
-	var wg sync.WaitGroup
-	for i := uint64(0); i < 100; i++ {
-
-		wg.Add(1)
-		//Test double attestations.
-		go func(i uint64) {
-			sr := [32]byte{byte(i)}
-			att.Data.Source.Epoch = 110 - i
-			att.Data.Target.Epoch = 111
-			err := v.postAttSignUpdate(ctx, att, pubKey, sr)
-			if err == nil {
-				passThrough++
-			} else {
-				if strings.Contains(err.Error(), failedAttLocalProtectionErr) {
-					slashable++
-				}
-				t.Logf("attestation source epoch %d", att.Data.Source.Epoch)
-				t.Logf("signing root %d", att.Data.Target.Epoch)
-			}
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-	require.Equal(t, 1, passThrough, "Expecting only one attestations to go through and all others to be found to be slashable")
-	require.Equal(t, 99, slashable, "Expecting 99 attestations to be found as slashable")
-
 }
 
 func TestAttestationHistory_Prunes(t *testing.T) {

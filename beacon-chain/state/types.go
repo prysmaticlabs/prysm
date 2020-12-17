@@ -7,10 +7,11 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func init() {
-	fieldMap = make(map[fieldIndex]dataType, fieldCount)
+	fieldMap = make(map[fieldIndex]dataType, params.BeaconConfig().BeaconStateFieldCount)
 
 	// Initialize the fixed sized arrays.
 	fieldMap[blockRoots] = basicArray

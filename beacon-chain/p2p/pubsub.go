@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/snappy"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -104,7 +104,7 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 //    the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
 //    i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
-	decodedData, err := snappy.Decode(nil /*dst*/, pmsg.Data)
+	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
 	if err != nil {
 		combinedData := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pmsg.Data...)
 		h := hashutil.Hash(combinedData)

@@ -273,7 +273,8 @@ func connectPeerHavingBlocks(
 
 	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy", func(stream network.Stream) {
 		defer func() {
-			assert.NoError(t, stream.Close())
+			_err := stream.Close()
+			_ = _err
 		}()
 
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
@@ -289,7 +290,8 @@ func connectPeerHavingBlocks(
 
 	p.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy", func(stream network.Stream) {
 		defer func() {
-			assert.NoError(t, stream.Close())
+			_err := stream.Close()
+			_ = _err
 		}()
 
 		req := new(p2pTypes.BeaconBlockByRootsReq)
