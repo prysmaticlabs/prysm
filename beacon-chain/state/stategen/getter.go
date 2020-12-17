@@ -25,7 +25,7 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) 
 
 // HasStateInCache returns true if the state exists in cache.
 func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	if s.hotStateCache.Has(blockRoot) {
+	if s.hotStateCache.has(blockRoot) {
 		return true, nil
 	}
 	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
@@ -59,10 +59,10 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	}
 
 	// To invalidate cache for parent root because pre state will get mutated.
-	defer s.hotStateCache.Delete(blockRoot)
+	defer s.hotStateCache.delete(blockRoot)
 
-	if s.hotStateCache.Has(blockRoot) {
-		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
+	if s.hotStateCache.has(blockRoot) {
+		return s.hotStateCache.getWithoutCopy(blockRoot), nil
 	}
 
 	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
@@ -147,7 +147,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 	defer span.End()
 
 	// First, it checks if the state exists in hot state cache.
-	cachedState := s.hotStateCache.Get(blockRoot)
+	cachedState := s.hotStateCache.get(blockRoot)
 	if cachedState != nil {
 		return cachedState, nil
 	}
@@ -281,8 +281,8 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 		}
 
 		// Does the state exist in the hot state cache.
-		if s.hotStateCache.Has(parentRoot) {
-			return s.hotStateCache.Get(parentRoot), nil
+		if s.hotStateCache.has(parentRoot) {
+			return s.hotStateCache.get(parentRoot), nil
 		}
 
 		// Does the state exist in finalized info cache.
