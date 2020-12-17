@@ -8,6 +8,8 @@ import (
 
 var log = logrus.WithField("prefix", "accounts")
 
+var msgKeymanagerNotSupported = "keymanager kind not supported: %s"
+
 // AccountsConfig specifies parameters to run to delete, enable, disable accounts.
 type AccountsConfig struct {
 	Wallet            *wallet.Wallet
