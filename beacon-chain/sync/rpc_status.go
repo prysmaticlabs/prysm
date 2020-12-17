@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"sync"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
@@ -28,8 +29,11 @@ func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
 	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
 	runutil.RunEvery(s.ctx, interval, func() {
+		wg := new(sync.WaitGroup)
 		for _, pid := range s.p2p.Peers().Connected() {
+			wg.Add(1)
 			go func(id peer.ID) {
+				defer wg.Done()
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
@@ -58,6 +62,24 @@ func (s *Service) maintainPeerStatuses() {
 					}
 				}
 			}(pid)
+		}
+		wg.Wait()
+
+		connLimit := s.p2p.Peers().ConnectedPeerLimit()
+		connPeers := s.p2p.Peers().Connected()
+
+		if len(connPeers) > int(connLimit) {
+			peerDiff := len(connPeers) - int(connLimit)
+			badPeers := s.p2p.Peers().RankBadPeers()
+			maxLimit := len(badPeers)
+			if maxLimit > peerDiff {
+				maxLimit = peerDiff
+			}
+			for _, pid := range badPeers[:maxLimit] {
+				if err := s.sendGoodByeAndDisconnect(s.ctx, p2ptypes.GoodbyeCodeTooManyPeers, pid); err != nil {
+					log.WithField("peer", pid).WithError(err).Debug("Could not send goodbye to peer")
+				}
+			}
 		}
 	})
 }

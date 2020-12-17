@@ -611,6 +611,41 @@ func (p *Status) ConnectedPeerLimit() uint64 {
 	return uint64(maxLim) - maxLimitBuffer
 }
 
+// RankBadPeers ranks our peers in terms of their
+// bad responses count. We rank our currently connected
+// peers who have a bad response count of larger than 0.
+func (p *Status) RankBadPeers() []peer.ID {
+	badPeer := func(peerData *peerdata.PeerData) bool {
+		return peerData.BadResponses > 0
+	}
+	type peerResp struct {
+		pid     peer.ID
+		badResp int
+	}
+	peersToRank := make([]*peerResp, 0)
+	// Select disconnected peers with a smaller bad response count.
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && badPeer(peerData) {
+			peersToRank = append(peersToRank, &peerResp{
+				pid:     pid,
+				badResp: peerData.BadResponses,
+			})
+		}
+	}
+
+	// Sort peers in descending order, so the peers with the
+	// most amount of bad responses are at the front of the queue.
+	sort.Slice(peersToRank, func(i, j int) bool {
+		return peersToRank[i].badResp > peersToRank[j].badResp
+	})
+
+	peerIDS := make([]peer.ID, len(peersToRank))
+	for i, peer := range peersToRank {
+		peerIDS[i] = peer.pid
+	}
+	return peerIDS
+}
+
 func (p *Status) isfromBadIP(pid peer.ID) bool {
 	p.store.RLock()
 	defer p.store.RUnlock()
