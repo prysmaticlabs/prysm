@@ -20,6 +20,7 @@ var (
 	_ = Streamer(&StreamServer{})
 )
 
+// Streamer defines a struct which can retrieve and stream process logs.
 type Streamer interface {
 	GetLastFewLogs() [][]byte
 	LogsFeed() *event.Feed
@@ -48,6 +49,7 @@ func NewStreamServer() *StreamServer {
 	return ss
 }
 
+// GetLastFewLogs returns the last few entries of logs stored in an LRU cache.
 func (ss *StreamServer) GetLastFewLogs() [][]byte {
 	messages := make([][]byte, 0)
 	for _, k := range ss.cache.Keys() {
@@ -59,6 +61,7 @@ func (ss *StreamServer) GetLastFewLogs() [][]byte {
 	return messages
 }
 
+// LogsFeed returns a feed callers can subscribe to to receive logs via a channel.
 func (ss *StreamServer) LogsFeed() *event.Feed {
 	return ss.feed
 }
