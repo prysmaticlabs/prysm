@@ -93,7 +93,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
-	service.hotStateCache.Put(r, beaconState)
+	service.hotStateCache.put(r, beaconState)
 
 	loadedState, err := service.StateByRoot(ctx, r)
 	require.NoError(t, err)
@@ -129,14 +129,14 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
-	service.hotStateCache.Put(r, beaconState)
+	service.hotStateCache.put(r, beaconState)
 
 	loadedState, err := service.StateByRootInitialSync(ctx, r)
 	require.NoError(t, err)
 	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
 		t.Error("Did not correctly cache state")
 	}
-	if service.hotStateCache.Has(r) {
+	if service.hotStateCache.has(r) {
 		t.Error("Hot state cache was not invalidated")
 	}
 }
@@ -229,7 +229,7 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
-	service.hotStateCache.Put(r, beaconState)
+	service.hotStateCache.put(r, beaconState)
 
 	// This tests where hot state was already cached.
 	loadedState, err := service.loadStateByRoot(ctx, r)
@@ -358,7 +358,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r1[:]}))
-	service.hotStateCache.Put(bytesutil.ToBytes32(b1.Block.ParentRoot), genesis)
+	service.hotStateCache.put(bytesutil.ToBytes32(b1.Block.ParentRoot), genesis)
 
 	loadedState, err := service.loadStateBySlot(ctx, 2)
 	require.NoError(t, err)
@@ -436,7 +436,7 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b1))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b2))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b3))
-	service.hotStateCache.Put(r1, b1State)
+	service.hotStateCache.put(r1, b1State)
 
 	lastState, err := service.lastAncestorState(ctx, r3)
 	require.NoError(t, err)
@@ -451,7 +451,7 @@ func TestState_HasState(t *testing.T) {
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}
 	rMiss := [32]byte{3}
-	service.hotStateCache.Put(rHit1, s)
+	service.hotStateCache.put(rHit1, s)
 	require.NoError(t, service.epochBoundaryStateCache.put(rHit2, s))
 
 	b := testutil.NewBeaconBlock()
@@ -482,7 +482,7 @@ func TestState_HasStateInCache(t *testing.T) {
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}
 	rMiss := [32]byte{3}
-	service.hotStateCache.Put(rHit1, s)
+	service.hotStateCache.put(rHit1, s)
 	require.NoError(t, service.epochBoundaryStateCache.put(rHit2, s))
 
 	tt := []struct {
