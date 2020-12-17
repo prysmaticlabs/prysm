@@ -44,7 +44,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 
 	// Cache the state prior.
 	r := [32]byte{'a'}
-	service.hotStateCache.Put(r, beaconState)
+	service.hotStateCache.put(r, beaconState)
 	require.NoError(t, service.SaveState(ctx, r, beaconState))
 
 	// Should not save the state and state summary.
@@ -62,7 +62,7 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	r := [32]byte{'a'}
-	svc.hotStateCache.Put(r, beaconState)
+	svc.hotStateCache.put(r, beaconState)
 
 	require.Equal(t, false, db.HasState(ctx, r), "Database has state stored already")
 	assert.NoError(t, svc.ForceCheckpoint(ctx, r[:]))
@@ -72,7 +72,7 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 	assert.NoError(t, svc.ForceCheckpoint(ctx, params.BeaconConfig().ZeroHash[:]))
 }
 
-func TestSaveState_AlreadyHas(t *testing.T) {
+func TestSaveState_Alreadyhas(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
@@ -83,7 +83,7 @@ func TestSaveState_AlreadyHas(t *testing.T) {
 	r := [32]byte{'A'}
 
 	// Pre cache the hot state.
-	service.hotStateCache.Put(r, beaconState)
+	service.hotStateCache.put(r, beaconState)
 	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))
 
 	// Should not save the state and state summary.
