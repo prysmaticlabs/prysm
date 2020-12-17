@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
