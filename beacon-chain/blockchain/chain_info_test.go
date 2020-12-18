@@ -25,44 +25,44 @@ var _ TimeFetcher = (*Service)(nil)
 var _ ForkFetcher = (*Service)(nil)
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
-	db := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db)
+	beaconDB := testDB.SetupDB(t)
+	c := setupBeaconChain(t, beaconDB)
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], c.FinalizedCheckpt().Root, "Incorrect pre chain start value")
 }
 
 func TestHeadRoot_Nil(t *testing.T) {
-	db := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db)
+	beaconDB := testDB.SetupDB(t)
+	c := setupBeaconChain(t, beaconDB)
 	headRoot, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], headRoot, "Incorrect pre chain start value")
 }
 
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, db)
+	c := setupBeaconChain(t, beaconDB)
 	c.finalizedCheckpt = cp
 
 	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
 }
 
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db)
+	c := setupBeaconChain(t, beaconDB)
 	c.finalizedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.FinalizedCheckpt().Root)
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	c := setupBeaconChain(t, db)
+	c := setupBeaconChain(t, beaconDB)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c.justifiedCheckpt = cp
@@ -70,9 +70,9 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 }
 
 func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	c := setupBeaconChain(t, db)
+	c := setupBeaconChain(t, beaconDB)
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c.justifiedCheckpt = cp
@@ -81,21 +81,21 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 }
 
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, db)
+	c := setupBeaconChain(t, beaconDB)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	c.prevJustifiedCheckpt = cp
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
 
 func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
 	genesisRoot := [32]byte{'C'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, db)
+	c := setupBeaconChain(t, beaconDB)
 	c.prevJustifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
 	assert.DeepEqual(t, c.genesisRoot[:], c.PreviousJustifiedCheckpt().Root)
@@ -118,15 +118,15 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadRoot_UseDB(t *testing.T) {
-	db := testDB.SetupDB(t)
-	c := &Service{beaconDB: db}
+	beaconDB := testDB.SetupDB(t)
+	c := &Service{beaconDB: beaconDB}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := testutil.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), b))
-	require.NoError(t, db.SaveStateSummary(context.Background(), &pb.StateSummary{Root: br[:]}))
-	require.NoError(t, db.SaveHeadBlockRoot(context.Background(), br))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), b))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: br[:]}))
+	require.NoError(t, beaconDB.SaveHeadBlockRoot(context.Background(), br))
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, br, bytesutil.ToBytes32(r))
@@ -195,8 +195,8 @@ func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadETH1Data_Nil(t *testing.T) {
-	db := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db)
+	beaconDB := testDB.SetupDB(t)
+	c := setupBeaconChain(t, beaconDB)
 	assert.DeepEqual(t, &ethpb.Eth1Data{}, c.HeadETH1Data(), "Incorrect pre chain start value")
 }
 
@@ -213,15 +213,15 @@ func TestHeadETH1Data_CanRetrieve(t *testing.T) {
 
 func TestIsCanonical_Ok(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	c := setupBeaconChain(t, db)
+	beaconDB := testDB.SetupDB(t)
+	c := setupBeaconChain(t, beaconDB)
 
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blk))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+	require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 	can, err := c.IsCanonical(ctx, root)
 	require.NoError(t, err)
 	assert.Equal(t, true, can)
