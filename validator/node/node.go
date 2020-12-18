@@ -465,7 +465,6 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		ValidatorService:         vs,
 		SyncChecker:              vs,
 		GenesisFetcher:           vs,
-		BeaconNodeInfoFetcher:    vs,
 		NodeGatewayEndpoint:      nodeGatewayEndpoint,
 		WalletDir:                walletDir,
 		Wallet:                   s.wallet,

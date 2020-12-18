@@ -29,6 +29,7 @@ var (
 		"/ethereum.validator.accounts.v2.Beacon/GetValidators":             true,
 		"/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue":         true,
 		"/ethereum.validator.accounts.v2.Beacon/GetPeers":                  true,
+		"/ethereum.validator.accounts.v2.Beacon/StreamValidatorLogs":       true,
 	}
 	authLock sync.RWMutex
 )

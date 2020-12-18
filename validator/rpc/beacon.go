@@ -12,6 +12,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	healthpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"
@@ -54,6 +55,7 @@ func (s *Server) registerBeaconClient() error {
 	}
 	s.beaconChainClient = ethpb.NewBeaconChainClient(conn)
 	s.beaconNodeClient = ethpb.NewNodeClient(conn)
+	s.beaconNodeHealthClient = healthpb.NewHealthClient(conn)
 	return nil
 }
 
