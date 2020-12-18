@@ -39,7 +39,7 @@ var (
 )
 
 // InputDirectory from the cli.
-func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (dir string, err error) {
+func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
 		return fileutil.ExpandPath(directory)

@@ -22,10 +22,10 @@ type Wallet struct {
 }
 
 // AccountNames --
-func (m *Wallet) AccountNames() (names []string, err error) {
+func (m *Wallet) AccountNames() ([]string, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	names = make([]string, 0)
+	names := make([]string, 0)
 	for name := range m.AccountPasswords {
 		names = append(names, name)
 	}
