@@ -120,7 +120,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 }
 
 // Ask user to select accounts via an interactive prompt.
-func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (selectedPubKeys []bls.PublicKey, err error) {
+func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (filteredPubKeys []bls.PublicKey, err error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")
@@ -183,7 +183,7 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (selectedPubKeys
 	}
 
 	// Filter the public keys based on user input.
-	filteredPubKeys := make([]bls.PublicKey, 0)
+	filteredPubKeys = make([]bls.PublicKey, 0)
 	for selectedIndex := range seen {
 		pk, err := bls.PublicKeyFromBytes(pubKeys[selectedIndex][:])
 		if err != nil {
