@@ -16,9 +16,9 @@ func init() {
 }
 
 func TestChainService_SaveHead_DataRace(t *testing.T) {
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		beaconDB: db,
+		beaconDB: beaconDB,
 	}
 	go func() {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))

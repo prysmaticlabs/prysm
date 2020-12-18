@@ -23,14 +23,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb_alpha.SignedBeaconBlock, []*ethpb_alpha.BeaconBlockContainer) {
+func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpb_alpha.SignedBeaconBlock, []*ethpb_alpha.BeaconBlockContainer) {
 	parentRoot := [32]byte{1, 2, 3}
 	genBlk := testutil.NewBeaconBlock()
 	genBlk.Block.ParentRoot = parentRoot[:]
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, genBlk))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+	require.NoError(t, beaconDB.SaveBlock(ctx, genBlk))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := uint64(100)
 	blks := make([]*ethpb_alpha.SignedBeaconBlock, count)
@@ -51,22 +51,22 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, db db.Database) (*ethpb
 		blks[i] = b
 		blkContainers[i] = &ethpb_alpha.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
-	require.NoError(t, db.SaveBlocks(ctx, blks))
+	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
 	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
 	summary := &p2ppb.StateSummary{
 		Root: headRoot[:],
 		Slot: blkContainers[len(blks)-1].Block.Block.Slot,
 	}
-	require.NoError(t, db.SaveStateSummary(ctx, summary))
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, headRoot))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, summary))
+	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
 	return genBlk, blkContainers
 }
 
 func TestServer_GetBlockHeader(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	headBlock := blkContainers[len(blkContainers)-1]
@@ -74,16 +74,16 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b2))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b2))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b3))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b3))
 
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
-			DB:                  db,
+			DB:                  beaconDB,
 			Block:               headBlock.Block,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
@@ -160,15 +160,15 @@ func TestServer_GetBlockHeader(t *testing.T) {
 }
 
 func TestServer_ListBlockHeaders(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	_, blkContainers := fillDBTestBlocks(ctx, t, db)
+	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
-			DB:                  db,
+			DB:                  beaconDB,
 			Block:               headBlock.Block,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
@@ -178,19 +178,19 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b2))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b2))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b3))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b3))
 	b4 := testutil.NewBeaconBlock()
 	b4.Block.Slot = 31
 	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b4))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b4))
 	b5 := testutil.NewBeaconBlock()
 	b5.Block.Slot = 28
 	b5.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b5))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b5))
 
 	tests := []struct {
 		name       string
@@ -241,13 +241,13 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 }
 
 func TestServer_ProposeBlock_OK(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	genesis := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), genesis), "Could not save genesis block")
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), genesis), "Could not save genesis block")
 
 	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
@@ -255,11 +255,11 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 	require.NoError(t, err)
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+	require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	beaconChainServer := &Server{
-		BeaconDB:          db,
+		BeaconDB:          beaconDB,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		BlockReceiver:     c,
 		ChainInfoFetcher:  c,
@@ -271,7 +271,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 	req.Block.ParentRoot = bsRoot[:]
 	v1Block, err := migration.V1Alpha1ToV1Block(req)
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, req))
+	require.NoError(t, beaconDB.SaveBlock(ctx, req))
 	blockReq := &ethpb.BeaconBlockContainer{
 		Message:   v1Block.Block,
 		Signature: v1Block.Signature,
@@ -281,32 +281,32 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 }
 
 func TestServer_GetBlock(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	_, blkContainers := fillDBTestBlocks(ctx, t, db)
+	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b2))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b2))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b3))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b3))
 
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
-			DB:                  db,
+			DB:                  beaconDB,
 			Block:               headBlock.Block,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -394,24 +394,24 @@ func TestServer_GetBlock(t *testing.T) {
 }
 
 func TestServer_GetBlockRoot(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b2))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b2))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	require.NoError(t, db.SaveBlock(ctx, b3))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b3))
 
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
-			DB:                  db,
+			DB:                  beaconDB,
 			Block:               headBlock.Block,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
@@ -497,22 +497,22 @@ func TestServer_GetBlockRoot(t *testing.T) {
 }
 
 func TestServer_ListBlockAttestations(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	_, blkContainers := fillDBTestBlocks(ctx, t, db)
+	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
-			DB:                  db,
+			DB:                  beaconDB,
 			Block:               headBlock.Block,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, db)
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
