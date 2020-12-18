@@ -6,10 +6,9 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 )
 
 // GetBeaconNodeConnection retrieves the current beacon node connection
