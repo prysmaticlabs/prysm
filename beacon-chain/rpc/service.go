@@ -37,6 +37,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -259,6 +260,8 @@ func (s *Service) Start() {
 		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
+		LogsStreamer:         logutil.NewStreamServer(),
+		StreamLogsBufferSize: 100, // Enough to handle bursts of beacon node logs for gRPC streaming.
 		BeaconDB:             s.beaconDB,
 		Server:               s.grpcServer,
 		SyncChecker:          s.syncService,
