@@ -2,10 +2,10 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,22 +38,63 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (
 
 // GetLogsEndpoints for the beacon and validator client.
 func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.LogsEndpointResponse, error) {
-	beaconLogsEndpoint, err := s.beaconNodeInfoFetcher.BeaconLogsEndpoint(ctx)
+	return nil, status.Error(codes.Unimplemented, "unimplemented")
+}
+
+// StreamBeaconLogs from the beacon node via a gRPC server-side stream.
+func (s *Server) StreamBeaconLogs(req *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+	client, err := s.beaconNodeHealthClient.StreamBeaconLogs(s.ctx, req)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &pb.LogsEndpointResponse{
-		BeaconLogsEndpoint:    beaconLogsEndpoint + "/logs",
-		ValidatorLogsEndpoint: fmt.Sprintf("%s:%d/logs", s.validatorMonitoringHost, s.validatorMonitoringPort),
-	}, nil
+	for {
+		select {
+		case <-s.ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		default:
+			resp, err := client.Recv()
+			if err != nil {
+				return errors.Wrap(err, "could not receive beacon logs from stream")
+			}
+			if err := stream.Send(resp); err != nil {
+				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+			}
+		}
+	}
 }
 
-// StreamBeaconLogs --
-func (s *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
-	return status.Error(codes.Unimplemented, "unimplemented")
-}
-
-// StreamValidatorLogs --
+// StreamValidatorLogs from the validator client via a gRPC server-side stream.
 func (s *Server) StreamValidatorLogs(_ *ptypes.Empty, stream pb.Health_StreamValidatorLogsServer) error {
-	return status.Error(codes.Unimplemented, "unimplemented")
+	ch := make(chan []byte, s.streamLogsBufferSize)
+	defer close(ch)
+	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
+	defer sub.Unsubscribe()
+
+	recentLogs := s.logsStreamer.GetLastFewLogs()
+	logStrings := make([]string, len(recentLogs))
+	for i, log := range recentLogs {
+		logStrings[i] = string(log)
+	}
+	if err := stream.Send(&pb.LogsResponse{
+		Logs: logStrings,
+	}); err != nil {
+		return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+	}
+	for {
+		select {
+		case log := <-ch:
+			resp := &pb.LogsResponse{
+				Logs: []string{string(log)},
+			}
+			if err := stream.Send(resp); err != nil {
+				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+			}
+		case <-s.ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }
