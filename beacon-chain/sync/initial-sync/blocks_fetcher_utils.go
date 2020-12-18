@@ -300,9 +300,7 @@ func (f *blocksFetcher) bestNonFinalizedSlot() uint64 {
 
 // calculateHeadAndTargetEpochs return node's current head epoch, along with the best known target
 // epoch. For the latter peers supporting that target epoch are returned as well.
-func (f *blocksFetcher) calculateHeadAndTargetEpochs() (uint64, uint64, []peer.ID) {
-	var targetEpoch, headEpoch uint64
-	var peers []peer.ID
+func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch uint64, targetEpoch uint64, peers []peer.ID) {
 	if f.mode == modeStopOnFinalizedEpoch {
 		headEpoch = f.chain.FinalizedCheckpt().Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
