@@ -366,31 +366,6 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	}
 }
 
-func TestServer_ListValidatorBalances_ResponseOutOfBound(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	count := 10
-	_, _, headState := setupValidators(t, beaconDB, count)
-	b := testutil.NewBeaconBlock()
-	gRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
-
-	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(beaconDB),
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-
-	req := &ethpb.ListValidatorBalancesRequest{PageSize: 250, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}, PublicKeys: [][]byte{{'a'}}}
-	_, err = bs.ListValidatorBalances(context.Background(), req)
-	require.ErrorContains(t, "Request exceeds response length", err)
-}
-
 func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 
@@ -613,6 +588,51 @@ func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
 
 	require.Equal(t, count/2-1, len(received.ValidatorList))
 	require.Equal(t, count/2-1, int(received.TotalSize))
+}
+
+func TestServer_ListValidatorBalances_UnknownValidatorInResponse(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	_, _, headState := setupValidators(t, beaconDB, 4)
+	b := testutil.NewBeaconBlock()
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
+
+	bs := &Server{
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(beaconDB),
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	nonExistentPubKey := [32]byte{8}
+	req := &ethpb.ListValidatorBalancesRequest{
+		PublicKeys: [][]byte{
+			pubKey(1),
+			pubKey(2),
+			nonExistentPubKey[:],
+		},
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
+	}
+
+	wanted := &ethpb.ValidatorBalances{
+		Balances: []*ethpb.ValidatorBalances_Balance{
+			{Status: "UNKNOWN"},
+			{Index: 1, PublicKey: pubKey(1), Balance: 1, Status: "EXITED"},
+			{Index: 2, PublicKey: pubKey(2), Balance: 2, Status: "EXITED"},
+		},
+		NextPageToken: "",
+		TotalSize:     3,
+	}
+	res, err := bs.ListValidatorBalances(context.Background(), req)
+	require.NoError(t, err)
+	if !proto.Equal(res, wanted) {
+		t.Errorf("Expected %v, received %v", wanted, res)
+	}
 }
 
 func TestServer_ListValidators_NoPagination(t *testing.T) {
