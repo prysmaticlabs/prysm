@@ -650,7 +650,7 @@ func TestAtInboundPeerLimit(t *testing.T) {
 		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}
 	assert.Equal(t, false, p.IsAboveInboundLimit(), "Inbound limit exceeded")
-	for i := 0; i < 15; i++ {
+	for i := 0; i < 31; i++ {
 		// Peer added to peer handler.
 		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}

@@ -406,6 +406,7 @@ func (s *ValidatorClient) registerClientService(
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,
 		GraffitiStruct:             gStruct,
+		LogDutyCountDown:           s.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})
 
 	if err != nil {
@@ -464,7 +465,6 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		ValidatorService:         vs,
 		SyncChecker:              vs,
 		GenesisFetcher:           vs,
-		BeaconNodeInfoFetcher:    vs,
 		NodeGatewayEndpoint:      nodeGatewayEndpoint,
 		WalletDir:                walletDir,
 		Wallet:                   s.wallet,

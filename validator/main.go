@@ -72,6 +72,7 @@ var appFlags = []cli.Flag{
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
 	flags.GraffitiFileFlag,
+	flags.EnableDutyCountDown,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,

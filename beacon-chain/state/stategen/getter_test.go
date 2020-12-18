@@ -18,15 +18,15 @@ import (
 
 func TestStateByRoot_ColdState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	service.finalizedInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, b))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b))
 	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -43,9 +43,9 @@ func TestStateByRoot_ColdState(t *testing.T) {
 
 func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(10))
@@ -61,9 +61,9 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 
 func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := testutil.NewBeaconBlock()
@@ -86,9 +86,9 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
 
 func TestStateByRoot_HotStateCached(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -104,9 +104,9 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 
 func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	targetSlot := uint64(10)
@@ -122,9 +122,9 @@ func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
 
 func TestStateByRootInitialSync_UseCache(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -143,8 +143,8 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 
 func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := testutil.NewBeaconBlock()
@@ -167,9 +167,9 @@ func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 
 func TestStateBySlot_ColdState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 	service.finalizedInfo.slot = service.slotsPerArchivedPoint + 1
 
@@ -177,19 +177,19 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	assert.NoError(t, db.SaveState(ctx, beaconState, gRoot))
-	assert.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	assert.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
+	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
 	b, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, b))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b))
 	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, bRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 
 	r := [32]byte{}
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: service.slotsPerArchivedPoint, Root: r[:]}))
@@ -202,19 +202,19 @@ func TestStateBySlot_ColdState(t *testing.T) {
 
 func TestStateBySlot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	assert.NoError(t, db.SaveState(ctx, beaconState, gRoot))
-	assert.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	assert.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
+	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
 	slot := uint64(10)
 	loadedState, err := service.StateBySlot(ctx, slot)
@@ -224,8 +224,8 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 
 func TestLoadeStateByRoot_Cached(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -242,14 +242,14 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 
 func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 0, Root: gRoot[:]}))
@@ -269,8 +269,8 @@ func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
 
 func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	gBlk := testutil.NewBeaconBlock()
@@ -295,8 +295,8 @@ func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 
 func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	gBlk := testutil.NewBeaconBlock()
@@ -321,8 +321,8 @@ func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
 
 func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
@@ -339,22 +339,22 @@ func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 
 func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
-	require.NoError(t, db.SaveState(ctx, genesis, genesisBlockRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	stateRoot, err := genesis.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	require.NoError(t, db.SaveBlock(ctx, genesisBlk))
+	require.NoError(t, beaconDB.SaveBlock(ctx, genesisBlk))
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlkRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot))
 
 	b1, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, b1))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b1))
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r1[:]}))
@@ -367,8 +367,8 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 
 func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
@@ -406,8 +406,8 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 
 func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
@@ -445,8 +445,8 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 
 func TestState_HasState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	s := testutil.NewBeaconState()
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}
@@ -476,8 +476,8 @@ func TestState_HasState(t *testing.T) {
 
 func TestState_HasStateInCache(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	s := testutil.NewBeaconState()
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}

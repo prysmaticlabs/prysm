@@ -48,9 +48,9 @@ type finalizedInfo struct {
 }
 
 // New returns a new state management object.
-func New(db db.NoHeadAccessDatabase) *State {
+func New(beaconDB db.NoHeadAccessDatabase) *State {
 	return &State{
-		beaconDB:                db,
+		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
