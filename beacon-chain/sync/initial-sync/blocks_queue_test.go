@@ -532,8 +532,8 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		fsm := &stateMachine{
 			state: stateScheduled,
 		}
-		assert.Equal(t, (peer.ID)(""), fsm.pid)
-		assert.DeepEqual(t, ([]*eth.SignedBeaconBlock)(nil), fsm.blocks)
+		assert.Equal(t, peer.ID(""), fsm.pid)
+		assert.DeepEqual(t, []*eth.SignedBeaconBlock(nil), fsm.blocks)
 		updatedState, err := handlerFn(fsm, response)
 		assert.NoError(t, err)
 		assert.Equal(t, stateDataParsed, updatedState)
