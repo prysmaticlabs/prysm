@@ -501,6 +501,7 @@ func SyncCommitteeIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64,
 			i++
 			cIndices = append(cIndices, cIndex)
 		}
+		i++
 	}
 	return cIndices, nil
 }
