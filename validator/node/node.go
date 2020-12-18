@@ -406,6 +406,7 @@ func (s *ValidatorClient) registerClientService(
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,
 		GraffitiStruct:             gStruct,
+		LogDutyCountDown:           s.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})
 
 	if err != nil {

@@ -59,6 +59,7 @@ type ValidatorService struct {
 	useWeb                bool
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
+	logDutyCountDown      bool
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
@@ -83,6 +84,7 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	LogDutyCountDown           bool
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
@@ -123,6 +125,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		useWeb:                cfg.UseWeb,
 		graffitiStruct:        cfg.GraffitiStruct,
+		logDutyCountDown:      cfg.LogDutyCountDown,
 	}, nil
 }
 
@@ -200,6 +203,7 @@ func (v *ValidatorService) Start() {
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
 		graffitiStruct:                 v.graffitiStruct,
+		logDutyCountDown:               v.logDutyCountDown,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
