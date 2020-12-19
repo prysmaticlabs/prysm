@@ -29,25 +29,25 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type LogsEndpointResponse struct {
-	BeaconLogsEndpoint   string   `protobuf:"bytes,1,opt,name=beacon_logs_endpoint,json=beaconLogsEndpoint,proto3" json:"beacon_logs_endpoint,omitempty"`
+type LogsResponse struct {
+	Logs                 []string `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *LogsEndpointResponse) Reset()         { *m = LogsEndpointResponse{} }
-func (m *LogsEndpointResponse) String() string { return proto.CompactTextString(m) }
-func (*LogsEndpointResponse) ProtoMessage()    {}
-func (*LogsEndpointResponse) Descriptor() ([]byte, []int) {
+func (m *LogsResponse) Reset()         { *m = LogsResponse{} }
+func (m *LogsResponse) String() string { return proto.CompactTextString(m) }
+func (*LogsResponse) ProtoMessage()    {}
+func (*LogsResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_2e4b7e98e3e10444, []int{0}
 }
-func (m *LogsEndpointResponse) XXX_Unmarshal(b []byte) error {
+func (m *LogsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *LogsEndpointResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LogsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_LogsEndpointResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_LogsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -57,50 +57,49 @@ func (m *LogsEndpointResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (m *LogsEndpointResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LogsEndpointResponse.Merge(m, src)
+func (m *LogsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogsResponse.Merge(m, src)
 }
-func (m *LogsEndpointResponse) XXX_Size() int {
+func (m *LogsResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *LogsEndpointResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_LogsEndpointResponse.DiscardUnknown(m)
+func (m *LogsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogsResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_LogsEndpointResponse proto.InternalMessageInfo
+var xxx_messageInfo_LogsResponse proto.InternalMessageInfo
 
-func (m *LogsEndpointResponse) GetBeaconLogsEndpoint() string {
+func (m *LogsResponse) GetLogs() []string {
 	if m != nil {
-		return m.BeaconLogsEndpoint
+		return m.Logs
 	}
-	return ""
+	return nil
 }
 
 func init() {
-	proto.RegisterType((*LogsEndpointResponse)(nil), "ethereum.beacon.rpc.v1.LogsEndpointResponse")
+	proto.RegisterType((*LogsResponse)(nil), "ethereum.beacon.rpc.v1.LogsResponse")
 }
 
 func init() { proto.RegisterFile("proto/beacon/rpc/v1/health.proto", fileDescriptor_2e4b7e98e3e10444) }
 
 var fileDescriptor_2e4b7e98e3e10444 = []byte{
-	// 258 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x90, 0xc1, 0x4a, 0xc3, 0x40,
-	0x10, 0x86, 0x59, 0x0f, 0x05, 0x17, 0x41, 0x58, 0x4a, 0x91, 0x2a, 0xa1, 0x04, 0x0f, 0x22, 0xb2,
-	0x63, 0xf4, 0x0d, 0x84, 0x62, 0x0f, 0x9e, 0xfa, 0x02, 0x65, 0x13, 0xc7, 0x6c, 0x20, 0xdd, 0x59,
-	0xb2, 0xd3, 0x80, 0x57, 0xbd, 0x7b, 0xf1, 0xa5, 0x3c, 0x0a, 0xbe, 0x80, 0x04, 0x1f, 0x44, 0x9a,
-	0x6d, 0xa0, 0x87, 0x1e, 0x87, 0x6f, 0x7e, 0xfe, 0x6f, 0x46, 0xce, 0x7c, 0x43, 0x4c, 0x90, 0xa3,
-	0x29, 0xc8, 0x41, 0xe3, 0x0b, 0x68, 0x33, 0xb0, 0x68, 0x6a, 0xb6, 0xba, 0x47, 0x6a, 0x82, 0x6c,
-	0xb1, 0xc1, 0xcd, 0x5a, 0xc7, 0x25, 0xdd, 0xf8, 0x42, 0xb7, 0xd9, 0xf4, 0xa2, 0x24, 0x2a, 0x6b,
-	0x04, 0xe3, 0x2b, 0x30, 0xce, 0x11, 0x1b, 0xae, 0xc8, 0x85, 0x98, 0x9a, 0x9e, 0xef, 0x68, 0x3f,
-	0xe5, 0x9b, 0x17, 0xc0, 0xb5, 0xe7, 0xd7, 0x08, 0xd3, 0x85, 0x1c, 0x3f, 0x51, 0x19, 0xe6, 0xee,
-	0xd9, 0x53, 0xe5, 0x78, 0x89, 0xc1, 0x93, 0x0b, 0xa8, 0x6e, 0xe5, 0x38, 0x76, 0xac, 0x6a, 0x2a,
-	0xc3, 0x0a, 0x77, 0xfc, 0x4c, 0xcc, 0xc4, 0xd5, 0xf1, 0x52, 0x45, 0xb6, 0x9f, 0xbc, 0xfb, 0x10,
-	0x72, 0xb4, 0xe8, 0x6d, 0xd5, 0xbb, 0x90, 0xa7, 0x8f, 0xc8, 0xfb, 0x58, 0x4d, 0x74, 0xd4, 0xd0,
-	0x83, 0x86, 0x9e, 0x6f, 0x35, 0xa6, 0x37, 0xfa, 0xf0, 0x51, 0xfa, 0x90, 0x56, 0x7a, 0xfd, 0xf6,
-	0xf3, 0xf7, 0x79, 0x74, 0xa9, 0x52, 0x40, 0xb6, 0xd0, 0x66, 0xa6, 0xf6, 0xd6, 0x0c, 0x5f, 0x82,
-	0xad, 0x2a, 0x0c, 0xaa, 0x0f, 0x27, 0x5f, 0x5d, 0x22, 0xbe, 0xbb, 0x44, 0xfc, 0x76, 0x89, 0xc8,
-	0x47, 0x7d, 0xef, 0xfd, 0x7f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x73, 0x6a, 0x3d, 0x50, 0x66, 0x01,
-	0x00, 0x00,
+	// 249 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0x28, 0x28, 0xca, 0x2f,
+	0xc9, 0xd7, 0x4f, 0x4a, 0x4d, 0x4c, 0xce, 0xcf, 0xd3, 0x2f, 0x2a, 0x48, 0xd6, 0x2f, 0x33, 0xd4,
+	0xcf, 0x48, 0x4d, 0xcc, 0x29, 0xc9, 0xd0, 0x03, 0x4b, 0x09, 0x89, 0xa5, 0x96, 0x64, 0xa4, 0x16,
+	0xa5, 0x96, 0xe6, 0xea, 0x41, 0x14, 0xe9, 0x15, 0x15, 0x24, 0xeb, 0x95, 0x19, 0x4a, 0xc9, 0xa4,
+	0xe7, 0xe7, 0xa7, 0xe7, 0xa4, 0xea, 0x27, 0x16, 0x64, 0xea, 0x27, 0xe6, 0xe5, 0xe5, 0x97, 0x24,
+	0x96, 0x64, 0xe6, 0xe7, 0x15, 0x43, 0x74, 0x49, 0x49, 0x43, 0x65, 0xc1, 0xbc, 0xa4, 0xd2, 0x34,
+	0xfd, 0xd4, 0xdc, 0x82, 0x92, 0x4a, 0x88, 0xa4, 0x92, 0x12, 0x17, 0x8f, 0x4f, 0x7e, 0x7a, 0x71,
+	0x50, 0x6a, 0x71, 0x41, 0x7e, 0x5e, 0x71, 0xaa, 0x90, 0x10, 0x17, 0x4b, 0x4e, 0x7e, 0x7a, 0xb1,
+	0x04, 0xa3, 0x02, 0xb3, 0x06, 0x67, 0x10, 0x98, 0x6d, 0xd4, 0xc6, 0xc8, 0xc5, 0xe6, 0x01, 0x76,
+	0x87, 0x50, 0x0d, 0x97, 0x40, 0x70, 0x49, 0x51, 0x6a, 0x62, 0xae, 0x13, 0xd8, 0x01, 0x20, 0xad,
+	0x42, 0x62, 0x7a, 0x10, 0x0b, 0xf4, 0x60, 0x16, 0xe8, 0xb9, 0x82, 0x2c, 0x90, 0x52, 0xd1, 0xc3,
+	0xee, 0x5c, 0x3d, 0x64, 0x0b, 0x95, 0x34, 0x9a, 0x2e, 0x3f, 0x99, 0xcc, 0xa4, 0x24, 0xa4, 0xa0,
+	0x9f, 0x5a, 0x92, 0xa1, 0x5f, 0x66, 0x98, 0x98, 0x53, 0x90, 0x91, 0x08, 0xf3, 0xb7, 0x3e, 0xc8,
+	0x7e, 0xfd, 0x62, 0xb0, 0x8d, 0x06, 0x8c, 0x4e, 0x3c, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24,
+	0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0x63, 0x12, 0x1b, 0xd8, 0x3e, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0xb7, 0x40, 0x67, 0x57, 0x38, 0x01, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -115,7 +114,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type HealthClient interface {
-	GetLogsEndpoint(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
+	StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
 }
 
 type healthClient struct {
@@ -126,64 +125,91 @@ func NewHealthClient(cc *grpc.ClientConn) HealthClient {
 	return &healthClient{cc}
 }
 
-func (c *healthClient) GetLogsEndpoint(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
-	out := new(LogsEndpointResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Health/GetLogsEndpoint", in, out, opts...)
+func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Health_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.Health/StreamBeaconLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &healthStreamBeaconLogsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Health_StreamBeaconLogsClient interface {
+	Recv() (*LogsResponse, error)
+	grpc.ClientStream
+}
+
+type healthStreamBeaconLogsClient struct {
+	grpc.ClientStream
+}
+
+func (x *healthStreamBeaconLogsClient) Recv() (*LogsResponse, error) {
+	m := new(LogsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // HealthServer is the server API for Health service.
 type HealthServer interface {
-	GetLogsEndpoint(context.Context, *types.Empty) (*LogsEndpointResponse, error)
+	StreamBeaconLogs(*types.Empty, Health_StreamBeaconLogsServer) error
 }
 
 // UnimplementedHealthServer can be embedded to have forward compatible implementations.
 type UnimplementedHealthServer struct {
 }
 
-func (*UnimplementedHealthServer) GetLogsEndpoint(ctx context.Context, req *types.Empty) (*LogsEndpointResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetLogsEndpoint not implemented")
+func (*UnimplementedHealthServer) StreamBeaconLogs(req *types.Empty, srv Health_StreamBeaconLogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamBeaconLogs not implemented")
 }
 
 func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
 	s.RegisterService(&_Health_serviceDesc, srv)
 }
 
-func _Health_GetLogsEndpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Health_StreamBeaconLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(types.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(HealthServer).GetLogsEndpoint(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.beacon.rpc.v1.Health/GetLogsEndpoint",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetLogsEndpoint(ctx, req.(*types.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(HealthServer).StreamBeaconLogs(m, &healthStreamBeaconLogsServer{stream})
+}
+
+type Health_StreamBeaconLogsServer interface {
+	Send(*LogsResponse) error
+	grpc.ServerStream
+}
+
+type healthStreamBeaconLogsServer struct {
+	grpc.ServerStream
+}
+
+func (x *healthStreamBeaconLogsServer) Send(m *LogsResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _Health_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.beacon.rpc.v1.Health",
 	HandlerType: (*HealthServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "GetLogsEndpoint",
-			Handler:    _Health_GetLogsEndpoint_Handler,
+			StreamName:    "StreamBeaconLogs",
+			Handler:       _Health_StreamBeaconLogs_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/beacon/rpc/v1/health.proto",
 }
 
-func (m *LogsEndpointResponse) Marshal() (dAtA []byte, err error) {
+func (m *LogsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -193,12 +219,12 @@ func (m *LogsEndpointResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *LogsEndpointResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *LogsResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *LogsEndpointResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *LogsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -207,12 +233,14 @@ func (m *LogsEndpointResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.BeaconLogsEndpoint) > 0 {
-		i -= len(m.BeaconLogsEndpoint)
-		copy(dAtA[i:], m.BeaconLogsEndpoint)
-		i = encodeVarintHealth(dAtA, i, uint64(len(m.BeaconLogsEndpoint)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.Logs) > 0 {
+		for iNdEx := len(m.Logs) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Logs[iNdEx])
+			copy(dAtA[i:], m.Logs[iNdEx])
+			i = encodeVarintHealth(dAtA, i, uint64(len(m.Logs[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -228,15 +256,17 @@ func encodeVarintHealth(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *LogsEndpointResponse) Size() (n int) {
+func (m *LogsResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.BeaconLogsEndpoint)
-	if l > 0 {
-		n += 1 + l + sovHealth(uint64(l))
+	if len(m.Logs) > 0 {
+		for _, s := range m.Logs {
+			l = len(s)
+			n += 1 + l + sovHealth(uint64(l))
+		}
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -250,7 +280,7 @@ func sovHealth(x uint64) (n int) {
 func sozHealth(x uint64) (n int) {
 	return sovHealth(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *LogsEndpointResponse) Unmarshal(dAtA []byte) error {
+func (m *LogsResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -273,15 +303,15 @@ func (m *LogsEndpointResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: LogsEndpointResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: LogsResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: LogsEndpointResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: LogsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconLogsEndpoint", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Logs", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -309,7 +339,7 @@ func (m *LogsEndpointResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.BeaconLogsEndpoint = string(dAtA[iNdEx:postIndex])
+			m.Logs = append(m.Logs, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

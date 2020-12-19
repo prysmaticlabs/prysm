@@ -63,6 +63,7 @@ type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
 	emitAccountMetrics                 bool
+	logDutyCountDown                   bool
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex

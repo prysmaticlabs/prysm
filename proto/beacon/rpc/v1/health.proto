@@ -8,17 +8,15 @@ import "google/protobuf/empty.proto";
 // Health service API
 //
 // The health service is able to return important metadata about a beacon node
-// such as the address of the logs websocket endpoint used by web clients.
+// such being able to stream logs via gRPC.
 service Health {
-    // Returns the websocket endpoint which can be reached to subscribe
-	// to logs from the beacon node.
-    rpc GetLogsEndpoint(google.protobuf.Empty) returns (LogsEndpointResponse) {
+    rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream LogsResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/health/logs/endpoint"
+            get: "/eth/v1alpha1/health/logs/stream"
         };
     }
 }
 
-message LogsEndpointResponse {
-	string beacon_logs_endpoint = 1;
+message LogsResponse {
+  repeated string logs = 1;
 }

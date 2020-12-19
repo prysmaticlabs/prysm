@@ -15,9 +15,9 @@ import (
 
 func TestResume(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	root, err := b.Block.HashTreeRoot()

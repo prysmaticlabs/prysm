@@ -40,6 +40,10 @@ func (v *validator) LogAttestationsSubmitted() {
 }
 
 func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
+	if !v.logDutyCountDown {
+		return nil
+	}
+
 	var nextDutySlot uint64
 	var role string
 	for _, duty := range v.duties.CurrentEpochDuties {

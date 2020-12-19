@@ -12,8 +12,10 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	healthpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -54,7 +56,6 @@ type Config struct {
 	ValidatorService         *client.ValidatorService
 	SyncChecker              client.SyncChecker
 	GenesisFetcher           client.GenesisFetcher
-	BeaconNodeInfoFetcher    client.BeaconNodeInfoFetcher
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
 	Wallet                   *wallet.Wallet
@@ -63,8 +64,11 @@ type Config struct {
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
+	logsStreamer             logutil.Streamer
+	streamLogsBufferSize     int
 	beaconChainClient        ethpb.BeaconChainClient
 	beaconNodeClient         ethpb.NodeClient
+	beaconNodeHealthClient   healthpb.HealthClient
 	valDB                    db.Database
 	ctx                      context.Context
 	cancel                   context.CancelFunc
@@ -86,7 +90,6 @@ type Server struct {
 	validatorService         *client.ValidatorService
 	syncChecker              client.SyncChecker
 	genesisFetcher           client.GenesisFetcher
-	beaconNodeInfoFetcher    client.BeaconNodeInfoFetcher
 	walletDir                string
 	wallet                   *wallet.Wallet
 	walletInitializedFeed    *event.Feed
@@ -104,6 +107,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 	return &Server{
 		ctx:                      ctx,
 		cancel:                   cancel,
+		logsStreamer:             logutil.NewStreamServer(),
+		streamLogsBufferSize:     1000, // Enough to handle most bursts of logs in the validator client.
 		host:                     cfg.Host,
 		port:                     cfg.Port,
 		withCert:                 cfg.CertFlag,
@@ -117,7 +122,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		valDB:                    cfg.ValDB,
 		validatorService:         cfg.ValidatorService,
 		syncChecker:              cfg.SyncChecker,
-		beaconNodeInfoFetcher:    cfg.BeaconNodeInfoFetcher,
 		genesisFetcher:           cfg.GenesisFetcher,
 		walletDir:                cfg.WalletDir,
 		walletInitializedFeed:    cfg.WalletInitializedFeed,
