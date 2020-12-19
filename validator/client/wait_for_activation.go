@@ -36,17 +36,14 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 		for {
 			select {
 			case <-ticker.C:
-				keys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+				validatingKeys, err = v.keyManager.FetchValidatingPublicKeys(ctx)
 				if err != nil {
 					return errors.Wrap(err, msgCouldNotFetchKeys)
 				}
-				if len(keys) == 0 {
+				if len(validatingKeys) == 0 {
 					log.Warn(msgNoKeysFetched)
 					continue
 				}
-				// after this statement we jump out of `select` and hit `break`,
-				// thus jumping out of `for` into the rest of the function
-				validatingKeys = keys
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting fetching validating keys")
 				return ctx.Err()
