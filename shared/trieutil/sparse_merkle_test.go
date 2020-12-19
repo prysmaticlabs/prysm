@@ -33,7 +33,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 	someKey := [48]byte{1, 2, 3, 4}
 	dep := &ethpb.Deposit{
 		Proof: proof,
-		Data: &ethpb.Deposit_Data{
+		Data: &ethpb.DepositData{
 			PublicKey:             someKey[:],
 			WithdrawalCredentials: someRoot[:],
 			Amount:                32,

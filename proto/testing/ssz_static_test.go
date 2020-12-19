@@ -108,7 +108,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		t.Skip("Unused type")
 		return nil, nil
 	case "DepositData":
-		obj = &ethpb.Deposit_Data{}
+		obj = &ethpb.DepositData{}
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
 	case "Eth1Block":

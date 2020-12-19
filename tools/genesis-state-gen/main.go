@@ -137,7 +137,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 	if err := json.Unmarshal(enc, &validatorsJSON); err != nil {
 		return nil, err
 	}
-	depositDataList := make([]*ethpb.Deposit_Data, len(validatorsJSON))
+	depositDataList := make([]*ethpb.DepositData, len(validatorsJSON))
 	depositDataRoots := make([][]byte, len(validatorsJSON))
 	for i, val := range validatorsJSON {
 		depositDataString := val.DepositData

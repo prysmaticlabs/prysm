@@ -31,8 +31,8 @@ import (
 //   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing def deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96]) along with a deposit of amount Gwei.
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
-	di := &ethpb.Deposit_Data{
+func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.DepositData, [32]byte, error) {
+	di := &ethpb.DepositData{
 		PublicKey:             depositKey.PublicKey().Marshal(),
 		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
@@ -78,7 +78,7 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 }
 
 // VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
-func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
+func VerifyDepositSignature(dd *ethpb.DepositData, domain []byte) error {
 	if featureconfig.Get().SkipBLSVerify {
 		return nil
 	}
@@ -112,7 +112,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 
 // GenerateDepositTransaction uses the provided validating key and withdrawal key to
 // create a transaction object for the deposit contract.
-func GenerateDepositTransaction(validatingKey, withdrawalKey bls.SecretKey) (*types.Transaction, *ethpb.Deposit_Data, error) {
+func GenerateDepositTransaction(validatingKey, withdrawalKey bls.SecretKey) (*types.Transaction, *ethpb.DepositData, error) {
 	depositData, depositRoot, err := DepositInput(
 		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
 	)

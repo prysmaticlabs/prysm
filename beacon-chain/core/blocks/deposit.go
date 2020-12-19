@@ -224,7 +224,7 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 }
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
-func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error {
+func verifyDepositDataSigningRoot(obj *ethpb.DepositData, domain []byte) error {
 	return depositutil.VerifyDepositSignature(obj, domain)
 }
 

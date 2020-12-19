@@ -125,7 +125,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
 		}
-		dst, err := metaData.Marshal()
+		dst, err := metaData.MarshalSSZ()
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +143,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		return nil, err
 	}
 	metaData := &pbp2p.MetaData{}
-	if err := metaData.Unmarshal(src); err != nil {
+	if err := metaData.UnmarshalSSZ(src); err != nil {
 		return nil, err
 	}
 	return metaData, nil

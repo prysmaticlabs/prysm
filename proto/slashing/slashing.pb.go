@@ -7,15 +7,12 @@
 package ethereum_slashing
 
 import (
-	context "context"
 	reflect "reflect"
 	sync "sync"
 
 	proto "github.com/golang/protobuf/proto"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
+	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -334,8 +331,8 @@ type ProposalHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	EpochBits          []byte `protobuf:"bytes,1,opt,name=epoch_bits,json=epochBits,proto3" json:"epoch_bits,omitempty"`
-	LatestEpochWritten uint64 `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty"`
+	EpochBits          github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytes,1,opt,name=epoch_bits,json=epochBits,proto3" json:"epoch_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitlist"`
+	LatestEpochWritten uint64                                       `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty"`
 }
 
 func (x *ProposalHistory) Reset() {
@@ -721,228 +718,4 @@ func file_proto_slashing_slashing_proto_init() {
 	file_proto_slashing_slashing_proto_rawDesc = nil
 	file_proto_slashing_slashing_proto_goTypes = nil
 	file_proto_slashing_slashing_proto_depIdxs = nil
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConnInterface
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
-
-// SlasherClient is the client API for Slasher service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type SlasherClient interface {
-	IsSlashableAttestation(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*AttesterSlashingResponse, error)
-	IsSlashableBlock(ctx context.Context, in *v1alpha1.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*ProposerSlashingResponse, error)
-	IsSlashableAttestationNoUpdate(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*Slashable, error)
-	IsSlashableBlockNoUpdate(ctx context.Context, in *v1alpha1.BeaconBlockHeader, opts ...grpc.CallOption) (*Slashable, error)
-	HighestAttestations(ctx context.Context, in *HighestAttestationRequest, opts ...grpc.CallOption) (*HighestAttestationResponse, error)
-}
-
-type slasherClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewSlasherClient(cc grpc.ClientConnInterface) SlasherClient {
-	return &slasherClient{cc}
-}
-
-func (c *slasherClient) IsSlashableAttestation(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*AttesterSlashingResponse, error) {
-	out := new(AttesterSlashingResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/IsSlashableAttestation", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *slasherClient) IsSlashableBlock(ctx context.Context, in *v1alpha1.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*ProposerSlashingResponse, error) {
-	out := new(ProposerSlashingResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/IsSlashableBlock", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *slasherClient) IsSlashableAttestationNoUpdate(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*Slashable, error) {
-	out := new(Slashable)
-	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/IsSlashableAttestationNoUpdate", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *slasherClient) IsSlashableBlockNoUpdate(ctx context.Context, in *v1alpha1.BeaconBlockHeader, opts ...grpc.CallOption) (*Slashable, error) {
-	out := new(Slashable)
-	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/IsSlashableBlockNoUpdate", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *slasherClient) HighestAttestations(ctx context.Context, in *HighestAttestationRequest, opts ...grpc.CallOption) (*HighestAttestationResponse, error) {
-	out := new(HighestAttestationResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/HighestAttestations", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// SlasherServer is the server API for Slasher service.
-type SlasherServer interface {
-	IsSlashableAttestation(context.Context, *v1alpha1.IndexedAttestation) (*AttesterSlashingResponse, error)
-	IsSlashableBlock(context.Context, *v1alpha1.SignedBeaconBlockHeader) (*ProposerSlashingResponse, error)
-	IsSlashableAttestationNoUpdate(context.Context, *v1alpha1.IndexedAttestation) (*Slashable, error)
-	IsSlashableBlockNoUpdate(context.Context, *v1alpha1.BeaconBlockHeader) (*Slashable, error)
-	HighestAttestations(context.Context, *HighestAttestationRequest) (*HighestAttestationResponse, error)
-}
-
-// UnimplementedSlasherServer can be embedded to have forward compatible implementations.
-type UnimplementedSlasherServer struct {
-}
-
-func (*UnimplementedSlasherServer) IsSlashableAttestation(context.Context, *v1alpha1.IndexedAttestation) (*AttesterSlashingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableAttestation not implemented")
-}
-func (*UnimplementedSlasherServer) IsSlashableBlock(context.Context, *v1alpha1.SignedBeaconBlockHeader) (*ProposerSlashingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableBlock not implemented")
-}
-func (*UnimplementedSlasherServer) IsSlashableAttestationNoUpdate(context.Context, *v1alpha1.IndexedAttestation) (*Slashable, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableAttestationNoUpdate not implemented")
-}
-func (*UnimplementedSlasherServer) IsSlashableBlockNoUpdate(context.Context, *v1alpha1.BeaconBlockHeader) (*Slashable, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableBlockNoUpdate not implemented")
-}
-func (*UnimplementedSlasherServer) HighestAttestations(context.Context, *HighestAttestationRequest) (*HighestAttestationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HighestAttestations not implemented")
-}
-
-func RegisterSlasherServer(s *grpc.Server, srv SlasherServer) {
-	s.RegisterService(&_Slasher_serviceDesc, srv)
-}
-
-func _Slasher_IsSlashableAttestation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1alpha1.IndexedAttestation)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SlasherServer).IsSlashableAttestation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.slashing.Slasher/IsSlashableAttestation",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SlasherServer).IsSlashableAttestation(ctx, req.(*v1alpha1.IndexedAttestation))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Slasher_IsSlashableBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1alpha1.SignedBeaconBlockHeader)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SlasherServer).IsSlashableBlock(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.slashing.Slasher/IsSlashableBlock",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SlasherServer).IsSlashableBlock(ctx, req.(*v1alpha1.SignedBeaconBlockHeader))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Slasher_IsSlashableAttestationNoUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1alpha1.IndexedAttestation)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SlasherServer).IsSlashableAttestationNoUpdate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.slashing.Slasher/IsSlashableAttestationNoUpdate",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SlasherServer).IsSlashableAttestationNoUpdate(ctx, req.(*v1alpha1.IndexedAttestation))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Slasher_IsSlashableBlockNoUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1alpha1.BeaconBlockHeader)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SlasherServer).IsSlashableBlockNoUpdate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.slashing.Slasher/IsSlashableBlockNoUpdate",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SlasherServer).IsSlashableBlockNoUpdate(ctx, req.(*v1alpha1.BeaconBlockHeader))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Slasher_HighestAttestations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HighestAttestationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SlasherServer).HighestAttestations(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.slashing.Slasher/HighestAttestations",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SlasherServer).HighestAttestations(ctx, req.(*HighestAttestationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Slasher_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "ethereum.slashing.Slasher",
-	HandlerType: (*SlasherServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "IsSlashableAttestation",
-			Handler:    _Slasher_IsSlashableAttestation_Handler,
-		},
-		{
-			MethodName: "IsSlashableBlock",
-			Handler:    _Slasher_IsSlashableBlock_Handler,
-		},
-		{
-			MethodName: "IsSlashableAttestationNoUpdate",
-			Handler:    _Slasher_IsSlashableAttestationNoUpdate_Handler,
-		},
-		{
-			MethodName: "IsSlashableBlockNoUpdate",
-			Handler:    _Slasher_IsSlashableBlockNoUpdate_Handler,
-		},
-		{
-			MethodName: "HighestAttestations",
-			Handler:    _Slasher_HighestAttestations_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/slashing/slashing.proto",
 }

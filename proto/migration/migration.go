@@ -28,7 +28,7 @@ func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.
 
 // V1Alpha1BlockToV1Block converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
 func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
+	marshaledBlk, err := alphaBlk.MarshalSSZ()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
@@ -41,7 +41,7 @@ func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBe
 
 // V1ToV1Alpha1Block converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
 func V1ToV1Alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
+	marshaledBlk, err := alphaBlk.MarshalSSZ()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}

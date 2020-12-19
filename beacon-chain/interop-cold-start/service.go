@@ -210,7 +210,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
 		s.chainStartDeposits[i] = &ethpb.Deposit{
-			Data: &ethpb.Deposit_Data{
+			Data: &ethpb.DepositData{
 				PublicKey: pk[:],
 			},
 		}

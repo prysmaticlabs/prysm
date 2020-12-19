@@ -17,8 +17,7 @@ proto_library(
 go_proto_library(
     name = "ethereum_slashing_go_proto",
     compilers = [
-        "@prysm//:grpc_proto_compiler",
-        "@io_bazel_rules_go//proto:go_grpc",
+        "@prysm//:proto_compiler",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/slashing",
     proto = ":ethereum_slashing_proto",
@@ -26,6 +25,9 @@ go_proto_library(
     deps = [
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
     ],
 )
 

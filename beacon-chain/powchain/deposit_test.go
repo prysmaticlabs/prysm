@@ -184,7 +184,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 
 	deposit := &ethpb.Deposit{
-		Data: &ethpb.Deposit_Data{
+		Data: &ethpb.DepositData{
 			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
 			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), 32),
 			Signature:             bytesutil.PadTo([]byte("test"), 96),

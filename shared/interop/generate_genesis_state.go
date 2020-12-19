@@ -42,7 +42,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 // GenerateGenesisStateFromDepositData creates a genesis state given a list of
 // deposit data items and their corresponding roots.
 func GenerateGenesisStateFromDepositData(
-	genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte,
+	genesisTime uint64, depositData []*ethpb.DepositData, depositDataRoots [][]byte,
 ) (*pb.BeaconState, []*ethpb.Deposit, error) {
 	trie, err := trieutil.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
@@ -68,7 +68,7 @@ func GenerateGenesisStateFromDepositData(
 }
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
-func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.SparseMerkleTrie) ([]*ethpb.Deposit, error) {
+func GenerateDepositsFromData(depositDataItems []*ethpb.DepositData, trie *trieutil.SparseMerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
 	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
@@ -87,7 +87,7 @@ func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trie
 }
 
 // generateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
-func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int, trie *trieutil.SparseMerkleTrie) ([]*ethpb.Deposit, error) {
+func generateDepositsFromData(depositDataItems []*ethpb.DepositData, offset int, trie *trieutil.SparseMerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
 	for i, item := range depositDataItems {
 		proof, err := trie.MerkleProof(i + offset)
@@ -103,12 +103,12 @@ func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int
 }
 
 // DepositDataFromKeys generates a list of deposit data items from a set of BLS validator keys.
-func DepositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
+func DepositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*ethpb.DepositData, [][]byte, error) {
 	type depositData struct {
-		items []*ethpb.Deposit_Data
+		items []*ethpb.DepositData
 		roots [][]byte
 	}
-	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
+	depositDataItems := make([]*ethpb.DepositData, len(privKeys))
 	depositDataRoots := make([][]byte, len(privKeys))
 	results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
@@ -128,9 +128,9 @@ func DepositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*
 	return depositDataItems, depositDataRoots, nil
 }
 
-func depositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*ethpb.Deposit_Data, [][]byte, error) {
+func depositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*ethpb.DepositData, [][]byte, error) {
 	dataRoots := make([][]byte, len(privKeys))
-	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
+	depositDataItems := make([]*ethpb.DepositData, len(privKeys))
 	for i := 0; i < len(privKeys); i++ {
 		data, err := createDepositData(privKeys[i], pubKeys[i])
 		if err != nil {
@@ -147,8 +147,8 @@ func depositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*
 }
 
 // Generates a deposit data item from BLS keys and signs the hash tree root of the data.
-func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Deposit_Data, error) {
-	di := &ethpb.Deposit_Data{
+func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.DepositData, error) {
+	di := &ethpb.DepositData{
 		PublicKey:             pubKey.Marshal(),
 		WithdrawalCredentials: withdrawalCredentialsHash(pubKey.Marshal()),
 		Amount:                params.BeaconConfig().MaxEffectiveBalance,

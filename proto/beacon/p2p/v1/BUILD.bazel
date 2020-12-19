@@ -27,7 +27,6 @@ ssz_gen_marshal(
     go_proto = ":v1_go_proto",
     includes = [
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
     ],
     objs = [
         "BeaconBlocksByRangeRequest",

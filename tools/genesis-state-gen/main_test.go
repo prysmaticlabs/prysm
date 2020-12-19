@@ -26,7 +26,7 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 	}
 }
 
-func createGenesisDepositData(t *testing.T) ([]*GenesisValidator, []*ethpb.Deposit_Data) {
+func createGenesisDepositData(t *testing.T) ([]*GenesisValidator, []*ethpb.DepositData) {
 	numKeys := 5
 	pubKeys := make([]bls.PublicKey, numKeys)
 	privKeys := make([]bls.SecretKey, numKeys)

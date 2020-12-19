@@ -162,7 +162,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -172,7 +172,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -182,7 +182,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -192,7 +192,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -202,7 +202,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 		{
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -213,7 +213,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 		{
 			Eth1BlockHeight: 12,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -223,7 +223,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing
 		{
 			Eth1BlockHeight: 12,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -245,7 +245,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -256,7 +256,7 @@ func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOlde
 		{
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             make([]byte, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -279,7 +279,7 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 		{
 			Eth1BlockHeight: 9,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("pk0"), 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -289,7 +289,7 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("pk1"), 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -299,7 +299,7 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 		{
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("pk1"), 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -309,7 +309,7 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 		{
 			Eth1BlockHeight: 12,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("pk2"), 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -335,7 +335,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	finalizedDeposits := []*dbpb.DepositContainer{
 		{
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -345,7 +345,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		},
 		{
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -355,7 +355,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		},
 		{
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -366,7 +366,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	}
 	dc.deposits = append(finalizedDeposits, &dbpb.DepositContainer{
 		Deposit: &ethpb.Deposit{
-			Data: &ethpb.Deposit_Data{
+			Data: &ethpb.DepositData{
 				PublicKey:             bytesutil.PadTo([]byte{3}, 48),
 				WithdrawalCredentials: make([]byte, 32),
 				Signature:             make([]byte, 96),
@@ -399,7 +399,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	oldFinalizedDeposits := []*dbpb.DepositContainer{
 		{
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -409,7 +409,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 		},
 		{
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -420,7 +420,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	}
 	newFinalizedDeposit := dbpb.DepositContainer{
 		Deposit: &ethpb.Deposit{
-			Data: &ethpb.Deposit_Data{
+			Data: &ethpb.DepositData{
 				PublicKey:             bytesutil.PadTo([]byte{2}, 48),
 				WithdrawalCredentials: make([]byte, 32),
 				Signature:             make([]byte, 96),
@@ -468,7 +468,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -479,7 +479,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -492,7 +492,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 		&dbpb.DepositContainer{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -503,7 +503,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 		&dbpb.DepositContainer{
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{3}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -525,7 +525,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -536,7 +536,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -549,7 +549,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 		&dbpb.DepositContainer{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),
@@ -560,7 +560,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 		&dbpb.DepositContainer{
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{3}, 48),
 					WithdrawalCredentials: make([]byte, 32),
 					Signature:             make([]byte, 96),

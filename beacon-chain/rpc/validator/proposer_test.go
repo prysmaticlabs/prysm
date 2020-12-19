@@ -396,7 +396,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index:           0,
 			Eth1BlockHeight: 2,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -406,7 +406,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index:           1,
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -419,7 +419,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index:           2,
 			Eth1BlockHeight: 400,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -429,7 +429,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Index:           3,
 			Eth1BlockHeight: 600,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -531,7 +531,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Index:           0,
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -541,7 +541,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Index:           1,
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -554,7 +554,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Index:           2,
 			Eth1BlockHeight: 5000,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -564,7 +564,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Index:           3,
 			Eth1BlockHeight: 6000,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -640,7 +640,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -649,7 +649,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		{
 			Index: 1,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -662,7 +662,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		recentDeposits = append(recentDeposits, &dbpb.DepositContainer{
 			Index: i,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -736,7 +736,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -745,7 +745,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		{
 			Index: 1,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -758,7 +758,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		recentDeposits = append(recentDeposits, &dbpb.DepositContainer{
 			Index: i,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -830,7 +830,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -839,7 +839,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		{
 			Index: 1,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -852,7 +852,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		recentDeposits = append(recentDeposits, &dbpb.DepositContainer{
 			Index: i,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -928,7 +928,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Index:           0,
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -938,7 +938,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Index:           1,
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -951,7 +951,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Index:           2,
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -961,7 +961,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Index:           3,
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -1035,7 +1035,7 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 			Index:           0,
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
@@ -1045,7 +1045,7 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 			Index:           1,
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
@@ -1134,7 +1134,7 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 			Index:           0,
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
@@ -1144,7 +1144,7 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 			Index:           1,
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
@@ -1239,7 +1239,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		Index:           0,
 		Eth1BlockHeight: 0,
 		Deposit: &ethpb.Deposit{
-			Data: &ethpb.Deposit_Data{
+			Data: &ethpb.DepositData{
 				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 				Signature:             make([]byte, 96),
 				WithdrawalCredentials: make([]byte, 32),
@@ -1924,7 +1924,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -1933,7 +1933,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 		{
 			Index: 1,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -2020,7 +2020,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		{
 			Index: 0,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -2029,7 +2029,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		{
 			Index: 1,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
@@ -2042,7 +2042,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		recentDeposits = append(recentDeposits, &dbpb.DepositContainer{
 			Index: i,
 			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
+				Data: &ethpb.DepositData{
 					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],

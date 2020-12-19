@@ -130,7 +130,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	depData := &ethpb.Deposit_Data{
+	depData := &ethpb.DepositData{
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 		Signature:             make([]byte, 96),

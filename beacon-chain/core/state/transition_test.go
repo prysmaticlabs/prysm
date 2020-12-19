@@ -659,7 +659,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Set up deposit object for block
 	deposit := &ethpb.Deposit{
-		Data: &ethpb.Deposit_Data{
+		Data: &ethpb.DepositData{
 			PublicKey: []byte{1, 2, 3},
 			Amount:    params.BeaconConfig().MaxEffectiveBalance,
 		},

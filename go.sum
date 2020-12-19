@@ -969,8 +969,12 @@ github.com/protolambda/zssz v0.1.5 h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1oue
 github.com/protolambda/zssz v0.1.5/go.mod h1:a4iwOX5FE7/JkKA+J/PH0Mjo9oXftN6P8NZyL28gpag=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951 h1:Jncuyb/nIJgXbEe0iGz3MN5JmijPVGzwk3G5FR01phI=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20201216204154-8900d82f99f7 h1:nyaY1kciZuSt+wpFZaEJw9SeVTntZdonOX1a1qYti5s=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20201216204154-8900d82f99f7/go.mod h1:4sw7AZEQo+pC/OFrz/nKgKSfXV4j5sRyQXGShvBM2us=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201217013645-05fb6e6e84b3 h1:9kAxYERS9PKjPsqWJWxA0S7L33Y96m8l/ymKk7DIWRY=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201217013645-05fb6e6e84b3/go.mod h1:4sw7AZEQo+pC/OFrz/nKgKSfXV4j5sRyQXGShvBM2us=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201217024051-14417aec656c h1:6OEzr8Fkm2fYCb4unMFF1PblB5Jg65sqEIyN4/k2+XA=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201217024051-14417aec656c/go.mod h1:4sw7AZEQo+pC/OFrz/nKgKSfXV4j5sRyQXGShvBM2us=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201218001909-adda188c65c9 h1:nmCbi8DCE05jQzyTayKzRl5EItRX38ivAwaoHthDf98=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201218001909-adda188c65c9/go.mod h1:4sw7AZEQo+pC/OFrz/nKgKSfXV4j5sRyQXGShvBM2us=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669 h1:cX6YRZnZ9sgMqM5U14llxUiXVNJ3u07Res1IIjTOgtI=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65 h1:hJfAWrlxx7SKpn4S/h2JGl2HHwA1a2wSS3HAzzZ0F+U=
