@@ -368,3 +368,39 @@ func TestWeakSubjectivityCheckptEpoch(t *testing.T) {
 		}
 	}
 }
+
+func TestPrevSlot(t *testing.T) {
+	tests := []struct {
+		name string
+		slot uint64
+		want uint64
+	}{
+		{
+			name: "no underflow",
+			slot: 0,
+			want: 0,
+		},
+		{
+			name: "slot 1",
+			slot: 1,
+			want: 0,
+		},
+		{
+			name: "slot 2",
+			slot: 2,
+			want: 1,
+		},
+		{
+			name: "max",
+			slot: 1<<64 - 1,
+			want: 1<<64 - 1 - 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PrevSlot(tt.slot); got != tt.want {
+				t.Errorf("PrevSlot() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

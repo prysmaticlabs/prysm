@@ -1,6 +1,7 @@
 package epoch_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -249,7 +250,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		t.Run(string(i), func(t *testing.T) {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			original := proto.Clone(tt.state)
 			s, err := state.InitializeFromProto(tt.state)
 			require.NoError(t, err)
@@ -456,4 +457,27 @@ func buildState(t testing.TB, slot, validatorCount uint64) *state.BeaconState {
 		t.Error(err)
 	}
 	return s
+}
+
+func TestProcessLightClientCommitteeUpdates_CanRotate(t *testing.T) {
+	getState := func(slot uint64) *state.BeaconState {
+		s := buildState(t, slot, params.BeaconConfig().MaxValidatorsPerCommittee)
+		return s
+	}
+	postState, err := epoch.ProcessLightClientCommitteeUpdates(getState(0))
+	require.NoError(t, err)
+	require.DeepEqual(t, postState.CurrentSyncCommittee(), postState.NextSyncCommittee())
+	current := postState.CurrentSyncCommittee()
+	next := postState.NextSyncCommittee()
+
+	postState, err = epoch.ProcessLightClientCommitteeUpdates(getState(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, err)
+	require.DeepEqual(t, current, postState.CurrentSyncCommittee())
+	require.DeepEqual(t, next, postState.NextSyncCommittee())
+
+	postState, err = epoch.ProcessLightClientCommitteeUpdates(getState(params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1))
+	require.NoError(t, err)
+	require.NotEqual(t, current, postState.CurrentSyncCommittee())
+	require.NotEqual(t, next, postState.NextSyncCommittee())
+	require.DeepEqual(t, next, postState.CurrentSyncCommittee())
 }

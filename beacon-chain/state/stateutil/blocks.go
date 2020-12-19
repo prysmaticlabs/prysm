@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -145,6 +144,5 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
 func SyncCommitteeRoot(committee *ethereum_beacon_p2p_v1.SyncCommittee) ([32]byte, error) {
-	// TODO(0): Implement light client root
-	return ssz.HashTreeRoot(committee)
+	return committee.HashTreeRoot()
 }
