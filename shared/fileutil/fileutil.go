@@ -54,7 +54,6 @@ func MkdirAll(dirPath string) error {
 		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
 			return errors.New("dir already exists without proper 0700 permissions")
 		}
-		return os.MkdirAll(expanded, info.Mode().Perm())
 	}
 	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
 }
