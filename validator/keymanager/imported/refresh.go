@@ -28,7 +28,7 @@ var (
 // library to listen for file-system changes and debounces these events to
 // ensure we can handle thousands of events fired in a short time-span.
 func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
-	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
+	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
 	if !fileutil.FileExists(accountsFilePath) {
 		return
 	}
@@ -107,9 +107,6 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepre
 	newAccountsStore := &accountStore{}
 	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
 		return err
-	}
-	if len(newAccountsStore.PublicKeys) == 0 || len(newAccountsStore.PrivateKeys) == 0 {
-		return errors.New("attempted to reload a keystore with 0 public/private keys")
 	}
 	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
 		return errors.New("number of public and private keys in keystore do not match")

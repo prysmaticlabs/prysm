@@ -15,37 +15,6 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-func TestImportedKeymanager_reloadAccountsFromKeystore_NoKeys(t *testing.T) {
-	password := "Passw03rdz293**%#2"
-	wallet := &mock.Wallet{
-		Files:            make(map[string]map[string][]byte),
-		AccountPasswords: make(map[string]string),
-		WalletPassword:   password,
-	}
-	dr := &Keymanager{
-		wallet: wallet,
-	}
-	accountsStore := &accountStore{
-		PrivateKeys: nil,
-		PublicKeys:  nil,
-	}
-	encodedStore, err := json.MarshalIndent(accountsStore, "", "\t")
-	require.NoError(t, err)
-	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
-	require.NoError(t, err)
-	id, err := uuid.NewRandom()
-	require.NoError(t, err)
-	keystore := &accountsKeystoreRepresentation{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
-	}
-	err = dr.reloadAccountsFromKeystore(keystore)
-	assert.ErrorContains(t, "0 public/private keys", err)
-}
-
 func TestImportedKeymanager_reloadAccountsFromKeystore_MismatchedNumKeys(t *testing.T) {
 	password := "Passw03rdz293**%#2"
 	wallet := &mock.Wallet{
@@ -99,7 +68,7 @@ func TestImportedKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}
 
-	accountsStore, err := dr.createAccountsKeystore(context.Background(), privKeys, pubKeys)
+	accountsStore, err := dr.CreateAccountsKeystore(context.Background(), privKeys, pubKeys)
 	require.NoError(t, err)
 	require.NoError(t, dr.reloadAccountsFromKeystore(accountsStore))
 

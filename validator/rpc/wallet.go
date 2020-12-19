@@ -265,7 +265,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	s.walletInitialized = true
 	km, err := w.InitializeKeymanager(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, accounts.MsgCouldNotInitializeKeymanager)
 	}
 	s.keymanager = km
 	s.wallet = w
