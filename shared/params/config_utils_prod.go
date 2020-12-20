@@ -3,8 +3,6 @@
 package params
 
 import (
-	"fmt"
-
 	"github.com/mohae/deepcopy"
 )
 
@@ -12,7 +10,6 @@ var beaconConfig = MainnetConfig()
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
-	fmt.Printf("Production level no locking!!!! ----------------------------->\n")
 	return beaconConfig
 }
 
