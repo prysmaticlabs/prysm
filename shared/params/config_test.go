@@ -34,12 +34,12 @@ func TestConfig_OverrideBeaconConfigTestTeardown(t *testing.T) {
 }
 
 func TestConfig_DataRace(t *testing.T) {
-	for i := 0 ; i < 10; i++ {
+	for i := 0; i < 10; i++ {
 		go func() {
 			cfg := params.BeaconConfig()
 			params.OverrideBeaconConfig(cfg)
 		}()
-		go func() uint64{
+		go func() uint64 {
 			return params.BeaconConfig().MaxDeposits
 		}()
 	}
