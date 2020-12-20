@@ -26,14 +26,13 @@ go_library(
     ],
 )
 
-# gazelle:ignore
 go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
         "checktags_test.go",
         "config_test.go",
-        "config_utils_test.go",
+        "config_utils_test.go",  # keep
         "loader_test.go",
     ],
     data = glob(["*.yaml"]) + [
