@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// ProcessLightClientAggregate verifies sync committee aggregate signature signing over the previous slot block root.
+// ProcessSyncCommittee verifies sync committee aggregate signature signing over the previous slot block root.
 //
 // def process_sync_committee(state: BeaconState, body: BeaconBlockBody) -> None:
 //    # Verify sync committee aggregate signature signing over the previous slot block root
@@ -34,7 +34,7 @@ import (
 //
 //    # Reward beacon proposer
 //    increase_balance(state, get_beacon_proposer_index(state), Gwei(participant_rewards // PROPOSER_REWARD_QUOTIENT))
-func ProcessLightClientAggregate(state *state.BeaconState, body *ethpb.BeaconBlockBody) (*state.BeaconState, error) {
+func ProcessSyncCommittee(state *state.BeaconState, body *ethpb.BeaconBlockBody) (*state.BeaconState, error) {
 	indices, err := helpers.SyncCommitteeIndices(state, helpers.CurrentEpoch(state))
 	if err != nil {
 		return nil, err
