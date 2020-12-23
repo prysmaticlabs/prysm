@@ -57,6 +57,8 @@ const (
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
 	finalizedCheckpoint
+	currentEpochStartShard
+	shardGasPrice
 )
 
 // List of current data types the state supports.
@@ -142,6 +144,10 @@ func (f fieldIndex) String() string {
 		return "currentJustifiedCheckpoint"
 	case finalizedCheckpoint:
 		return "finalizedCheckpoint"
+	case currentEpochStartShard:
+		return "currentEpochStartShard"
+	case shardGasPrice:
+		return "shardGasPrice"
 	default:
 		return ""
 	}

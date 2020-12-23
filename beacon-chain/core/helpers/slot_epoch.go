@@ -228,3 +228,23 @@ func VotingPeriodStartTime(genesis, slot uint64) uint64 {
 			params.BeaconConfig().SecondsPerSlot
 	return startTime
 }
+
+// ComputeSourceEpoch returns epoch at the start of the previous period.
+// This is used to facilitate computing shard proposer committees and sync committees.
+//
+// Spec code:
+// def compute_committee_source_epoch(epoch: Epoch, period: uint64) -> Epoch:
+//    """
+//    Return the source epoch for computing the committee.
+//    """
+//    source_epoch = epoch - epoch % period
+//    if source_epoch >= period:
+//        source_epoch -= period  # `period` epochs lookahead
+//    return source_epoch
+func SourceEpoch(epoch uint64, period uint64) uint64 {
+	s := epoch - epoch%period
+	if s >= period {
+		s -= period
+	}
+	return s
+}

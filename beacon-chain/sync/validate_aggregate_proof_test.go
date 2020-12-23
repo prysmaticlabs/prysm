@@ -89,7 +89,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 
-	_, err := validateSelectionIndex(ctx, beaconState, data, 0, sig.Marshal())
+	_, err := validateSelectionIndex(ctx, beaconState, data, 1, sig.Marshal())
 	wanted := "validator is not an aggregator for slot"
 	assert.ErrorContains(t, wanted, err)
 }

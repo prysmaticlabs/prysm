@@ -44,6 +44,10 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 8002;
   ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
+
+  // Shard [9001-10000]
+  uint64 shard_gas_price = 9001;
+  uint64 current_epoch_start_shard = 9002;
 }
 
 message Fork {
