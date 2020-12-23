@@ -12,14 +12,14 @@ import (
 // def compute_shard_from_committee_index(state: BeaconState, index: CommitteeIndex, slot: Slot) -> Shard:
 //    active_shards = get_active_shard_count(state)
 //    return Shard((index + get_start_shard(state, slot)) % active_shards)
-//func ShardFromCommitteeIndex(beaconState *state.BeaconState, slot uint64, committeeID uint64) (uint64, error) {
-//	activeShards := ActiveShardCount()
-//	startShard, err := StartShard(beaconState, slot)
-//	if err != nil {
-//		return 0, err
-//	}
-//	return (startShard + committeeID) % activeShards, nil
-//}
+func ShardFromCommitteeIndex(beaconState *state.BeaconState, slot uint64, committeeID uint64) (uint64, error) {
+	activeShards := ActiveShardCount()
+	startShard, err := StartShard(beaconState, slot)
+	if err != nil {
+		return 0, err
+	}
+	return (startShard + committeeID) % activeShards, nil
+}
 
 // StartShard returns the starting shard of a historical epoch
 //
