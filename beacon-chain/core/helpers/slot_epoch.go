@@ -229,7 +229,7 @@ func VotingPeriodStartTime(genesis, slot uint64) uint64 {
 	return startTime
 }
 
-// ComputeSourceEpoch returns epoch at the start of the previous period.
+// SourceEpoch returns epoch at the start of the previous period.
 // This is used to facilitate computing shard proposer committees and sync committees.
 //
 // Spec code:

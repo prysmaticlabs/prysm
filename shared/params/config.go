@@ -128,8 +128,7 @@ type BeaconChainConfig struct {
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
 
 	// Shard constants.
-	InitialActiveShards uint64 // InitialActiveShards defines the initial active shard count.
-
+	InitialActiveShards  uint64 // InitialActiveShards defines the initial active shard count.
 	TargetShardBlockSize uint64 // TargetShardBlockSize defines the EIP1559 implementation of target block being full.
 	MaxGasPrice          uint64 // MaxGasPrice defines the max gas price.
 	MinGasPrice          uint64 // MinGasPrice defines the min gas price.
