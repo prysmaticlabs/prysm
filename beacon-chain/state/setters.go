@@ -727,6 +727,32 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	return nil
 }
 
+// SetEpochStartShard for the beacon state.
+func (b *BeaconState) SetEpochStartShard(val uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.CurrentEpochStartShard = val
+	b.markFieldAsDirty(currentEpochStartShard)
+	return nil
+}
+
+// SetShardGasPrice for the beacon state.
+func (b *BeaconState) SetShardGasPrice(val uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.ShardGasPrice = val
+	b.markFieldAsDirty(shardGasPrice)
+	return nil
+}
+
 // Recomputes the branch up the index in the Merkle trie representation
 // of the beacon state. This method performs map reads and the caller MUST
 // hold the lock before calling this method.

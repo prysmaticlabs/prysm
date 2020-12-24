@@ -189,5 +189,12 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
 	fieldRoots[20] = finalRoot[:]
+
+	shardGasPriceRoot := htrutils.Uint64Root(state.ShardGasPrice)
+	fieldRoots[21] = shardGasPriceRoot[:]
+
+	startShardRoot := htrutils.Uint64Root(state.CurrentEpochStartShard)
+	fieldRoots[22] = startShardRoot[:]
+
 	return fieldRoots, nil
 }

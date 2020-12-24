@@ -143,8 +143,8 @@ func computeCommittees(
 	committeesListsBySlot := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
-		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
-			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
+		if countAtSlot > helpers.ActiveShardCount() {
+			countAtSlot = helpers.ActiveShardCount()
 		}
 		if countAtSlot == 0 {
 			countAtSlot = 1

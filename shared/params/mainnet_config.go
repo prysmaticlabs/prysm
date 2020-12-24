@@ -142,6 +142,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainVoluntaryExit:     bytesutil.ToBytes4(bytesutil.Bytes4(4)),
 	DomainSelectionProof:    bytesutil.ToBytes4(bytesutil.Bytes4(5)),
 	DomainAggregateAndProof: bytesutil.ToBytes4(bytesutil.Bytes4(6)),
+	DomainShardCommittee:    bytesutil.ToBytes4(bytesutil.Bytes4(7)),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
@@ -158,7 +159,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SlotsPerArchivedPoint:     2048,
 	GenesisCountdownInterval:  time.Minute,
 	NetworkName:               "Mainnet",
-	BeaconStateFieldCount:     21,
+	BeaconStateFieldCount:     23,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
@@ -166,6 +167,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Weak subjectivity values.
 	SafetyDecay: 10,
+
+	// Shard values.
+	InitialActiveShards:  64,
+	TargetShardBlockSize: 1 << 18,
+	MaxGasPrice:          16384,
+	MinGasPrice:          8,
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},

@@ -79,9 +79,11 @@ func (b *BeaconState) Copy() *BeaconState {
 	dst := &BeaconState{
 		state: &pbp2p.BeaconState{
 			// Primitive types, safe to copy.
-			GenesisTime:      b.state.GenesisTime,
-			Slot:             b.state.Slot,
-			Eth1DepositIndex: b.state.Eth1DepositIndex,
+			GenesisTime:            b.state.GenesisTime,
+			Slot:                   b.state.Slot,
+			Eth1DepositIndex:       b.state.Eth1DepositIndex,
+			CurrentEpochStartShard: b.state.CurrentEpochStartShard,
+			ShardGasPrice:          b.state.ShardGasPrice,
 
 			// Large arrays, infrequently changed, constant size.
 			RandaoMixes:               b.state.RandaoMixes,
@@ -361,6 +363,10 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
+	case currentEpochStartShard:
+		return htrutils.Uint64Root(b.state.CurrentEpochStartShard), nil
+	case shardGasPrice:
+		return htrutils.Uint64Root(b.state.ShardGasPrice), nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

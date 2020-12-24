@@ -1055,6 +1055,28 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	return b.state.FinalizedCheckpoint.Epoch
 }
 
+// CurrentEpochStartShard of the current beacon chain state.
+func (b *BeaconState) CurrentEpochStartShard() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.state.CurrentEpochStartShard
+}
+
+// ShardGasPrice of the current beacon chain state.
+func (b *BeaconState) ShardGasPrice() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.state.ShardGasPrice
+}
+
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
 	if input == nil {
 		return nil

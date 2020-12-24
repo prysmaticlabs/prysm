@@ -48,6 +48,8 @@ message BeaconState {
   // Shard fields [9000-10000]
   repeated PendingShardHeader previous_epoch_pending_shard_headers = 9001 [(gogoproto.moretags) = "ssz-max:\"8192\""];
   repeated PendingShardHeader current_epoch_pending_shard_headers = 9002 [(gogoproto.moretags) = "ssz-max:\"8192\""];
+  uint64 shard_gas_price = 9003;
+  uint64 current_epoch_start_shard = 9004;
 }
 
 message Fork {

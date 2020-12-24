@@ -136,12 +136,11 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 }
 
 func TestRetrieveCommitteesForRoot(t *testing.T) {
-
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 
-	numValidators := 128
+	numValidators := int(params.BeaconConfig().MaxValidatorsPerCommittee)
 	headState := setupActiveValidators(t, numValidators)
 
 	m := &mock.ChainService{

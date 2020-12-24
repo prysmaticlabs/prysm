@@ -95,6 +95,7 @@ type BeaconChainConfig struct {
 	DomainVoluntaryExit     [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`      // DomainVoluntaryExit defines the BLS signature domain for exit verification.
 	DomainSelectionProof    [4]byte `yaml:"DOMAIN_SELECTION_PROOF"`     // DomainSelectionProof defines the BLS signature domain for selection proof.
 	DomainAggregateAndProof [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF"` // DomainAggregateAndProof defines the BLS signature domain for aggregate and proof.
+	DomainShardCommittee    [4]byte // DomainShardCommittee defines the BLS signature domain for shard committee.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -125,6 +126,12 @@ type BeaconChainConfig struct {
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
+
+	// Shard constants.
+	InitialActiveShards  uint64 // InitialActiveShards defines the initial active shard count.
+	TargetShardBlockSize uint64 // TargetShardBlockSize defines the EIP1559 implementation of target block being full.
+	MaxGasPrice          uint64 // MaxGasPrice defines the max gas price.
+	MinGasPrice          uint64 // MinGasPrice defines the min gas price.
 }
 
 var beaconConfig = MainnetConfig()
