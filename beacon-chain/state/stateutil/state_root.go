@@ -190,11 +190,23 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	}
 	fieldRoots[20] = finalRoot[:]
 
+	previousEpochShardHeaderRoot, err := h.pendingShardHeaderRoot(state.PreviousEpochPendingShardHeaders)
+	if err != nil {
+		return nil, err
+	}
+	fieldRoots[21] = previousEpochShardHeaderRoot[:]
+
+	currentEpochShardHeaderRoot, err := h.pendingShardHeaderRoot(state.CurrentEpochPendingShardHeaders)
+	if err != nil {
+		return nil, err
+	}
+	fieldRoots[22] = currentEpochShardHeaderRoot[:]
+
 	shardGasPriceRoot := htrutils.Uint64Root(state.ShardGasPrice)
-	fieldRoots[21] = shardGasPriceRoot[:]
+	fieldRoots[23] = shardGasPriceRoot[:]
 
 	startShardRoot := htrutils.Uint64Root(state.CurrentEpochStartShard)
-	fieldRoots[22] = startShardRoot[:]
+	fieldRoots[24] = startShardRoot[:]
 
 	return fieldRoots, nil
 }

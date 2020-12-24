@@ -22,6 +22,7 @@ func TestAttestationDataRoot_EqualGeneric(t *testing.T) {
 			Root:  bytesutil.PadTo([]byte("target root"), 32),
 			Epoch: 9,
 		},
+		ShardHeaderRoot: bytesutil.PadTo([]byte("header root"), 32),
 	}
 	genericHtr, err := attData.HashTreeRoot()
 	require.NoError(t, err)

@@ -57,6 +57,8 @@ const (
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
 	finalizedCheckpoint
+	previousEpochPendingShardHeader
+	currentEpochPendingShardHeader
 	currentEpochStartShard
 	shardGasPrice
 )
@@ -144,6 +146,10 @@ func (f fieldIndex) String() string {
 		return "currentJustifiedCheckpoint"
 	case finalizedCheckpoint:
 		return "finalizedCheckpoint"
+	case currentEpochPendingShardHeader:
+		return "currentEpochPendingShardHeader"
+	case previousEpochPendingShardHeader:
+		return "previousEpochPendingShardHeader"
 	case currentEpochStartShard:
 		return "currentEpochStartShard"
 	case shardGasPrice:

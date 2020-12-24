@@ -32,6 +32,22 @@ func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttesta
 	}
 }
 
+// CopyPendingShardHeader copies the provided pending shard header object.
+func CopyPendingShardHeader(header *pbp2p.PendingShardHeader) *pbp2p.PendingShardHeader {
+	if header == nil {
+		return nil
+	}
+	return &pbp2p.PendingShardHeader{
+		Slot:       header.Slot,
+		Shard:      header.Shard,
+		Commitment: bytesutil.SafeCopyBytes(header.Commitment),
+		Root:       bytesutil.SafeCopyBytes(header.Root),
+		Length:     header.Length,
+		Votes:      bytesutil.SafeCopyBytes(header.Votes),
+		Confirmed:  header.Confirmed,
+	}
+}
+
 // CopyAttestation copies the provided attestation object.
 func CopyAttestation(att *ethpb.Attestation) *ethpb.Attestation {
 	if att == nil {

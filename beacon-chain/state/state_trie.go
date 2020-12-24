@@ -86,13 +86,15 @@ func (b *BeaconState) Copy() *BeaconState {
 			ShardGasPrice:          b.state.ShardGasPrice,
 
 			// Large arrays, infrequently changed, constant size.
-			RandaoMixes:               b.state.RandaoMixes,
-			StateRoots:                b.state.StateRoots,
-			BlockRoots:                b.state.BlockRoots,
-			PreviousEpochAttestations: b.state.PreviousEpochAttestations,
-			CurrentEpochAttestations:  b.state.CurrentEpochAttestations,
-			Slashings:                 b.state.Slashings,
-			Eth1DataVotes:             b.state.Eth1DataVotes,
+			RandaoMixes:                      b.state.RandaoMixes,
+			StateRoots:                       b.state.StateRoots,
+			BlockRoots:                       b.state.BlockRoots,
+			PreviousEpochAttestations:        b.state.PreviousEpochAttestations,
+			CurrentEpochAttestations:         b.state.CurrentEpochAttestations,
+			Slashings:                        b.state.Slashings,
+			Eth1DataVotes:                    b.state.Eth1DataVotes,
+			PreviousEpochPendingShardHeaders: b.state.PreviousEpochPendingShardHeaders,
+			CurrentEpochPendingShardHeaders:  b.state.CurrentEpochPendingShardHeaders,
 
 			// Large arrays, increases over time.
 			Validators:      b.state.Validators,
@@ -367,6 +369,28 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return htrutils.Uint64Root(b.state.CurrentEpochStartShard), nil
 	case shardGasPrice:
 		return htrutils.Uint64Root(b.state.ShardGasPrice), nil
+	case currentEpochPendingShardHeader:
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.CurrentEpochPendingShardHeaders, 8192) // TODO: Use param config.
+			if err != nil {
+				return [32]byte{}, err
+			}
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
+		}
+		return b.recomputeFieldTrie(currentEpochPendingShardHeader, b.state.CurrentEpochPendingShardHeaders)
+	case previousEpochPendingShardHeader:
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.PreviousEpochPendingShardHeaders, 8192)
+			if err != nil {
+				return [32]byte{}, err
+			}
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
+		}
+		return b.recomputeFieldTrie(previousEpochPendingShardHeader, b.state.PreviousEpochPendingShardHeaders)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

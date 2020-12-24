@@ -49,7 +49,7 @@ func AttestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 }
 
 func marshalAttestationData(data *ethpb.AttestationData) []byte {
-	enc := make([]byte, 128)
+	enc := make([]byte, 160)
 
 	if data != nil {
 		// Slot.
@@ -79,13 +79,16 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 			copy(enc[88:96], targetEpochBuf)
 			copy(enc[96:128], data.Target.Root)
 		}
+
+		// Shard header.
+		copy(enc[128:160], data.ShardHeaderRoot)
 	}
 
 	return enc
 }
 
 func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([32]byte, error) {
-	fieldRoots := make([][]byte, 5)
+	fieldRoots := make([][]byte, 6)
 
 	if data != nil {
 		// Slot.
@@ -117,6 +120,10 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 			return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
 		}
 		fieldRoots[4] = targetRoot[:]
+
+		// Shard header root.
+		headerRoot := bytesutil.ToBytes32(data.ShardHeaderRoot)
+		fieldRoots[5] = headerRoot[:]
 	}
 
 	return htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
@@ -124,7 +131,7 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 
 func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
 	// Marshal attestation to determine if it exists in the cache.
-	enc := make([]byte, 2192)
+	enc := make([]byte, 2224)
 	fieldRoots := make([][]byte, 4)
 
 	if att != nil {
@@ -135,11 +142,11 @@ func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pb
 		copy(enc[2048:2056], inclusionBuf)
 
 		attDataBuf := marshalAttestationData(att.Data)
-		copy(enc[2056:2184], attDataBuf)
+		copy(enc[2056:2216], attDataBuf)
 
 		proposerBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
-		copy(enc[2184:2192], proposerBuf)
+		copy(enc[2216:2224], proposerBuf)
 
 		// Check if it exists in cache:
 		if h.rootsCache != nil {
@@ -208,5 +215,35 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) (
 	attsLenRoot := make([]byte, 32)
 	copy(attsLenRoot, attsLenBuf.Bytes())
 	res := htrutils.MixInLength(attsRootsRoot, attsLenRoot)
+	return res, nil
+}
+
+func (h *stateRootHasher) pendingShardHeaderRoot(headers []*pb.PendingShardHeader) ([32]byte, error) {
+	roots := make([][]byte, len(headers))
+	for i := 0; i < len(headers); i++ {
+		pendingRoot, err := headers[i].HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not compute shard header merkleization")
+		}
+		roots[i] = pendingRoot[:]
+	}
+
+	headersRoot, err := htrutils.BitwiseMerkleize(
+		hashutil.CustomSHA256Hasher(),
+		roots,
+		uint64(len(roots)),
+		8192, // TODO: Use params
+	)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute shard header merkleization")
+	}
+	headerLenBuf := new(bytes.Buffer)
+	if err := binary.Write(headerLenBuf, binary.LittleEndian, uint64(len(headersRoot))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal epoch shard header length")
+	}
+	// We need to mix in the length of the slice.
+	headerLenRoot := make([]byte, 32)
+	copy(headerLenRoot, headerLenBuf.Bytes())
+	res := htrutils.MixInLength(headersRoot, headerLenRoot)
 	return res, nil
 }

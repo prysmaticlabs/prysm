@@ -186,6 +186,10 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 		Eth1Data:         eth1Data,
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
+
+		// Shard data.
+		CurrentEpochPendingShardHeaders:  []*pb.PendingShardHeader{},
+		PreviousEpochPendingShardHeaders: []*pb.PendingShardHeader{},
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBody{

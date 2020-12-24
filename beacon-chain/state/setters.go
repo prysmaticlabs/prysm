@@ -753,6 +753,90 @@ func (b *BeaconState) SetShardGasPrice(val uint64) error {
 	return nil
 }
 
+// SetPreviousEpochPendingShardHeader for the beacon state. Updates the entire
+// list to a new value by overwriting the previous one.
+func (b *BeaconState) SetPreviousEpochPendingShardHeader(val []*pbp2p.PendingShardHeader) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[previousEpochPendingShardHeader].MinusRef()
+	b.sharedFieldReferences[previousEpochPendingShardHeader] = &reference{refs: 1}
+
+	b.state.PreviousEpochPendingShardHeaders = val
+	b.markFieldAsDirty(previousEpochPendingShardHeader)
+	b.rebuildTrie[previousEpochPendingShardHeader] = true
+	return nil
+}
+
+// SetCurrentEpochPendingShardHeader for the beacon state. Updates the entire
+// list to a new value by overwriting the previous one.
+func (b *BeaconState) SetCurrentEpochPendingShardHeader(val []*pbp2p.PendingShardHeader) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[currentEpochPendingShardHeader].MinusRef()
+	b.sharedFieldReferences[currentEpochPendingShardHeader] = &reference{refs: 1}
+
+	b.state.CurrentEpochPendingShardHeaders = val
+	b.markFieldAsDirty(currentEpochPendingShardHeader)
+	b.rebuildTrie[currentEpochPendingShardHeader] = true
+	return nil
+}
+
+// AppendCurrentEpochPendingShardHeader for the beacon state. Appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendCurrentEpochPendingShardHeader(val *pbp2p.PendingShardHeader) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	atts := b.state.CurrentEpochPendingShardHeaders
+	if b.sharedFieldReferences[currentEpochPendingShardHeader].Refs() > 1 {
+		// Copy elements in underlying array by reference.
+		atts = make([]*pbp2p.PendingShardHeader, len(b.state.CurrentEpochPendingShardHeaders))
+		copy(atts, b.state.CurrentEpochPendingShardHeaders)
+		b.sharedFieldReferences[currentEpochPendingShardHeader].MinusRef()
+		b.sharedFieldReferences[currentEpochPendingShardHeader] = &reference{refs: 1}
+	}
+
+	b.state.CurrentEpochPendingShardHeaders = append(atts, val)
+	b.markFieldAsDirty(currentEpochPendingShardHeader)
+	b.dirtyIndices[currentEpochPendingShardHeader] = append(b.dirtyIndices[currentEpochPendingShardHeader], uint64(len(b.state.CurrentEpochPendingShardHeaders)-1))
+	return nil
+}
+
+// AppendPreviousEpochPendingShardHeader for the beacon state. Appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendPreviousEpochPendingShardHeader(val *pbp2p.PendingShardHeader) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	atts := b.state.PreviousEpochPendingShardHeaders
+	if b.sharedFieldReferences[previousEpochPendingShardHeader].Refs() > 1 {
+		// Copy elements in underlying array by reference.
+		atts = make([]*pbp2p.PendingShardHeader, len(b.state.PreviousEpochPendingShardHeaders))
+		copy(atts, b.state.PreviousEpochPendingShardHeaders)
+		b.sharedFieldReferences[previousEpochPendingShardHeader].MinusRef()
+		b.sharedFieldReferences[previousEpochPendingShardHeader] = &reference{refs: 1}
+	}
+
+	b.state.PreviousEpochPendingShardHeaders = append(atts, val)
+	b.markFieldAsDirty(previousEpochPendingShardHeader)
+	b.dirtyIndices[previousEpochPendingShardHeader] = append(b.dirtyIndices[previousEpochPendingShardHeader], uint64(len(b.state.PreviousEpochPendingShardHeaders)-1))
+	return nil
+}
+
 // Recomputes the branch up the index in the Merkle trie representation
 // of the beacon state. This method performs map reads and the caller MUST
 // hold the lock before calling this method.
