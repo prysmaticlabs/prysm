@@ -287,6 +287,7 @@ func GenerateAttesterSlashingForValidator(
 				Epoch: currentEpoch + 1,
 				Root:  params.BeaconConfig().ZeroHash[:],
 			},
+			ShardHeaderRoot: make([]byte, 32),
 		},
 		AttestingIndices: []uint64{idx},
 	}

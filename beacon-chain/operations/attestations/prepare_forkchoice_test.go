@@ -275,6 +275,7 @@ func TestService_seen(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
+		ShardHeaderRoot: make([]byte, 32),
 	}
 
 	ad2 := &ethpb.AttestationData{
@@ -289,6 +290,7 @@ func TestService_seen(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
+		ShardHeaderRoot: make([]byte, 32),
 	}
 
 	// Attestation are checked in order of this list.
