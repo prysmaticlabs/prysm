@@ -219,9 +219,10 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) (
 }
 
 func (h *stateRootHasher) pendingShardHeaderRoot(headers []*pb.PendingShardHeader) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
 	roots := make([][]byte, len(headers))
 	for i := 0; i < len(headers); i++ {
-		pendingRoot, err := headers[i].HashTreeRoot()
+		pendingRoot, err := shardHeaderRoot(hasher, headers[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute shard header merkleization")
 		}
@@ -229,7 +230,7 @@ func (h *stateRootHasher) pendingShardHeaderRoot(headers []*pb.PendingShardHeade
 	}
 
 	headersRoot, err := htrutils.BitwiseMerkleize(
-		hashutil.CustomSHA256Hasher(),
+		hasher,
 		roots,
 		uint64(len(roots)),
 		8192, // TODO: Use params
@@ -246,4 +247,56 @@ func (h *stateRootHasher) pendingShardHeaderRoot(headers []*pb.PendingShardHeade
 	copy(headerLenRoot, headerLenBuf.Bytes())
 	res := htrutils.MixInLength(headersRoot, headerLenRoot)
 	return res, nil
+}
+
+func shardHeaderRoot(hasher htrutils.HashFn, header *pb.PendingShardHeader) ([32]byte, error) {
+	fieldRoots := make([][]byte, 7)
+
+	if header != nil {
+		slotBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(slotBuf, header.Slot)
+		slotRoot := bytesutil.ToBytes32(slotBuf)
+		fieldRoots[0] = slotRoot[:]
+
+		shardBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(shardBuf, header.Shard)
+		shardRoot := bytesutil.ToBytes32(shardBuf)
+		fieldRoots[1] = shardRoot[:]
+
+		c := bytesutil.ToBytes48(header.Commitment)
+		chunks, err := htrutils.Pack([][]byte{c[:]})
+		if err != nil {
+			return [32]byte{}, err
+		}
+		commitmentRoot, err := htrutils.BitwiseMerkleize(hasher, chunks, uint64(len(chunks)), uint64(len(chunks)))
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[2] = commitmentRoot[:]
+
+		headerRoot := bytesutil.ToBytes32(header.Root)
+		fieldRoots[3] = headerRoot[:]
+
+		lengthBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(lengthBuf, header.Length)
+		lengthRoot := bytesutil.ToBytes32(lengthBuf)
+		fieldRoots[4] = lengthRoot[:]
+
+		votesRoot, err := htrutils.BitlistRoot(hasher, header.Votes, 2048)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[5] = votesRoot[:]
+
+		boolBytes := make([]byte, 32)
+		if header.Confirmed {
+			boolBytes[0] = 1
+			fieldRoots[6] = boolBytes
+		} else {
+			boolBytes[0] = 0
+			fieldRoots[6] = boolBytes
+		}
+	}
+
+	return htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }

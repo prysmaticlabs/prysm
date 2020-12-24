@@ -5,7 +5,10 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -27,6 +30,25 @@ func TestAttestationDataRoot_EqualGeneric(t *testing.T) {
 	genericHtr, err := attData.HashTreeRoot()
 	require.NoError(t, err)
 	dataHtr, err := AttestationDataRoot(attData)
+	require.NoError(t, err)
+
+	if !bytes.Equal(genericHtr[:], dataHtr[:]) {
+		t.Fatalf("Expected %#x, received %#x", genericHtr, dataHtr)
+	}
+}
+
+func TestPendingShardHeader_EqualGeneric(t *testing.T) {
+	header := &ethereum_beacon_p2p_v1.PendingShardHeader{
+		Slot:       39,
+		Shard:      2,
+		Root:       bytesutil.PadTo([]byte("block root"), 32),
+		Commitment: bytesutil.PadTo([]byte("block root"), 48),
+		Confirmed:  true,
+		Votes:      bitfield.NewBitlist(2048),
+	}
+	genericHtr, err := header.HashTreeRoot()
+	require.NoError(t, err)
+	dataHtr, err := shardHeaderRoot(hashutil.CustomSHA256Hasher(), header)
 	require.NoError(t, err)
 
 	if !bytes.Equal(genericHtr[:], dataHtr[:]) {
