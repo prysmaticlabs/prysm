@@ -44,6 +44,10 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 8002;
   ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
+
+  // Shard fields [9000-10000]
+  repeated PendingShardHeader previous_epoch_pending_shard_headers = 9001 [(gogoproto.moretags) = "ssz-max:\"8192\""];
+  repeated PendingShardHeader current_epoch_pending_shard_headers = 9002 [(gogoproto.moretags) = "ssz-max:\"8192\""];
 }
 
 message Fork {
@@ -106,3 +110,12 @@ message CheckPtInfo {
   Fork fork = 5;
 }
 
+message PendingShardHeader {
+  uint64 slot = 1;
+  uint64 shard = 2;
+  bytes commitment = 3 [(gogoproto.moretags) = "ssz-size:\"48\""];
+  bytes root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 length = 5;
+  bytes votes = 6 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  bool confirmed = 7;
+}

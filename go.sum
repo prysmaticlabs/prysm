@@ -221,6 +221,7 @@ github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL
 github.com/ferranbt/fastssz v0.0.0-20200728110133-0b6e349af87a/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/ferranbt/fastssz v0.0.0-20201020132831-68dc48984fd3 h1:FnpkCo1TAj/eq0ETLPhAplYYB4KlFQy3kVb8cLludAc=
 github.com/ferranbt/fastssz v0.0.0-20201020132831-68dc48984fd3/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
+github.com/ferranbt/fastssz v0.0.0-20201203133411-08e10d27d26a/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/fjl/memsize v0.0.0-20180418122429-ca190fb6ffbc/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
@@ -987,10 +988,15 @@ github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951 h1
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20201117145913-073714f478fb h1:OUfQgEA6zB19I66EQ2nPtjdBbk+Vv7eCBf2+x3BTv5w=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20201117145913-073714f478fb/go.mod h1:k7b2dxy6RppCG6kmOJkNOXzRpEoTdsPygc2aQhsUsZk=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201224165946-7cbf2d479741 h1:qyrlNCATTMBsIRVqAXj+u1uD28Qu46OwpfkfJF2gRqk=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201224165946-7cbf2d479741/go.mod h1:35/gKr26vXoUOwBP1yxlh2pyovyVXza2oZSkIdpptUU=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201224170801-e8f14c5dd89a h1:KJuiQNEmNKYdasKRIjZL+S0gEVSWB5XZgk7RQvLOh7c=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20201224170801-e8f14c5dd89a/go.mod h1:k7b2dxy6RppCG6kmOJkNOXzRpEoTdsPygc2aQhsUsZk=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669 h1:cX6YRZnZ9sgMqM5U14llxUiXVNJ3u07Res1IIjTOgtI=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65 h1:hJfAWrlxx7SKpn4S/h2JGl2HHwA1a2wSS3HAzzZ0F+U=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20201217222627-a48494c940af/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae h1:7qd0Af1ozWKBU3c93YW2RH+/09hJns9+ftqWUZyts9c=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae/go.mod h1:VecIJZrewdAuhVckySLFt2wAAHRME934bSDurP8ftkc=
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796 h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=
