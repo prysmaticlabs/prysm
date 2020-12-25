@@ -325,6 +325,115 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
 }
 
+// UpdatePendingVote for shard header.
+//
+//def update_pending_votes(state: BeaconState,
+//                         attestation: Attestation) -> None:
+//    if compute_epoch_at_slot(slot) == get_current_epoch(state):
+//        pending_headers = state.current_epoch_pending_shard_headers
+//    else:
+//        pending_headers = state.previous_epoch_pending_shard_headers
+//    # Create or update the PendingShardHeader object
+//    pending_header = None
+//    for header in pending_headers:
+//        if header.root == attestation.data.shard_header_root:
+//            pending_header = header
+//    assert pending_header is not None
+//    assert pending_header.slot == attestation.data.slot + 1
+//    assert pending_header.shard == compute_shard_from_committee_index(
+//        state,
+//        attestation.data.index,
+//        attestation.data.slot
+//    )
+//    pending_header.votes = bitwise_or(
+//        pending_header.votes,
+//        attestation.aggregation_bits
+//    )
+//
+//    # Check if the PendingShardHeader is eligible for expedited confirmation
+//    # Requirement 1: nothing else confirmed
+//    all_candidates = [
+//        c for c in pending_headers if
+//        (c.slot, c.shard) == (pending_header.slot, pending_header.shard)
+//    ]
+//    if True not in [c.confirmed for c in all_candidates]:
+//        # Requirement 2: >= 2/3 of balance attesting
+//        participants = get_attesting_indices(state, attestationg.data, pending_commitment.votes)
+//        participants_balance = get_total_balance(state, participants)
+//        full_committee = get_beacon_committee(state, attestationg.data.slot, attestationg.data.shard)
+//        full_committee_balance = get_total_balance(state, full_committee)
+//        if participants_balance * 3 > full_committee_balance * 2:
+//            pending_header.confirmed = True
+func UpdatePendingVote(
+	ctx context.Context,
+	beaconState *stateTrie.BeaconState,
+	att *ethpb.Attestation,
+) (*stateTrie.BeaconState, error) {
+	var pendingHeaders []*pb.PendingShardHeader
+	var currentEpoch bool
+	if helpers.SlotToEpoch(att.Data.Slot) == helpers.CurrentEpoch(beaconState) {
+		pendingHeaders = beaconState.CurrentEpochPendingShardHeaders()
+		currentEpoch = true
+	} else {
+		pendingHeaders = beaconState.PreviousEpochPendingShardHeaders()
+		currentEpoch = false
+	}
+
+	// Locate the pending shard header.
+	var pendingHeader *pb.PendingShardHeader
+	for _, header := range pendingHeaders {
+		if bytes.Equal(header.Root, att.Data.ShardHeaderRoot) {
+			pendingHeader = header
+		}
+	}
+
+	if pendingHeader == nil {
+		return nil, errors.New("unknown shard header root")
+	}
+	if pendingHeader.Slot != att.Data.Slot+1 {
+		return nil, errors.New("incorrect shard head slot")
+	}
+	shard, err := helpers.ShardFromCommitteeIndex(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	if pendingHeader.Shard != shard {
+		return nil, errors.New("incorrect shard")
+	}
+	pendingHeader.Votes.Or(att.AggregationBits)
+
+	if !pendingHeader.Confirmed {
+		committeeIndices, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			return nil, err
+		}
+		votedIndices := attestationutil.AttestingIndices(pendingHeader.Votes, committeeIndices)
+		committeeBalance := helpers.TotalBalance(beaconState, committeeIndices)
+		if err != nil {
+			return nil, err
+		}
+		votedBalance := helpers.TotalBalance(beaconState, votedIndices)
+		if err != nil {
+			return nil, err
+		}
+		if votedBalance*3 > committeeBalance*2 {
+			pendingHeader.Confirmed = true
+		}
+	}
+
+	if currentEpoch {
+		if err := beaconState.SetCurrentEpochPendingShardHeader(pendingHeaders); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := beaconState.SetPreviousEpochPendingShardHeader(pendingHeaders); err != nil {
+			return nil, err
+		}
+	}
+
+	return beaconState, nil
+}
+
 // Inner method to verify attestations. This abstraction allows for the domain to be provided as an
 // argument.
 func verifyAttestationsSigWithDomain(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) error {

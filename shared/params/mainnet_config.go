@@ -169,10 +169,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Shard values.
-	InitialActiveShards:  64,
-	TargetShardBlockSize: 1 << 18,
-	MaxGasPrice:          16384,
-	MinGasPrice:          8,
+	InitialActiveShards:           64,
+	TargetShardBlockSize:          1 << 18,
+	MaxGasPrice:                   16384,
+	MinGasPrice:                   8,
+	GaspriceAdjustmentCoefficient: 8,
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},
