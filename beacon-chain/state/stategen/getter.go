@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -165,7 +166,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 	if s.beaconDB.HasState(ctx, blockRoot) {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
-
+	fmt.Println(blockRoot)
 	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state summary")

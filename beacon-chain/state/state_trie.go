@@ -116,7 +116,7 @@ func (b *BeaconState) Copy() *BeaconState {
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
-		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+		sharedFieldReferences: make(map[fieldIndex]*reference, 12),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 		// Copy on write validator index map.

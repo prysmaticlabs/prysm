@@ -28,6 +28,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 		Slot:            0,
 		CommitteeIndex:  0,
 		BeaconBlockRoot: make([]byte, 32),
+		ShardHeaderRoot: make([]byte, 32),
 		Source: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
@@ -42,6 +43,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 		Slot:            1,
 		CommitteeIndex:  0,
 		BeaconBlockRoot: make([]byte, 32),
+		ShardHeaderRoot: make([]byte, 32),
 		Source: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
@@ -111,6 +113,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 		Slot:            0,
 		CommitteeIndex:  0,
 		BeaconBlockRoot: make([]byte, 32),
+		ShardHeaderRoot: make([]byte, 32),
 		Source: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
@@ -125,6 +128,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 		Slot:            0,
 		CommitteeIndex:  0,
 		BeaconBlockRoot: make([]byte, 32),
+		ShardHeaderRoot: make([]byte, 32),
 		Source: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),

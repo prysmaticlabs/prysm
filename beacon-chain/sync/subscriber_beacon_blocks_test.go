@@ -22,6 +22,7 @@ func TestDeleteAttsInPool(t *testing.T) {
 	}
 	data := &ethpb.AttestationData{
 		BeaconBlockRoot: make([]byte, 32),
+		ShardHeaderRoot: make([]byte, 32),
 		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
@@ -48,6 +49,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b00011111},
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: make([]byte, 32),
+				ShardHeaderRoot: make([]byte, 32),
 				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
@@ -58,6 +60,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b00010001},
 			Data: &ethpb.AttestationData{
 				BeaconBlockRoot: make([]byte, 32),
+				ShardHeaderRoot: make([]byte, 32),
 				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},

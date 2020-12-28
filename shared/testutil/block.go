@@ -44,8 +44,9 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	return &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
+			ParentRoot:   make([]byte, 32),
+			StateRoot:    make([]byte, 32),
+			ShardHeaders: []*ethpb.ShardHeader{},
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
@@ -70,6 +71,7 @@ func NewAttestation() *ethpb.Attestation {
 		AggregationBits: bitfield.Bitlist{0b1101},
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: make([]byte, 32),
+			ShardHeaderRoot: make([]byte, 32),
 			Source: &ethpb.Checkpoint{
 				Root: make([]byte, 32),
 			},
@@ -302,6 +304,7 @@ func GenerateAttesterSlashingForValidator(
 			Slot:            bState.Slot(),
 			CommitteeIndex:  0,
 			BeaconBlockRoot: make([]byte, 32),
+			ShardHeaderRoot: make([]byte, 32),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -452,6 +455,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 				Epoch: currentEpoch,
 				Root:  targetRoot,
 			},
+			ShardHeaderRoot: make([]byte, 32),
 		}
 
 		dataRoot, err := helpers.ComputeSigningRoot(attData, domain)

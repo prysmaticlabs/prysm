@@ -72,6 +72,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
+			ShardHeaderRoot: make([]byte, 32),
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
@@ -160,6 +161,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 				BeaconBlockRoot: make([]byte, 32),
+				ShardHeaderRoot: make([]byte, 32),
 			},
 		},
 		SelectionProof: make([]byte, 96),
@@ -188,6 +190,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: r32[:],
+			ShardHeaderRoot: r32[:],
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: r32[:]},
 		},
@@ -259,6 +262,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
+			ShardHeaderRoot: make([]byte, 32),
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},

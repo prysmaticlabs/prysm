@@ -27,7 +27,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *testutil.BlockGenConfig, slot uint64) *ethpb.SignedBeaconBlock {
 		blk, err := testutil.GenerateFullBlock(genesis, keys, conf, slot)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		return blk
 	}
 	bc := params.BeaconConfig()
@@ -145,9 +145,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, err)
 			err = s.ReceiveBlock(ctx, tt.args.block, root)
 			if tt.wantedErr != "" {
-				assert.ErrorContains(t, tt.wantedErr, err)
+				require.ErrorContains(t, tt.wantedErr, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				tt.check(t, s)
 			}
 		})

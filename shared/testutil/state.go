@@ -32,9 +32,11 @@ var st, _ = stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{
 		StateRoot:  make([]byte, 32),
 		BodyRoot:   make([]byte, 32),
 	},
-	PreviousEpochAttestations:   make([]*pb.PendingAttestation, 0),
-	CurrentEpochAttestations:    make([]*pb.PendingAttestation, 0),
-	PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+	PreviousEpochAttestations:        make([]*pb.PendingAttestation, 0),
+	CurrentEpochAttestations:         make([]*pb.PendingAttestation, 0),
+	PreviousJustifiedCheckpoint:      &ethpb.Checkpoint{Root: make([]byte, 32)},
+	PreviousEpochPendingShardHeaders: make([]*pb.PendingShardHeader, 0),
+	CurrentEpochPendingShardHeaders:  make([]*pb.PendingShardHeader, 0),
 })
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.

@@ -14,6 +14,7 @@ func TestAttCaches_hasSeenBit(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		BeaconBlockRoot: make([]byte, 32),
+		ShardHeaderRoot: make([]byte, 32),
 	}
 	seenA1 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b10000011}, Signature: make([]byte, 96)}
 	seenA2 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b11100000}, Signature: make([]byte, 96)}
@@ -45,6 +46,7 @@ func TestAttCaches_insertSeenBitDuplicates(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 		BeaconBlockRoot: make([]byte, 32),
+		ShardHeaderRoot: make([]byte, 32),
 	}
 	att1 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b10000011}, Signature: make([]byte, 96)}
 	r, err := hashFn(att1.Data)

@@ -23,6 +23,8 @@ func init() {
 	fieldMap[validators] = compositeArray
 	fieldMap[previousEpochAttestations] = compositeArray
 	fieldMap[currentEpochAttestations] = compositeArray
+	fieldMap[previousEpochPendingShardHeader] = compositeArray
+	fieldMap[currentEpochPendingShardHeader] = compositeArray
 }
 
 type fieldIndex int
