@@ -239,7 +239,7 @@ func (h *stateRootHasher) pendingShardHeaderRoot(headers []*pb.PendingShardHeade
 		return [32]byte{}, errors.Wrap(err, "could not compute shard header merkleization")
 	}
 	headerLenBuf := new(bytes.Buffer)
-	if err := binary.Write(headerLenBuf, binary.LittleEndian, uint64(len(headersRoot))); err != nil {
+	if err := binary.Write(headerLenBuf, binary.LittleEndian, uint64(len(headers))); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not marshal epoch shard header length")
 	}
 	// We need to mix in the length of the slice.

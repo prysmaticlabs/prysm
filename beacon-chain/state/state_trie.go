@@ -63,6 +63,8 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.sharedFieldReferences[balances] = &reference{refs: 1}
 	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[previousEpochPendingShardHeader] = &reference{refs: 1}
+	b.sharedFieldReferences[currentEpochPendingShardHeader] = &reference{refs: 1}
 
 	return b, nil
 }
