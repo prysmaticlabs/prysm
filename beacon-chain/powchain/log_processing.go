@@ -35,6 +35,10 @@ const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
 
+func tooMuchDataRequestedError(err error) bool {
+	return err.Error() == "query returned more than 10000 results"
+}
+
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
 func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
