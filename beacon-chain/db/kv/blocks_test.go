@@ -451,36 +451,50 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 	}
 }
 
-func TestStore_BlockRootBySlot(t *testing.T) {
+func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	block := testutil.NewBeaconBlock()
-	block.Block.Slot = 20
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 20
+	require.NoError(t, db.SaveBlock(ctx, b1))
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 100
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte("parent1"), 32)
+	require.NoError(t, db.SaveBlock(ctx, b2))
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 100
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
+	require.NoError(t, db.SaveBlock(ctx, b3))
 
-	blockRoot, err := block.Block.HashTreeRoot()
+	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	retrievedBlockRoot, err := db.BlockRootBySlot(ctx, 20)
+	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
-	assert.Equal(t, [32]byte{}, retrievedBlockRoot, "Expected empty block root")
-	require.NoError(t, db.SaveBlock(ctx, block))
-	retrievedBlockRoot, err = db.BlockRootBySlot(ctx, 20)
+	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
-	assert.Equal(t, blockRoot, retrievedBlockRoot, "Wanted: %v, received: %v", blockRoot, retrievedBlockRoot)
-}
 
-func TestStore_BlockBySlot(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-
-	block := testutil.NewBeaconBlock()
-	block.Block.Slot = 20
-
-	retrievedBlock, err := db.BlockBySlot(ctx, 20)
+	retrievedBlocks, retrievedBlockRoots, err := db.BlocksBySlot(ctx, 1)
 	require.NoError(t, err)
-	assert.Equal(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, block))
-	retrievedBlock, err = db.BlockBySlot(ctx, 20)
+	assert.Equal(t, 0, len(retrievedBlocks), "Unexpected number of blocks received, expected none")
+	assert.Equal(t, 0, len(retrievedBlockRoots), "Unexpected number of block roots received, expected none")
+	retrievedBlocks, retrievedBlockRoots, err = db.BlocksBySlot(ctx, 20)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block, retrievedBlock), "Wanted: %v, received: %v", block, retrievedBlock)
+	assert.Equal(t, true, proto.Equal(b1, retrievedBlocks[0]), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
+	assert.DeepEqual(t, [][32]byte{r1}, retrievedBlockRoots)
+	retrievedBlocks, retrievedBlockRoots, err = db.BlocksBySlot(ctx, 100)
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(b2, retrievedBlocks[0]), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
+	assert.Equal(t, true, proto.Equal(b3, retrievedBlocks[1]), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
+	assert.DeepEqual(t, [][32]byte{r2, r3}, retrievedBlockRoots)
+
+	retrievedBlockRoots, err = db.BlockRootsBySlot(ctx, 1)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][32]byte{}, retrievedBlockRoots)
+	retrievedBlockRoots, err = db.BlockRootsBySlot(ctx, 20)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][32]byte{r1}, retrievedBlockRoots)
+	retrievedBlockRoots, err = db.BlockRootsBySlot(ctx, 100)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][32]byte{r2, r3}, retrievedBlockRoots)
 }
