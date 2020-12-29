@@ -33,15 +33,15 @@ var proposerIndicesCache = cache.NewProposerIndicesCache()
 //    """
 //    Return the number of committees in each slot for the given ``epoch``.
 //    """
-//    return max(uint64(1), min(
-//        get_active_shard_count(state, epoch),
-//        uint64(len(get_active_validator_indices(state, epoch))) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
+//    return max(1, min(
+//        MAX_COMMITTEES_PER_SLOT,
+//        len(get_active_validator_indices(state, epoch)) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //    ))
 func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 	var committeePerSlot = activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 
-	if committeePerSlot > ActiveShardCount() {
-		return ActiveShardCount()
+	if committeePerSlot > params.BeaconConfig().MaxCommitteesPerSlot {
+		return params.BeaconConfig().MaxCommitteesPerSlot
 	}
 	if committeePerSlot == 0 {
 		return 1
