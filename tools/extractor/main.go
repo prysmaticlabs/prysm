@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -29,7 +28,7 @@ func main() {
 	}
 	ctx := context.Background()
 	slot := uint64(*state)
-	roots, err := d.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
+	roots, err := d.BlockRootsBySlot(ctx, slot)
 	if err != nil {
 		panic(err)
 	}
