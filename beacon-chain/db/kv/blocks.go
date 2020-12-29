@@ -510,7 +510,7 @@ func getBlockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot uint64) ([][]byt
 	key := bytesutil.Uint64ToBytesBigEndian(slot)
 	c := bkt.Cursor()
 	k, v := c.Seek(key)
-	if k != nil && bytes.Compare(k, key) == 0 {
+	if k != nil && bytes.Equal(k, key) {
 		for i := 0; i < len(v); i += 32 {
 			roots = append(roots, v[i:i+32])
 		}
