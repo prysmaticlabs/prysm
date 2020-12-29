@@ -61,6 +61,33 @@ func (s *Store) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	return headBlock, err
 }
 
+func (s *Store) BlockRootBySlot(ctx context.Context, slot uint64) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRootBySlot")
+	defer span.End()
+	var blockRoot [32]byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blockSlotIndicesBucket)
+		key := bytesutil.Uint64ToBytesBigEndian(slot)
+		c := bkt.Cursor()
+		k, v := c.Seek(key)
+		if k != nil {
+			blockRoot = bytesutil.ToBytes32(v[0:32])
+		}
+		return nil
+	})
+	return blockRoot, err
+}
+
+func (s *Store) BlockBySlot(ctx context.Context, slot uint64) (*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockBySlot")
+	defer span.End()
+	blockRoot, err := s.BlockRootBySlot(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	return s.Block(ctx, blockRoot)
+}
+
 // Blocks retrieves a list of beacon blocks and its respective roots by filter criteria.
 func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Blocks")

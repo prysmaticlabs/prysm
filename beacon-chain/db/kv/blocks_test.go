@@ -450,3 +450,37 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 		assert.Equal(t, roots[i], rt, "mismatch of block roots")
 	}
 }
+
+func TestStore_BlockRootBySlot(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 20
+
+	blockRoot, err := block.Block.HashTreeRoot()
+	require.NoError(t, err)
+	retrievedBlockRoot, err := db.BlockRootBySlot(ctx, 20)
+	require.NoError(t, err)
+	assert.Equal(t, [32]byte{}, retrievedBlockRoot, "Expected empty block root")
+	require.NoError(t, db.SaveBlock(ctx, block))
+	retrievedBlockRoot, err = db.BlockRootBySlot(ctx, 20)
+	require.NoError(t, err)
+	assert.Equal(t, blockRoot, retrievedBlockRoot, "Wanted: %v, received: %v", blockRoot, retrievedBlockRoot)
+}
+
+func TestStore_BlockBySlot(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 20
+
+	retrievedBlock, err := db.BlockBySlot(ctx, 20)
+	require.NoError(t, err)
+	assert.Equal(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock, "Expected nil block")
+	require.NoError(t, db.SaveBlock(ctx, block))
+	retrievedBlock, err = db.BlockBySlot(ctx, 20)
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(block, retrievedBlock), "Wanted: %v, received: %v", block, retrievedBlock)
+}
