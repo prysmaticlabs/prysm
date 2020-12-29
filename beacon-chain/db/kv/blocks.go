@@ -135,11 +135,10 @@ func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // BlocksBySlot retrieves a list of beacon blocks and its respective roots by slot.
-func (s *Store) BlocksBySlot(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
+func (s *Store) BlocksBySlot(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
 	defer span.End()
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
-	blockRoots := make([][32]byte, 0)
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -156,15 +155,14 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot uint64) ([]*ethpb.SignedB
 				return err
 			}
 			blocks = append(blocks, block)
-			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
 		return nil
 	})
-	return blocks, blockRoots, err
+	return blocks, len(blocks) > 0, err
 }
 
 // BlockRootsBySlot retrieves a list of beacon block roots by slot
-func (s *Store) BlockRootsBySlot(ctx context.Context, slot uint64) ([][32]byte, error) {
+func (s *Store) BlockRootsBySlot(ctx context.Context, slot uint64) ([][32]byte, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRootsBySlot")
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
@@ -180,9 +178,9 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot uint64) ([][32]byte, 
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve block roots by slot")
+		return nil, false, errors.Wrap(err, "could not retrieve block roots by slot")
 	}
-	return blockRoots, nil
+	return blockRoots, len(blockRoots) > 0, nil
 }
 
 // deleteBlock by block root.

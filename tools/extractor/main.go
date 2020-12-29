@@ -28,7 +28,7 @@ func main() {
 	}
 	ctx := context.Background()
 	slot := uint64(*state)
-	roots, err := d.BlockRootsBySlot(ctx, slot)
+	roots, _, err := d.BlockRootsBySlot(ctx, slot)
 	if err != nil {
 		panic(err)
 	}

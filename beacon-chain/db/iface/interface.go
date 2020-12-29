@@ -22,8 +22,8 @@ type ReadOnlyDatabase interface {
 	Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, [][32]byte, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
-	BlocksBySlot(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, [][32]byte, error)
-	BlockRootsBySlot(ctx context.Context, slot uint64) ([][32]byte, error)
+	BlocksBySlot(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, bool, error)
+	BlockRootsBySlot(ctx context.Context, slot uint64) ([][32]byte, bool, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	GenesisBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
