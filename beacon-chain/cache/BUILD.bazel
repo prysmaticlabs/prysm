@@ -11,7 +11,6 @@ go_library(
         "committees.go",
         "common.go",
         "doc.go",
-        "hot_state_cache.go",
         "skip_slot_cache.go",
         "subnet_ids.go",
         "proposer_indices_type.go",
@@ -57,7 +56,6 @@ go_test(
         "committee_fuzz_test.go",
         "committee_test.go",
         "cache_test.go",
-        "hot_state_cache_test.go",
         "skip_slot_cache_test.go",
         "subnet_ids_test.go",
         "proposer_indices_test.go"

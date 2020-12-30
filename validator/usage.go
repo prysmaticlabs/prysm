@@ -102,6 +102,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WalletDirFlag,
 			flags.WalletPasswordFileFlag,
 			flags.GraffitiFileFlag,
+			flags.EnableDutyCountDown,
 		},
 	},
 	{
