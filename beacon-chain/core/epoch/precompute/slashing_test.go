@@ -1,7 +1,6 @@
 package precompute_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -112,7 +111,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		t.Run(fmt.Sprint(i), func(t *testing.T) {
+		t.Run(string(i), func(t *testing.T) {
 			ab := uint64(0)
 			for i, b := range tt.state.Balances {
 				// Skip validator 0 since it's slashed
