@@ -287,6 +287,12 @@ var (
 		Name:  "graffiti-file",
 		Usage: "The path to a YAML file with graffiti values",
 	}
+	// EnableDutyCountDown enables more verbose logging for counting down to duty.
+	EnableDutyCountDown = &cli.BoolFlag{
+		Name:  "enable-duty-count-down",
+		Usage: "Enables more verbose logging for counting down to duty",
+		Value: false,
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

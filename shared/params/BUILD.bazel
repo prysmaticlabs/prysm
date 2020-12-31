@@ -38,6 +38,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],

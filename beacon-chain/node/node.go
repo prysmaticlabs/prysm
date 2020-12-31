@@ -124,12 +124,24 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.OverrideBeaconConfig(c)
 	}
 
-	// Setting chain network specific flags.
-	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
-		c := params.BeaconNetworkConfig()
-		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
-		params.OverrideBeaconNetworkConfig(c)
+	// ETH PoW related flags.
+	if cliCtx.IsSet(flags.ChainID.Name) {
+		c := params.BeaconConfig()
+		c.DepositChainID = cliCtx.Uint64(flags.ChainID.Name)
+		params.OverrideBeaconConfig(c)
 	}
+	if cliCtx.IsSet(flags.NetworkID.Name) {
+		c := params.BeaconConfig()
+		c.DepositNetworkID = cliCtx.Uint64(flags.NetworkID.Name)
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
+		c := params.BeaconConfig()
+		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
+		params.OverrideBeaconConfig(c)
+	}
+
+	// Setting chain network specific flags.
 	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
 		c := params.BeaconNetworkConfig()
 		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
@@ -139,16 +151,6 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		networkCfg := params.BeaconNetworkConfig()
 		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
 		params.OverrideBeaconNetworkConfig(networkCfg)
-	}
-	if cliCtx.IsSet(flags.ChainID.Name) {
-		c := params.BeaconNetworkConfig()
-		c.ChainID = cliCtx.Uint64(flags.ChainID.Name)
-		params.OverrideBeaconNetworkConfig(c)
-	}
-	if cliCtx.IsSet(flags.NetworkID.Name) {
-		c := params.BeaconNetworkConfig()
-		c.NetworkID = cliCtx.Uint64(flags.NetworkID.Name)
-		params.OverrideBeaconNetworkConfig(c)
 	}
 
 	registry := shared.NewServiceRegistry()
@@ -469,7 +471,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-	depAddress := params.BeaconNetworkConfig().DepositContractAddress
+	depAddress := params.BeaconConfig().DepositContractAddress
 	if depAddress == "" {
 		log.Fatal("Valid deposit contract is required")
 	}
