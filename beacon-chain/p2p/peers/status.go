@@ -55,13 +55,13 @@ const (
 
 const (
 	// ColocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
-	ColocationLimit = 7
+	ColocationLimit = 5
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
 
 	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
-	InboundRatio = float64(2) / 5
+	InboundRatio = float64(1)
 )
 
 // Status is the structure holding the peer status information.

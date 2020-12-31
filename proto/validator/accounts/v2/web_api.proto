@@ -1,6 +1,7 @@
 syntax = "proto3";
 package ethereum.validator.accounts.v2;
 
+import "proto/beacon/rpc/v1/health.proto";
 import "eth/v1alpha1/beacon_chain.proto";
 import "eth/v1alpha1/node.proto";
 import "eth/v1alpha1/validator.proto";
@@ -54,8 +55,8 @@ service Beacon {
         };
     }
     rpc GetValidatorParticipation(
-    ethereum.eth.v1alpha1.GetValidatorParticipationRequest
-        ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
+        ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+    ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/participation"
         };
@@ -65,6 +66,13 @@ service Beacon {
     ) returns (ethereum.eth.v1alpha1.ValidatorPerformanceResponse) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/performance"
+        };
+    }
+    rpc GetValidators(
+        ethereum.eth.v1alpha1.ListValidatorsRequest
+    ) returns (ethereum.eth.v1alpha1.Validators) {
+        option (google.api.http) = {
+            get: "/v2/validator/beacon/validators"
         };
     }
     rpc GetValidatorBalances(
@@ -97,7 +105,7 @@ service Health {
             get: "/v2/validator/health/logs/endpoints"
         };
     }
-    rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream LogsResponse) {
+    rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream ethereum.beacon.rpc.v1.LogsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/health/logs/beacon/stream"
         };

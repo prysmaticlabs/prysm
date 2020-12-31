@@ -9,8 +9,6 @@ func UseE2EConfig() {
 	// setting this to 0, prevents the node from being overwhelmed
 	// from discovery lookups.
 	cfg.MinimumPeersInSubnet = 0
-	cfg.ChainID = 1337   // Chain ID of eth1 dev net.
-	cfg.NetworkID = 1337 // Network ID of eth1 dev net.
 	OverrideBeaconNetworkConfig(cfg)
 }
 
@@ -31,6 +29,10 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
+
+	// PoW parameters.
+	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
+	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Prysm constants.
 	e2eConfig.NetworkName = "End-to-end"

@@ -68,7 +68,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	s.saveHotStateDB.lock.Unlock()
 
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
-	if s.hotStateCache.Has(blockRoot) {
+	if s.hotStateCache.has(blockRoot) {
 		return nil
 	}
 
@@ -88,7 +88,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	}
 
 	// Store the copied state in the hot state cache.
-	s.hotStateCache.Put(blockRoot, state)
+	s.hotStateCache.put(blockRoot, state)
 
 	return nil
 }

@@ -327,6 +327,15 @@ func (s *Service) ENR() *enr.Record {
 	return s.dv5Listener.Self().Record()
 }
 
+// DiscoveryAddress is the multiaddress representation of
+// our enr.
+func (s *Service) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+	if s.dv5Listener == nil {
+		return nil, nil
+	}
+	return convertToUdpMultiAddr(s.dv5Listener.Self())
+}
+
 // Metadata returns a copy of the peer's metadata.
 func (s *Service) Metadata() *pb.MetaData {
 	return proto.Clone(s.metaData).(*pb.MetaData)

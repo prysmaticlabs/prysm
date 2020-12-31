@@ -8,7 +8,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -23,7 +22,7 @@ var defaultHotStateDBInterval uint64 = 128 // slots
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
 	slotsPerArchivedPoint   uint64
-	hotStateCache           *cache.HotStateCache
+	hotStateCache           *hotStateCache
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
@@ -49,10 +48,10 @@ type finalizedInfo struct {
 }
 
 // New returns a new state management object.
-func New(db db.NoHeadAccessDatabase) *State {
+func New(beaconDB db.NoHeadAccessDatabase) *State {
 	return &State{
-		beaconDB:                db,
-		hotStateCache:           cache.NewHotStateCache(),
+		beaconDB:                beaconDB,
+		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		epochBoundaryStateCache: newBoundaryStateCache(),
