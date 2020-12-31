@@ -660,7 +660,8 @@ func TestWaitForSlotOneThird_BlockIsHereNoWait(t *testing.T) {
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 
 	s := &pbp2p.BeaconState{Slot: 2}
-	state, _ := beaconstate.InitializeFromProto(s)
+	state, err := beaconstate.InitializeFromProto(s)
+	require.NoError(t, err)
 	server := &Server{
 		AttestationCache:   cache.NewAttestationCache(),
 		HeadFetcher:        &mock.ChainService{State: state},
