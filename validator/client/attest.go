@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -15,9 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -48,8 +44,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.Debug("Empty committee for validator duty, not attesting")
 		return
 	}
-
-	v.waitToSlotOneThird(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -220,30 +214,6 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
 
 	return nil
-}
-
-// waitToSlotOneThird waits until one third through the current slot period
-// such that head block for beacon node can get updated.
-func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
-	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
-	defer span.End()
-
-	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
-	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
-	finalTime := startTime.Add(delay)
-	wait := timeutils.Until(finalTime)
-	if wait <= 0 {
-		return
-	}
-	t := time.NewTimer(wait)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		traceutil.AnnotateError(span, ctx.Err())
-		return
-	case <-t.C:
-		return
-	}
 }
 
 func attestationLogFields(pubKey [48]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
