@@ -704,3 +704,28 @@ func TestGetGraffiti_Ok(t *testing.T) {
 		})
 	}
 }
+
+func TestGetGraffitiOrdered_Ok(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := &mocks{
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+	}
+	pubKey := [48]byte{'a'}
+	m.validatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
+		Times(4).
+		Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
+
+	v := &validator{
+		validatorClient: m.validatorClient,
+		graffitiStruct: &graffiti.Graffiti{
+			Ordered: []string{"a", "b", "c"},
+			Default: "c",
+		},
+	}
+	for _, want := range [][]byte{[]byte{'a'}, []byte{'b'}, []byte{'c'}, []byte{'a'}} {
+		got, err := v.getGraffiti(context.Background(), pubKey)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, got)
+	}
+}
