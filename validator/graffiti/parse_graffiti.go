@@ -9,6 +9,7 @@ import (
 type Graffiti struct {
 	Default  string            `yaml:"default,omitempty"`
 	Random   []string          `yaml:"random,omitempty"`
+	Ordered  []string          `yaml:"ordered,omitempty"`
 	Specific map[uint64]string `yaml:"specific,omitempty"`
 }
 
