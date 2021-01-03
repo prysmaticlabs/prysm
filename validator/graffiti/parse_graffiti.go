@@ -9,6 +9,7 @@ import (
 
 type Graffiti struct {
 	Default  string                          `yaml:"default,omitempty"`
+	Ordered  []string                        `yaml:"ordered,omitempty"`
 	Random   []string                        `yaml:"random,omitempty"`
 	Specific map[types.ValidatorIndex]string `yaml:"specific,omitempty"`
 }
