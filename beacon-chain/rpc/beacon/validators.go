@@ -859,7 +859,7 @@ func (bs *Server) GetIndividualVotes(
 // if the input slot has a skip block, false is returned,
 // if the input slot has more than one block, an error is returned.
 func (bs *Server) isSlotCanonical(ctx context.Context, slot uint64) (bool, error) {
-	roots, hasBlockRoots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
+	hasBlockRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
 	if err != nil {
 		return false, err
 	}

@@ -47,12 +47,12 @@ func (e Exporter) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32
 }
 
 // BlocksBySlot -- passthrough.
-func (e Exporter) BlocksBySlot(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, bool, error) {
+func (e Exporter) BlocksBySlot(ctx context.Context, slot uint64) (bool, []*eth.SignedBeaconBlock, error) {
 	return e.db.BlocksBySlot(ctx, slot)
 }
 
 // BlockRootsBySlot -- passthrough.
-func (e Exporter) BlockRootsBySlot(ctx context.Context, slot uint64) ([][32]byte, bool, error) {
+func (e Exporter) BlockRootsBySlot(ctx context.Context, slot uint64) (bool, [][32]byte, error) {
 	return e.db.BlockRootsBySlot(ctx, slot)
 }
 

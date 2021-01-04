@@ -69,7 +69,7 @@ func main() {
 		// If the state is not available, roll back
 		for state == nil {
 			slot--
-			rts, _, err := db.BlockRootsBySlot(context.Background(), slot)
+			_, rts, err := db.BlockRootsBySlot(context.Background(), slot)
 			if err != nil {
 				panic(err)
 			}
