@@ -126,7 +126,7 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 			if err != nil {
 				return nil, nil, err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil, nil, nil
 			}
 		} else {
@@ -142,7 +142,7 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 			if err != nil {
 				return nil, nil, err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil, nil, nil
 			}
 		}
@@ -162,7 +162,7 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 	if err != nil {
 		return nil, nil, err
 	}
-	if strings.ToLower(resp) == "n" {
+	if strings.EqualFold(resp, "n") {
 		return nil, nil, nil
 	}
 
