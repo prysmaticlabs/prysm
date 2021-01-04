@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
@@ -25,7 +24,7 @@ import (
 // library to listen for file-system changes and debounces these events to
 // ensure we can handle thousands of events fired in a short time-span.
 func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
-	debounceFileChangesInterval := time.Second * time.Duration(featureconfig.Get().KeystoreImportDebounceInterval)
+	debounceFileChangesInterval := featureconfig.Get().KeystoreImportDebounceInterval
 	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
 	if !fileutil.FileExists(accountsFilePath) {
 		return
