@@ -1,6 +1,7 @@
 package epoch_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -249,7 +250,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		t.Run(string(i), func(t *testing.T) {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			original := proto.Clone(tt.state)
 			s, err := state.InitializeFromProto(tt.state)
 			require.NoError(t, err)
