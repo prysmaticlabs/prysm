@@ -7,6 +7,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,6 +40,19 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (
 // GetLogsEndpoints for the beacon and validator client.
 func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.LogsEndpointResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "unimplemented")
+}
+
+// GetVersion --
+func (s *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*pb.VersionResponse, error) {
+	beacon, err := s.beaconNodeClient.GetVersion(ctx, &ptypes.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.VersionResponse{
+		Beacon:    beacon.Version,
+		Validator: version.GetVersion(),
+	}, nil
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.

@@ -105,6 +105,11 @@ service Health {
             get: "/v2/validator/health/logs/endpoints"
         };
     }
+    rpc GetVersion(google.protobuf.Empty) returns (VersionResponse) {
+        option (google.api.http) = {
+            get: "/v2/validator/health/version"
+        };
+    }
     rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream ethereum.beacon.rpc.v1.LogsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/health/logs/beacon/stream"
@@ -266,6 +271,11 @@ message NodeConnectionResponse {
 message LogsEndpointResponse {
 	string validator_logs_endpoint = 1;
 	string beacon_logs_endpoint = 2;
+}
+
+message VersionResponse {
+	string beacon = 1;
+	string validator = 2;
 }
 
 message ChangePasswordRequest {
