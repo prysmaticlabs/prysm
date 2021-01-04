@@ -64,7 +64,7 @@ set SLASHER_REAL=%wrapper_dir%\slasher-%prysm_version%-%system%-%arch%
 
 if [%1]==[beacon-chain] (
     if exist %BEACON_CHAIN_REAL% (
-        Beacon chain is up to date.
+        echo [32mBeacon chain is up to date.[0m
     ) else (
         echo [35mDownloading beacon chain %prysm_version% to %BEACON_CHAIN_REAL% %reason%[0m
         curl -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% -o %BEACON_CHAIN_REAL%
@@ -75,7 +75,7 @@ if [%1]==[beacon-chain] (
 
 if [%1]==[validator] (
     if exist %VALIDATOR_REAL% (
-        Validator is up to date.
+        echo [32mValidator is up to date.[0m
     ) else (
         echo [35mDownloading validator %prysm_version% to %VALIDATOR_REAL% %reason%[0m
         curl -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch% -o %VALIDATOR_REAL%
@@ -86,7 +86,7 @@ if [%1]==[validator] (
 
 if [%1]==[slasher] (
     if exist %SLASHER_REAL% (
-        Slasher is up to date.
+        echo [32mSlasher is up to date.[0m
     ) else (
         echo [35mDownloading slasher %prysm_version% to %SLASHER_REAL% %reason%[0m
         curl -L https://prysmaticlabs.com/releases/slasher-%prysm_version%-%system%-%arch% -o %SLASHER_REAL%
