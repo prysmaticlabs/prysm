@@ -43,6 +43,9 @@ func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
 	if !v.logDutyCountDown {
 		return nil
 	}
+	if v.duties == nil {
+		return nil
+	}
 
 	var nextDutySlot uint64
 	var role string
