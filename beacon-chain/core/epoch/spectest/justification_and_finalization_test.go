@@ -25,15 +25,15 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 	}
 }
 
-func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, state *state.BeaconState) (*state.BeaconState, error) {
+func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, st *state.BeaconState) (*state.BeaconState, error) {
 	ctx := context.Background()
-	vp, bp, err := precompute.New(ctx, state)
+	vp, bp, err := precompute.New(ctx, st)
 	require.NoError(t, err)
-	_, bp, err = precompute.ProcessAttestations(ctx, state, vp, bp)
+	_, bp, err = precompute.ProcessAttestations(ctx, st, vp, bp)
 	require.NoError(t, err)
 
-	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
+	st, err = precompute.ProcessJustificationAndFinalizationPreCompute(st, bp)
 	require.NoError(t, err, "Could not process justification")
 
-	return state, nil
+	return st, nil
 }
