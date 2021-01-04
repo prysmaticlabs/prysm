@@ -9,6 +9,8 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -228,6 +230,11 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
 
+	// Don't need to wait if current slot is lower than highest processed slot from beacon node.
+	if slot < v.highestValidSlot {
+		return
+	}
+
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
@@ -237,12 +244,32 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	}
 	t := time.NewTimer(wait)
 	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		traceutil.AnnotateError(span, ctx.Err())
-		return
-	case <-t.C:
-		return
+
+	bChannel := make(chan *feed.Event, 1)
+	sub := v.blockFeed.Subscribe(bChannel)
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case event := <-bChannel:
+			// Node processed a block, check if the processed block is the same as input slot.
+			if event.Type == statefeed.BlockProcessed {
+				b, ok := event.Data.(*statefeed.BlockProcessedData)
+				if !ok {
+					log.Error("Event feed data is not type *statefeed.BlockProcessedData")
+					continue
+				}
+				if slot == b.Slot {
+					return
+				}
+			}
+		case <-ctx.Done():
+			traceutil.AnnotateError(span, ctx.Err())
+			return
+
+		case <-t.C:
+			return
+		}
 	}
 }
 

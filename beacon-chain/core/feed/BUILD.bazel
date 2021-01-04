@@ -7,5 +7,6 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared:__subpackages__",
+        "//validator:__subpackages__",
     ],
 )
