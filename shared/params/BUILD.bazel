@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "config.go",
+        "config_utils_develop.go",  # keep
         "config_utils_prod.go",
         "io_config.go",
         "loader.go",
