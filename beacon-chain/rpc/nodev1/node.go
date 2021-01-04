@@ -6,11 +6,38 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"go.opencensus.io/trace"
 )
 
 // GetIdentity retrieves data about the node's network presence.
 func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.IdentityResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "nodev1.GetIdentity")
+	defer span.End()
+
+	peerId := ns.PeerManager.PeerID().Pretty()
+	enr := ns.PeerManager.ENR().IdentityScheme()
+	var p2pAddresses []string
+	for _, address := range ns.PeerManager.Host().Addrs() {
+		p2pAddresses = append(p2pAddresses, address.String())
+	}
+	discoveryAddress, err := ns.PeerManager.DiscoveryAddress()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not obtain discovery address")
+	}
+	metadata := &ethpb.Metadata{
+		SeqNumber: ns.MetadataProvider.MetadataSeq(),
+		Attnets:   ns.MetadataProvider.Metadata().Attnets,
+	}
+
+	return &ethpb.IdentityResponse{
+		Data: &ethpb.Identity{
+			PeerId:             peerId,
+			Enr:                enr,
+			P2PAddresses:       p2pAddresses,
+			DiscoveryAddresses: []string{discoveryAddress.String()},
+			Metadata:           metadata,
+		},
+	}, nil
 }
 
 // GetPeer retrieves data about the given peer.
