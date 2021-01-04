@@ -352,9 +352,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "117f5366af9cf009354ed1abe02f906168158473461d69c8056984b9b0292619",
+    sha256 = "edb80f3a695d84f6000f0e05abf7a4bbf207c03abb91219780ec97e7d6ad21c8",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.2/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.3/prysm-web-ui.tar.gz",
     ],
 )
 

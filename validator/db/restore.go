@@ -28,7 +28,7 @@ func restore(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "n" {
+		if strings.EqualFold(resp, "n") {
 			logrus.Info("Restore aborted")
 			return nil
 		}

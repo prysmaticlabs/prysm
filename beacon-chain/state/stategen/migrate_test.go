@@ -15,8 +15,8 @@ import (
 
 func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
@@ -33,9 +33,9 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 func TestMigrateToCold_HappyPath(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)
@@ -63,19 +63,19 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, pks := testutil.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	assert.NoError(t, db.SaveBlock(ctx, genesis))
+	assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	assert.NoError(t, db.SaveState(ctx, beaconState, gRoot))
-	assert.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	assert.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
+	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
 	b1, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
@@ -113,9 +113,9 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	stateSlot := uint64(1)

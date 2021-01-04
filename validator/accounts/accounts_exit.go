@@ -130,7 +130,7 @@ func interact(
 			if err != nil {
 				return nil, nil, err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil, nil, nil
 			}
 		} else {
@@ -146,7 +146,7 @@ func interact(
 			if err != nil {
 				return nil, nil, err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil, nil, nil
 			}
 		}
@@ -166,7 +166,7 @@ func interact(
 	if err != nil {
 		return nil, nil, err
 	}
-	if strings.ToLower(resp) == "n" {
+	if strings.EqualFold(resp, "n") {
 		return nil, nil, nil
 	}
 

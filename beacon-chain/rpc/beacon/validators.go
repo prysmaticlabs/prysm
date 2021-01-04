@@ -87,6 +87,7 @@ func (bs *Server) ListValidatorBalances(
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				Status: "UNKNOWN",
 			})
+			balancesCount = len(res)
 			continue
 		}
 		filtered[index] = true
