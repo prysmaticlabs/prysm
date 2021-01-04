@@ -32,7 +32,7 @@ go_test(
     srcs = [
         "checktags_test.go",
         "config_test.go",
-        "config_utils_test.go",  # keep
+        "config_utils_develop.go",  # keep
         "loader_test.go",
     ],
     data = glob(["*.yaml"]) + [
@@ -40,7 +40,7 @@ go_test(
         "@eth2_spec_tests_minimal//:test_data",
     ],
     embed = [":go_default_library"],
-    gotags = ["test"],
+    gotags = ["develop"],
     race = "on",
     deps = [
         "//shared/testutil/assert:go_default_library",

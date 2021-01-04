@@ -1,4 +1,4 @@
-// +build !test
+// +build !develop
 
 package params
 
@@ -7,5 +7,5 @@ import (
 )
 
 func init() {
-	log.Fatal("Tests in this package require extra build tag: rerun go test with `-tags test`")
+	log.Fatal("Tests in this package require extra build tag: re-run with `-tags develop`")
 }
