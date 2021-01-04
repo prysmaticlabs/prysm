@@ -3,6 +3,7 @@ package iface
 
 import (
 	"context"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"io"
 
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
@@ -37,6 +38,6 @@ type ValidatorDB interface {
 	SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (kv.EncHistoryData, error)
-	SaveAttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte, history kv.EncHistoryData) error
+	SaveAttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte, history kv.EncHistoryData, indexedAtt *ethpb.IndexedAttestation) error
 	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 }

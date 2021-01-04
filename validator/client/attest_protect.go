@@ -63,12 +63,10 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return errors.Wrapf(err, "could not mark epoch %d as attested", indexedAtt.Data.Target.Epoch)
 	}
-	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory); err != nil {
+	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, newHistory, indexedAtt); err != nil {
 		return errors.Wrapf(err, "could not save attestation history for public key: %#x", pubKey)
 	}
 
-	// TODO(#7813): Add back the saving of lowest target and lowest source epoch
-	// after we have implemented batch saving of attestation metadata.
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
