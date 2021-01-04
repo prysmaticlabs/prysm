@@ -33,7 +33,6 @@ go_test(
     srcs = [
         "checktags_test.go",
         "config_test.go",
-        "config_utils_develop.go",  # keep
         "loader_test.go",
     ],
     data = glob(["*.yaml"]) + [
