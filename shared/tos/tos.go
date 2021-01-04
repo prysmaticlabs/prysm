@@ -53,7 +53,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	if err != nil {
 		return errors.New(acceptTosPromptErrText)
 	}
-	if strings.ToLower(input) != "accept" {
+	if !strings.EqualFold(input, "accept") {
 		return errors.New("you have to accept Terms and Conditions in order to continue")
 	}
 
