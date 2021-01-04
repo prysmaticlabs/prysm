@@ -58,7 +58,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "y" {
+		if strings.EqualFold(resp, "y") {
 			mnemonicPassphrase, err := promptutil.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,
