@@ -298,9 +298,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	conf := params.BeaconConfig()
 	conf.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(conf)
-	defer func() {
-		params.UseMainnetConfig()
-	}()
+	defer params.UseMainnetConfig()
 
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
@@ -470,9 +468,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	conf.SecondsPerETH1Block = 10
 	conf.Eth1FollowDistance = 50
 	params.OverrideBeaconConfig(conf)
-	defer func() {
-		params.UseMainnetConfig()
-	}()
+	defer params.UseMainnetConfig()
 
 	// Genesis not set
 	followBlock := uint64(2000)
