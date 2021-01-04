@@ -349,9 +349,9 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
 	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	require.Equal(t, true, ok, "No cache entry found for validator")
-	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
+	assert.Equal(t, params.BeaconConfig().RandomSubnetsPerValidator, uint64(len(coms)))
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
-	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
+	totalTime := time.Duration(params.BeaconConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
 	receivedTime := time.Until(exp.Round(time.Second))
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())

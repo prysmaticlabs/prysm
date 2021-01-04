@@ -87,6 +87,7 @@ func (bs *Server) ListValidatorBalances(
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				Status: "UNKNOWN",
 			})
+			balancesCount = len(res)
 			continue
 		}
 		filtered[index] = true
@@ -515,16 +516,16 @@ func (bs *Server) GetValidatorParticipation(
 		startSlot = uint64(i)
 	}
 
-	state, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	beaconState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	v, b, err := precompute.New(ctx, state)
+	v, b, err := precompute.New(ctx, beaconState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
 	}
-	_, b, err = precompute.ProcessAttestations(ctx, state, v, b)
+	_, b, err = precompute.ProcessAttestations(ctx, beaconState, v, b)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 	}

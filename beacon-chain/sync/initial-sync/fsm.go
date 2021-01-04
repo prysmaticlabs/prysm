@@ -162,7 +162,7 @@ func (m *stateMachine) setState(name stateID) {
 
 // trigger invokes the event handler on a given state machine.
 func (m *stateMachine) trigger(event eventID, data interface{}) error {
-	handlers, ok := (*m.smm).handlers[m.state]
+	handlers, ok := m.smm.handlers[m.state]
 	if !ok {
 		return fmt.Errorf("no event handlers registered for event: %v, state: %v", event, m.state)
 	}
@@ -178,12 +178,12 @@ func (m *stateMachine) trigger(event eventID, data interface{}) error {
 
 // isFirst checks whether a given machine has the lowest start slot.
 func (m *stateMachine) isFirst() bool {
-	return m.start == (*m.smm).keys[0]
+	return m.start == m.smm.keys[0]
 }
 
 // isLast checks whether a given machine has the highest start slot.
 func (m *stateMachine) isLast() bool {
-	return m.start == (*m.smm).keys[len((*m.smm).keys)-1]
+	return m.start == m.smm.keys[len(m.smm.keys)-1]
 }
 
 // String returns human-readable representation of a FSM state.

@@ -147,7 +147,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "y" {
+		if strings.EqualFold(resp, "y") {
 			mnemonicPassphrase, err := promptutil.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,

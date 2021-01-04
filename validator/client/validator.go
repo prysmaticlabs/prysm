@@ -63,6 +63,7 @@ type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
 	emitAccountMetrics                 bool
+	logDutyCountDown                   bool
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
@@ -593,6 +594,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
 				"slot":                  slotOffset + i,
+				"slotInEpoch":           (slotOffset + i) % params.BeaconConfig().SlotsPerEpoch,
 				"attesterDutiesAtSlot":  len(attesterKeys[i]),
 				"totalAttestersInEpoch": totalAttestingKeys,
 				"pubKeys":               attesterKeys[i],

@@ -58,6 +58,7 @@ type Flags struct {
 	// Slasher toggles.
 	EnableHistoricalDetection bool // EnableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
+	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -186,6 +187,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		log.Warn("Using a larger gossip history for the node")
 		cfg.EnableLargerGossipHistory = true
+	}
+	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
+		log.Warn("Disabling slashing broadcasting to p2p network")
+		cfg.DisableBroadcastSlashings = true
 	}
 	Init(cfg)
 }
