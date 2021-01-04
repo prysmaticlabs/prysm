@@ -94,6 +94,10 @@ var (
 		Usage: "(Danger): Disables the cache for attesting history in the validator DB, greatly increasing " +
 			"disk reads and writes as well as increasing time required for attestations to be produced",
 	}
+	disableBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:  "disable-broadcast-slashings",
+		Usage: "Disables broadcasting slashings submitted to the beacon node.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -122,7 +126,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
-var E2EValidatorFlags = []string{}
+var E2EValidatorFlags = make([]string, 0)
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
@@ -141,6 +145,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkPtInfoCache,
 	disablePruningDepositProofs,
 	disableSyncBacktracking,
+	disableBroadcastSlashingFlag,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
