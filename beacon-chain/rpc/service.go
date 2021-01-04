@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -92,6 +93,7 @@ type Service struct {
 	p2p                     p2p.Broadcaster
 	peersFetcher            p2p.PeersProvider
 	peerManager             p2p.PeerManager
+	metadataProvider        p2p.MetadataProvider
 	depositFetcher          depositcache.DepositFetcher
 	pendingDepositFetcher   depositcache.PendingDepositsFetcher
 	stateNotifier           statefeed.Notifier
@@ -132,6 +134,7 @@ type Config struct {
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
 	PeerManager             p2p.PeerManager
+	MetadataProvider        p2p.MetadataProvider
 	DepositFetcher          depositcache.DepositFetcher
 	PendingDepositFetcher   depositcache.PendingDepositsFetcher
 	StateNotifier           statefeed.Notifier
@@ -161,6 +164,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		p2p:                     cfg.Broadcaster,
 		peersFetcher:            cfg.PeersFetcher,
 		peerManager:             cfg.PeerManager,
+		metadataProvider:        cfg.MetadataProvider,
 		powChainService:         cfg.POWChainService,
 		chainStartFetcher:       cfg.ChainStartFetcher,
 		mockEth1Votes:           cfg.MockEth1Votes,
@@ -272,6 +276,17 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.beaconMonitoringHost,
 		BeaconMonitoringPort: s.beaconMonitoringPort,
 	}
+	nodeServerV1 := &nodev1.Server{
+		BeaconDB:           s.beaconDB,
+		Server:             s.grpcServer,
+		SyncChecker:        s.syncService,
+		GenesisTimeFetcher: s.genesisTimeFetcher,
+		PeersFetcher:       s.peersFetcher,
+		PeerManager:        s.peerManager,
+		GenesisFetcher:     s.genesisFetcher,
+		MetadataProvider:   s.metadataProvider,
+	}
+
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.beaconDB,
@@ -313,6 +328,7 @@ func (s *Service) Start() {
 		SyncChecker:         s.syncService,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
