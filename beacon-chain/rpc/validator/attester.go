@@ -44,7 +44,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 
 	// Attester will either wait until there's a valid block from the expected block proposer of for the assigned input slot
 	// or one third of the slot has transpired. Whichever comes first.
-	vs.waitToOneThird(ctx, req.Slot)
+	vs.waitOneThirdOrValidBlock(ctx, req.Slot)
 
 	res, err := vs.AttestationCache.Get(ctx, req)
 	if err != nil {
@@ -240,9 +240,10 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 	return &ptypes.Empty{}, nil
 }
 
-// waitToOneThird waits until one-third of the way through the slot
-// or the head slot equals to the input slot.
-func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
+// waitOneThirdOrValidBlock waits until (a) or (b) whichever comes first:
+//   (a) the validator has received a valid block from the expected block proposer for the assigned slot
+//   (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot)
+func (vs *Server) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
 	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
 	defer span.End()
 

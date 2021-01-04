@@ -11,6 +11,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -628,7 +630,7 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 	}
 }
 
-func TestWaitForSlotOneThird_WaitedCorrectly(t *testing.T) {
+func TestWaitOneThirdOrValidBlock_WaitOneThird(t *testing.T) {
 	currentTime := uint64(time.Now().Unix())
 	numOfSlots := uint64(4)
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
@@ -646,7 +648,7 @@ func TestWaitForSlotOneThird_WaitedCorrectly(t *testing.T) {
 
 	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
 	oneThird := currentTime + timeToSleep
-	server.waitToOneThird(context.Background(), numOfSlots)
+	server.waitOneThirdOrValidBlock(context.Background(), numOfSlots)
 
 	currentTime = uint64(time.Now().Unix())
 	if currentTime != oneThird {
@@ -654,7 +656,45 @@ func TestWaitForSlotOneThird_WaitedCorrectly(t *testing.T) {
 	}
 }
 
-func TestWaitForSlotOneThird_BlockIsHereNoWait(t *testing.T) {
+func TestWaitOneThirdOrValidBlock_ValidBlockNoWait(t *testing.T) {
+	currentTime := uint64(time.Now().Unix())
+	currentSlot := uint64(4)
+	genesisTime := currentTime - (currentSlot * params.BeaconConfig().SecondsPerSlot)
+
+	chainService := &mock.ChainService{
+		Genesis: time.Now(),
+	}
+	server := &Server{
+		AttestationCache:   cache.NewAttestationCache(),
+		HeadFetcher:        &mock.ChainService{},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
+		StateNotifier:      chainService.StateNotifier(),
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		time.AfterFunc(500*time.Millisecond, func() {
+			// Send valid event.
+			server.StateNotifier.StateFeed().Send(&feed.Event{
+				Type: statefeed.BlockProcessed,
+				Data: &statefeed.BlockProcessedData{
+					Slot: currentSlot,
+				},
+			})
+		})
+		wg.Done()
+	}()
+
+	server.waitOneThirdOrValidBlock(context.Background(), currentSlot)
+
+	if currentTime != uint64(time.Now().Unix()) {
+		t.Errorf("Wanted %d time for slot one third but got %d", uint64(time.Now().Unix()), currentTime)
+	}
+}
+
+func TestWaitOneThirdOrValidBlock_CurrentSlotHigherThanRequested(t *testing.T) {
 	currentTime := uint64(time.Now().Unix())
 	numOfSlots := uint64(4)
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
@@ -669,7 +709,7 @@ func TestWaitForSlotOneThird_BlockIsHereNoWait(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
 	}
 
-	server.waitToOneThird(context.Background(), s.Slot)
+	server.waitOneThirdOrValidBlock(context.Background(), s.Slot)
 
 	if currentTime != uint64(time.Now().Unix()) {
 		t.Errorf("Wanted %d time for slot one third but got %d", uint64(time.Now().Unix()), currentTime)
