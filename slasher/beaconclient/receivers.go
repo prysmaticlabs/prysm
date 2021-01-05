@@ -27,7 +27,7 @@ var reconnectPeriod = 5 * time.Second
 func (bs *Service) ReceiveBlocks(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveBlocks")
 	defer span.End()
-	stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
+	stream, err := bs.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream")
 		return
@@ -53,7 +53,7 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
-					stream, err = bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
+					stream, err = bs.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
 					if err != nil {
 						log.WithError(err).Error("Could not restart block stream")
 						return
