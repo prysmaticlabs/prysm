@@ -312,7 +312,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		})
 		stream, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 		require.NoError(t, err)
-		if err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
+		if err := r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
 			return err
 		}
 		if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -563,7 +563,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 		})
 		stream, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 		require.NoError(t, err)
-		if err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
+		if err := r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
 			return err
 		}
 		if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -725,7 +725,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		})
 		stream, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 		require.NoError(t, err)
-		if err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
+		if err := r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
 			return err
 		}
 		if testutil.WaitTimeout(&wg, 1*time.Second) {

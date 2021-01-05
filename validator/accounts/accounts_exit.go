@@ -74,7 +74,7 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	return nil
 }
 
-func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, error) {
+func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km keymanager.IKeymanager, err error) {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound
 	})
@@ -82,11 +82,11 @@ func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, err
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
 
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err = w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not initialize keymanager")
 	}
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err = km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -94,10 +94,14 @@ func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, err
 		return nil, nil, errors.New("wallet is empty, no accounts to perform voluntary exit")
 	}
 
-	return validatingPublicKeys, keymanager, nil
+	return validatingPublicKeys, km, nil
 }
 
-func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte) ([][]byte, []string, error) {
+func interact(
+	cliCtx *cli.Context,
+	r io.Reader,
+	validatingPublicKeys [][48]byte,
+) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
 	// Allow the user to interactively select the accounts to exit or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings.
 	filteredPubKeys, err := filterPublicKeysFromUserInput(
@@ -109,8 +113,8 @@ func interact(cliCtx *cli.Context, r io.Reader, validatingPublicKeys [][48]byte)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
 	}
-	rawPubKeys := make([][]byte, len(filteredPubKeys))
-	formattedPubKeys := make([]string, len(filteredPubKeys))
+	rawPubKeys = make([][]byte, len(filteredPubKeys))
+	formattedPubKeys = make([]string, len(filteredPubKeys))
 	for i, pk := range filteredPubKeys {
 		pubKeyBytes := pk.Marshal()
 		rawPubKeys[i] = pubKeyBytes
