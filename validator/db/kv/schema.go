@@ -23,6 +23,7 @@ var (
 	// Optimized slashing protection buckets and keys.
 	pubKeysBucket                 = []byte("pubkeys-bucket")
 	attestationSigningRootsBucket = []byte("att-signing-roots-bucket")
+	attestationSourceEpochsBucket = []byte("att-source-epochs-bucket")
 
 	// Migrations
 	migrationsBucket = []byte("migrations")

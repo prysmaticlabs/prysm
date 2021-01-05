@@ -2,9 +2,7 @@ package kv
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -13,7 +11,73 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func TestStore_CheckSurroundVote_54kEpochs(t *testing.T) {
+func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 1
+	pubKeys := make([][48]byte, numValidators)
+	validatorDB := setupDB(t, pubKeys)
+	tests := []struct {
+		name                string
+		existingAttestation *ethpb.Attestation
+		existingSigningRoot [32]byte
+		incomingAttestation *ethpb.Attestation
+		incomingSigningRoot [32]byte
+		want                bool
+	}{
+		{
+			name:                "different signing root at same target equals a double vote",
+			existingAttestation: createAttestation(0, 1 /* target */),
+			existingSigningRoot: [32]byte{1},
+			incomingAttestation: createAttestation(0, 1 /* target */),
+			incomingSigningRoot: [32]byte{2},
+			want:                true,
+		},
+		{
+			name:                "same signing root at same target is safe",
+			existingAttestation: createAttestation(0, 1 /* target */),
+			existingSigningRoot: [32]byte{1},
+			incomingAttestation: createAttestation(0, 1 /* target */),
+			incomingSigningRoot: [32]byte{1},
+			want:                false,
+		},
+		{
+			name:                "different signing root at different target is safe",
+			existingAttestation: createAttestation(0, 1 /* target */),
+			existingSigningRoot: [32]byte{1},
+			incomingAttestation: createAttestation(0, 2 /* target */),
+			incomingSigningRoot: [32]byte{2},
+			want:                false,
+		},
+		{
+			name:                "no data stored at target should not be considered a double vote",
+			existingAttestation: createAttestation(0, 1 /* target */),
+			existingSigningRoot: [32]byte{1},
+			incomingAttestation: createAttestation(0, 2 /* target */),
+			incomingSigningRoot: [32]byte{1},
+			want:                false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatorDB.ApplyAttestationForPubKey(
+				ctx,
+				pubKeys[0],
+				tt.existingSigningRoot,
+				tt.existingAttestation,
+			)
+			require.NoError(t, err)
+			slashable := validatorDB.CheckSlashableAttestation(
+				ctx,
+				pubKeys[0],
+				tt.incomingSigningRoot,
+				tt.incomingAttestation,
+			)
+			assert.Equal(t, tt.want, slashable)
+		})
+	}
+}
+
+func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1
 	numEpochs := uint64(54000)
@@ -24,7 +88,11 @@ func TestStore_CheckSurroundVote_54kEpochs(t *testing.T) {
 	// since genesis up to and including the weak subjectivity period epoch (54,000).
 	err := validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
-		sourceEpochsBucket, err := bucket.CreateBucketIfNotExists(pubKeys[0][:])
+		pkBucket, err := bucket.CreateBucketIfNotExists(pubKeys[0][:])
+		if err != nil {
+			return err
+		}
+		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 		if err != nil {
 			return err
 		}
@@ -40,43 +108,53 @@ func TestStore_CheckSurroundVote_54kEpochs(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	surroundingAtt := createAttestation(numEpochs/2, numEpochs /* source, target */)
-	start := time.Now()
-	slashable := validatorDB.CheckSlashableAttestation(ctx, pubKeys[0], numEpochs/2, numEpochs)
-	assert.Equal(t, true, slashable)
-	end := time.Now()
-	fmt.Printf("Checking surround vote with (source %d, target %d), took %v\n", surroundingAtt.Data.Source.Epoch, surroundingAtt.Data.Target.Epoch, end.Sub(start))
-
-	surroundingAtt = createAttestation(0, numEpochs /* source, target */)
-	start = time.Now()
-	slashable = validatorDB.CheckSurroundVote(ctx, pubKeys[0], surroundingAtt)
-	assert.Equal(t, true, slashable)
-	end = time.Now()
-	fmt.Printf("Checking surround vote with (source %d, target %d), took %v\n", surroundingAtt.Data.Source.Epoch, surroundingAtt.Data.Target.Epoch, end.Sub(start))
-
-	surroundingAtt = createAttestation(numEpochs-3, numEpochs /* source, target */)
-	start = time.Now()
-	slashable = validatorDB.CheckSurroundVote(ctx, pubKeys[0], surroundingAtt)
-	assert.Equal(t, true, slashable)
-	end = time.Now()
-	fmt.Printf("Checking surround vote with (source %d, target %d), took %v\n", surroundingAtt.Data.Source.Epoch, surroundingAtt.Data.Target.Epoch, end.Sub(start))
-
-	safeAtt := createAttestation(numEpochs, numEpochs+1 /* source, target */)
-	start = time.Now()
-	slashable = validatorDB.CheckSurroundVote(ctx, pubKeys[0], safeAtt)
-	assert.Equal(t, false, slashable)
-	end = time.Now()
-	fmt.Printf("Checking safe attestation with (source %d, target %d), took %v\n", safeAtt.Data.Source.Epoch, safeAtt.Data.Target.Epoch, end.Sub(start))
+	tests := []struct {
+		name        string
+		signingRoot [32]byte
+		attestation *ethpb.Attestation
+		want        bool
+	}{
+		{
+			name:        "surround vote at half of the weak subjectivity period",
+			signingRoot: [32]byte{},
+			attestation: createAttestation(numEpochs/2, numEpochs),
+			want:        true,
+		},
+		{
+			name:        "spanning genesis to weak subjectivity period surround vote",
+			signingRoot: [32]byte{},
+			attestation: createAttestation(0, numEpochs),
+			want:        true,
+		},
+		{
+			name:        "simple surround vote at end of weak subjectivity period",
+			signingRoot: [32]byte{},
+			attestation: createAttestation(numEpochs-3, numEpochs),
+			want:        true,
+		},
+		{
+			name:        "non-slashable vote",
+			signingRoot: [32]byte{},
+			attestation: createAttestation(numEpochs, numEpochs+1),
+			want:        false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			slashable := validatorDB.CheckSlashableAttestation(ctx, pubKeys[0], tt.signingRoot, tt.attestation)
+			assert.Equal(t, tt.want, slashable)
+		})
+	}
 }
 
-func BenchmarkStore_CheckSurroundVote_SafeAttestation_54kEpochs(b *testing.B) {
+func BenchmarkStore_CheckSlashableAttestation_Surround_SafeAttestation_54kEpochs(b *testing.B) {
 	numValidators := 1
 	numEpochs := uint64(54000)
 	pubKeys := make([][48]byte, numValidators)
 	benchCheckSurroundVote(b, pubKeys, numEpochs, false /* surround */)
 }
 
-func BenchmarkStore_CheckSurroundVote_Surrounding_54kEpochs(b *testing.B) {
+func BenchmarkStore_CheckSurroundVote_Surround_Slashable_54kEpochs(b *testing.B) {
 	numValidators := 1
 	numEpochs := uint64(54000)
 	pubKeys := make([][48]byte, numValidators)
@@ -101,7 +179,11 @@ func benchCheckSurroundVote(
 	err = validatorDB.update(func(tx *bolt.Tx) error {
 		for _, pubKey := range pubKeys {
 			bucket := tx.Bucket(pubKeysBucket)
-			sourceEpochsBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
+			pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
+			if err != nil {
+				return err
+			}
+			sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 			if err != nil {
 				return err
 			}
@@ -128,7 +210,7 @@ func benchCheckSurroundVote(
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, pubKey := range pubKeys {
-			slashable := validatorDB.CheckSurroundVote(ctx, pubKey, surroundingVote)
+			slashable := validatorDB.CheckSlashableAttestation(ctx, pubKey, [32]byte{}, surroundingVote)
 			assert.Equal(b, shouldSurround, slashable)
 		}
 	}
