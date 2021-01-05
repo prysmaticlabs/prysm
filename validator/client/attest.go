@@ -251,7 +251,7 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	for {
 		select {
 		case b := <-bChannel:
-			if slot == b.Block.Slot {
+			if slot <= b.Block.Slot {
 				return
 			}
 		case <-ctx.Done():
