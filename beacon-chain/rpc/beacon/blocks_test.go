@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -550,7 +551,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	<-exitRoutine
 }
 
-func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
+func TestServer_StreamBlocksVerified_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -569,7 +570,35 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamBlocksServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ptypes.Empty{}, mockStream))
+		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ethpb.StreamBlocksRequest{
+			VerifiedOnly: true,
+		}, mockStream))
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
+func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	chainService := &chainMock.ChainService{}
+	ctx, cancel := context.WithCancel(ctx)
+	server := &Server{
+		Ctx:           ctx,
+		BlockNotifier: chainService.BlockNotifier(),
+		HeadFetcher:   chainService,
+		BeaconDB:      db,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mock.NewMockBeaconChain_StreamBlocksServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
+	go func(tt *testing.T) {
+		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ethpb.StreamBlocksRequest{}, mockStream))
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -577,6 +606,40 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
+	ctx := context.Background()
+	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
+	b, err := testutil.GenerateFullBlock(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	chainService := &chainMock.ChainService{State: beaconState}
+	server := &Server{
+		Ctx:           ctx,
+		BlockNotifier: chainService.BlockNotifier(),
+		HeadFetcher:   chainService,
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mock.NewMockBeaconChain_StreamBlocksServer(ctrl)
+	mockStream.EXPECT().Send(b).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+
+	go func(tt *testing.T) {
+		assert.NoError(tt, server.StreamBlocks(&ethpb.StreamBlocksRequest{}, mockStream), "Could not call RPC method")
+	}(t)
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: b},
+		})
+	}
+	<-exitRoutine
+}
+
+func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
@@ -602,7 +665,9 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamBlocks(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamBlocks(&ethpb.StreamBlocksRequest{
+			VerifiedOnly: true,
+		}, mockStream), "Could not call RPC method")
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
