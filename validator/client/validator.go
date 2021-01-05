@@ -376,13 +376,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
-	req.Epoch++
-	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	for _, duty := range dutiesNextEpoch.Duties {
+	dutiesNextEpoch := resp.GetNextEpochDuties()
+	for _, duty := range dutiesNextEpoch {
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex

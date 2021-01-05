@@ -549,11 +549,6 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
-	client.EXPECT().GetDuties(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(resp, nil)
-
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
