@@ -242,7 +242,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
 func (v *validator) ReceiveBlocks(ctx context.Context) {
-	stream, err := v.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
+	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream")
 		return

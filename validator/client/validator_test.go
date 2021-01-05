@@ -843,7 +843,7 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client.EXPECT().StreamBlocks(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
@@ -869,7 +869,7 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client.EXPECT().StreamBlocks(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	slot := uint64(100)
