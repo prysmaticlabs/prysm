@@ -380,7 +380,7 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 		addresses = append(addresses, address)
 	}
 	if node.Load(&ip6) == nil {
-		address, ipErr := multiAddressBuilderWithID(net.IP(ip4).String(), "udp", uint(node.UDP()), id)
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip6).String(), "udp", uint(node.UDP()), id)
 		if ipErr != nil {
 			return nil, errors.Wrap(ipErr, "could not build IPv6 address")
 		}
