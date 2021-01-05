@@ -280,10 +280,11 @@ func TestUDPMultiAddress(t *testing.T) {
 	defer listener.Close()
 	s.dv5Listener = listener
 
-	multiAddress, err := s.DiscoveryAddress()
+	multiAddresses, err := s.DiscoveryAddresses()
 	require.NoError(t, err)
-	assert.Equal(t, true, strings.Contains(multiAddress.String(), fmt.Sprintf("%d", port)))
-	assert.Equal(t, true, strings.Contains(multiAddress.String(), "udp"))
+	require.Equal(t, 1, len(multiAddresses))
+	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), fmt.Sprintf("%d", port)))
+	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), "udp"))
 }
 
 // addPeer is a helper to add a peer with a given connection state)
