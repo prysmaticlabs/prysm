@@ -18,7 +18,6 @@ go_library(
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
-        "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )
@@ -30,5 +29,11 @@ go_test(
         "server_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library"],
+    deps = [
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
+        "//shared/version:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
+    ],
 )
