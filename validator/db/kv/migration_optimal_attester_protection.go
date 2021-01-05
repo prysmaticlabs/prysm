@@ -2,8 +2,10 @@ package kv
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/golang/snappy"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -17,10 +19,10 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 		return nil // Migration already completed.
 	}
 
-	// TODO: Implement logic.
 	bkt := tx.Bucket(historicAttestationsBucket)
 
 	// Compress all attestation history data.
+	ctx := context.Background()
 	if err := bkt.ForEach(func(k, v []byte) error {
 		if v == nil {
 			return nil
@@ -32,12 +34,44 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 			return err
 		}
 
+		pkBucket, err := tx.CreateBucketIfNotExists(k)
+		if err != nil {
+			return err
+		}
+		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
+		if err != nil {
+			return err
+		}
+		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
+		if err != nil {
+			return err
+		}
+
 		// Extract every single source, target, signing root
 		// from the attesting history then insert them into the
 		// respective buckets under the new db schema.
-		_ = attestingHistory
-
-		return bkt.Put(k, v)
+		latestEpochWritten, err := attestingHistory.GetLatestEpochWritten(ctx)
+		if err != nil {
+			return err
+		}
+		for targetEpoch := uint64(0); targetEpoch < latestEpochWritten; targetEpoch++ {
+			historicalAtt, err := attestingHistory.GetTargetData(ctx, targetEpoch)
+			if err != nil {
+				return err
+			}
+			if historicalAtt.IsEmpty() {
+				continue
+			}
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(historicalAtt.Source)
+			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+				return err
+			}
+			if err := signingRootsBucket.Put(targetEpochBytes, historicalAtt.SigningRoot); err != nil {
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		return err
 	}
