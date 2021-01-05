@@ -35,14 +35,14 @@ var ProposeDoubleBlock = types.Evaluator{
 // ValidatorsSlashed ensures the expected amount of validators are slashed.
 var ValidatorsSlashed = types.Evaluator{
 	Name:       "validators_slashed_epoch_%d",
-	Policy:     policies.AfterNthEpoch(2),
+	Policy:     policies.AfterNthEpoch(1),
 	Evaluation: validatorsSlashed,
 }
 
 // SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
 var SlashedValidatorsLoseBalance = types.Evaluator{
 	Name:       "slashed_validators_lose_valance_epoch_%d",
-	Policy:     policies.AfterNthEpoch(2),
+	Policy:     policies.AfterNthEpoch(1),
 	Evaluation: validatorsLoseBalance,
 }
 
