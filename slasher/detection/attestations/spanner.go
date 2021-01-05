@@ -70,7 +70,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 	targetEpoch := att.Data.Target.Epoch
 	dis := targetEpoch - sourceEpoch
 
-	if sourceEpoch > targetEpoch { //Prevent underflow and handle source > target slashable cases.
+	if sourceEpoch > targetEpoch { // Prevent underflow and handle source > target slashable cases.
 		dis = sourceEpoch - targetEpoch
 		sourceEpoch, targetEpoch = targetEpoch, sourceEpoch
 		sourceLargerThenTargetObserved.Inc()
