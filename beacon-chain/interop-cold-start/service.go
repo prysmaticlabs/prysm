@@ -146,7 +146,7 @@ func (s *Service) PreGenesisState() *stateTrie.BeaconState {
 
 // ClearPreGenesisData --
 func (s *Service) ClearPreGenesisData() {
-	//no-op
+	// no-op
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
