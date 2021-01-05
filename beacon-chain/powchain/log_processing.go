@@ -34,8 +34,8 @@ const eth1DataSavingInterval = 100
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
-const batchSizeAdditiveFactorMultiplier = 0.10
-const batchSizeMultiplicativeDecreaseDivisor = 2
+const additiveFactorMultiplier = 0.10
+const multiplicativeDecreaseDivisor = 2
 
 func tooMuchDataRequestedError(err error) bool {
 	// this error is only infura specific (other providers might have different error messages)
@@ -284,7 +284,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 
 	batchSize := s.eth1HeaderReqLimit
-	additiveFactor := uint64(float64(batchSize) * batchSizeAdditiveFactorMultiplier)
+	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
 
 	for currentBlockNum < latestFollowHeight {
 		start := currentBlockNum
@@ -318,7 +318,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 				}
 
 				// multiplicative decrease
-				batchSize = batchSize / batchSizeMultiplicativeDecreaseDivisor
+				batchSize = batchSize / multiplicativeDecreaseDivisor
 				continue
 			}
 			return err
