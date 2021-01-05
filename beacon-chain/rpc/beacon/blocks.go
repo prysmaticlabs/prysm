@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -174,11 +175,17 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 	return bs.chainHeadRetrieval(ctx)
 }
 
-// StreamBlocks to clients every single time a block is processed by the beacon node.
+// StreamBlocks to clients every single time a block is received by the beacon node.
 func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconChain_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
-	blockSub := bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
+	var blockSub event.Subscription
+	if req.VerifiedOnly {
+		blockSub = bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
+	} else {
+		blockSub = bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	}
 	defer blockSub.Unsubscribe()
+
 	for {
 		select {
 		case event := <-blocksChannel:
@@ -186,7 +193,6 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 				if event.Type == statefeed.BlockProcessed {
 					data, ok := event.Data.(*statefeed.BlockProcessedData)
 					if !ok || data == nil {
-						// Got bad data over the stream.
 						continue
 					}
 					if err := stream.Send(data.SignedBlock); err != nil {
