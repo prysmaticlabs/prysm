@@ -230,7 +230,7 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	defer span.End()
 
 	// Don't need to wait if requested slot is the same as highest valid slot.
-	if slot == v.highestValidSlot {
+	if slot <= v.highestValidSlot {
 		return
 	}
 
