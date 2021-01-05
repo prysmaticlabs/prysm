@@ -79,6 +79,7 @@ go_test(
     srcs = [
         "blockchain_test.go",
         "chain_info_test.go",
+        "checktags_test.go",
         "head_test.go",
         "info_test.go",
         "metrics_test.go",
@@ -90,6 +91,7 @@ go_test(
         "weak_subjectivity_checks_test.go",
     ],
     embed = [":go_default_library"],
+    gotags = ["develop"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
@@ -126,6 +128,7 @@ go_test(
     name = "go_raceon_test",
     srcs = [
         "chain_info_norace_test.go",
+        "checktags_test.go",
         "receive_block_test.go",
         "service_norace_test.go",
     ],
@@ -137,6 +140,7 @@ go_test(
         # See: https://github.com/etcd-io/bbolt/issues/187.
         "-d=checkptr=0",
     ],
+    gotags = ["develop"],
     race = "on",
     tags = ["race_on"],
     deps = [
