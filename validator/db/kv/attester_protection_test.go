@@ -13,7 +13,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func TestStore_CheckSurroundVote(t *testing.T) {
+func TestStore_CheckSurroundVote_54kEpochs(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1
 	numEpochs := uint64(54000)
@@ -42,7 +42,7 @@ func TestStore_CheckSurroundVote(t *testing.T) {
 
 	surroundingAtt := createAttestation(numEpochs/2, numEpochs /* source, target */)
 	start := time.Now()
-	slashable := validatorDB.CheckSurroundVote(ctx, pubKeys[0], surroundingAtt)
+	slashable := validatorDB.CheckSlashableAttestation(ctx, pubKeys[0], numEpochs/2, numEpochs)
 	assert.Equal(t, true, slashable)
 	end := time.Now()
 	fmt.Printf("Checking surround vote with (source %d, target %d), took %v\n", surroundingAtt.Data.Source.Epoch, surroundingAtt.Data.Target.Epoch, end.Sub(start))

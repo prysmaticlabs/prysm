@@ -21,7 +21,8 @@ var (
 	genesisValidatorsRootKey = []byte("genesis-val-root")
 
 	// Optimized slashing protection buckets and keys.
-	pubKeysBucket = []byte("pubkeys")
+	pubKeysBucket                 = []byte("pubkeys-bucket")
+	attestationSigningRootsBucket = []byte("att-signing-roots-bucket")
 
 	// Migrations
 	migrationsBucket = []byte("migrations")
