@@ -137,8 +137,8 @@ func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) 
 }
 
 // SaveState -- passthrough.
-func (e Exporter) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
-	return e.db.SaveState(ctx, state, blockRoot)
+func (e Exporter) SaveState(ctx context.Context, st *state.BeaconState, blockRoot [32]byte) error {
+	return e.db.SaveState(ctx, st, blockRoot)
 }
 
 // SaveStateSummary -- passthrough.
