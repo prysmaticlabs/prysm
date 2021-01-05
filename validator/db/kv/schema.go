@@ -20,6 +20,9 @@ var (
 	// Genesis validators root bucket key.
 	genesisValidatorsRootKey = []byte("genesis-val-root")
 
+	// Optimized slashing protection buckets and keys.
+	pubKeysBucket = []byte("pubkeys")
+
 	// Migrations
 	migrationsBucket = []byte("migrations")
 )
