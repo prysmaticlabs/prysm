@@ -39,7 +39,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	options = append(options, libp2p.Security(noise.ID, noise.New))
 
 	if cfg.EnableUPnP {
-		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
+		options = append(options, libp2p.NATPortMap()) // Allow to use UPnP
 	}
 	if cfg.RelayNodeAddr != "" {
 		options = append(options, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
