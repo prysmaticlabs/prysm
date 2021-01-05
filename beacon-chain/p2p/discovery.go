@@ -361,7 +361,7 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	return multiAddressBuilderWithID(node.IP().String(), "tcp", uint(node.TCP()), id)
 }
 
-func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
+func ConvertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	pubkey := node.Pubkey()
 	assertedKey := convertToInterfacePubkey(pubkey)
 	id, err := peer.IDFromPublicKey(assertedKey)

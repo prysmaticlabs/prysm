@@ -39,6 +39,11 @@ import (
 
 var discoveryWaitTime = 1 * time.Second
 
+type dummyIdentity enode.ID
+
+func (id dummyIdentity) Verify(_ *enr.Record, _ []byte) error { return nil }
+func (id dummyIdentity) NodeAddr(_ *enr.Record) []byte        { return id[:] }
+
 func init() {
 	rand.Seed(time.Now().Unix())
 }
@@ -285,6 +290,20 @@ func TestUDPMultiAddress(t *testing.T) {
 	require.Equal(t, true, len(multiAddresses) > 0)
 	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), fmt.Sprintf("%d", port)))
 	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), "udp"))
+}
+
+func TestMultipleDiscoveryAddresses(t *testing.T) {
+	record := &enr.Record{}
+	err := record.SetSig(dummyIdentity{1}, []byte{42})
+	require.NoError(t, err)
+	record.Set(enr.IPv4{127, 0, 0, 1})
+	record.Set(enr.IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68})
+	node, err := enode.New(dummyIdentity{}, record)
+	require.NoError(t, err)
+
+	multiAddresses, err := ConvertToUdpMultiAddr(node)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(multiAddresses))
 }
 
 // addPeer is a helper to add a peer with a given connection state)
