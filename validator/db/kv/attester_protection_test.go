@@ -2,6 +2,8 @@ package kv
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -168,7 +170,7 @@ func benchCheckSurroundVote(
 	shouldSurround bool,
 ) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, "/tmp/benchbench", pubKeys)
+	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), pubKeys)
 	require.NoError(b, err, "Failed to instantiate DB")
 	defer func() {
 		require.NoError(b, validatorDB.Close(), "Failed to close database")
