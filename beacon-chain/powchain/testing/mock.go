@@ -125,7 +125,7 @@ func (m *POWChain) PreGenesisState() *beaconstate.BeaconState {
 
 // ClearPreGenesisData --
 func (m *POWChain) ClearPreGenesisData() {
-	//no-op
+	// no-op
 }
 
 // IsConnectedToETH1 --

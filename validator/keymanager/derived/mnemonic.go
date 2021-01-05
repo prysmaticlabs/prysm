@@ -71,8 +71,8 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 	return nil
 }
 
-//Uses the provided mnemonic seed phrase to generate the
-//appropriate seed file for recovering a derived wallets.
+// Uses the provided mnemonic seed phrase to generate the
+// appropriate seed file for recovering a derived wallets.
 func seedFromMnemonic(mnemonic, mnemonicPassphrase string) ([]byte, error) {
 	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
 		return nil, bip39.ErrInvalidMnemonic
