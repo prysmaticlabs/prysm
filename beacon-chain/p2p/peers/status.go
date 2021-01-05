@@ -59,6 +59,9 @@ const (
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
+
+	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
+	InboundRatio = float64(1)
 )
 
 // Status is the structure holding the peer status information.
@@ -186,6 +189,22 @@ func (p *Status) IsActive(pid peer.ID) bool {
 
 	peerData, ok := p.store.PeerData(pid)
 	return ok && (peerData.ConnState == PeerConnected || peerData.ConnState == PeerConnecting)
+}
+
+// IsAboveInboundLimit checks if we are above our current inbound
+// peer limit.
+func (p *Status) IsAboveInboundLimit() bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	totalInbound := 0
+	for _, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected &&
+			peerData.Direction == network.DirInbound {
+			totalInbound += 1
+		}
+	}
+	inboundLimit := int(float64(p.ConnectedPeerLimit()) * InboundRatio)
+	return totalInbound > inboundLimit
 }
 
 // SetMetadata sets the metadata of the given remote peer.
@@ -580,6 +599,16 @@ func (p *Status) HighestEpoch() uint64 {
 		}
 	}
 	return helpers.SlotToEpoch(highestSlot)
+}
+
+// ConnectedPeerLimit returns the peer limit of
+// concurrent peers connected to the beacon-node.
+func (p *Status) ConnectedPeerLimit() uint64 {
+	maxLim := p.MaxPeerLimit()
+	if maxLim <= maxLimitBuffer {
+		return 0
+	}
+	return uint64(maxLim) - maxLimitBuffer
 }
 
 func (p *Status) isfromBadIP(pid peer.ID) bool {

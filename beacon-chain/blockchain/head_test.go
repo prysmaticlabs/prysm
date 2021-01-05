@@ -15,8 +15,8 @@ import (
 )
 
 func TestSaveHead_Same(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
 
 	r := [32]byte{'A'}
 	service.head = &head{slot: 0, root: r}
@@ -28,8 +28,8 @@ func TestSaveHead_Same(t *testing.T) {
 
 func TestSaveHead_Different(t *testing.T) {
 	ctx := context.Background()
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
 
 	oldRoot := [32]byte{'A'}
 	service.head = &head{slot: 0, root: oldRoot}
@@ -61,8 +61,8 @@ func TestSaveHead_Different(t *testing.T) {
 func TestSaveHead_Different_Reorg(t *testing.T) {
 	ctx := context.Background()
 	hook := logTest.NewGlobal()
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
 
 	oldRoot := [32]byte{'A'}
 	service.head = &head{slot: 0, root: oldRoot}
@@ -95,8 +95,8 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 }
 
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
 
 	state, _ := testutil.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}
@@ -107,8 +107,8 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 }
 
 func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
-	db, sc := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db, sc)
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), b))

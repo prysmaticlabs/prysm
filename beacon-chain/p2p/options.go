@@ -85,7 +85,7 @@ func multiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
 	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
 }
 
-func multiAddressBuilderWithID(ipAddr string, port uint, id peer.ID) (ma.Multiaddr, error) {
+func multiAddressBuilderWithID(ipAddr, protocol string, port uint, id peer.ID) (ma.Multiaddr, error) {
 	parsedIP := net.ParseIP(ipAddr)
 	if parsedIP.To4() == nil && parsedIP.To16() == nil {
 		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
@@ -94,9 +94,9 @@ func multiAddressBuilderWithID(ipAddr string, port uint, id peer.ID) (ma.Multiad
 		return nil, errors.New("empty peer id given")
 	}
 	if parsedIP.To4() != nil {
-		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr, port, id.String()))
+		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/%s/%d/p2p/%s", ipAddr, protocol, port, id.String()))
 	}
-	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d/p2p/%s", ipAddr, port, id.String()))
+	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/%s/%d/p2p/%s", ipAddr, protocol, port, id.String()))
 }
 
 // Adds a private key to the libp2p option if the option was provided.

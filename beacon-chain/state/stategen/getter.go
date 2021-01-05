@@ -25,7 +25,7 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) 
 
 // HasStateInCache returns true if the state exists in cache.
 func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	if s.hotStateCache.Has(blockRoot) {
+	if s.hotStateCache.has(blockRoot) {
 		return true, nil
 	}
 	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
@@ -59,10 +59,10 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	}
 
 	// To invalidate cache for parent root because pre state will get mutated.
-	defer s.hotStateCache.Delete(blockRoot)
+	defer s.hotStateCache.delete(blockRoot)
 
-	if s.hotStateCache.Has(blockRoot) {
-		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
+	if s.hotStateCache.has(blockRoot) {
+		return s.hotStateCache.getWithoutCopy(blockRoot), nil
 	}
 
 	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
@@ -108,28 +108,17 @@ func (s *State) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconStat
 	return s.loadStateBySlot(ctx, slot)
 }
 
-// StateSummaryExists returns true if the corresponding state summary of the input block root either
-// exists in the DB or in the cache.
-func (s *State) StateSummaryExists(ctx context.Context, blockRoot [32]byte) bool {
-	return s.stateSummaryCache.Has(blockRoot) || s.beaconDB.HasStateSummary(ctx, blockRoot)
-}
-
 // This returns the state summary object of a given block root, it first checks the cache
 // then checks the DB. An error is returned if state summary object is nil.
 func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	var summary *pb.StateSummary
 	var err error
-	if s.stateSummaryCache == nil {
-		return nil, errors.New("nil stateSummaryCache")
+
+	summary, err = s.beaconDB.StateSummary(ctx, blockRoot)
+	if err != nil {
+		return nil, err
 	}
-	if s.stateSummaryCache.Has(blockRoot) {
-		summary = s.stateSummaryCache.Get(blockRoot)
-	} else {
-		summary, err = s.beaconDB.StateSummary(ctx, blockRoot)
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	if summary == nil {
 		return s.RecoverStateSummary(ctx, blockRoot)
 	}
@@ -158,7 +147,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 	defer span.End()
 
 	// First, it checks if the state exists in hot state cache.
-	cachedState := s.hotStateCache.Get(blockRoot)
+	cachedState := s.hotStateCache.get(blockRoot)
 	if cachedState != nil {
 		return cachedState, nil
 	}
@@ -292,8 +281,8 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 		}
 
 		// Does the state exist in the hot state cache.
-		if s.hotStateCache.Has(parentRoot) {
-			return s.hotStateCache.Get(parentRoot), nil
+		if s.hotStateCache.has(parentRoot) {
+			return s.hotStateCache.get(parentRoot), nil
 		}
 
 		// Does the state exist in finalized info cache.

@@ -24,7 +24,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,
@@ -67,7 +67,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	assert.Equal(t, 2, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,
@@ -140,7 +140,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,
@@ -182,7 +182,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,

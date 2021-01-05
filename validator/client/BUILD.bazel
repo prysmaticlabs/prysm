@@ -22,7 +22,6 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/beacon/rpc/v1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/bls:go_default_library",
@@ -32,6 +31,7 @@ go_library(
         "//shared/grpcutils:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/mathutil:go_default_library",
+        "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/slotutil:go_default_library",

@@ -19,6 +19,10 @@ func LoadChainConfigFile(chainConfigFileName string) {
 	// Convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
 	for i, line := range lines {
+		// No need to convert the deposit contract address to byte array (as config expects a string).
+		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
+			continue
+		}
 		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
 			parts := replaceHexStringWithYAMLFormat(line)
 			lines[i] = strings.Join(parts, "\n")

@@ -11,11 +11,11 @@ import (
 )
 
 func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
-	db, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 32
-	require.NoError(t, db.SaveBlock(context.Background(), b))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), b))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	tests := []struct {
@@ -71,7 +71,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				beaconDB:         db,
+				beaconDB:         beaconDB,
 				wsRoot:           tt.wsRoot[:],
 				wsEpoch:          tt.wsEpoch,
 				wsVerified:       tt.wsVerified,

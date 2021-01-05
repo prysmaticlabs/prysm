@@ -21,6 +21,7 @@ package featureconfig
 
 import (
 	"sync"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -49,6 +50,7 @@ type Flags struct {
 	EnableSyncBacktracking             bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
+	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -56,6 +58,7 @@ type Flags struct {
 	// Slasher toggles.
 	EnableHistoricalDetection bool // EnableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
+	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -65,6 +68,10 @@ type Flags struct {
 
 	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
+
+	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
+	// changed on disk. This feature is for advanced use cases only.
+	KeystoreImportDebounceInterval time.Duration
 }
 
 var featureConfig *Flags
@@ -181,6 +188,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Using a larger gossip history for the node")
 		cfg.EnableLargerGossipHistory = true
 	}
+	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
+		log.Warn("Disabling slashing broadcasting to p2p network")
+		cfg.DisableBroadcastSlashings = true
+	}
 	Init(cfg)
 }
 
@@ -213,11 +224,16 @@ func ConfigureValidator(ctx *cli.Context) {
 			"upon completing web onboarding.")
 		cfg.WriteWalletPasswordOnWebOnboarding = true
 	}
+	if ctx.Bool(disableAttestingHistoryDBCache.Name) {
+		log.Warn("Disabled attesting history DB cache, likely increasing disk reads and writes significantly")
+		cfg.DisableAttestingHistoryDBCache = true
+	}
 	cfg.EnableBlst = true
 	if ctx.Bool(disableBlst.Name) {
 		log.Warn("Disabling new BLS library blst")
 		cfg.EnableBlst = false
 	}
+	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)
 }
 

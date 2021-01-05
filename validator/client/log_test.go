@@ -11,6 +11,7 @@ import (
 func TestLogNextDutyCountDown_NoDuty(t *testing.T) {
 	hook := logTest.NewGlobal()
 	v := &validator{
+		logDutyCountDown: true,
 		duties: &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
 			{AttesterSlot: 110},
@@ -24,6 +25,7 @@ func TestLogNextDutyCountDown_NoDuty(t *testing.T) {
 func TestLogNextDutyCountDown_HasDutyAttester(t *testing.T) {
 	hook := logTest.NewGlobal()
 	v := &validator{
+		logDutyCountDown: true,
 		duties: &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
 			{AttesterSlot: 110},
@@ -37,6 +39,7 @@ func TestLogNextDutyCountDown_HasDutyAttester(t *testing.T) {
 func TestLogNextDutyCountDown_HasDutyProposer(t *testing.T) {
 	hook := logTest.NewGlobal()
 	v := &validator{
+		logDutyCountDown: true,
 		duties: &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
 			{AttesterSlot: 110},
@@ -45,4 +48,11 @@ func TestLogNextDutyCountDown_HasDutyProposer(t *testing.T) {
 	}
 	require.NoError(t, v.LogNextDutyTimeLeft(101))
 	require.LogsContain(t, hook, "\"Next duty\" currentSlot=101 dutySlot=105 prefix=validator role=proposer")
+}
+
+func TestLogNextDutyCountDown_NilDuty(t *testing.T) {
+	v := &validator{
+		logDutyCountDown: true,
+	}
+	require.NoError(t, v.LogNextDutyTimeLeft(101))
 }

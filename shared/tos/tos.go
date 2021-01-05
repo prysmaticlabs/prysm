@@ -53,7 +53,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	if err != nil {
 		return errors.New(acceptTosPromptErrText)
 	}
-	if strings.ToLower(input) != "accept" {
+	if !strings.EqualFold(input, "accept") {
 		return errors.New("you have to accept Terms and Conditions in order to continue")
 	}
 
@@ -63,11 +63,18 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 
 // saveTosAccepted creates a file when Tos accepted.
 func saveTosAccepted(ctx *cli.Context) {
-	if err := fileutil.MkdirAll(ctx.String(cmd.DataDirFlag.Name)); err != nil {
-		log.WithError(err).Warnf("error creating directory: %s", ctx.String(cmd.DataDirFlag.Name))
-	}
-	err := fileutil.WriteFile(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""))
+	dataDir := ctx.String(cmd.DataDirFlag.Name)
+	dataDirExists, err := fileutil.HasDir(dataDir)
 	if err != nil {
-		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name, filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename))
+		log.WithError(err).Warnf("error checking directory: %s", dataDir)
+	}
+	if !dataDirExists {
+		if err := fileutil.MkdirAll(dataDir); err != nil {
+			log.WithError(err).Warnf("error creating directory: %s", dataDir)
+		}
+	}
+	if err := fileutil.WriteFile(filepath.Join(dataDir, acceptTosFilename), []byte("")); err != nil {
+		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name,
+			filepath.Join(dataDir, acceptTosFilename))
 	}
 }

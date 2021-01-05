@@ -101,6 +101,8 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 
 	n, err := p.Encoding().EncodeWithMaxLength(s, msg)
 	if err != nil {
+		_err := s.Reset()
+		_ = _err
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 
@@ -234,6 +236,11 @@ func (p *TestP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
+// DiscoveryAddress --
+func (p *TestP2P) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+	return nil, nil
+}
+
 // AddConnectionHandler handles the connection with a newly connected peer.
 func (p *TestP2P) AddConnectionHandler(f, _ func(ctx context.Context, id peer.ID) error) {
 	p.BHost.Network().Notify(&network.NotifyBundle{
@@ -287,12 +294,16 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 
 	if topic != "/eth2/beacon_chain/req/metadata/1" {
 		if _, err := p.Encoding().EncodeWithMaxLength(stream, msg); err != nil {
+			_err := stream.Reset()
+			_ = _err
 			return nil, err
 		}
 	}
 
 	// Close stream for writing.
-	if err := stream.Close(); err != nil {
+	if err := stream.CloseWrite(); err != nil {
+		_err := stream.Reset()
+		_ = _err
 		return nil, err
 	}
 	// Delay returning the stream for testing purposes
@@ -314,7 +325,7 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *TestP2P) FindPeersWithSubnet(_ context.Context, _ uint64) (bool, error) {
+func (p *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
 	return false, nil
 }
 

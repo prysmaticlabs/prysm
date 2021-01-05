@@ -4,6 +4,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -205,7 +206,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			}
 
 		}
-		if err := clearDB(dataDir, forceClearFlag); err != nil {
+		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	} else {
@@ -218,11 +219,14 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(dataDir, nil)
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, nil)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
+	if err := valDB.RunMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
+	}
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := s.registerPrometheusService(cliCtx); err != nil {
 			return err
@@ -296,16 +300,19 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			}
 
 		}
-		if err := clearDB(dataDir, forceClearFlag); err != nil {
+		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, make([][48]byte, 0))
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
+	if err := valDB.RunMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
+	}
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := s.registerPrometheusService(cliCtx); err != nil {
 			return err
@@ -399,6 +406,7 @@ func (s *ValidatorClient) registerClientService(
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,
 		GraffitiStruct:             gStruct,
+		LogDutyCountDown:           s.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})
 
 	if err != nil {
@@ -442,24 +450,35 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
+	beaconClientEndpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	grpcHeaders := s.cliCtx.String(flags.GrpcHeadersFlag.Name)
+	clientCert := s.cliCtx.String(flags.CertFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
-		ValDB:                   s.db,
-		Host:                    rpcHost,
-		Port:                    fmt.Sprintf("%d", rpcPort),
-		WalletInitializedFeed:   s.walletInitialized,
-		ValidatorService:        vs,
-		SyncChecker:             vs,
-		GenesisFetcher:          vs,
-		BeaconNodeInfoFetcher:   vs,
-		NodeGatewayEndpoint:     nodeGatewayEndpoint,
-		WalletDir:               walletDir,
-		Wallet:                  s.wallet,
-		Keymanager:              km,
-		ValidatorGatewayHost:    validatorGatewayHost,
-		ValidatorGatewayPort:    validatorGatewayPort,
-		ValidatorMonitoringHost: validatorMonitoringHost,
-		ValidatorMonitoringPort: validatorMonitoringPort,
+		ValDB:                    s.db,
+		Host:                     rpcHost,
+		Port:                     fmt.Sprintf("%d", rpcPort),
+		WalletInitializedFeed:    s.walletInitialized,
+		ValidatorService:         vs,
+		SyncChecker:              vs,
+		GenesisFetcher:           vs,
+		NodeGatewayEndpoint:      nodeGatewayEndpoint,
+		WalletDir:                walletDir,
+		Wallet:                   s.wallet,
+		Keymanager:               km,
+		ValidatorGatewayHost:     validatorGatewayHost,
+		ValidatorGatewayPort:     validatorGatewayPort,
+		ValidatorMonitoringHost:  validatorMonitoringHost,
+		ValidatorMonitoringPort:  validatorMonitoringPort,
+		BeaconClientEndpoint:     beaconClientEndpoint,
+		ClientMaxCallRecvMsgSize: maxCallRecvMsgSize,
+		ClientGrpcRetries:        grpcRetries,
+		ClientGrpcRetryDelay:     grpcRetryDelay,
+		ClientGrpcHeaders:        strings.Split(grpcHeaders, ","),
+		ClientWithCert:           clientCert,
 	})
 	return s.services.RegisterService(server)
 }
@@ -487,7 +506,7 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	return s.services.RegisterService(gatewaySrv)
 }
 
-func clearDB(dataDir string, force bool) error {
+func clearDB(ctx context.Context, dataDir string, force bool) error {
 	var err error
 	clearDBConfirmed := force
 
@@ -502,7 +521,7 @@ func clearDB(dataDir string, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(dataDir, nil)
+		valDB, err := kv.NewKVStore(ctx, dataDir, nil)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}

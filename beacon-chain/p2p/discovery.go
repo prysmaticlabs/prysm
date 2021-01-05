@@ -231,6 +231,10 @@ func (s *Service) startDiscoveryV5(
 // 6) Peer's fork digest in their ENR matches that of
 // 	  our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
+	// Ignore nil node entries passed in.
+	if node == nil {
+		return false
+	}
 	// ignore nodes with no ip address stored.
 	if node.IP() == nil {
 		return false
@@ -354,7 +358,17 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	return multiAddressBuilderWithID(node.IP().String(), uint(node.TCP()), id)
+	return multiAddressBuilderWithID(node.IP().String(), "tcp", uint(node.TCP()), id)
+}
+
+func convertToUdpMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
+	pubkey := node.Pubkey()
+	assertedKey := convertToInterfacePubkey(pubkey)
+	id, err := peer.IDFromPublicKey(assertedKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get peer id")
+	}
+	return multiAddressBuilderWithID(node.IP().String(), "udp", uint(node.UDP()), id)
 }
 
 func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
