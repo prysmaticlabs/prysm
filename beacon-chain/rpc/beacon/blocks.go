@@ -6,9 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -177,32 +175,22 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 // StreamBlocks to clients every single time a block is received by the beacon node.
 func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
-	blockSub := bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	blockSub := bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
 	defer blockSub.Unsubscribe()
 	for {
 		select {
 		case event := <-blocksChannel:
-			if event.Type == blockfeed.ReceivedBlock {
-				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
+			if event.Type == statefeed.BlockProcessed {
+				data, ok := event.Data.(*statefeed.BlockProcessedData)
 				if !ok {
 					// Got bad data over the stream.
 					continue
 				}
-				if data.SignedBlock == nil {
-					// One nil block shouldn't stop the stream.
-					continue
-				}
-				headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+				b, err := bs.BeaconDB.Block(bs.Ctx, data.BlockRoot)
 				if err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
-					continue
+					return status.Errorf(codes.Unavailable, "Could not retrieve saved block: %v", err)
 				}
-
-				if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
-					continue
-				}
-				if err := stream.Send(data.SignedBlock); err != nil {
+				if err := stream.Send(b); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 			}

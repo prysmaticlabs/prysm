@@ -12,7 +12,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -559,7 +558,7 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	server := &Server{
 		Ctx:           ctx,
-		BlockNotifier: chainService.BlockNotifier(),
+		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 		BeaconDB:      db,
 	}
@@ -578,15 +577,20 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
 	b, err := testutil.GenerateFullBlock(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, b))
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,
-		BlockNotifier: chainService.BlockNotifier(),
+		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
+		BeaconDB:      db,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -603,9 +607,9 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
-		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: b},
+		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{Slot: b.Block.Slot, BlockRoot: r},
 		})
 	}
 	<-exitRoutine
