@@ -147,7 +147,7 @@ func TestStart_OK(t *testing.T) {
 	web3Service.cancel()
 }
 
-func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
+func TestStart_NoHTTPEndpointDefinedWarns_WithoutChainStarted(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
@@ -167,7 +167,7 @@ func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 	}()
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	// Expect Start function to fail from a fatal call due
+	// Expect Start function to Warn from a fatal call due
 	// to no state existing.
 	go func() {
 		defer func() {

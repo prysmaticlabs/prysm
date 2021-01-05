@@ -257,12 +257,13 @@ func (s *Service) Start() {
 			log.Fatal(err)
 		}
 		if genState == nil {
-			log.Fatal("cannot create genesis state: no eth1 http endpoint defined")
+			log.Warn("cannot create genesis state: no eth1 http endpoint defined")
 		}
 	}
 
-	// Exit early if eth1 endpoint is not set.
+	// Print a warning if eth1 endpoint is not set and return early
 	if s.currHttpEndpoint == "" {
+		log.Warn("no eth1 endpoint defined")
 		return
 	}
 	go func() {
