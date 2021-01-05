@@ -172,7 +172,7 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 	return bs.chainHeadRetrieval(ctx)
 }
 
-// StreamBlocks to clients every single time a block is received by the beacon node.
+// StreamBlocks to clients every single time a block is processed by the beacon node.
 func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
 	blockSub := bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
