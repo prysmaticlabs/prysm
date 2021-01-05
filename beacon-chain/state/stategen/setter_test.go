@@ -14,9 +14,9 @@ import (
 
 func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
@@ -35,9 +35,9 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 func TestSaveState_HotStateCached(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db)
+	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -55,18 +55,18 @@ func TestSaveState_HotStateCached(t *testing.T) {
 
 func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	svc := New(db)
+	svc := New(beaconDB)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	r := [32]byte{'a'}
 	svc.hotStateCache.put(r, beaconState)
 
-	require.Equal(t, false, db.HasState(ctx, r), "Database has state stored already")
+	require.Equal(t, false, beaconDB.HasState(ctx, r), "Database has state stored already")
 	assert.NoError(t, svc.ForceCheckpoint(ctx, r[:]))
-	assert.Equal(t, true, db.HasState(ctx, r), "Did not save checkpoint to database")
+	assert.Equal(t, true, beaconDB.HasState(ctx, r), "Did not save checkpoint to database")
 
 	// Should not panic with genesis finalized root.
 	assert.NoError(t, svc.ForceCheckpoint(ctx, params.BeaconConfig().ZeroHash[:]))
@@ -75,8 +75,8 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 func TestSaveState_Alreadyhas(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -94,8 +94,8 @@ func TestSaveState_Alreadyhas(t *testing.T) {
 
 func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -109,23 +109,23 @@ func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	require.Equal(t, true, ok, "Did not save epoch boundary state")
 	assert.Equal(t, true, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")
 	// Should have not been saved in DB.
-	require.Equal(t, false, db.HasState(ctx, r))
+	require.Equal(t, false, beaconDB.HasState(ctx, r))
 }
 
 func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
 	r := [32]byte{'A'}
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, service.SaveState(ctx, r, beaconState))
 
 	// Should only save state summary.
@@ -133,14 +133,14 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	assert.Equal(t, true, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")
 	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 	// Should have not been saved in DB.
-	require.Equal(t, false, db.HasState(ctx, r))
+	require.Equal(t, false, beaconDB.HasState(ctx, r))
 }
 
 func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	service.EnableSaveHotStateToDB(ctx)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(defaultHotStateDBInterval))
@@ -150,14 +150,14 @@ func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
 
 	require.LogsContain(t, hook, "Saving hot state to DB")
 	// Should have saved in DB.
-	require.Equal(t, true, db.HasState(ctx, r))
+	require.Equal(t, true, beaconDB.HasState(ctx, r))
 }
 
 func TestEnableSaveHotStateToDB_Enabled(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 
 	service.EnableSaveHotStateToDB(ctx)
 	require.LogsContain(t, hook, "Entering mode to save hot states in DB")
@@ -167,8 +167,8 @@ func TestEnableSaveHotStateToDB_Enabled(t *testing.T) {
 func TestEnableSaveHotStateToDB_AlreadyEnabled(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	service.saveHotStateDB.enabled = true
 	service.EnableSaveHotStateToDB(ctx)
 	require.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
@@ -178,11 +178,11 @@ func TestEnableSaveHotStateToDB_AlreadyEnabled(t *testing.T) {
 func TestEnableSaveHotStateToDB_Disabled(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	service.saveHotStateDB.enabled = true
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
+	require.NoError(t, beaconDB.SaveBlock(ctx, b))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	service.saveHotStateDB.savedStateRoots = [][32]byte{r}
@@ -195,8 +195,8 @@ func TestEnableSaveHotStateToDB_Disabled(t *testing.T) {
 func TestEnableSaveHotStateToDB_AlreadyDisabled(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	service := New(db)
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
 	require.NoError(t, service.DisableSaveHotStateToDB(ctx))
 	require.LogsDoNotContain(t, hook, "Exiting mode to save hot states in DB")
 	require.Equal(t, false, service.saveHotStateDB.enabled)
