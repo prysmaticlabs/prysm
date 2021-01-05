@@ -282,7 +282,7 @@ func TestUDPMultiAddress(t *testing.T) {
 
 	multiAddresses, err := s.DiscoveryAddresses()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(multiAddresses))
+	require.Equal(t, true, len(multiAddresses) > 0)
 	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), fmt.Sprintf("%d", port)))
 	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), "udp"))
 }
