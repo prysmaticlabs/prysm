@@ -182,15 +182,11 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 		case event := <-blocksChannel:
 			if event.Type == statefeed.BlockProcessed {
 				data, ok := event.Data.(*statefeed.BlockProcessedData)
-				if !ok {
+				if !ok || data == nil {
 					// Got bad data over the stream.
 					continue
 				}
-				b, err := bs.BeaconDB.Block(bs.Ctx, data.BlockRoot)
-				if err != nil {
-					return status.Errorf(codes.Unavailable, "Could not retrieve saved block: %v", err)
-				}
-				if err := stream.Send(b); err != nil {
+				if err := stream.Send(data.SignedBlock); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 			}

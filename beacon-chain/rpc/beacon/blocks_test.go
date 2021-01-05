@@ -609,7 +609,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{Slot: b.Block.Slot, BlockRoot: r},
+			Data: &statefeed.BlockProcessedData{Slot: b.Block.Slot, BlockRoot: r, SignedBlock: b},
 		})
 	}
 	<-exitRoutine
