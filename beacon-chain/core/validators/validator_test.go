@@ -77,7 +77,7 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
-		{ExitEpoch: exitedEpoch + 2}, //over flow here
+		{ExitEpoch: exitedEpoch + 2}, // Overflow here
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 	}}
 	state, err := beaconstate.InitializeFromProto(base)

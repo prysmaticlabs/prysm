@@ -109,7 +109,8 @@ func isNewAttSlashable(
 		return false, err
 	}
 
-	if latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod { //Underflow protected older then weak subjectivity check.
+	// Underflow protected older then weak subjectivity check.
+	if latestEpochWritten >= wsPeriod && targetEpoch <= latestEpochWritten-wsPeriod {
 		return false, nil
 	}
 
