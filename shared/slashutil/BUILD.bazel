@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["surround_votes.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/slashutil",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library"],
+)
