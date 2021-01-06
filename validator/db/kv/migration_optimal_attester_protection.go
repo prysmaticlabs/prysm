@@ -3,12 +3,10 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/golang/snappy"
-	"github.com/k0kubun/go-ansi"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/schollz/progressbar/v3"
+	"github.com/prysmaticlabs/prysm/shared/progressutil"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -26,7 +24,7 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 
 	// Compress all attestation history data.
 	ctx := context.Background()
-	bar := initializeProgressBar(bkt.Stats().KeyN, "Migrating attesting history to more efficient format")
+	bar := progressutil.InitializeProgressBar(bkt.Stats().KeyN, "Migrating attesting history to more efficient format")
 	if err := bkt.ForEach(func(k, v []byte) error {
 		if v == nil {
 			return nil
@@ -84,22 +82,4 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 	}
 
 	return mb.Put(migrationOptimalAttesterProtectionKey, migrationCompleted)
-}
-
-func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
-	return progressbar.NewOptions(
-		numItems,
-		progressbar.OptionFullWidth(),
-		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
-		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
-		progressbar.OptionOnCompletion(func() { fmt.Println() }),
-		progressbar.OptionSetDescription(msg),
-	)
 }
