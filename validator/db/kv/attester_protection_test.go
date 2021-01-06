@@ -8,6 +8,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
@@ -20,9 +21,9 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	validatorDB := setupDB(t, pubKeys)
 	tests := []struct {
 		name                string
-		existingAttestation *ethpb.Attestation
+		existingAttestation *ethpb.IndexedAttestation
 		existingSigningRoot [32]byte
-		incomingAttestation *ethpb.Attestation
+		incomingAttestation *ethpb.IndexedAttestation
 		incomingSigningRoot [32]byte
 		want                bool
 	}{
@@ -118,7 +119,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	tests := []struct {
 		name        string
 		signingRoot [32]byte
-		attestation *ethpb.Attestation
+		attestation *ethpb.IndexedAttestation
 		want        SlashingKind
 	}{
 		{
@@ -153,6 +154,242 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 				require.NotNil(t, err)
 			}
 			assert.Equal(t, tt.want, slashingKind)
+		})
+	}
+}
+
+func TestStore_CheckSlashableAttestation_SurroundVote(t *testing.T) {
+	ctx := context.Background()
+	pubKeys := [][48]byte{{1}}
+	validatorDB := setupDB(t, pubKeys)
+	source := uint64(1)
+	target := uint64(4)
+	err := validatorDB.ApplyAttestationForPubKey(ctx, pubKeys[0], [32]byte{}, createAttestation(source, target))
+	require.NoError(t, err)
+	tests := []struct {
+		name        string
+		validatorDB *Store
+		sourceEpoch uint64
+		targetEpoch uint64
+		want        SlashingKind
+	}{
+		{
+			name:        "ignores attestations outside of weak subjectivity bounds",
+			validatorDB: validatorDB,
+			targetEpoch: params.BeaconConfig().WeakSubjectivityPeriod,
+			sourceEpoch: params.BeaconConfig().WeakSubjectivityPeriod,
+			want:        NotSlashable,
+		},
+		{
+			name:        "detects surrounding attestations",
+			validatorDB: validatorDB,
+			targetEpoch: target + 1,
+			sourceEpoch: source - 1,
+			want:        SurroundingVote,
+		},
+		{
+			name:        "detects surrounded attestations",
+			validatorDB: validatorDB,
+			targetEpoch: target - 1,
+			sourceEpoch: source + 1,
+			want:        SurroundedVote,
+		},
+		{
+			name:        "new attestation source == old source, but new target < old target",
+			validatorDB: validatorDB,
+			targetEpoch: target - 1,
+			sourceEpoch: source,
+			want:        NotSlashable,
+		},
+		{
+			name:        "new attestation source > old source, but new target == old target",
+			validatorDB: validatorDB,
+			targetEpoch: target,
+			sourceEpoch: source + 1,
+			want:        NotSlashable,
+		},
+		{
+			name:        "new attestation source and targets equal to old one",
+			validatorDB: validatorDB,
+			targetEpoch: target,
+			sourceEpoch: source,
+			want:        NotSlashable,
+		},
+		{
+			name:        "new attestation source == old source, but new target > old target",
+			validatorDB: validatorDB,
+			targetEpoch: target + 1,
+			sourceEpoch: source,
+			want:        NotSlashable,
+		},
+		{
+			name:        "new attestation source < old source, but new target == old target",
+			validatorDB: validatorDB,
+			targetEpoch: target,
+			sourceEpoch: source - 1,
+			want:        NotSlashable,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			slashingKind, err := tt.validatorDB.CheckSlashableAttestation(
+				ctx, pubKeys[0], [32]byte{}, createAttestation(tt.sourceEpoch, tt.targetEpoch),
+			)
+			if tt.want == NotSlashable {
+				require.NoError(t, err)
+				require.Equal(t, NotSlashable, slashingKind)
+			} else {
+				require.NotNil(t, err)
+				require.Equal(t, tt.want, slashingKind)
+			}
+		})
+	}
+}
+
+func Test_isSurrounded(t *testing.T) {
+	type args struct {
+		oldSource uint64
+		oldTarget uint64
+		newSource uint64
+		newTarget uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "0 values returns false",
+			args: args{
+				oldSource: 0,
+				oldTarget: 0,
+				newSource: 0,
+				newTarget: 0,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation is surrounded by an old one",
+			args: args{
+				oldSource: 2,
+				oldTarget: 6,
+				newSource: 3,
+				newTarget: 5,
+			},
+			want: true,
+		},
+		{
+			name: "new attestation source and targets equal to old one",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 5,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source == old source, but new target < old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 4,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source > old source, but new target == old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 4,
+				newTarget: 5,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isSurrounded(
+				tt.args.oldSource, tt.args.oldTarget, tt.args.newSource, tt.args.newTarget,
+			); got != tt.want {
+				t.Errorf("isSurrounded() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isSurrounding(t *testing.T) {
+	type args struct {
+		oldSource uint64
+		oldTarget uint64
+		newSource uint64
+		newTarget uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "0 values returns false",
+			args: args{
+				oldSource: 0,
+				oldTarget: 0,
+				newSource: 0,
+				newTarget: 0,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation is surrounding an old one",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 2,
+				newTarget: 6,
+			},
+			want: true,
+		},
+		{
+			name: "new attestation source and targets equal to old one",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 5,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source == old source, but new target > old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 3,
+				newTarget: 6,
+			},
+			want: false,
+		},
+		{
+			name: "new attestation source < old source, but new target == old target",
+			args: args{
+				oldSource: 3,
+				oldTarget: 5,
+				newSource: 2,
+				newTarget: 5,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isSurrounding(
+				tt.args.oldSource, tt.args.oldTarget, tt.args.newSource, tt.args.newTarget,
+			); got != tt.want {
+				t.Errorf("isSurrounding() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
@@ -211,7 +448,7 @@ func benchCheckSurroundVote(
 	require.NoError(b, err)
 
 	// Will surround many attestations.
-	var surroundingVote *ethpb.Attestation
+	var surroundingVote *ethpb.IndexedAttestation
 	if shouldSurround {
 		surroundingVote = createAttestation(numEpochs/2, numEpochs)
 	} else {
@@ -231,8 +468,8 @@ func benchCheckSurroundVote(
 	}
 }
 
-func createAttestation(source, target uint64) *ethpb.Attestation {
-	return &ethpb.Attestation{
+func createAttestation(source, target uint64) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
 				Epoch: source,

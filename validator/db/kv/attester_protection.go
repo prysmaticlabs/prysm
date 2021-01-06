@@ -29,7 +29,7 @@ var (
 // CheckSlashableAttestation verifies an incoming attestation is
 // not a double vote for a validator public key nor a surround vote.
 func (store *Store) CheckSlashableAttestation(
-	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.Attestation,
+	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
 	var slashKind SlashingKind
 	err := store.view(func(tx *bolt.Tx) error {
@@ -58,8 +58,12 @@ func (store *Store) CheckSlashableAttestation(
 		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochBytes []byte) error {
 			existingSourceEpoch := bytesutil.BytesToUint64BigEndian(sourceEpochBytes)
 			existingTargetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
-			surrounding := att.Data.Source.Epoch < existingSourceEpoch && att.Data.Target.Epoch > existingTargetEpoch
-			surrounded := att.Data.Source.Epoch > existingSourceEpoch && att.Data.Target.Epoch < existingTargetEpoch
+			surrounding := isSurrounding(
+				existingSourceEpoch, existingTargetEpoch, att.Data.Source.Epoch, att.Data.Target.Epoch,
+			)
+			surrounded := isSurrounded(
+				existingSourceEpoch, existingTargetEpoch, att.Data.Source.Epoch, att.Data.Target.Epoch,
+			)
 			if surrounding {
 				slashKind = SurroundingVote
 				return fmt.Errorf(
@@ -90,7 +94,7 @@ func (store *Store) CheckSlashableAttestation(
 // key by storing its signing root under the appropriate bucket as well
 // as its source and target epochs for future slashing protection checks.
 func (store *Store) ApplyAttestationForPubKey(
-	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.Attestation,
+	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) error {
 	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
@@ -114,4 +118,12 @@ func (store *Store) ApplyAttestationForPubKey(
 		}
 		return sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes)
 	})
+}
+
+func isSurrounding(prevSource, prevTarget, incomingSource, incomingTarget uint64) bool {
+	return incomingSource < prevSource && incomingTarget > prevTarget
+}
+
+func isSurrounded(prevSource, prevTarget, incomingSource, incomingTarget uint64) bool {
+	return prevSource < incomingSource && prevTarget > incomingTarget
 }

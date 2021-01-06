@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
@@ -116,19 +115,6 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 		}
 	}
 
-	// We then fetch the attestation histories for each public key
-	// and store them in a map for usage at runtime.
-	if !featureconfig.Get().DisableAttestingHistoryDBCache {
-		// No need for a lock here as this function is only called once
-		// to initialize the database and would lead to deadlocks otherwise.
-		for _, pubKey := range pubKeys {
-			history, err := kv.AttestationHistoryForPubKeyV2(ctx, pubKey)
-			if err != nil {
-				return nil, err
-			}
-			kv.attestingHistoriesByPubKey[pubKey] = history
-		}
-	}
 	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
 
