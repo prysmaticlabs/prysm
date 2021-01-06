@@ -494,7 +494,7 @@ func TestServer_WaitToSlotOneThird_CanWait(t *testing.T) {
 
 	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
 	oneThird := currentTime + timeToSleep
-	v.waitToSlotOneThird(context.Background(), currentSlot)
+	v.waitOneThirdOrValidBlock(context.Background(), currentSlot)
 
 	if oneThird != uint64(time.Now().Unix()) {
 		t.Errorf("Wanted %d time for slot one third but got %d", oneThird, currentTime)
@@ -512,7 +512,7 @@ func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
 		highestValidSlot: currentSlot,
 	}
 
-	v.waitToSlotOneThird(context.Background(), currentSlot)
+	v.waitOneThirdOrValidBlock(context.Background(), currentSlot)
 
 	if currentTime != uint64(time.Now().Unix()) {
 		t.Errorf("Wanted %d time for slot one third but got %d", uint64(time.Now().Unix()), currentTime)
@@ -538,7 +538,7 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 		wg.Done()
 	}()
 
-	v.waitToSlotOneThird(context.Background(), currentSlot)
+	v.waitOneThirdOrValidBlock(context.Background(), currentSlot)
 
 	if currentTime != uint64(time.Now().Unix()) {
 		t.Errorf("Wanted %d time for slot one third but got %d", uint64(time.Now().Unix()), currentTime)
