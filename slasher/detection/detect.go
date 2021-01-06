@@ -72,7 +72,7 @@ func (ds *Service) DetectAttesterSlashings(
 		}
 	}
 	if len(slashings) > 0 {
-		if err = ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+		if err := ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
 			return nil, err
 		}
 	}

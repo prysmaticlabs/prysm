@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"

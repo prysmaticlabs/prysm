@@ -23,7 +23,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 
 	bPrime, err := db.BlockHeaders(ctx, slot, validatorID)
 	require.NoError(t, err, "Failed to get block")
-	require.DeepEqual(t, ([]*ethpb.SignedBeaconBlockHeader)(nil), bPrime, "Should return nil for a non existent key")
+	require.DeepEqual(t, []*ethpb.SignedBeaconBlockHeader(nil), bPrime, "Should return nil for a non existent key")
 }
 
 func TestSaveHistoryBlkHdr(t *testing.T) {
@@ -90,7 +90,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 		require.NoError(t, err, "Save block failed")
 		bh, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		require.NoError(t, err)
-		assert.DeepEqual(t, ([]*ethpb.SignedBeaconBlockHeader)(nil), bh, "Expected block to have been deleted")
+		assert.DeepEqual(t, []*ethpb.SignedBeaconBlockHeader(nil), bh, "Expected block to have been deleted")
 	}
 }
 
