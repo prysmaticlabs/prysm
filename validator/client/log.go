@@ -45,23 +45,19 @@ func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
 	}
 
 	var nextDutySlot uint64
-	attestingCount := 0
-	proposingCount := 0
+	attestingCounts := make(map[uint64]uint64)
+	proposingCounts := make(map[uint64]uint64)
 	for _, duty := range v.duties.CurrentEpochDuties {
-		if duty.AttesterSlot == nextDutySlot {
-			attestingCount += 1
-		} else if duty.AttesterSlot > slot && (nextDutySlot > duty.AttesterSlot || nextDutySlot == 0) {
+		attestingCounts[duty.AttesterSlot]++
+
+		if duty.AttesterSlot > slot && (nextDutySlot > duty.AttesterSlot || nextDutySlot == 0) {
 			nextDutySlot = duty.AttesterSlot
-			attestingCount = 1
-			proposingCount = 0
 		}
 		for _, proposerSlot := range duty.ProposerSlots {
-			if proposerSlot == nextDutySlot {
-				proposingCount = 1
-			} else if proposerSlot > slot && (nextDutySlot > proposerSlot || nextDutySlot == 0) {
+			proposingCounts[proposerSlot]++
+
+			if proposerSlot > slot && (nextDutySlot > proposerSlot || nextDutySlot == 0) {
 				nextDutySlot = proposerSlot
-				attestingCount = 0
-				proposingCount = 1
 			}
 		}
 	}
@@ -80,8 +76,8 @@ func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
 				logrus.Fields{
 					"currentSlot": slot,
 					"dutySlot":    nextDutySlot,
-					"attesting":   attestingCount,
-					"proposing":   proposingCount,
+					"attesting":   attestingCounts[nextDutySlot],
+					"proposing":   proposingCounts[nextDutySlot],
 					"slotInEpoch": slot % params.BeaconConfig().SlotsPerEpoch,
 					"secondsLeft": timeLeft,
 				}).Info("Next duty")
