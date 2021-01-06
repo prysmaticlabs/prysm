@@ -531,7 +531,7 @@ func TestMaxCover_MaxCoverCandidates_dedup(t *testing.T) {
 	}
 }
 
-func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
+func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 	problemSet := func() MaxCoverCandidates {
 		// test vectors originally from:
 		// https://github.com/sigp/lighthouse/blob/master/beacon_node/operation_pool/src/max_cover.rs
@@ -567,7 +567,10 @@ func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 				{2, &bitfield.Bitlist{0b00000001, 0b11100000, 0b1}, 0, false},
 				{3, &bitfield.Bitlist{0b00000110, 0b00000000, 0b1}, 0, false},
 			}},
-			wantedErr: ErrInvalidMaxCoverProblem.Error(),
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b00000000, 0b00011111, 0xf1},
+				Keys:     []int{0},
+			},
 		},
 		{
 			name: "k=0",
