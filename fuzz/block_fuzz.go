@@ -89,10 +89,12 @@ type fakeChecker struct{}
 func (fakeChecker) Syncing() bool {
 	return false
 }
+func (fakeChecker) Initialized() bool {
+	return false
+}
 func (fakeChecker) Status() error {
 	return nil
 }
-
 func (fakeChecker) Resync() error {
 	return nil
 }
