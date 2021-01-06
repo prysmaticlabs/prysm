@@ -1,6 +1,8 @@
 package featureconfig
 
 import (
+	"time"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -94,6 +96,16 @@ var (
 		Usage: "(Danger): Disables the cache for attesting history in the validator DB, greatly increasing " +
 			"disk reads and writes as well as increasing time required for attestations to be produced",
 	}
+	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
+		Name: "dynamic-key-reload-debounce-interval",
+		Usage: "(Advanced): Specifies the time duration the validator waits to reload new keys if they have " +
+			"changed on disk. Default 1s, can be any type of duration such as 1.5s, 1000ms, 1m.",
+		Value: time.Second,
+	}
+	disableBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:  "disable-broadcast-slashings",
+		Usage: "Disables broadcasting slashings submitted to the beacon node.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -111,6 +123,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	Mainnet,
 	disableAccountsV2,
 	disableBlst,
+	dynamicKeyReloadDebounceInterval,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -122,7 +135,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
-var E2EValidatorFlags = []string{}
+var E2EValidatorFlags = make([]string, 0)
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
@@ -141,6 +154,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkPtInfoCache,
 	disablePruningDepositProofs,
 	disableSyncBacktracking,
+	disableBroadcastSlashingFlag,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

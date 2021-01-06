@@ -65,3 +65,10 @@ func TestLogNextDutyCountDown_HasMultipleDuties(t *testing.T) {
 	require.NoError(t, v.LogNextDutyTimeLeft(101))
 	require.LogsContain(t, hook, "\"Next duty\" attesting=2 currentSlot=101 dutySlot=105 prefix=validator proposing=1")
 }
+
+func TestLogNextDutyCountDown_NilDuty(t *testing.T) {
+	v := &validator{
+		logDutyCountDown: true,
+	}
+	require.NoError(t, v.LogNextDutyTimeLeft(101))
+}
