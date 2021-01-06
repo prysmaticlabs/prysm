@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation_history_v2.go",
+        "attester_protection.go",
         "backup.go",
         "db.go",
         "genesis.go",
@@ -37,6 +38,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestation_history_v2_test.go",
+        "attester_protection_test.go",
         "backup_test.go",
         "db_test.go",
         "genesis_test.go",

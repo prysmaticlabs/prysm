@@ -24,6 +24,11 @@ func GetVersion() string {
 	return fmt.Sprintf("%s. Built at: %s", GetBuildData(), buildDate)
 }
 
+// GetSemanticVersion returns the Major.Minor.Patch version of this build.
+func GetSemanticVersion() string {
+	return gitTag
+}
+
 // GetBuildData returns the git tag and commit of the current build.
 func GetBuildData() string {
 	// if doing a local build, these values are not interpolated
