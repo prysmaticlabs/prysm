@@ -15,8 +15,7 @@ import (
 )
 
 var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
-var failedPreAttSignExternalErr = "attempted to make slashable attestation, rejected by external slasher service"
-var failedPostAttSignExternalErr = "external slasher service detected a submitted slashable attestation"
+var failedPostAttSignExternalErr = "attempted to make slashable attestation, rejected by external slasher service"
 
 // Checks if an attestation is slashable by comparing it with the attesting
 // history for the given public key in our DB. If it is not, we then update the history
@@ -70,12 +69,6 @@ func (v *validator) slashableAttestationCheck(
 	// TODO(#7813): Add back the saving of lowest target and lowest source epoch
 	// after we have implemented batch saving of attestation metadata.
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPreAttSignExternalErr)
-		}
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()

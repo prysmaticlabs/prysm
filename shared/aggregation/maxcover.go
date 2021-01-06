@@ -59,10 +59,6 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps, allowDuplicates bool) (*A
 		k = len(mc.Candidates)
 	}
 
-	if err := mc.Candidates.validate(); err != nil {
-		return nil, err
-	}
-
 	if !allowDuplicates {
 		mc.Candidates.dedup(allowOverlaps)
 	}
@@ -106,7 +102,9 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps, allowDuplicates bool) (*A
 // score updates scores of candidates, taking into account the uncovered elements only.
 func (cl *MaxCoverCandidates) score(uncovered bitfield.Bitlist) *MaxCoverCandidates {
 	for i := 0; i < len(*cl); i++ {
-		(*cl)[i].score = (*cl)[i].bits.And(uncovered).Count()
+		if (*cl)[i].bits.Len() == uncovered.Len() {
+			(*cl)[i].score = (*cl)[i].bits.And(uncovered).Count()
+		}
 	}
 	return cl
 }
@@ -151,7 +149,7 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 	}
 	ret := bitfield.NewBitlist((*cl)[0].bits.Len())
 	for i := 0; i < len(*cl); i++ {
-		if *(*cl)[i].bits != nil {
+		if *(*cl)[i].bits != nil && ret.Len() == (*cl)[i].bits.Len() {
 			ret = ret.Or(*(*cl)[i].bits)
 		}
 	}
@@ -169,32 +167,15 @@ func (cl *MaxCoverCandidates) dedup(allowOverlaps bool) *MaxCoverCandidates {
 	}
 	cl.score(uncoveredBits).sort()
 	for i := 1; i < len(*cl); i++ {
+		if (*cl)[i-1].bits.Len() != (*cl)[i].bits.Len() {
+			continue
+		}
 		nonOverlappingBits := (*cl)[i-1].bits.Xor(*(*cl)[i].bits)
 		if (*cl)[i-1].score == (*cl)[i].score && nonOverlappingBits.Count() == 0 {
 			(*cl)[i-1].processed = true
 		}
 	}
 	return cl.filter(bitfield.NewBitlist((*cl)[0].bits.Len()), allowOverlaps)
-}
-
-// validate checks candidates for validity (equal bitlength etc).
-func (cl *MaxCoverCandidates) validate() error {
-	if len(*cl) == 0 {
-		return errors.Wrap(ErrInvalidMaxCoverProblem, "empty list of candidates")
-	}
-	if (*cl)[0].bits == nil || (*cl)[0].bits.Len() == 0 {
-		return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
-	}
-	bitlistLen := (*cl)[0].bits.Len()
-	for i := 1; i < len(*cl); i++ {
-		if (*cl)[i].bits == nil || (*cl)[i].bits.Len() == 0 {
-			return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
-		}
-		if bitlistLen != (*cl)[i].bits.Len() {
-			return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlists of different length")
-		}
-	}
-	return nil
 }
 
 // String provides string representation of a candidate.
