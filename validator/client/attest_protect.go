@@ -70,12 +70,6 @@ func (v *validator) slashableAttestationCheck(
 	// TODO(#7813): Add back the saving of lowest target and lowest source epoch
 	// after we have implemented batch saving of attestation metadata.
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPreAttSignExternalErr)
-		}
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
