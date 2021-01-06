@@ -369,10 +369,9 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		}
 	}
 	type args struct {
-		k               int
-		candidates      MaxCoverCandidates
-		allowOverlaps   bool
-		allowDuplicates bool
+		k             int
+		candidates    MaxCoverCandidates
+		allowOverlaps bool
 	}
 	tests := []struct {
 		name      string
@@ -399,7 +398,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		},
 		{
 			name: "k=0",
-			args: args{k: 0, candidates: problemSet(), allowDuplicates: true},
+			args: args{k: 0, candidates: problemSet()},
 			want: &Aggregation{
 				Coverage: bitfield.Bitlist{0b0000000, 0b1},
 				Keys:     []int{},
@@ -407,7 +406,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		},
 		{
 			name: "k=1",
-			args: args{k: 1, candidates: problemSet(), allowDuplicates: true},
+			args: args{k: 1, candidates: problemSet()},
 			want: &Aggregation{
 				Coverage: bitfield.Bitlist{0b0011011, 0b1},
 				Keys:     []int{1},
@@ -415,7 +414,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		},
 		{
 			name: "k=2",
-			args: args{k: 2, candidates: problemSet(), allowDuplicates: true},
+			args: args{k: 2, candidates: problemSet()},
 			want: &Aggregation{
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
@@ -423,7 +422,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		},
 		{
 			name: "k=3",
-			args: args{k: 3, candidates: problemSet(), allowDuplicates: true},
+			args: args{k: 3, candidates: problemSet()},
 			want: &Aggregation{
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
@@ -431,7 +430,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		},
 		{
 			name: "k=5",
-			args: args{k: 5, candidates: problemSet(), allowDuplicates: true},
+			args: args{k: 5, candidates: problemSet()},
 			want: &Aggregation{
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
@@ -439,7 +438,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		},
 		{
 			name: "k=50",
-			args: args{k: 50, candidates: problemSet(), allowDuplicates: true},
+			args: args{k: 50, candidates: problemSet()},
 			want: &Aggregation{
 				Coverage: bitfield.Bitlist{0b0011111, 0b1},
 				Keys:     []int{1, 0},
@@ -482,7 +481,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 			mc := &MaxCoverProblem{
 				Candidates: tt.args.candidates,
 			}
-			got, err := mc.Cover(tt.args.k, tt.args.allowOverlaps, tt.args.allowDuplicates)
+			got, err := mc.Cover(tt.args.k, tt.args.allowOverlaps)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
