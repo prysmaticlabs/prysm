@@ -127,7 +127,7 @@ func (s *Service) Stop() error {
 
 // Status of initial sync.
 func (s *Service) Status() error {
-	if s.Syncing() {
+	if s.synced.IsNotSet() && s.chainStarted.IsSet() {
 		return errors.New("syncing")
 	}
 	return nil
