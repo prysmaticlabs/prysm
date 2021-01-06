@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
