@@ -22,6 +22,10 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	aggregated := attList(make([]*ethpb.Attestation, 0, len(atts)))
 	unaggregated := attList(atts)
 
+	if err := unaggregated.validate(); err != nil {
+		return nil, err
+	}
+
 	// Aggregation over n/2 rounds is enough to find all aggregatable items (exits earlier if there
 	// are many items that can be aggregated).
 	for i := 0; i < len(atts)/2; i++ {
@@ -173,4 +177,27 @@ func (al attList) filterContained() attList {
 		filtered = append(filtered, al[i])
 	}
 	return filtered
+}
+
+// validate checks attestation list for validity (equal bitlength, non-nil bitlist etc).
+func (al attList) validate() error {
+	if al == nil {
+		return errors.New("nil list")
+	}
+	if len(al) == 0 {
+		return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "empty list")
+	}
+	if al[0].AggregationBits == nil || al[0].AggregationBits.Len() == 0 {
+		return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
+	}
+	bitlistLen := al[0].AggregationBits.Len()
+	for i := 1; i < len(al); i++ {
+		if al[i].AggregationBits == nil || al[i].AggregationBits.Len() == 0 {
+			return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
+		}
+		if bitlistLen != al[i].AggregationBits.Len() {
+			return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlists of different length")
+		}
+	}
+	return nil
 }
