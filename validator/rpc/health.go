@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetBeaconNodeConnection retrieves the current beacon node connection
 // information, as well as its sync status.
-func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (*pb.NodeConnectionResponse, error) {
+func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) (*pb.NodeConnectionResponse, error) {
 	syncStatus, err := s.syncChecker.Syncing(ctx)
 	if err != nil || s.validatorService.Status() != nil {
 		return &pb.NodeConnectionResponse{
@@ -35,7 +35,7 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *ptypes.Empty) (
 }
 
 // GetLogsEndpoints for the beacon and validator client.
-func (s *Server) GetLogsEndpoints(ctx context.Context, _ *ptypes.Empty) (*pb.LogsEndpointResponse, error) {
+func (s *Server) GetLogsEndpoints(ctx context.Context, _ *emptypb.Empty) (*pb.LogsEndpointResponse, error) {
 	beaconLogsEndpoint, err := s.beaconNodeInfoFetcher.BeaconLogsEndpoint(ctx)
 	if err != nil {
 		return nil, err

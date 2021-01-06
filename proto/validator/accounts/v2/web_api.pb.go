@@ -8,16 +8,17 @@ package ethereum_validator_accounts_v2
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -1487,7 +1488,7 @@ var file_proto_validator_accounts_v2_web_api_proto_goTypes = []interface{}{
 	(*ImportKeystoresRequest)(nil),   // 16: ethereum.validator.accounts.v2.ImportKeystoresRequest
 	(*ImportKeystoresResponse)(nil),  // 17: ethereum.validator.accounts.v2.ImportKeystoresResponse
 	(*HasUsedWebResponse)(nil),       // 18: ethereum.validator.accounts.v2.HasUsedWebResponse
-	(*empty.Empty)(nil),              // 19: google.protobuf.Empty
+	(*emptypb.Empty)(nil),            // 19: google.protobuf.Empty
 }
 var file_proto_validator_accounts_v2_web_api_proto_depIdxs = []int32{
 	0,  // 0: ethereum.validator.accounts.v2.CreateWalletRequest.keymanager:type_name -> ethereum.validator.accounts.v2.KeymanagerKind
@@ -1782,8 +1783,8 @@ const _ = grpc.SupportPackageIsVersion6
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type WalletClient interface {
 	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, error)
-	WalletConfig(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
-	GenerateMnemonic(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
+	WalletConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
+	GenerateMnemonic(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
 	ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error)
 }
 
@@ -1804,7 +1805,7 @@ func (c *walletClient) CreateWallet(ctx context.Context, in *CreateWalletRequest
 	return out, nil
 }
 
-func (c *walletClient) WalletConfig(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*WalletResponse, error) {
+func (c *walletClient) WalletConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletResponse, error) {
 	out := new(WalletResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/WalletConfig", in, out, opts...)
 	if err != nil {
@@ -1813,7 +1814,7 @@ func (c *walletClient) WalletConfig(ctx context.Context, in *empty.Empty, opts .
 	return out, nil
 }
 
-func (c *walletClient) GenerateMnemonic(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
+func (c *walletClient) GenerateMnemonic(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
 	out := new(GenerateMnemonicResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic", in, out, opts...)
 	if err != nil {
@@ -1834,8 +1835,8 @@ func (c *walletClient) ImportKeystores(ctx context.Context, in *ImportKeystoresR
 // WalletServer is the server API for Wallet service.
 type WalletServer interface {
 	CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, error)
-	WalletConfig(context.Context, *empty.Empty) (*WalletResponse, error)
-	GenerateMnemonic(context.Context, *empty.Empty) (*GenerateMnemonicResponse, error)
+	WalletConfig(context.Context, *emptypb.Empty) (*WalletResponse, error)
+	GenerateMnemonic(context.Context, *emptypb.Empty) (*GenerateMnemonicResponse, error)
 	ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error)
 }
 
@@ -1846,10 +1847,10 @@ type UnimplementedWalletServer struct {
 func (*UnimplementedWalletServer) CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWallet not implemented")
 }
-func (*UnimplementedWalletServer) WalletConfig(context.Context, *empty.Empty) (*WalletResponse, error) {
+func (*UnimplementedWalletServer) WalletConfig(context.Context, *emptypb.Empty) (*WalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WalletConfig not implemented")
 }
-func (*UnimplementedWalletServer) GenerateMnemonic(context.Context, *empty.Empty) (*GenerateMnemonicResponse, error) {
+func (*UnimplementedWalletServer) GenerateMnemonic(context.Context, *emptypb.Empty) (*GenerateMnemonicResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateMnemonic not implemented")
 }
 func (*UnimplementedWalletServer) ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error) {
@@ -1879,7 +1880,7 @@ func _Wallet_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func
 }
 
 func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1891,13 +1892,13 @@ func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/ethereum.validator.accounts.v2.Wallet/WalletConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletServer).WalletConfig(ctx, req.(*empty.Empty))
+		return srv.(WalletServer).WalletConfig(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1909,7 +1910,7 @@ func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*empty.Empty))
+		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1962,7 +1963,7 @@ var _Wallet_serviceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AccountsClient interface {
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
-	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type accountsClient struct {
@@ -1982,8 +1983,8 @@ func (c *accountsClient) ListAccounts(ctx context.Context, in *ListAccountsReque
 	return out, nil
 }
 
-func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/ChangePassword", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1994,7 +1995,7 @@ func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordR
 // AccountsServer is the server API for Accounts service.
 type AccountsServer interface {
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
-	ChangePassword(context.Context, *ChangePasswordRequest) (*empty.Empty, error)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedAccountsServer can be embedded to have forward compatible implementations.
@@ -2004,7 +2005,7 @@ type UnimplementedAccountsServer struct {
 func (*UnimplementedAccountsServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
 }
-func (*UnimplementedAccountsServer) ChangePassword(context.Context, *ChangePasswordRequest) (*empty.Empty, error) {
+func (*UnimplementedAccountsServer) ChangePassword(context.Context, *ChangePasswordRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
 
@@ -2069,8 +2070,8 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type HealthClient interface {
-	GetBeaconNodeConnection(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
+	GetBeaconNodeConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
+	GetLogsEndpoints(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
 }
 
 type healthClient struct {
@@ -2081,7 +2082,7 @@ func NewHealthClient(cc grpc.ClientConnInterface) HealthClient {
 	return &healthClient{cc}
 }
 
-func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
+func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
 	out := new(NodeConnectionResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection", in, out, opts...)
 	if err != nil {
@@ -2090,7 +2091,7 @@ func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *empty.Em
 	return out, nil
 }
 
-func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
+func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
 	out := new(LogsEndpointResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints", in, out, opts...)
 	if err != nil {
@@ -2101,18 +2102,18 @@ func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *empty.Empty, op
 
 // HealthServer is the server API for Health service.
 type HealthServer interface {
-	GetBeaconNodeConnection(context.Context, *empty.Empty) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(context.Context, *empty.Empty) (*LogsEndpointResponse, error)
+	GetBeaconNodeConnection(context.Context, *emptypb.Empty) (*NodeConnectionResponse, error)
+	GetLogsEndpoints(context.Context, *emptypb.Empty) (*LogsEndpointResponse, error)
 }
 
 // UnimplementedHealthServer can be embedded to have forward compatible implementations.
 type UnimplementedHealthServer struct {
 }
 
-func (*UnimplementedHealthServer) GetBeaconNodeConnection(context.Context, *empty.Empty) (*NodeConnectionResponse, error) {
+func (*UnimplementedHealthServer) GetBeaconNodeConnection(context.Context, *emptypb.Empty) (*NodeConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconNodeConnection not implemented")
 }
-func (*UnimplementedHealthServer) GetLogsEndpoints(context.Context, *empty.Empty) (*LogsEndpointResponse, error) {
+func (*UnimplementedHealthServer) GetLogsEndpoints(context.Context, *emptypb.Empty) (*LogsEndpointResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLogsEndpoints not implemented")
 }
 
@@ -2121,7 +2122,7 @@ func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
 }
 
 func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2133,13 +2134,13 @@ func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*empty.Empty))
+		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Health_GetLogsEndpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2151,7 +2152,7 @@ func _Health_GetLogsEndpoints_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetLogsEndpoints(ctx, req.(*empty.Empty))
+		return srv.(HealthServer).GetLogsEndpoints(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2177,10 +2178,10 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AuthClient interface {
-	HasUsedWeb(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error)
+	HasUsedWeb(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error)
 	Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
-	Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error)
+	Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type authClient struct {
@@ -2191,7 +2192,7 @@ func NewAuthClient(cc grpc.ClientConnInterface) AuthClient {
 	return &authClient{cc}
 }
 
-func (c *authClient) HasUsedWeb(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error) {
+func (c *authClient) HasUsedWeb(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error) {
 	out := new(HasUsedWebResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/HasUsedWeb", in, out, opts...)
 	if err != nil {
@@ -2218,8 +2219,8 @@ func (c *authClient) Signup(ctx context.Context, in *AuthRequest, opts ...grpc.C
 	return out, nil
 }
 
-func (c *authClient) Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *authClient) Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Logout", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -2229,17 +2230,17 @@ func (c *authClient) Logout(ctx context.Context, in *empty.Empty, opts ...grpc.C
 
 // AuthServer is the server API for Auth service.
 type AuthServer interface {
-	HasUsedWeb(context.Context, *empty.Empty) (*HasUsedWebResponse, error)
+	HasUsedWeb(context.Context, *emptypb.Empty) (*HasUsedWebResponse, error)
 	Login(context.Context, *AuthRequest) (*AuthResponse, error)
 	Signup(context.Context, *AuthRequest) (*AuthResponse, error)
-	Logout(context.Context, *empty.Empty) (*empty.Empty, error)
+	Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 }
 
 // UnimplementedAuthServer can be embedded to have forward compatible implementations.
 type UnimplementedAuthServer struct {
 }
 
-func (*UnimplementedAuthServer) HasUsedWeb(context.Context, *empty.Empty) (*HasUsedWebResponse, error) {
+func (*UnimplementedAuthServer) HasUsedWeb(context.Context, *emptypb.Empty) (*HasUsedWebResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HasUsedWeb not implemented")
 }
 func (*UnimplementedAuthServer) Login(context.Context, *AuthRequest) (*AuthResponse, error) {
@@ -2248,7 +2249,7 @@ func (*UnimplementedAuthServer) Login(context.Context, *AuthRequest) (*AuthRespo
 func (*UnimplementedAuthServer) Signup(context.Context, *AuthRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Signup not implemented")
 }
-func (*UnimplementedAuthServer) Logout(context.Context, *empty.Empty) (*empty.Empty, error) {
+func (*UnimplementedAuthServer) Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 
@@ -2257,7 +2258,7 @@ func RegisterAuthServer(s *grpc.Server, srv AuthServer) {
 }
 
 func _Auth_HasUsedWeb_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2269,7 +2270,7 @@ func _Auth_HasUsedWeb_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/ethereum.validator.accounts.v2.Auth/HasUsedWeb",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).HasUsedWeb(ctx, req.(*empty.Empty))
+		return srv.(AuthServer).HasUsedWeb(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2311,7 +2312,7 @@ func _Auth_Signup_Handler(srv interface{}, ctx context.Context, dec func(interfa
 }
 
 func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2323,7 +2324,7 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		FullMethod: "/ethereum.validator.accounts.v2.Auth/Logout",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).Logout(ctx, req.(*empty.Empty))
+		return srv.(AuthServer).Logout(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -31,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -873,7 +873,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream)
+		err := server.StreamIndexedAttestations(&emptypb.Empty{}, mockStream)
 		assert.ErrorContains(t, "Context canceled", err)
 		<-exitRoutine
 	}(t)
@@ -1016,7 +1016,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamIndexedAttestations(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	server.CollectedAttestationsBuffer <- allAtts
@@ -1040,7 +1040,7 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
 		err := server.StreamAttestations(
-			&ptypes.Empty{},
+			&emptypb.Empty{},
 			mockStream,
 		)
 		assert.ErrorContains(tt, "Context canceled", err)
@@ -1076,7 +1076,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamAttestations(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 	for i := 0; i < len(atts); i++ {
 		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).

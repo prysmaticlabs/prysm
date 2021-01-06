@@ -16,7 +16,6 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -35,6 +34,7 @@ import (
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // reconnectPeriod is the frequency that we try to restart our
@@ -122,7 +122,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	stream, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
@@ -172,7 +172,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
 
-	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+	s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not get sync status")
 	}
@@ -184,7 +184,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		select {
 		// Poll every half slot.
 		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
-			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+			s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(err, "could not get sync status")
 			}
@@ -335,7 +335,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	head, err := v.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return 0, err
 	}

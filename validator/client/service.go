@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	"github.com/dgraph-io/ristretto"
-	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -312,7 +313,7 @@ func ConstructDialOptions(
 // Syncing returns whether or not the beacon node is currently synchronizing the chain.
 func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 	nc := ethpb.NewNodeClient(v.conn)
-	resp, err := nc.GetSyncStatus(ctx, &ptypes.Empty{})
+	resp, err := nc.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return false, err
 	}
@@ -323,14 +324,14 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 // the genesis time along with the validator deposit contract address.
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn)
-	return nc.GetGenesis(ctx, &ptypes.Empty{})
+	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }
 
 // BeaconLogsEndpoint retrieves the websocket endpoint string at which
 // clients can subscribe to for beacon node logs.
 func (v *ValidatorService) BeaconLogsEndpoint(ctx context.Context) (string, error) {
 	hc := pbrpc.NewHealthClient(v.conn)
-	resp, err := hc.GetLogsEndpoint(ctx, &ptypes.Empty{})
+	resp, err := hc.GetLogsEndpoint(ctx, &emptypb.Empty{})
 	if err != nil {
 		return "", err
 	}

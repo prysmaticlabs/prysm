@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -116,7 +117,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -137,7 +138,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -165,7 +166,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -188,7 +189,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -216,7 +217,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -250,7 +251,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, errors.New("failed stream"))
 	err = v.WaitForChainStart(context.Background())
 	want := "could not setup beacon chain ChainStart streaming client"
@@ -269,7 +270,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		nil,

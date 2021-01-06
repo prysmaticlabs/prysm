@@ -3,7 +3,6 @@ package debug
 import (
 	"context"
 
-	"github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -11,6 +10,7 @@ import (
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetPeer returns the data known about the peer defined by the provided peer id.
@@ -24,7 +24,7 @@ func (ds *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*pbrpc
 
 // ListPeers returns all peers known to the host node, irregardless of if they are connected/
 // disconnected.
-func (ds *Server) ListPeers(_ context.Context, _ *types.Empty) (*pbrpc.DebugPeerResponses, error) {
+func (ds *Server) ListPeers(_ context.Context, _ *emptypb.Empty) (*pbrpc.DebugPeerResponses, error) {
 	var responses []*pbrpc.DebugPeerResponse
 	for _, pid := range ds.PeersFetcher.Peers().All() {
 		resp, err := ds.getPeer(pid)

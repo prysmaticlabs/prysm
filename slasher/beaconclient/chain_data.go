@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var syncStatusPollingInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
@@ -20,7 +20,7 @@ func (bs *Service) ChainHead(
 ) (*ethpb.ChainHead, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ChainHead")
 	defer span.End()
-	res, err := bs.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	res, err := bs.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil || res == nil {
 		return nil, errors.Wrap(err, "Could not retrieve chain head or got nil chain head")
 	}
@@ -36,7 +36,7 @@ func (bs *Service) GenesisValidatorsRoot(
 	defer span.End()
 
 	if bs.genesisValidatorRoot == nil {
-		res, err := bs.nodeClient.GetGenesis(ctx, &ptypes.Empty{})
+		res, err := bs.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve genesis data")
 		}
@@ -51,7 +51,7 @@ func (bs *Service) GenesisValidatorsRoot(
 // Poll the beacon node every syncStatusPollingInterval until the node
 // is no longer syncing.
 func (bs *Service) querySyncStatus(ctx context.Context) {
-	status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+	status, err := bs.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not fetch sync status")
 	}
@@ -65,7 +65,7 @@ func (bs *Service) querySyncStatus(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+			status, err := bs.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				log.WithError(err).Error("Could not fetch sync status")
 			}

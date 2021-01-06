@@ -10,13 +10,13 @@ import (
 	"net/http"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Allow a very short delay after disconnecting to prevent connection refused issues.
@@ -100,7 +100,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	for _, conn := range conns {
 		nodeClient := eth.NewNodeClient(conn)
-		peersResp, err := nodeClient.ListPeers(ctx, &ptypes.Empty{})
+		peersResp, err := nodeClient.ListPeers(ctx, &emptypb.Empty{})
 		if err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 func finishedSyncing(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	syncNodeClient := eth.NewNodeClient(conn)
-	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 	finalizedRoots := make([][]byte, len(conns))
 	for i, conn := range conns {
 		beaconClient := eth.NewBeaconChainClient(conn)
-		chainHead, err := beaconClient.GetChainHead(context.Background(), &ptypes.Empty{})
+		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return err
 		}

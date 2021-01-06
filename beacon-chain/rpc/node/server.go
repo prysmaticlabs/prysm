@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -24,25 +23,27 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Server defines a server implementation of the gRPC Node service,
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type Server struct {
-	SyncChecker          sync.Checker
 	Server               *grpc.Server
-	BeaconDB             db.ReadOnlyDatabase
-	PeersFetcher         p2p.PeersProvider
-	PeerManager          p2p.PeerManager
-	GenesisTimeFetcher   blockchain.TimeFetcher
-	GenesisFetcher       blockchain.GenesisFetcher
-	BeaconMonitoringHost string
 	BeaconMonitoringPort int
+	PeersFetcher         p2p.PeersProvider
+	GenesisFetcher       blockchain.GenesisFetcher
+	GenesisTimeFetcher   blockchain.TimeFetcher
+	PeerManager          p2p.PeerManager
+	BeaconMonitoringHost string
+	BeaconDB             db.ReadOnlyDatabase
+	SyncChecker          sync.Checker
+	ethpb.UnimplementedNodeServer
 }
 
 // GetSyncStatus checks the current network sync status of the node.
-func (ns *Server) GetSyncStatus(_ context.Context, _ *empty.Empty) (*ethpb.SyncStatus, error) {
+func (ns *Server) GetSyncStatus(_ context.Context, _ *emptypb.Empty) (*ethpb.SyncStatus, error) {
 	return &ethpb.SyncStatus{
 		Syncing: ns.SyncChecker.Syncing(),
 	}, nil
@@ -50,7 +51,7 @@ func (ns *Server) GetSyncStatus(_ context.Context, _ *empty.Empty) (*ethpb.SyncS
 
 // GetGenesis fetches genesis chain information of Ethereum 2.0. Returns unix timestamp 0
 // if a genesis time has yet to be determined.
-func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesis, error) {
+func (ns *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Genesis, error) {
 	contractAddr, err := ns.BeaconDB.DepositContractAddress(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve contract address from db: %v", err)
@@ -76,7 +77,7 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesi
 }
 
 // GetVersion checks the version information of the beacon node.
-func (ns *Server) GetVersion(_ context.Context, _ *empty.Empty) (*ethpb.Version, error) {
+func (ns *Server) GetVersion(_ context.Context, _ *emptypb.Empty) (*ethpb.Version, error) {
 	return &ethpb.Version{
 		Version: version.GetVersion(),
 	}, nil
@@ -87,7 +88,7 @@ func (ns *Server) GetVersion(_ context.Context, _ *empty.Empty) (*ethpb.Version,
 // Any service not present in this list may return UNIMPLEMENTED or
 // PERMISSION_DENIED. The server may also support fetching services by grpc
 // reflection.
-func (ns *Server) ListImplementedServices(_ context.Context, _ *empty.Empty) (*ethpb.ImplementedServices, error) {
+func (ns *Server) ListImplementedServices(_ context.Context, _ *emptypb.Empty) (*ethpb.ImplementedServices, error) {
 	serviceInfo := ns.Server.GetServiceInfo()
 	serviceNames := make([]string, 0, len(serviceInfo))
 	for svc := range serviceInfo {
@@ -100,7 +101,7 @@ func (ns *Server) ListImplementedServices(_ context.Context, _ *empty.Empty) (*e
 }
 
 // GetHost returns the p2p data on the current local and host peer.
-func (ns *Server) GetHost(_ context.Context, _ *empty.Empty) (*ethpb.HostData, error) {
+func (ns *Server) GetHost(_ context.Context, _ *emptypb.Empty) (*ethpb.HostData, error) {
 	var stringAddr []string
 	for _, addr := range ns.PeerManager.Host().Addrs() {
 		stringAddr = append(stringAddr, addr.String())
@@ -123,7 +124,7 @@ func (ns *Server) GetHost(_ context.Context, _ *empty.Empty) (*ethpb.HostData, e
 }
 
 // GetLogsEndpoint
-func (ns *Server) GetLogsEndpoint(_ context.Context, _ *empty.Empty) (*pbrpc.LogsEndpointResponse, error) {
+func (ns *Server) GetLogsEndpoint(_ context.Context, _ *emptypb.Empty) (*pbrpc.LogsEndpointResponse, error) {
 	return &pbrpc.LogsEndpointResponse{
 		BeaconLogsEndpoint: fmt.Sprintf("%s:%d", ns.BeaconMonitoringHost, ns.BeaconMonitoringPort),
 	}, nil
@@ -175,7 +176,7 @@ func (ns *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*ethpb
 }
 
 // ListPeers lists the peers connected to this node.
-func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, error) {
+func (ns *Server) ListPeers(ctx context.Context, _ *emptypb.Empty) (*ethpb.Peers, error) {
 	peers := ns.PeersFetcher.Peers().Connected()
 	res := make([]*ethpb.Peer, 0, len(peers))
 	for _, pid := range peers {

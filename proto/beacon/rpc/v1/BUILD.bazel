@@ -8,7 +8,7 @@ go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
         "@io_bazel_rules_go//proto:go_grpc",
-        "@com_github_grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway",
     proto = ":v1_proto",
@@ -47,7 +47,10 @@ go_library(
 
 proto_library(
     name = "v1_proto",
-    srcs = ["debug.proto", "health.proto"],
+    srcs = [
+        "debug.proto",
+        "health.proto",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:v1_proto",

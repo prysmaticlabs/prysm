@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -25,23 +26,25 @@ import (
 // Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
+// nolint: maligned
 type Server struct {
-	BeaconDB            db.ReadOnlyDatabase
-	Ctx                 context.Context
-	ChainStartFetcher   powchain.ChainStartFetcher
-	ChainInfoFetcher    blockchain.ChainInfoFetcher
-	DepositFetcher      depositcache.DepositFetcher
-	BlockFetcher        powchain.POWBlockFetcher
-	GenesisTimeFetcher  blockchain.TimeFetcher
-	BlockReceiver       blockchain.BlockReceiver
-	StateNotifier       statefeed.Notifier
-	BlockNotifier       blockfeed.Notifier
-	AttestationNotifier operation.Notifier
-	Broadcaster         p2p.Broadcaster
-	AttestationsPool    attestations.Pool
 	SlashingsPool       *slashings.Pool
-	CanonicalStateChan  chan *pbp2p.BeaconState
-	ChainStartChan      chan time.Time
 	StateGen            *stategen.State
+	ChainStartChan      chan time.Time
+	CanonicalStateChan  chan *pbp2p.BeaconState
+	BeaconDB            db.ReadOnlyDatabase
+	BlockNotifier       blockfeed.Notifier
+	AttestationsPool    attestations.Pool
+	Broadcaster         p2p.Broadcaster
+	AttestationNotifier operation.Notifier
+	Ctx                 context.Context
+	StateNotifier       statefeed.Notifier
+	BlockReceiver       blockchain.BlockReceiver
+	GenesisTimeFetcher  blockchain.TimeFetcher
+	BlockFetcher        powchain.POWBlockFetcher
+	DepositFetcher      depositcache.DepositFetcher
+	ChainInfoFetcher    blockchain.ChainInfoFetcher
+	ChainStartFetcher   powchain.ChainStartFetcher
 	SyncChecker         sync.Checker
+	ethpb.UnimplementedBeaconChainServer
 }

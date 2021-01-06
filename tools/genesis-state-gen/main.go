@@ -146,7 +146,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 		if err != nil {
 			return nil, err
 		}
-		data := &ethpb.Deposit_Data{}
+		data := &ethpb.DepositData{}
 		if err := data.UnmarshalSSZ(depositDataHex); err != nil {
 			return nil, err
 		}

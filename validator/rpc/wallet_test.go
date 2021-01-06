@@ -8,10 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/google/uuid"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -23,6 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_CreateWallet_Imported(t *testing.T) {
@@ -106,7 +105,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 	_, err = s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Must include mnemonic", err)
 
-	mnemonicResp, err := s.GenerateMnemonic(ctx, &ptypes.Empty{})
+	mnemonicResp, err := s.GenerateMnemonic(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	req.Mnemonic = mnemonicResp.Mnemonic
 
@@ -116,7 +115,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
 	s := &Server{}
-	resp, err := s.WalletConfig(context.Background(), &ptypes.Empty{})
+	resp, err := s.WalletConfig(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.DeepEqual(t, resp, &pb.WalletResponse{})
 }
@@ -144,7 +143,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	require.NoError(t, err)
 	s.wallet = w
 	s.keymanager = km
-	resp, err := s.WalletConfig(ctx, &ptypes.Empty{})
+	resp, err := s.WalletConfig(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, resp, &pb.WalletResponse{

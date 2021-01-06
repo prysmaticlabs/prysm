@@ -5,7 +5,10 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -23,11 +26,7 @@ func (m *mockSyncChecker) Syncing(_ context.Context) (bool, error) {
 type mockGenesisFetcher struct{}
 
 func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, error) {
-	genesis, err := ptypes.TimestampProto(time.Unix(0, 0))
-	if err != nil {
-		log.Info(err)
-		return nil, err
-	}
+	genesis := timestamppb.New(time.Unix(0, 0))
 	return &ethpb.Genesis{
 		GenesisTime: genesis,
 	}, nil
@@ -53,7 +52,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 		genesisFetcher:      &mockGenesisFetcher{},
 		nodeGatewayEndpoint: endpoint,
 	}
-	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
+	got, err := s.GetBeaconNodeConnection(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,
@@ -71,7 +70,7 @@ func TestServer_GetLogsEndpoints(t *testing.T) {
 		validatorMonitoringPort: 8081,
 		beaconNodeInfoFetcher:   &mockBeaconInfoFetcher{endpoint: "localhost:8080"},
 	}
-	got, err := s.GetLogsEndpoints(ctx, &ptypes.Empty{})
+	got, err := s.GetLogsEndpoints(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	want := &pb.LogsEndpointResponse{
 		BeaconLogsEndpoint:    "localhost:8080/logs",

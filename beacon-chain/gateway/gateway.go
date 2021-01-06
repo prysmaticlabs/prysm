@@ -9,12 +9,13 @@ import (
 	"net/http"
 	"time"
 
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var _ shared.Service = (*Gateway)(nil)
@@ -55,7 +56,9 @@ func (g *Gateway) Start() {
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(
 			gwruntime.MIMEWildcard,
-			&gwruntime.JSONPb{OrigName: false, EmitDefaults: true},
+			&gwruntime.JSONPb{
+				MarshalOptions: protojson.MarshalOptions{EmitUnpopulated: true, UseProtoNames: false},
+			},
 		),
 	)
 	handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{

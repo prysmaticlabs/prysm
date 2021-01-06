@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
-	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func setupWalletDir(t testing.TB) string {
@@ -88,7 +88,7 @@ func TestServer_Logout(t *testing.T) {
 	_, err = jwt.Parse(tokenString, checkParsedKey)
 	assert.NoError(t, err)
 
-	_, err = ss.Logout(context.Background(), &ptypes.Empty{})
+	_, err = ss.Logout(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
 	// Attempting to validate the same token string after logout should fail.

@@ -8,8 +8,8 @@ import (
 	"os"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
-	ptypes "github.com/gogo/protobuf/types"
 	golog "github.com/ipfs/go-log/v2"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -18,23 +18,26 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Server defines a server implementation of the gRPC Debug service,
 // providing RPC endpoints for runtime debugging of a node, this server is
 // gated behind the feature flag --enable-debug-rpc-endpoints.
+
 type Server struct {
-	BeaconDB           db.NoHeadAccessDatabase
-	GenesisTimeFetcher blockchain.TimeFetcher
 	StateGen           *stategen.State
+	GenesisTimeFetcher blockchain.TimeFetcher
 	HeadFetcher        blockchain.HeadFetcher
 	PeerManager        p2p.PeerManager
 	PeersFetcher       p2p.PeersProvider
+	BeaconDB           db.NoHeadAccessDatabase
+	ethpb.UnimplementedBeaconDebugServer
 }
 
 // SetLoggingLevel of a beacon node according to a request type,
 // either INFO, DEBUG, or TRACE.
-func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequest) (*ptypes.Empty, error) {
+func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequest) (*emptypb.Empty, error) {
 	var verbosity string
 	switch req.Level {
 	case pbrpc.LoggingLevelRequest_INFO:
@@ -59,5 +62,5 @@ func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequ
 		glogger.Verbosity(gethlog.LvlTrace)
 		gethlog.Root().SetHandler(glogger)
 	}
-	return &ptypes.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }

@@ -13,37 +13,37 @@ go_proto_library(
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
     ],
 )
-
-ssz_gen_marshal(
-    name = "ssz_generated_files",
-    go_proto = ":v1_go_proto",
-    includes = [
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-    ],
-    objs = [
-        "BeaconBlocksByRangeRequest",
-        "ENRForkID",
-        "MetaData",
-        "Fork",
-        "ForkData",
-        "HistoricalBatch",
-        "Status",
-        "BeaconState",
-        "SigningData",
-    ],
-)
+#
+#ssz_gen_marshal(
+#    name = "ssz_generated_files",
+#    go_proto = ":v1_go_proto",
+#    includes = [
+#        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+#    ],
+#    objs = [
+#        "BeaconBlocksByRangeRequest",
+#        "ENRForkID",
+#        "MetaData",
+#        "Fork",
+#        "ForkData",
+#        "HistoricalBatch",
+#        "Status",
+#        "BeaconState",
+#        "SigningData",
+#    ],
+#)
 
 go_library(
     name = "go_default_library",
-    srcs = [":ssz_generated_files"],
+    srcs = ["generated.ssz.go"],
     embed = [":v1_go_proto"],
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS,

@@ -26,6 +26,7 @@ import (
 // Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
+// nolint: maligned
 type Server struct {
 	BeaconDB                    db.ReadOnlyDatabase
 	Ctx                         context.Context
@@ -47,4 +48,7 @@ type Server struct {
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
 	StateGen                    *stategen.State
 	SyncChecker                 sync.Checker
+	ethpb.UnimplementedBeaconChainServer
 }
+
+func (bs *Server) mustEmbedUnimplementedBeaconChainServer() {}

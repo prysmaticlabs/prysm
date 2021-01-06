@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
+func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
 	return nil, errors.New("unimplemented")
 }
 
