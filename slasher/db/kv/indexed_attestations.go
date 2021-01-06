@@ -97,7 +97,7 @@ func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *eth
 	}
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
-		//if data is in db skip put and index functions
+		// if data is in db skip put and index functions
 		val := bucket.Get(key)
 		if val != nil {
 			return nil
@@ -129,7 +129,7 @@ func (db *Store) SaveIndexedAttestations(ctx context.Context, idxAttestations []
 	err := db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
 		for i, key := range keys {
-			//if data is in db skip put and index functions
+			// if data is in db skip put and index functions
 			val := bucket.Get(key)
 			if val != nil {
 				continue
