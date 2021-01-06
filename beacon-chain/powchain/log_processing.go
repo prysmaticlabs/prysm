@@ -314,7 +314,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		if err != nil {
 			if tooMuchDataRequestedError(err) {
 				if batchSize == 0 {
-					return err
+					return errors.New("batch size is zero")
 				}
 
 				// multiplicative decrease
