@@ -195,11 +195,8 @@ func (al attList) validate() error {
 	}
 	bitlistLen := al[0].AggregationBits.Len()
 	for i := 1; i < len(al); i++ {
-		if al[i].AggregationBits == nil || al[i].AggregationBits.Len() == 0 {
-			return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
-		}
-		if bitlistLen != al[i].AggregationBits.Len() {
-			return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlists of different length")
+		if al[i].AggregationBits == nil || bitlistLen != al[i].AggregationBits.Len() {
+			return aggregation.ErrBitsDifferentLen
 		}
 	}
 	return nil
