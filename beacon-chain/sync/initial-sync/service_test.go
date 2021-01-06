@@ -327,8 +327,9 @@ func TestService_markSynced(t *testing.T) {
 	assert.Equal(t, false, s.chainStarted.IsSet())
 	assert.Equal(t, false, s.synced.IsSet())
 	assert.Equal(t, true, s.Syncing())
-	assert.NoError(t, s.Status())
+	assert.ErrorContains(t, "syncing", s.Status())
 	s.chainStarted.Set()
+	assert.Equal(t, true, s.Syncing())
 	assert.ErrorContains(t, "syncing", s.Status())
 
 	expectedGenesisTime := time.Unix(358544700, 0)
@@ -359,6 +360,7 @@ func TestService_markSynced(t *testing.T) {
 	}
 	assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
 	assert.Equal(t, false, s.Syncing())
+	assert.NoError(t, s.Status())
 }
 
 func TestService_Resync(t *testing.T) {
@@ -435,4 +437,12 @@ func TestService_Resync(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_Initialized(t *testing.T) {
+	s := NewService(context.Background(), &Config{})
+	s.chainStarted.Set()
+	assert.Equal(t, true, s.Initialized())
+	s.chainStarted.UnSet()
+	assert.Equal(t, false, s.Initialized())
 }
