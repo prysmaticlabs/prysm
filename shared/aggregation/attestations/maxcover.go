@@ -23,6 +23,9 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	unaggregated := attList(atts)
 
 	if err := unaggregated.validate(); err != nil {
+		if errors.Is(err, aggregation.ErrBitsDifferentLen) {
+			return unaggregated, nil
+		}
 		return nil, err
 	}
 
