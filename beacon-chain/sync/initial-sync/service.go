@@ -127,7 +127,7 @@ func (s *Service) Stop() error {
 
 // Status of initial sync.
 func (s *Service) Status() error {
-	if s.synced.IsNotSet() && s.chainStarted.IsSet() {
+	if s.Syncing() {
 		return errors.New("syncing")
 	}
 	return nil
@@ -136,6 +136,11 @@ func (s *Service) Status() error {
 // Syncing returns true if initial sync is still running.
 func (s *Service) Syncing() bool {
 	return s.synced.IsNotSet()
+}
+
+// Initialized returns true if initial sync has been started.
+func (s *Service) Initialized() bool {
+	return s.chainStarted.IsSet()
 }
 
 // Resync allows a node to start syncing again if it has fallen
