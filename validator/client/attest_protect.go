@@ -7,6 +7,8 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
+
 	"go.opencensus.io/trace"
 )
 
@@ -31,8 +33,14 @@ func (v *validator) slashableAttestationCheck(
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		// TODO: Log the slashing kind.
-		_ = slashingKind
+		switch slashingKind {
+		case kv.DoubleVote:
+			log.Warn("Attestation is slashable as it is a double vote")
+		case kv.SurroundingVote:
+			log.Warn("Attestation is slashable as it is surrounding a previous attestation")
+		case kv.SurroundedVote:
+			log.Warn("Attestation is slashable as it is surrounded by a previous attestation")
+		}
 		return errors.Wrap(err, failedAttLocalProtectionErr)
 	}
 
