@@ -32,7 +32,7 @@ type ValidatorDB interface {
 	SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot uint64, signingRoot []byte) error
 	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
 
-	// Optimal attester protection related methods.
+	// Attester protection related methods.
 	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
 	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
 	SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
