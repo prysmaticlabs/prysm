@@ -3,9 +3,12 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/golang/snappy"
+	"github.com/k0kubun/go-ansi"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/schollz/progressbar/v3"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -23,6 +26,7 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 
 	// Compress all attestation history data.
 	ctx := context.Background()
+	bar := initializeProgressBar(bkt.Stats().KeyN, "Migrating attesting history to more efficient format")
 	if err := bkt.ForEach(func(k, v []byte) error {
 		if v == nil {
 			return nil
@@ -34,7 +38,8 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 			return err
 		}
 
-		pkBucket, err := tx.CreateBucketIfNotExists(k)
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket, err := bucket.CreateBucketIfNotExists(k)
 		if err != nil {
 			return err
 		}
@@ -54,7 +59,9 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 		if err != nil {
 			return err
 		}
-		for targetEpoch := uint64(0); targetEpoch < latestEpochWritten; targetEpoch++ {
+		// For every epoch since genesis up to the highest epoch written, we then
+		// extract historical data and insert it into the new schema.
+		for targetEpoch := uint64(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
 			historicalAtt, err := attestingHistory.GetTargetData(ctx, targetEpoch)
 			if err != nil {
 				return err
@@ -71,10 +78,28 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 				return err
 			}
 		}
-		return nil
+		return bar.Add(1)
 	}); err != nil {
 		return err
 	}
 
 	return mb.Put(migrationOptimalAttesterProtectionKey, migrationCompleted)
+}
+
+func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
+	return progressbar.NewOptions(
+		numItems,
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		progressbar.OptionSetDescription(msg),
+	)
 }
