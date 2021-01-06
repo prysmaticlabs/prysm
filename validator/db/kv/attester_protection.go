@@ -10,6 +10,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+// SlashingKind used for helpful information upon detection.
 type SlashingKind int
 
 const (
