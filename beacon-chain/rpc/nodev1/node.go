@@ -2,10 +2,13 @@ package nodev1
 
 import (
 	"context"
+	"fmt"
+	"runtime"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 // GetIdentity retrieves data about the node's network presence.
@@ -25,8 +28,13 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeersR
 
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
-func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.VersionResponse, error) {
-	return nil, errors.New("unimplemented")
+func (ns *Server) GetVersion(_ context.Context, _ *ptypes.Empty) (*ethpb.VersionResponse, error) {
+	v := fmt.Sprintf("Prysm/%s (%s %s)", version.GetSemanticVersion(), runtime.GOOS, runtime.GOARCH)
+	return &ethpb.VersionResponse{
+		Data: &ethpb.Version{
+			Version: v,
+		},
+	}, nil
 }
 
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
