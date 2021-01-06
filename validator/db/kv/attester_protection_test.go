@@ -68,13 +68,18 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 				tt.existingAttestation,
 			)
 			require.NoError(t, err)
-			slashable := validatorDB.CheckSlashableAttestation(
+			slashingKind, err := validatorDB.CheckSlashableAttestation(
 				ctx,
 				pubKeys[0],
 				tt.incomingSigningRoot,
 				tt.incomingAttestation,
 			)
-			assert.Equal(t, tt.want, slashable)
+			if tt.want {
+				require.NotNil(t, err)
+				assert.Equal(t, DoubleVote, slashingKind)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -114,37 +119,40 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 		name        string
 		signingRoot [32]byte
 		attestation *ethpb.Attestation
-		want        bool
+		want        SlashingKind
 	}{
 		{
 			name:        "surround vote at half of the weak subjectivity period",
 			signingRoot: [32]byte{},
 			attestation: createAttestation(numEpochs/2, numEpochs),
-			want:        true,
+			want:        SurroundingVote,
 		},
 		{
 			name:        "spanning genesis to weak subjectivity period surround vote",
 			signingRoot: [32]byte{},
 			attestation: createAttestation(0, numEpochs),
-			want:        true,
+			want:        SurroundingVote,
 		},
 		{
 			name:        "simple surround vote at end of weak subjectivity period",
 			signingRoot: [32]byte{},
 			attestation: createAttestation(numEpochs-3, numEpochs),
-			want:        true,
+			want:        SurroundingVote,
 		},
 		{
 			name:        "non-slashable vote",
 			signingRoot: [32]byte{},
 			attestation: createAttestation(numEpochs, numEpochs+1),
-			want:        false,
+			want:        NotSlashable,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			slashable := validatorDB.CheckSlashableAttestation(ctx, pubKeys[0], tt.signingRoot, tt.attestation)
-			assert.Equal(t, tt.want, slashable)
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, pubKeys[0], tt.signingRoot, tt.attestation)
+			if tt.want != NotSlashable {
+				require.NotNil(t, err)
+			}
+			assert.Equal(t, tt.want, slashingKind)
 		})
 	}
 }
@@ -212,8 +220,13 @@ func benchCheckSurroundVote(
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, pubKey := range pubKeys {
-			slashable := validatorDB.CheckSlashableAttestation(ctx, pubKey, [32]byte{}, surroundingVote)
-			assert.Equal(b, shouldSurround, slashable)
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, pubKey, [32]byte{}, surroundingVote)
+			if shouldSurround {
+				require.NotNil(b, err)
+				assert.Equal(b, SurroundingVote, slashingKind)
+			} else {
+				require.NoError(b, err)
+			}
 		}
 	}
 }
