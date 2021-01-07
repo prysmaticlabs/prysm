@@ -39,7 +39,7 @@ func (m mockListener) Self() *enode.Node {
 }
 
 func (mockListener) Close() {
-	//no-op
+	// no-op
 }
 
 func (mockListener) Lookup(enode.ID) []*enode.Node {

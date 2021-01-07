@@ -9,6 +9,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -272,6 +274,15 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.beaconMonitoringHost,
 		BeaconMonitoringPort: s.beaconMonitoringPort,
 	}
+	nodeServerV1 := &nodev1.Server{
+		BeaconDB:           s.beaconDB,
+		Server:             s.grpcServer,
+		SyncChecker:        s.syncService,
+		GenesisTimeFetcher: s.genesisTimeFetcher,
+		PeersFetcher:       s.peersFetcher,
+		PeerManager:        s.peerManager,
+		GenesisFetcher:     s.genesisFetcher,
+	}
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.beaconDB,
@@ -313,6 +324,7 @@ func (s *Service) Start() {
 		SyncChecker:         s.syncService,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)

@@ -51,9 +51,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			Slot:      blockCopy.Block.Slot,
-			BlockRoot: blockRoot,
-			Verified:  true,
+			Slot:        blockCopy.Block.Slot,
+			BlockRoot:   blockRoot,
+			SignedBlock: blockCopy,
+			Verified:    true,
 		},
 	})
 
@@ -97,9 +98,10 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
-			Slot:      blockCopy.Block.Slot,
-			BlockRoot: blockRoot,
-			Verified:  true,
+			Slot:        blockCopy.Block.Slot,
+			BlockRoot:   blockRoot,
+			SignedBlock: blockCopy,
+			Verified:    true,
 		},
 	})
 
@@ -141,9 +143,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
 			Data: &statefeed.BlockProcessedData{
-				Slot:      blockCopy.Block.Slot,
-				BlockRoot: blkRoots[i],
-				Verified:  true,
+				Slot:        blockCopy.Block.Slot,
+				BlockRoot:   blkRoots[i],
+				SignedBlock: blockCopy,
+				Verified:    true,
 			},
 		})
 

@@ -207,43 +207,24 @@ func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.Beacon
 		return s.beaconDB.GenesisState(ctx)
 	}
 
-	// Gather last saved state, that is where node starts to replay the blocks.
-	startState, err := s.lastSavedState(ctx, slot)
-	if err != nil {
-		return nil, err
-	}
-
 	// Gather the last saved block root and the slot number.
 	lastValidRoot, lastValidSlot, err := s.lastSavedBlock(ctx, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get last valid block for hot state using slot")
 	}
 
-	// This is an impossible scenario.
-	// In the event where current state slot is greater or equal to last valid block slot,
-	// we should just process state up to input slot.
-	if startState.Slot() >= lastValidSlot {
-		return processSlotsStateGen(ctx, startState, slot)
-	}
-
-	// Load and replay blocks to get the intermediate state.
-	replayBlks, err := s.LoadBlocks(ctx, startState.Slot()+1, lastValidSlot, lastValidRoot)
+	replayStartState, err := s.loadStateByRoot(ctx, lastValidRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	// If there's no blocks to replay, a node doesn't need to recalculate the start state.
-	// A node can simply advance the slots on the last saved state.
-	if len(replayBlks) == 0 {
-		return s.ReplayBlocks(ctx, startState, replayBlks, slot)
+	if lastValidSlot < slot {
+		replayStartState, err = processSlotsStateGen(ctx, replayStartState, slot)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	pRoot := bytesutil.ToBytes32(replayBlks[0].Block.ParentRoot)
-	replayStartState, err := s.loadStateByRoot(ctx, pRoot)
-	if err != nil {
-		return nil, err
-	}
-	return s.ReplayBlocks(ctx, replayStartState, replayBlks, slot)
+	return replayStartState, nil
 }
 
 // This returns the highest available ancestor state of the input block root.
