@@ -30,10 +30,12 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-type mockListener struct{}
+type mockListener struct {
+	localNode *enode.LocalNode
+}
 
-func (mockListener) Self() *enode.Node {
-	panic("implement me")
+func (m mockListener) Self() *enode.Node {
+	return m.localNode.Node()
 }
 
 func (mockListener) Close() {

@@ -299,8 +299,9 @@ func TestMultipleDiscoveryAddresses(t *testing.T) {
 	node := enode.NewLocalNode(db, key)
 	node.Set(enr.IPv4{127, 0, 0, 1})
 	node.Set(enr.IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68})
+	s := &Service{dv5Listener: mockListener{localNode: node}}
 
-	multiAddresses, err := convertToUdpMultiAddr(node.Node())
+	multiAddresses, err := s.DiscoveryAddresses()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(multiAddresses))
 	ipv4Found, ipv6Found := false, false
