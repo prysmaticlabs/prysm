@@ -172,11 +172,11 @@ func (s *Service) createListener(
 		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
 	}
 
-	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
+	udpV5, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to discV5")
 	}
-	return network, nil
+	return udpV5, nil
 }
 
 func (s *Service) createLocalNode(
