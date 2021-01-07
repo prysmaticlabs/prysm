@@ -159,11 +159,9 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	}
 }
 
-func TestPruneAttestationsOlderThanCurrentWeakSubjectivity(t *testing.T) {
-	ctx := context.Background()
-	numValidators := 1
+func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivity_NoPruning(t *testing.T) {
 	numEpochs := params.BeaconConfig().WeakSubjectivityPeriod
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := [][48]byte{{1}}
 	validatorDB := setupDB(t, pubKeys)
 
 	// Write signing roots for every single epoch
@@ -178,8 +176,8 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		for epoch := uint64(0); epoch < numEpochs; epoch++ {
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(epoch)
+		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
 			var signingRoot [32]byte
 			copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 			if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
@@ -190,7 +188,151 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	err = validatorDB.PruneAttestationsOlderThanCurrentWeakSubjectivity(context.Background())
+	require.NoError(t, err)
+
 	// Next, attempt to prune and realize that we still have all epochs intact.
+	err = validatorDB.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket := bucket.Bucket(pubKeys[0][:])
+		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			var expectedSigningRoot [32]byte
+			copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
+			signingRoot := signingRootsBucket.Get(targetEpochBytes)
+
+			// Expect the correct signing root.
+			require.DeepEqual(t, expectedSigningRoot[:], signingRoot)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+}
+
+func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubjectivity(t *testing.T) {
+	numEpochs := params.BeaconConfig().WeakSubjectivityPeriod
+	pubKeys := [][48]byte{{1}}
+	validatorDB := setupDB(t, pubKeys)
+
+	// Write signing roots for every single epoch
+	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
+	err := validatorDB.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket, err := bucket.CreateBucketIfNotExists(pubKeys[0][:])
+		if err != nil {
+			return err
+		}
+		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
+		if err != nil {
+			return err
+		}
+		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			var signingRoot [32]byte
+			copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
+			if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
+				return err
+			}
+		}
+
+		// Save a single signing root for weak subjectivity period + 1.
+		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs + 1)
+		var signingRoot [32]byte
+		copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
+		return signingRootsBucket.Put(targetEpochBytes, signingRoot[:])
+	})
+	require.NoError(t, err)
+
+	err = validatorDB.PruneAttestationsOlderThanCurrentWeakSubjectivity(context.Background())
+	require.NoError(t, err)
+
+	// Next, attempt to prune and realize that we pruned everything except for
+	// a signing root at target = WEAK_SUBJECTIVITY_PERIOD + 1.
+	err = validatorDB.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket := bucket.Bucket(pubKeys[0][:])
+		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			signingRoot := signingRootsBucket.Get(targetEpochBytes)
+			// We expect to have pruned all these signing roots.
+			require.Equal(t, true, signingRoot == nil)
+		}
+
+		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs + 1)
+		var expectedSigningRoot [32]byte
+		copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
+		signingRoot := signingRootsBucket.Get(targetEpochBytes)
+
+		// Expect the correct signing root at WEAK_SUBJECTIVITY_PERIOD + 1.
+		require.DeepEqual(t, expectedSigningRoot[:], signingRoot)
+		return nil
+	})
+	require.NoError(t, err)
+}
+
+func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubjectivity(t *testing.T) {
+	numWeakSubjectivityPeriods := uint64(5)
+	pubKeys := [][48]byte{{1}}
+	validatorDB := setupDB(t, pubKeys)
+
+	// Write signing roots for epochs within multiples of WEAK_SUBJECTIVITY_PERIOD.
+	err := validatorDB.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket, err := bucket.CreateBucketIfNotExists(pubKeys[0][:])
+		if err != nil {
+			return err
+		}
+		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
+		if err != nil {
+			return err
+		}
+		for i := uint64(1); i <= numWeakSubjectivityPeriods; i++ {
+			targetEpoch := (i * params.BeaconConfig().WeakSubjectivityPeriod) + 1
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			var signingRoot [32]byte
+			copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
+			if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	err = validatorDB.PruneAttestationsOlderThanCurrentWeakSubjectivity(context.Background())
+	require.NoError(t, err)
+
+	// Next, attempt to prune and realize that we pruned everything except for
+	// a signing root in an epoch within the highest WEAK_SUBJECTIVITY_PERIOD
+	// multiple we wrote earlier in our test.
+	err = validatorDB.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket := bucket.Bucket(pubKeys[0][:])
+		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+
+		// We check everything except for the highest weak subjectivity period
+		// has been pruned from the bucket.
+		for i := uint64(1); i <= numWeakSubjectivityPeriods-1; i++ {
+			targetEpoch := (i * params.BeaconConfig().WeakSubjectivityPeriod) + 1
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			signingRoot := signingRootsBucket.Get(targetEpochBytes)
+			// We expect to have pruned all these signing roots.
+			require.Equal(t, true, signingRoot == nil)
+		}
+
+		targetEpoch := (numWeakSubjectivityPeriods * params.BeaconConfig().WeakSubjectivityPeriod) + 1
+		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+		var expectedSigningRoot [32]byte
+		copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
+		signingRoot := signingRootsBucket.Get(targetEpochBytes)
+
+		// Expect the correct signing root.
+		require.DeepEqual(t, expectedSigningRoot[:], signingRoot)
+		return nil
+	})
+	require.NoError(t, err)
 }
 
 func BenchmarkStore_CheckSlashableAttestation_Surround_SafeAttestation_54kEpochs(b *testing.B) {

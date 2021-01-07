@@ -128,13 +128,17 @@ func (store *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx contex
 		bucket := tx.Bucket(pubKeysBucket)
 		// Loop through every immediate subbucket, which corresponds to
 		// each public key in the database.
-		return bucket.Tx().ForEach(func(pubKey []byte, subbucket *bolt.Bucket) error {
-			signingRootsBucket := subbucket.Bucket(attestationSigningRootsBucket)
+		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
+			pkBucket := bucket.Bucket(pubKey)
+			if pkBucket == nil {
+				return nil
+			}
+			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 
 			// We obtain the highest target epoch from the signing roots bucket.
 			highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
 			highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
-			numWssPeriods := highestTargetEpoch % wssPeriod
+			numWssPeriods := highestTargetEpoch / wssPeriod
 
 			// If the highest target epoch is greater than WEAK_SUBJECTIVITY_PERIOD,
 			// this means we can start pruning old attestation signing roots.
@@ -145,7 +149,9 @@ func (store *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx contex
 					// For each attestation signing root we find, we check
 					// if it less than the weak subjectivity period of the
 					// highest written target epoch in the bucket and delete if so.
-					if targetEpoch%wssPeriod < numWssPeriods {
+					if targetEpoch < wssPeriod {
+						return signingRootsBucket.Delete(k)
+					} else if (targetEpoch / wssPeriod) < numWssPeriods {
 						return signingRootsBucket.Delete(k)
 					}
 					return nil
