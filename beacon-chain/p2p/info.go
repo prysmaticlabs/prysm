@@ -42,8 +42,8 @@ func (s *Service) selfAddresses() string {
 	if s.dv5Listener != nil {
 		addresses = append(addresses, s.dv5Listener.Self().String())
 	}
-	for _, ma := range s.host.Addrs() {
-		addresses = append(addresses, ma.String()+"/p2p/"+s.host.ID().Pretty())
+	for _, addr := range s.host.Addrs() {
+		addresses = append(addresses, addr.String()+"/p2p/"+s.host.ID().Pretty())
 	}
 	return strings.Join(addresses, ",")
 }
