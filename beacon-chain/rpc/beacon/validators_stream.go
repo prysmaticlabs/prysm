@@ -155,8 +155,8 @@ func (is *infostream) handleConnection() error {
 	// Send responses at the end of every epoch.
 	for {
 		select {
-		case event := <-is.stateChannel:
-			if event.Type == statefeed.BlockProcessed {
+		case stateEvent := <-is.stateChannel:
+			if stateEvent.Type == statefeed.BlockProcessed {
 				is.handleBlockProcessed()
 			}
 		case <-is.stateSub.Err():
