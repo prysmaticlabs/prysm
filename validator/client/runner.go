@@ -80,7 +80,7 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx, accountsChangedChan); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
-	
+
 	go v.ReceiveBlocks(ctx)
 
 	headSlot, err := v.CanonicalHeadSlot(ctx)
@@ -202,6 +202,7 @@ func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan
 		sub.Unsubscribe()
 		close(validatingPubKeysChan)
 	}()
+
 	for {
 		select {
 		case <-validatingPubKeysChan:
