@@ -42,6 +42,7 @@ type Validator interface {
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	GetKeymanager() keymanager.IKeymanager
+	ReceiveBlocks(ctx context.Context)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -79,6 +80,8 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx, accountsChangedChan); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
+	
+	go v.ReceiveBlocks(ctx)
 
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {

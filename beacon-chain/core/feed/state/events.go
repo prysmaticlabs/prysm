@@ -3,7 +3,11 @@
 // and chain start.
 package state
 
-import "time"
+import (
+	"time"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+)
 
 const (
 	// BlockProcessed is sent after a block has been processed and updated the state database.
@@ -25,6 +29,8 @@ type BlockProcessedData struct {
 	Slot uint64
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
+	// SignedBlock is the physical processed block.
+	SignedBlock *ethpb.SignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }

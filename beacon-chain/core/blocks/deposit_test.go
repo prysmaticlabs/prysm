@@ -188,7 +188,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 }
 
 func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
-	//Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
+	// Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
 	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))

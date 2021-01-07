@@ -8,19 +8,15 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/asyncutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-)
-
-var (
-	debounceFileChangesInterval = time.Second
 )
 
 // Listen for changes to the all-accounts.keystore.json file in our wallet
@@ -28,6 +24,7 @@ var (
 // library to listen for file-system changes and debounces these events to
 // ensure we can handle thousands of events fired in a short time-span.
 func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
+	debounceFileChangesInterval := featureconfig.Get().KeystoreImportDebounceInterval
 	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
 	if !fileutil.FileExists(accountsFilePath) {
 		return

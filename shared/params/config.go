@@ -3,8 +3,6 @@ package params
 
 import (
 	"time"
-
-	"github.com/mohae/deepcopy"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -125,28 +123,4 @@ type BeaconChainConfig struct {
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
-}
-
-var beaconConfig = MainnetConfig()
-
-// BeaconConfig retrieves beacon chain config.
-func BeaconConfig() *BeaconChainConfig {
-	return beaconConfig
-}
-
-// OverrideBeaconConfig by replacing the config. The preferred pattern is to
-// call BeaconConfig(), change the specific parameters, and then call
-// OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
-// return this new configuration.
-func OverrideBeaconConfig(c *BeaconChainConfig) {
-	beaconConfig = c
-}
-
-// Copy returns a copy of the config object.
-func (c *BeaconChainConfig) Copy() *BeaconChainConfig {
-	config, ok := deepcopy.Copy(*c).(BeaconChainConfig)
-	if !ok {
-		config = *beaconConfig
-	}
-	return &config
 }

@@ -193,3 +193,6 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 	return fv.Keymanager
 }
+
+// ReceiveBlocks for mocking
+func (fv *FakeValidator) ReceiveBlocks(ctx context.Context) {}
