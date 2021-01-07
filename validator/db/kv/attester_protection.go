@@ -7,6 +7,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -58,12 +59,16 @@ func (store *Store) CheckSlashableAttestation(
 		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochBytes []byte) error {
 			existingSourceEpoch := bytesutil.BytesToUint64BigEndian(sourceEpochBytes)
 			existingTargetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
-			surrounding := isSurrounding(
-				existingSourceEpoch, existingTargetEpoch, att.Data.Source.Epoch, att.Data.Target.Epoch,
-			)
-			surrounded := isSurrounded(
-				existingSourceEpoch, existingTargetEpoch, att.Data.Source.Epoch, att.Data.Target.Epoch,
-			)
+			existingAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+				},
+			}
+			// Checks if the incoming attestation is surrounding or
+			// is surrounded by an existing one.
+			surrounding := slashutil.IsSurround(att, existingAtt)
+			surrounded := slashutil.IsSurround(existingAtt, att)
 			if surrounding {
 				slashKind = SurroundingVote
 				return fmt.Errorf(
@@ -118,12 +123,4 @@ func (store *Store) ApplyAttestationForPubKey(
 		}
 		return sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes)
 	})
-}
-
-func isSurrounding(prevSource, prevTarget, incomingSource, incomingTarget uint64) bool {
-	return incomingSource < prevSource && incomingTarget > prevTarget
-}
-
-func isSurrounded(prevSource, prevTarget, incomingSource, incomingTarget uint64) bool {
-	return prevSource < incomingSource && prevTarget > incomingTarget
 }
