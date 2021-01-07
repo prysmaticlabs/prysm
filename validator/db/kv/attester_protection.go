@@ -7,6 +7,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -42,7 +43,8 @@ func (store *Store) CheckSlashableAttestation(
 		// First we check for double votes.
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 		if signingRootsBucket != nil {
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.Data.Target.Epoch)
+			targetEpoch := att.Data.Target.Epoch % params.BeaconConfig().WeakSubjectivityPeriod
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
 			existingSigningRoot := signingRootsBucket.Get(targetEpochBytes)
 			if existingSigningRoot != nil && !bytes.Equal(signingRoot[:], existingSigningRoot) {
 				slashKind = DoubleVote
@@ -113,5 +115,43 @@ func (store *Store) ApplyAttestationForPubKey(
 			return err
 		}
 		return sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes)
+	})
+}
+
+// PruneAttestationsOlderThanCurrentWeakSubjectivity loops through every
+// public key in the public keys bucket and prunes all attestation signing roots
+// that are older than the highest written epoch % weak subjectivity period.
+// This routine is meant to run on startup.
+func (store *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Context) error {
+	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	return store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		// Loop through every immediate subbucket, which corresponds to
+		// each public key in the database.
+		return bucket.Tx().ForEach(func(pubKey []byte, subbucket *bolt.Bucket) error {
+			signingRootsBucket := subbucket.Bucket(attestationSigningRootsBucket)
+
+			// We obtain the highest target epoch from the signing roots bucket.
+			highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
+			highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
+			numWssPeriods := highestTargetEpoch % wssPeriod
+
+			// If the highest target epoch is greater than WEAK_SUBJECTIVITY_PERIOD,
+			// this means we can start pruning old attestation signing roots.
+			if highestTargetEpoch > wssPeriod {
+				return signingRootsBucket.ForEach(func(k []byte, _ []byte) error {
+					targetEpoch := bytesutil.BytesToUint64BigEndian(k)
+
+					// For each attestation signing root we find, we check
+					// if it less than the weak subjectivity period of the
+					// highest written target epoch in the bucket and delete if so.
+					if targetEpoch%wssPeriod < numWssPeriods {
+						return signingRootsBucket.Delete(k)
+					}
+					return nil
+				})
+			}
+			return nil
+		})
 	})
 }

@@ -2,12 +2,14 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
@@ -155,6 +157,40 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 			assert.Equal(t, tt.want, slashingKind)
 		})
 	}
+}
+
+func TestPruneAttestationsOlderThanCurrentWeakSubjectivity(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 1
+	numEpochs := params.BeaconConfig().WeakSubjectivityPeriod
+	pubKeys := make([][48]byte, numValidators)
+	validatorDB := setupDB(t, pubKeys)
+
+	// Write signing roots for every single epoch
+	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
+	err := validatorDB.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket, err := bucket.CreateBucketIfNotExists(pubKeys[0][:])
+		if err != nil {
+			return err
+		}
+		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
+		if err != nil {
+			return err
+		}
+		for epoch := uint64(0); epoch < numEpochs; epoch++ {
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(epoch)
+			var signingRoot [32]byte
+			copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
+			if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	// Next, attempt to prune and realize that we still have all epochs intact.
 }
 
 func BenchmarkStore_CheckSlashableAttestation_Surround_SafeAttestation_54kEpochs(b *testing.B) {
