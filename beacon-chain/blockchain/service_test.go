@@ -404,17 +404,17 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 		beaconDB: beaconDB,
 		stateGen: stategen.New(beaconDB),
 	}
-	b := testutil.NewBeaconBlock()
-	b.Block.Slot = 1
-	r, err := b.HashTreeRoot()
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 1
+	r, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	newState := testutil.NewBeaconState()
 	require.NoError(t, s.stateGen.SaveState(ctx, r, newState))
-	require.NoError(t, s.saveHeadNoDB(ctx, b, r, newState))
+	require.NoError(t, s.saveHeadNoDB(ctx, blk, r, newState))
 
 	newB, err := s.beaconDB.HeadBlock(ctx)
 	require.NoError(t, err)
-	if reflect.DeepEqual(newB, b) {
+	if reflect.DeepEqual(newB, blk) {
 		t.Error("head block should not be equal")
 	}
 }
