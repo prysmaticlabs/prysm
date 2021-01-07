@@ -17,16 +17,16 @@ func ensurePeerConnections(ctx context.Context, h host.Host, peers ...string) {
 		if p == "" {
 			continue
 		}
-		p, err := MakePeer(p)
+		peerInfo, err := MakePeer(p)
 		if err != nil {
 			log.Errorf("Could not make peer: %v", err)
 			continue
 		}
 
-		c := h.Network().ConnsToPeer(p.ID)
+		c := h.Network().ConnsToPeer(peerInfo.ID)
 		if len(c) == 0 {
-			if err := connectWithTimeout(ctx, h, p); err != nil {
-				log.WithField("peer", p.ID).WithField("addrs", p.Addrs).WithError(err).Errorf("Failed to reconnect to peer")
+			if err := connectWithTimeout(ctx, h, peerInfo); err != nil {
+				log.WithField("peer", peerInfo.ID).WithField("addrs", peerInfo.Addrs).WithError(err).Errorf("Failed to reconnect to peer")
 				continue
 			}
 		}
