@@ -14,6 +14,7 @@ go_library(
         "migration_optimal_attester_protection.go",
         "migration_snappy_history.go",
         "proposal_history_v2.go",
+        "prune_attester_protection.go",
         "schema.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
@@ -48,6 +49,7 @@ go_test(
         "migration_optimal_attester_protection_test.go",
         "migration_snappy_history_test.go",
         "proposal_history_v2_test.go",
+        "prune_attester_protection_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
