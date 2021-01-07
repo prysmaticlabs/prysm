@@ -6,9 +6,8 @@ import (
 	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	bolt "go.etcd.io/bbolt"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	bolt "go.etcd.io/bbolt"
 )
 
 // SlashingKind used for helpful information upon detection.
