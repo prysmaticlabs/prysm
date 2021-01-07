@@ -49,7 +49,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	v.waitToSlotOneThird(ctx, slot)
+	v.waitOneThirdOrValidBlock(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -75,14 +75,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		return
-	}
-
-	if err := v.slashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot); err != nil {
-		log.WithError(err).Error("Failed attestation slashing protection check")
-		log.WithFields(
-			attestationLogFields(pubKey, indexedAtt),
-		).Debug("Attempted slashable attestation details")
 		return
 	}
 
@@ -122,7 +114,13 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	// Set the signature of the attestation and send it out to the beacon node.
 	indexedAtt.Signature = sig
-
+	if err := v.slashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot); err != nil {
+		log.WithError(err).Error("Failed attestation slashing protection check")
+		log.WithFields(
+			attestationLogFields(pubKey, indexedAtt),
+		).Debug("Attempted slashable attestation details")
+		return
+	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -222,11 +220,17 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	return nil
 }
 
-// waitToSlotOneThird waits until one third through the current slot period
-// such that head block for beacon node can get updated.
-func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
-	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
+// waitOneThirdOrValidBlock waits until (a) or (b) whichever comes first:
+//   (a) the validator has received a valid block that is the same slot as input slot
+//   (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot)
+func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
+	ctx, span := trace.StartSpan(ctx, "validator.waitOneThirdOrValidBlock")
 	defer span.End()
+
+	// Don't need to wait if requested slot is the same as highest valid slot.
+	if slot <= v.highestValidSlot {
+		return
+	}
 
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
@@ -237,12 +241,24 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	}
 	t := time.NewTimer(wait)
 	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		traceutil.AnnotateError(span, ctx.Err())
-		return
-	case <-t.C:
-		return
+
+	bChannel := make(chan *ethpb.SignedBeaconBlock, 1)
+	sub := v.blockFeed.Subscribe(bChannel)
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case b := <-bChannel:
+			if slot <= b.Block.Slot {
+				return
+			}
+		case <-ctx.Done():
+			traceutil.AnnotateError(span, ctx.Err())
+			return
+
+		case <-t.C:
+			return
+		}
 	}
 }
 

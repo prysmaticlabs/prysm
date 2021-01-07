@@ -34,6 +34,13 @@ const eth1DataSavingInterval = 100
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
+const additiveFactorMultiplier = 0.10
+const multiplicativeDecreaseDivisor = 2
+
+func tooMuchDataRequestedError(err error) bool {
+	// this error is only infura specific (other providers might have different error messages)
+	return err.Error() == "query returned more than 10000 results"
+}
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
@@ -275,9 +282,13 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	batchSize := s.eth1HeaderReqLimit
+	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
+
 	for currentBlockNum < latestFollowHeight {
 		start := currentBlockNum
-		end := currentBlockNum + s.eth1HeaderReqLimit
+		end := currentBlockNum + batchSize
 		// Appropriately bound the request, as we do not
 		// want request blocks beyond the current follow distance.
 		if end > latestFollowHeight {
@@ -301,6 +312,15 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		logs, err := s.httpLogger.FilterLogs(ctx, query)
 		if err != nil {
+			if tooMuchDataRequestedError(err) {
+				if batchSize == 0 {
+					return errors.New("batch size is zero")
+				}
+
+				// multiplicative decrease
+				batchSize = batchSize / multiplicativeDecreaseDivisor
+				continue
+			}
 			return err
 		}
 		// Only request headers before chainstart to correctly determine
@@ -328,6 +348,14 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			return err
 		}
 		currentBlockNum = end
+
+		if batchSize < s.eth1HeaderReqLimit {
+			// update the batchSize with additive increase
+			batchSize = batchSize + additiveFactor
+			if batchSize > s.eth1HeaderReqLimit {
+				batchSize = s.eth1HeaderReqLimit
+			}
+		}
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
