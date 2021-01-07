@@ -44,7 +44,7 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 			}
 			return aggregated.merge(unaggregated), err
 		}
-		solution, err := maxCover.Cover(len(atts), false /* allowOverlaps */, false /* allowDuplicates */)
+		solution, err := maxCover.Cover(len(atts), false /* allowOverlaps */)
 		if err != nil {
 			return aggregated.merge(unaggregated), err
 		}

@@ -236,8 +236,8 @@ func (p *TestP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
-// DiscoveryAddress --
-func (p *TestP2P) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+// DiscoveryAddresses --
+func (p *TestP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	return nil, nil
 }
 
