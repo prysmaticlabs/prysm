@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // SlashingKind used for helpful information upon detection.
@@ -43,8 +43,7 @@ func (store *Store) CheckSlashableAttestation(
 		// First we check for double votes.
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 		if signingRootsBucket != nil {
-			targetEpoch := att.Data.Target.Epoch % params.BeaconConfig().WeakSubjectivityPeriod
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.Data.Target.Epoch)
 			existingSigningRoot := signingRootsBucket.Get(targetEpochBytes)
 			if existingSigningRoot != nil && !bytes.Equal(signingRoot[:], existingSigningRoot) {
 				slashKind = DoubleVote
