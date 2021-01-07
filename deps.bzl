@@ -632,8 +632,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:FnpkCo1TAj/eq0ETLPhAplYYB4KlFQy3kVb8cLludAc=",
-        version = "v0.0.0-20201020132831-68dc48984fd3",
+        sum = "h1:lBcqQHaZyB0AYEUohFpsIDWY1sHo28VgGXOCBdnPCWo=",
+        version = "v0.0.0-20210107123522-4c3c34260bd9",
     )
 
     go_repository(
@@ -1864,8 +1864,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mitchellh_mapstructure",
         importpath = "github.com/mitchellh/mapstructure",
-        sum = "h1:SzB1nHZ2Xi+17FP0zVQBHIZqvwRN9408fJO8h+eeNA8=",
-        version = "v1.3.3",
+        sum = "h1:7ks8ZkOP5/ujthUsT07rNv+nkLXCQWKNHuwzOAesEks=",
+        version = "v1.4.0",
     )
 
     go_repository(
@@ -2863,8 +2863,8 @@ def prysm_deps():
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",
-        sum = "h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=",
-        version = "v2.3.0",
+        sum = "h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=",
+        version = "v2.4.0",
     )
 
     go_repository(
