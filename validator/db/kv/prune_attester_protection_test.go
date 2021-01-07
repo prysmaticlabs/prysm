@@ -59,6 +59,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 		copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 		return signingRootsBkt.Put(targetEpochBytes, signingRoot[:])
 	})
+	require.NoError(t, err)
 
 	err = validatorDB.PruneAttestationsOlderThanCurrentWeakSubjectivity(context.Background())
 	require.NoError(t, err)
@@ -68,6 +69,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 	err = checkAttestingHistoryAfterPruning(
 		t, validatorDB, pubKey, numEpochs, true, /* should be pruned */
 	)
+	require.NoError(t, err)
 	err = validatorDB.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])

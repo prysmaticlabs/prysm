@@ -7,11 +7,10 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	bolt "go.etcd.io/bbolt"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
