@@ -69,7 +69,9 @@ type validator struct {
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	walletInitializedFeed              *event.Feed
+	blockFeed                          *event.Feed
 	genesisTime                        uint64
+	highestValidSlot                   uint64
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
@@ -234,6 +236,37 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// ReceiveBlocks starts a gRPC client stream listener to obtain
+// blocks from the beacon node. Upon receiving a block, the service
+// broadcasts it to a feed for other usages to subscribe to.
+func (v *validator) ReceiveBlocks(ctx context.Context) {
+	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve blocks stream")
+		return
+	}
+
+	for {
+		if ctx.Err() == context.Canceled {
+			log.WithError(ctx.Err()).Error("Context canceled - shutting down blocks receiver")
+			return
+		}
+		res, err := stream.Recv()
+		if err != nil {
+			log.WithError(err).Error("Could not receive blocks from beacon node")
+			return
+		}
+		if res == nil || res.Block == nil {
+			continue
+		}
+		if res.Block.Slot > v.highestValidSlot {
+			v.highestValidSlot = res.Block.Slot
+		}
+
+		v.blockFeed.Send(res)
+	}
 }
 
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) bool {
