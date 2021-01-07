@@ -90,14 +90,7 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	req := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
-		},
-		Signature: make([]byte, 96),
-	}
+	req := testutil.HydrateAttestation(&ethpb.Attestation{})
 	wanted := "Incorrect attestation signature"
 	_, err := attesterServer.ProposeAttestation(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
