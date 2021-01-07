@@ -243,3 +243,64 @@ func checkAttestingHistoryAfterPruning(
 		return nil
 	})
 }
+
+func Test_olderThanCurrentWeakSubjectivityPeriod(t *testing.T) {
+	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	type args struct {
+		epoch        uint64
+		highestEpoch uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "returns true if epoch < WSS",
+			args: args{
+				epoch:        1,
+				highestEpoch: wssPeriod,
+			},
+			want: true,
+		},
+		{
+			name: "returns true if epoch == WSS and 2*WSS have passed",
+			args: args{
+				epoch:        wssPeriod,
+				highestEpoch: 2 * wssPeriod,
+			},
+			want: true,
+		},
+		{
+			name: "returns true if epoch == 2*WSS and 3*WSS have passed",
+			args: args{
+				epoch:        2 * wssPeriod,
+				highestEpoch: 3 * wssPeriod,
+			},
+			want: true,
+		},
+		{
+			name: "returns false if epoch == 3*WSS and 3*WSS have passed",
+			args: args{
+				epoch:        3 * wssPeriod,
+				highestEpoch: 3 * wssPeriod,
+			},
+			want: false,
+		},
+		{
+			name: "returns false if epoch == 4*WSS and 3*WSS have passed",
+			args: args{
+				epoch:        4 * wssPeriod,
+				highestEpoch: 3 * wssPeriod,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := olderThanCurrentWeakSubjectivityPeriod(tt.args.epoch, tt.args.highestEpoch); got != tt.want {
+				t.Errorf("olderThanCurrentWeakSubjectivityPeriod() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

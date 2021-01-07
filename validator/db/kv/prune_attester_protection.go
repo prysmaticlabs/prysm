@@ -40,7 +40,6 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	highestSourceEpochBytes, _ := sourceEpochsBucket.Cursor().Last()
 	highestTargetEpochBytes := sourceEpochsBucket.Get(highestSourceEpochBytes)
 	highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
-	totalWssPeriods := highestTargetEpoch / wssPeriod
 
 	// No need to prune if the highest epoch we've written is still
 	// before the first weak subjectivity period.
@@ -55,9 +54,7 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 		// if its associated target epoch is less than the weak
 		// subjectivity period of the highest written target epoch
 		// in the bucket and delete if so.
-		if targetEpoch < wssPeriod {
-			return sourceEpochsBucket.Delete(k)
-		} else if (targetEpoch / wssPeriod) < totalWssPeriods {
+		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
 			return sourceEpochsBucket.Delete(k)
 		}
 		return nil
@@ -74,7 +71,6 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 	// We obtain the highest target epoch from the signing roots bucket.
 	highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
 	highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
-	totalWssPeriods := highestTargetEpoch / wssPeriod
 
 	// No need to prune if the highest epoch we've written is still
 	// before the first weak subjectivity period.
@@ -87,11 +83,20 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 		// For each target epoch we find in the bucket, we check
 		// if it less than the weak subjectivity period of the
 		// highest written target epoch in the bucket and delete if so.
-		if targetEpoch < wssPeriod {
-			return signingRootsBucket.Delete(k)
-		} else if (targetEpoch / wssPeriod) < totalWssPeriods {
+		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
 			return signingRootsBucket.Delete(k)
 		}
 		return nil
 	})
+}
+
+func olderThanCurrentWeakSubjectivityPeriod(epoch, highestEpoch uint64) bool {
+	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	// Number of weak subjectivity periods that have passed.
+	currentWeakSubjectivityPeriod := highestEpoch / wssPeriod
+	// We check if either the epoch is less than WEAK_SUBJECTIVITY_PERIOD
+	// or is it is from a weak subjectivity period older than the current one,
+	// for example, if 5 weak subjectivity periods have passed and epoch is
+	// from 2 weak subjectivity periods ago, then we return true.
+	return epoch < wssPeriod || (epoch/wssPeriod) < currentWeakSubjectivityPeriod
 }
