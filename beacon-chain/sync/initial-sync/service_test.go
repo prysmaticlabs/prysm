@@ -342,9 +342,9 @@ func TestService_markSynced(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Synced {
-				data, ok := event.Data.(*statefeed.SyncedData)
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.Synced {
+				data, ok := stateEvent.Data.(*statefeed.SyncedData)
 				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
 				receivedGenesisTime = data.StartTime
 			}

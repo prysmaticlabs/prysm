@@ -56,8 +56,8 @@ func (p *FakeP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
-// DiscoveryAddress -- fake
-func (p *FakeP2P) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+// DiscoveryAddresses -- fake
+func (p *FakeP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	return nil, nil
 }
 
