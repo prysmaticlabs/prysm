@@ -621,7 +621,7 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
-	errors := make([]error, 0, requestRange)
+	errs := make([]error, 0, requestRange)
 	if requestRange == 0 {
 		return headers, nil
 	}
@@ -635,13 +635,13 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes
 			Error:  err,
 		})
 		headers = append(headers, header)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
 		return nil, ioErr
 	}
-	for _, e := range errors {
+	for _, e := range errs {
 		if e != nil {
 			return nil, e
 		}
