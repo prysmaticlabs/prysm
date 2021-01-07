@@ -203,15 +203,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
-		},
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(3),
 		Signature:       priv.Sign([]byte("foo")).Marshal(),
-	}
+	})
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	require.NoError(t, err)
@@ -261,18 +256,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-				},
+				Data:             testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 				AttestingIndices: []uint64{0, 1},
 				Signature:        make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-					Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-				},
+				Data:             testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 				AttestingIndices: []uint64{0, 1},
 				Signature:        make([]byte, 96),
 			},
@@ -283,15 +272,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
-	blockAtt := &ethpb.Attestation{
+	blockAtt := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
-		Signature:       make([]byte, 96),
-	}
+	})
 	attestations := []*ethpb.Attestation{blockAtt}
 	var exits []*ethpb.SignedVoluntaryExit
 	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
@@ -443,18 +429,13 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)
-	blockAtt := &ethpb.Attestation{
+	blockAtt := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Slot:            beaconState.Slot(),
-			BeaconBlockRoot: make([]byte, 32),
-			Target:          &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState), Root: make([]byte, 32)},
-			Source: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  mockRoot[:],
-			}},
+			Slot:   beaconState.Slot(),
+			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState)},
+			Source: &ethpb.Checkpoint{Root: mockRoot[:]}},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, 96),
-	}
+	})
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	assert.NoError(t, err)
@@ -763,16 +744,10 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 1)
 
 	for i := 0; i < len(atts); i++ {
-		att := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Slot:            1,
-				Source:          &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-				Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-				BeaconBlockRoot: make([]byte, 32),
-			},
+		att := testutil.HydrateAttestation(&ethpb.Attestation{
+			Data:            &ethpb.AttestationData{Slot: 1},
 			AggregationBits: aggBits,
-			Signature:       make([]byte, 96),
-		}
+		})
 
 		committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 		assert.NoError(t, err)
