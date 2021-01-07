@@ -7,6 +7,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -29,7 +30,7 @@ var (
 // CheckSlashableAttestation verifies an incoming attestation is
 // not a double vote for a validator public key nor a surround vote.
 func (store *Store) CheckSlashableAttestation(
-	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.Attestation,
+	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
 	var slashKind SlashingKind
 	err := store.view(func(tx *bolt.Tx) error {
@@ -58,8 +59,16 @@ func (store *Store) CheckSlashableAttestation(
 		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochBytes []byte) error {
 			existingSourceEpoch := bytesutil.BytesToUint64BigEndian(sourceEpochBytes)
 			existingTargetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
-			surrounding := att.Data.Source.Epoch < existingSourceEpoch && att.Data.Target.Epoch > existingTargetEpoch
-			surrounded := att.Data.Source.Epoch > existingSourceEpoch && att.Data.Target.Epoch < existingTargetEpoch
+			existingAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+				},
+			}
+			// Checks if the incoming attestation is surrounding or
+			// is surrounded by an existing one.
+			surrounding := slashutil.IsSurround(att, existingAtt)
+			surrounded := slashutil.IsSurround(existingAtt, att)
 			if surrounding {
 				slashKind = SurroundingVote
 				return fmt.Errorf(
@@ -90,7 +99,7 @@ func (store *Store) CheckSlashableAttestation(
 // key by storing its signing root under the appropriate bucket as well
 // as its source and target epochs for future slashing protection checks.
 func (store *Store) ApplyAttestationForPubKey(
-	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.Attestation,
+	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) error {
 	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)

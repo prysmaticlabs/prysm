@@ -42,3 +42,9 @@ type SignedBlock struct {
 	Slot        string `json:"slot"`
 	SigningRoot string `json:"signing_root,omitempty"`
 }
+
+type historicalAttestation struct {
+	sourceEpoch uint64
+	targetEpoch uint64
+	signingRoot [32]byte
+}
