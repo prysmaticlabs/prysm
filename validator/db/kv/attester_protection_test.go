@@ -164,7 +164,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivit
 	pubKeys := [][48]byte{{1}}
 	validatorDB := setupDB(t, pubKeys)
 
-	// Write signing roots for every single epoch
+	// Write signing roots and (source, target) pairs for every single epoch
 	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
 	err := validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
@@ -176,8 +176,18 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivit
 		if err != nil {
 			return err
 		}
-		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
+		if err != nil {
+			return err
+		}
+		for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
+			// Save (source epoch, target epoch) pairs.
+			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+				return err
+			}
+			// Save signing root for target epoch.
 			var signingRoot [32]byte
 			copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 			if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
@@ -196,8 +206,13 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivit
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKeys[0][:])
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
-		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
+		for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
+			storedTargetEpoch := sourceEpochsBucket.Get(sourceEpochBytes)
+			require.DeepEqual(t, targetEpochBytes, storedTargetEpoch)
+
 			var expectedSigningRoot [32]byte
 			copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 			signingRoot := signingRootsBucket.Get(targetEpochBytes)
@@ -227,8 +242,17 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 		if err != nil {
 			return err
 		}
-		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
+		if err != nil {
+			return err
+		}
+		for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
+			// Save (source epoch, target epoch) pairs.
+			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+				return err
+			}
 			var signingRoot [32]byte
 			copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 			if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
@@ -253,14 +277,24 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKeys[0][:])
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
+			storedTargetEpoch := sourceEpochsBucket.Get(sourceEpochBytes)
+			require.Equal(t, true, storedTargetEpoch == nil)
+
 			signingRoot := signingRootsBucket.Get(targetEpochBytes)
 			// We expect to have pruned all these signing roots.
 			require.Equal(t, true, signingRoot == nil)
 		}
 
 		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs + 1)
+		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs)
+
+		storedTargetEpoch := sourceEpochsBucket.Get(sourceEpochBytes)
+		require.DeepEqual(t, numEpochs+1, bytesutil.BytesToUint64BigEndian(storedTargetEpoch))
+
 		var expectedSigningRoot [32]byte
 		copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 		signingRoot := signingRootsBucket.Get(targetEpochBytes)

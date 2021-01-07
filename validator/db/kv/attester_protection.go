@@ -134,14 +134,37 @@ func (store *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx contex
 				return nil
 			}
 			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 
 			// We obtain the highest target epoch from the signing roots bucket.
 			highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
 			highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
-			numWssPeriods := highestTargetEpoch / wssPeriod
+			numWssPeriodsForTargetEpoch := highestTargetEpoch / wssPeriod
+
+			// We obtain the highest source epoch from the signing roots bucket.
+			highestSourceEpochBytes, _ := sourceEpochsBucket.Cursor().Last()
+			highestSourceEpoch := bytesutil.BytesToUint64BigEndian(highestSourceEpochBytes)
+			numWssPeriodsForSourceEpoch := highestSourceEpoch / wssPeriod
 
 			// If the highest target epoch is greater than WEAK_SUBJECTIVITY_PERIOD,
 			// this means we can start pruning old attestation signing roots.
+			if highestSourceEpoch > wssPeriod {
+				if err := sourceEpochsBucket.ForEach(func(k []byte, v []byte) error {
+					targetEpoch := bytesutil.BytesToUint64BigEndian(v)
+
+					// For each attestation signing root we find, we check
+					// if it less than the weak subjectivity period of the
+					// highest written target epoch in the bucket and delete if so.
+					if targetEpoch < wssPeriod {
+						return sourceEpochsBucket.Delete(k)
+					} else if (targetEpoch / wssPeriod) < numWssPeriodsForSourceEpoch {
+						return sourceEpochsBucket.Delete(k)
+					}
+					return nil
+				}); err != nil {
+					return err
+				}
+			}
 			if highestTargetEpoch > wssPeriod {
 				return signingRootsBucket.ForEach(func(k []byte, _ []byte) error {
 					targetEpoch := bytesutil.BytesToUint64BigEndian(k)
@@ -151,7 +174,7 @@ func (store *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx contex
 					// highest written target epoch in the bucket and delete if so.
 					if targetEpoch < wssPeriod {
 						return signingRootsBucket.Delete(k)
-					} else if (targetEpoch / wssPeriod) < numWssPeriods {
+					} else if (targetEpoch / wssPeriod) < numWssPeriodsForTargetEpoch {
 						return signingRootsBucket.Delete(k)
 					}
 					return nil
