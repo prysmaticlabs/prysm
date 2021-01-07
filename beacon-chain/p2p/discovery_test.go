@@ -293,17 +293,27 @@ func TestUDPMultiAddress(t *testing.T) {
 }
 
 func TestMultipleDiscoveryAddresses(t *testing.T) {
-	record := &enr.Record{}
-	err := record.SetSig(dummyIdentity{1}, []byte{42})
+	db, err := enode.OpenDB(t.TempDir())
 	require.NoError(t, err)
-	record.Set(enr.IPv4{127, 0, 0, 1})
-	record.Set(enr.IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68})
-	node, err := enode.New(dummyIdentity{}, record)
-	require.NoError(t, err)
+	_, key := createAddrAndPrivKey(t)
+	node := enode.NewLocalNode(db, key)
+	node.Set(enr.IPv4{127, 0, 0, 1})
+	node.Set(enr.IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68})
 
-	multiAddresses, err := ConvertToUdpMultiAddr(node)
+	multiAddresses, err := convertToUdpMultiAddr(node.Node())
 	require.NoError(t, err)
 	require.Equal(t, 2, len(multiAddresses))
+	ipv4Found, ipv6Found := false, false
+	for _, address := range multiAddresses {
+		s := address.String()
+		if strings.Contains(s, "ip4") {
+			ipv4Found = true
+		} else if strings.Contains(s, "ip6") {
+			ipv6Found = true
+		}
+	}
+	assert.Equal(t, true, ipv4Found, "IPv4 discovery address not found")
+	assert.Equal(t, true, ipv6Found, "IPv6 discovery address not found")
 }
 
 // addPeer is a helper to add a peer with a given connection state)
