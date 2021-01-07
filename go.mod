@@ -84,7 +84,7 @@ require (
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210105190001-13193818c0df
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20210107162333-9e9cf77d4921
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
 	github.com/rs/cors v1.7.0
