@@ -129,6 +129,9 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 			kv.attestingHistoriesByPubKey[pubKey] = history
 		}
 	}
+	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not prune old attestations from DB")
+	}
 	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
 
