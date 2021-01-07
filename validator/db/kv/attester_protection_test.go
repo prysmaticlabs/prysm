@@ -262,6 +262,11 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 
 		// Save a single signing root for weak subjectivity period + 1.
 		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs + 1)
+		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs)
+		if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+			return err
+		}
+
 		var signingRoot [32]byte
 		copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 		return signingRootsBucket.Put(targetEpochBytes, signingRoot[:])
@@ -278,7 +283,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 		pkBucket := bucket.Bucket(pubKeys[0][:])
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
-		for targetEpoch := uint64(0); targetEpoch < numEpochs; targetEpoch++ {
+		for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
 			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
 			storedTargetEpoch := sourceEpochsBucket.Get(sourceEpochBytes)
