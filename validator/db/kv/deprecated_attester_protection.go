@@ -41,7 +41,7 @@ func (hd deprecatedEncodedAttestingHistory) assertSize() error {
 	return nil
 }
 
-func (h *deprecatedHistoryData) IsEmpty() bool {
+func (h *deprecatedHistoryData) isEmpty() bool {
 	if h == (*deprecatedHistoryData)(nil) {
 		return true
 	}
