@@ -20,9 +20,8 @@ var ProtectionDbFileName = "validator.db"
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                         *bolt.DB
-	databasePath               string
-	attestingHistoriesByPubKey map[[48]byte]deprecatedEncodedAttestingHistory
+	db           *bolt.DB
+	databasePath string
 }
 
 // Close closes the underlying boltdb database.
@@ -84,9 +83,8 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	}
 
 	kv := &Store{
-		db:                         boltDB,
-		databasePath:               dirPath,
-		attestingHistoriesByPubKey: make(map[[48]byte]deprecatedEncodedAttestingHistory),
+		db:           boltDB,
+		databasePath: dirPath,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {

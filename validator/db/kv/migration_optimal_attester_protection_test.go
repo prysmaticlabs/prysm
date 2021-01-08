@@ -223,9 +223,8 @@ func setupDBWithoutMigration(dirPath string) (*Store, error) {
 	}
 
 	kv := &Store{
-		db:                         boltDB,
-		databasePath:               dirPath,
-		attestingHistoriesByPubKey: make(map[[48]byte]EncHistoryData),
+		db:           boltDB,
+		databasePath: dirPath,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
