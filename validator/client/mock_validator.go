@@ -186,6 +186,3 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 	}
 	return ctx.Value(allValidatorsAreExitedCtxKey).(bool), nil
 }
-
-// ReceiveBlocks for mocking
-func (fv *FakeValidator) ReceiveBlocks(ctx context.Context) {}

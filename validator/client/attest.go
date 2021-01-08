@@ -49,7 +49,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	v.waitOneThirdOrValidBlock(ctx, slot)
+	v.waitToSlotOneThird(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -220,17 +220,11 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	return nil
 }
 
-// waitOneThirdOrValidBlock waits until (a) or (b) whichever comes first:
-//   (a) the validator has received a valid block that is the same slot as input slot
-//   (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot)
-func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
-	ctx, span := trace.StartSpan(ctx, "validator.waitOneThirdOrValidBlock")
+// waitToSlotOneThird waits until one third through the current slot period
+// such that head block for beacon node can get updated.
+func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
+	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
-
-	// Don't need to wait if requested slot is the same as highest valid slot.
-	if slot <= v.highestValidSlot {
-		return
-	}
 
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
@@ -241,24 +235,12 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
 	}
 	t := time.NewTimer(wait)
 	defer t.Stop()
-
-	bChannel := make(chan *ethpb.SignedBeaconBlock, 1)
-	sub := v.blockFeed.Subscribe(bChannel)
-	defer sub.Unsubscribe()
-
-	for {
-		select {
-		case b := <-bChannel:
-			if slot <= b.Block.Slot {
-				return
-			}
-		case <-ctx.Done():
-			traceutil.AnnotateError(span, ctx.Err())
-			return
-
-		case <-t.C:
-			return
-		}
+	select {
+	case <-ctx.Done():
+		traceutil.AnnotateError(span, ctx.Err())
+		return
+	case <-t.C:
+		return
 	}
 }
 

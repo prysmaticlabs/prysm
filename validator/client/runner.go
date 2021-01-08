@@ -36,7 +36,6 @@ type Validator interface {
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
-	ReceiveBlocks(ctx context.Context)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -71,8 +70,6 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
-	go v.ReceiveBlocks(ctx)
-
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)

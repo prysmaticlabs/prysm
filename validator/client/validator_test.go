@@ -14,7 +14,6 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -828,57 +827,4 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
-}
-
-func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
-
-	v := validator{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
-	}
-	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
-	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocks(
-		gomock.Any(),
-		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
-	).Return(stream, nil)
-	stream.EXPECT().Context().Return(ctx).AnyTimes()
-	stream.EXPECT().Recv().Return(
-		&ethpb.SignedBeaconBlock{},
-		nil,
-	).Do(func() {
-		cancel()
-	})
-	v.ReceiveBlocks(ctx)
-	require.Equal(t, uint64(0), v.highestValidSlot)
-}
-
-func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
-
-	v := validator{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
-	}
-	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
-	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocks(
-		gomock.Any(),
-		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
-	).Return(stream, nil)
-	stream.EXPECT().Context().Return(ctx).AnyTimes()
-	slot := uint64(100)
-	stream.EXPECT().Recv().Return(
-		&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}},
-		nil,
-	).Do(func() {
-		cancel()
-	})
-	v.ReceiveBlocks(ctx)
-	require.Equal(t, slot, v.highestValidSlot)
 }
