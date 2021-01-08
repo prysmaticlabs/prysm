@@ -71,6 +71,7 @@ go_library(
         "@com_github_kevinms_leakybucket_go//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
         "@com_github_libp2p_go_libp2p//config:go_default_library",
+        "@com_github_libp2p_go_libp2p//p2p/protocol/identify:go_default_library",
         "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
         "@com_github_libp2p_go_libp2p_core//control:go_default_library",
         "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
