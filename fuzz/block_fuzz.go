@@ -48,8 +48,6 @@ func randomHex(n int) string {
 }
 
 func init() {
-	featureconfig.Init(&featureconfig.Flags{SkipBLSVerify: true})
-
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 
