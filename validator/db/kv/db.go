@@ -113,6 +113,11 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 		}
 	}
 
+	// Perform a special migration to an optimal attester protection DB schema.
+	if err := kv.migrateOptimalAttesterProtection(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not migrate attester protection to more efficient format")
+	}
+
 	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not prune old attestations from DB")
 	}
