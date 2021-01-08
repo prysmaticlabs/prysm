@@ -327,9 +327,8 @@ func (s *Service) ENR() *enr.Record {
 	return s.dv5Listener.Self().Record()
 }
 
-// DiscoveryAddress is the multiaddress representation of
-// our enr.
-func (s *Service) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+// DiscoveryAddresses represents our enr addresses as multiaddresses.
+func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	if s.dv5Listener == nil {
 		return nil, nil
 	}

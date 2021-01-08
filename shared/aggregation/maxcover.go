@@ -51,16 +51,12 @@ func NewMaxCoverCandidate(key int, bits *bitfield.Bitlist) *MaxCoverCandidate {
 
 // Cover calculates solution to Maximum k-Cover problem in O(knm), where
 // n is number of candidates and m is a length of bitlist in each candidate.
-func (mc *MaxCoverProblem) Cover(k int, allowOverlaps, allowDuplicates bool) (*Aggregation, error) {
+func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error) {
 	if len(mc.Candidates) == 0 {
 		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
 	}
 	if len(mc.Candidates) < k {
 		k = len(mc.Candidates)
-	}
-
-	if !allowDuplicates {
-		mc.Candidates.dedup(allowOverlaps)
 	}
 
 	solution := &Aggregation{
@@ -154,28 +150,6 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 		}
 	}
 	return ret
-}
-
-// dedup removes duplicate candidates (ones with the same bits set on).
-func (cl *MaxCoverCandidates) dedup(allowOverlaps bool) *MaxCoverCandidates {
-	if len(*cl) < 2 {
-		return cl
-	}
-	uncoveredBits := cl.union()
-	if uncoveredBits == nil {
-		return cl
-	}
-	cl.score(uncoveredBits).sort()
-	for i := 1; i < len(*cl); i++ {
-		if (*cl)[i-1].bits.Len() != (*cl)[i].bits.Len() {
-			continue
-		}
-		nonOverlappingBits := (*cl)[i-1].bits.Xor(*(*cl)[i].bits)
-		if (*cl)[i-1].score == (*cl)[i].score && nonOverlappingBits.Count() == 0 {
-			(*cl)[i-1].processed = true
-		}
-	}
-	return cl.filter(bitfield.NewBitlist((*cl)[0].bits.Len()), allowOverlaps)
 }
 
 // String provides string representation of a candidate.

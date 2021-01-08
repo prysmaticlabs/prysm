@@ -36,8 +36,8 @@ func (m MockPeerManager) ENR() *enr.Record {
 	return m.Enr
 }
 
-// DiscoveryAddress .
-func (m MockPeerManager) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+// DiscoveryAddresses .
+func (m MockPeerManager) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	return nil, nil
 }
 
