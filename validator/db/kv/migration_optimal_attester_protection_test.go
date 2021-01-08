@@ -4,13 +4,53 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang/snappy"
+	bolt "go.etcd.io/bbolt"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	bolt "go.etcd.io/bbolt"
 )
+
+func TestMemory_migrateOptimalAttesterProtection(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 2000
+	pubKeys := make([][48]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		var pk [48]byte
+		copy(pk[:], fmt.Sprintf("%d", i))
+		pubKeys[i] = pk
+	}
+	validatorDB := setupDB(t, pubKeys)
+	history := NewAttestationHistoryArray(0)
+	// Attest all epochs from genesis to 8500 (similar to mainnet).
+	numEpochs := uint64(11425)
+	for i := uint64(1); i <= numEpochs; i++ {
+		var sr [32]byte
+		copy(sr[:], fmt.Sprintf("%d", i))
+		newHist, err := history.SetTargetData(ctx, i, &HistoryData{
+			Source:      i - 1,
+			SigningRoot: sr[:],
+		})
+		require.NoError(t, err)
+		history = newHist
+	}
+	newHist, err := history.SetLatestEpochWritten(ctx, numEpochs)
+	require.NoError(t, err)
+	enc := snappy.Encode(nil /*dst*/, newHist)
+
+	err = validatorDB.setupHistoryForTest(pubKeys, enc)
+	require.NoError(t, err)
+
+	// Attempt a migration.
+	fmt.Printf("Attempting migration for %d validators each attesting %d epochs\n", numValidators, numEpochs)
+	start := time.Now()
+	require.NoError(t, validatorDB.migrateTxCommit())
+	end := time.Now()
+	fmt.Printf("Migration complete, took %v\n", end.Sub(start))
+}
 
 func Test_migrateOptimalAttesterProtection(t *testing.T) {
 	tests := []struct {
