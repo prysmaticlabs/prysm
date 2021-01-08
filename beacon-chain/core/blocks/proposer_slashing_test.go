@@ -141,27 +141,21 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	proposerIdx := uint64(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
+		Header: testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			Slot:          0,
-			ParentRoot:    make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
 			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
-		},
+		}),
 	}
 	var err error
 	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	header2 := &ethpb.SignedBeaconBlockHeader{
+	header2 := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			Slot:          0,
-			ParentRoot:    make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
-	}
+	})
 	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -211,24 +205,18 @@ func TestVerifyProposerSlashing(t *testing.T) {
 			name: "same header, same slot as state",
 			args: args{
 				slashing: &ethpb.ProposerSlashing{
-					Header_1: &ethpb.SignedBeaconBlockHeader{
+					Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          currentSlot,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
-							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
-					},
-					Header_2: &ethpb.SignedBeaconBlockHeader{
+					}),
+					Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          currentSlot,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
-							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
-					},
+					}),
 				},
 				beaconState: beaconState,
 			},
@@ -238,26 +226,18 @@ func TestVerifyProposerSlashing(t *testing.T) {
 			name: "same header, different signatures",
 			args: args{
 				slashing: &ethpb.ProposerSlashing{
-					Header_1: &ethpb.SignedBeaconBlockHeader{
+					Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
-							Slot:          0,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
-							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
 						Signature: sig1,
-					},
-					Header_2: &ethpb.SignedBeaconBlockHeader{
+					}),
+					Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
-							Slot:          0,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
-							ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 						},
 						Signature: sig2,
-					},
+					}),
 				},
 				beaconState: beaconState,
 			},
@@ -267,24 +247,20 @@ func TestVerifyProposerSlashing(t *testing.T) {
 			name: "slashing in future epoch",
 			args: args{
 				slashing: &ethpb.ProposerSlashing{
-					Header_1: &ethpb.SignedBeaconBlockHeader{
+					Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          65,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
 							ParentRoot:    bytesutil.PadTo([]byte("foo"), 32),
 						},
-					},
-					Header_2: &ethpb.SignedBeaconBlockHeader{
+					}),
+					Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          65,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
 							ParentRoot:    bytesutil.PadTo([]byte("bar"), 32),
 						},
-					},
+					}),
 				},
 				beaconState: beaconState,
 			},
