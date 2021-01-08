@@ -49,6 +49,7 @@ go_test(
         "//shared/bls:go_default_library",
         "//shared/params:go_default_library",
         "//shared/runutil:go_default_library",
+        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/timeutils:go_default_library",

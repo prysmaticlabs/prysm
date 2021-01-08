@@ -27,7 +27,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -48,8 +47,6 @@ func randomHex(n int) string {
 }
 
 func init() {
-	featureconfig.Init(&featureconfig.Flags{SkipBLSVerify: true})
-
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 
@@ -89,10 +86,12 @@ type fakeChecker struct{}
 func (fakeChecker) Syncing() bool {
 	return false
 }
+func (fakeChecker) Initialized() bool {
+	return false
+}
 func (fakeChecker) Status() error {
 	return nil
 }
-
 func (fakeChecker) Resync() error {
 	return nil
 }

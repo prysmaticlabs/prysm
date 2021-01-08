@@ -404,17 +404,17 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 		beaconDB: beaconDB,
 		stateGen: stategen.New(beaconDB),
 	}
-	b := testutil.NewBeaconBlock()
-	b.Block.Slot = 1
-	r, err := b.HashTreeRoot()
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 1
+	r, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	newState := testutil.NewBeaconState()
 	require.NoError(t, s.stateGen.SaveState(ctx, r, newState))
-	require.NoError(t, s.saveHeadNoDB(ctx, b, r, newState))
+	require.NoError(t, s.saveHeadNoDB(ctx, blk, r, newState))
 
 	newB, err := s.beaconDB.HeadBlock(ctx)
 	require.NoError(t, err)
-	if reflect.DeepEqual(newB, b) {
+	if reflect.DeepEqual(newB, blk) {
 		t.Error("head block should not be equal")
 	}
 }
@@ -430,8 +430,8 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
-	state := testutil.NewBeaconState()
-	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, state))
+	beaconState := testutil.NewBeaconState()
+	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, beaconState))
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
@@ -484,9 +484,9 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)
 	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	state, err := beaconstate.InitializeFromProto(bs)
+	beaconState, err := beaconstate.InitializeFromProto(bs)
 	require.NoError(b, err)
-	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, state))
+	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, beaconState))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

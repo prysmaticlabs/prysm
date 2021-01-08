@@ -229,17 +229,17 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 	for i := 0; i < numPeers; i++ {
 		addPeer(t, p, peers.PeerDisconnected)
 	}
-	peers := p.SubscribedToSubnet(2)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps := p.SubscribedToSubnet(2)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 
-	peers = p.SubscribedToSubnet(8)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps = p.SubscribedToSubnet(8)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 
-	peers = p.SubscribedToSubnet(9)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps = p.SubscribedToSubnet(9)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 }
 
 func TestPeerImplicitAdd(t *testing.T) {

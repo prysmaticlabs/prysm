@@ -195,6 +195,7 @@ func (v *ValidatorService) Start() {
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
+		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		logDutyCountDown:               v.logDutyCountDown,
 	}

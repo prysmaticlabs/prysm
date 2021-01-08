@@ -33,7 +33,7 @@ func TestLogNextDutyCountDown_HasDutyAttester(t *testing.T) {
 		}},
 	}
 	require.NoError(t, v.LogNextDutyTimeLeft(115))
-	require.LogsContain(t, hook, "\"Next duty\" currentSlot=115 dutySlot=120 prefix=validator role=attester")
+	require.LogsContain(t, hook, "\"Next duty\" attesting=1 currentSlot=115 dutySlot=120 prefix=validator proposing=0")
 }
 
 func TestLogNextDutyCountDown_HasDutyProposer(t *testing.T) {
@@ -47,5 +47,28 @@ func TestLogNextDutyCountDown_HasDutyProposer(t *testing.T) {
 		}},
 	}
 	require.NoError(t, v.LogNextDutyTimeLeft(101))
-	require.LogsContain(t, hook, "\"Next duty\" currentSlot=101 dutySlot=105 prefix=validator role=proposer")
+	require.LogsContain(t, hook, "\"Next duty\" attesting=0 currentSlot=101 dutySlot=105 prefix=validator proposing=1")
+}
+
+func TestLogNextDutyCountDown_HasMultipleDuties(t *testing.T) {
+	hook := logTest.NewGlobal()
+	v := &validator{
+		logDutyCountDown: true,
+		duties: &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{AttesterSlot: 120},
+			{AttesterSlot: 110},
+			{AttesterSlot: 105},
+			{AttesterSlot: 105},
+			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
+		}},
+	}
+	require.NoError(t, v.LogNextDutyTimeLeft(101))
+	require.LogsContain(t, hook, "\"Next duty\" attesting=2 currentSlot=101 dutySlot=105 prefix=validator proposing=1")
+}
+
+func TestLogNextDutyCountDown_NilDuty(t *testing.T) {
+	v := &validator{
+		logDutyCountDown: true,
+	}
+	require.NoError(t, v.LogNextDutyTimeLeft(101))
 }
