@@ -247,20 +247,24 @@ func TestVerifyProposerSlashing(t *testing.T) {
 			name: "slashing in future epoch",
 			args: args{
 				slashing: &ethpb.ProposerSlashing{
-					Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+					Header_1: &ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          65,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
 							ParentRoot:    bytesutil.PadTo([]byte("foo"), 32),
 						},
-					}),
-					Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+					},
+					Header_2: &ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          65,
+							StateRoot:     bytesutil.PadTo([]byte{}, 32),
+							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
 							ParentRoot:    bytesutil.PadTo([]byte("bar"), 32),
 						},
-					}),
+					},
 				},
 				beaconState: beaconState,
 			},
