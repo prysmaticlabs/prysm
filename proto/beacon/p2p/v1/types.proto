@@ -34,9 +34,9 @@ message BeaconState {
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];
 
-  // Attestations [7001-8000]
-  repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"previous_epoch_attestations.max\""];
-  repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"current_epoch_attestations.max\""];
+  // Participations [7001-8000]
+  repeated ParticipationBits previous_epoch_participation = 7001 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
+  repeated ParticipationBits current_epoch_participation = 7002 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
 
   // Finality [8001-9000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.
@@ -44,6 +44,10 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint previous_justified_checkpoint = 8002;
   ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
+}
+
+message ParticipationBits {
+  bytes bits = 1 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
 }
 
 message Fork {
