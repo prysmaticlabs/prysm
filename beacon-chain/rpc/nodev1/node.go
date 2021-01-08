@@ -9,6 +9,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/status"
@@ -20,15 +21,27 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 	defer span.End()
 
 	peerId := ns.PeerManager.PeerID().Pretty()
-	enr := ns.PeerManager.ENR().IdentityScheme()
+
+	serializedEnr, err := p2p.SerializeENR(ns.PeerManager.ENR())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not obtain enr")
+	}
+	enr := fmt.Sprint("enr:", serializedEnr)
+
 	var p2pAddresses []string
 	for _, address := range ns.PeerManager.Host().Addrs() {
-		p2pAddresses = append(p2pAddresses, address.String())
+		p2pAddresses = append(p2pAddresses, fmt.Sprint(address.String(), "/p2p/", peerId))
 	}
-	discoveryAddress, err := ns.PeerManager.DiscoveryAddress()
+
+	disc, err := ns.PeerManager.DiscoveryAddresses()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain discovery address")
 	}
+	var discoveryAddresses []string
+	for _, address := range disc {
+		discoveryAddresses = append(discoveryAddresses, address.String())
+	}
+
 	metadata := &ethpb.Metadata{
 		SeqNumber: ns.MetadataProvider.MetadataSeq(),
 		Attnets:   ns.MetadataProvider.Metadata().Attnets,
@@ -39,7 +52,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 			PeerId:             peerId,
 			Enr:                enr,
 			P2PAddresses:       p2pAddresses,
-			DiscoveryAddresses: []string{discoveryAddress.String()},
+			DiscoveryAddresses: discoveryAddresses,
 			Metadata:           metadata,
 		},
 	}, nil
