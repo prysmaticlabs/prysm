@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -30,11 +29,9 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 		bkt := tx.Bucket(historicAttestationsBucket)
 		numKeys = bkt.Stats().KeyN
 		if err := bkt.ForEach(func(k, v []byte) error {
-			fmt.Println("Looping through every key...")
 			if v == nil {
 				return nil
 			}
-			fmt.Println("Creating att buckets")
 			bucket := tx.Bucket(pubKeysBucket)
 			pkBucket, err := bucket.CreateBucketIfNotExists(k)
 			if err != nil {
