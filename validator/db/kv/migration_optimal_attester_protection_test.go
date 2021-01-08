@@ -16,7 +16,7 @@ import (
 
 func TestMemory_migrateOptimalAttesterProtection(t *testing.T) {
 	ctx := context.Background()
-	numValidators := 500
+	numValidators := 2000
 	pubKeys := make([][48]byte, numValidators)
 	for i := 0; i < numValidators; i++ {
 		var pk [48]byte
@@ -26,7 +26,7 @@ func TestMemory_migrateOptimalAttesterProtection(t *testing.T) {
 	validatorDB := setupDB(t, pubKeys)
 	history := NewAttestationHistoryArray(0)
 	// Attest all epochs from genesis to 8500 (similar to mainnet).
-	numEpochs := uint64(8500)
+	numEpochs := uint64(11425)
 	for i := uint64(1); i <= numEpochs; i++ {
 		var sr [32]byte
 		copy(sr[:], fmt.Sprintf("%d", i))

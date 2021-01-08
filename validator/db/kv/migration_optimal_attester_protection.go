@@ -97,79 +97,110 @@ func (db *Store) setupHistoryForTest(pubKeys [][48]byte, enc []byte) error {
 }
 
 func (store *Store) migrateTxCommit() error {
-	tx, err := store.db.Begin(true)
-	if err != nil {
-		return nil
-	}
-	mb := tx.Bucket(migrationsBucket)
-	if b := mb.Get(migrationOptimalAttesterProtectionKey); bytes.Equal(b, migrationCompleted) {
-		return nil // Migration already completed.
-	}
-
-	bkt := tx.Bucket(historicAttestationsBucket)
-
-	// Compress all attestation history data.
-	ctx := context.Background()
-	bar := progressutil.InitializeProgressBar(bkt.Stats().KeyN, "Migrating attesting history to more efficient format")
-	if err := bkt.ForEach(func(k, v []byte) error {
-		if v == nil {
-			return nil
-		}
-		var attestingHistory EncHistoryData
-		var err error
-		attestingHistory, err = snappy.Decode(nil /*dst*/, v)
-		if err != nil {
-			return err
+	keys := make([][]byte, 0)
+	vals := make([][]byte, 0)
+	numKeys := 0
+	err := store.db.Update(func(tx *bolt.Tx) error {
+		mb := tx.Bucket(migrationsBucket)
+		if b := mb.Get(migrationOptimalAttesterProtectionKey); bytes.Equal(b, migrationCompleted) {
+			return nil // Migration already completed.
 		}
 
-		bucket := tx.Bucket(pubKeysBucket)
-		pkBucket, err := bucket.CreateBucketIfNotExists(k)
-		if err != nil {
-			return err
-		}
-		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
-		if err != nil {
-			return err
-		}
-		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
-		if err != nil {
-			return err
-		}
-
-		// Extract every single source, target, signing root
-		// from the attesting history then insert them into the
-		// respective buckets under the new db schema.
-		latestEpochWritten, err := attestingHistory.GetLatestEpochWritten(ctx)
-		if err != nil {
-			return err
-		}
-		// For every epoch since genesis up to the highest epoch written, we then
-		// extract historical data and insert it into the new schema.
-		for targetEpoch := uint64(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
-			historicalAtt, err := attestingHistory.GetTargetData(ctx, targetEpoch)
+		bkt := tx.Bucket(historicAttestationsBucket)
+		numKeys = bkt.Stats().KeyN
+		if err := bkt.ForEach(func(k, v []byte) error {
+			if v == nil {
+				return nil
+			}
+			bucket := tx.Bucket(pubKeysBucket)
+			pkBucket, err := bucket.CreateBucketIfNotExists(k)
 			if err != nil {
 				return err
 			}
-			if historicalAtt.IsEmpty() {
-				continue
-			}
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
-			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(historicalAtt.Source)
-			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+			_, err = pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
+			if err != nil {
 				return err
 			}
-			if err := signingRootsBucket.Put(targetEpochBytes, historicalAtt.SigningRoot); err != nil {
+			_, err = pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
+			if err != nil {
 				return err
 			}
+			nk := make([]byte, len(k))
+			copy(nk, k)
+			nv := make([]byte, len(v))
+			copy(nv, v)
+			keys = append(keys, nk)
+			vals = append(vals, nv)
+			return nil
+		}); err != nil {
+			return err
 		}
-		return bar.Add(1)
-	}); err != nil {
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 
-	if err := mb.Put(migrationOptimalAttesterProtectionKey, migrationCompleted); err != nil {
-		return err
+	// Compress all attestation history data.
+	ctx := context.Background()
+	bar := progressutil.InitializeProgressBar(numKeys, "Migrating attesting history to more efficient format")
+	for i, k := range keys {
+		v := vals[i]
+		err = store.db.Update(func(tx *bolt.Tx) error {
+			if v == nil {
+				return nil
+			}
+			var attestingHistory EncHistoryData
+			var err error
+			attestingHistory, err = snappy.Decode(nil /*dst*/, v)
+			if err != nil {
+				return err
+			}
+
+			bucket := tx.Bucket(pubKeysBucket)
+			pkBucket := bucket.Bucket(k)
+			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
+
+			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+
+			// Extract every single source, target, signing root
+			// from the attesting history then insert them into the
+			// respective buckets under the new db schema.
+			latestEpochWritten, err := attestingHistory.GetLatestEpochWritten(ctx)
+			if err != nil {
+				return err
+			}
+			// For every epoch since genesis up to the highest epoch written, we then
+			// extract historical data and insert it into the new schema.
+			for targetEpoch := uint64(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
+				historicalAtt, err := attestingHistory.GetTargetData(ctx, targetEpoch)
+				if err != nil {
+					return err
+				}
+				if historicalAtt.IsEmpty() {
+					continue
+				}
+				targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+				sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(historicalAtt.Source)
+				if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+					return err
+				}
+				if err := signingRootsBucket.Put(targetEpochBytes, historicalAtt.SigningRoot); err != nil {
+					return err
+				}
+			}
+			return bar.Add(1)
+		})
+		if err != nil {
+			return err
+		}
 	}
 
-	return tx.Commit()
+	return store.db.Update(func(tx *bolt.Tx) error {
+		mb := tx.Bucket(migrationsBucket)
+		if err := mb.Put(migrationOptimalAttesterProtectionKey, migrationCompleted); err != nil {
+			return err
+		}
+		return nil
+	})
 }
