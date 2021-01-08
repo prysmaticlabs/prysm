@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -520,6 +521,9 @@ func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
 }
 
 func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{AttestTimely: true})
+	defer resetCfg()
+
 	currentTime := uint64(time.Now().Unix())
 	currentSlot := uint64(4)
 	genesisTime := currentTime - (currentSlot * params.BeaconConfig().SecondsPerSlot)
