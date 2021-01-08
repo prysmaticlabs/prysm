@@ -22,7 +22,7 @@ var ProtectionDbFileName = "validator.db"
 type Store struct {
 	db                         *bolt.DB
 	databasePath               string
-	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
+	attestingHistoriesByPubKey map[[48]byte]deprecatedEncodedAttestingHistory
 }
 
 // Close closes the underlying boltdb database.
@@ -86,7 +86,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                         boltDB,
 		databasePath:               dirPath,
-		attestingHistoriesByPubKey: make(map[[48]byte]EncHistoryData),
+		attestingHistoriesByPubKey: make(map[[48]byte]deprecatedEncodedAttestingHistory),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {

@@ -29,7 +29,7 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 		if v == nil {
 			return nil
 		}
-		var attestingHistory EncHistoryData
+		var attestingHistory deprecatedEncodedAttestingHistory
 		var err error
 		attestingHistory, err = snappy.Decode(nil /*dst*/, v)
 		if err != nil {
@@ -53,14 +53,14 @@ func migrateOptimalAttesterProtection(tx *bolt.Tx) error {
 		// Extract every single source, target, signing root
 		// from the attesting history then insert them into the
 		// respective buckets under the new db schema.
-		latestEpochWritten, err := attestingHistory.GetLatestEpochWritten(ctx)
+		latestEpochWritten, err := attestingHistory.getLatestEpochWritten(ctx)
 		if err != nil {
 			return err
 		}
 		// For every epoch since genesis up to the highest epoch written, we then
 		// extract historical data and insert it into the new schema.
 		for targetEpoch := uint64(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
-			historicalAtt, err := attestingHistory.GetTargetData(ctx, targetEpoch)
+			historicalAtt, err := attestingHistory.getTargetData(ctx, targetEpoch)
 			if err != nil {
 				return err
 			}

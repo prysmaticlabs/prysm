@@ -113,7 +113,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 			}
 		}
 	}
-	return saveLowestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
+	return nil
 }
 
 func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
@@ -261,52 +261,4 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 		})
 	}
 	return historicalAtts, nil
-}
-
-// This saves the lowest source and target epoch from the individual validator to the DB.
-func saveLowestSourceTargetToDB(ctx context.Context, validatorDB db.Database, signedAttsByPubKey map[[48]byte][]*SignedAttestation) error {
-	validatorLowestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested source epoch.
-	validatorLowestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested target epoch.
-	for pubKey, signedAtts := range signedAttsByPubKey {
-		for _, att := range signedAtts {
-			source, err := uint64FromString(att.SourceEpoch)
-			if err != nil {
-				return fmt.Errorf("%d is not a valid source: %v", source, err)
-			}
-			target, err := uint64FromString(att.TargetEpoch)
-			if err != nil {
-				return fmt.Errorf("%d is not a valid target: %v", target, err)
-			}
-			se, ok := validatorLowestSourceEpoch[pubKey]
-			if !ok {
-				validatorLowestSourceEpoch[pubKey] = source
-			} else if source < se {
-				validatorLowestSourceEpoch[pubKey] = source
-			}
-			te, ok := validatorLowestTargetEpoch[pubKey]
-			if !ok {
-				validatorLowestTargetEpoch[pubKey] = target
-			} else if target < te {
-				validatorLowestTargetEpoch[pubKey] = target
-			}
-		}
-	}
-
-	// This should not happen.
-	if len(validatorLowestTargetEpoch) != len(validatorLowestSourceEpoch) {
-		return errors.New("incorrect source and target map length")
-	}
-
-	// Save lowest source and target epoch to DB for every validator in the map.
-	for k, v := range validatorLowestSourceEpoch {
-		if err := validatorDB.SaveLowestSignedSourceEpoch(ctx, k, v); err != nil {
-			return err
-		}
-	}
-	for k, v := range validatorLowestTargetEpoch {
-		if err := validatorDB.SaveLowestSignedTargetEpoch(ctx, k, v); err != nil {
-			return err
-		}
-	}
-	return nil
 }
