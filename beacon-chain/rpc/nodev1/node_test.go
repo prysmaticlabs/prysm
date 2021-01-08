@@ -7,17 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-
-	"github.com/libp2p/go-libp2p-core/peer"
-
 	"github.com/ethereum/go-ethereum/p2p/enode"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
