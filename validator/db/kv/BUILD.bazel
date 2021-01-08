@@ -14,6 +14,7 @@ go_library(
         "migration_optimal_attester_protection.go",
         "migration_snappy_history.go",
         "proposal_history_v2.go",
+        "prune_attester_protection.go",
         "schema.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
@@ -21,10 +22,10 @@ go_library(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/progressutil:go_default_library",
+        "//shared/slashutil:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
@@ -48,6 +49,7 @@ go_test(
         "migration_optimal_attester_protection_test.go",
         "migration_snappy_history_test.go",
         "proposal_history_v2_test.go",
+        "prune_attester_protection_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
