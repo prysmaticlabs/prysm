@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -11,9 +12,11 @@ import (
 
 // MockPeerManager is mock of the PeerManager interface.
 type MockPeerManager struct {
-	Enr   *enr.Record
-	PID   peer.ID
-	BHost host.Host
+	Enr               *enr.Record
+	PID               peer.ID
+	BHost             host.Host
+	DiscoveryAddr     []multiaddr.Multiaddr
+	FailDiscoveryAddr bool
 }
 
 // Disconnect .
@@ -38,7 +41,10 @@ func (m MockPeerManager) ENR() *enr.Record {
 
 // DiscoveryAddresses .
 func (m MockPeerManager) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
-	return nil, nil
+	if m.FailDiscoveryAddr {
+		return nil, errors.New("fail")
+	}
+	return m.DiscoveryAddr, nil
 }
 
 // RefreshENR .
