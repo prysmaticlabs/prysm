@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -54,15 +55,9 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				},
-				Signature:       make([]byte, 96),
+			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
-			},
+			}),
 			SelectionProof: make([]byte, 96),
 		},
 	}, nil)
@@ -99,15 +94,9 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				},
-				Signature:       make([]byte, 96),
+			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
-			},
+			}),
 			SelectionProof: make([]byte, 96),
 		},
 	}, nil)

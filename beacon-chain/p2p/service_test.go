@@ -225,8 +225,7 @@ func TestListenForNewNodes(t *testing.T) {
 		})
 	}
 	time.Sleep(4 * time.Second)
-	peers := s.host.Network().Peers()
-	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
+	assert.Equal(t, 5, len(s.host.Network().Peers()), "Not all peers added to peerstore")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
