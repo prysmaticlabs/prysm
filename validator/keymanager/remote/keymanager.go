@@ -97,6 +97,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		tlsCfg := &tls.Config{
 			Certificates: []tls.Certificate{clientPair},
 			RootCAs:      cp,
+			MinVersion:   tls.VersionTLS13,
 		}
 		clientCreds = credentials.NewTLS(tlsCfg)
 	}

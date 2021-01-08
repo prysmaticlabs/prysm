@@ -20,9 +20,9 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	validatorDB := setupDB(t, pubKeys)
 	tests := []struct {
 		name                string
-		existingAttestation *ethpb.Attestation
+		existingAttestation *ethpb.IndexedAttestation
 		existingSigningRoot [32]byte
-		incomingAttestation *ethpb.Attestation
+		incomingAttestation *ethpb.IndexedAttestation
 		incomingSigningRoot [32]byte
 		want                bool
 	}{
@@ -118,7 +118,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	tests := []struct {
 		name        string
 		signingRoot [32]byte
-		attestation *ethpb.Attestation
+		attestation *ethpb.IndexedAttestation
 		want        SlashingKind
 	}{
 		{
@@ -211,7 +211,7 @@ func benchCheckSurroundVote(
 	require.NoError(b, err)
 
 	// Will surround many attestations.
-	var surroundingVote *ethpb.Attestation
+	var surroundingVote *ethpb.IndexedAttestation
 	if shouldSurround {
 		surroundingVote = createAttestation(numEpochs/2, numEpochs)
 	} else {
@@ -231,8 +231,8 @@ func benchCheckSurroundVote(
 	}
 }
 
-func createAttestation(source, target uint64) *ethpb.Attestation {
-	return &ethpb.Attestation{
+func createAttestation(source, target uint64) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
 				Epoch: source,
