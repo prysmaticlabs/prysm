@@ -47,7 +47,7 @@ message BeaconState {
 }
 
 message ParticipationBits {
-  bytes bits = 1 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
+  bytes bits = 1 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector8"];
 }
 
 message Fork {
