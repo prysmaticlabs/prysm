@@ -37,7 +37,7 @@ func (hd EncHistoryData) assertSize() error {
 		return fmt.Errorf("encapsulated data size: %d is smaller then minimal size: %d", len(hd), minimalSize)
 	}
 	if (len(hd)-minimalSize)%historySize != 0 {
-		return fmt.Errorf("encapsulated data size: %d ivalidator/client/validator.gos not a multiple of entry size: %d", len(hd), historySize)
+		return fmt.Errorf("encapsulated data size: %d is not a multiple of entry size: %d", len(hd), historySize)
 	}
 	return nil
 }
