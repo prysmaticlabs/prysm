@@ -11,7 +11,6 @@ var migrationCompleted = []byte("done")
 type migration func(*bolt.Tx) error
 
 var migrations = []migration{
-	migrateSnappyAttestationHistory,
 }
 
 // RunMigrations defined in the migrations array.
