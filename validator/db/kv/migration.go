@@ -10,8 +10,7 @@ var migrationCompleted = []byte("done")
 
 type migration func(*bolt.Tx) error
 
-var migrations = []migration{
-}
+var migrations = []migration{}
 
 // RunMigrations defined in the migrations array.
 func (s *Store) RunMigrations(ctx context.Context) error {
