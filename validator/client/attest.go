@@ -260,6 +260,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
 			return
 
 		case <-t.C:
+			fmt.Println("Successfully waited 1/3. Slot ", slot)
 			return
 		}
 	}
