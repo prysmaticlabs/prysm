@@ -106,6 +106,10 @@ var (
 		Name:  "disable-broadcast-slashings",
 		Usage: "Disables broadcasting slashings submitted to the beacon node.",
 	}
+	attestTimely = &cli.BoolFlag{
+		Name:  "attest-timely",
+		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -124,6 +128,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableAccountsV2,
 	disableBlst,
 	dynamicKeyReloadDebounceInterval,
+	attestTimely,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.

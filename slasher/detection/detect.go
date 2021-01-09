@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
@@ -138,8 +137,8 @@ func (ds *Service) detectSurroundVotes(
 		if att.Data == nil {
 			continue
 		}
-		isSurround := slashutil.IsSurround(incomingAtt, att)
-		isSurrounded := slashutil.IsSurround(att, incomingAtt)
+		isSurround := isSurrounding(incomingAtt, att)
+		isSurrounded := isSurrounding(att, incomingAtt)
 		if !isSurround && !isSurrounded {
 			continue
 		}
@@ -209,6 +208,11 @@ func isDoublePropose(incomingBlockHeader, prevBlockHeader *ethpb.SignedBeaconBlo
 
 func isDoubleVote(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
 	return !attestationutil.AttDataIsEqual(incomingAtt.Data, prevAtt.Data) && incomingAtt.Data.Target.Epoch == prevAtt.Data.Target.Epoch
+}
+
+func isSurrounding(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
+	return incomingAtt.Data.Source.Epoch < prevAtt.Data.Source.Epoch &&
+		incomingAtt.Data.Target.Epoch > prevAtt.Data.Target.Epoch
 }
 
 // UpdateHighestAttestation updates to the db the highest source and target attestations for a each validator.
