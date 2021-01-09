@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -86,7 +87,7 @@ type ChainInfoFetcher interface {
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
 type POWBlockFetcher interface {
 	BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error)
-	BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error)
+	BlockByTimestamp(ctx context.Context, time uint64) (*types.HeaderInfo, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
@@ -428,13 +429,13 @@ func (s *Service) dialETH1Nodes(endpoint string) (*ethclient.Client, *gethRPC.Cl
 		closeClients()
 		return nil, nil, err
 	}
-	if cID.Uint64() != params.BeaconNetworkConfig().ChainID {
+	if cID.Uint64() != params.BeaconConfig().DepositChainID {
 		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconNetworkConfig().ChainID)
+		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconConfig().DepositChainID)
 	}
-	if nID.Uint64() != params.BeaconNetworkConfig().NetworkID {
+	if nID.Uint64() != params.BeaconConfig().DepositNetworkID {
 		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconNetworkConfig().NetworkID)
+		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconConfig().DepositNetworkID)
 	}
 
 	return httpClient, httpRPCClient, nil
@@ -620,7 +621,7 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
-	errors := make([]error, 0, requestRange)
+	errs := make([]error, 0, requestRange)
 	if requestRange == 0 {
 		return headers, nil
 	}
@@ -634,13 +635,13 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes
 			Error:  err,
 		})
 		headers = append(headers, header)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
 		return nil, ioErr
 	}
-	for _, e := range errors {
+	for _, e := range errs {
 		if e != nil {
 			return nil, e
 		}
@@ -847,11 +848,11 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)
 	}
 	earliestValidTime := votingTime - followBackDist
-	blkNum, err := s.BlockNumberByTimestamp(ctx, earliestValidTime)
+	hdr, err := s.BlockByTimestamp(ctx, earliestValidTime)
 	if err != nil {
 		return 0, err
 	}
-	return blkNum.Uint64(), nil
+	return hdr.Number.Uint64(), nil
 }
 
 // This performs a health check on our primary endpoint, and if it

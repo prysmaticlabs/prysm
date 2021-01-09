@@ -66,7 +66,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		} else {
@@ -80,7 +80,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		}
@@ -131,7 +131,7 @@ func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	default:
-		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
+		return fmt.Errorf(msgKeymanagerNotSupported, cfg.Wallet.KeymanagerKind())
 	}
 	return nil
 }

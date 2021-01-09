@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 )
 
 // MockPeerManager is mock of the PeerManager interface.
@@ -33,6 +34,11 @@ func (m *MockPeerManager) Host() host.Host {
 // ENR .
 func (m MockPeerManager) ENR() *enr.Record {
 	return m.Enr
+}
+
+// DiscoveryAddresses .
+func (m MockPeerManager) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
+	return nil, nil
 }
 
 // RefreshENR .

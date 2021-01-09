@@ -24,7 +24,7 @@ var ProtectionDbFileName = "validator.db"
 type Store struct {
 	db                         *bolt.DB
 	databasePath               string
-	lock                       sync.Mutex
+	lock                       sync.RWMutex
 	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
 }
 
@@ -96,14 +96,14 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 		return createBuckets(
 			tx,
 			genesisInfoBucket,
-			historicProposalsBucket,
 			historicAttestationsBucket,
-			newHistoricAttestationsBucket,
-			newHistoricProposalsBucket,
+			historicProposalsBucket,
 			lowestSignedSourceBucket,
 			lowestSignedTargetBucket,
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
+			pubKeysBucket,
+			migrationsBucket,
 		)
 	}); err != nil {
 		return nil, err
@@ -129,13 +129,16 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 			kv.attestingHistoriesByPubKey[pubKey] = history
 		}
 	}
+	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not prune old attestations from DB")
+	}
 	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
 
 // UpdatePublicKeysBuckets for a specified list of keys.
 func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricProposalsBucket)
+		bucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKey := range pubKeys {
 			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
 				return errors.Wrap(err, "failed to create proposal history bucket")

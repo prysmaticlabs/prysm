@@ -339,14 +339,6 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 		return nil
 	}
 
-	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		return err
-	}
-	proposerIndices, err := precomputeProposerIndices(state, indices)
-	if err != nil {
-		return err
-	}
 	// Use state root from (current_epoch - 1 - lookahead))
 	wantedEpoch := PrevEpoch(state)
 	if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
@@ -360,9 +352,26 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return err
 	}
-	// Skip Cache if we have an invalid key
+	// Skip cache update if we have an invalid key
 	if r == nil || bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
 		return nil
+	}
+	// Skip cache update if the key already exists
+	exists, err := proposerIndicesCache.HasProposerIndices(bytesutil.ToBytes32(r))
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return err
+	}
+	proposerIndices, err := precomputeProposerIndices(state, indices)
+	if err != nil {
+		return err
 	}
 	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
 		BlockRoot:       bytesutil.ToBytes32(r),

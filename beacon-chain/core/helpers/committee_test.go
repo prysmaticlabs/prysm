@@ -660,9 +660,9 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Did not precompute proposer indices correctly")
 }
 
-func TestUpdateProposerIndicesInCache_CouldNotGetActiveIndices(t *testing.T) {
+func TestUpdateProposerIndicesInCache_SlotOutOfBound(t *testing.T) {
 	err := UpdateProposerIndicesInCache(&beaconstate.BeaconState{}, 2)
-	want := "nil inner state"
+	want := "out of bound"
 	require.ErrorContains(t, want, err)
 }
 

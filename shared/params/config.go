@@ -3,8 +3,6 @@ package params
 
 import (
 	"time"
-
-	"github.com/mohae/deepcopy"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -56,6 +54,15 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance               uint64 `yaml:"ETH1_FOLLOW_DISTANCE"`                // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	SafeSlotsToUpdateJustified       uint64 `yaml:"SAFE_SLOTS_TO_UPDATE_JUSTIFIED"`      // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
 	SecondsPerETH1Block              uint64 `yaml:"SECONDS_PER_ETH1_BLOCK"`              // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
+
+	// Ethereum PoW parameters.
+	DepositChainID         uint64 `yaml:"DEPOSIT_CHAIN_ID"`         // DepositChainID of the eth1 network. This used for replay protection.
+	DepositNetworkID       uint64 `yaml:"DEPOSIT_NETWORK_ID"`       // DepositNetworkID of the eth1 network. This used for replay protection.
+	DepositContractAddress string `yaml:"DEPOSIT_CONTRACT_ADDRESS"` // DepositContractAddress is the address of the deposit contract.
+
+	// Validator parameters.
+	RandomSubnetsPerValidator         uint64 `yaml:"RANDOM_SUBNETS_PER_VALIDATOR"`          // RandomSubnetsPerValidator specifies the amount of subnets a validator has to be subscribed to at one time.
+	EpochsPerRandomSubnetSubscription uint64 `yaml:"EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION"` // EpochsPerRandomSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -122,28 +129,4 @@ type BeaconChainConfig struct {
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
-}
-
-var beaconConfig = MainnetConfig()
-
-// BeaconConfig retrieves beacon chain config.
-func BeaconConfig() *BeaconChainConfig {
-	return beaconConfig
-}
-
-// OverrideBeaconConfig by replacing the config. The preferred pattern is to
-// call BeaconConfig(), change the specific parameters, and then call
-// OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
-// return this new configuration.
-func OverrideBeaconConfig(c *BeaconChainConfig) {
-	beaconConfig = c
-}
-
-// Copy returns a copy of the config object.
-func (c *BeaconChainConfig) Copy() *BeaconChainConfig {
-	config, ok := deepcopy.Copy(*c).(BeaconChainConfig)
-	if !ok {
-		config = *beaconConfig
-	}
-	return &config
 }

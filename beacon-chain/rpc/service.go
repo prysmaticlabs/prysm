@@ -9,6 +9,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -37,6 +39,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -62,6 +65,7 @@ type Service struct {
 	beaconDB                db.HeadAccessDatabase
 	chainInfoFetcher        blockchain.ChainInfoFetcher
 	headFetcher             blockchain.HeadFetcher
+	canonicalFetcher        blockchain.CanonicalFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
 	genesisTimeFetcher      blockchain.TimeFetcher
@@ -112,6 +116,7 @@ type Config struct {
 	BeaconDB                db.HeadAccessDatabase
 	ChainInfoFetcher        blockchain.ChainInfoFetcher
 	HeadFetcher             blockchain.HeadFetcher
+	CanonicalFetcher        blockchain.CanonicalFetcher
 	ForkFetcher             blockchain.ForkFetcher
 	FinalizationFetcher     blockchain.FinalizationFetcher
 	AttestationReceiver     blockchain.AttestationReceiver
@@ -150,6 +155,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		headFetcher:             cfg.HeadFetcher,
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
+		canonicalFetcher:        cfg.CanonicalFetcher,
 		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		attestationReceiver:     cfg.AttestationReceiver,
@@ -256,6 +262,8 @@ func (s *Service) Start() {
 		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
+		LogsStreamer:         logutil.NewStreamServer(),
+		StreamLogsBufferSize: 100, // Enough to handle bursts of beacon node logs for gRPC streaming.
 		BeaconDB:             s.beaconDB,
 		Server:               s.grpcServer,
 		SyncChecker:          s.syncService,
@@ -266,6 +274,15 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.beaconMonitoringHost,
 		BeaconMonitoringPort: s.beaconMonitoringPort,
 	}
+	nodeServerV1 := &nodev1.Server{
+		BeaconDB:           s.beaconDB,
+		Server:             s.grpcServer,
+		SyncChecker:        s.syncService,
+		GenesisTimeFetcher: s.genesisTimeFetcher,
+		PeersFetcher:       s.peersFetcher,
+		PeerManager:        s.peerManager,
+		GenesisFetcher:     s.genesisFetcher,
+	}
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.beaconDB,
@@ -273,6 +290,7 @@ func (s *Service) Start() {
 		SlashingsPool:               s.slashingsPool,
 		HeadFetcher:                 s.headFetcher,
 		FinalizationFetcher:         s.finalizationFetcher,
+		CanonicalFetcher:            s.canonicalFetcher,
 		ChainStartFetcher:           s.chainStartFetcher,
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,
@@ -306,6 +324,7 @@ func (s *Service) Start() {
 		SyncChecker:         s.syncService,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)

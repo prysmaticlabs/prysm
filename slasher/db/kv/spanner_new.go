@@ -101,7 +101,7 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 	if len(es.Bytes())%int(types.SpannerEncodedLength) != 0 {
 		return types.ErrWrongSize
 	}
-	//also prune indexed attestations older then weak subjectivity period
+	// Also prune indexed attestations older then weak subjectivity period.
 	if err := db.setObservedEpochs(ctx, epoch); err != nil {
 		return err
 	}

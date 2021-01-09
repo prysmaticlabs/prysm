@@ -35,7 +35,7 @@ import (
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -63,7 +63,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Genesis(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -113,7 +113,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 }
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := uint64(8)
@@ -150,7 +150,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 }
 
 func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	someRoot := [32]byte{1, 2, 3}
@@ -289,7 +289,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
@@ -398,7 +398,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	testutil.NewBeaconBlock()
 	count := uint64(1)
@@ -465,7 +465,7 @@ func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := uint64(params.BeaconConfig().DefaultPageSize)
@@ -538,7 +538,7 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.UseMainnetConfig()
-	db, sc := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
@@ -609,7 +609,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		BeaconDB:           db,
 		GenesisTimeFetcher: &chainMock.ChainService{State: state},
 		HeadFetcher:        &chainMock.ChainService{State: state},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(db),
 	}
 	err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: targetRoot1[:],
@@ -646,7 +646,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	db, sc := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 
@@ -709,7 +709,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		GenesisTimeFetcher: &chainMock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(db),
 	}
 	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
@@ -893,7 +893,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	db, sc := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -980,7 +980,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		},
 		AttestationNotifier:         chainService.OperationNotifier(),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
-		StateGen:                    stategen.New(db, sc),
+		StateGen:                    stategen.New(db),
 	}
 
 	for dataRoot, sameDataAtts := range atts {
@@ -1071,9 +1071,9 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	}
 
 	atts := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}),
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}),
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}),
 	}
 
 	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
