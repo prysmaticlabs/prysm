@@ -189,15 +189,13 @@ func GenerateProposerSlashingForValidator(
 	priv bls.SecretKey,
 	idx uint64,
 ) (*ethpb.ProposerSlashing, error) {
-	header1 := &ethpb.SignedBeaconBlockHeader{
+	header1 := HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
 			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
-			StateRoot:     make([]byte, 32),
-			ParentRoot:    make([]byte, 32),
 		},
-	}
+	})
 	currentEpoch := helpers.CurrentEpoch(bState)
 	var err error
 	header1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
@@ -380,4 +378,32 @@ func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
 		return 0, err
 	}
 	return rand.NewGenerator().Uint64() % activeCount, nil
+}
+
+// HydrateSignedBeaconHeader hydrates a signed beacon block header with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconHeader(h *ethpb.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
+	if h.Signature == nil {
+		h.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	h.Header = HydrateBeaconHeader(h.Header)
+	return h
+}
+
+// HydrateBeaconHeader hydrates a beacon block header with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconHeader(h *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
+	if h == nil {
+		h = &ethpb.BeaconBlockHeader{}
+	}
+	if h.BodyRoot == nil {
+		h.BodyRoot = make([]byte, 32)
+	}
+	if h.StateRoot == nil {
+		h.StateRoot = make([]byte, 32)
+	}
+	if h.ParentRoot == nil {
+		h.ParentRoot = make([]byte, 32)
+	}
+	return h
 }

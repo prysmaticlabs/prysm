@@ -12,7 +12,6 @@ type migration func(*bolt.Tx) error
 
 var migrations = []migration{
 	migrateSnappyAttestationHistory,
-	migrateOptimalAttesterProtection,
 }
 
 // RunMigrations defined in the migrations array.
