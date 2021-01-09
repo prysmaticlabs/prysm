@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
@@ -190,7 +189,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
 				slashingAtt2 := ss.Attestation_2
-				if !slashutil.IsSurround(slashingAtt1, slashingAtt2) {
+				if !isSurrounding(slashingAtt1, slashingAtt2) {
 					t.Fatalf(
 						"Expected slashing to be valid, received atts %d->%d and %d->%d",
 						slashingAtt2.Data.Source.Epoch,
