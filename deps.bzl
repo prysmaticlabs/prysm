@@ -632,8 +632,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:FnpkCo1TAj/eq0ETLPhAplYYB4KlFQy3kVb8cLludAc=",
-        version = "v0.0.0-20201020132831-68dc48984fd3",
+        sum = "h1:lBcqQHaZyB0AYEUohFpsIDWY1sHo28VgGXOCBdnPCWo=",
+        version = "v0.0.0-20210107123522-4c3c34260bd9",
     )
 
     go_repository(
@@ -1864,8 +1864,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mitchellh_mapstructure",
         importpath = "github.com/mitchellh/mapstructure",
-        sum = "h1:SzB1nHZ2Xi+17FP0zVQBHIZqvwRN9408fJO8h+eeNA8=",
-        version = "v1.3.3",
+        sum = "h1:7ks8ZkOP5/ujthUsT07rNv+nkLXCQWKNHuwzOAesEks=",
+        version = "v1.4.0",
     )
 
     go_repository(
@@ -2189,8 +2189,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:hJfAWrlxx7SKpn4S/h2JGl2HHwA1a2wSS3HAzzZ0F+U=",
-        version = "v0.0.0-20200618145306-2ae0807bef65",
+        sum = "h1:T86rPg76THT+xHx54zNu/4dgR3gWDm3VTdYocAj1NCE=",
+        version = "v0.0.0-20210107162333-9e9cf77d4921",
     )
 
     go_repository(
@@ -2863,8 +2863,8 @@ def prysm_deps():
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",
-        sum = "h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=",
-        version = "v2.3.0",
+        sum = "h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=",
+        version = "v2.4.0",
     )
 
     go_repository(
@@ -3110,8 +3110,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_tools",
         importpath = "golang.org/x/tools",
-        sum = "h1:xLt+iB5ksWcZVxqc+g9K41ZHy+6MKWfXCDsjSThnsPA=",
-        version = "v0.0.0-20200904185747-39188db58858",
+        sum = "h1:lHDhNNs7asPT3p01mm8EP3B+bNyyVfg0bcYjhJUYgxw=",
+        version = "v0.0.0-20201218024724-ae774e9781d2",
     )
 
     go_repository(
