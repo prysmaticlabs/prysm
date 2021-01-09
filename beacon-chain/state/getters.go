@@ -138,6 +138,8 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 		FinalizedCheckpoint:         b.finalizedCheckpoint(),
 		CurrentSyncCommittee:        b.currentSyncCommittee(),
 		NextSyncCommittee:           b.nextSyncCommittee(),
+		CurrentEpochParticipation:   b.currentEpochParticipation(),
+		PreviousEpochParticipation:  b.previousEpochParticipation(),
 	}
 }
 
@@ -1109,6 +1111,56 @@ func (b *BeaconState) NextSyncCommittee() *pbp2p.SyncCommittee {
 	return b.nextSyncCommittee()
 }
 
+// CurrentEpochParticipation corresponding to participation bits on the beacon chain.
+func (b *BeaconState) CurrentEpochParticipation() []*pbp2p.ParticipationBits {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.CurrentEpochParticipation == nil {
+		return nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.currentEpochParticipation()
+}
+
+// PreviousEpochParticipation corresponding to participation bits on the beacon chain.
+func (b *BeaconState) PreviousEpochParticipation() []*pbp2p.ParticipationBits {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.PreviousEpochParticipation == nil {
+		return nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.previousEpochParticipation()
+}
+
+// currentEpochParticipation corresponding to participation bits on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) currentEpochParticipation() []*pbp2p.ParticipationBits {
+	if !b.HasInnerState() {
+		return nil
+	}
+
+	return b.safeCopyParticipationBits(b.state.CurrentEpochParticipation)
+}
+
+// previousEpochParticipation corresponding to participation bits on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) previousEpochParticipation() []*pbp2p.ParticipationBits {
+	if !b.HasInnerState() {
+		return nil
+	}
+
+	return b.safeCopyParticipationBits(b.state.PreviousEpochParticipation)
+}
+
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
 	if input == nil {
 		return nil
@@ -1154,4 +1206,18 @@ func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpo
 	}
 
 	return CopyCheckpoint(input)
+}
+
+func (b *BeaconState) safeCopyParticipationBits(input []*pbp2p.ParticipationBits) []*pbp2p.ParticipationBits {
+	if input == nil {
+		return nil
+	}
+
+	dst := make([]*pbp2p.ParticipationBits, len(input))
+	for i, r := range input {
+		new := bitfield.NewBitvector8()
+		copy(new, r.Bits)
+		dst[i] = &pbp2p.ParticipationBits{Bits: new}
+	}
+	return dst
 }
