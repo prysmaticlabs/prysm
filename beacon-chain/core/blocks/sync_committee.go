@@ -15,25 +15,28 @@ import (
 //
 // def process_sync_committee(state: BeaconState, body: BeaconBlockBody) -> None:
 //    # Verify sync committee aggregate signature signing over the previous slot block root
-//    previous_slot = max(state.slot, Slot(1)) - Slot(1)
+//    previous_slot = Slot(max(int(state.slot), 1) - 1)
 //    committee_indices = get_sync_committee_indices(state, get_current_epoch(state))
-//    participant_indices = [committee_indices[i] for i in range(len(committee_indices)) if body.sync_committee_bits[i]]
-//    participant_pubkeys = [state.validators[participant_index].pubkey for participant_index in participant_indices]
+//    participant_indices = [index for index, bit in zip(committee_indices, body.sync_committee_bits) if bit]
+//    committee_pubkeys = state.current_sync_committee.pubkeys
+//    participant_pubkeys = [pubkey for pubkey, bit in zip(committee_pubkeys, body.sync_committee_bits) if bit]
 //    domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
 //    signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
-//    assert bls.FastAggregateVerify(participant_pubkeys, signing_root, body.sync_committee_signature)
+//    assert eth2_fast_aggregate_verify(participant_pubkeys, signing_root, body.sync_committee_signature)
 //
 //    # Reward sync committee participants
-//    participant_rewards = Gwei(0)
+//    total_proposer_reward = Gwei(0)
 //    active_validator_count = uint64(len(get_active_validator_indices(state, get_current_epoch(state))))
 //    for participant_index in participant_indices:
 //        base_reward = get_base_reward(state, participant_index)
-//        reward = Gwei(base_reward * active_validator_count // len(committee_indices) // SLOTS_PER_EPOCH)
+//        proposer_reward = get_proposer_reward(state, participant_index)
+//        max_participant_reward = base_reward - proposer_reward
+//        reward = Gwei(max_participant_reward * active_validator_count // len(committee_indices) // SLOTS_PER_EPOCH)
 //        increase_balance(state, participant_index, reward)
-//        participant_rewards += reward
+//        total_proposer_reward += proposer_reward
 //
 //    # Reward beacon proposer
-//    increase_balance(state, get_beacon_proposer_index(state), Gwei(participant_rewards // PROPOSER_REWARD_QUOTIENT))
+//    increase_balance(state, get_beacon_proposer_index(state), total_proposer_reward)
 func ProcessSyncCommittee(state *state.BeaconState, body *ethpb.BeaconBlockBody) (*state.BeaconState, error) {
 	indices, err := helpers.SyncCommitteeIndices(state, helpers.CurrentEpoch(state))
 	if err != nil {
@@ -86,17 +89,19 @@ func ProcessSyncCommittee(state *state.BeaconState, body *ethpb.BeaconBlockBody)
 		if err != nil {
 			return nil, err
 		}
-		r := br * aCount / uint64(len(indices)) / params.BeaconConfig().SlotsPerEpoch
+		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
+		maxReward := br - proposerReward
+		r := maxReward * aCount / uint64(len(indices)) / params.BeaconConfig().SlotsPerEpoch
 		if err := helpers.IncreaseBalance(state, index, r); err != nil {
 			return nil, err
 		}
-		proposerRewards += r
+		proposerRewards += proposerReward
 	}
 	proposerIndex, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
 		return nil, err
 	}
-	if err := helpers.IncreaseBalance(state, proposerIndex, proposerRewards/params.BeaconConfig().ProposerRewardQuotient); err != nil {
+	if err := helpers.IncreaseBalance(state, proposerIndex, proposerRewards); err != nil {
 		return nil, err
 	}
 	return state, nil

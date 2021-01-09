@@ -21,6 +21,7 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	}
 
 	indices, err := helpers.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	require.NoError(t, err)
 	ps := helpers.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)

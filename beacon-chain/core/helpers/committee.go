@@ -426,7 +426,7 @@ func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uin
 //        bls.AggregatePKs(pubkeys[i:i + SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE])
 //        for i in range(0, len(pubkeys), SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE)
 //    ]
-//    return SyncCommittee(pubkeys, aggregates)
+//    return SyncCommittee(pubkeys=pubkeys, pubkey_aggregates=aggregates)
 func SyncCommittee(state *stateTrie.BeaconState, epoch uint64) (*pb.SyncCommittee, error) {
 	indices, err := SyncCommitteeIndices(state, epoch)
 	if err != nil {
@@ -457,11 +457,13 @@ func SyncCommittee(state *stateTrie.BeaconState, epoch uint64) (*pb.SyncCommitte
 //    """
 //    Return the sync committee indices for a given state and epoch.
 //    """
+//    MAX_RANDOM_BYTE = 2**8 - 1
 //    base_epoch = Epoch((max(epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD, 1) - 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
 //    active_validator_indices = get_active_validator_indices(state, base_epoch)
 //    active_validator_count = uint64(len(active_validator_indices))
 //    seed = get_seed(state, base_epoch, DOMAIN_SYNC_COMMITTEE)
-//    i, sync_committee_indices = 0, []
+//    i = 0
+//    sync_committee_indices: List[ValidatorIndex] = []
 //    while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
 //        shuffled_index = compute_shuffled_index(uint64(i % active_validator_count), active_validator_count, seed)
 //        candidate_index = active_validator_indices[shuffled_index]
