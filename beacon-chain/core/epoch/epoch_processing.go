@@ -426,3 +426,139 @@ func ProcessLightClientCommitteeUpdates(beaconState *stateTrie.BeaconState) (*st
 	}
 	return beaconState, nil
 }
+
+// UnslashedParticipatingIndices returns the unslashed participating indices.
+//
+// Spec code:
+// def get_unslashed_participating_indices(state: BeaconState, flag: uint8, epoch: Epoch) -> Set[ValidatorIndex]:
+//    assert epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    if epoch == get_current_epoch(state):
+//        epoch_participation = state.current_epoch_participation
+//    else:
+//        epoch_participation = state.previous_epoch_participation
+//    participating_indices = [
+//        index for index in get_active_validator_indices(state, epoch)
+//        if epoch_participation[index][flag]
+//    ]
+//    return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
+func UnslashedParticipatingIndices(state *stateTrie.BeaconState, flag uint64, epoch uint64) ([]uint64, error) {
+	if epoch != helpers.CurrentEpoch(state) && epoch != helpers.PrevEpoch(state) {
+		return nil, fmt.Errorf(
+			"epoch (%d) is not previous epoch (%d) or current epoch (%d)",
+			epoch,
+			helpers.PrevEpoch(state),
+			helpers.CurrentEpoch(state),
+		)
+	}
+	var participationBits []*pb.ParticipationBits
+	if epoch == helpers.CurrentEpoch(state) {
+		participationBits = state.CurrentEpochParticipation()
+	} else {
+		participationBits = state.PreviousEpochParticipation()
+	}
+	indices, err := helpers.ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return nil, err
+	}
+
+	participationIndices := make([]uint64, 0, len(participationBits))
+	for _, index := range indices {
+		if participationBits[index].Bits.BitAt(flag) {
+			v, err := state.ValidatorAtIndexReadOnly(index)
+			if err != nil {
+				return nil, err
+			}
+			if !v.Slashed() {
+				participationIndices = append(participationIndices, index)
+			}
+		}
+	}
+
+	return participationIndices, nil
+}
+
+// Spec code:
+// def get_flag_deltas(state: BeaconState, flag: uint8, numerator: uint64) -> Tuple[Sequence[Gwei], Sequence[Gwei]]:
+//    """
+//    Computes the rewards and penalties associated with a particular duty, by scanning through the participation
+//    flags to determine who participated and who did not and assigning them the appropriate rewards and penalties.
+//    """
+//    rewards = [Gwei(0)] * len(state.validators)
+//    penalties = [Gwei(0)] * len(state.validators)
+//
+//    unslashed_participating_indices = get_unslashed_participating_indices(state, flag, get_previous_epoch(state))
+//    increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from balances to avoid uint64 overflow
+//    unslashed_participating_increments = get_total_balance(state, unslashed_participating_indices) // increment
+//    active_increments = get_total_active_balance(state) // increment
+//    for index in get_eligible_validator_indices(state):
+//        base_reward = get_base_reward(state, index)
+//        if index in unslashed_participating_indices:
+//            if is_in_inactivity_leak(state):
+//                # Optimal participatition is fully rewarded to cancel the inactivity penalty
+//                rewards[index] = base_reward * numerator // REWARD_DENOMINATOR
+//            else:
+//                rewards[index] = (
+//                    (base_reward * numerator * unslashed_participating_increments)
+//                    // (active_increments * REWARD_DENOMINATOR)
+//                )
+//        else:
+//            penalties[index] = base_reward * numerator // REWARD_DENOMINATOR
+//    return rewards, penalties
+func FlagDeltas(state *stateTrie.BeaconState, flag uint64, numerator uint64) ([]uint64, []uint64, error) {
+	rewards := make([]uint64, state.NumValidators())
+	penalties := make([]uint64, state.NumValidators())
+
+	unslashedParticipatingIndices, err := UnslashedParticipatingIndices(state, flag, helpers.PrevEpoch(state))
+	if err != nil {
+		return nil, nil, err
+	}
+	unslashedParticipatingMap := make(map[uint64]bool)
+	for _, index := range unslashedParticipatingIndices {
+		unslashedParticipatingMap[index] = true
+	}
+	inc := params.BeaconConfig().EffectiveBalanceIncrement
+	unslashedParticipatingInc := helpers.TotalBalance(state, unslashedParticipatingIndices) / inc
+	activeBalance, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return nil, nil, err
+	}
+	activeInc := activeBalance / inc
+	eligibleIndices, err := helpers.ActiveValidatorIndices(state, helpers.PrevEpoch(state))
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, index := range eligibleIndices {
+		br, err := BaseReward(state, index)
+		if err != nil {
+			return nil, nil, err
+		}
+		if unslashedParticipatingMap[index] {
+			if isInInactivityLeak(helpers.PrevEpoch(state), state.FinalizedCheckpointEpoch()) {
+				rewards[index] = br * numerator / 64
+			} else {
+				rewards[index] = (br * numerator * unslashedParticipatingInc) / (64 * activeInc)
+			}
+		} else {
+			penalties[index] = br * numerator / 64
+		}
+	}
+	return rewards, penalties, nil
+}
+
+// isInInactivityLeak returns true if the state is experiencing inactivity leak.
+//
+// Spec code:
+// def is_in_inactivity_leak(state: BeaconState) -> bool:
+//    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
+func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
+	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
+}
+
+// finalityDelay returns the finality delay using the beacon state.
+//
+// Spec code:
+// def get_finality_delay(state: BeaconState) -> uint64:
+//    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
+func finalityDelay(prevEpoch, finalizedEpoch uint64) uint64 {
+	return prevEpoch - finalizedEpoch
+}
