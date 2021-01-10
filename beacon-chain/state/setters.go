@@ -24,8 +24,8 @@ import (
 // 3) Eth1DataVotes
 // 4) RandaoMixes
 // 5) HistoricalRoots
-// 6) CurrentEpochAttestations
-// 7) PreviousEpochAttestations
+// 6) CurrentParticipationBits
+// 7) PreviousParticipationBits
 //
 // The fields referred to above are instead copied by reference, where
 // we simply copy the reference to the underlying object instead of the
@@ -515,39 +515,39 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 	return nil
 }
 
-// SetPreviousEpochAttestations for the beacon state. Updates the entire
+// SetPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
+func (b *BeaconState) SetPreviousParticipationBits(val []*pbp2p.ParticipationBits) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[previousEpochAttestations].MinusRef()
-	b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
+	b.sharedFieldReferences[previousEpochParticipationBits] = &reference{refs: 1}
 
-	b.state.PreviousEpochAttestations = val
-	b.markFieldAsDirty(previousEpochAttestations)
-	b.rebuildTrie[previousEpochAttestations] = true
+	b.state.PreviousEpochParticipation = val
+	b.markFieldAsDirty(previousEpochParticipationBits)
+	b.rebuildTrie[previousEpochParticipationBits] = true
 	return nil
 }
 
-// SetCurrentEpochAttestations for the beacon state. Updates the entire
+// SetCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
+func (b *BeaconState) SetCurrentParticipationBits(val []*pbp2p.ParticipationBits) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[currentEpochAttestations].MinusRef()
-	b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
+	b.sharedFieldReferences[currentEpochParticipationBits] = &reference{refs: 1}
 
-	b.state.CurrentEpochAttestations = val
-	b.markFieldAsDirty(currentEpochAttestations)
-	b.rebuildTrie[currentEpochAttestations] = true
+	b.state.CurrentEpochParticipation = val
+	b.markFieldAsDirty(currentEpochParticipationBits)
+	b.rebuildTrie[currentEpochParticipationBits] = true
 	return nil
 }
 
@@ -573,50 +573,50 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	return nil
 }
 
-// AppendCurrentEpochAttestations for the beacon state. Appends the new value
+// AppendCurrentParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
+func (b *BeaconState) AppendCurrentParticipationBits(val *pbp2p.ParticipationBits) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	atts := b.state.CurrentEpochAttestations
-	if b.sharedFieldReferences[currentEpochAttestations].Refs() > 1 {
+	participation := b.state.CurrentEpochParticipation
+	if b.sharedFieldReferences[currentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
-		copy(atts, b.state.CurrentEpochAttestations)
-		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
-		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+		participation = make([]*pbp2p.ParticipationBits, len(b.state.CurrentEpochParticipation))
+		copy(participation, b.state.CurrentEpochParticipation)
+		b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[currentEpochParticipationBits] = &reference{refs: 1}
 	}
 
-	b.state.CurrentEpochAttestations = append(atts, val)
-	b.markFieldAsDirty(currentEpochAttestations)
-	b.dirtyIndices[currentEpochAttestations] = append(b.dirtyIndices[currentEpochAttestations], uint64(len(b.state.CurrentEpochAttestations)-1))
+	b.state.CurrentEpochParticipation = append(participation, val)
+	b.markFieldAsDirty(currentEpochParticipationBits)
+	b.addDirtyIndices(currentEpochParticipationBits, []uint64{uint64(len(b.state.CurrentEpochParticipation) - 1)})
 	return nil
 }
 
-// AppendPreviousEpochAttestations for the beacon state. Appends the new value
+// AppendPreviousParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
+func (b *BeaconState) AppendPreviousParticipationBits(val *pbp2p.ParticipationBits) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	atts := b.state.PreviousEpochAttestations
-	if b.sharedFieldReferences[previousEpochAttestations].Refs() > 1 {
-		atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
-		copy(atts, b.state.PreviousEpochAttestations)
-		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
-		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+	bits := b.state.PreviousEpochParticipation
+	if b.sharedFieldReferences[previousEpochParticipationBits].Refs() > 1 {
+		bits = make([]*pbp2p.ParticipationBits, len(b.state.PreviousEpochParticipation))
+		copy(bits, b.state.PreviousEpochParticipation)
+		b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[previousEpochParticipationBits] = &reference{refs: 1}
 	}
 
-	b.state.PreviousEpochAttestations = append(atts, val)
-	b.markFieldAsDirty(previousEpochAttestations)
-	b.addDirtyIndices(previousEpochAttestations, []uint64{uint64(len(b.state.PreviousEpochAttestations) - 1)})
+	b.state.PreviousEpochParticipation = append(bits, val)
+	b.markFieldAsDirty(previousEpochParticipationBits)
+	b.addDirtyIndices(previousEpochParticipationBits, []uint64{uint64(len(b.state.PreviousEpochParticipation) - 1)})
 
 	return nil
 }

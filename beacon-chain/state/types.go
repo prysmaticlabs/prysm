@@ -21,8 +21,8 @@ func init() {
 	// Initialize the composite arrays.
 	fieldMap[eth1DataVotes] = compositeArray
 	fieldMap[validators] = compositeArray
-	fieldMap[previousEpochAttestations] = compositeArray
-	fieldMap[currentEpochAttestations] = compositeArray
+	fieldMap[previousEpochParticipationBits] = compositeArray
+	fieldMap[currentEpochParticipationBits] = compositeArray
 }
 
 type fieldIndex int
@@ -51,8 +51,8 @@ const (
 	balances
 	randaoMixes
 	slashings
-	previousEpochAttestations
-	currentEpochAttestations
+	previousEpochParticipationBits
+	currentEpochParticipationBits
 	justificationBits
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
@@ -132,10 +132,10 @@ func (f fieldIndex) String() string {
 		return "randaoMixes"
 	case slashings:
 		return "slashings"
-	case previousEpochAttestations:
-		return "previousEpochAttestations"
-	case currentEpochAttestations:
-		return "currentEpochAttestations"
+	case previousEpochParticipationBits:
+		return "previousEpochParticipationBits"
+	case currentEpochParticipationBits:
+		return "currentEpochParticipationBits"
 	case justificationBits:
 		return "justificationBits"
 	case previousJustifiedCheckpoint:

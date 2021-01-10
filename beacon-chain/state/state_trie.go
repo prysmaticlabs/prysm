@@ -56,8 +56,8 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
-	b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
-	b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldReferences[previousEpochParticipationBits] = &reference{refs: 1}
+	b.sharedFieldReferences[currentEpochParticipationBits] = &reference{refs: 1}
 	b.sharedFieldReferences[slashings] = &reference{refs: 1}
 	b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
@@ -84,18 +84,18 @@ func (b *BeaconState) Copy() *BeaconState {
 			Eth1DepositIndex: b.state.Eth1DepositIndex,
 
 			// Large arrays, infrequently changed, constant size.
-			RandaoMixes:               b.state.RandaoMixes,
-			StateRoots:                b.state.StateRoots,
-			BlockRoots:                b.state.BlockRoots,
-			PreviousEpochAttestations: b.state.PreviousEpochAttestations,
-			CurrentEpochAttestations:  b.state.CurrentEpochAttestations,
-			Slashings:                 b.state.Slashings,
-			Eth1DataVotes:             b.state.Eth1DataVotes,
+			RandaoMixes:   b.state.RandaoMixes,
+			StateRoots:    b.state.StateRoots,
+			BlockRoots:    b.state.BlockRoots,
+			Slashings:     b.state.Slashings,
+			Eth1DataVotes: b.state.Eth1DataVotes,
 
 			// Large arrays, increases over time.
-			Validators:      b.state.Validators,
-			Balances:        b.state.Balances,
-			HistoricalRoots: b.state.HistoricalRoots,
+			Validators:                 b.state.Validators,
+			Balances:                   b.state.Balances,
+			HistoricalRoots:            b.state.HistoricalRoots,
+			PreviousEpochParticipation: b.state.PreviousEpochParticipation,
+			CurrentEpochParticipation:  b.state.CurrentEpochParticipation,
 
 			// Everything else, too small to be concerned about, constant size.
 			Fork:                        b.fork(),
@@ -333,28 +333,10 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
 	case slashings:
 		return htrutils.SlashingsRoot(b.state.Slashings)
-	case previousEpochAttestations:
-		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.PreviousEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
-			if err != nil {
-				return [32]byte{}, err
-			}
-			b.dirtyIndices[field] = []uint64{}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
-		}
-		return b.recomputeFieldTrie(field, b.state.PreviousEpochAttestations)
-	case currentEpochAttestations:
-		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.CurrentEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
-			if err != nil {
-				return [32]byte{}, err
-			}
-			b.dirtyIndices[field] = []uint64{}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
-		}
-		return b.recomputeFieldTrie(field, b.state.CurrentEpochAttestations)
+	case previousEpochParticipationBits:
+		return stateutil.ParticipationBitsRoot(b.state.PreviousEpochParticipation)
+	case currentEpochParticipationBits:
+		return stateutil.ParticipationBitsRoot(b.state.CurrentEpochParticipation)
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:

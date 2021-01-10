@@ -130,16 +130,14 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 		Balances:                    b.balances(),
 		RandaoMixes:                 b.randaoMixes(),
 		Slashings:                   b.slashings(),
-		PreviousEpochAttestations:   b.previousEpochAttestations(),
-		CurrentEpochAttestations:    b.currentEpochAttestations(),
+		CurrentEpochParticipation:   b.currentEpochParticipation(),
+		PreviousEpochParticipation:  b.previousEpochParticipation(),
 		JustificationBits:           b.justificationBits(),
 		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         b.finalizedCheckpoint(),
 		CurrentSyncCommittee:        b.currentSyncCommittee(),
 		NextSyncCommittee:           b.nextSyncCommittee(),
-		CurrentEpochParticipation:   b.currentEpochParticipation(),
-		PreviousEpochParticipation:  b.previousEpochParticipation(),
 	}
 }
 
@@ -888,56 +886,6 @@ func (b *BeaconState) slashings() []uint64 {
 	res := make([]uint64, len(b.state.Slashings))
 	copy(res, b.state.Slashings)
 	return res
-}
-
-// PreviousEpochAttestations corresponding to blocks on the beacon chain.
-func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
-	if !b.HasInnerState() {
-		return nil
-	}
-	if b.state.PreviousEpochAttestations == nil {
-		return nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	return b.previousEpochAttestations()
-}
-
-// previousEpochAttestations corresponding to blocks on the beacon chain.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochAttestations() []*pbp2p.PendingAttestation {
-	if !b.HasInnerState() {
-		return nil
-	}
-
-	return b.safeCopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
-}
-
-// CurrentEpochAttestations corresponding to blocks on the beacon chain.
-func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
-	if !b.HasInnerState() {
-		return nil
-	}
-	if b.state.CurrentEpochAttestations == nil {
-		return nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	return b.currentEpochAttestations()
-}
-
-// currentEpochAttestations corresponding to blocks on the beacon chain.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochAttestations() []*pbp2p.PendingAttestation {
-	if !b.HasInnerState() {
-		return nil
-	}
-
-	return b.safeCopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }
 
 // JustificationBits marking which epochs have been justified in the beacon chain.

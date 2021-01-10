@@ -1,7 +1,6 @@
 package stateutil
 
 import (
-	"bytes"
 	"encoding/binary"
 
 	"github.com/pkg/errors"
@@ -120,93 +119,4 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 	}
 
 	return htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-}
-
-func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
-	// Marshal attestation to determine if it exists in the cache.
-	enc := make([]byte, 2192)
-	fieldRoots := make([][]byte, 4)
-
-	if att != nil {
-		copy(enc[0:2048], att.AggregationBits)
-
-		inclusionBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
-		copy(enc[2048:2056], inclusionBuf)
-
-		attDataBuf := marshalAttestationData(att.Data)
-		copy(enc[2056:2184], attDataBuf)
-
-		proposerBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
-		copy(enc[2184:2192], proposerBuf)
-
-		// Check if it exists in cache:
-		if h.rootsCache != nil {
-			if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
-				return found.([32]byte), nil
-			}
-		}
-
-		// Bitfield.
-		aggregationRoot, err := htrutils.BitlistRoot(hasher, att.AggregationBits, 2048)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		fieldRoots[0] = aggregationRoot[:]
-
-		// Attestation data.
-		attDataRoot, err := attestationDataRoot(hasher, att.Data)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		fieldRoots[1] = attDataRoot[:]
-
-		// Inclusion delay.
-		inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
-		fieldRoots[2] = inclusionRoot[:]
-
-		// Proposer index.
-		proposerRoot := bytesutil.ToBytes32(proposerBuf)
-		fieldRoots[3] = proposerRoot[:]
-	}
-	res, err := htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	if h.rootsCache != nil {
-		h.rootsCache.Set(string(enc), res, 32)
-	}
-	return res, nil
-}
-
-func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
-	roots := make([][]byte, len(atts))
-	for i := 0; i < len(atts); i++ {
-		pendingRoot, err := h.pendingAttestationRoot(hasher, atts[i])
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
-		}
-		roots[i] = pendingRoot[:]
-	}
-
-	attsRootsRoot, err := htrutils.BitwiseMerkleize(
-		hasher,
-		roots,
-		uint64(len(roots)),
-		params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch,
-	)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
-	}
-	attsLenBuf := new(bytes.Buffer)
-	if err := binary.Write(attsLenBuf, binary.LittleEndian, uint64(len(atts))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal epoch attestations length")
-	}
-	// We need to mix in the length of the slice.
-	attsLenRoot := make([]byte, 32)
-	copy(attsLenRoot, attsLenBuf.Bytes())
-	res := htrutils.MixInLength(attsRootsRoot, attsLenRoot)
-	return res, nil
 }

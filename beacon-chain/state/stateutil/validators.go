@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -59,6 +60,44 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	balancesRootsBufRoot := make([]byte, 32)
 	copy(balancesRootsBufRoot, balancesRootsBuf.Bytes())
 	return htrutils.MixInLength(balancesRootsRoot, balancesRootsBufRoot), nil
+}
+
+// ParticipationBitsRoot computes the HashTreeRoot merkleization of
+// participation roots.
+func ParticipationBitsRoot(bits []*pb.ParticipationBits) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
+	bitsMarshaling := make([][]byte, 0)
+	for i := 0; i < len(bits); i++ {
+		bitsBuf := make([]byte, 8)
+		b := bits[i].Bits.Bytes()[0]
+		binary.LittleEndian.PutUint64(bitsBuf, uint64(b))
+		bitsMarshaling = append(bitsMarshaling, bitsBuf)
+	}
+	bitsChunks, err := htrutils.Pack(bitsMarshaling)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not pack participation bits into chunks")
+	}
+	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+	elemSize := uint64(8)
+	participationBitsLimit := (maxBalCap*elemSize + 31) / 32
+	if participationBitsLimit == 0 {
+		if len(bits) == 0 {
+			participationBitsLimit = 1
+		} else {
+			participationBitsLimit = uint64(len(bits))
+		}
+	}
+	bitsRoot, err := htrutils.BitwiseMerkleize(hasher, bitsChunks, uint64(len(bitsChunks)), participationBitsLimit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute bits merkleization")
+	}
+	bitsRootsBuf := new(bytes.Buffer)
+	if err := binary.Write(bitsRootsBuf, binary.LittleEndian, uint64(len(bits))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal bits length")
+	}
+	bitsRootsBufRoot := make([]byte, 32)
+	copy(bitsRootsBufRoot, bitsRootsBuf.Bytes())
+	return htrutils.MixInLength(bitsRoot, bitsRootsBufRoot), nil
 }
 
 // ValidatorRoot describes a method from which the hash tree root

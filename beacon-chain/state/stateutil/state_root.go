@@ -151,19 +151,19 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	}
 	fieldRoots[14] = slashingsRootsRoot[:]
 
-	// PreviousEpochAttestations slice root.
-	prevAttsRoot, err := h.epochAttestationsRoot(state.PreviousEpochAttestations)
+	// PreviousEpochParticipation slice root.
+	prevParticipationRoot, err := ParticipationBitsRoot(state.PreviousEpochParticipation)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
+		return nil, errors.Wrap(err, "could not compute previous epoch participation merkleization")
 	}
-	fieldRoots[15] = prevAttsRoot[:]
+	fieldRoots[15] = prevParticipationRoot[:]
 
-	// CurrentEpochAttestations slice root.
-	currAttsRoot, err := h.epochAttestationsRoot(state.CurrentEpochAttestations)
+	// CurrentEpochParticipation slice root.
+	currParticipationRoot, err := ParticipationBitsRoot(state.CurrentEpochParticipation)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not compute current epoch attestations merkleization")
+		return nil, errors.Wrap(err, "could not compute current epoch participation merkleization")
 	}
-	fieldRoots[16] = currAttsRoot[:]
+	fieldRoots[16] = currParticipationRoot[:]
 
 	// JustificationBits root.
 	justifiedBitsRoot := bytesutil.ToBytes32(state.JustificationBits)
