@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -13,6 +14,13 @@ import (
 
 // SlashingKind used for helpful information upon detection.
 type SlashingKind int
+
+type attestationRecord struct {
+	pubKey      [48]byte
+	source      uint64
+	target      uint64
+	signingRoot [32]byte
+}
 
 const (
 	NotSlashable SlashingKind = iota
@@ -101,26 +109,74 @@ func (store *Store) CheckSlashableAttestation(
 func (store *Store) ApplyAttestationForPubKey(
 	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) error {
-	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(pubKeysBucket)
-		pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
+	return nil
+}
+
+func (store *Store) batchAttestationWrites() error {
+	ch := make(chan *attestationRecord, 100)
+	listeners := make([]chan struct{}, 0)
+	flushDelay := time.Millisecond * 100
+	timer := time.NewTimer(flushDelay)
+	defer timer.Stop()
+	attestations := make([]*attestationRecord, 0, 100)
+	for {
+		select {
+		case v := <-ch:
+			fmt.Println("Received attestation")
+			attestations = append(attestations, v)
+			if len(attestations) == cap(attestations) {
+				fmt.Println("Atts slice is full, need to flush")
+				if err := store.flushAttestationsToDB(attestations); err != nil {
+					_ = err
+				}
+				for _, l := range listeners {
+					l <- struct{}{}
+				}
+				timer.Reset(flushDelay)
+			}
+		case <-timer.C:
+			if len(attestations) > 0 {
+				fmt.Println("Delay passed, forcing flush")
+				if err := store.flushAttestationsToDB(attestations); err != nil {
+					_ = err
+				}
+				for _, l := range listeners {
+					l <- struct{}{}
+				}
+			}
+			timer.Reset(flushDelay)
+		}
+	}
+}
+
+func (store *Store) flushAttestationsToDB(atts []*attestationRecord) error {
+	tx, err := store.db.Begin(true /* writable */)
+	if err != nil {
+		return err
+	}
+	bucket := tx.Bucket(pubKeysBucket)
+	for _, att := range atts {
+		pkBucket, err := bucket.CreateBucketIfNotExists(att.pubKey[:])
 		if err != nil {
 			return err
 		}
-		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.Data.Source.Epoch)
-		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.Data.Target.Epoch)
+		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.source)
+		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.target)
 
 		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
 		if err != nil {
 			return err
 		}
-		if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
+		if err := signingRootsBucket.Put(targetEpochBytes, att.signingRoot[:]); err != nil {
 			return err
 		}
 		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 		if err != nil {
 			return err
 		}
-		return sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes)
-	})
+		if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
