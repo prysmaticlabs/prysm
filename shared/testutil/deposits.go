@@ -186,8 +186,8 @@ func signedDeposit(
 		PublicKey:             publicKey,
 		Amount:                balance,
 		WithdrawalCredentials: withdrawalCreds[:],
+		Signature:             secretKey.Sign(sigRoot[:]).Marshal(),
 	}
-	depositData.Signature = secretKey.Sign(sigRoot[:]).Marshal()
 
 	deposit := &ethpb.Deposit{
 		Data: depositData,

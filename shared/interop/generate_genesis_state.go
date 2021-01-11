@@ -168,8 +168,8 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Depo
 		PublicKey:             depositMessage.PublicKey,
 		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
 		Amount:                depositMessage.Amount,
+		Signature:             privKey.Sign(root[:]).Marshal(),
 	}
-	di.Signature = privKey.Sign(root[:]).Marshal()
 	return di, nil
 }
 
