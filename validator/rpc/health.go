@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -38,9 +37,14 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) 
 	}, nil
 }
 
+// GetLogsEndpoints for the beacon and validator client.
+func (s *Server) GetLogsEndpoints(ctx context.Context, _ *emptypb.Empty) (*pb.LogsEndpointResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "unimplemented")
+}
+
 // GetVersion --
-func (s *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*pb.VersionResponse, error) {
-	beacon, err := s.beaconNodeClient.GetVersion(ctx, &ptypes.Empty{})
+func (s *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*pb.VersionResponse, error) {
+	beacon, err := s.beaconNodeClient.GetVersion(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +56,7 @@ func (s *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*pb.VersionRe
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
-func (s *Server) StreamBeaconLogs(req *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+func (s *Server) StreamBeaconLogs(req *emptypb.Empty, stream pb.Health_StreamBeaconLogsServer) error {
 	client, err := s.beaconNodeHealthClient.StreamBeaconLogs(s.ctx, req)
 	if err != nil {
 		return err
@@ -76,7 +80,7 @@ func (s *Server) StreamBeaconLogs(req *ptypes.Empty, stream pb.Health_StreamBeac
 }
 
 // StreamValidatorLogs from the validator client via a gRPC server-side stream.
-func (s *Server) StreamValidatorLogs(_ *ptypes.Empty, stream pb.Health_StreamValidatorLogsServer) error {
+func (s *Server) StreamValidatorLogs(_ *emptypb.Empty, stream pb.Health_StreamValidatorLogsServer) error {
 	ch := make(chan []byte, s.streamLogsBufferSize)
 	defer close(ch)
 	sub := s.logsStreamer.LogsFeed().Subscribe(ch)

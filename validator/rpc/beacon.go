@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Initialize a client connect to a beacon node gRPC endpoint.
@@ -62,8 +62,8 @@ func (s *Server) registerBeaconClient() error {
 // GetBeaconStatus retrieves information about the beacon node gRPC connection
 // and certain chain metadata, such as the genesis time, the chain head, and the
 // deposit contract address.
-func (s *Server) GetBeaconStatus(ctx context.Context, _ *ptypes.Empty) (*pb.BeaconStatusResponse, error) {
-	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+func (s *Server) GetBeaconStatus(ctx context.Context, _ *emptypb.Empty) (*pb.BeaconStatusResponse, error) {
+	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return &pb.BeaconStatusResponse{
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
@@ -71,13 +71,13 @@ func (s *Server) GetBeaconStatus(ctx context.Context, _ *ptypes.Empty) (*pb.Beac
 			Syncing:            false,
 		}, nil
 	}
-	genesis, err := s.beaconNodeClient.GetGenesis(ctx, &ptypes.Empty{})
+	genesis, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
 	genesisTime := uint64(time.Unix(genesis.GenesisTime.Seconds, 0).Unix())
 	address := genesis.DepositContractAddress
-	chainHead, err := s.beaconChainClient.GetChainHead(ctx, &ptypes.Empty{})
+	chainHead, err := s.beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -121,14 +121,14 @@ func (s *Server) GetValidators(
 
 // GetValidatorQueue is a wrapper around the /eth/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidatorQueue(
-	ctx context.Context, req *ptypes.Empty,
+	ctx context.Context, req *emptypb.Empty,
 ) (*ethpb.ValidatorQueue, error) {
 	return s.beaconChainClient.GetValidatorQueue(ctx, req)
 }
 
 // GetPeers is a wrapper around the /eth/v1alpha1 endpoint of the same name.
 func (s *Server) GetPeers(
-	ctx context.Context, req *ptypes.Empty,
+	ctx context.Context, req *emptypb.Empty,
 ) (*ethpb.Peers, error) {
 	return s.beaconNodeClient.ListPeers(ctx, req)
 }

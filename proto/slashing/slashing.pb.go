@@ -7,16 +7,15 @@
 package ethereum_slashing
 
 import (
-	"context"
+	context "context"
 	reflect "reflect"
 	sync "sync"
 
 	proto "github.com/golang/protobuf/proto"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -335,8 +334,8 @@ type ProposalHistory struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	EpochBits          github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytes,1,opt,name=epoch_bits,json=epochBits,proto3" json:"epoch_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitlist"`
-	LatestEpochWritten uint64                                       `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty"`
+	EpochBits          []byte `protobuf:"bytes,1,opt,name=epoch_bits,json=epochBits,proto3" json:"epoch_bits,omitempty"`
+	LatestEpochWritten uint64 `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty"`
 }
 
 func (x *ProposalHistory) Reset() {

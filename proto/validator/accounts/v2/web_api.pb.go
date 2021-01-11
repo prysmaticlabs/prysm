@@ -8,30 +8,18 @@ package ethereum_validator_accounts_v2
 
 import (
 	context "context"
-<<<<<<< HEAD
-	reflect "reflect"
-	sync "sync"
-
 	proto "github.com/golang/protobuf/proto"
-=======
-	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
-	types "github.com/gogo/protobuf/types"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	"google.golang.org/protobuf/types/known/emptypb"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -922,56 +910,56 @@ func (x *LogsEndpointResponse) GetBeaconLogsEndpoint() string {
 }
 
 type VersionResponse struct {
-	Beacon               string   `protobuf:"bytes,1,opt,name=beacon,proto3" json:"beacon,omitempty"`
-	Validator            string   `protobuf:"bytes,2,opt,name=validator,proto3" json:"validator,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Beacon    string `protobuf:"bytes,1,opt,name=beacon,proto3" json:"beacon,omitempty"`
+	Validator string `protobuf:"bytes,2,opt,name=validator,proto3" json:"validator,omitempty"`
 }
 
-func (m *VersionResponse) Reset()         { *m = VersionResponse{} }
-func (m *VersionResponse) String() string { return proto.CompactTextString(m) }
-func (*VersionResponse) ProtoMessage()    {}
-func (*VersionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{13}
-}
-func (m *VersionResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *VersionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_VersionResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+func (x *VersionResponse) Reset() {
+	*x = VersionResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
 	}
 }
-func (m *VersionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_VersionResponse.Merge(m, src)
-}
-func (m *VersionResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *VersionResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_VersionResponse.DiscardUnknown(m)
+
+func (x *VersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
 }
 
-var xxx_messageInfo_VersionResponse proto.InternalMessageInfo
+func (*VersionResponse) ProtoMessage() {}
 
-func (m *VersionResponse) GetBeacon() string {
-	if m != nil {
-		return m.Beacon
+func (x *VersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VersionResponse.ProtoReflect.Descriptor instead.
+func (*VersionResponse) Descriptor() ([]byte, []int) {
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *VersionResponse) GetBeacon() string {
+	if x != nil {
+		return x.Beacon
 	}
 	return ""
 }
 
-func (m *VersionResponse) GetValidator() string {
-	if m != nil {
-		return m.Validator
+func (x *VersionResponse) GetValidator() string {
+	if x != nil {
+		return x.Validator
 	}
 	return ""
 }
@@ -986,34 +974,12 @@ type ChangePasswordRequest struct {
 	PasswordConfirmation string `protobuf:"bytes,3,opt,name=password_confirmation,json=passwordConfirmation,proto3" json:"password_confirmation,omitempty"`
 }
 
-<<<<<<< HEAD
 func (x *ChangePasswordRequest) Reset() {
 	*x = ChangePasswordRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[13]
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
-=======
-func (m *ChangePasswordRequest) Reset()         { *m = ChangePasswordRequest{} }
-func (m *ChangePasswordRequest) String() string { return proto.CompactTextString(m) }
-func (*ChangePasswordRequest) ProtoMessage()    {}
-func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{14}
-}
-func (m *ChangePasswordRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ChangePasswordRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ChangePasswordRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	}
 }
 
@@ -1024,7 +990,7 @@ func (x *ChangePasswordRequest) String() string {
 func (*ChangePasswordRequest) ProtoMessage() {}
 
 func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[13]
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1037,7 +1003,7 @@ func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePasswordRequest.ProtoReflect.Descriptor instead.
 func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
-	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{13}
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ChangePasswordRequest) GetCurrentPassword() string {
@@ -1069,34 +1035,12 @@ type HasWalletResponse struct {
 	WalletExists bool `protobuf:"varint,1,opt,name=wallet_exists,json=walletExists,proto3" json:"wallet_exists,omitempty"`
 }
 
-<<<<<<< HEAD
 func (x *HasWalletResponse) Reset() {
 	*x = HasWalletResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[14]
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
-=======
-func (m *HasWalletResponse) Reset()         { *m = HasWalletResponse{} }
-func (m *HasWalletResponse) String() string { return proto.CompactTextString(m) }
-func (*HasWalletResponse) ProtoMessage()    {}
-func (*HasWalletResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{15}
-}
-func (m *HasWalletResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *HasWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_HasWalletResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	}
 }
 
@@ -1107,7 +1051,7 @@ func (x *HasWalletResponse) String() string {
 func (*HasWalletResponse) ProtoMessage() {}
 
 func (x *HasWalletResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[14]
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1120,7 +1064,7 @@ func (x *HasWalletResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HasWalletResponse.ProtoReflect.Descriptor instead.
 func (*HasWalletResponse) Descriptor() ([]byte, []int) {
-	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{14}
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *HasWalletResponse) GetWalletExists() bool {
@@ -1139,34 +1083,12 @@ type ImportKeystoresRequest struct {
 	KeystoresPassword string   `protobuf:"bytes,2,opt,name=keystores_password,json=keystoresPassword,proto3" json:"keystores_password,omitempty"`
 }
 
-<<<<<<< HEAD
 func (x *ImportKeystoresRequest) Reset() {
 	*x = ImportKeystoresRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[15]
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
-=======
-func (m *ImportKeystoresRequest) Reset()         { *m = ImportKeystoresRequest{} }
-func (m *ImportKeystoresRequest) String() string { return proto.CompactTextString(m) }
-func (*ImportKeystoresRequest) ProtoMessage()    {}
-func (*ImportKeystoresRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{16}
-}
-func (m *ImportKeystoresRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ImportKeystoresRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ImportKeystoresRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	}
 }
 
@@ -1177,7 +1099,7 @@ func (x *ImportKeystoresRequest) String() string {
 func (*ImportKeystoresRequest) ProtoMessage() {}
 
 func (x *ImportKeystoresRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[15]
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1112,7 @@ func (x *ImportKeystoresRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportKeystoresRequest.ProtoReflect.Descriptor instead.
 func (*ImportKeystoresRequest) Descriptor() ([]byte, []int) {
-	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{15}
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ImportKeystoresRequest) GetKeystoresImported() []string {
@@ -1215,34 +1137,12 @@ type ImportKeystoresResponse struct {
 	ImportedPublicKeys [][]byte `protobuf:"bytes,1,rep,name=imported_public_keys,json=importedPublicKeys,proto3" json:"imported_public_keys,omitempty"`
 }
 
-<<<<<<< HEAD
 func (x *ImportKeystoresResponse) Reset() {
 	*x = ImportKeystoresResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[16]
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
-=======
-func (m *ImportKeystoresResponse) Reset()         { *m = ImportKeystoresResponse{} }
-func (m *ImportKeystoresResponse) String() string { return proto.CompactTextString(m) }
-func (*ImportKeystoresResponse) ProtoMessage()    {}
-func (*ImportKeystoresResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{17}
-}
-func (m *ImportKeystoresResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ImportKeystoresResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ImportKeystoresResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	}
 }
 
@@ -1253,7 +1153,7 @@ func (x *ImportKeystoresResponse) String() string {
 func (*ImportKeystoresResponse) ProtoMessage() {}
 
 func (x *ImportKeystoresResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[16]
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1266,7 +1166,7 @@ func (x *ImportKeystoresResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportKeystoresResponse.ProtoReflect.Descriptor instead.
 func (*ImportKeystoresResponse) Descriptor() ([]byte, []int) {
-	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{16}
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ImportKeystoresResponse) GetImportedPublicKeys() [][]byte {
@@ -1285,34 +1185,12 @@ type HasUsedWebResponse struct {
 	HasWallet   bool `protobuf:"varint,2,opt,name=has_wallet,json=hasWallet,proto3" json:"has_wallet,omitempty"`
 }
 
-<<<<<<< HEAD
 func (x *HasUsedWebResponse) Reset() {
 	*x = HasUsedWebResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[17]
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
-=======
-func (m *HasUsedWebResponse) Reset()         { *m = HasUsedWebResponse{} }
-func (m *HasUsedWebResponse) String() string { return proto.CompactTextString(m) }
-func (*HasUsedWebResponse) ProtoMessage()    {}
-func (*HasUsedWebResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{18}
-}
-func (m *HasUsedWebResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *HasUsedWebResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_HasUsedWebResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	}
 }
 
@@ -1323,7 +1201,7 @@ func (x *HasUsedWebResponse) String() string {
 func (*HasUsedWebResponse) ProtoMessage() {}
 
 func (x *HasUsedWebResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[17]
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1336,7 +1214,7 @@ func (x *HasUsedWebResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HasUsedWebResponse.ProtoReflect.Descriptor instead.
 func (*HasUsedWebResponse) Descriptor() ([]byte, []int) {
-	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{17}
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *HasUsedWebResponse) GetHasSignedUp() bool {
@@ -1353,7 +1231,140 @@ func (x *HasUsedWebResponse) GetHasWallet() bool {
 	return false
 }
 
-<<<<<<< HEAD
+type LogsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Logs []string `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
+}
+
+func (x *LogsResponse) Reset() {
+	*x = LogsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[19]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *LogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogsResponse) ProtoMessage() {}
+
+func (x *LogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[19]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogsResponse.ProtoReflect.Descriptor instead.
+func (*LogsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *LogsResponse) GetLogs() []string {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
+type BeaconStatusResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BeaconNodeEndpoint     string              `protobuf:"bytes,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
+	Connected              bool                `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
+	Syncing                bool                `protobuf:"varint,3,opt,name=syncing,proto3" json:"syncing,omitempty"`
+	GenesisTime            uint64              `protobuf:"varint,4,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	DepositContractAddress []byte              `protobuf:"bytes,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
+	ChainHead              *v1alpha1.ChainHead `protobuf:"bytes,6,opt,name=chain_head,json=chainHead,proto3" json:"chain_head,omitempty"`
+}
+
+func (x *BeaconStatusResponse) Reset() {
+	*x = BeaconStatusResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[20]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BeaconStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeaconStatusResponse) ProtoMessage() {}
+
+func (x *BeaconStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_validator_accounts_v2_web_api_proto_msgTypes[20]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeaconStatusResponse.ProtoReflect.Descriptor instead.
+func (*BeaconStatusResponse) Descriptor() ([]byte, []int) {
+	return file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *BeaconStatusResponse) GetBeaconNodeEndpoint() string {
+	if x != nil {
+		return x.BeaconNodeEndpoint
+	}
+	return ""
+}
+
+func (x *BeaconStatusResponse) GetConnected() bool {
+	if x != nil {
+		return x.Connected
+	}
+	return false
+}
+
+func (x *BeaconStatusResponse) GetSyncing() bool {
+	if x != nil {
+		return x.Syncing
+	}
+	return false
+}
+
+func (x *BeaconStatusResponse) GetGenesisTime() uint64 {
+	if x != nil {
+		return x.GenesisTime
+	}
+	return 0
+}
+
+func (x *BeaconStatusResponse) GetDepositContractAddress() []byte {
+	if x != nil {
+		return x.DepositContractAddress
+	}
+	return nil
+}
+
+func (x *BeaconStatusResponse) GetChainHead() *v1alpha1.ChainHead {
+	if x != nil {
+		return x.ChainHead
+	}
+	return nil
+}
+
 var File_proto_validator_accounts_v2_web_api_proto protoreflect.FileDescriptor
 
 var file_proto_validator_accounts_v2_web_api_proto_rawDesc = []byte{
@@ -1361,276 +1372,398 @@ var file_proto_validator_accounts_v2_web_api_proto_rawDesc = []byte{
 	0x72, 0x2f, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2f, 0x76, 0x32, 0x2f, 0x77, 0x65,
 	0x62, 0x5f, 0x61, 0x70, 0x69, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x1e, 0x65, 0x74, 0x68,
 	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e,
-	0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x1a, 0x1c, 0x67, 0x6f, 0x6f,
-	0x67, 0x6c, 0x65, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x61, 0x74, 0x69,
-	0x6f, 0x6e, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1b, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
-	0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x65, 0x6d, 0x70, 0x74, 0x79,
-	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xeb, 0x02, 0x0a, 0x13, 0x43, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x4e,
-	0x0a, 0x0a, 0x6b, 0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0e, 0x32, 0x2e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
-	0x2e, 0x76, 0x32, 0x2e, 0x4b, 0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x4b, 0x69,
-	0x6e, 0x64, 0x52, 0x0a, 0x6b, 0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x12, 0x27,
-	0x0a, 0x0f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
-	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x50,
-	0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x6e, 0x65, 0x6d, 0x6f,
-	0x6e, 0x69, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x6d, 0x6e, 0x65, 0x6d, 0x6f,
-	0x6e, 0x69, 0x63, 0x12, 0x21, 0x0a, 0x0c, 0x6e, 0x75, 0x6d, 0x5f, 0x61, 0x63, 0x63, 0x6f, 0x75,
-	0x6e, 0x74, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0b, 0x6e, 0x75, 0x6d, 0x41, 0x63,
-	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12, 0x1f, 0x0a, 0x0b, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65,
-	0x5f, 0x61, 0x64, 0x64, 0x72, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x72, 0x65, 0x6d,
-	0x6f, 0x74, 0x65, 0x41, 0x64, 0x64, 0x72, 0x12, 0x26, 0x0a, 0x0f, 0x72, 0x65, 0x6d, 0x6f, 0x74,
-	0x65, 0x5f, 0x63, 0x72, 0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x43, 0x72, 0x74, 0x50, 0x61, 0x74, 0x68, 0x12,
-	0x26, 0x0a, 0x0f, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x6b, 0x65, 0x79, 0x5f, 0x70, 0x61,
-	0x74, 0x68, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65,
-	0x4b, 0x65, 0x79, 0x50, 0x61, 0x74, 0x68, 0x12, 0x2b, 0x0a, 0x12, 0x72, 0x65, 0x6d, 0x6f, 0x74,
-	0x65, 0x5f, 0x63, 0x61, 0x5f, 0x63, 0x72, 0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x08, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x0f, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x43, 0x61, 0x43, 0x72, 0x74,
-	0x50, 0x61, 0x74, 0x68, 0x22, 0x5e, 0x0a, 0x14, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x61,
-	0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x46, 0x0a, 0x06,
-	0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x65,
+	0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x1a, 0x20, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x72, 0x70, 0x63, 0x2f, 0x76, 0x31,
+	0x2f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1f, 0x65,
+	0x74, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63,
+	0x6f, 0x6e, 0x5f, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x17,
+	0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x6e, 0x6f, 0x64,
+	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1c, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1c, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x61, 0x70,
+	0x69, 0x2f, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x1a, 0x1b, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x62, 0x75, 0x66, 0x2f, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x22, 0xeb, 0x02, 0x0a, 0x13, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65,
+	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x4e, 0x0a, 0x0a, 0x6b, 0x65, 0x79, 0x6d,
+	0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2e, 0x2e, 0x65,
 	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x57, 0x61,
-	0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x06, 0x77, 0x61,
-	0x6c, 0x6c, 0x65, 0x74, 0x22, 0xb7, 0x01, 0x0a, 0x17, 0x45, 0x64, 0x69, 0x74, 0x57, 0x61, 0x6c,
-	0x6c, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4b, 0x65,
+	0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x4b, 0x69, 0x6e, 0x64, 0x52, 0x0a, 0x6b, 0x65,
+	0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x12, 0x27, 0x0a, 0x0f, 0x77, 0x61, 0x6c, 0x6c,
+	0x65, 0x74, 0x5f, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x0e, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
+	0x64, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x08, 0x6d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x12, 0x21, 0x0a,
+	0x0c, 0x6e, 0x75, 0x6d, 0x5f, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x18, 0x04, 0x20,
+	0x01, 0x28, 0x04, 0x52, 0x0b, 0x6e, 0x75, 0x6d, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
 	0x12, 0x1f, 0x0a, 0x0b, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x41, 0x64, 0x64,
+	0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x41, 0x64, 0x64,
 	0x72, 0x12, 0x26, 0x0a, 0x0f, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x63, 0x72, 0x74, 0x5f,
-	0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f,
+	0x70, 0x61, 0x74, 0x68, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f,
 	0x74, 0x65, 0x43, 0x72, 0x74, 0x50, 0x61, 0x74, 0x68, 0x12, 0x26, 0x0a, 0x0f, 0x72, 0x65, 0x6d,
-	0x6f, 0x74, 0x65, 0x5f, 0x6b, 0x65, 0x79, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x03, 0x20, 0x01,
+	0x6f, 0x74, 0x65, 0x5f, 0x6b, 0x65, 0x79, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x07, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x50, 0x61, 0x74,
 	0x68, 0x12, 0x2b, 0x0a, 0x12, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x63, 0x61, 0x5f, 0x63,
-	0x72, 0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72,
-	0x65, 0x6d, 0x6f, 0x74, 0x65, 0x43, 0x61, 0x43, 0x72, 0x74, 0x50, 0x61, 0x74, 0x68, 0x22, 0x36,
-	0x0a, 0x18, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x4d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e,
-	0x69, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x6e,
-	0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x6d, 0x6e,
-	0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x22, 0x8a, 0x01, 0x0a, 0x0e, 0x57, 0x61, 0x6c, 0x6c, 0x65,
-	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a, 0x0b, 0x77, 0x61, 0x6c,
-	0x6c, 0x65, 0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a,
-	0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x50, 0x61, 0x74, 0x68, 0x12, 0x57, 0x0a, 0x0f, 0x6b, 0x65,
-	0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x5f, 0x6b, 0x69, 0x6e, 0x64, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x0e, 0x32, 0x2e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76,
-	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
-	0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4b, 0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x4b,
-	0x69, 0x6e, 0x64, 0x52, 0x0e, 0x6b, 0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x4b,
-	0x69, 0x6e, 0x64, 0x22, 0x92, 0x01, 0x0a, 0x13, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x63, 0x63, 0x6f,
-	0x75, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2d, 0x0a, 0x13, 0x67,
-	0x65, 0x74, 0x5f, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x5f, 0x74, 0x78, 0x5f, 0x64, 0x61,
-	0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x10, 0x67, 0x65, 0x74, 0x44, 0x65, 0x70,
-	0x6f, 0x73, 0x69, 0x74, 0x54, 0x78, 0x44, 0x61, 0x74, 0x61, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x61,
-	0x67, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70,
-	0x61, 0x67, 0x65, 0x53, 0x69, 0x7a, 0x65, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x61, 0x67, 0x65, 0x5f,
-	0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x61, 0x67,
-	0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x10, 0x0a, 0x03, 0x61, 0x6c, 0x6c, 0x18, 0x04, 0x20,
-	0x01, 0x28, 0x08, 0x52, 0x03, 0x61, 0x6c, 0x6c, 0x22, 0xa2, 0x01, 0x0a, 0x14, 0x4c, 0x69, 0x73,
-	0x74, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x43, 0x0a, 0x08, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x18, 0x01, 0x20,
-	0x03, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76,
-	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
-	0x73, 0x2e, 0x76, 0x32, 0x2e, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x08, 0x61, 0x63,
-	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12, 0x26, 0x0a, 0x0f, 0x6e, 0x65, 0x78, 0x74, 0x5f, 0x70,
-	0x61, 0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x0d, 0x6e, 0x65, 0x78, 0x74, 0x50, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x1d,
-	0x0a, 0x0a, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x05, 0x52, 0x09, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x53, 0x69, 0x7a, 0x65, 0x22, 0xb1, 0x01,
-	0x0a, 0x07, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x32, 0x0a, 0x15, 0x76, 0x61, 0x6c,
-	0x69, 0x64, 0x61, 0x74, 0x69, 0x6e, 0x67, 0x5f, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b,
-	0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x13, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61,
-	0x74, 0x69, 0x6e, 0x67, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x21, 0x0a,
-	0x0c, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x0b, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x4e, 0x61, 0x6d, 0x65,
-	0x12, 0x26, 0x0a, 0x0f, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x5f, 0x74, 0x78, 0x5f, 0x64,
-	0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0d, 0x64, 0x65, 0x70, 0x6f, 0x73,
-	0x69, 0x74, 0x54, 0x78, 0x44, 0x61, 0x74, 0x61, 0x12, 0x27, 0x0a, 0x0f, 0x64, 0x65, 0x72, 0x69,
-	0x76, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x04, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0e, 0x64, 0x65, 0x72, 0x69, 0x76, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x61, 0x74,
-	0x68, 0x22, 0x4b, 0x0a, 0x0e, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65,
-	0x79, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x0a, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
-	0x4b, 0x65, 0x79, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x69, 0x6e, 0x64, 0x69, 0x63, 0x65, 0x73, 0x18,
-	0x02, 0x20, 0x03, 0x28, 0x04, 0x52, 0x07, 0x69, 0x6e, 0x64, 0x69, 0x63, 0x65, 0x73, 0x22, 0x5e,
-	0x0a, 0x0b, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a,
-	0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x33, 0x0a, 0x15, 0x70, 0x61, 0x73,
-	0x73, 0x77, 0x6f, 0x72, 0x64, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x72, 0x6d, 0x61, 0x74, 0x69,
-	0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x14, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f,
-	0x72, 0x64, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x4f,
-	0x0a, 0x0c, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x14,
-	0x0a, 0x05, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x74,
-	0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x29, 0x0a, 0x10, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x5f, 0x65, 0x78,
-	0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0f,
-	0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x45, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22,
-	0xdf, 0x01, 0x0a, 0x16, 0x4e, 0x6f, 0x64, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69,
-	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a, 0x14, 0x62, 0x65,
-	0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x6e, 0x6f, 0x64, 0x65, 0x5f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69,
-	0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e,
-	0x4e, 0x6f, 0x64, 0x65, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x12, 0x1c, 0x0a, 0x09,
-	0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52,
-	0x09, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x65, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x79,
-	0x6e, 0x63, 0x69, 0x6e, 0x67, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x79, 0x6e,
-	0x63, 0x69, 0x6e, 0x67, 0x12, 0x21, 0x0a, 0x0c, 0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x5f,
-	0x74, 0x69, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0b, 0x67, 0x65, 0x6e, 0x65,
-	0x73, 0x69, 0x73, 0x54, 0x69, 0x6d, 0x65, 0x12, 0x38, 0x0a, 0x18, 0x64, 0x65, 0x70, 0x6f, 0x73,
-	0x69, 0x74, 0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x5f, 0x61, 0x64, 0x64, 0x72,
-	0x65, 0x73, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x16, 0x64, 0x65, 0x70, 0x6f, 0x73,
-	0x69, 0x74, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73,
-	0x73, 0x22, 0x80, 0x01, 0x0a, 0x14, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69,
-	0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x36, 0x0a, 0x17, 0x76, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x5f, 0x6c, 0x6f, 0x67, 0x73, 0x5f, 0x65, 0x6e, 0x64,
-	0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x15, 0x76, 0x61, 0x6c,
-	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69,
-	0x6e, 0x74, 0x12, 0x30, 0x0a, 0x14, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x6c, 0x6f, 0x67,
-	0x73, 0x5f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x12, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70,
-	0x6f, 0x69, 0x6e, 0x74, 0x22, 0x93, 0x01, 0x0a, 0x15, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50,
-	0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x29,
-	0x0a, 0x10, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f,
-	0x72, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e,
-	0x74, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x61, 0x73,
-	0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x61, 0x73,
-	0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x33, 0x0a, 0x15, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
-	0x64, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x14, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x38, 0x0a, 0x11, 0x48, 0x61,
-	0x73, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x23, 0x0a, 0x0d, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x65, 0x78, 0x69, 0x73, 0x74, 0x73,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0c, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x45, 0x78,
-	0x69, 0x73, 0x74, 0x73, 0x22, 0x76, 0x0a, 0x16, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65,
-	0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2d,
-	0x0a, 0x12, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x5f, 0x69, 0x6d, 0x70, 0x6f,
-	0x72, 0x74, 0x65, 0x64, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x11, 0x6b, 0x65, 0x79, 0x73,
-	0x74, 0x6f, 0x72, 0x65, 0x73, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x12, 0x2d, 0x0a,
-	0x12, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x5f, 0x70, 0x61, 0x73, 0x73, 0x77,
-	0x6f, 0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x11, 0x6b, 0x65, 0x79, 0x73, 0x74,
-	0x6f, 0x72, 0x65, 0x73, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x22, 0x4b, 0x0a, 0x17,
-	0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a, 0x14, 0x69, 0x6d, 0x70, 0x6f, 0x72,
-	0x74, 0x65, 0x64, 0x5f, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x73, 0x18,
-	0x01, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x12, 0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x50,
-	0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x73, 0x22, 0x57, 0x0a, 0x12, 0x48, 0x61, 0x73,
-	0x55, 0x73, 0x65, 0x64, 0x57, 0x65, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x22, 0x0a, 0x0d, 0x68, 0x61, 0x73, 0x5f, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x5f, 0x75, 0x70,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x68, 0x61, 0x73, 0x53, 0x69, 0x67, 0x6e, 0x65,
-	0x64, 0x55, 0x70, 0x12, 0x1d, 0x0a, 0x0a, 0x68, 0x61, 0x73, 0x5f, 0x77, 0x61, 0x6c, 0x6c, 0x65,
-	0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x68, 0x61, 0x73, 0x57, 0x61, 0x6c, 0x6c,
-	0x65, 0x74, 0x2a, 0x37, 0x0a, 0x0e, 0x4b, 0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72,
-	0x4b, 0x69, 0x6e, 0x64, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x45, 0x52, 0x49, 0x56, 0x45, 0x44, 0x10,
-	0x00, 0x12, 0x0c, 0x0a, 0x08, 0x49, 0x4d, 0x50, 0x4f, 0x52, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12,
-	0x0a, 0x0a, 0x06, 0x52, 0x45, 0x4d, 0x4f, 0x54, 0x45, 0x10, 0x02, 0x32, 0xe9, 0x04, 0x0a, 0x06,
-	0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12, 0xa1, 0x01, 0x0a, 0x0c, 0x43, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12, 0x33, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65,
-	0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63,
-	0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57,
-	0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x34, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x43, 0x72,
-	0x65, 0x61, 0x74, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x26, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x20, 0x22, 0x1b, 0x2f, 0x76, 0x32, 0x2f,
-	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74,
-	0x2f, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x3a, 0x01, 0x2a, 0x12, 0x74, 0x0a, 0x0c, 0x57, 0x61,
-	0x6c, 0x6c, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
-	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70,
-	0x74, 0x79, 0x1a, 0x2e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
-	0x2e, 0x76, 0x32, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x1c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x16, 0x12, 0x14, 0x2f, 0x76, 0x32, 0x2f,
-	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74,
-	0x12, 0x8d, 0x01, 0x0a, 0x10, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x4d, 0x6e, 0x65,
-	0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x38, 0x2e,
+	0x72, 0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72,
+	0x65, 0x6d, 0x6f, 0x74, 0x65, 0x43, 0x61, 0x43, 0x72, 0x74, 0x50, 0x61, 0x74, 0x68, 0x22, 0x5e,
+	0x0a, 0x14, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x46, 0x0a, 0x06, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
+	0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f,
+	0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x06, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x22, 0xb7,
+	0x01, 0x0a, 0x17, 0x45, 0x64, 0x69, 0x74, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x72, 0x65,
+	0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0a, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x41, 0x64, 0x64, 0x72, 0x12, 0x26, 0x0a, 0x0f, 0x72,
+	0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x63, 0x72, 0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x43, 0x72, 0x74, 0x50,
+	0x61, 0x74, 0x68, 0x12, 0x26, 0x0a, 0x0f, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x6b, 0x65,
+	0x79, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x72, 0x65,
+	0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x50, 0x61, 0x74, 0x68, 0x12, 0x2b, 0x0a, 0x12, 0x72,
+	0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x63, 0x61, 0x5f, 0x63, 0x72, 0x74, 0x5f, 0x70, 0x61, 0x74,
+	0x68, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x43,
+	0x61, 0x43, 0x72, 0x74, 0x50, 0x61, 0x74, 0x68, 0x22, 0x36, 0x0a, 0x18, 0x47, 0x65, 0x6e, 0x65,
+	0x72, 0x61, 0x74, 0x65, 0x4d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x6d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63,
+	0x22, 0x8a, 0x01, 0x0a, 0x0e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a, 0x0b, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x70, 0x61,
+	0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74,
+	0x50, 0x61, 0x74, 0x68, 0x12, 0x57, 0x0a, 0x0f, 0x6b, 0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67,
+	0x65, 0x72, 0x5f, 0x6b, 0x69, 0x6e, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2e, 0x2e,
 	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
-	0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x47,
-	0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x4d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x27, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x21, 0x12,
-	0x1f, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x6d,
-	0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65,
-	0x12, 0xb4, 0x01, 0x0a, 0x0f, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74,
-	0x6f, 0x72, 0x65, 0x73, 0x12, 0x36, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
+	0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4b,
+	0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x4b, 0x69, 0x6e, 0x64, 0x52, 0x0e, 0x6b,
+	0x65, 0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x4b, 0x69, 0x6e, 0x64, 0x22, 0x92, 0x01,
+	0x0a, 0x13, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2d, 0x0a, 0x13, 0x67, 0x65, 0x74, 0x5f, 0x64, 0x65, 0x70,
+	0x6f, 0x73, 0x69, 0x74, 0x5f, 0x74, 0x78, 0x5f, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x08, 0x52, 0x10, 0x67, 0x65, 0x74, 0x44, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x54, 0x78,
+	0x44, 0x61, 0x74, 0x61, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x73, 0x69, 0x7a,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70, 0x61, 0x67, 0x65, 0x53, 0x69, 0x7a,
+	0x65, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e,
+	0x12, 0x10, 0x0a, 0x03, 0x61, 0x6c, 0x6c, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x03, 0x61,
+	0x6c, 0x6c, 0x22, 0xa2, 0x01, 0x0a, 0x14, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x43, 0x0a, 0x08, 0x61,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x27, 0x2e,
+	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
+	0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x41,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x08, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
+	0x12, 0x26, 0x0a, 0x0f, 0x6e, 0x65, 0x78, 0x74, 0x5f, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x74, 0x6f,
+	0x6b, 0x65, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x6e, 0x65, 0x78, 0x74, 0x50,
+	0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x1d, 0x0a, 0x0a, 0x74, 0x6f, 0x74, 0x61,
+	0x6c, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x09, 0x74, 0x6f,
+	0x74, 0x61, 0x6c, 0x53, 0x69, 0x7a, 0x65, 0x22, 0xb1, 0x01, 0x0a, 0x07, 0x41, 0x63, 0x63, 0x6f,
+	0x75, 0x6e, 0x74, 0x12, 0x32, 0x0a, 0x15, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x69, 0x6e,
+	0x67, 0x5f, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0c, 0x52, 0x13, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x69, 0x6e, 0x67, 0x50, 0x75,
+	0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x21, 0x0a, 0x0c, 0x61, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x61,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x26, 0x0a, 0x0f, 0x64, 0x65,
+	0x70, 0x6f, 0x73, 0x69, 0x74, 0x5f, 0x74, 0x78, 0x5f, 0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0c, 0x52, 0x0d, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x54, 0x78, 0x44, 0x61,
+	0x74, 0x61, 0x12, 0x27, 0x0a, 0x0f, 0x64, 0x65, 0x72, 0x69, 0x76, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+	0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x64, 0x65, 0x72,
+	0x69, 0x76, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x61, 0x74, 0x68, 0x22, 0x4b, 0x0a, 0x0e, 0x41,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1f, 0x0a,
+	0x0b, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x73, 0x18, 0x01, 0x20, 0x03,
+	0x28, 0x0c, 0x52, 0x0a, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x73, 0x12, 0x18,
+	0x0a, 0x07, 0x69, 0x6e, 0x64, 0x69, 0x63, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x04, 0x52,
+	0x07, 0x69, 0x6e, 0x64, 0x69, 0x63, 0x65, 0x73, 0x22, 0x5e, 0x0a, 0x0b, 0x41, 0x75, 0x74, 0x68,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77,
+	0x6f, 0x72, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77,
+	0x6f, 0x72, 0x64, 0x12, 0x33, 0x0a, 0x15, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x5f,
+	0x63, 0x6f, 0x6e, 0x66, 0x69, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x14, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x43, 0x6f, 0x6e, 0x66,
+	0x69, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x4f, 0x0a, 0x0c, 0x41, 0x75, 0x74, 0x68,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x74, 0x6f, 0x6b, 0x65,
+	0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x29,
+	0x0a, 0x10, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x5f, 0x65, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x45,
+	0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0xdf, 0x01, 0x0a, 0x16, 0x4e, 0x6f,
+	0x64, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a, 0x14, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x6e,
+	0x6f, 0x64, 0x65, 0x5f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x12, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x4e, 0x6f, 0x64, 0x65, 0x45, 0x6e,
+	0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63,
+	0x74, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x63, 0x6f, 0x6e, 0x6e, 0x65,
+	0x63, 0x74, 0x65, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x69, 0x6e, 0x67, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x69, 0x6e, 0x67, 0x12, 0x21,
+	0x0a, 0x0c, 0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x04, 0x52, 0x0b, 0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x54, 0x69, 0x6d,
+	0x65, 0x12, 0x38, 0x0a, 0x18, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x5f, 0x63, 0x6f, 0x6e,
+	0x74, 0x72, 0x61, 0x63, 0x74, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x0c, 0x52, 0x16, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x43, 0x6f, 0x6e, 0x74,
+	0x72, 0x61, 0x63, 0x74, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x22, 0x80, 0x01, 0x0a, 0x14,
+	0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x36, 0x0a, 0x17, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
+	0x72, 0x5f, 0x6c, 0x6f, 0x67, 0x73, 0x5f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x15, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
+	0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x12, 0x30, 0x0a, 0x14,
+	0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x6c, 0x6f, 0x67, 0x73, 0x5f, 0x65, 0x6e, 0x64, 0x70,
+	0x6f, 0x69, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x62, 0x65, 0x61, 0x63,
+	0x6f, 0x6e, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x22, 0x47,
+	0x0a, 0x0f, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x16, 0x0a, 0x06, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x06, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x12, 0x1c, 0x0a, 0x09, 0x76, 0x61, 0x6c,
+	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x76, 0x61,
+	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x22, 0x93, 0x01, 0x0a, 0x15, 0x43, 0x68, 0x61, 0x6e,
+	0x67, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x29, 0x0a, 0x10, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x70, 0x61, 0x73,
+	0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x63, 0x75, 0x72,
+	0x72, 0x65, 0x6e, 0x74, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x1a, 0x0a, 0x08,
+	0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
+	0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x33, 0x0a, 0x15, 0x70, 0x61, 0x73, 0x73,
+	0x77, 0x6f, 0x72, 0x64, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f,
+	0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x14, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72,
+	0x64, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x38, 0x0a,
+	0x11, 0x48, 0x61, 0x73, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x23, 0x0a, 0x0d, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x65, 0x78, 0x69,
+	0x73, 0x74, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0c, 0x77, 0x61, 0x6c, 0x6c, 0x65,
+	0x74, 0x45, 0x78, 0x69, 0x73, 0x74, 0x73, 0x22, 0x76, 0x0a, 0x16, 0x49, 0x6d, 0x70, 0x6f, 0x72,
+	0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x2d, 0x0a, 0x12, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x5f, 0x69,
+	0x6d, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x11, 0x6b,
+	0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64,
+	0x12, 0x2d, 0x0a, 0x12, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x5f, 0x70, 0x61,
+	0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x11, 0x6b, 0x65,
+	0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x22,
+	0x4b, 0x0a, 0x17, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72,
+	0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a, 0x14, 0x69, 0x6d,
+	0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x5f, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65,
+	0x79, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x12, 0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74,
+	0x65, 0x64, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x73, 0x22, 0x57, 0x0a, 0x12,
+	0x48, 0x61, 0x73, 0x55, 0x73, 0x65, 0x64, 0x57, 0x65, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x22, 0x0a, 0x0d, 0x68, 0x61, 0x73, 0x5f, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x64,
+	0x5f, 0x75, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x68, 0x61, 0x73, 0x53, 0x69,
+	0x67, 0x6e, 0x65, 0x64, 0x55, 0x70, 0x12, 0x1d, 0x0a, 0x0a, 0x68, 0x61, 0x73, 0x5f, 0x77, 0x61,
+	0x6c, 0x6c, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x68, 0x61, 0x73, 0x57,
+	0x61, 0x6c, 0x6c, 0x65, 0x74, 0x22, 0x22, 0x0a, 0x0c, 0x4c, 0x6f, 0x67, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x6f, 0x67, 0x73, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x09, 0x52, 0x04, 0x6c, 0x6f, 0x67, 0x73, 0x22, 0x9e, 0x02, 0x0a, 0x14, 0x42, 0x65,
+	0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x30, 0x0a, 0x14, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x6e, 0x6f, 0x64,
+	0x65, 0x5f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x12, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x4e, 0x6f, 0x64, 0x65, 0x45, 0x6e, 0x64, 0x70,
+	0x6f, 0x69, 0x6e, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x65,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74,
+	0x65, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x69, 0x6e, 0x67, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x69, 0x6e, 0x67, 0x12, 0x21, 0x0a, 0x0c,
+	0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x0b, 0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x54, 0x69, 0x6d, 0x65, 0x12,
+	0x38, 0x0a, 0x18, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x72,
+	0x61, 0x63, 0x74, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28,
+	0x0c, 0x52, 0x16, 0x64, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x61,
+	0x63, 0x74, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x12, 0x3f, 0x0a, 0x0a, 0x63, 0x68, 0x61,
+	0x69, 0x6e, 0x5f, 0x68, 0x65, 0x61, 0x64, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x20, 0x2e,
+	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x48, 0x65, 0x61, 0x64, 0x52,
+	0x09, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x48, 0x65, 0x61, 0x64, 0x2a, 0x37, 0x0a, 0x0e, 0x4b, 0x65,
+	0x79, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72, 0x4b, 0x69, 0x6e, 0x64, 0x12, 0x0b, 0x0a, 0x07,
+	0x44, 0x45, 0x52, 0x49, 0x56, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x49, 0x4d, 0x50,
+	0x4f, 0x52, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06, 0x52, 0x45, 0x4d, 0x4f, 0x54,
+	0x45, 0x10, 0x02, 0x32, 0xe9, 0x04, 0x0a, 0x06, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12, 0xa1,
+	0x01, 0x0a, 0x0c, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12,
+	0x33, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64,
+	0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32,
+	0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x34, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
 	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e,
-	0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73,
-	0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x37, 0x2e, 0x65,
+	0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x57, 0x61, 0x6c, 0x6c,
+	0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x26, 0x82, 0xd3, 0xe4, 0x93,
+	0x02, 0x20, 0x22, 0x1b, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
+	0x72, 0x2f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x2f, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x3a,
+	0x01, 0x2a, 0x12, 0x74, 0x0a, 0x0c, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66,
+	0x69, 0x67, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x2e, 0x2e, 0x65, 0x74, 0x68,
+	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e,
+	0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x57, 0x61, 0x6c, 0x6c,
+	0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1c, 0x82, 0xd3, 0xe4, 0x93,
+	0x02, 0x16, 0x12, 0x14, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
+	0x72, 0x2f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12, 0x8d, 0x01, 0x0a, 0x10, 0x47, 0x65, 0x6e,
+	0x65, 0x72, 0x61, 0x74, 0x65, 0x4d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x12, 0x16, 0x2e,
+	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
+	0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x38, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x4d,
+	0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x27, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x21, 0x12, 0x1f, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c,
+	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x6d, 0x6e, 0x65, 0x6d, 0x6f, 0x6e, 0x69, 0x63, 0x2f,
+	0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x12, 0xb4, 0x01, 0x0a, 0x0f, 0x49, 0x6d, 0x70,
+	0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x36, 0x2e, 0x65,
 	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
 	0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x49, 0x6d,
-	0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x30, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x2a, 0x22, 0x25, 0x2f,
-	0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x77, 0x61, 0x6c,
-	0x6c, 0x65, 0x74, 0x2f, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x2f, 0x69, 0x6d,
-	0x70, 0x6f, 0x72, 0x74, 0x3a, 0x01, 0x2a, 0x32, 0xb0, 0x02, 0x0a, 0x08, 0x41, 0x63, 0x63, 0x6f,
-	0x75, 0x6e, 0x74, 0x73, 0x12, 0x99, 0x01, 0x0a, 0x0c, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x63, 0x63,
-	0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12, 0x33, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75,
-	0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x63, 0x63, 0x6f, 0x75,
-	0x6e, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x34, 0x2e, 0x65, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e,
-	0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4c, 0x69, 0x73, 0x74,
-	0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x22, 0x1e, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x18, 0x12, 0x16, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
-	0x12, 0x87, 0x01, 0x0a, 0x0e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77,
-	0x6f, 0x72, 0x64, 0x12, 0x35, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76,
-	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
-	0x73, 0x2e, 0x76, 0x32, 0x2e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77,
-	0x6f, 0x72, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
-	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70,
-	0x74, 0x79, 0x22, 0x26, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x20, 0x22, 0x1b, 0x2f, 0x76, 0x32, 0x2f,
-	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f,
-	0x72, 0x64, 0x2f, 0x65, 0x64, 0x69, 0x74, 0x3a, 0x01, 0x2a, 0x32, 0xb2, 0x02, 0x0a, 0x06, 0x48,
-	0x65, 0x61, 0x6c, 0x74, 0x68, 0x12, 0x97, 0x01, 0x0a, 0x17, 0x47, 0x65, 0x74, 0x42, 0x65, 0x61,
-	0x63, 0x6f, 0x6e, 0x4e, 0x6f, 0x64, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x36, 0x2e, 0x65, 0x74, 0x68, 0x65,
+	0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x37, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
+	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e,
+	0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73,
+	0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x30, 0x82,
+	0xd3, 0xe4, 0x93, 0x02, 0x2a, 0x22, 0x25, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64,
+	0x61, 0x74, 0x6f, 0x72, 0x2f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x2f, 0x6b, 0x65, 0x79, 0x73,
+	0x74, 0x6f, 0x72, 0x65, 0x73, 0x2f, 0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x3a, 0x01, 0x2a, 0x32,
+	0xb0, 0x02, 0x0a, 0x08, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12, 0x99, 0x01, 0x0a,
+	0x0c, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12, 0x33, 0x2e,
+	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
+	0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4c,
+	0x69, 0x73, 0x74, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x34, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61,
+	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
+	0x2e, 0x76, 0x32, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1e, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x18,
+	0x12, 0x16, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f,
+	0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12, 0x87, 0x01, 0x0a, 0x0e, 0x43, 0x68, 0x61,
+	0x6e, 0x67, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x35, 0x2e, 0x65, 0x74,
+	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
+	0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x43, 0x68, 0x61,
+	0x6e, 0x67, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x26, 0x82, 0xd3, 0xe4, 0x93,
+	0x02, 0x20, 0x22, 0x1b, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
+	0x72, 0x2f, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x2f, 0x65, 0x64, 0x69, 0x74, 0x3a,
+	0x01, 0x2a, 0x32, 0x81, 0x08, 0x0a, 0x06, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x12, 0x84, 0x01,
+	0x0a, 0x0f, 0x47, 0x65, 0x74, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75,
+	0x73, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x34, 0x2e, 0x65, 0x74, 0x68, 0x65,
 	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61,
-	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x43,
-	0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x22, 0x2c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x26, 0x12, 0x24, 0x2f, 0x76, 0x32, 0x2f, 0x76,
-	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x2f,
-	0x6e, 0x6f, 0x64, 0x65, 0x5f, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12,
-	0x8d, 0x01, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f,
-	0x69, 0x6e, 0x74, 0x73, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x34, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4c, 0x6f,
-	0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x2b, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x25, 0x12, 0x23, 0x2f, 0x76, 0x32, 0x2f,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f,
+	0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x23, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1d, 0x12, 0x1b, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c,
+	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x12, 0xb7, 0x01, 0x0a, 0x19, 0x47, 0x65, 0x74, 0x56, 0x61, 0x6c, 0x69,
+	0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x61, 0x72, 0x74, 0x69, 0x63, 0x69, 0x70, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x37, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x56, 0x61,
+	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x61, 0x72, 0x74, 0x69, 0x63, 0x69, 0x70, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x35, 0x2e, 0x65, 0x74,
+	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x61, 0x72,
+	0x74, 0x69, 0x63, 0x69, 0x70, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x22, 0x2a, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x24, 0x12, 0x22, 0x2f, 0x76, 0x32, 0x2f,
+	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e,
+	0x2f, 0x70, 0x61, 0x72, 0x74, 0x69, 0x63, 0x69, 0x70, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0xac,
+	0x01, 0x0a, 0x17, 0x47, 0x65, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50,
+	0x65, 0x72, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x6e, 0x63, 0x65, 0x12, 0x32, 0x2e, 0x65, 0x74, 0x68,
+	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x2e, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x65, 0x72, 0x66,
+	0x6f, 0x72, 0x6d, 0x61, 0x6e, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x33,
+	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
+	0x50, 0x65, 0x72, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x6e, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x28, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x22, 0x12, 0x20, 0x2f, 0x76, 0x32,
+	0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f,
+	0x6e, 0x2f, 0x70, 0x65, 0x72, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x6e, 0x63, 0x65, 0x12, 0x89, 0x01,
+	0x0a, 0x0d, 0x47, 0x65, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73, 0x12,
+	0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
+	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x69,
+	0x64, 0x61, 0x74, 0x6f, 0x72, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x21, 0x2e,
+	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73,
+	0x22, 0x27, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x21, 0x12, 0x1f, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61,
+	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x76,
+	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73, 0x12, 0x9c, 0x01, 0x0a, 0x14, 0x47, 0x65,
+	0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63,
+	0x65, 0x73, 0x12, 0x33, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x56,
+	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x73,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x28, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65,
+	0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
+	0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65,
+	0x73, 0x22, 0x25, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1f, 0x12, 0x1d, 0x2f, 0x76, 0x32, 0x2f, 0x76,
+	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f,
+	0x62, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x12, 0x76, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x56,
+	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x51, 0x75, 0x65, 0x75, 0x65, 0x12, 0x16, 0x2e,
+	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
+	0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x25, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x56, 0x61,
+	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x51, 0x75, 0x65, 0x75, 0x65, 0x22, 0x22, 0x82, 0xd3,
+	0xe4, 0x93, 0x02, 0x1c, 0x12, 0x1a, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61,
+	0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x71, 0x75, 0x65, 0x75, 0x65,
+	0x12, 0x64, 0x0a, 0x08, 0x47, 0x65, 0x74, 0x50, 0x65, 0x65, 0x72, 0x73, 0x12, 0x16, 0x2e, 0x67,
+	0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45,
+	0x6d, 0x70, 0x74, 0x79, 0x1a, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
+	0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x65, 0x65,
+	0x72, 0x73, 0x22, 0x22, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1c, 0x12, 0x1a, 0x2f, 0x76, 0x32, 0x2f,
+	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e,
+	0x2f, 0x70, 0x65, 0x65, 0x72, 0x73, 0x32, 0xc9, 0x05, 0x0a, 0x06, 0x48, 0x65, 0x61, 0x6c, 0x74,
+	0x68, 0x12, 0x97, 0x01, 0x0a, 0x17, 0x47, 0x65, 0x74, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x4e,
+	0x6f, 0x64, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x16, 0x2e,
+	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
+	0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x36, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65,
+	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2c, 0x82,
+	0xd3, 0xe4, 0x93, 0x02, 0x26, 0x12, 0x24, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64,
+	0x61, 0x74, 0x6f, 0x72, 0x2f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x2f, 0x6e, 0x6f, 0x64, 0x65,
+	0x5f, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x8d, 0x01, 0x0a, 0x10,
+	0x47, 0x65, 0x74, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x73,
+	0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x34, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
+	0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63,
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e,
+	0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2b,
+	0x82, 0xd3, 0xe4, 0x93, 0x02, 0x25, 0x12, 0x23, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69,
+	0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x2f, 0x6c, 0x6f, 0x67,
+	0x73, 0x2f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x73, 0x12, 0x7b, 0x0a, 0x0a, 0x47,
+	0x65, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
+	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74,
+	0x79, 0x1a, 0x2f, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c,
+	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e,
+	0x76, 0x32, 0x2e, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x22, 0x24, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1e, 0x12, 0x1c, 0x2f, 0x76, 0x32, 0x2f,
 	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68,
-	0x2f, 0x6c, 0x6f, 0x67, 0x73, 0x2f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x73, 0x32,
-	0xea, 0x03, 0x0a, 0x04, 0x41, 0x75, 0x74, 0x68, 0x12, 0x7b, 0x0a, 0x0a, 0x48, 0x61, 0x73, 0x55,
-	0x73, 0x65, 0x64, 0x57, 0x65, 0x62, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x32,
+	0x2f, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x83, 0x01, 0x0a, 0x10, 0x53, 0x74, 0x72,
+	0x65, 0x61, 0x6d, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x4c, 0x6f, 0x67, 0x73, 0x12, 0x16, 0x2e,
+	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
+	0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x24, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x76, 0x31, 0x2e, 0x4c,
+	0x6f, 0x67, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2f, 0x82, 0xd3, 0xe4,
+	0x93, 0x02, 0x29, 0x12, 0x27, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
+	0x6f, 0x72, 0x2f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x2f, 0x6c, 0x6f, 0x67, 0x73, 0x2f, 0x62,
+	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x30, 0x01, 0x12, 0x91,
+	0x01, 0x0a, 0x13, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
+	0x6f, 0x72, 0x4c, 0x6f, 0x67, 0x73, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x2c,
 	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61,
 	0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e,
-	0x48, 0x61, 0x73, 0x55, 0x73, 0x65, 0x64, 0x57, 0x65, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x21, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1b, 0x12, 0x19, 0x2f, 0x76, 0x32, 0x2f,
-	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61,
-	0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x82, 0x01, 0x0a, 0x05, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x12,
-	0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64,
-	0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32,
-	0x2e, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x41, 0x75,
-	0x74, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1e, 0x82, 0xd3, 0xe4, 0x93,
-	0x02, 0x18, 0x22, 0x13, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x2f, 0x6c, 0x6f, 0x67, 0x69, 0x6e, 0x3a, 0x01, 0x2a, 0x12, 0x84, 0x01, 0x0a, 0x06, 0x53,
-	0x69, 0x67, 0x6e, 0x75, 0x70, 0x12, 0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75,
-	0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61,
+	0x4c, 0x6f, 0x67, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x32, 0x82, 0xd3,
+	0xe4, 0x93, 0x02, 0x2c, 0x12, 0x2a, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61,
+	0x74, 0x6f, 0x72, 0x2f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x2f, 0x6c, 0x6f, 0x67, 0x73, 0x2f,
+	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d,
+	0x30, 0x01, 0x32, 0xea, 0x03, 0x0a, 0x04, 0x41, 0x75, 0x74, 0x68, 0x12, 0x7b, 0x0a, 0x0a, 0x48,
+	0x61, 0x73, 0x55, 0x73, 0x65, 0x64, 0x57, 0x65, 0x62, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
+	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74,
+	0x79, 0x1a, 0x32, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c,
+	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e,
+	0x76, 0x32, 0x2e, 0x48, 0x61, 0x73, 0x55, 0x73, 0x65, 0x64, 0x57, 0x65, 0x62, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x21, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1b, 0x12, 0x19, 0x2f,
+	0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x69, 0x6e, 0x69,
+	0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x82, 0x01, 0x0a, 0x05, 0x4c, 0x6f, 0x67,
+	0x69, 0x6e, 0x12, 0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61,
 	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
-	0x2e, 0x76, 0x32, 0x2e, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x22, 0x1f, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x19, 0x22, 0x14, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x73, 0x69, 0x67, 0x6e, 0x75, 0x70, 0x3a, 0x01,
-	0x2a, 0x12, 0x59, 0x0a, 0x06, 0x4c, 0x6f, 0x67, 0x6f, 0x75, 0x74, 0x12, 0x16, 0x2e, 0x67, 0x6f,
-	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d,
-	0x70, 0x74, 0x79, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x1f, 0x82, 0xd3, 0xe4,
-	0x93, 0x02, 0x19, 0x22, 0x14, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
-	0x6f, 0x72, 0x2f, 0x6c, 0x6f, 0x67, 0x6f, 0x75, 0x74, 0x3a, 0x01, 0x2a, 0x62, 0x06, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x33,
+	0x2e, 0x76, 0x32, 0x2e, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64,
+	0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32,
+	0x2e, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1e, 0x82,
+	0xd3, 0xe4, 0x93, 0x02, 0x18, 0x22, 0x13, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64,
+	0x61, 0x74, 0x6f, 0x72, 0x2f, 0x6c, 0x6f, 0x67, 0x69, 0x6e, 0x3a, 0x01, 0x2a, 0x12, 0x84, 0x01,
+	0x0a, 0x06, 0x53, 0x69, 0x67, 0x6e, 0x75, 0x70, 0x12, 0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
+	0x65, 0x75, 0x6d, 0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63,
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x73, 0x2e, 0x76, 0x32, 0x2e, 0x41, 0x75, 0x74, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x1f, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x19, 0x22, 0x14, 0x2f, 0x76, 0x32,
+	0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x73, 0x69, 0x67, 0x6e, 0x75,
+	0x70, 0x3a, 0x01, 0x2a, 0x12, 0x59, 0x0a, 0x06, 0x4c, 0x6f, 0x67, 0x6f, 0x75, 0x74, 0x12, 0x16,
+	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
+	0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x1f,
+	0x82, 0xd3, 0xe4, 0x93, 0x02, 0x19, 0x22, 0x14, 0x2f, 0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69,
+	0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x6c, 0x6f, 0x67, 0x6f, 0x75, 0x74, 0x3a, 0x01, 0x2a, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1646,63 +1779,99 @@ func file_proto_validator_accounts_v2_web_api_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_validator_accounts_v2_web_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_validator_accounts_v2_web_api_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_proto_validator_accounts_v2_web_api_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_proto_validator_accounts_v2_web_api_proto_goTypes = []interface{}{
-	(KeymanagerKind)(0),              // 0: ethereum.validator.accounts.v2.KeymanagerKind
-	(*CreateWalletRequest)(nil),      // 1: ethereum.validator.accounts.v2.CreateWalletRequest
-	(*CreateWalletResponse)(nil),     // 2: ethereum.validator.accounts.v2.CreateWalletResponse
-	(*EditWalletConfigRequest)(nil),  // 3: ethereum.validator.accounts.v2.EditWalletConfigRequest
-	(*GenerateMnemonicResponse)(nil), // 4: ethereum.validator.accounts.v2.GenerateMnemonicResponse
-	(*WalletResponse)(nil),           // 5: ethereum.validator.accounts.v2.WalletResponse
-	(*ListAccountsRequest)(nil),      // 6: ethereum.validator.accounts.v2.ListAccountsRequest
-	(*ListAccountsResponse)(nil),     // 7: ethereum.validator.accounts.v2.ListAccountsResponse
-	(*Account)(nil),                  // 8: ethereum.validator.accounts.v2.Account
-	(*AccountRequest)(nil),           // 9: ethereum.validator.accounts.v2.AccountRequest
-	(*AuthRequest)(nil),              // 10: ethereum.validator.accounts.v2.AuthRequest
-	(*AuthResponse)(nil),             // 11: ethereum.validator.accounts.v2.AuthResponse
-	(*NodeConnectionResponse)(nil),   // 12: ethereum.validator.accounts.v2.NodeConnectionResponse
-	(*LogsEndpointResponse)(nil),     // 13: ethereum.validator.accounts.v2.LogsEndpointResponse
-	(*ChangePasswordRequest)(nil),    // 14: ethereum.validator.accounts.v2.ChangePasswordRequest
-	(*HasWalletResponse)(nil),        // 15: ethereum.validator.accounts.v2.HasWalletResponse
-	(*ImportKeystoresRequest)(nil),   // 16: ethereum.validator.accounts.v2.ImportKeystoresRequest
-	(*ImportKeystoresResponse)(nil),  // 17: ethereum.validator.accounts.v2.ImportKeystoresResponse
-	(*HasUsedWebResponse)(nil),       // 18: ethereum.validator.accounts.v2.HasUsedWebResponse
-	(*emptypb.Empty)(nil),            // 19: google.protobuf.Empty
+	(KeymanagerKind)(0),                               // 0: ethereum.validator.accounts.v2.KeymanagerKind
+	(*CreateWalletRequest)(nil),                       // 1: ethereum.validator.accounts.v2.CreateWalletRequest
+	(*CreateWalletResponse)(nil),                      // 2: ethereum.validator.accounts.v2.CreateWalletResponse
+	(*EditWalletConfigRequest)(nil),                   // 3: ethereum.validator.accounts.v2.EditWalletConfigRequest
+	(*GenerateMnemonicResponse)(nil),                  // 4: ethereum.validator.accounts.v2.GenerateMnemonicResponse
+	(*WalletResponse)(nil),                            // 5: ethereum.validator.accounts.v2.WalletResponse
+	(*ListAccountsRequest)(nil),                       // 6: ethereum.validator.accounts.v2.ListAccountsRequest
+	(*ListAccountsResponse)(nil),                      // 7: ethereum.validator.accounts.v2.ListAccountsResponse
+	(*Account)(nil),                                   // 8: ethereum.validator.accounts.v2.Account
+	(*AccountRequest)(nil),                            // 9: ethereum.validator.accounts.v2.AccountRequest
+	(*AuthRequest)(nil),                               // 10: ethereum.validator.accounts.v2.AuthRequest
+	(*AuthResponse)(nil),                              // 11: ethereum.validator.accounts.v2.AuthResponse
+	(*NodeConnectionResponse)(nil),                    // 12: ethereum.validator.accounts.v2.NodeConnectionResponse
+	(*LogsEndpointResponse)(nil),                      // 13: ethereum.validator.accounts.v2.LogsEndpointResponse
+	(*VersionResponse)(nil),                           // 14: ethereum.validator.accounts.v2.VersionResponse
+	(*ChangePasswordRequest)(nil),                     // 15: ethereum.validator.accounts.v2.ChangePasswordRequest
+	(*HasWalletResponse)(nil),                         // 16: ethereum.validator.accounts.v2.HasWalletResponse
+	(*ImportKeystoresRequest)(nil),                    // 17: ethereum.validator.accounts.v2.ImportKeystoresRequest
+	(*ImportKeystoresResponse)(nil),                   // 18: ethereum.validator.accounts.v2.ImportKeystoresResponse
+	(*HasUsedWebResponse)(nil),                        // 19: ethereum.validator.accounts.v2.HasUsedWebResponse
+	(*LogsResponse)(nil),                              // 20: ethereum.validator.accounts.v2.LogsResponse
+	(*BeaconStatusResponse)(nil),                      // 21: ethereum.validator.accounts.v2.BeaconStatusResponse
+	(*v1alpha1.ChainHead)(nil),                        // 22: ethereum.eth.v1alpha1.ChainHead
+	(*empty.Empty)(nil),                               // 23: google.protobuf.Empty
+	(*v1alpha1.GetValidatorParticipationRequest)(nil), // 24: ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+	(*v1alpha1.ValidatorPerformanceRequest)(nil),      // 25: ethereum.eth.v1alpha1.ValidatorPerformanceRequest
+	(*v1alpha1.ListValidatorsRequest)(nil),            // 26: ethereum.eth.v1alpha1.ListValidatorsRequest
+	(*v1alpha1.ListValidatorBalancesRequest)(nil),     // 27: ethereum.eth.v1alpha1.ListValidatorBalancesRequest
+	(*v1alpha1.ValidatorParticipationResponse)(nil),   // 28: ethereum.eth.v1alpha1.ValidatorParticipationResponse
+	(*v1alpha1.ValidatorPerformanceResponse)(nil),     // 29: ethereum.eth.v1alpha1.ValidatorPerformanceResponse
+	(*v1alpha1.Validators)(nil),                       // 30: ethereum.eth.v1alpha1.Validators
+	(*v1alpha1.ValidatorBalances)(nil),                // 31: ethereum.eth.v1alpha1.ValidatorBalances
+	(*v1alpha1.ValidatorQueue)(nil),                   // 32: ethereum.eth.v1alpha1.ValidatorQueue
+	(*v1alpha1.Peers)(nil),                            // 33: ethereum.eth.v1alpha1.Peers
+	(*v1.LogsResponse)(nil),                           // 34: ethereum.beacon.rpc.v1.LogsResponse
 }
 var file_proto_validator_accounts_v2_web_api_proto_depIdxs = []int32{
 	0,  // 0: ethereum.validator.accounts.v2.CreateWalletRequest.keymanager:type_name -> ethereum.validator.accounts.v2.KeymanagerKind
 	5,  // 1: ethereum.validator.accounts.v2.CreateWalletResponse.wallet:type_name -> ethereum.validator.accounts.v2.WalletResponse
 	0,  // 2: ethereum.validator.accounts.v2.WalletResponse.keymanager_kind:type_name -> ethereum.validator.accounts.v2.KeymanagerKind
 	8,  // 3: ethereum.validator.accounts.v2.ListAccountsResponse.accounts:type_name -> ethereum.validator.accounts.v2.Account
-	1,  // 4: ethereum.validator.accounts.v2.Wallet.CreateWallet:input_type -> ethereum.validator.accounts.v2.CreateWalletRequest
-	19, // 5: ethereum.validator.accounts.v2.Wallet.WalletConfig:input_type -> google.protobuf.Empty
-	19, // 6: ethereum.validator.accounts.v2.Wallet.GenerateMnemonic:input_type -> google.protobuf.Empty
-	16, // 7: ethereum.validator.accounts.v2.Wallet.ImportKeystores:input_type -> ethereum.validator.accounts.v2.ImportKeystoresRequest
-	6,  // 8: ethereum.validator.accounts.v2.Accounts.ListAccounts:input_type -> ethereum.validator.accounts.v2.ListAccountsRequest
-	14, // 9: ethereum.validator.accounts.v2.Accounts.ChangePassword:input_type -> ethereum.validator.accounts.v2.ChangePasswordRequest
-	19, // 10: ethereum.validator.accounts.v2.Health.GetBeaconNodeConnection:input_type -> google.protobuf.Empty
-	19, // 11: ethereum.validator.accounts.v2.Health.GetLogsEndpoints:input_type -> google.protobuf.Empty
-	19, // 12: ethereum.validator.accounts.v2.Auth.HasUsedWeb:input_type -> google.protobuf.Empty
-	10, // 13: ethereum.validator.accounts.v2.Auth.Login:input_type -> ethereum.validator.accounts.v2.AuthRequest
-	10, // 14: ethereum.validator.accounts.v2.Auth.Signup:input_type -> ethereum.validator.accounts.v2.AuthRequest
-	19, // 15: ethereum.validator.accounts.v2.Auth.Logout:input_type -> google.protobuf.Empty
-	2,  // 16: ethereum.validator.accounts.v2.Wallet.CreateWallet:output_type -> ethereum.validator.accounts.v2.CreateWalletResponse
-	5,  // 17: ethereum.validator.accounts.v2.Wallet.WalletConfig:output_type -> ethereum.validator.accounts.v2.WalletResponse
-	4,  // 18: ethereum.validator.accounts.v2.Wallet.GenerateMnemonic:output_type -> ethereum.validator.accounts.v2.GenerateMnemonicResponse
-	17, // 19: ethereum.validator.accounts.v2.Wallet.ImportKeystores:output_type -> ethereum.validator.accounts.v2.ImportKeystoresResponse
-	7,  // 20: ethereum.validator.accounts.v2.Accounts.ListAccounts:output_type -> ethereum.validator.accounts.v2.ListAccountsResponse
-	19, // 21: ethereum.validator.accounts.v2.Accounts.ChangePassword:output_type -> google.protobuf.Empty
-	12, // 22: ethereum.validator.accounts.v2.Health.GetBeaconNodeConnection:output_type -> ethereum.validator.accounts.v2.NodeConnectionResponse
-	13, // 23: ethereum.validator.accounts.v2.Health.GetLogsEndpoints:output_type -> ethereum.validator.accounts.v2.LogsEndpointResponse
-	18, // 24: ethereum.validator.accounts.v2.Auth.HasUsedWeb:output_type -> ethereum.validator.accounts.v2.HasUsedWebResponse
-	11, // 25: ethereum.validator.accounts.v2.Auth.Login:output_type -> ethereum.validator.accounts.v2.AuthResponse
-	11, // 26: ethereum.validator.accounts.v2.Auth.Signup:output_type -> ethereum.validator.accounts.v2.AuthResponse
-	19, // 27: ethereum.validator.accounts.v2.Auth.Logout:output_type -> google.protobuf.Empty
-	16, // [16:28] is the sub-list for method output_type
-	4,  // [4:16] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	22, // 4: ethereum.validator.accounts.v2.BeaconStatusResponse.chain_head:type_name -> ethereum.eth.v1alpha1.ChainHead
+	1,  // 5: ethereum.validator.accounts.v2.Wallet.CreateWallet:input_type -> ethereum.validator.accounts.v2.CreateWalletRequest
+	23, // 6: ethereum.validator.accounts.v2.Wallet.WalletConfig:input_type -> google.protobuf.Empty
+	23, // 7: ethereum.validator.accounts.v2.Wallet.GenerateMnemonic:input_type -> google.protobuf.Empty
+	17, // 8: ethereum.validator.accounts.v2.Wallet.ImportKeystores:input_type -> ethereum.validator.accounts.v2.ImportKeystoresRequest
+	6,  // 9: ethereum.validator.accounts.v2.Accounts.ListAccounts:input_type -> ethereum.validator.accounts.v2.ListAccountsRequest
+	15, // 10: ethereum.validator.accounts.v2.Accounts.ChangePassword:input_type -> ethereum.validator.accounts.v2.ChangePasswordRequest
+	23, // 11: ethereum.validator.accounts.v2.Beacon.GetBeaconStatus:input_type -> google.protobuf.Empty
+	24, // 12: ethereum.validator.accounts.v2.Beacon.GetValidatorParticipation:input_type -> ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+	25, // 13: ethereum.validator.accounts.v2.Beacon.GetValidatorPerformance:input_type -> ethereum.eth.v1alpha1.ValidatorPerformanceRequest
+	26, // 14: ethereum.validator.accounts.v2.Beacon.GetValidators:input_type -> ethereum.eth.v1alpha1.ListValidatorsRequest
+	27, // 15: ethereum.validator.accounts.v2.Beacon.GetValidatorBalances:input_type -> ethereum.eth.v1alpha1.ListValidatorBalancesRequest
+	23, // 16: ethereum.validator.accounts.v2.Beacon.GetValidatorQueue:input_type -> google.protobuf.Empty
+	23, // 17: ethereum.validator.accounts.v2.Beacon.GetPeers:input_type -> google.protobuf.Empty
+	23, // 18: ethereum.validator.accounts.v2.Health.GetBeaconNodeConnection:input_type -> google.protobuf.Empty
+	23, // 19: ethereum.validator.accounts.v2.Health.GetLogsEndpoints:input_type -> google.protobuf.Empty
+	23, // 20: ethereum.validator.accounts.v2.Health.GetVersion:input_type -> google.protobuf.Empty
+	23, // 21: ethereum.validator.accounts.v2.Health.StreamBeaconLogs:input_type -> google.protobuf.Empty
+	23, // 22: ethereum.validator.accounts.v2.Health.StreamValidatorLogs:input_type -> google.protobuf.Empty
+	23, // 23: ethereum.validator.accounts.v2.Auth.HasUsedWeb:input_type -> google.protobuf.Empty
+	10, // 24: ethereum.validator.accounts.v2.Auth.Login:input_type -> ethereum.validator.accounts.v2.AuthRequest
+	10, // 25: ethereum.validator.accounts.v2.Auth.Signup:input_type -> ethereum.validator.accounts.v2.AuthRequest
+	23, // 26: ethereum.validator.accounts.v2.Auth.Logout:input_type -> google.protobuf.Empty
+	2,  // 27: ethereum.validator.accounts.v2.Wallet.CreateWallet:output_type -> ethereum.validator.accounts.v2.CreateWalletResponse
+	5,  // 28: ethereum.validator.accounts.v2.Wallet.WalletConfig:output_type -> ethereum.validator.accounts.v2.WalletResponse
+	4,  // 29: ethereum.validator.accounts.v2.Wallet.GenerateMnemonic:output_type -> ethereum.validator.accounts.v2.GenerateMnemonicResponse
+	18, // 30: ethereum.validator.accounts.v2.Wallet.ImportKeystores:output_type -> ethereum.validator.accounts.v2.ImportKeystoresResponse
+	7,  // 31: ethereum.validator.accounts.v2.Accounts.ListAccounts:output_type -> ethereum.validator.accounts.v2.ListAccountsResponse
+	23, // 32: ethereum.validator.accounts.v2.Accounts.ChangePassword:output_type -> google.protobuf.Empty
+	21, // 33: ethereum.validator.accounts.v2.Beacon.GetBeaconStatus:output_type -> ethereum.validator.accounts.v2.BeaconStatusResponse
+	28, // 34: ethereum.validator.accounts.v2.Beacon.GetValidatorParticipation:output_type -> ethereum.eth.v1alpha1.ValidatorParticipationResponse
+	29, // 35: ethereum.validator.accounts.v2.Beacon.GetValidatorPerformance:output_type -> ethereum.eth.v1alpha1.ValidatorPerformanceResponse
+	30, // 36: ethereum.validator.accounts.v2.Beacon.GetValidators:output_type -> ethereum.eth.v1alpha1.Validators
+	31, // 37: ethereum.validator.accounts.v2.Beacon.GetValidatorBalances:output_type -> ethereum.eth.v1alpha1.ValidatorBalances
+	32, // 38: ethereum.validator.accounts.v2.Beacon.GetValidatorQueue:output_type -> ethereum.eth.v1alpha1.ValidatorQueue
+	33, // 39: ethereum.validator.accounts.v2.Beacon.GetPeers:output_type -> ethereum.eth.v1alpha1.Peers
+	12, // 40: ethereum.validator.accounts.v2.Health.GetBeaconNodeConnection:output_type -> ethereum.validator.accounts.v2.NodeConnectionResponse
+	13, // 41: ethereum.validator.accounts.v2.Health.GetLogsEndpoints:output_type -> ethereum.validator.accounts.v2.LogsEndpointResponse
+	14, // 42: ethereum.validator.accounts.v2.Health.GetVersion:output_type -> ethereum.validator.accounts.v2.VersionResponse
+	34, // 43: ethereum.validator.accounts.v2.Health.StreamBeaconLogs:output_type -> ethereum.beacon.rpc.v1.LogsResponse
+	20, // 44: ethereum.validator.accounts.v2.Health.StreamValidatorLogs:output_type -> ethereum.validator.accounts.v2.LogsResponse
+	19, // 45: ethereum.validator.accounts.v2.Auth.HasUsedWeb:output_type -> ethereum.validator.accounts.v2.HasUsedWebResponse
+	11, // 46: ethereum.validator.accounts.v2.Auth.Login:output_type -> ethereum.validator.accounts.v2.AuthResponse
+	11, // 47: ethereum.validator.accounts.v2.Auth.Signup:output_type -> ethereum.validator.accounts.v2.AuthResponse
+	23, // 48: ethereum.validator.accounts.v2.Auth.Logout:output_type -> google.protobuf.Empty
+	27, // [27:49] is the sub-list for method output_type
+	5,  // [5:27] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_proto_validator_accounts_v2_web_api_proto_init() }
@@ -1868,7 +2037,7 @@ func file_proto_validator_accounts_v2_web_api_proto_init() {
 			}
 		}
 		file_proto_validator_accounts_v2_web_api_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ChangePasswordRequest); i {
+			switch v := v.(*VersionResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1880,7 +2049,7 @@ func file_proto_validator_accounts_v2_web_api_proto_init() {
 			}
 		}
 		file_proto_validator_accounts_v2_web_api_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HasWalletResponse); i {
+			switch v := v.(*ChangePasswordRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1892,7 +2061,7 @@ func file_proto_validator_accounts_v2_web_api_proto_init() {
 			}
 		}
 		file_proto_validator_accounts_v2_web_api_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImportKeystoresRequest); i {
+			switch v := v.(*HasWalletResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1904,7 +2073,7 @@ func file_proto_validator_accounts_v2_web_api_proto_init() {
 			}
 		}
 		file_proto_validator_accounts_v2_web_api_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImportKeystoresResponse); i {
+			switch v := v.(*ImportKeystoresRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1916,7 +2085,43 @@ func file_proto_validator_accounts_v2_web_api_proto_init() {
 			}
 		}
 		file_proto_validator_accounts_v2_web_api_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ImportKeystoresResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_validator_accounts_v2_web_api_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*HasUsedWebResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_validator_accounts_v2_web_api_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*LogsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_validator_accounts_v2_web_api_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BeaconStatusResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1934,9 +2139,9 @@ func file_proto_validator_accounts_v2_web_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_validator_accounts_v2_web_api_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   18,
+			NumMessages:   21,
 			NumExtensions: 0,
-			NumServices:   4,
+			NumServices:   5,
 		},
 		GoTypes:           file_proto_validator_accounts_v2_web_api_proto_goTypes,
 		DependencyIndexes: file_proto_validator_accounts_v2_web_api_proto_depIdxs,
@@ -1947,302 +2152,6 @@ func file_proto_validator_accounts_v2_web_api_proto_init() {
 	file_proto_validator_accounts_v2_web_api_proto_rawDesc = nil
 	file_proto_validator_accounts_v2_web_api_proto_goTypes = nil
 	file_proto_validator_accounts_v2_web_api_proto_depIdxs = nil
-=======
-type LogsResponse struct {
-	Logs                 []string `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *LogsResponse) Reset()         { *m = LogsResponse{} }
-func (m *LogsResponse) String() string { return proto.CompactTextString(m) }
-func (*LogsResponse) ProtoMessage()    {}
-func (*LogsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{19}
-}
-func (m *LogsResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *LogsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_LogsResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *LogsResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LogsResponse.Merge(m, src)
-}
-func (m *LogsResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *LogsResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_LogsResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_LogsResponse proto.InternalMessageInfo
-
-func (m *LogsResponse) GetLogs() []string {
-	if m != nil {
-		return m.Logs
-	}
-	return nil
-}
-
-type BeaconStatusResponse struct {
-	BeaconNodeEndpoint     string              `protobuf:"bytes,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
-	Connected              bool                `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
-	Syncing                bool                `protobuf:"varint,3,opt,name=syncing,proto3" json:"syncing,omitempty"`
-	GenesisTime            uint64              `protobuf:"varint,4,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	DepositContractAddress []byte              `protobuf:"bytes,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
-	ChainHead              *v1alpha1.ChainHead `protobuf:"bytes,6,opt,name=chain_head,json=chainHead,proto3" json:"chain_head,omitempty"`
-	XXX_NoUnkeyedLiteral   struct{}            `json:"-"`
-	XXX_unrecognized       []byte              `json:"-"`
-	XXX_sizecache          int32               `json:"-"`
-}
-
-func (m *BeaconStatusResponse) Reset()         { *m = BeaconStatusResponse{} }
-func (m *BeaconStatusResponse) String() string { return proto.CompactTextString(m) }
-func (*BeaconStatusResponse) ProtoMessage()    {}
-func (*BeaconStatusResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8a5153635bfe042e, []int{20}
-}
-func (m *BeaconStatusResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *BeaconStatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BeaconStatusResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *BeaconStatusResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BeaconStatusResponse.Merge(m, src)
-}
-func (m *BeaconStatusResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *BeaconStatusResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_BeaconStatusResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_BeaconStatusResponse proto.InternalMessageInfo
-
-func (m *BeaconStatusResponse) GetBeaconNodeEndpoint() string {
-	if m != nil {
-		return m.BeaconNodeEndpoint
-	}
-	return ""
-}
-
-func (m *BeaconStatusResponse) GetConnected() bool {
-	if m != nil {
-		return m.Connected
-	}
-	return false
-}
-
-func (m *BeaconStatusResponse) GetSyncing() bool {
-	if m != nil {
-		return m.Syncing
-	}
-	return false
-}
-
-func (m *BeaconStatusResponse) GetGenesisTime() uint64 {
-	if m != nil {
-		return m.GenesisTime
-	}
-	return 0
-}
-
-func (m *BeaconStatusResponse) GetDepositContractAddress() []byte {
-	if m != nil {
-		return m.DepositContractAddress
-	}
-	return nil
-}
-
-func (m *BeaconStatusResponse) GetChainHead() *v1alpha1.ChainHead {
-	if m != nil {
-		return m.ChainHead
-	}
-	return nil
-}
-
-func init() {
-	proto.RegisterEnum("ethereum.validator.accounts.v2.KeymanagerKind", KeymanagerKind_name, KeymanagerKind_value)
-	proto.RegisterType((*CreateWalletRequest)(nil), "ethereum.validator.accounts.v2.CreateWalletRequest")
-	proto.RegisterType((*CreateWalletResponse)(nil), "ethereum.validator.accounts.v2.CreateWalletResponse")
-	proto.RegisterType((*EditWalletConfigRequest)(nil), "ethereum.validator.accounts.v2.EditWalletConfigRequest")
-	proto.RegisterType((*GenerateMnemonicResponse)(nil), "ethereum.validator.accounts.v2.GenerateMnemonicResponse")
-	proto.RegisterType((*WalletResponse)(nil), "ethereum.validator.accounts.v2.WalletResponse")
-	proto.RegisterType((*ListAccountsRequest)(nil), "ethereum.validator.accounts.v2.ListAccountsRequest")
-	proto.RegisterType((*ListAccountsResponse)(nil), "ethereum.validator.accounts.v2.ListAccountsResponse")
-	proto.RegisterType((*Account)(nil), "ethereum.validator.accounts.v2.Account")
-	proto.RegisterType((*AccountRequest)(nil), "ethereum.validator.accounts.v2.AccountRequest")
-	proto.RegisterType((*AuthRequest)(nil), "ethereum.validator.accounts.v2.AuthRequest")
-	proto.RegisterType((*AuthResponse)(nil), "ethereum.validator.accounts.v2.AuthResponse")
-	proto.RegisterType((*NodeConnectionResponse)(nil), "ethereum.validator.accounts.v2.NodeConnectionResponse")
-	proto.RegisterType((*LogsEndpointResponse)(nil), "ethereum.validator.accounts.v2.LogsEndpointResponse")
-	proto.RegisterType((*VersionResponse)(nil), "ethereum.validator.accounts.v2.VersionResponse")
-	proto.RegisterType((*ChangePasswordRequest)(nil), "ethereum.validator.accounts.v2.ChangePasswordRequest")
-	proto.RegisterType((*HasWalletResponse)(nil), "ethereum.validator.accounts.v2.HasWalletResponse")
-	proto.RegisterType((*ImportKeystoresRequest)(nil), "ethereum.validator.accounts.v2.ImportKeystoresRequest")
-	proto.RegisterType((*ImportKeystoresResponse)(nil), "ethereum.validator.accounts.v2.ImportKeystoresResponse")
-	proto.RegisterType((*HasUsedWebResponse)(nil), "ethereum.validator.accounts.v2.HasUsedWebResponse")
-	proto.RegisterType((*LogsResponse)(nil), "ethereum.validator.accounts.v2.LogsResponse")
-	proto.RegisterType((*BeaconStatusResponse)(nil), "ethereum.validator.accounts.v2.BeaconStatusResponse")
-}
-
-func init() {
-	proto.RegisterFile("proto/validator/accounts/v2/web_api.proto", fileDescriptor_8a5153635bfe042e)
-}
-
-var fileDescriptor_8a5153635bfe042e = []byte{
-	// 2058 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x58, 0xcd, 0x6f, 0x1c, 0x49,
-	0x15, 0xa7, 0x6d, 0x67, 0x32, 0x7e, 0x33, 0xfe, 0x48, 0xd9, 0xb1, 0x27, 0x8e, 0x63, 0x3b, 0x95,
-	0x0f, 0x3b, 0x4e, 0x76, 0x26, 0x99, 0xb0, 0x49, 0x94, 0x0b, 0x8a, 0xc7, 0x83, 0x13, 0x39, 0x1f,
-	0xa6, 0xe3, 0x4d, 0xc4, 0x65, 0x5b, 0xe5, 0xee, 0x4a, 0x4f, 0xcb, 0x33, 0xdd, 0xbd, 0xdd, 0x35,
-	0x13, 0x3b, 0x5c, 0x60, 0x59, 0x09, 0x81, 0xc4, 0x01, 0xf6, 0x80, 0x90, 0x10, 0x12, 0x9c, 0x39,
-	0x80, 0x84, 0xb4, 0xff, 0x02, 0xdc, 0x90, 0xf8, 0x03, 0x40, 0x11, 0x17, 0xe0, 0x9f, 0x40, 0x55,
-	0x5d, 0xd5, 0x1f, 0x93, 0xe9, 0x6d, 0x5b, 0x88, 0x0b, 0xb7, 0xae, 0xf7, 0xf9, 0xab, 0x57, 0xaf,
-	0x5e, 0xbd, 0xd7, 0x70, 0xc3, 0x0f, 0x3c, 0xe6, 0x35, 0x06, 0xa4, 0xeb, 0x58, 0x84, 0x79, 0x41,
-	0x83, 0x98, 0xa6, 0xd7, 0x77, 0x59, 0xd8, 0x18, 0x34, 0x1b, 0x6f, 0xe9, 0x81, 0x41, 0x7c, 0xa7,
-	0x2e, 0x64, 0xd0, 0x0a, 0x65, 0x1d, 0x1a, 0xd0, 0x7e, 0xaf, 0x1e, 0x4b, 0xd7, 0x95, 0x74, 0x7d,
-	0xd0, 0x5c, 0x5a, 0x8b, 0x4c, 0x1d, 0x50, 0x62, 0x7a, 0x6e, 0x23, 0xf0, 0xcd, 0xc6, 0xe0, 0x4e,
-	0xa3, 0x43, 0x49, 0x97, 0x75, 0x22, 0x0b, 0x4b, 0xab, 0x94, 0x75, 0x1a, 0x83, 0x3b, 0xa4, 0xeb,
-	0x77, 0xc8, 0x1d, 0x29, 0x68, 0x98, 0x1d, 0xe2, 0xb8, 0x52, 0x60, 0x31, 0x23, 0xe0, 0x7a, 0x16,
-	0x95, 0x8c, 0xe5, 0x0c, 0x23, 0xf1, 0x2f, 0xb9, 0xb6, 0xe7, 0xd9, 0x5d, 0xda, 0x20, 0xbe, 0xd3,
-	0x20, 0xae, 0xeb, 0x31, 0xc2, 0x1c, 0xcf, 0x0d, 0x25, 0xf7, 0xa2, 0xe4, 0x8a, 0xd5, 0x41, 0xff,
-	0x4d, 0x83, 0xf6, 0x7c, 0x76, 0x2c, 0x99, 0x1f, 0xd9, 0x0e, 0xeb, 0xf4, 0x0f, 0xea, 0xa6, 0xd7,
-	0x6b, 0xd8, 0x9e, 0xed, 0x25, 0x52, 0x7c, 0x15, 0xed, 0x88, 0x7f, 0x45, 0xe2, 0xf8, 0xdf, 0x63,
-	0x30, 0xd7, 0x0a, 0x28, 0x61, 0xf4, 0x35, 0xe9, 0x76, 0x29, 0xd3, 0xe9, 0x67, 0x7d, 0x1a, 0x32,
-	0xf4, 0x1c, 0xe0, 0x90, 0x1e, 0xf7, 0x88, 0x4b, 0x6c, 0x1a, 0xd4, 0xb4, 0x35, 0x6d, 0x63, 0xba,
-	0x59, 0xaf, 0x7f, 0x7d, 0xc0, 0xea, 0xbb, 0xb1, 0xc6, 0xae, 0xe3, 0x5a, 0x7a, 0xca, 0x02, 0x5a,
-	0x87, 0x99, 0xb7, 0xc2, 0x81, 0xe1, 0x93, 0x30, 0x7c, 0xeb, 0x05, 0x56, 0x6d, 0x6c, 0x4d, 0xdb,
-	0x98, 0xd4, 0xa7, 0x23, 0xf2, 0x9e, 0xa4, 0xa2, 0x25, 0x28, 0xf7, 0x5c, 0xda, 0xf3, 0x5c, 0xc7,
-	0xac, 0x8d, 0x0b, 0x89, 0x78, 0x8d, 0x2e, 0x43, 0xd5, 0xed, 0xf7, 0x0c, 0xe5, 0xb2, 0x36, 0xb1,
-	0xa6, 0x6d, 0x4c, 0xe8, 0x15, 0xb7, 0xdf, 0x7b, 0x24, 0x49, 0x68, 0x15, 0x2a, 0x01, 0xed, 0x79,
-	0x8c, 0x1a, 0xc4, 0xb2, 0x82, 0xda, 0x19, 0x61, 0x01, 0x22, 0xd2, 0x23, 0xcb, 0x0a, 0xd0, 0x75,
-	0x98, 0x91, 0x02, 0x66, 0xc0, 0xc1, 0xb0, 0x4e, 0xad, 0x24, 0x84, 0xa6, 0x22, 0x72, 0x2b, 0x60,
-	0x7b, 0x84, 0x75, 0x52, 0x72, 0x87, 0xf4, 0x38, 0x92, 0x3b, 0x9b, 0x96, 0xdb, 0xa5, 0xc7, 0x42,
-	0xee, 0x26, 0x20, 0x65, 0x8f, 0x24, 0x26, 0xcb, 0x42, 0x54, 0x5a, 0x68, 0x11, 0x69, 0x14, 0x7f,
-	0x0a, 0xf3, 0xd9, 0x60, 0x87, 0xbe, 0xe7, 0x86, 0x14, 0x7d, 0x1b, 0x4a, 0x51, 0x18, 0x44, 0xa4,
-	0x2b, 0xc5, 0x91, 0xce, 0xea, 0xeb, 0x52, 0x1b, 0x7f, 0xa5, 0xc1, 0x62, 0xdb, 0x72, 0x58, 0xc4,
-	0x6e, 0x79, 0xee, 0x1b, 0xc7, 0x56, 0x27, 0x3a, 0x14, 0x19, 0xed, 0x24, 0x91, 0x19, 0x3b, 0x61,
-	0x64, 0xc6, 0x4f, 0x1e, 0x99, 0x89, 0xd1, 0x91, 0xb9, 0x07, 0xb5, 0x1d, 0xea, 0xd2, 0x80, 0x30,
-	0xfa, 0x4c, 0x1e, 0x77, 0x1c, 0x9d, 0x74, 0x4a, 0x68, 0xd9, 0x94, 0xc0, 0x3f, 0xd1, 0x60, 0x7a,
-	0x28, 0x98, 0xab, 0x50, 0x89, 0x53, 0x8d, 0x75, 0xd4, 0x46, 0x55, 0x9a, 0xb1, 0x0e, 0x7a, 0x0d,
-	0x33, 0x49, 0x66, 0x1a, 0x87, 0x8e, 0x1b, 0xe5, 0xe2, 0xe9, 0x13, 0x7c, 0xfa, 0x30, 0xb3, 0xc6,
-	0x3f, 0xd7, 0x60, 0xee, 0xa9, 0x13, 0x32, 0x95, 0x8d, 0x2a, 0xf4, 0x1f, 0xc1, 0x9c, 0x4d, 0x99,
-	0x61, 0x51, 0xdf, 0x0b, 0x1d, 0x66, 0xb0, 0x23, 0xc3, 0x22, 0x8c, 0x08, 0x64, 0x65, 0x7d, 0xd6,
-	0xa6, 0x6c, 0x3b, 0xe2, 0xec, 0x1f, 0x6d, 0x13, 0x46, 0xd0, 0x45, 0x98, 0xf4, 0x89, 0x4d, 0x8d,
-	0xd0, 0x79, 0x47, 0x05, 0xb2, 0x33, 0x7a, 0x99, 0x13, 0x5e, 0x3a, 0xef, 0x28, 0xba, 0x04, 0x20,
-	0x98, 0xcc, 0x3b, 0xa4, 0xae, 0x0c, 0xbc, 0x10, 0xdf, 0xe7, 0x04, 0x34, 0x0b, 0xe3, 0xa4, 0xdb,
-	0x15, 0x51, 0x2e, 0xeb, 0xfc, 0x13, 0xff, 0x56, 0x83, 0xf9, 0x2c, 0x28, 0x19, 0xa7, 0x16, 0x94,
-	0xe3, 0x9b, 0xa4, 0xad, 0x8d, 0x6f, 0x54, 0x9a, 0xeb, 0x45, 0xfb, 0x97, 0x36, 0xf4, 0x58, 0x91,
-	0x27, 0x83, 0x4b, 0x8f, 0x78, 0xa8, 0x63, 0x4c, 0x32, 0x69, 0x38, 0x79, 0x2f, 0xc6, 0x75, 0x09,
-	0x80, 0x79, 0x8c, 0x74, 0xa3, 0x4d, 0x8d, 0x8b, 0x4d, 0x4d, 0x0a, 0x0a, 0xdf, 0x15, 0xfe, 0x83,
-	0x06, 0x67, 0xa5, 0x71, 0xd4, 0x84, 0xf3, 0xd2, 0xbb, 0xe3, 0xda, 0x86, 0xdf, 0x3f, 0xe8, 0x3a,
-	0x26, 0x4f, 0x35, 0x11, 0xaf, 0xaa, 0x3e, 0x97, 0x30, 0xf7, 0x04, 0x6f, 0x97, 0x1e, 0xf3, 0xca,
-	0x20, 0x21, 0x19, 0x2e, 0xe9, 0x51, 0x89, 0xa1, 0x22, 0x69, 0xcf, 0x49, 0x8f, 0x72, 0xa4, 0xc3,
-	0x07, 0x30, 0x2e, 0x0c, 0x4e, 0x59, 0x99, 0xe8, 0xaf, 0x73, 0xb9, 0xc0, 0x19, 0x88, 0x92, 0x9b,
-	0xce, 0xd9, 0xe9, 0x84, 0x2c, 0x52, 0x76, 0x17, 0xa6, 0x55, 0x3c, 0x92, 0x2b, 0x96, 0xc0, 0x8d,
-	0x82, 0x5a, 0xd5, 0xc1, 0x57, 0x28, 0x43, 0x54, 0x83, 0xb3, 0x8e, 0x6b, 0x39, 0x26, 0x0d, 0x6b,
-	0x63, 0x6b, 0xe3, 0x1b, 0x13, 0xba, 0x5a, 0xe2, 0x4f, 0xa1, 0xf2, 0xa8, 0xcf, 0x3a, 0xca, 0xd2,
-	0x12, 0x94, 0xe3, 0x3a, 0x29, 0x53, 0x5e, 0xad, 0xd1, 0x5d, 0x38, 0xaf, 0xbe, 0x0d, 0x93, 0x5f,
-	0xf1, 0xa0, 0x27, 0x40, 0xc9, 0x4d, 0xcf, 0x2b, 0x66, 0x2b, 0xc5, 0xc3, 0x2f, 0xa0, 0x1a, 0xd9,
-	0x97, 0x87, 0x3f, 0x0f, 0x67, 0xa2, 0xd3, 0x8a, 0xac, 0x47, 0x0b, 0x74, 0x03, 0x66, 0xc5, 0x87,
-	0x41, 0x8f, 0x7c, 0x27, 0x48, 0xac, 0x4e, 0xe8, 0x33, 0x82, 0xde, 0x8e, 0xc9, 0xf8, 0x6f, 0x1a,
-	0x2c, 0x3c, 0xf7, 0x2c, 0xda, 0xf2, 0x5c, 0x97, 0x9a, 0x9c, 0x14, 0xdb, 0xbe, 0x0d, 0xf3, 0xf2,
-	0x29, 0xe4, 0x0f, 0x9e, 0x41, 0x5d, 0xcb, 0xf7, 0x1c, 0x97, 0x49, 0x57, 0x28, 0xe2, 0x71, 0xdd,
-	0xb6, 0xe4, 0xa0, 0x65, 0x98, 0x34, 0x23, 0x3b, 0x34, 0xba, 0x8b, 0x65, 0x3d, 0x21, 0xf0, 0xa8,
-	0x85, 0xc7, 0xae, 0xe9, 0xb8, 0xb6, 0x38, 0xb1, 0xb2, 0xae, 0x96, 0xfc, 0xd8, 0x6d, 0xea, 0xd2,
-	0xd0, 0x09, 0x0d, 0xe6, 0xf4, 0xa8, 0x7a, 0x10, 0x24, 0x6d, 0xdf, 0xe9, 0x51, 0xf4, 0x00, 0x6a,
-	0xea, 0xd8, 0x4d, 0xcf, 0x65, 0x01, 0x31, 0x99, 0x28, 0x80, 0x34, 0x0c, 0xc5, 0xeb, 0x50, 0xd5,
-	0x17, 0x24, 0xbf, 0x25, 0xd9, 0x8f, 0x22, 0x2e, 0xfe, 0x3e, 0xbf, 0x38, 0x9e, 0x1d, 0x2a, 0x94,
-	0xf1, 0xfe, 0xee, 0xc1, 0x62, 0x7c, 0x3d, 0x8c, 0xae, 0x67, 0x87, 0xc3, 0x5b, 0x3c, 0x1f, 0xb3,
-	0xd3, 0xfa, 0xa9, 0xb8, 0x64, 0x95, 0xc6, 0xd2, 0x71, 0x49, 0x6b, 0xe0, 0x1d, 0x98, 0x79, 0x45,
-	0x83, 0x30, 0x1d, 0xdc, 0x05, 0x28, 0x45, 0x82, 0xd2, 0x97, 0x5c, 0xf1, 0x10, 0xc6, 0x5e, 0xa5,
-	0xc5, 0x84, 0x80, 0xbf, 0xd4, 0xe0, 0x7c, 0xab, 0x43, 0x5c, 0x9b, 0xaa, 0x87, 0x56, 0x65, 0xda,
-	0x0d, 0x98, 0x35, 0xfb, 0x41, 0x40, 0xdd, 0xd4, 0xcb, 0x1c, 0x59, 0x9e, 0x91, 0xf4, 0xf4, 0xd3,
-	0x3c, 0xf4, 0x78, 0x9f, 0x20, 0x29, 0xc7, 0xbf, 0x26, 0x29, 0x1f, 0xc0, 0xb9, 0xc7, 0x24, 0x1c,
-	0x2a, 0xdf, 0x57, 0x60, 0x4a, 0x96, 0x6f, 0x7a, 0xe4, 0x84, 0xa2, 0x36, 0xf1, 0x33, 0xaf, 0x46,
-	0xc4, 0xb6, 0xa0, 0xe1, 0x01, 0x2c, 0x3c, 0xe9, 0xf9, 0x5e, 0xc0, 0xf8, 0xb5, 0x62, 0x5e, 0x40,
-	0x53, 0xb5, 0x16, 0x1d, 0x2a, 0x9a, 0xe1, 0x08, 0x19, 0x6a, 0x89, 0xab, 0x38, 0xa9, 0x9f, 0x8b,
-	0x39, 0x4f, 0x24, 0x23, 0x2b, 0x3e, 0xb4, 0xbb, 0x44, 0x5c, 0x85, 0x00, 0xef, 0xc2, 0xe2, 0x07,
-	0x7e, 0x93, 0xac, 0x57, 0xee, 0x8c, 0x0f, 0xab, 0x00, 0x52, 0xbc, 0xb8, 0x66, 0x85, 0xf8, 0x35,
-	0xa0, 0xc7, 0x24, 0xfc, 0x24, 0xa4, 0xd6, 0x6b, 0x7a, 0x10, 0xdb, 0xc1, 0x30, 0xd5, 0x21, 0xa1,
-	0x11, 0x3a, 0xb6, 0x4b, 0x2d, 0xa3, 0xef, 0xcb, 0xfd, 0x57, 0x3a, 0x24, 0x7c, 0x29, 0x68, 0x9f,
-	0xf8, 0xbc, 0x9a, 0x72, 0x19, 0xd9, 0x33, 0xc8, 0x0b, 0xd3, 0x51, 0xa1, 0xc4, 0x18, 0xaa, 0x3c,
-	0x8d, 0x62, 0x93, 0x08, 0x26, 0x78, 0xc6, 0xc9, 0x28, 0x88, 0x6f, 0xfc, 0xeb, 0x31, 0x98, 0xdf,
-	0x12, 0xa9, 0xf3, 0x92, 0x11, 0xd6, 0x0f, 0xff, 0xcf, 0x6e, 0x2f, 0xfa, 0x16, 0x80, 0x68, 0xc4,
-	0x8d, 0x0e, 0x25, 0x96, 0x68, 0xf1, 0x2a, 0xcd, 0xb5, 0xe4, 0x7d, 0xa3, 0xac, 0x53, 0x57, 0xed,
-	0x77, 0xbd, 0xc5, 0x05, 0x1f, 0x53, 0x62, 0xe9, 0x93, 0xa6, 0xfa, 0xdc, 0xbc, 0x0f, 0xd3, 0xd9,
-	0xe7, 0x1e, 0x55, 0xe0, 0xec, 0x76, 0x5b, 0x7f, 0xf2, 0xaa, 0xbd, 0x3d, 0xfb, 0x0d, 0x54, 0x85,
-	0xf2, 0x93, 0x67, 0x7b, 0x2f, 0xf4, 0xfd, 0xf6, 0xf6, 0xac, 0x86, 0x00, 0x4a, 0x7a, 0xfb, 0xd9,
-	0x8b, 0xfd, 0xf6, 0xec, 0x58, 0xf3, 0x9f, 0x13, 0x50, 0x8a, 0x0e, 0x02, 0xfd, 0x46, 0x83, 0x6a,
-	0xba, 0xe1, 0x43, 0x77, 0x8b, 0x5e, 0xd8, 0x11, 0xbd, 0xf8, 0xd2, 0x37, 0x4f, 0xa7, 0x14, 0x9d,
-	0x23, 0xbe, 0xfe, 0xf9, 0x5f, 0xff, 0xf1, 0xe5, 0xd8, 0x1a, 0xbe, 0xc8, 0x07, 0x9f, 0x64, 0x1c,
-	0x8a, 0x72, 0xa6, 0x61, 0x0a, 0x95, 0x87, 0xda, 0x26, 0x62, 0x50, 0x4d, 0xb7, 0x8b, 0x68, 0xa1,
-	0x1e, 0x8d, 0x17, 0x75, 0x35, 0x38, 0xd4, 0xdb, 0x7c, 0xbc, 0x58, 0x3a, 0x65, 0x4f, 0x8a, 0x97,
-	0x85, 0xff, 0x05, 0x34, 0x3f, 0xca, 0x3f, 0xfa, 0xa9, 0x06, 0xb3, 0xc3, 0x0d, 0x5f, 0xae, 0xeb,
-	0x07, 0x45, 0xae, 0xf3, 0x5a, 0x47, 0xbc, 0x2e, 0x40, 0x5c, 0x46, 0xab, 0x59, 0x10, 0xaa, 0x7d,
-	0x6c, 0xd8, 0x52, 0x11, 0xfd, 0x51, 0x83, 0x99, 0xa1, 0x9b, 0x8d, 0xee, 0x15, 0xb9, 0x1d, 0x5d,
-	0x82, 0x96, 0xee, 0x9f, 0x5a, 0x4f, 0xa2, 0xbd, 0x2d, 0xd0, 0x6e, 0xe2, 0x6b, 0x23, 0x8f, 0x2c,
-	0xae, 0x46, 0x8d, 0xa8, 0x96, 0x3c, 0xd4, 0x36, 0x9b, 0xbf, 0x1f, 0x83, 0x72, 0x3c, 0xfb, 0xfc,
-	0x52, 0x83, 0x6a, 0xba, 0xd3, 0x2b, 0xce, 0xb6, 0x11, 0xcd, 0x6a, 0x71, 0xb6, 0x8d, 0x6a, 0x26,
-	0xf1, 0x8a, 0x80, 0x5e, 0x43, 0x0b, 0x59, 0xe8, 0x71, 0x9f, 0xf8, 0x23, 0x0d, 0xa6, 0xb3, 0x0f,
-	0x10, 0xfa, 0xb8, 0x30, 0xad, 0x47, 0x3d, 0x58, 0x4b, 0x39, 0x49, 0x92, 0x97, 0xef, 0xaa, 0xa6,
-	0x37, 0xa8, 0xe5, 0x88, 0x90, 0xfd, 0xa0, 0x0c, 0xa5, 0xa8, 0xf0, 0xa1, 0x2f, 0x34, 0x98, 0xd9,
-	0xa1, 0x2c, 0x5d, 0x06, 0x73, 0x73, 0xb0, 0x30, 0x2c, 0xa3, 0x8a, 0x29, 0xbe, 0x22, 0x40, 0x5d,
-	0x42, 0x43, 0xa0, 0xe4, 0x2f, 0x85, 0x30, 0x72, 0xf9, 0x95, 0x06, 0x17, 0x76, 0x28, 0x7b, 0xa5,
-	0xd8, 0x7b, 0x24, 0x60, 0x8e, 0xe9, 0xf8, 0xe2, 0x91, 0x44, 0xf7, 0x73, 0x8a, 0x56, 0xae, 0x86,
-	0x0a, 0xd4, 0xc7, 0x39, 0x8a, 0x79, 0x5a, 0x12, 0xf2, 0xa6, 0x80, 0x7c, 0x15, 0xe1, 0x91, 0x90,
-	0xfd, 0x0c, 0xb6, 0xdf, 0x69, 0xb0, 0x98, 0xc1, 0x41, 0x83, 0x37, 0x5e, 0xd0, 0x23, 0xae, 0x49,
-	0x51, 0xb3, 0xd0, 0x7d, 0x22, 0xac, 0x20, 0xdf, 0x3d, 0x95, 0x8e, 0x04, 0xbc, 0x21, 0x00, 0x63,
-	0xb4, 0x36, 0x1a, 0x70, 0x0a, 0xd2, 0x8f, 0x35, 0x98, 0x4a, 0xc3, 0x0d, 0xd1, 0xad, 0x1c, 0x87,
-	0x3c, 0xc7, 0x13, 0x31, 0x05, 0xef, 0x72, 0x11, 0xbc, 0x30, 0xaf, 0xe0, 0x48, 0x30, 0x83, 0xc4,
-	0xf3, 0xaf, 0x34, 0x98, 0x4f, 0x63, 0xd9, 0x22, 0x5d, 0x8e, 0x31, 0x73, 0x69, 0xf3, 0x21, 0x29,
-	0x69, 0x85, 0x6c, 0xa3, 0x08, 0x99, 0x52, 0xc0, 0xd7, 0x04, 0xc0, 0x55, 0x74, 0x69, 0x24, 0xc0,
-	0x03, 0x85, 0x62, 0x00, 0xe7, 0xd2, 0xe8, 0xbe, 0xd3, 0xa7, 0x7d, 0x9a, 0x7b, 0x37, 0xae, 0x15,
-	0x79, 0x17, 0xea, 0x18, 0x0b, 0xd7, 0xcb, 0x68, 0x69, 0xa4, 0xeb, 0xcf, 0x84, 0x0b, 0x0b, 0xca,
-	0x3b, 0x94, 0xed, 0x51, 0x1a, 0xe4, 0x5f, 0xc5, 0xe5, 0x1c, 0x77, 0x42, 0xab, 0xc0, 0x8b, 0xcf,
-	0x65, 0x9a, 0x7f, 0x3e, 0x03, 0xa5, 0xc7, 0xe2, 0x47, 0x1e, 0xfa, 0x45, 0x94, 0xc2, 0x5b, 0x71,
-	0x5b, 0x93, 0x0c, 0x34, 0xb9, 0x00, 0x0a, 0x1f, 0x86, 0xd1, 0x83, 0x11, 0xbe, 0x25, 0xa0, 0x5d,
-	0x47, 0x57, 0xb3, 0xd0, 0xa2, 0x5f, 0x8a, 0xe2, 0xef, 0xa0, 0x61, 0x26, 0xde, 0xa3, 0x27, 0x92,
-	0xa5, 0x07, 0x82, 0xff, 0xa2, 0x3c, 0x8d, 0x9a, 0x64, 0xf0, 0x4d, 0x01, 0xe8, 0x1a, 0xba, 0x32,
-	0x12, 0x10, 0xef, 0x13, 0x1b, 0x34, 0x76, 0xfd, 0x3d, 0x00, 0x9e, 0x12, 0xd1, 0x3c, 0x92, 0x0b,
-	0xa4, 0x51, 0x04, 0x64, 0x68, 0xa0, 0xc1, 0x57, 0x05, 0x86, 0x15, 0xb4, 0x3c, 0x12, 0xc3, 0x40,
-	0xba, 0xfb, 0xa1, 0x06, 0xb3, 0x2f, 0x59, 0x40, 0x49, 0x6f, 0x2b, 0x1e, 0x93, 0x72, 0x31, 0x5c,
-	0x4d, 0x30, 0x44, 0xc7, 0x5e, 0x0f, 0x7c, 0xb3, 0x3e, 0xb8, 0x53, 0x4f, 0x77, 0xc5, 0xb8, 0x21,
-	0x1c, 0xdf, 0x40, 0xeb, 0xf9, 0x9b, 0x8f, 0xeb, 0x34, 0x77, 0x7c, 0x5b, 0x43, 0x3f, 0xd3, 0x60,
-	0x2e, 0x42, 0xf1, 0x2a, 0x3d, 0xe1, 0xe5, 0x02, 0xb9, 0x75, 0x92, 0x53, 0x89, 0x01, 0x35, 0x05,
-	0xa0, 0x5b, 0x68, 0x33, 0x1f, 0x50, 0x42, 0x55, 0x98, 0x9a, 0xff, 0x1a, 0x87, 0x09, 0x3e, 0xda,
-	0xf3, 0xf3, 0x49, 0xc6, 0x89, 0x5c, 0x48, 0xcd, 0x22, 0x48, 0x1f, 0x8e, 0x24, 0xf8, 0xb2, 0x00,
-	0x76, 0x11, 0x5d, 0xc8, 0x02, 0x73, 0x5c, 0x87, 0x39, 0xa4, 0xeb, 0xbc, 0xa3, 0x16, 0xfa, 0x5c,
-	0x83, 0x33, 0x4f, 0x3d, 0xdb, 0x71, 0xd1, 0xcd, 0xc2, 0x9f, 0x48, 0xc9, 0x7f, 0x8e, 0xe2, 0x00,
-	0xa5, 0x7f, 0x5a, 0xa8, 0x26, 0x03, 0xcf, 0x65, 0x71, 0x74, 0xb9, 0x5f, 0xde, 0xca, 0x7e, 0xa1,
-	0x41, 0x89, 0xcf, 0x48, 0x7d, 0xff, 0x7f, 0x89, 0x62, 0x55, 0xa0, 0xb8, 0x80, 0x87, 0x1a, 0xdb,
-	0x50, 0x38, 0xe6, 0x30, 0xbe, 0x0b, 0xa5, 0xa7, 0x9e, 0xed, 0xf5, 0x59, 0xee, 0x21, 0xe4, 0xf5,
-	0x30, 0x39, 0xa6, 0xbb, 0xc2, 0xda, 0x43, 0x6d, 0x73, 0xab, 0xfa, 0xa7, 0xf7, 0x2b, 0xda, 0x5f,
-	0xde, 0xaf, 0x68, 0x7f, 0x7f, 0xbf, 0xa2, 0x1d, 0x94, 0x84, 0xfa, 0xdd, 0xff, 0x04, 0x00, 0x00,
-	0xff, 0xff, 0x16, 0x34, 0x84, 0x21, 0xf4, 0x18, 0x00, 0x00,
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2258,8 +2167,8 @@ const _ = grpc.SupportPackageIsVersion6
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type WalletClient interface {
 	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, error)
-	WalletConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
-	GenerateMnemonic(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
+	WalletConfig(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
+	GenerateMnemonic(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
 	ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error)
 }
 
@@ -2280,7 +2189,7 @@ func (c *walletClient) CreateWallet(ctx context.Context, in *CreateWalletRequest
 	return out, nil
 }
 
-func (c *walletClient) WalletConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletResponse, error) {
+func (c *walletClient) WalletConfig(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*WalletResponse, error) {
 	out := new(WalletResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/WalletConfig", in, out, opts...)
 	if err != nil {
@@ -2289,7 +2198,7 @@ func (c *walletClient) WalletConfig(ctx context.Context, in *emptypb.Empty, opts
 	return out, nil
 }
 
-func (c *walletClient) GenerateMnemonic(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
+func (c *walletClient) GenerateMnemonic(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
 	out := new(GenerateMnemonicResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic", in, out, opts...)
 	if err != nil {
@@ -2310,8 +2219,8 @@ func (c *walletClient) ImportKeystores(ctx context.Context, in *ImportKeystoresR
 // WalletServer is the server API for Wallet service.
 type WalletServer interface {
 	CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, error)
-	WalletConfig(context.Context, *emptypb.Empty) (*WalletResponse, error)
-	GenerateMnemonic(context.Context, *emptypb.Empty) (*GenerateMnemonicResponse, error)
+	WalletConfig(context.Context, *empty.Empty) (*WalletResponse, error)
+	GenerateMnemonic(context.Context, *empty.Empty) (*GenerateMnemonicResponse, error)
 	ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error)
 }
 
@@ -2322,10 +2231,10 @@ type UnimplementedWalletServer struct {
 func (*UnimplementedWalletServer) CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWallet not implemented")
 }
-func (*UnimplementedWalletServer) WalletConfig(context.Context, *emptypb.Empty) (*WalletResponse, error) {
+func (*UnimplementedWalletServer) WalletConfig(context.Context, *empty.Empty) (*WalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WalletConfig not implemented")
 }
-func (*UnimplementedWalletServer) GenerateMnemonic(context.Context, *emptypb.Empty) (*GenerateMnemonicResponse, error) {
+func (*UnimplementedWalletServer) GenerateMnemonic(context.Context, *empty.Empty) (*GenerateMnemonicResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateMnemonic not implemented")
 }
 func (*UnimplementedWalletServer) ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error) {
@@ -2355,7 +2264,7 @@ func _Wallet_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func
 }
 
 func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2367,13 +2276,13 @@ func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/ethereum.validator.accounts.v2.Wallet/WalletConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletServer).WalletConfig(ctx, req.(*emptypb.Empty))
+		return srv.(WalletServer).WalletConfig(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2385,7 +2294,7 @@ func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*emptypb.Empty))
+		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2438,7 +2347,7 @@ var _Wallet_serviceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AccountsClient interface {
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
-	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type accountsClient struct {
@@ -2458,8 +2367,8 @@ func (c *accountsClient) ListAccounts(ctx context.Context, in *ListAccountsReque
 	return out, nil
 }
 
-func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/ChangePassword", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -2470,7 +2379,7 @@ func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordR
 // AccountsServer is the server API for Accounts service.
 type AccountsServer interface {
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
-	ChangePassword(context.Context, *ChangePasswordRequest) (*emptypb.Empty, error)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*empty.Empty, error)
 }
 
 // UnimplementedAccountsServer can be embedded to have forward compatible implementations.
@@ -2480,7 +2389,7 @@ type UnimplementedAccountsServer struct {
 func (*UnimplementedAccountsServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
 }
-func (*UnimplementedAccountsServer) ChangePassword(context.Context, *ChangePasswordRequest) (*emptypb.Empty, error) {
+func (*UnimplementedAccountsServer) ChangePassword(context.Context, *ChangePasswordRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
 
@@ -2544,73 +2453,42 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 // BeaconClient is the client API for Beacon service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-<<<<<<< HEAD
-type HealthClient interface {
-	GetBeaconNodeConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
-}
-
-type healthClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewHealthClient(cc grpc.ClientConnInterface) HealthClient {
-	return &healthClient{cc}
-}
-
-func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
-	out := new(NodeConnectionResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection", in, out, opts...)
-=======
 type BeaconClient interface {
-	GetBeaconStatus(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error)
+	GetBeaconStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error)
 	GetValidatorParticipation(ctx context.Context, in *v1alpha1.GetValidatorParticipationRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorParticipationResponse, error)
 	GetValidatorPerformance(ctx context.Context, in *v1alpha1.ValidatorPerformanceRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorPerformanceResponse, error)
 	GetValidators(ctx context.Context, in *v1alpha1.ListValidatorsRequest, opts ...grpc.CallOption) (*v1alpha1.Validators, error)
 	GetValidatorBalances(ctx context.Context, in *v1alpha1.ListValidatorBalancesRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorBalances, error)
-	GetValidatorQueue(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error)
-	GetPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error)
+	GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error)
+	GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error)
 }
 
 type beaconClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
-func NewBeaconClient(cc *grpc.ClientConn) BeaconClient {
+func NewBeaconClient(cc grpc.ClientConnInterface) BeaconClient {
 	return &beaconClient{cc}
 }
 
-func (c *beaconClient) GetBeaconStatus(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error) {
+func (c *beaconClient) GetBeaconStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error) {
 	out := new(BeaconStatusResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus", in, out, opts...)
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-<<<<<<< HEAD
-func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
-	out := new(LogsEndpointResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints", in, out, opts...)
-=======
 func (c *beaconClient) GetValidatorParticipation(ctx context.Context, in *v1alpha1.GetValidatorParticipationRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorParticipationResponse, error) {
 	out := new(v1alpha1.ValidatorParticipationResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetValidatorParticipation", in, out, opts...)
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-<<<<<<< HEAD
-// HealthServer is the server API for Health service.
-type HealthServer interface {
-	GetBeaconNodeConnection(context.Context, *emptypb.Empty) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(context.Context, *emptypb.Empty) (*LogsEndpointResponse, error)
-=======
 func (c *beaconClient) GetValidatorPerformance(ctx context.Context, in *v1alpha1.ValidatorPerformanceRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorPerformanceResponse, error) {
 	out := new(v1alpha1.ValidatorPerformanceResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetValidatorPerformance", in, out, opts...)
@@ -2618,7 +2496,6 @@ func (c *beaconClient) GetValidatorPerformance(ctx context.Context, in *v1alpha1
 		return nil, err
 	}
 	return out, nil
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 }
 
 func (c *beaconClient) GetValidators(ctx context.Context, in *v1alpha1.ListValidatorsRequest, opts ...grpc.CallOption) (*v1alpha1.Validators, error) {
@@ -2630,13 +2507,6 @@ func (c *beaconClient) GetValidators(ctx context.Context, in *v1alpha1.ListValid
 	return out, nil
 }
 
-<<<<<<< HEAD
-func (*UnimplementedHealthServer) GetBeaconNodeConnection(context.Context, *emptypb.Empty) (*NodeConnectionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconNodeConnection not implemented")
-}
-func (*UnimplementedHealthServer) GetLogsEndpoints(context.Context, *emptypb.Empty) (*LogsEndpointResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetLogsEndpoints not implemented")
-=======
 func (c *beaconClient) GetValidatorBalances(ctx context.Context, in *v1alpha1.ListValidatorBalancesRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorBalances, error) {
 	out := new(v1alpha1.ValidatorBalances)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetValidatorBalances", in, out, opts...)
@@ -2646,17 +2516,16 @@ func (c *beaconClient) GetValidatorBalances(ctx context.Context, in *v1alpha1.Li
 	return out, nil
 }
 
-func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error) {
+func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error) {
 	out := new(v1alpha1.ValidatorQueue)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 }
 
-func (c *beaconClient) GetPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error) {
+func (c *beaconClient) GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error) {
 	out := new(v1alpha1.Peers)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetPeers", in, out, opts...)
 	if err != nil {
@@ -2665,44 +2534,40 @@ func (c *beaconClient) GetPeers(ctx context.Context, in *types.Empty, opts ...gr
 	return out, nil
 }
 
-<<<<<<< HEAD
-func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-=======
 // BeaconServer is the server API for Beacon service.
 type BeaconServer interface {
-	GetBeaconStatus(context.Context, *types.Empty) (*BeaconStatusResponse, error)
+	GetBeaconStatus(context.Context, *empty.Empty) (*BeaconStatusResponse, error)
 	GetValidatorParticipation(context.Context, *v1alpha1.GetValidatorParticipationRequest) (*v1alpha1.ValidatorParticipationResponse, error)
 	GetValidatorPerformance(context.Context, *v1alpha1.ValidatorPerformanceRequest) (*v1alpha1.ValidatorPerformanceResponse, error)
 	GetValidators(context.Context, *v1alpha1.ListValidatorsRequest) (*v1alpha1.Validators, error)
 	GetValidatorBalances(context.Context, *v1alpha1.ListValidatorBalancesRequest) (*v1alpha1.ValidatorBalances, error)
-	GetValidatorQueue(context.Context, *types.Empty) (*v1alpha1.ValidatorQueue, error)
-	GetPeers(context.Context, *types.Empty) (*v1alpha1.Peers, error)
+	GetValidatorQueue(context.Context, *empty.Empty) (*v1alpha1.ValidatorQueue, error)
+	GetPeers(context.Context, *empty.Empty) (*v1alpha1.Peers, error)
 }
 
 // UnimplementedBeaconServer can be embedded to have forward compatible implementations.
 type UnimplementedBeaconServer struct {
 }
 
-func (*UnimplementedBeaconServer) GetBeaconStatus(ctx context.Context, req *types.Empty) (*BeaconStatusResponse, error) {
+func (*UnimplementedBeaconServer) GetBeaconStatus(context.Context, *empty.Empty) (*BeaconStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconStatus not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorParticipation(ctx context.Context, req *v1alpha1.GetValidatorParticipationRequest) (*v1alpha1.ValidatorParticipationResponse, error) {
+func (*UnimplementedBeaconServer) GetValidatorParticipation(context.Context, *v1alpha1.GetValidatorParticipationRequest) (*v1alpha1.ValidatorParticipationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorParticipation not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorPerformance(ctx context.Context, req *v1alpha1.ValidatorPerformanceRequest) (*v1alpha1.ValidatorPerformanceResponse, error) {
+func (*UnimplementedBeaconServer) GetValidatorPerformance(context.Context, *v1alpha1.ValidatorPerformanceRequest) (*v1alpha1.ValidatorPerformanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorPerformance not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidators(ctx context.Context, req *v1alpha1.ListValidatorsRequest) (*v1alpha1.Validators, error) {
+func (*UnimplementedBeaconServer) GetValidators(context.Context, *v1alpha1.ListValidatorsRequest) (*v1alpha1.Validators, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidators not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorBalances(ctx context.Context, req *v1alpha1.ListValidatorBalancesRequest) (*v1alpha1.ValidatorBalances, error) {
+func (*UnimplementedBeaconServer) GetValidatorBalances(context.Context, *v1alpha1.ListValidatorBalancesRequest) (*v1alpha1.ValidatorBalances, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorBalances not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorQueue(ctx context.Context, req *types.Empty) (*v1alpha1.ValidatorQueue, error) {
+func (*UnimplementedBeaconServer) GetValidatorQueue(context.Context, *empty.Empty) (*v1alpha1.ValidatorQueue, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorQueue not implemented")
 }
-func (*UnimplementedBeaconServer) GetPeers(ctx context.Context, req *types.Empty) (*v1alpha1.Peers, error) {
+func (*UnimplementedBeaconServer) GetPeers(context.Context, *empty.Empty) (*v1alpha1.Peers, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPeers not implemented")
 }
 
@@ -2711,8 +2576,7 @@ func RegisterBeaconServer(s *grpc.Server, srv BeaconServer) {
 }
 
 func _Beacon_GetBeaconStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2724,22 +2588,13 @@ func _Beacon_GetBeaconStatus_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-<<<<<<< HEAD
-		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*emptypb.Empty))
-=======
-		return srv.(BeaconServer).GetBeaconStatus(ctx, req.(*types.Empty))
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
+		return srv.(BeaconServer).GetBeaconStatus(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-<<<<<<< HEAD
-func _Health_GetLogsEndpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-=======
 func _Beacon_GetValidatorParticipation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1alpha1.GetValidatorParticipationRequest)
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2751,60 +2606,14 @@ func _Beacon_GetValidatorParticipation_Handler(srv interface{}, ctx context.Cont
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetValidatorParticipation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-<<<<<<< HEAD
-		return srv.(HealthServer).GetLogsEndpoints(ctx, req.(*emptypb.Empty))
-=======
 		return srv.(BeaconServer).GetValidatorParticipation(ctx, req.(*v1alpha1.GetValidatorParticipationRequest))
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-<<<<<<< HEAD
-var _Health_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "ethereum.validator.accounts.v2.Health",
-	HandlerType: (*HealthServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetBeaconNodeConnection",
-			Handler:    _Health_GetBeaconNodeConnection_Handler,
-		},
-		{
-			MethodName: "GetLogsEndpoints",
-			Handler:    _Health_GetLogsEndpoints_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/validator/accounts/v2/web_api.proto",
-}
-
-// AuthClient is the client API for Auth service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type AuthClient interface {
-	HasUsedWeb(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error)
-	Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
-	Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
-	Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-}
-
-type authClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewAuthClient(cc grpc.ClientConnInterface) AuthClient {
-	return &authClient{cc}
-}
-
-func (c *authClient) HasUsedWeb(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error) {
-	out := new(HasUsedWebResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/HasUsedWeb", in, out, opts...)
-	if err != nil {
-=======
 func _Beacon_GetValidatorPerformance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1alpha1.ValidatorPerformanceRequest)
 	if err := dec(in); err != nil {
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 		return nil, err
 	}
 	if interceptor == nil {
@@ -2820,69 +2629,8 @@ func _Beacon_GetValidatorPerformance_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-<<<<<<< HEAD
-func (c *authClient) Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
-	out := new(AuthResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Login", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
-	out := new(AuthResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Signup", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authClient) Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Logout", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// AuthServer is the server API for Auth service.
-type AuthServer interface {
-	HasUsedWeb(context.Context, *emptypb.Empty) (*HasUsedWebResponse, error)
-	Login(context.Context, *AuthRequest) (*AuthResponse, error)
-	Signup(context.Context, *AuthRequest) (*AuthResponse, error)
-	Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-}
-
-// UnimplementedAuthServer can be embedded to have forward compatible implementations.
-type UnimplementedAuthServer struct {
-}
-
-func (*UnimplementedAuthServer) HasUsedWeb(context.Context, *emptypb.Empty) (*HasUsedWebResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HasUsedWeb not implemented")
-}
-func (*UnimplementedAuthServer) Login(context.Context, *AuthRequest) (*AuthResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
-}
-func (*UnimplementedAuthServer) Signup(context.Context, *AuthRequest) (*AuthResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Signup not implemented")
-}
-func (*UnimplementedAuthServer) Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
-}
-
-func RegisterAuthServer(s *grpc.Server, srv AuthServer) {
-	s.RegisterService(&_Auth_serviceDesc, srv)
-}
-
-func _Auth_HasUsedWeb_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-=======
 func _Beacon_GetValidators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1alpha1.ListValidatorsRequest)
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2894,11 +2642,7 @@ func _Beacon_GetValidators_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetValidators",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-<<<<<<< HEAD
-		return srv.(AuthServer).HasUsedWeb(ctx, req.(*emptypb.Empty))
-=======
 		return srv.(BeaconServer).GetValidators(ctx, req.(*v1alpha1.ListValidatorsRequest))
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2922,7 +2666,7 @@ func _Beacon_GetValidatorBalances_Handler(srv interface{}, ctx context.Context, 
 }
 
 func _Beacon_GetValidatorQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2934,18 +2678,13 @@ func _Beacon_GetValidatorQueue_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetValidatorQueue(ctx, req.(*types.Empty))
+		return srv.(BeaconServer).GetValidatorQueue(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-<<<<<<< HEAD
-func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-=======
 func _Beacon_GetPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2957,11 +2696,7 @@ func _Beacon_GetPeers_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetPeers",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-<<<<<<< HEAD
-		return srv.(AuthServer).Logout(ctx, req.(*emptypb.Empty))
-=======
-		return srv.(BeaconServer).GetPeers(ctx, req.(*types.Empty))
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722
+		return srv.(BeaconServer).GetPeers(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3002,29 +2737,27 @@ var _Beacon_serviceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/validator/accounts/v2/web_api.proto",
 }
-<<<<<<< HEAD
-=======
 
 // HealthClient is the client API for Health service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type HealthClient interface {
-	GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
-	GetVersion(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*VersionResponse, error)
-	StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
-	StreamValidatorLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error)
+	GetBeaconNodeConnection(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
+	GetLogsEndpoints(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
+	GetVersion(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*VersionResponse, error)
+	StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
+	StreamValidatorLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error)
 }
 
 type healthClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
-func NewHealthClient(cc *grpc.ClientConn) HealthClient {
+func NewHealthClient(cc grpc.ClientConnInterface) HealthClient {
 	return &healthClient{cc}
 }
 
-func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
+func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
 	out := new(NodeConnectionResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection", in, out, opts...)
 	if err != nil {
@@ -3033,7 +2766,7 @@ func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *types.Em
 	return out, nil
 }
 
-func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
+func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
 	out := new(LogsEndpointResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints", in, out, opts...)
 	if err != nil {
@@ -3042,7 +2775,7 @@ func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *types.Empty, op
 	return out, nil
 }
 
-func (c *healthClient) GetVersion(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*VersionResponse, error) {
+func (c *healthClient) GetVersion(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*VersionResponse, error) {
 	out := new(VersionResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetVersion", in, out, opts...)
 	if err != nil {
@@ -3051,7 +2784,7 @@ func (c *healthClient) GetVersion(ctx context.Context, in *types.Empty, opts ...
 	return out, nil
 }
 
-func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
+func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Health_serviceDesc.Streams[0], "/ethereum.validator.accounts.v2.Health/StreamBeaconLogs", opts...)
 	if err != nil {
 		return nil, err
@@ -3083,7 +2816,7 @@ func (x *healthStreamBeaconLogsClient) Recv() (*v1.LogsResponse, error) {
 	return m, nil
 }
 
-func (c *healthClient) StreamValidatorLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error) {
+func (c *healthClient) StreamValidatorLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Health_serviceDesc.Streams[1], "/ethereum.validator.accounts.v2.Health/StreamValidatorLogs", opts...)
 	if err != nil {
 		return nil, err
@@ -3117,30 +2850,30 @@ func (x *healthStreamValidatorLogsClient) Recv() (*LogsResponse, error) {
 
 // HealthServer is the server API for Health service.
 type HealthServer interface {
-	GetBeaconNodeConnection(context.Context, *types.Empty) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(context.Context, *types.Empty) (*LogsEndpointResponse, error)
-	GetVersion(context.Context, *types.Empty) (*VersionResponse, error)
-	StreamBeaconLogs(*types.Empty, Health_StreamBeaconLogsServer) error
-	StreamValidatorLogs(*types.Empty, Health_StreamValidatorLogsServer) error
+	GetBeaconNodeConnection(context.Context, *empty.Empty) (*NodeConnectionResponse, error)
+	GetLogsEndpoints(context.Context, *empty.Empty) (*LogsEndpointResponse, error)
+	GetVersion(context.Context, *empty.Empty) (*VersionResponse, error)
+	StreamBeaconLogs(*empty.Empty, Health_StreamBeaconLogsServer) error
+	StreamValidatorLogs(*empty.Empty, Health_StreamValidatorLogsServer) error
 }
 
 // UnimplementedHealthServer can be embedded to have forward compatible implementations.
 type UnimplementedHealthServer struct {
 }
 
-func (*UnimplementedHealthServer) GetBeaconNodeConnection(ctx context.Context, req *types.Empty) (*NodeConnectionResponse, error) {
+func (*UnimplementedHealthServer) GetBeaconNodeConnection(context.Context, *empty.Empty) (*NodeConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconNodeConnection not implemented")
 }
-func (*UnimplementedHealthServer) GetLogsEndpoints(ctx context.Context, req *types.Empty) (*LogsEndpointResponse, error) {
+func (*UnimplementedHealthServer) GetLogsEndpoints(context.Context, *empty.Empty) (*LogsEndpointResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLogsEndpoints not implemented")
 }
-func (*UnimplementedHealthServer) GetVersion(ctx context.Context, req *types.Empty) (*VersionResponse, error) {
+func (*UnimplementedHealthServer) GetVersion(context.Context, *empty.Empty) (*VersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVersion not implemented")
 }
-func (*UnimplementedHealthServer) StreamBeaconLogs(req *types.Empty, srv Health_StreamBeaconLogsServer) error {
+func (*UnimplementedHealthServer) StreamBeaconLogs(*empty.Empty, Health_StreamBeaconLogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamBeaconLogs not implemented")
 }
-func (*UnimplementedHealthServer) StreamValidatorLogs(req *types.Empty, srv Health_StreamValidatorLogsServer) error {
+func (*UnimplementedHealthServer) StreamValidatorLogs(*empty.Empty, Health_StreamValidatorLogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamValidatorLogs not implemented")
 }
 
@@ -3149,7 +2882,7 @@ func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
 }
 
 func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3161,13 +2894,13 @@ func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*types.Empty))
+		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Health_GetLogsEndpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3179,13 +2912,13 @@ func _Health_GetLogsEndpoints_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetLogsEndpoints(ctx, req.(*types.Empty))
+		return srv.(HealthServer).GetLogsEndpoints(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Health_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3197,13 +2930,13 @@ func _Health_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetVersion",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetVersion(ctx, req.(*types.Empty))
+		return srv.(HealthServer).GetVersion(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Health_StreamBeaconLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(types.Empty)
+	m := new(empty.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -3224,7 +2957,7 @@ func (x *healthStreamBeaconLogsServer) Send(m *v1.LogsResponse) error {
 }
 
 func _Health_StreamValidatorLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(types.Empty)
+	m := new(empty.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -3280,21 +3013,21 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AuthClient interface {
-	HasUsedWeb(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error)
+	HasUsedWeb(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error)
 	Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
-	Logout(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*types.Empty, error)
+	Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type authClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
-func NewAuthClient(cc *grpc.ClientConn) AuthClient {
+func NewAuthClient(cc grpc.ClientConnInterface) AuthClient {
 	return &authClient{cc}
 }
 
-func (c *authClient) HasUsedWeb(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error) {
+func (c *authClient) HasUsedWeb(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error) {
 	out := new(HasUsedWebResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/HasUsedWeb", in, out, opts...)
 	if err != nil {
@@ -3321,8 +3054,8 @@ func (c *authClient) Signup(ctx context.Context, in *AuthRequest, opts ...grpc.C
 	return out, nil
 }
 
-func (c *authClient) Logout(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*types.Empty, error) {
-	out := new(types.Empty)
+func (c *authClient) Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Logout", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -3332,26 +3065,26 @@ func (c *authClient) Logout(ctx context.Context, in *types.Empty, opts ...grpc.C
 
 // AuthServer is the server API for Auth service.
 type AuthServer interface {
-	HasUsedWeb(context.Context, *types.Empty) (*HasUsedWebResponse, error)
+	HasUsedWeb(context.Context, *empty.Empty) (*HasUsedWebResponse, error)
 	Login(context.Context, *AuthRequest) (*AuthResponse, error)
 	Signup(context.Context, *AuthRequest) (*AuthResponse, error)
-	Logout(context.Context, *types.Empty) (*types.Empty, error)
+	Logout(context.Context, *empty.Empty) (*empty.Empty, error)
 }
 
 // UnimplementedAuthServer can be embedded to have forward compatible implementations.
 type UnimplementedAuthServer struct {
 }
 
-func (*UnimplementedAuthServer) HasUsedWeb(ctx context.Context, req *types.Empty) (*HasUsedWebResponse, error) {
+func (*UnimplementedAuthServer) HasUsedWeb(context.Context, *empty.Empty) (*HasUsedWebResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HasUsedWeb not implemented")
 }
-func (*UnimplementedAuthServer) Login(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
+func (*UnimplementedAuthServer) Login(context.Context, *AuthRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (*UnimplementedAuthServer) Signup(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
+func (*UnimplementedAuthServer) Signup(context.Context, *AuthRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Signup not implemented")
 }
-func (*UnimplementedAuthServer) Logout(ctx context.Context, req *types.Empty) (*types.Empty, error) {
+func (*UnimplementedAuthServer) Logout(context.Context, *empty.Empty) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 
@@ -3360,7 +3093,7 @@ func RegisterAuthServer(s *grpc.Server, srv AuthServer) {
 }
 
 func _Auth_HasUsedWeb_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3372,7 +3105,7 @@ func _Auth_HasUsedWeb_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/ethereum.validator.accounts.v2.Auth/HasUsedWeb",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).HasUsedWeb(ctx, req.(*types.Empty))
+		return srv.(AuthServer).HasUsedWeb(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3414,7 +3147,7 @@ func _Auth_Signup_Handler(srv interface{}, ctx context.Context, dec func(interfa
 }
 
 func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3426,7 +3159,7 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		FullMethod: "/ethereum.validator.accounts.v2.Auth/Logout",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).Logout(ctx, req.(*types.Empty))
+		return srv.(AuthServer).Logout(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3455,4446 +3188,3 @@ var _Auth_serviceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/validator/accounts/v2/web_api.proto",
 }
-
-func (m *CreateWalletRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *CreateWalletRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CreateWalletRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.RemoteCaCrtPath) > 0 {
-		i -= len(m.RemoteCaCrtPath)
-		copy(dAtA[i:], m.RemoteCaCrtPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteCaCrtPath)))
-		i--
-		dAtA[i] = 0x42
-	}
-	if len(m.RemoteKeyPath) > 0 {
-		i -= len(m.RemoteKeyPath)
-		copy(dAtA[i:], m.RemoteKeyPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteKeyPath)))
-		i--
-		dAtA[i] = 0x3a
-	}
-	if len(m.RemoteCrtPath) > 0 {
-		i -= len(m.RemoteCrtPath)
-		copy(dAtA[i:], m.RemoteCrtPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteCrtPath)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if len(m.RemoteAddr) > 0 {
-		i -= len(m.RemoteAddr)
-		copy(dAtA[i:], m.RemoteAddr)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteAddr)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if m.NumAccounts != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.NumAccounts))
-		i--
-		dAtA[i] = 0x20
-	}
-	if len(m.Mnemonic) > 0 {
-		i -= len(m.Mnemonic)
-		copy(dAtA[i:], m.Mnemonic)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Mnemonic)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.WalletPassword) > 0 {
-		i -= len(m.WalletPassword)
-		copy(dAtA[i:], m.WalletPassword)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.WalletPassword)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.Keymanager != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.Keymanager))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *CreateWalletResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *CreateWalletResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CreateWalletResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.Wallet != nil {
-		{
-			size, err := m.Wallet.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintWebApi(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *EditWalletConfigRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *EditWalletConfigRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *EditWalletConfigRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.RemoteCaCrtPath) > 0 {
-		i -= len(m.RemoteCaCrtPath)
-		copy(dAtA[i:], m.RemoteCaCrtPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteCaCrtPath)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.RemoteKeyPath) > 0 {
-		i -= len(m.RemoteKeyPath)
-		copy(dAtA[i:], m.RemoteKeyPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteKeyPath)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.RemoteCrtPath) > 0 {
-		i -= len(m.RemoteCrtPath)
-		copy(dAtA[i:], m.RemoteCrtPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteCrtPath)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.RemoteAddr) > 0 {
-		i -= len(m.RemoteAddr)
-		copy(dAtA[i:], m.RemoteAddr)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.RemoteAddr)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *GenerateMnemonicResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GenerateMnemonicResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GenerateMnemonicResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Mnemonic) > 0 {
-		i -= len(m.Mnemonic)
-		copy(dAtA[i:], m.Mnemonic)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Mnemonic)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *WalletResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *WalletResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *WalletResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.KeymanagerKind != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.KeymanagerKind))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.WalletPath) > 0 {
-		i -= len(m.WalletPath)
-		copy(dAtA[i:], m.WalletPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.WalletPath)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ListAccountsRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListAccountsRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListAccountsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.All {
-		i--
-		if m.All {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x20
-	}
-	if len(m.PageToken) > 0 {
-		i -= len(m.PageToken)
-		copy(dAtA[i:], m.PageToken)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.PageToken)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if m.PageSize != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.PageSize))
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.GetDepositTxData {
-		i--
-		if m.GetDepositTxData {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ListAccountsResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListAccountsResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListAccountsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.TotalSize != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.TotalSize))
-		i--
-		dAtA[i] = 0x18
-	}
-	if len(m.NextPageToken) > 0 {
-		i -= len(m.NextPageToken)
-		copy(dAtA[i:], m.NextPageToken)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.NextPageToken)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Accounts) > 0 {
-		for iNdEx := len(m.Accounts) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Accounts[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintWebApi(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *Account) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Account) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Account) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.DerivationPath) > 0 {
-		i -= len(m.DerivationPath)
-		copy(dAtA[i:], m.DerivationPath)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.DerivationPath)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.DepositTxData) > 0 {
-		i -= len(m.DepositTxData)
-		copy(dAtA[i:], m.DepositTxData)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.DepositTxData)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.AccountName) > 0 {
-		i -= len(m.AccountName)
-		copy(dAtA[i:], m.AccountName)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.AccountName)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.ValidatingPublicKey) > 0 {
-		i -= len(m.ValidatingPublicKey)
-		copy(dAtA[i:], m.ValidatingPublicKey)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.ValidatingPublicKey)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AccountRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AccountRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AccountRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Indices) > 0 {
-		dAtA3 := make([]byte, len(m.Indices)*10)
-		var j2 int
-		for _, num := range m.Indices {
-			for num >= 1<<7 {
-				dAtA3[j2] = uint8(uint64(num)&0x7f | 0x80)
-				num >>= 7
-				j2++
-			}
-			dAtA3[j2] = uint8(num)
-			j2++
-		}
-		i -= j2
-		copy(dAtA[i:], dAtA3[:j2])
-		i = encodeVarintWebApi(dAtA, i, uint64(j2))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.PublicKeys) > 0 {
-		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.PublicKeys[iNdEx])
-			copy(dAtA[i:], m.PublicKeys[iNdEx])
-			i = encodeVarintWebApi(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AuthRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AuthRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AuthRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.PasswordConfirmation) > 0 {
-		i -= len(m.PasswordConfirmation)
-		copy(dAtA[i:], m.PasswordConfirmation)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.PasswordConfirmation)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Password) > 0 {
-		i -= len(m.Password)
-		copy(dAtA[i:], m.Password)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Password)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AuthResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AuthResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AuthResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.TokenExpiration != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.TokenExpiration))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.Token) > 0 {
-		i -= len(m.Token)
-		copy(dAtA[i:], m.Token)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Token)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *NodeConnectionResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *NodeConnectionResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *NodeConnectionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.DepositContractAddress) > 0 {
-		i -= len(m.DepositContractAddress)
-		copy(dAtA[i:], m.DepositContractAddress)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.DepositContractAddress)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if m.GenesisTime != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.GenesisTime))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.Syncing {
-		i--
-		if m.Syncing {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.Connected {
-		i--
-		if m.Connected {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.BeaconNodeEndpoint) > 0 {
-		i -= len(m.BeaconNodeEndpoint)
-		copy(dAtA[i:], m.BeaconNodeEndpoint)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.BeaconNodeEndpoint)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *LogsEndpointResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *LogsEndpointResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *LogsEndpointResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.BeaconLogsEndpoint) > 0 {
-		i -= len(m.BeaconLogsEndpoint)
-		copy(dAtA[i:], m.BeaconLogsEndpoint)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.BeaconLogsEndpoint)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.ValidatorLogsEndpoint) > 0 {
-		i -= len(m.ValidatorLogsEndpoint)
-		copy(dAtA[i:], m.ValidatorLogsEndpoint)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.ValidatorLogsEndpoint)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *VersionResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *VersionResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *VersionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Validator) > 0 {
-		i -= len(m.Validator)
-		copy(dAtA[i:], m.Validator)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Validator)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Beacon) > 0 {
-		i -= len(m.Beacon)
-		copy(dAtA[i:], m.Beacon)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Beacon)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ChangePasswordRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ChangePasswordRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ChangePasswordRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.PasswordConfirmation) > 0 {
-		i -= len(m.PasswordConfirmation)
-		copy(dAtA[i:], m.PasswordConfirmation)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.PasswordConfirmation)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Password) > 0 {
-		i -= len(m.Password)
-		copy(dAtA[i:], m.Password)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.Password)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.CurrentPassword) > 0 {
-		i -= len(m.CurrentPassword)
-		copy(dAtA[i:], m.CurrentPassword)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.CurrentPassword)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *HasWalletResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *HasWalletResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *HasWalletResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.WalletExists {
-		i--
-		if m.WalletExists {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ImportKeystoresRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ImportKeystoresRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ImportKeystoresRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.KeystoresPassword) > 0 {
-		i -= len(m.KeystoresPassword)
-		copy(dAtA[i:], m.KeystoresPassword)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.KeystoresPassword)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.KeystoresImported) > 0 {
-		for iNdEx := len(m.KeystoresImported) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.KeystoresImported[iNdEx])
-			copy(dAtA[i:], m.KeystoresImported[iNdEx])
-			i = encodeVarintWebApi(dAtA, i, uint64(len(m.KeystoresImported[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ImportKeystoresResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ImportKeystoresResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ImportKeystoresResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.ImportedPublicKeys) > 0 {
-		for iNdEx := len(m.ImportedPublicKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.ImportedPublicKeys[iNdEx])
-			copy(dAtA[i:], m.ImportedPublicKeys[iNdEx])
-			i = encodeVarintWebApi(dAtA, i, uint64(len(m.ImportedPublicKeys[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *HasUsedWebResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *HasUsedWebResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *HasUsedWebResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.HasWallet {
-		i--
-		if m.HasWallet {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.HasSignedUp {
-		i--
-		if m.HasSignedUp {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *LogsResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *LogsResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *LogsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Logs) > 0 {
-		for iNdEx := len(m.Logs) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Logs[iNdEx])
-			copy(dAtA[i:], m.Logs[iNdEx])
-			i = encodeVarintWebApi(dAtA, i, uint64(len(m.Logs[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *BeaconStatusResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *BeaconStatusResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BeaconStatusResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.ChainHead != nil {
-		{
-			size, err := m.ChainHead.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintWebApi(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x32
-	}
-	if len(m.DepositContractAddress) > 0 {
-		i -= len(m.DepositContractAddress)
-		copy(dAtA[i:], m.DepositContractAddress)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.DepositContractAddress)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if m.GenesisTime != 0 {
-		i = encodeVarintWebApi(dAtA, i, uint64(m.GenesisTime))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.Syncing {
-		i--
-		if m.Syncing {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.Connected {
-		i--
-		if m.Connected {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.BeaconNodeEndpoint) > 0 {
-		i -= len(m.BeaconNodeEndpoint)
-		copy(dAtA[i:], m.BeaconNodeEndpoint)
-		i = encodeVarintWebApi(dAtA, i, uint64(len(m.BeaconNodeEndpoint)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func encodeVarintWebApi(dAtA []byte, offset int, v uint64) int {
-	offset -= sovWebApi(v)
-	base := offset
-	for v >= 1<<7 {
-		dAtA[offset] = uint8(v&0x7f | 0x80)
-		v >>= 7
-		offset++
-	}
-	dAtA[offset] = uint8(v)
-	return base
-}
-func (m *CreateWalletRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Keymanager != 0 {
-		n += 1 + sovWebApi(uint64(m.Keymanager))
-	}
-	l = len(m.WalletPassword)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.Mnemonic)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.NumAccounts != 0 {
-		n += 1 + sovWebApi(uint64(m.NumAccounts))
-	}
-	l = len(m.RemoteAddr)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.RemoteCrtPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.RemoteKeyPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.RemoteCaCrtPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *CreateWalletResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Wallet != nil {
-		l = m.Wallet.Size()
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *EditWalletConfigRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.RemoteAddr)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.RemoteCrtPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.RemoteKeyPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.RemoteCaCrtPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *GenerateMnemonicResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Mnemonic)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *WalletResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.WalletPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.KeymanagerKind != 0 {
-		n += 1 + sovWebApi(uint64(m.KeymanagerKind))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ListAccountsRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.GetDepositTxData {
-		n += 2
-	}
-	if m.PageSize != 0 {
-		n += 1 + sovWebApi(uint64(m.PageSize))
-	}
-	l = len(m.PageToken)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.All {
-		n += 2
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ListAccountsResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Accounts) > 0 {
-		for _, e := range m.Accounts {
-			l = e.Size()
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	l = len(m.NextPageToken)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.TotalSize != 0 {
-		n += 1 + sovWebApi(uint64(m.TotalSize))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *Account) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.ValidatingPublicKey)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.AccountName)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.DepositTxData)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.DerivationPath)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *AccountRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
-			l = len(b)
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	if len(m.Indices) > 0 {
-		l = 0
-		for _, e := range m.Indices {
-			l += sovWebApi(uint64(e))
-		}
-		n += 1 + sovWebApi(uint64(l)) + l
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *AuthRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Password)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.PasswordConfirmation)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *AuthResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Token)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.TokenExpiration != 0 {
-		n += 1 + sovWebApi(uint64(m.TokenExpiration))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *NodeConnectionResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.BeaconNodeEndpoint)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.Connected {
-		n += 2
-	}
-	if m.Syncing {
-		n += 2
-	}
-	if m.GenesisTime != 0 {
-		n += 1 + sovWebApi(uint64(m.GenesisTime))
-	}
-	l = len(m.DepositContractAddress)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *LogsEndpointResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.ValidatorLogsEndpoint)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.BeaconLogsEndpoint)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *VersionResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Beacon)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.Validator)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ChangePasswordRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.CurrentPassword)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.Password)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	l = len(m.PasswordConfirmation)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *HasWalletResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.WalletExists {
-		n += 2
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ImportKeystoresRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.KeystoresImported) > 0 {
-		for _, s := range m.KeystoresImported {
-			l = len(s)
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	l = len(m.KeystoresPassword)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ImportKeystoresResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.ImportedPublicKeys) > 0 {
-		for _, b := range m.ImportedPublicKeys {
-			l = len(b)
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *HasUsedWebResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.HasSignedUp {
-		n += 2
-	}
-	if m.HasWallet {
-		n += 2
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *LogsResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Logs) > 0 {
-		for _, s := range m.Logs {
-			l = len(s)
-			n += 1 + l + sovWebApi(uint64(l))
-		}
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *BeaconStatusResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.BeaconNodeEndpoint)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.Connected {
-		n += 2
-	}
-	if m.Syncing {
-		n += 2
-	}
-	if m.GenesisTime != 0 {
-		n += 1 + sovWebApi(uint64(m.GenesisTime))
-	}
-	l = len(m.DepositContractAddress)
-	if l > 0 {
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.ChainHead != nil {
-		l = m.ChainHead.Size()
-		n += 1 + l + sovWebApi(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func sovWebApi(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
-}
-func sozWebApi(x uint64) (n int) {
-	return sovWebApi(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (m *CreateWalletRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: CreateWalletRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CreateWalletRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Keymanager", wireType)
-			}
-			m.Keymanager = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Keymanager |= KeymanagerKind(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field WalletPassword", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.WalletPassword = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Mnemonic", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Mnemonic = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NumAccounts", wireType)
-			}
-			m.NumAccounts = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.NumAccounts |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteAddr", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteAddr = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteCrtPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteCrtPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteKeyPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteKeyPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteCaCrtPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteCaCrtPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *CreateWalletResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: CreateWalletResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CreateWalletResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Wallet", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Wallet == nil {
-				m.Wallet = &WalletResponse{}
-			}
-			if err := m.Wallet.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *EditWalletConfigRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: EditWalletConfigRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: EditWalletConfigRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteAddr", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteAddr = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteCrtPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteCrtPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteKeyPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteKeyPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteCaCrtPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RemoteCaCrtPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GenerateMnemonicResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GenerateMnemonicResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GenerateMnemonicResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Mnemonic", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Mnemonic = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *WalletResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: WalletResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: WalletResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field WalletPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.WalletPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field KeymanagerKind", wireType)
-			}
-			m.KeymanagerKind = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.KeymanagerKind |= KeymanagerKind(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ListAccountsRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ListAccountsRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListAccountsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GetDepositTxData", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.GetDepositTxData = bool(v != 0)
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PageSize", wireType)
-			}
-			m.PageSize = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.PageSize |= int32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PageToken", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PageToken = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field All", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.All = bool(v != 0)
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ListAccountsResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ListAccountsResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListAccountsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Accounts", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Accounts = append(m.Accounts, &Account{})
-			if err := m.Accounts[len(m.Accounts)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.NextPageToken = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TotalSize", wireType)
-			}
-			m.TotalSize = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.TotalSize |= int32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Account) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Account: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Account: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ValidatingPublicKey", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ValidatingPublicKey = append(m.ValidatingPublicKey[:0], dAtA[iNdEx:postIndex]...)
-			if m.ValidatingPublicKey == nil {
-				m.ValidatingPublicKey = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AccountName", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AccountName = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DepositTxData", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DepositTxData = append(m.DepositTxData[:0], dAtA[iNdEx:postIndex]...)
-			if m.DepositTxData == nil {
-				m.DepositTxData = []byte{}
-			}
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DerivationPath", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DerivationPath = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AccountRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AccountRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AccountRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PublicKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PublicKeys = append(m.PublicKeys, make([]byte, postIndex-iNdEx))
-			copy(m.PublicKeys[len(m.PublicKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType == 0 {
-				var v uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					v |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				m.Indices = append(m.Indices, v)
-			} else if wireType == 2 {
-				var packedLen int
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowWebApi
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					packedLen |= int(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				if packedLen < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				postIndex := iNdEx + packedLen
-				if postIndex < 0 {
-					return ErrInvalidLengthWebApi
-				}
-				if postIndex > l {
-					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA[iNdEx:postIndex] {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.Indices) == 0 {
-					m.Indices = make([]uint64, 0, elementCount)
-				}
-				for iNdEx < postIndex {
-					var v uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowWebApi
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						v |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					m.Indices = append(m.Indices, v)
-				}
-			} else {
-				return fmt.Errorf("proto: wrong wireType = %d for field Indices", wireType)
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AuthRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AuthRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AuthRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Password", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Password = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PasswordConfirmation", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PasswordConfirmation = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AuthResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AuthResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AuthResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Token", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Token = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TokenExpiration", wireType)
-			}
-			m.TokenExpiration = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.TokenExpiration |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *NodeConnectionResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: NodeConnectionResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: NodeConnectionResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconNodeEndpoint", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.BeaconNodeEndpoint = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Connected", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Connected = bool(v != 0)
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Syncing", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Syncing = bool(v != 0)
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GenesisTime", wireType)
-			}
-			m.GenesisTime = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.GenesisTime |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DepositContractAddress", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DepositContractAddress = append(m.DepositContractAddress[:0], dAtA[iNdEx:postIndex]...)
-			if m.DepositContractAddress == nil {
-				m.DepositContractAddress = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *LogsEndpointResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: LogsEndpointResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: LogsEndpointResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ValidatorLogsEndpoint", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ValidatorLogsEndpoint = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconLogsEndpoint", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.BeaconLogsEndpoint = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *VersionResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: VersionResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: VersionResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Beacon", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Beacon = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Validator", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Validator = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ChangePasswordRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ChangePasswordRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ChangePasswordRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentPassword", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.CurrentPassword = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Password", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Password = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PasswordConfirmation", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.PasswordConfirmation = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *HasWalletResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: HasWalletResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: HasWalletResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field WalletExists", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.WalletExists = bool(v != 0)
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ImportKeystoresRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ImportKeystoresRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ImportKeystoresRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field KeystoresImported", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.KeystoresImported = append(m.KeystoresImported, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field KeystoresPassword", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.KeystoresPassword = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ImportKeystoresResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ImportKeystoresResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ImportKeystoresResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ImportedPublicKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ImportedPublicKeys = append(m.ImportedPublicKeys, make([]byte, postIndex-iNdEx))
-			copy(m.ImportedPublicKeys[len(m.ImportedPublicKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *HasUsedWebResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: HasUsedWebResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: HasUsedWebResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field HasSignedUp", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.HasSignedUp = bool(v != 0)
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field HasWallet", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.HasWallet = bool(v != 0)
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *LogsResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: LogsResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: LogsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Logs", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Logs = append(m.Logs, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *BeaconStatusResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: BeaconStatusResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: BeaconStatusResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BeaconNodeEndpoint", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.BeaconNodeEndpoint = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Connected", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Connected = bool(v != 0)
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Syncing", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Syncing = bool(v != 0)
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GenesisTime", wireType)
-			}
-			m.GenesisTime = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.GenesisTime |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DepositContractAddress", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DepositContractAddress = append(m.DepositContractAddress[:0], dAtA[iNdEx:postIndex]...)
-			if m.DepositContractAddress == nil {
-				m.DepositContractAddress = []byte{}
-			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ChainHead", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.ChainHead == nil {
-				m.ChainHead = &v1alpha1.ChainHead{}
-			}
-			if err := m.ChainHead.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipWebApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthWebApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func skipWebApi(dAtA []byte) (n int, err error) {
-	l := len(dAtA)
-	iNdEx := 0
-	depth := 0
-	for iNdEx < l {
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return 0, ErrIntOverflowWebApi
-			}
-			if iNdEx >= l {
-				return 0, io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		wireType := int(wire & 0x7)
-		switch wireType {
-		case 0:
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return 0, ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return 0, io.ErrUnexpectedEOF
-				}
-				iNdEx++
-				if dAtA[iNdEx-1] < 0x80 {
-					break
-				}
-			}
-		case 1:
-			iNdEx += 8
-		case 2:
-			var length int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return 0, ErrIntOverflowWebApi
-				}
-				if iNdEx >= l {
-					return 0, io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				length |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if length < 0 {
-				return 0, ErrInvalidLengthWebApi
-			}
-			iNdEx += length
-		case 3:
-			depth++
-		case 4:
-			if depth == 0 {
-				return 0, ErrUnexpectedEndOfGroupWebApi
-			}
-			depth--
-		case 5:
-			iNdEx += 4
-		default:
-			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
-		}
-		if iNdEx < 0 {
-			return 0, ErrInvalidLengthWebApi
-		}
-		if depth == 0 {
-			return iNdEx, nil
-		}
-	}
-	return 0, io.ErrUnexpectedEOF
-}
-
-var (
-	ErrInvalidLengthWebApi        = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowWebApi          = fmt.Errorf("proto: integer overflow")
-	ErrUnexpectedEndOfGroupWebApi = fmt.Errorf("proto: unexpected end of group")
-)
->>>>>>> 97320a0a8e8a71f7231e500f4e7c06d063fa5722

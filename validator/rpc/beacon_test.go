@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
@@ -26,7 +28,7 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 		beaconNodeClient: nodeClient,
 	}
 	ctx := context.Background()
-	resp, err := srv.GetBeaconStatus(ctx, &ptypes.Empty{})
+	resp, err := srv.GetBeaconStatus(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	want := &pb.BeaconStatusResponse{
 		BeaconNodeEndpoint: "",
@@ -64,7 +66,7 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		beaconChainClient: beaconChainClient,
 	}
 	ctx := context.Background()
-	resp, err := srv.GetBeaconStatus(ctx, &ptypes.Empty{})
+	resp, err := srv.GetBeaconStatus(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	want := &pb.BeaconStatusResponse{
 		BeaconNodeEndpoint:     "",
