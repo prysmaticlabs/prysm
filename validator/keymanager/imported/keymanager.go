@@ -24,7 +24,6 @@ import (
 )
 
 var (
-	log               = logrus.WithField("prefix", "imported-keymanager")
 	lock              sync.RWMutex
 	orderedPublicKeys = make([][48]byte, 0)
 	secretKeysCache   = make(map[[48]byte]bls.SecretKey)

@@ -10,12 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	"github.com/sirupsen/logrus"
 	util "github.com/wealdtech/go-eth2-util"
-)
-
-var (
-	log = logrus.WithField("prefix", "derived-keymanager")
 )
 
 const (

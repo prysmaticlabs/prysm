@@ -8,6 +8,7 @@ go_library(
         "format.go",
         "helpers.go",
         "import.go",
+        "log.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format",
     visibility = ["//validator:__subpackages__"],

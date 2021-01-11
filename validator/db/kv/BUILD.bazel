@@ -10,6 +10,7 @@ go_library(
         "db.go",
         "genesis.go",
         "historical_attestations.go",
+        "log.go",
         "migration.go",
         "migration_snappy_history.go",
         "proposal_history_v2.go",

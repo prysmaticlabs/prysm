@@ -3,7 +3,6 @@ package db
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/tos"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,7 +22,7 @@ var DatabaseCommands = &cli.Command{
 			Before: tos.VerifyTosAcceptedOrPrompt,
 			Action: func(cliCtx *cli.Context) error {
 				if err := restore(cliCtx); err != nil {
-					logrus.Fatalf("Could not restore database: %v", err)
+					log.Fatalf("Could not restore database: %v", err)
 				}
 				return nil
 			},
