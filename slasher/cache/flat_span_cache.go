@@ -3,7 +3,6 @@ package cache
 import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	log "github.com/sirupsen/logrus"
 )
 
 // EpochFlatSpansCache is used to store the spans needed on a per-epoch basis for slashing detection.

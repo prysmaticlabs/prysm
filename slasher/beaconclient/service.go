@@ -18,13 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
-
-var log = logrus.WithField("prefix", "beaconclient")
 
 // Notifier defines a struct which exposes event feeds regarding beacon blocks,
 // attestations, and more information received from a beacon node.

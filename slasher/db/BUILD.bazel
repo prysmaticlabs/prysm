@@ -7,6 +7,7 @@ go_library(
         "alias.go",
         "cmd.go",
         "db.go",
+        "log.go",
         "restore.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db",

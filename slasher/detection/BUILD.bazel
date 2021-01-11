@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "detect.go",
         "listeners.go",
+        "log.go",
         "metrics.go",
         "service.go",
     ],
