@@ -184,6 +184,8 @@ func (store *Store) flushAttestationRecords() {
 		store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
+	// We use a struct wrapper around the error as the event feed
+	// cannot handle sending a raw `nil` in case there is not error.
 	store.batchAttestationsFlushedFeed.Send(saveAttestationsResponse{
 		err: err,
 	})
