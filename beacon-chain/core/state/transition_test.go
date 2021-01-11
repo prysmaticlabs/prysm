@@ -164,24 +164,16 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	require.NoError(t, err)
 	slashing := &ethpb.ProposerSlashing{
-		Header_1: &ethpb.SignedBeaconBlockHeader{
+		Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
-				Slot:       params.BeaconConfig().SlotsPerEpoch,
-				ParentRoot: make([]byte, 32),
-				StateRoot:  make([]byte, 32),
-				BodyRoot:   make([]byte, 32),
+				Slot: params.BeaconConfig().SlotsPerEpoch,
 			},
-			Signature: make([]byte, 96),
-		},
-		Header_2: &ethpb.SignedBeaconBlockHeader{
+		}),
+		Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
-				Slot:       params.BeaconConfig().SlotsPerEpoch * 2,
-				ParentRoot: make([]byte, 32),
-				StateRoot:  make([]byte, 32),
-				BodyRoot:   make([]byte, 32),
+				Slot: params.BeaconConfig().SlotsPerEpoch * 2,
 			},
-			Signature: make([]byte, 96),
-		},
+		}),
 	}
 	block.Block.Body.ProposerSlashings = []*ethpb.ProposerSlashing{slashing}
 
@@ -231,26 +223,20 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
 				Signature: bytesutil.PadTo([]byte("A"), 96),
-			},
-			Header_2: &ethpb.SignedBeaconBlockHeader{
+			}),
+			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
 				Signature: bytesutil.PadTo([]byte("B"), 96),
-			},
+			}),
 		},
 	}
 	attesterSlashings := []*ethpb.AttesterSlashing{
@@ -286,12 +272,11 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		BodyRoot:   bodyRoot[:],
-		StateRoot:  make([]byte, 32),
-	})
+	}))
 	require.NoError(t, err)
 	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -343,27 +328,23 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	header1 := &ethpb.SignedBeaconBlockHeader{
+	header1 := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
 			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
-			ParentRoot:    make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
 		},
-	}
+	})
 	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
-	header2 := &ethpb.SignedBeaconBlockHeader{
+	header2 := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
-			ParentRoot:    make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
 		},
-	}
+	})
 	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
