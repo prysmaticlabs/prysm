@@ -371,11 +371,9 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	beaconState := testutil.NewBeaconState()
 	require.NoError(t, beaconState.SetSlot(slot))
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix()-int64(slot*params.BeaconConfig().SecondsPerSlot))))
-	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		ParentRoot: blockRoot2[:],
-		StateRoot:  make([]byte, 32),
-		BodyRoot:   make([]byte, 32),
-	})
+	}))
 	require.NoError(t, err)
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 2,
