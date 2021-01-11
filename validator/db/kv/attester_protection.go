@@ -16,6 +16,8 @@ import (
 // SlashingKind used for helpful information upon detection.
 type SlashingKind int
 
+// An attestation record can be represented by these simple values
+// for manipulation by database methods.
 type attestationRecord struct {
 	pubKey      [48]byte
 	source      uint64
@@ -23,6 +25,16 @@ type attestationRecord struct {
 	signingRoot [32]byte
 }
 
+// A wrapper over an error received from a background routine
+// saving batched attestations for slashing protection.
+// This wrapper allows us to send this response over event feeds,
+// as our event feed does not allow sending `nil` values to
+// subscribers.
+type saveAttestationsResponse struct {
+	err error
+}
+
+// Enums representing the types of slashable events for attesters.
 const (
 	NotSlashable SlashingKind = iota
 	DoubleVote
@@ -120,11 +132,12 @@ func (store *Store) SaveAttestationForPubKey(
 	// during the process of saving the attestation record, the sender
 	// will give us that error. We use a buffered channel
 	// to prevent blocking the sender from notifying us of the result.
-	errChan := make(chan error, 1)
-	defer close(errChan)
-	sub := store.batchAttestationsFlushedFeed.Subscribe(errChan)
+	responseChan := make(chan saveAttestationsResponse, 1)
+	defer close(responseChan)
+	sub := store.batchAttestationsFlushedFeed.Subscribe(responseChan)
 	defer sub.Unsubscribe()
-	return <-errChan
+	res := <-responseChan
+	return res.err
 }
 
 // Meant to run as a background routine, this function checks whether:
@@ -134,8 +147,8 @@ func (store *Store) SaveAttestationForPubKey(
 // to flush the attestations to the DB all at once in a single boltDB
 // transaction for efficiency. Then, batched attestations slice is emptied out.
 func (store *Store) batchAttestationWrites(ctx context.Context) {
-	timer := time.NewTimer(ATTESTATION_BATCH_WRITE_INTERVAL)
-	defer timer.Stop()
+	ticker := time.NewTicker(ATTESTATION_BATCH_WRITE_INTERVAL)
+	defer ticker.Stop()
 	for {
 		select {
 		case v := <-store.batchedAttestationsChan:
@@ -145,16 +158,14 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
 				store.flushAttestationRecords()
-				timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
 			}
-		case <-timer.C:
+		case <-ticker.C:
 			if len(store.batchedAttestations) > 0 {
 				log.WithField("numRecords", len(store.batchedAttestations)).Debug(
 					"Batched attestation records write interval reached, flushing to DB",
 				)
 				store.flushAttestationRecords()
 			}
-			timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
 		case <-ctx.Done():
 			return
 		}
@@ -173,7 +184,9 @@ func (store *Store) flushAttestationRecords() {
 		store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
-	store.batchAttestationsFlushedFeed.Send(err)
+	store.batchAttestationsFlushedFeed.Send(saveAttestationsResponse{
+		err: err,
+	})
 }
 
 // Saves a list of attestation records to the database in a single boltDB
