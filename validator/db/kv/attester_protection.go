@@ -142,19 +142,19 @@ func (store *Store) SaveAttestationForPubKey(
 
 // Meant to run as a background routine, this function checks whether:
 // (a) we have reached a max capacity of batched attestations in the Store or
-// (b) ATTESTATION_BATCH_WRITE_INTERVAL has passed
+// (b) attestationBatchWriteInterval has passed
 // Based on whichever comes first, this function then proceeds
 // to flush the attestations to the DB all at once in a single boltDB
 // transaction for efficiency. Then, batched attestations slice is emptied out.
 func (store *Store) batchAttestationWrites(ctx context.Context) {
-	ticker := time.NewTicker(ATTESTATION_BATCH_WRITE_INTERVAL)
+	ticker := time.NewTicker(attestationBatchWriteInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case v := <-store.batchedAttestationsChan:
 			store.batchedAttestations = append(store.batchedAttestations, v)
-			if len(store.batchedAttestations) == ATTESTATION_BATCH_CAPACITY {
-				log.WithField("numRecords", ATTESTATION_BATCH_CAPACITY).Debug(
+			if len(store.batchedAttestations) == attestationBatchCapacity {
+				log.WithField("numRecords", attestationBatchCapacity).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
 				store.flushAttestationRecords()
@@ -181,7 +181,7 @@ func (store *Store) flushAttestationRecords() {
 	// If there was no error, we reset the batched attestations slice.
 	if err == nil {
 		log.Debug("Successfully flushed batched attestations to DB")
-		store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
+		store.batchedAttestations = make([]*attestationRecord, 0, attestationBatchCapacity)
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
 	// We use a struct wrapper around the error as the event feed

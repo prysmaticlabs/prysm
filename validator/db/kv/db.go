@@ -23,10 +23,10 @@ const (
 	// to the max number of keys per validator client, but there is no
 	// detriment if there are more keys than this capacity, as attestations
 	// for those keys will simply be flushed at the next flush interval.
-	ATTESTATION_BATCH_CAPACITY = 2048
+	attestationBatchCapacity = 2048
 	// How often we will flush attestation records to the database
 	// from a batch kept in memory for slashing protection.
-	ATTESTATION_BATCH_WRITE_INTERVAL = time.Millisecond * 100
+	attestationBatchWriteInterval = time.Millisecond * 100
 )
 
 // ProtectionDbFileName Validator slashing protection db file name.
@@ -106,8 +106,8 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                           boltDB,
 		databasePath:                 dirPath,
-		batchedAttestations:          make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY),
-		batchedAttestationsChan:      make(chan *attestationRecord, ATTESTATION_BATCH_CAPACITY),
+		batchedAttestations:          make([]*attestationRecord, 0, attestationBatchCapacity),
+		batchedAttestationsChan:      make(chan *attestationRecord, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 
