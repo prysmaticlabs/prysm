@@ -5,13 +5,20 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
+)
+
+const (
+	ATTESTATION_BATCH_CAPACITY       = 4096
+	ATTESTATION_BATCH_WRITE_INTERVAL = time.Millisecond * 100
 )
 
 // ProtectionDbFileName Validator slashing protection db file name.
@@ -20,9 +27,11 @@ var ProtectionDbFileName = "validator.db"
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                         *bolt.DB
-	databasePath               string
-	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
+	db                           *bolt.DB
+	databasePath                 string
+	batchedAttestations          []*attestationRecord
+	batchedAttestationsChan      chan *attestationRecord
+	batchAttestationsFlushedFeed *event.Feed
 }
 
 // Close closes the underlying boltdb database.
@@ -84,9 +93,11 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	}
 
 	kv := &Store{
-		db:                         boltDB,
-		databasePath:               dirPath,
-		attestingHistoriesByPubKey: make(map[[48]byte]EncHistoryData),
+		db:                           boltDB,
+		databasePath:                 dirPath,
+		batchedAttestations:          make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY),
+		batchedAttestationsChan:      make(chan *attestationRecord, ATTESTATION_BATCH_CAPACITY),
+		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
@@ -118,9 +129,15 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 		return nil, errors.Wrap(err, "could not migrate attester protection to more efficient format")
 	}
 
+	// Prune attesting records older than the current weak subjectivity period.
 	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not prune old attestations from DB")
 	}
+
+	// Batch save attestation records for slashing protection at timed
+	// intervals to our database.
+	go kv.batchAttestationWrites(ctx)
+
 	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
@@ -109,46 +110,65 @@ func (store *Store) CheckSlashableAttestation(
 func (store *Store) ApplyAttestationForPubKey(
 	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) error {
-	return nil
+	store.batchedAttestationsChan <- &attestationRecord{
+		pubKey:      pubKey,
+		source:      att.Data.Source.Epoch,
+		target:      att.Data.Target.Epoch,
+		signingRoot: signingRoot,
+	}
+	// Subscribe to be notified when the attestation record queued
+	// for saving to the DB is indeed saved. If an error occurred
+	// during the process of saving the attestation record, the sender
+	// will give us that error. We use a buffered channel
+	// to prevent blocking the sender from notifying us of the result.
+	errChan := make(chan error, 1)
+	defer close(errChan)
+	sub := store.batchAttestationsFlushedFeed.Subscribe(errChan)
+	defer sub.Unsubscribe()
+	return <-errChan
 }
 
-func (store *Store) batchAttestationWrites() error {
-	ch := make(chan *attestationRecord, 100)
-	listeners := make([]chan struct{}, 0)
-	flushDelay := time.Millisecond * 100
-	timer := time.NewTimer(flushDelay)
+// Meant to run as a background routine, this function checks whether:
+// (a) we have reached a max capacity of batched attestations in the Store or
+// (b) ATTESTATION_BATCH_WRITE_INTERVAL has passed
+// Based on whichever comes first, this function then proceeds
+// to flush the attestations to the DB all at once in a single boltDB
+// transaction for efficiency. Then, batched attestations slice is emptied out.
+func (store *Store) batchAttestationWrites(ctx context.Context) {
+	timer := time.NewTimer(ATTESTATION_BATCH_WRITE_INTERVAL)
 	defer timer.Stop()
-	attestations := make([]*attestationRecord, 0, 100)
 	for {
 		select {
-		case v := <-ch:
-			fmt.Println("Received attestation")
-			attestations = append(attestations, v)
-			if len(attestations) == cap(attestations) {
-				fmt.Println("Atts slice is full, need to flush")
-				if err := store.flushAttestationsToDB(attestations); err != nil {
-					_ = err
+		case v := <-store.batchedAttestationsChan:
+			store.batchedAttestations = append(store.batchedAttestations, v)
+			if len(store.batchedAttestations) == ATTESTATION_BATCH_CAPACITY {
+				err := store.flushAttestationsToDB(store.batchedAttestations)
+				if err == nil {
+					// Reset the slice of batched attestations if we successfully
+					// flushed them to the database.
+					store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
 				}
-				for _, l := range listeners {
-					l <- struct{}{}
-				}
-				timer.Reset(flushDelay)
+				store.batchAttestationsFlushedFeed.Send(err)
+				timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
 			}
 		case <-timer.C:
-			if len(attestations) > 0 {
-				fmt.Println("Delay passed, forcing flush")
-				if err := store.flushAttestationsToDB(attestations); err != nil {
-					_ = err
+			if len(store.batchedAttestations) > 0 {
+				err := store.flushAttestationsToDB(store.batchedAttestations)
+				if err == nil {
+					store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
 				}
-				for _, l := range listeners {
-					l <- struct{}{}
-				}
+				store.batchAttestationsFlushedFeed.Send(err)
 			}
-			timer.Reset(flushDelay)
+			timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
+		case <-ctx.Done():
+			return
 		}
 	}
 }
 
+// Saves a list of attestation records to the database in a single boltDB
+// transaction to minimize write lock contention compared to doing them
+// all in individual, isolated boltDB transactions.
 func (store *Store) flushAttestationsToDB(atts []*attestationRecord) error {
 	tx, err := store.db.Begin(true /* writable */)
 	if err != nil {
@@ -158,24 +178,24 @@ func (store *Store) flushAttestationsToDB(atts []*attestationRecord) error {
 	for _, att := range atts {
 		pkBucket, err := bucket.CreateBucketIfNotExists(att.pubKey[:])
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not create public key bucket")
 		}
 		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.source)
 		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.target)
 
 		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not create signing roots bucket")
 		}
 		if err := signingRootsBucket.Put(targetEpochBytes, att.signingRoot[:]); err != nil {
-			return err
+			return errors.Wrapf(err, "could not save signing signing root for epoch %d", att.target)
 		}
 		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not create source epochs bucket")
 		}
 		if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
-			return err
+			return errors.Wrapf(err, "could not save source epoch %d for epoch %d", att.source, att.target)
 		}
 	}
 	return tx.Commit()
