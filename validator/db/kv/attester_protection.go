@@ -142,13 +142,17 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 		case v := <-store.batchedAttestationsChan:
 			store.batchedAttestations = append(store.batchedAttestations, v)
 			if len(store.batchedAttestations) == ATTESTATION_BATCH_CAPACITY {
-				log.Debug("Reached max capacity of batched attestations, flushing to DB")
+				log.WithField("numRecords", ATTESTATION_BATCH_CAPACITY).Debug(
+					"Reached max capacity of batched attestation records, flushing to DB",
+				)
 				store.flushAttestationRecords()
 				timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
 			}
 		case <-timer.C:
 			if len(store.batchedAttestations) > 0 {
-				log.Debug("Batched attestations write interval reached, flushing to DB")
+				log.WithField("numRecords", len(store.batchedAttestations)).Debug(
+					"Batched attestation records write interval reached, flushing to DB",
+				)
 				store.flushAttestationRecords()
 			}
 			timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
