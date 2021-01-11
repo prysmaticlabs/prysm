@@ -41,7 +41,7 @@ type ValidatorDB interface {
 	CheckSlashableAttestation(
 		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 	) (kv.SlashingKind, error)
-	ApplyAttestationForPubKey(
+	SaveAttestationForPubKey(
 		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 	) error
 }
