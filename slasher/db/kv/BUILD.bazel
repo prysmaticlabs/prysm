@@ -11,6 +11,7 @@ go_library(
         "highest_attestation.go",
         "indexed_attestations.go",
         "kv.go",
+        "log.go",
         "proposer_slashings.go",
         "schema.go",
         "spanner_new.go",
