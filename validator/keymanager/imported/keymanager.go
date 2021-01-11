@@ -60,10 +60,10 @@ type accountStore struct {
 	PublicKeys  [][]byte `json:"public_keys"`
 }
 
-// Defines an internal Prysm representation
+// AccountsKeystoreRepresentation defines an internal Prysm representation
 // of validator accounts, encrypted according to the EIP-2334 standard
 // but containing extra fields such as markers for disabled public keys.
-type accountsKeystoreRepresentation struct {
+type AccountsKeystoreRepresentation struct {
 	Crypto             map[string]interface{} `json:"crypto"`
 	ID                 string                 `json:"uuid"`
 	Version            uint                   `json:"version"`
@@ -294,7 +294,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	} else if err != nil {
 		return errors.Wrapf(err, "could not read keystore file for accounts %s", AccountsKeystoreFileName)
 	}
-	keystoreFile := &accountsKeystoreRepresentation{}
+	keystoreFile := &AccountsKeystoreRepresentation{}
 	if err := json.Unmarshal(encoded, keystoreFile); err != nil {
 		return errors.Wrapf(err, "could not decode keystore file for accounts %s", AccountsKeystoreFileName)
 	}
@@ -343,7 +343,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 func (dr *Keymanager) CreateAccountsKeystore(
 	_ context.Context,
 	privateKeys, publicKeys [][]byte,
-) (*accountsKeystoreRepresentation, error) {
+) (*AccountsKeystoreRepresentation, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -398,7 +398,7 @@ func (dr *Keymanager) CreateAccountsKeystore(
 	for pubKey := range dr.disabledPublicKeys {
 		disabledPubKeys = append(disabledPubKeys, fmt.Sprintf("%x", pubKey))
 	}
-	return &accountsKeystoreRepresentation{
+	return &AccountsKeystoreRepresentation{
 		Crypto:             cryptoFields,
 		ID:                 id.String(),
 		Version:            encryptor.Version(),

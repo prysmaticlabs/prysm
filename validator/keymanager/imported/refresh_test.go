@@ -36,7 +36,7 @@ func TestImportedKeymanager_reloadAccountsFromKeystore_MismatchedNumKeys(t *test
 	require.NoError(t, err)
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
-	keystore := &accountsKeystoreRepresentation{
+	keystore := &AccountsKeystoreRepresentation{
 		Crypto:  cryptoFields,
 		ID:      id.String(),
 		Version: encryptor.Version(),
