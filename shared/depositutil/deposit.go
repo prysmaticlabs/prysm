@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -32,13 +31,13 @@ import (
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
-	di := &ethpb.Deposit_Data{
+	depositSigningData := &p2ppb.DepositSigningData{
 		PublicKey:             depositKey.PublicKey().Marshal(),
 		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
 	}
 
-	sr, err := ssz.SigningRoot(di)
+	sr, err := depositSigningData.HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -54,6 +53,11 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 	root, err := (&p2ppb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
+	}
+	di := &ethpb.Deposit_Data{
+		PublicKey:             depositKey.PublicKey().Marshal(),
+		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
+		Amount:                amountInGwei,
 	}
 	di.Signature = depositKey.Sign(root[:]).Marshal()
 
@@ -83,16 +87,20 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 		return nil
 	}
 	ddCopy := state.CopyDepositData(dd)
-	publicKey, err := bls.PublicKeyFromBytes(dd.PublicKey)
+	publicKey, err := bls.PublicKeyFromBytes(ddCopy.PublicKey)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
 	}
-	sig, err := bls.SignatureFromBytes(dd.Signature)
+	sig, err := bls.SignatureFromBytes(ddCopy.Signature)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	ddCopy.Signature = nil
-	root, err := ssz.SigningRoot(ddCopy)
+	di := &p2ppb.DepositSigningData{
+		PublicKey:             ddCopy.PublicKey,
+		WithdrawalCredentials: ddCopy.WithdrawalCredentials,
+		Amount:                ddCopy.Amount,
+	}
+	root, err := di.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}

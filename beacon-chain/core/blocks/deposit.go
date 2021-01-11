@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -248,7 +247,12 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		}
 		pks[i] = dpk
 		sigs[i] = dep.Data.Signature
-		root, err := ssz.SigningRoot(dep.Data)
+		depositSigningData := &pb.DepositSigningData{
+			PublicKey:             dep.Data.PublicKey,
+			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
+			Amount:                dep.Data.Amount,
+		}
+		root, err := depositSigningData.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not get signing root")
 		}

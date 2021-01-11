@@ -3,7 +3,6 @@ package depositutil_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -26,7 +25,12 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 
 	sig, err := bls.SignatureFromBytes(result.Signature)
 	require.NoError(t, err)
-	sr, err := ssz.SigningRoot(result)
+	testData := &pb.DepositSigningData{
+		PublicKey:             result.PublicKey,
+		WithdrawalCredentials: result.WithdrawalCredentials,
+		Amount:                result.Amount,
+	}
+	sr, err := testData.HashTreeRoot()
 	require.NoError(t, err)
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,

@@ -26,6 +26,7 @@ ssz_gen_marshal(
     ],
     objs = [
         "BeaconBlocksByRangeRequest",
+        "DepositSigningData",
         "ENRForkID",
         "MetaData",
         "Fork",

@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -164,7 +163,7 @@ func signedDeposit(
 ) (*ethpb.Deposit, error) {
 	withdrawalCreds := hashutil.Hash(withdrawalKey)
 	withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
-	depositData := &ethpb.Deposit_Data{
+	depositSigningData := &pb.DepositSigningData{
 		PublicKey:             publicKey,
 		Amount:                balance,
 		WithdrawalCredentials: withdrawalCreds[:],
@@ -174,7 +173,7 @@ func signedDeposit(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute domain")
 	}
-	root, err := ssz.SigningRoot(depositData)
+	root, err := depositSigningData.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root of deposit data")
 	}
@@ -182,6 +181,11 @@ func signedDeposit(
 	sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
 	if err != nil {
 		return nil, err
+	}
+	depositData := &ethpb.Deposit_Data{
+		PublicKey:             publicKey,
+		Amount:                balance,
+		WithdrawalCredentials: withdrawalCreds[:],
 	}
 	depositData.Signature = secretKey.Sign(sigRoot[:]).Marshal()
 
@@ -321,7 +325,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			withdrawalCreds := hashutil.Hash(publicKeys[1].Marshal())
 			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
-			depositData := &ethpb.Deposit_Data{
+			depositSigningData := &pb.DepositSigningData{
 				PublicKey:             publicKeys[1].Marshal(),
 				Amount:                params.BeaconConfig().MaxEffectiveBalance,
 				WithdrawalCredentials: withdrawalCreds[:],
@@ -331,13 +335,18 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not compute domain")
 			}
-			root, err := ssz.SigningRoot(depositData)
+			root, err := depositSigningData.HashTreeRoot()
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
 			sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data and domain")
+			}
+			depositData := &ethpb.Deposit_Data{
+				PublicKey:             publicKeys[1].Marshal(),
+				Amount:                params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawalCredentials: withdrawalCreds[:],
 			}
 			// Always use the same validator to sign
 			depositData.Signature = secretKeys[1].Sign(sigRoot[:]).Marshal()
