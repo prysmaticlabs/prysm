@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	ATTESTATION_BATCH_CAPACITY       = 4096
+	ATTESTATION_BATCH_CAPACITY       = 2048
 	ATTESTATION_BATCH_WRITE_INTERVAL = time.Millisecond * 100
 )
 
