@@ -9,6 +9,7 @@ go_library(
         "beacon.go",
         "health.go",
         "intercepter.go",
+        "log.go",
         "server.go",
         "wallet.go",
     ],

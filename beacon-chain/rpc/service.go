@@ -51,12 +51,6 @@ import (
 
 const attestationBufferSize = 100
 
-var log logrus.FieldLogger
-
-func init() {
-	log = logrus.WithField("prefix", "rpc")
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                     context.Context

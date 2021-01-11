@@ -52,8 +52,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var log = logrus.WithField("prefix", "node")
-
 const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
