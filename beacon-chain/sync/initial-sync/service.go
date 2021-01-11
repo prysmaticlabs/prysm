@@ -143,6 +143,11 @@ func (s *Service) Initialized() bool {
 	return s.chainStarted.IsSet()
 }
 
+// HeadSlot returns the slot number which the blockchain in synced up to.
+func (s *Service) HeadSlot() uint64 {
+	return s.chain.HeadSlot()
+}
+
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
 func (s *Service) Resync() error {

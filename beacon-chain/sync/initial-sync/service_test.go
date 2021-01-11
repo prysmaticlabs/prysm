@@ -444,3 +444,27 @@ func TestService_Initialized(t *testing.T) {
 	s.chainStarted.UnSet()
 	assert.Equal(t, false, s.Initialized())
 }
+
+func TestService_HeadSlot(t *testing.T) {
+	ctx := context.Background()
+
+	genesisRoot, err := testutil.NewBeaconBlock().HashTreeRoot()
+	require.NoError(t, err)
+	blk1 := testutil.NewBeaconBlock()
+	blk1.Block.Slot = 1
+	blk1.Block.ParentRoot = genesisRoot[:]
+	blk1Root, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	blk2 := testutil.NewBeaconBlock()
+	blk2.Block.Slot = 2
+	blk2.Block.ParentRoot = blk1Root[:]
+	chainService := &mock.ChainService{}
+	chainService.Root = blk2.Block.ParentRoot
+	blk2Root, err := blk2.HashTreeRoot()
+	require.NoError(t, err)
+	err = chainService.ReceiveBlock(ctx, blk2, blk2Root)
+	require.NoError(t, err)
+
+	s := NewService(context.Background(), &Config{Chain: chainService})
+	assert.Equal(t, uint64(2), s.HeadSlot())
+}

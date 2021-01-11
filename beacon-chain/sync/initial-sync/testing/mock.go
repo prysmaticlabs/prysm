@@ -6,6 +6,7 @@ package testing
 type Sync struct {
 	IsSyncing     bool
 	IsInitialized bool
+	Slot          uint64
 }
 
 // Syncing --
@@ -21,6 +22,11 @@ func (s *Sync) Initialized() bool {
 // Status --
 func (s *Sync) Status() error {
 	return nil
+}
+
+// HeadSlot --
+func (s *Sync) HeadSlot() uint64 {
+	return s.Slot
 }
 
 // Resync --
