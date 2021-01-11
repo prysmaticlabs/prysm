@@ -195,33 +195,31 @@ func (store *Store) flushAttestationRecords() {
 // transaction to minimize write lock contention compared to doing them
 // all in individual, isolated boltDB transactions.
 func (store *Store) saveAttestationRecords(atts []*attestationRecord) error {
-	tx, err := store.db.Begin(true /* writable */)
-	if err != nil {
-		return err
-	}
-	bucket := tx.Bucket(pubKeysBucket)
-	for _, att := range atts {
-		pkBucket, err := bucket.CreateBucketIfNotExists(att.pubKey[:])
-		if err != nil {
-			return errors.Wrap(err, "could not create public key bucket")
-		}
-		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.source)
-		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.target)
+	return store.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		for _, att := range atts {
+			pkBucket, err := bucket.CreateBucketIfNotExists(att.pubKey[:])
+			if err != nil {
+				return errors.Wrap(err, "could not create public key bucket")
+			}
+			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.source)
+			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.target)
 
-		signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
-		if err != nil {
-			return errors.Wrap(err, "could not create signing roots bucket")
+			signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
+			if err != nil {
+				return errors.Wrap(err, "could not create signing roots bucket")
+			}
+			if err := signingRootsBucket.Put(targetEpochBytes, att.signingRoot[:]); err != nil {
+				return errors.Wrapf(err, "could not save signing signing root for epoch %d", att.target)
+			}
+			sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
+			if err != nil {
+				return errors.Wrap(err, "could not create source epochs bucket")
+			}
+			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+				return errors.Wrapf(err, "could not save source epoch %d for epoch %d", att.source, att.target)
+			}
 		}
-		if err := signingRootsBucket.Put(targetEpochBytes, att.signingRoot[:]); err != nil {
-			return errors.Wrapf(err, "could not save signing signing root for epoch %d", att.target)
-		}
-		sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
-		if err != nil {
-			return errors.Wrap(err, "could not create source epochs bucket")
-		}
-		if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
-			return errors.Wrapf(err, "could not save source epoch %d for epoch %d", att.source, att.target)
-		}
-	}
-	return tx.Commit()
+		return nil
+	})
 }
