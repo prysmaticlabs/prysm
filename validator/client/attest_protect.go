@@ -43,7 +43,7 @@ func (v *validator) slashableAttestationCheck(
 		return errors.Wrap(err, failedAttLocalProtectionErr)
 	}
 
-	if err := v.db.ApplyAttestationForPubKey(ctx, pubKey, signingRoot, indexedAtt); err != nil {
+	if err := v.db.SaveAttestationForPubKey(ctx, pubKey, signingRoot, indexedAtt); err != nil {
 		return errors.Wrap(err, "could not save attestation history for validator public key")
 	}
 

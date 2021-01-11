@@ -104,10 +104,9 @@ func (store *Store) CheckSlashableAttestation(
 	return slashKind, err
 }
 
-// ApplyAttestationForPubKey applies an attestation for a validator public
-// key by storing its signing root under the appropriate bucket as well
-// as its source and target epochs for future slashing protection checks.
-func (store *Store) ApplyAttestationForPubKey(
+// SaveAttestationForPubKey saves an attestation for a validator public
+// key for local validator slashing protection.
+func (store *Store) SaveAttestationForPubKey(
 	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) error {
 	store.batchedAttestationsChan <- &attestationRecord{

@@ -108,7 +108,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 					},
 				},
 			}
-			if err := validatorDB.ApplyAttestationForPubKey(ctx, pubKey, att.signingRoot, indexedAtt); err != nil {
+			if err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, att.signingRoot, indexedAtt); err != nil {
 				return errors.Wrap(err, "could not save attestation from imported JSON to database")
 			}
 		}

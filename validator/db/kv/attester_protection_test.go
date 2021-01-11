@@ -61,7 +61,7 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validatorDB.ApplyAttestationForPubKey(
+			err := validatorDB.SaveAttestationForPubKey(
 				ctx,
 				pubKeys[0],
 				tt.existingSigningRoot,
