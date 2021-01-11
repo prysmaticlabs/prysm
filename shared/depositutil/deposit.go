@@ -31,13 +31,13 @@ import (
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
-	depositSigningData := &p2ppb.DepositSigningData{
+	depositMessage := &p2ppb.DepositMessage{
 		PublicKey:             depositKey.PublicKey().Marshal(),
 		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
 	}
 
-	sr, err := depositSigningData.HashTreeRoot()
+	sr, err := depositMessage.HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -95,7 +95,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	di := &p2ppb.DepositSigningData{
+	di := &p2ppb.DepositMessage{
 		PublicKey:             ddCopy.PublicKey,
 		WithdrawalCredentials: ddCopy.WithdrawalCredentials,
 		Amount:                ddCopy.Amount,

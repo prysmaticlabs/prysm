@@ -247,12 +247,12 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		}
 		pks[i] = dpk
 		sigs[i] = dep.Data.Signature
-		depositSigningData := &pb.DepositSigningData{
+		depositMessage := &pb.DepositMessage{
 			PublicKey:             dep.Data.PublicKey,
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
 			Amount:                dep.Data.Amount,
 		}
-		root, err := depositSigningData.HashTreeRoot()
+		root, err := depositMessage.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not get signing root")
 		}

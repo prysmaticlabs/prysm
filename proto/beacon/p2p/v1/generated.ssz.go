@@ -1609,13 +1609,13 @@ func (f *ForkData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the DepositSigningData object
-func (d *DepositSigningData) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the DepositMessage object
+func (d *DepositMessage) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(d)
 }
 
-// MarshalSSZTo ssz marshals the DepositSigningData object to a target array
-func (d *DepositSigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the DepositMessage object to a target array
+func (d *DepositMessage) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'PublicKey'
@@ -1638,8 +1638,8 @@ func (d *DepositSigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the DepositSigningData object
-func (d *DepositSigningData) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the DepositMessage object
+func (d *DepositMessage) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 88 {
@@ -1664,19 +1664,19 @@ func (d *DepositSigningData) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the DepositSigningData object
-func (d *DepositSigningData) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the DepositMessage object
+func (d *DepositMessage) SizeSSZ() (size int) {
 	size = 88
 	return
 }
 
-// HashTreeRoot ssz hashes the DepositSigningData object
-func (d *DepositSigningData) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the DepositMessage object
+func (d *DepositMessage) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(d)
 }
 
-// HashTreeRootWith ssz hashes the DepositSigningData object with a hasher
-func (d *DepositSigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the DepositMessage object with a hasher
+func (d *DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'PublicKey'

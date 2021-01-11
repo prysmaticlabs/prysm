@@ -147,12 +147,12 @@ func depositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*
 
 // Generates a deposit data item from BLS keys and signs the hash tree root of the data.
 func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Deposit_Data, error) {
-	depositSigningData := &pb.DepositSigningData{
+	depositMessage := &pb.DepositMessage{
 		PublicKey:             pubKey.Marshal(),
 		WithdrawalCredentials: withdrawalCredentialsHash(pubKey.Marshal()),
 		Amount:                params.BeaconConfig().MaxEffectiveBalance,
 	}
-	sr, err := depositSigningData.HashTreeRoot()
+	sr, err := depositMessage.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}

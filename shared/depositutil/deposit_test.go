@@ -25,7 +25,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 
 	sig, err := bls.SignatureFromBytes(result.Signature)
 	require.NoError(t, err)
-	testData := &pb.DepositSigningData{
+	testData := &pb.DepositMessage{
 		PublicKey:             result.PublicKey,
 		WithdrawalCredentials: result.WithdrawalCredentials,
 		Amount:                result.Amount,

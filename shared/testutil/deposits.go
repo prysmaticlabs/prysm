@@ -163,7 +163,7 @@ func signedDeposit(
 ) (*ethpb.Deposit, error) {
 	withdrawalCreds := hashutil.Hash(withdrawalKey)
 	withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
-	depositSigningData := &pb.DepositSigningData{
+	depositMessage := &pb.DepositMessage{
 		PublicKey:             publicKey,
 		Amount:                balance,
 		WithdrawalCredentials: withdrawalCreds[:],
@@ -173,7 +173,7 @@ func signedDeposit(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute domain")
 	}
-	root, err := depositSigningData.HashTreeRoot()
+	root, err := depositMessage.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root of deposit data")
 	}
@@ -325,7 +325,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			withdrawalCreds := hashutil.Hash(publicKeys[1].Marshal())
 			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
-			depositSigningData := &pb.DepositSigningData{
+			depositMessage := &pb.DepositMessage{
 				PublicKey:             publicKeys[1].Marshal(),
 				Amount:                params.BeaconConfig().MaxEffectiveBalance,
 				WithdrawalCredentials: withdrawalCreds[:],
@@ -335,7 +335,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not compute domain")
 			}
-			root, err := depositSigningData.HashTreeRoot()
+			root, err := depositMessage.HashTreeRoot()
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
