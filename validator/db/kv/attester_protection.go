@@ -142,22 +142,14 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 		case v := <-store.batchedAttestationsChan:
 			store.batchedAttestations = append(store.batchedAttestations, v)
 			if len(store.batchedAttestations) == ATTESTATION_BATCH_CAPACITY {
-				err := store.flushAttestationsToDB(store.batchedAttestations)
-				if err == nil {
-					// Reset the slice of batched attestations if we successfully
-					// flushed them to the database.
-					store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
-				}
-				store.batchAttestationsFlushedFeed.Send(err)
+				log.Debug("Reached max capacity of batched attestations, flushing to DB")
+				store.flushAttestationRecords()
 				timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
 			}
 		case <-timer.C:
 			if len(store.batchedAttestations) > 0 {
-				err := store.flushAttestationsToDB(store.batchedAttestations)
-				if err == nil {
-					store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
-				}
-				store.batchAttestationsFlushedFeed.Send(err)
+				log.Debug("Batched attestations write interval reached, flushing to DB")
+				store.flushAttestationRecords()
 			}
 			timer.Reset(ATTESTATION_BATCH_WRITE_INTERVAL)
 		case <-ctx.Done():
@@ -166,10 +158,23 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 	}
 }
 
+// Flushes a list of batched attestations to the database
+// and resets the list of batched attestations for future writes.
+// This function notifies all subscribers for flushed attestations
+// of the result of the save operation.
+func (store *Store) flushAttestationRecords() {
+	err := store.saveAttestationRecords(store.batchedAttestations)
+	if err == nil {
+		log.Debug("Successfully flushed batched attestations to DB")
+		store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
+	}
+	store.batchAttestationsFlushedFeed.Send(err)
+}
+
 // Saves a list of attestation records to the database in a single boltDB
 // transaction to minimize write lock contention compared to doing them
 // all in individual, isolated boltDB transactions.
-func (store *Store) flushAttestationsToDB(atts []*attestationRecord) error {
+func (store *Store) saveAttestationRecords(atts []*attestationRecord) error {
 	tx, err := store.db.Begin(true /* writable */)
 	if err != nil {
 		return err
