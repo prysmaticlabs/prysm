@@ -163,13 +163,6 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 				reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
 		}
 		return handleValidatorSlice(val, indices, convertAll)
-	case previousEpochAttestations, currentEpochAttestations:
-		val, ok := elements.([]*pb.PendingAttestation)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %v but got %v",
-				reflect.TypeOf([]*pb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
-		}
-		return handlePendingAttestation(val, indices, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}

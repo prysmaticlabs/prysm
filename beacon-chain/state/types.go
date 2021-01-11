@@ -21,8 +21,6 @@ func init() {
 	// Initialize the composite arrays.
 	fieldMap[eth1DataVotes] = compositeArray
 	fieldMap[validators] = compositeArray
-	fieldMap[previousEpochParticipationBits] = compositeArray
-	fieldMap[currentEpochParticipationBits] = compositeArray
 }
 
 type fieldIndex int

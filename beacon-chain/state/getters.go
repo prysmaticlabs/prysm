@@ -1163,9 +1163,9 @@ func (b *BeaconState) safeCopyParticipationBits(input []*pbp2p.ParticipationBits
 
 	dst := make([]*pbp2p.ParticipationBits, len(input))
 	for i, r := range input {
-		new := bitfield.NewBitvector8()
-		copy(new, r.Bits)
-		dst[i] = &pbp2p.ParticipationBits{Bits: new}
+		newB := bitfield.NewBitvector8()
+		copy(newB, r.Bits)
+		dst[i] = &pbp2p.ParticipationBits{Bits: newB}
 	}
 	return dst
 }

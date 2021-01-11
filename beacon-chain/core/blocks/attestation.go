@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -165,17 +164,6 @@ func ProcessAttestationNoVerifySignature(
 		return nil, errors.Wrap(err, "could not verify attestation bitfields")
 	}
 
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, err
-	}
-	pendingAtt := &pb.PendingAttestation{
-		Data:            data,
-		AggregationBits: att.AggregationBits,
-		InclusionDelay:  beaconState.Slot() - s,
-		ProposerIndex:   proposerIndex,
-	}
-
 	var ffgSourceEpoch uint64
 	var ffgSourceRoot []byte
 	var ffgTargetEpoch uint64
@@ -183,16 +171,18 @@ func ProcessAttestationNoVerifySignature(
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint().Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint().Root
 		ffgTargetEpoch = currEpoch
-		if err := beaconState.AppendCurrentEpochAttestations(pendingAtt); err != nil {
-			return nil, err
-		}
+		// TODO: Reform this based on the new scheme
+		//if err := beaconState.AppendCurrentEpochAttestations(pendingAtt); err != nil {
+		//	return nil, err
+		//}
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint().Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint().Root
 		ffgTargetEpoch = prevEpoch
-		if err := beaconState.AppendPreviousEpochAttestations(pendingAtt); err != nil {
-			return nil, err
-		}
+		// TODO: Reform this based on the new scheme
+		//if err := beaconState.AppendPreviousEpochAttestations(pendingAtt); err != nil {
+		//	return nil, err
+		//}
 	}
 	if data.Source.Epoch != ffgSourceEpoch {
 		return nil, fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.Source.Epoch)

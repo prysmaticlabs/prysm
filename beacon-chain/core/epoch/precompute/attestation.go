@@ -8,9 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -25,31 +23,32 @@ func ProcessAttestations(
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
 
-	v := &Validator{}
-	var err error
+	//v := &Validator{}
+	//var err error
 
-	for _, a := range append(state.PreviousEpochAttestations(), state.CurrentEpochAttestations()...) {
-		if a.InclusionDelay == 0 {
-			return nil, nil, errors.New("attestation with inclusion delay of 0")
-		}
-		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return nil, nil, errors.Wrap(err, "could not check validator attested current epoch")
-		}
-		v.IsPrevEpochAttester, v.IsPrevEpochTargetAttester, v.IsPrevEpochHeadAttester, err = AttestedPrevEpoch(state, a)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
-		}
-
-		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
-		if err != nil {
-			return nil, nil, err
-		}
-		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
-		vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
-	}
+	// TODO: Reform this based on the new scheme
+	//for _, a := range append(state.PreviousEpochAttestations(), state.CurrentEpochAttestations()...) {
+	//	if a.InclusionDelay == 0 {
+	//		return nil, nil, errors.New("attestation with inclusion delay of 0")
+	//	}
+	//	v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
+	//	if err != nil {
+	//		traceutil.AnnotateError(span, err)
+	//		return nil, nil, errors.Wrap(err, "could not check validator attested current epoch")
+	//	}
+	//	v.IsPrevEpochAttester, v.IsPrevEpochTargetAttester, v.IsPrevEpochHeadAttester, err = AttestedPrevEpoch(state, a)
+	//	if err != nil {
+	//		traceutil.AnnotateError(span, err)
+	//		return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
+	//	}
+	//
+	//	committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
+	//	if err != nil {
+	//		return nil, nil, err
+	//	}
+	//	indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
+	//	vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
+	//}
 
 	pBal = UpdateBalance(vp, pBal)
 

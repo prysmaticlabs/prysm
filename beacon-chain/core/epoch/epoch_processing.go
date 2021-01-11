@@ -320,13 +320,13 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		}
 	}
 
-	// Rotate current and previous epoch attestations.
-	if err := state.SetPreviousEpochAttestations(state.CurrentEpochAttestations()); err != nil {
-		return nil, err
-	}
-	if err := state.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
-		return nil, err
-	}
+	// TODO: Reform this based on the new scheme
+	//if err := state.SetPreviousEpochAttestations(state.CurrentEpochAttestations()); err != nil {
+	//	return nil, err
+	//}
+	//if err := state.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
+	//	return nil, err
+	//}
 	return state, nil
 }
 
