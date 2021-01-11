@@ -18,7 +18,14 @@ import (
 )
 
 const (
-	ATTESTATION_BATCH_CAPACITY       = 2048
+	// How many attestation records we can hold in memory
+	// before we flush them to the database. Roughly corresponds
+	// to the max number of keys per validator client, but there is no
+	// detriment if there are more keys than this capacity, as attestations
+	// for those keys will simply be flushed at the next flush interval.
+	ATTESTATION_BATCH_CAPACITY = 2048
+	// How often we will flush attestation records to the database
+	// from a batch kept in memory for slashing protection.
 	ATTESTATION_BATCH_WRITE_INTERVAL = time.Millisecond * 100
 )
 
