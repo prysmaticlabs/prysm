@@ -185,7 +185,7 @@ func (store *Store) flushAttestationRecords() {
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
 	// We use a struct wrapper around the error as the event feed
-	// cannot handle sending a raw `nil` in case there is not error.
+	// cannot handle sending a raw `nil` in case there is no error.
 	store.batchAttestationsFlushedFeed.Send(saveAttestationsResponse{
 		err: err,
 	})
