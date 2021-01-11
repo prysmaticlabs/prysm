@@ -165,9 +165,9 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Depo
 		return nil, err
 	}
 	di := &ethpb.Deposit_Data{
-		PublicKey:             pubKey.Marshal(),
-		WithdrawalCredentials: withdrawalCredentialsHash(pubKey.Marshal()),
-		Amount:                params.BeaconConfig().MaxEffectiveBalance,
+		PublicKey:             depositMessage.PublicKey,
+		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+		Amount:                depositMessage.Amount,
 	}
 	di.Signature = privKey.Sign(root[:]).Marshal()
 	return di, nil

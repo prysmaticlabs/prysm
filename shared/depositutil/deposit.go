@@ -55,9 +55,9 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 		return nil, [32]byte{}, err
 	}
 	di := &ethpb.Deposit_Data{
-		PublicKey:             depositKey.PublicKey().Marshal(),
-		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
-		Amount:                amountInGwei,
+		PublicKey:             depositMessage.PublicKey,
+		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+		Amount:                depositMessage.Amount,
 	}
 	di.Signature = depositKey.Sign(root[:]).Marshal()
 
