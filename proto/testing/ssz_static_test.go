@@ -106,7 +106,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.Deposit{}
 	case "DepositMessage":
 		obj = &pb.DepositMessage{}
-		return nil, nil
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
 	case "Eth1Data":
