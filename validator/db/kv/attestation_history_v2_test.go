@@ -4,58 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
-
-func TestAttestationHistoryForPubKey_OK(t *testing.T) {
-	ctx := context.Background()
-	pubKey := [48]byte{30}
-	db := setupDB(t, [][48]byte{pubKey})
-
-	_, err := db.AttestationHistoryForPubKeyV2(context.Background(), pubKey)
-	require.NoError(t, err)
-
-	history := NewAttestationHistoryArray(53999)
-
-	history, err = history.SetTargetData(
-		ctx,
-		10,
-		&HistoryData{
-			Source:      uint64(1),
-			SigningRoot: []byte{1, 2, 3},
-		},
-	)
-	require.NoError(t, err)
-
-	err = db.SaveAttestationHistoryForPubKeyV2(context.Background(), pubKey, history)
-	require.NoError(t, err)
-	got, err := db.AttestationHistoryForPubKeyV2(context.Background(), pubKey)
-	require.NoError(t, err)
-	require.DeepEqual(t, history, got, "Expected attestation history epoch bits to be empty")
-}
-
-func TestStore_AttestedPublicKeys(t *testing.T) {
-	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
-	require.NoError(t, err, "Failed to instantiate DB")
-	t.Cleanup(func() {
-		require.NoError(t, validatorDB.Close(), "Failed to close database")
-		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
-	})
-
-	keys, err := validatorDB.AttestedPublicKeys(ctx)
-	require.NoError(t, err)
-	assert.DeepEqual(t, make([][48]byte, 0), keys)
-
-	pubKey := [48]byte{1}
-	err = validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, NewAttestationHistoryArray(0))
-	require.NoError(t, err)
-
-	keys, err = validatorDB.AttestedPublicKeys(ctx)
-	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{pubKey}, keys)
-}
 
 func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
