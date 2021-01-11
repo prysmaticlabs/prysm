@@ -95,7 +95,7 @@ func TestGetIdentity(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fmt.Sprint("enr:", expectedEnr), resp.Data.Enr)
 		require.Equal(t, 1, len(resp.Data.P2PAddresses))
-		assert.Equal(t, fmt.Sprint(p2pAddr.String(), "/p2p/", expectedID), resp.Data.P2PAddresses[0])
+		assert.Equal(t, p2pAddr.String()+"/p2p/"+expectedID, resp.Data.P2PAddresses[0])
 		require.Equal(t, 2, len(resp.Data.DiscoveryAddresses))
 		ipv4Found, ipv6Found := false, false
 		for _, address := range resp.Data.DiscoveryAddresses {

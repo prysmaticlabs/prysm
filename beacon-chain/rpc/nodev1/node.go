@@ -28,18 +28,19 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 	}
 	enr := fmt.Sprint("enr:", serializedEnr)
 
-	var p2pAddresses []string
-	for _, address := range ns.PeerManager.Host().Addrs() {
-		p2pAddresses = append(p2pAddresses, fmt.Sprint(address.String(), "/p2p/", peerId))
+	sourcep2p := ns.PeerManager.Host().Addrs()
+	p2pAddresses := make([]string, len(sourcep2p))
+	for i, _ := range sourcep2p {
+		p2pAddresses[i] = sourcep2p[i].String() + "/p2p/" + peerId
 	}
 
-	disc, err := ns.PeerManager.DiscoveryAddresses()
+	sourceDisc, err := ns.PeerManager.DiscoveryAddresses()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain discovery address")
 	}
-	var discoveryAddresses []string
-	for _, address := range disc {
-		discoveryAddresses = append(discoveryAddresses, address.String())
+	discoveryAddresses := make([]string, len(sourceDisc))
+	for i, _ := range sourceDisc {
+		discoveryAddresses[i] = sourceDisc[i].String()
 	}
 
 	metadata := &ethpb.Metadata{
