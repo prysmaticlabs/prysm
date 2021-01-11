@@ -69,7 +69,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.WithError(err).Errorf("Loaded in an empty file: %s", ev.Name)
 			return
 		}
-		accountsKeystore := &accountsKeystoreRepresentation{}
+		accountsKeystore := &AccountsKeystoreRepresentation{}
 		if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
 			log.WithError(
 				err,
@@ -98,7 +98,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 
 // Replaces the accounts store struct in the imported keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
-func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepresentation) error {
+func (dr *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepresentation) error {
 	decryptor := keystorev4.New()
 	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.wallet.Password())
 	if err != nil {

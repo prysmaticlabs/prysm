@@ -109,7 +109,7 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 				// We verify that the updated disabled keys are reflected on disk as well.
 				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 				require.NoError(t, err)
-				keystore := &accountsKeystoreRepresentation{}
+				keystore := &AccountsKeystoreRepresentation{}
 				require.NoError(t, json.Unmarshal(encoded, keystore))
 
 				require.Equal(t, len(wanted), len(keystore.DisabledPublicKeys))
@@ -225,7 +225,7 @@ func TestKeymanager_EnableAccounts(t *testing.T) {
 				// We verify that the updated disabled keys are reflected on disk as well.
 				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 				require.NoError(t, err)
-				keystore := &accountsKeystoreRepresentation{}
+				keystore := &AccountsKeystoreRepresentation{}
 				require.NoError(t, json.Unmarshal(encoded, keystore))
 
 				require.Equal(t, len(wanted), len(keystore.DisabledPublicKeys))

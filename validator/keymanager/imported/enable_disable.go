@@ -42,7 +42,7 @@ func (dr *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not read keystore file for accounts")
 	}
-	keystore := &accountsKeystoreRepresentation{}
+	keystore := &AccountsKeystoreRepresentation{}
 	if err := json.Unmarshal(encoded, keystore); err != nil {
 		return err
 	}
