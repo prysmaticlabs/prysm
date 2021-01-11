@@ -167,10 +167,12 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 // of the result of the save operation.
 func (store *Store) flushAttestationRecords() {
 	err := store.saveAttestationRecords(store.batchedAttestations)
+	// If there was no error, we reset the batched attestations slice.
 	if err == nil {
 		log.Debug("Successfully flushed batched attestations to DB")
 		store.batchedAttestations = make([]*attestationRecord, 0, ATTESTATION_BATCH_CAPACITY)
 	}
+	// Forward the error, if any, to all subscribers via an event feed.
 	store.batchAttestationsFlushedFeed.Send(err)
 }
 
