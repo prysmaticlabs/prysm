@@ -24,7 +24,7 @@ import (
 )
 
 func TestValidatorStatus_DepositedEth1(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err, "Could not generate deposits and keys")
@@ -62,7 +62,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 }
 
 func TestValidatorStatus_Deposited(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
@@ -114,7 +114,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 }
 
 func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
@@ -166,7 +166,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 }
 
 func TestValidatorStatus_Pending(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -229,7 +229,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 }
 
 func TestValidatorStatus_Active(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	// This test breaks if it doesnt use mainnet config
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -303,7 +303,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 }
 
 func TestValidatorStatus_Exiting(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -366,7 +366,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 }
 
 func TestValidatorStatus_Slashing(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -426,7 +426,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 }
 
 func TestValidatorStatus_Exited(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -490,7 +490,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 }
 
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	pubKey := pubKey(1)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -516,7 +516,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 }
 
 func TestActivationStatus_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
@@ -606,7 +606,7 @@ func TestActivationStatus_OK(t *testing.T) {
 }
 
 func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	pbKey := pubKey(5)
@@ -709,7 +709,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 }
 
 func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(6)
@@ -820,7 +820,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 }
 
 func TestMultipleValidatorStatus_Indices(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4), pubKey(5), pubKey(6), pubKey(7)}
@@ -918,7 +918,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 }
 
 func TestValidatorStatus_Invalid(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err, "Could not generate deposits and keys")

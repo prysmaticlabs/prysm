@@ -299,7 +299,7 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
-	unfinalizedRoots := [][32]byte{}
+	var unfinalizedRoots [][32]byte
 	for i := uint64(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i

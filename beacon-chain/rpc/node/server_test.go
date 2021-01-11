@@ -12,19 +12,19 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
@@ -42,7 +42,7 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 }
 
 func TestNodeServer_GetGenesis(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	addr := common.Address{1, 2, 3}
 	require.NoError(t, db.SaveDepositContractAddress(ctx, addr))
@@ -78,19 +78,6 @@ func TestNodeServer_GetVersion(t *testing.T) {
 	res, err := ns.GetVersion(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, v, res.Version)
-}
-
-func TestNodeServer_GetLogsEndpoint(t *testing.T) {
-	ns := &Server{
-		BeaconMonitoringHost: "localhost",
-		BeaconMonitoringPort: 8080,
-	}
-	res, err := ns.GetLogsEndpoint(context.Background(), &emptypb.Empty{})
-	require.NoError(t, err)
-	want := &pbrpc.LogsEndpointResponse{
-		BeaconLogsEndpoint: "localhost:8080",
-	}
-	assert.DeepEqual(t, want, res)
 }
 
 func TestNodeServer_GetImplementedServices(t *testing.T) {

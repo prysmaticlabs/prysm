@@ -172,11 +172,11 @@ func (s *Service) createListener(
 		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
 	}
 
-	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
+	listener, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to discV5")
 	}
-	return network, nil
+	return listener, nil
 }
 
 func (s *Service) createLocalNode(
@@ -231,6 +231,10 @@ func (s *Service) startDiscoveryV5(
 // 6) Peer's fork digest in their ENR matches that of
 // 	  our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
+	// Ignore nil node entries passed in.
+	if node == nil {
+		return false
+	}
 	// ignore nodes with no ip address stored.
 	if node.IP() == nil {
 		return false
@@ -354,7 +358,36 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	return multiAddressBuilderWithID(node.IP().String(), uint(node.TCP()), id)
+	return multiAddressBuilderWithID(node.IP().String(), "tcp", uint(node.TCP()), id)
+}
+
+func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
+	pubkey := node.Pubkey()
+	assertedKey := convertToInterfacePubkey(pubkey)
+	id, err := peer.IDFromPublicKey(assertedKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get peer id")
+	}
+
+	var addresses []ma.Multiaddr
+	var ip4 enr.IPv4
+	var ip6 enr.IPv6
+	if node.Load(&ip4) == nil {
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip4).String(), "udp", uint(node.UDP()), id)
+		if ipErr != nil {
+			return nil, errors.Wrap(ipErr, "could not build IPv4 address")
+		}
+		addresses = append(addresses, address)
+	}
+	if node.Load(&ip6) == nil {
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip6).String(), "udp", uint(node.UDP()), id)
+		if ipErr != nil {
+			return nil, errors.Wrap(ipErr, "could not build IPv6 address")
+		}
+		addresses = append(addresses, address)
+	}
+
+	return addresses, nil
 }
 
 func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {

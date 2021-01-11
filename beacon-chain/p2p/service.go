@@ -19,22 +19,22 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	filter "github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
+	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var _ shared.Service = (*Service)(nil)
@@ -47,9 +47,6 @@ var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
-
-// lookup limit whenever looking up for random nodes.
-const lookupLimit = 15
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
@@ -66,7 +63,7 @@ type Service struct {
 	cancel                context.CancelFunc
 	cfg                   *Config
 	peers                 *peers.Status
-	addrFilter            *filter.Filters
+	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
 	metaData              *pb.MetaData
@@ -132,6 +129,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 
 	s.host = h
+	s.host.RemoveStreamHandler(identify.IDDelta)
 
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
@@ -234,6 +232,13 @@ func (s *Service) Start() {
 	runutil.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
+	runutil.RunEvery(s.ctx, 1*time.Minute, func() {
+		log.WithFields(logrus.Fields{
+			"inbound":     len(s.peers.Inbound()),
+			"outbound":    len(s.peers.Outbound()),
+			"activePeers": len(s.peers.Active()),
+		}).Info("Peer summary")
+	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIPAddr(s.host.ID(), multiAddrs...)
@@ -332,6 +337,14 @@ func (s *Service) ENR() *enr.Record {
 	return s.dv5Listener.Self().Record()
 }
 
+// DiscoveryAddresses represents our enr addresses as multiaddresses.
+func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
+	if s.dv5Listener == nil {
+		return nil, nil
+	}
+	return convertToUdpMultiAddr(s.dv5Listener.Self())
+}
+
 // Metadata returns a copy of the peer's metadata.
 func (s *Service) Metadata() *pb.MetaData {
 	return proto.Clone(s.metaData).(*pb.MetaData)
@@ -402,7 +415,7 @@ func (s *Service) awaitStateInitialized() {
 	}
 }
 
-func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
+func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
 	if err != nil {
 		log.Errorf("Could not convert to peer address info's from multiaddresses: %v", err)

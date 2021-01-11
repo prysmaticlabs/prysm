@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -15,7 +16,7 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		bucket := tx.Bucket(historicAttestationsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			pubKeyBytes := [48]byte{}
 			copy(pubKeyBytes[:], key)
@@ -26,55 +27,37 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	return attestedPublicKeys, err
 }
 
-// AttestationHistoryForPubKeysV2 accepts an array of validator public keys and returns a mapping of corresponding attestation history.
-func (store *Store) AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]EncHistoryData, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeysV2")
+// AttestationHistoryForPubKeyV2 returns the corresponding attesting
+// history for a specified validator public key.
+func (store *Store) AttestationHistoryForPubKeyV2(ctx context.Context, publicKey [48]byte) (EncHistoryData, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKeyV2")
 	defer span.End()
-
-	if len(publicKeys) == 0 {
-		return make(map[[48]byte]EncHistoryData), nil
+	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.lock.RLock()
+		if history, ok := store.attestingHistoriesByPubKey[publicKey]; ok {
+			store.lock.RUnlock()
+			return history, nil
+		}
+		store.lock.RUnlock()
 	}
-
 	var err error
-	attestationHistoryForVals := make(map[[48]byte]EncHistoryData)
+	var attestationHistory EncHistoryData
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		for _, key := range publicKeys {
-			enc := bucket.Get(key[:])
-			var attestationHistory EncHistoryData
-			if len(enc) == 0 {
-				attestationHistory = NewAttestationHistoryArray(0)
-			} else {
-				attestationHistory = make(EncHistoryData, len(enc))
-				copy(attestationHistory, enc)
-			}
-			attestationHistoryForVals[key] = attestationHistory
+		bucket := tx.Bucket(historicAttestationsBucket)
+		enc := bucket.Get(publicKey[:])
+		if len(enc) == 0 {
+			attestationHistory = NewAttestationHistoryArray(0)
+		} else {
+			attestationHistory = enc
 		}
 		return nil
 	})
-	for pk, ah := range attestationHistoryForVals {
-		ehd := make(EncHistoryData, len(ah))
-		copy(ehd, ah)
-		attestationHistoryForVals[pk] = ehd
+	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.lock.Lock()
+		store.attestingHistoriesByPubKey[publicKey] = attestationHistory
+		store.lock.Unlock()
 	}
-	return attestationHistoryForVals, err
-}
-
-// SaveAttestationHistoryForPubKeysV2 saves the attestation histories for the requested validator public keys.
-func (store *Store) SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]EncHistoryData) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeysV2")
-	defer span.End()
-
-	err := store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
-		for pubKey, encodedHistory := range historyByPubKeys {
-			if err := bucket.Put(pubKey[:], encodedHistory); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return err
+	return attestationHistory, err
 }
 
 // SaveAttestationHistoryForPubKeyV2 saves the attestation history for the requested validator public key.
@@ -82,10 +65,14 @@ func (store *Store) SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKe
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistoryForPubKeyV2")
 	defer span.End()
 	err := store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricAttestationsBucket)
+		bucket := tx.Bucket(historicAttestationsBucket)
 		return bucket.Put(pubKey[:], history)
 	})
-
+	if !featureconfig.Get().DisableAttestingHistoryDBCache {
+		store.lock.Lock()
+		store.attestingHistoriesByPubKey[pubKey] = history
+		store.lock.Unlock()
+	}
 	return err
 }
 

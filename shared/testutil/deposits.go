@@ -169,7 +169,6 @@ func signedDeposit(
 		Amount:                balance,
 		WithdrawalCredentials: withdrawalCreds[:],
 	}
-	depositData.MarshalSSZ()
 
 	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	if err != nil {

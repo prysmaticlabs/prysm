@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"google.golang.org/grpc"
 )
 
@@ -16,6 +17,7 @@ import (
 // version information.
 // nolint: maligned
 type Server struct {
+	SyncChecker        sync.Checker
 	Server             *grpc.Server
 	BeaconDB           db.ReadOnlyDatabase
 	PeersFetcher       p2p.PeersProvider

@@ -27,16 +27,16 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
-	UpdateProtections(ctx context.Context, slot uint64) error
 	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
-	ResetAttesterProtectionData()
+	LogNextDutyTimeLeft(slot uint64) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
+	ReceiveBlocks(ctx context.Context)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -71,6 +71,8 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
+	go v.ReceiveBlocks(ctx)
+
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)
@@ -101,7 +103,6 @@ func run(ctx context.Context, v Validator) {
 
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
-
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 
@@ -110,12 +111,6 @@ func run(ctx context.Context, v Validator) {
 			if err := v.UpdateDuties(ctx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
-				span.End()
-				continue
-			}
-
-			if err := v.UpdateProtections(ctx, slot); err != nil {
-				log.WithError(err).Error("Could not update validator protection")
 				span.End()
 				continue
 			}
@@ -161,6 +156,9 @@ func run(ctx context.Context, v Validator) {
 				v.LogAttestationsSubmitted()
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 					log.WithError(err).Error("Could not report validator's rewards/penalties")
+				}
+				if err := v.LogNextDutyTimeLeft(slot); err != nil {
+					log.WithError(err).Error("Could not report next count down")
 				}
 				span.End()
 			}()

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -175,35 +176,53 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ch
 }
 
 // StreamBlocks to clients every single time a block is received by the beacon node.
-func (bs *Server) StreamBlocks(_ *emptypb.Empty, stream ethpb.BeaconChain_StreamBlocksServer) error {
+func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconChain_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
-	blockSub := bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	var blockSub event.Subscription
+	if req.VerifiedOnly {
+		blockSub = bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
+	} else {
+		blockSub = bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	}
 	defer blockSub.Unsubscribe()
+
 	for {
 		select {
-		case event := <-blocksChannel:
-			if event.Type == blockfeed.ReceivedBlock {
-				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
-				if !ok {
-					// Got bad data over the stream.
-					continue
+		case blockEvent := <-blocksChannel:
+			if req.VerifiedOnly {
+				if blockEvent.Type == statefeed.BlockProcessed {
+					data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
+					if !ok || data == nil {
+						continue
+					}
+					if err := stream.Send(data.SignedBlock); err != nil {
+						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+					}
 				}
-				if data.SignedBlock == nil {
-					// One nil block shouldn't stop the stream.
-					continue
-				}
-				headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
-				if err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
-					continue
-				}
+			} else {
+				if blockEvent.Type == blockfeed.ReceivedBlock {
+					data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
+					if !ok {
+						// Got bad data over the stream.
+						continue
+					}
+					if data.SignedBlock == nil {
+						// One nil block shouldn't stop the stream.
+						continue
+					}
+					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+					if err != nil {
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
+						continue
+					}
 
-				if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
-					continue
-				}
-				if err := stream.Send(data.SignedBlock); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+					if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
+						continue
+					}
+					if err := stream.Send(data.SignedBlock); err != nil {
+						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+					}
 				}
 			}
 		case <-blockSub.Err():
@@ -223,8 +242,8 @@ func (bs *Server) StreamChainHead(_ *emptypb.Empty, stream ethpb.BeaconChain_Str
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.BlockProcessed {
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.BlockProcessed {
 				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)

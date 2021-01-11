@@ -69,6 +69,7 @@ go_test(
         "attester_test.go",
         "exit_test.go",
         "proposer_test.go",
+        "proposer_utils_test.go",
         "server_test.go",
         "status_test.go",
         "validator_test.go",

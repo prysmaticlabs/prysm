@@ -70,6 +70,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ChainConfigFileFlag,
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
+			cmd.RestoreSourceFileFlag,
+			cmd.RestoreTargetDirFlag,
 		},
 	},
 	{
@@ -99,6 +101,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayPort,
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
+			flags.FallbackWeb3ProviderFlag,
 			flags.SetGCPercent,
 			flags.HeadSync,
 			flags.DisableSync,

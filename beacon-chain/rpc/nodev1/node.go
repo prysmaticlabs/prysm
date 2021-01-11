@@ -2,9 +2,15 @@ package nodev1
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"runtime"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/shared/version"
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -26,7 +32,15 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ethpb.PeersRequest) (*ethpb.
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
 func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "nodev1.GetVersion")
+	defer span.End()
+
+	v := fmt.Sprintf("Prysm/%s (%s %s)", version.GetSemanticVersion(), runtime.GOOS, runtime.GOARCH)
+	return &ethpb.VersionResponse{
+		Data: &ethpb.Version{
+			Version: v,
+		},
+	}, nil
 }
 
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
@@ -44,5 +58,11 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 //    "503":
 //      description: Node not initialized or having issues
 func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "nodev1.GetHealth")
+	defer span.End()
+
+	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
+		return &emptypb.Empty{}, nil
+	}
+	return &emptypb.Empty{}, status.Error(http.StatusInternalServerError, "node not initialized or having issues")
 }

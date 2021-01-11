@@ -15,11 +15,11 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -48,11 +48,18 @@ func genMockKeymanger(numKeys int) *mockKeymanager {
 }
 
 type mockKeymanager struct {
-	lock    sync.RWMutex
-	keysMap map[[48]byte]bls.SecretKey
+	lock        sync.RWMutex
+	keysMap     map[[48]byte]bls.SecretKey
+	fetchNoKeys bool
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	if m.fetchNoKeys {
+		// We set the value to `false` to fetch keys the next time.
+		m.fetchNoKeys = false
+		return make([][48]byte, 0), nil
+	}
+
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	keys := make([][48]byte, 0)
@@ -264,7 +271,6 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		//keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
@@ -279,173 +285,6 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	err := v.WaitForChainStart(context.Background())
 	want := "could not receive ChainStart from stream"
 	assert.ErrorContains(t, want, err)
-}
-
-func TestWaitActivation_ContextCanceled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	pubKey := [48]byte{}
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
-	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-	}
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
-		},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.ValidatorActivationResponse{},
-		nil,
-	)
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx))
-}
-
-func TestWaitActivation_StreamSetupFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	pubKey := [48]byte{}
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
-	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-	}
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
-		},
-	).Return(clientStream, errors.New("failed stream"))
-	err = v.WaitForActivation(context.Background())
-	want := "could not setup validator WaitForActivation streaming client"
-	assert.ErrorContains(t, want, err)
-}
-
-func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	pubKey := [48]byte{}
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
-	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-	}
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
-		},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		nil,
-		errors.New("fails"),
-	)
-	err = v.WaitForActivation(context.Background())
-	want := "could not receive validator activation from stream"
-	assert.ErrorContains(t, want, err)
-}
-
-func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	pubKey := [48]byte{}
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
-	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-		genesisTime:     1,
-	}
-	resp := generateMockStatusResponse([][]byte{pubKey[:]})
-	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
-		},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		resp,
-		nil,
-	)
-	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
-	require.LogsContain(t, hook, "Validator activated")
-}
-
-func TestWaitForActivation_Exiting(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	pubKey := [48]byte{}
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
-	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-		genesisTime:     1,
-	}
-	resp := generateMockStatusResponse([][]byte{pubKey[:]})
-	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_EXITING
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
-		},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		resp,
-		nil,
-	)
-	require.NoError(t, v.WaitForActivation(context.Background()))
 }
 
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
@@ -729,97 +568,6 @@ func TestUpdateDuties_OK(t *testing.T) {
 	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
 }
 
-func TestUpdateProtections_OK(t *testing.T) {
-	ctx := context.Background()
-	pubKey1 := [48]byte{1}
-	pubKey2 := [48]byte{2}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
-	history := kv.NewAttestationHistoryArray(2)
-	history, err := history.SetTargetData(ctx, 1, &kv.HistoryData{Source: 0, SigningRoot: []byte{1}})
-	require.NoError(t, err)
-	history, err = history.SetTargetData(ctx, 2, &kv.HistoryData{Source: 1, SigningRoot: []byte{2}})
-	require.NoError(t, err)
-	history, err = history.SetLatestEpochWritten(ctx, 2)
-	require.NoError(t, err)
-	history2 := kv.NewAttestationHistoryArray(3)
-	history2, err = history2.SetTargetData(ctx, 3, &kv.HistoryData{Source: 2, SigningRoot: []byte{1}})
-	require.NoError(t, err)
-	history2, err = history2.SetLatestEpochWritten(ctx, 3)
-	require.NoError(t, err)
-
-	histories := make(map[[48]byte]kv.EncHistoryData)
-	histories[pubKey1] = history
-	histories[pubKey2] = history2
-	require.NoError(t, db.SaveAttestationHistoryForPubKeysV2(context.Background(), histories))
-
-	slot := params.BeaconConfig().SlotsPerEpoch
-	duties := &ethpb.DutiesResponse{
-		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{
-				AttesterSlot:   slot,
-				ValidatorIndex: 200,
-				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
-				PublicKey:      pubKey1[:],
-			},
-			{
-				AttesterSlot:   slot,
-				ValidatorIndex: 201,
-				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
-				PublicKey:      pubKey2[:],
-			},
-		},
-	}
-	v := validator{
-		db:              db,
-		validatorClient: client,
-		duties:          duties,
-	}
-
-	require.NoError(t, v.UpdateProtections(context.Background(), slot), "Could not update assignments")
-	require.DeepEqual(t, history, v.attesterHistoryByPubKey[pubKey1], "Unexpected retrieved history")
-	require.DeepEqual(t, history2, v.attesterHistoryByPubKey[pubKey2], "Unexpected retrieved history")
-}
-
-func TestSaveProtection_OK(t *testing.T) {
-	pubKey1 := [48]byte{1}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := dbTest.SetupDB(t, [][48]byte{pubKey1})
-	ctx := context.Background()
-
-	cleanHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
-	require.NoError(t, err)
-	v := validator{
-		db:                      db,
-		validatorClient:         client,
-		attesterHistoryByPubKey: cleanHistories,
-	}
-
-	history1 := cleanHistories[pubKey1]
-	sr := [32]byte{1}
-	newHist, err := kv.MarkAllAsAttestedSinceLatestWrittenEpoch(ctx, history1, 1, &kv.HistoryData{
-		Source:      0,
-		SigningRoot: sr[:],
-	})
-	require.NoError(t, err)
-	history1 = newHist
-
-	cleanHistories[pubKey1] = history1
-
-	v.attesterHistoryByPubKey = cleanHistories
-	require.NoError(t, v.SaveProtection(context.Background(), pubKey1), "Could not update assignments")
-	savedHistories, err := db.AttestationHistoryForPubKeysV2(context.Background(), [][48]byte{pubKey1})
-	require.NoError(t, err)
-
-	require.DeepEqual(t, history1, savedHistories[pubKey1], "Unexpected retrieved history")
-}
-
 func TestRolesAt_OK(t *testing.T) {
 	v, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -1081,4 +829,57 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
+}
+
+func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconChainClient(ctrl)
+
+	v := validator{
+		beaconClient: client,
+		blockFeed:    new(event.Feed),
+	}
+	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	client.EXPECT().StreamBlocks(
+		gomock.Any(),
+		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
+	).Return(stream, nil)
+	stream.EXPECT().Context().Return(ctx).AnyTimes()
+	stream.EXPECT().Recv().Return(
+		&ethpb.SignedBeaconBlock{},
+		nil,
+	).Do(func() {
+		cancel()
+	})
+	v.ReceiveBlocks(ctx)
+	require.Equal(t, uint64(0), v.highestValidSlot)
+}
+
+func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconChainClient(ctrl)
+
+	v := validator{
+		beaconClient: client,
+		blockFeed:    new(event.Feed),
+	}
+	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	client.EXPECT().StreamBlocks(
+		gomock.Any(),
+		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
+	).Return(stream, nil)
+	stream.EXPECT().Context().Return(ctx).AnyTimes()
+	slot := uint64(100)
+	stream.EXPECT().Recv().Return(
+		&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}},
+		nil,
+	).Do(func() {
+		cancel()
+	})
+	v.ReceiveBlocks(ctx)
+	require.Equal(t, slot, v.highestValidSlot)
 }

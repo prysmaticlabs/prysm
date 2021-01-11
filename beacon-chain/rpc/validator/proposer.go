@@ -190,12 +190,12 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	eth1VotingPeriodStartTime := vs.slotStartTime(slot)
 
 	// Look up most recent block up to timestamp
-	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
+	blockNumber, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
 		log.WithError(err).Error("Could not get block number from timestamp")
 		return vs.randomETH1DataVote(ctx)
 	}
-	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
+	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber.Number)
 	if err != nil {
 		log.WithError(err).Error("Could not get eth1 data from block number")
 		return vs.randomETH1DataVote(ctx)
@@ -235,48 +235,38 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
-	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, earliestValidTime)
+	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
 	if err != nil {
 		log.WithError(err).Error("Could not get last block by earliest valid time")
 		return vs.randomETH1DataVote(ctx)
 	}
-	timeOfLastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockTimeByHeight(ctx, lastBlockByEarliestValidTime)
-	if err != nil {
-		log.WithError(err).Error("Could not get time of last block by earliest valid time")
-		return vs.randomETH1DataVote(ctx)
-	}
 	// Increment the earliest block if the original block's time is before valid time.
 	// This is very likely to happen because BlockTimeByHeight returns the last block AT OR BEFORE the specified time.
-	if timeOfLastBlockByEarliestValidTime < earliestValidTime {
-		lastBlockByEarliestValidTime = big.NewInt(0).Add(lastBlockByEarliestValidTime, big.NewInt(1))
+	if lastBlockByEarliestValidTime.Time < earliestValidTime {
+		lastBlockByEarliestValidTime.Number = big.NewInt(0).Add(lastBlockByEarliestValidTime.Number, big.NewInt(1))
 	}
 
-	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, latestValidTime)
+	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {
 		log.WithError(err).Error("Could not get last block by latest valid time")
 		return vs.randomETH1DataVote(ctx)
 	}
-	timeOfLastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockTimeByHeight(ctx, lastBlockByLatestValidTime)
-	if err != nil {
-		log.WithError(err).Error("Could not get time of last block by latest valid time")
-		return vs.randomETH1DataVote(ctx)
-	}
-	if timeOfLastBlockByLatestValidTime < earliestValidTime {
+	if lastBlockByLatestValidTime.Time < earliestValidTime {
 		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
 
-	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime)
+	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime.Number)
 	if lastBlockDepositCount == 0 {
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
-	inRangeVotes, err := vs.inRangeVotes(ctx, beaconState, lastBlockByEarliestValidTime, lastBlockByLatestValidTime)
+	inRangeVotes, err := vs.inRangeVotes(ctx, beaconState, lastBlockByEarliestValidTime.Number, lastBlockByLatestValidTime.Number)
 	if err != nil {
 		return nil, err
 	}
 	if len(inRangeVotes) == 0 {
 		if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
-			hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime)
+			hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
 			if err != nil {
 				log.WithError(err).Error("Could not get hash of last block by latest valid time")
 				return vs.randomETH1DataVote(ctx)
@@ -583,15 +573,15 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state *stateTrie.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st *stateTrie.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
-	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, state)
+	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	return validAtts.sortByProfitability().limitToMaxAttestations(), nil
+	return validAtts.dedup().sortByProfitability().limitToMaxAttestations(), nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -669,7 +659,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			}
 			attsForInclusion = append(attsForInclusion, as...)
 		}
-		atts = attsForInclusion.sortByProfitability().limitToMaxAttestations()
+		atts = attsForInclusion.dedup().sortByProfitability().limitToMaxAttestations()
 	}
 	return atts, nil
 }

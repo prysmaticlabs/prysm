@@ -342,11 +342,6 @@ func (s *Service) Stop() error {
 		}
 	}
 
-	// Save cached state summaries to the DB before stop.
-	if err := s.stateGen.SaveStateSummariesToDB(s.ctx); err != nil {
-		return err
-	}
-
 	// Save initial sync cached blocks to the DB before stop.
 	return s.beaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }

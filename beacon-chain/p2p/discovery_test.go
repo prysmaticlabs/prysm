@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -264,6 +265,53 @@ func TestInboundPeerLimit(t *testing.T) {
 	require.Equal(t, true, s.isPeerAtLimit(true), "not at limit for inbound peers")
 }
 
+func TestUDPMultiAddress(t *testing.T) {
+	port := 6500
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	s := &Service{
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	listener, err := s.createListener(ipAddr, pkey)
+	require.NoError(t, err)
+	defer listener.Close()
+	s.dv5Listener = listener
+
+	multiAddresses, err := s.DiscoveryAddresses()
+	require.NoError(t, err)
+	require.Equal(t, true, len(multiAddresses) > 0)
+	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), fmt.Sprintf("%d", port)))
+	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), "udp"))
+}
+
+func TestMultipleDiscoveryAddresses(t *testing.T) {
+	db, err := enode.OpenDB(t.TempDir())
+	require.NoError(t, err)
+	_, key := createAddrAndPrivKey(t)
+	node := enode.NewLocalNode(db, key)
+	node.Set(enr.IPv4{127, 0, 0, 1})
+	node.Set(enr.IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68})
+	s := &Service{dv5Listener: mockListener{localNode: node}}
+
+	multiAddresses, err := s.DiscoveryAddresses()
+	require.NoError(t, err)
+	require.Equal(t, 2, len(multiAddresses))
+	ipv4Found, ipv6Found := false, false
+	for _, address := range multiAddresses {
+		s := address.String()
+		if strings.Contains(s, "ip4") {
+			ipv4Found = true
+		} else if strings.Contains(s, "ip6") {
+			ipv6Found = true
+		}
+	}
+	assert.Equal(t, true, ipv4Found, "IPv4 discovery address not found")
+	assert.Equal(t, true, ipv6Found, "IPv6 discovery address not found")
+}
+
 // addPeer is a helper to add a peer with a given connection state)
 func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
 	// Set up some peers with different states
@@ -274,7 +322,7 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	mhBytes = append(mhBytes, idBytes...)
 	id, err := peer.IDFromBytes(mhBytes)
 	require.NoError(t, err)
-	p.Add(new(enr.Record), id, nil, network.DirUnknown)
+	p.Add(new(enr.Record), id, nil, network.DirInbound)
 	p.SetConnectionState(id, state)
 	p.SetMetadata(id, &pb.MetaData{
 		SeqNumber: 0,

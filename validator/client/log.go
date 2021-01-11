@@ -2,9 +2,13 @@ package client
 
 import (
 	"fmt"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,4 +37,55 @@ func (v *validator) LogAttestationsSubmitted() {
 	}
 
 	v.attLogs = make(map[[32]byte]*attSubmitted)
+}
+
+func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
+	if !v.logDutyCountDown {
+		return nil
+	}
+	if v.duties == nil {
+		return nil
+	}
+
+	var nextDutySlot uint64
+	attestingCounts := make(map[uint64]uint64)
+	proposingCounts := make(map[uint64]uint64)
+	for _, duty := range v.duties.CurrentEpochDuties {
+		attestingCounts[duty.AttesterSlot]++
+
+		if duty.AttesterSlot > slot && (nextDutySlot > duty.AttesterSlot || nextDutySlot == 0) {
+			nextDutySlot = duty.AttesterSlot
+		}
+		for _, proposerSlot := range duty.ProposerSlots {
+			proposingCounts[proposerSlot]++
+
+			if proposerSlot > slot && (nextDutySlot > proposerSlot || nextDutySlot == 0) {
+				nextDutySlot = proposerSlot
+			}
+		}
+	}
+
+	if nextDutySlot == 0 {
+		log.WithField("slotInEpoch", slot%params.BeaconConfig().SlotsPerEpoch).Info("No duty until next epoch")
+	} else {
+		nextDutyTime, err := helpers.SlotToTime(v.genesisTime, nextDutySlot)
+		if err != nil {
+			return err
+		}
+		timeLeft := time.Duration(nextDutyTime.Unix() - timeutils.Now().Unix()).Nanoseconds()
+		// There is not much value to log if time left is less than one slot.
+		if uint64(timeLeft) >= params.BeaconConfig().SecondsPerSlot {
+			log.WithFields(
+				logrus.Fields{
+					"currentSlot": slot,
+					"dutySlot":    nextDutySlot,
+					"attesting":   attestingCounts[nextDutySlot],
+					"proposing":   proposingCounts[nextDutySlot],
+					"slotInEpoch": slot % params.BeaconConfig().SlotsPerEpoch,
+					"secondsLeft": timeLeft,
+				}).Info("Next duty")
+		}
+	}
+
+	return nil
 }

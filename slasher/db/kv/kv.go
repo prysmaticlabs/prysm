@@ -16,7 +16,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var databaseFileName = "slasher.db"
+const (
+	// SlasherDbDirName is the name of the directory containing the slasher database.
+	SlasherDbDirName = "slasherdata"
+	// DatabaseFileName is the name of the slasher database.
+	DatabaseFileName = "slasher.db"
+)
 
 // Store defines an implementation of the slasher Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
@@ -68,7 +73,7 @@ func (db *Store) ClearDB() error {
 	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.Remove(filepath.Join(db.databasePath, databaseFileName))
+	return os.Remove(filepath.Join(db.databasePath, DatabaseFileName))
 }
 
 // DatabasePath at which this database writes files.
@@ -99,7 +104,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		}
 	}
 
-	datafile := path.Join(dirPath, databaseFileName)
+	datafile := path.Join(dirPath, DatabaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {

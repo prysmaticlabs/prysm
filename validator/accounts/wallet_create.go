@@ -35,6 +35,10 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	if keymanagerKind == keymanager.Imported {
+		log.Warning("Creating an imported wallet does not provide anything beneficial. " +
+			"This option will be removed in v1.0.0. Please use `validator accounts import` instead.")
+	}
 	createWalletConfig, err := extractWalletCreationConfigFromCli(cliCtx, keymanagerKind)
 	if err != nil {
 		return nil, err
@@ -94,7 +98,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
+		return nil, errors.Wrapf(err, msgKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return w, nil
 }
@@ -143,7 +147,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "y" {
+		if strings.EqualFold(resp, "y") {
 			mnemonicPassphrase, err := promptutil.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,

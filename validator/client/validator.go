@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -40,6 +39,15 @@ import (
 // reconnectPeriod is the frequency that we try to restart our
 // slasher connection when the slasher client connection is not ready.
 var reconnectPeriod = 5 * time.Second
+
+// keyFetchPeriod is the frequency that we try to refetch validating keys
+// in case no keys were fetched previously.
+var keyRefetchPeriod = 30 * time.Second
+
+var (
+	msgCouldNotFetchKeys = "could not fetch validating keys"
+	msgNoKeysFetched     = "No validating keys fetched. Trying again"
+)
 
 // ValidatorRole defines the validator role.
 type ValidatorRole int8
@@ -55,17 +63,18 @@ type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
 	emitAccountMetrics                 bool
+	logDutyCountDown                   bool
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
-	attesterHistoryByPubKeyLock        sync.RWMutex
 	walletInitializedFeed              *event.Feed
+	blockFeed                          *event.Feed
 	genesisTime                        uint64
+	highestValidSlot                   uint64
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             *slotutil.SlotTicker
-	attesterHistoryByPubKey            map[[48]byte]kv.EncHistoryData
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
@@ -222,62 +231,42 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 				return nil
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting reconnect external protection")
-				return errors.New("context closed, no longer attempting to restart external protection")
+				return ctx.Err()
 			}
 		}
 	}
 	return nil
 }
 
-// WaitForActivation checks whether the validator pubkey is in the active
-// validator set. If not, this operation will block until an activation message is
-// received.
-func (v *validator) WaitForActivation(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
-	defer span.End()
+// ReceiveBlocks starts a gRPC client stream listener to obtain
+// blocks from the beacon node. Upon receiving a block, the service
+// broadcasts it to a feed for other usages to subscribe to.
+func (v *validator) ReceiveBlocks(ctx context.Context) {
+	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve blocks stream")
+		return
+	}
 
-	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not fetch validating keys")
-	}
-	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
-	}
-	stream, err := v.validatorClient.WaitForActivation(ctx, req)
-	if err != nil {
-		return errors.Wrap(err, "could not setup validator WaitForActivation streaming client")
-	}
 	for {
-		res, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+			log.WithError(ctx.Err()).Error("Context canceled - shutting down blocks receiver")
+			return
 		}
+		res, err := stream.Recv()
 		if err != nil {
-			return errors.Wrap(err, "could not receive validator activation from stream")
+			log.WithError(err).Error("Could not receive blocks from beacon node")
+			return
 		}
-		valActivated := v.checkAndLogValidatorStatus(res.Statuses)
+		if res == nil || res.Block == nil {
+			continue
+		}
+		if res.Block.Slot > v.highestValidSlot {
+			v.highestValidSlot = res.Block.Slot
+		}
 
-		if valActivated {
-			for _, statusResp := range res.Statuses {
-				if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
-					continue
-				}
-				log.WithFields(logrus.Fields{
-					"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(statusResp.PublicKey)),
-					"index":     statusResp.Index,
-				}).Info("Validator activated")
-			}
-			break
-		}
+		v.blockFeed.Send(res)
 	}
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
-
-	return nil
 }
 
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) bool {
@@ -502,44 +491,6 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]Va
 	return rolesAt, nil
 }
 
-// UpdateProtections goes through the duties of the given slot and fetches the required validator history,
-// assigning it in validator.
-func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
-	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
-	for _, duty := range v.duties.CurrentEpochDuties {
-		if duty == nil || duty.AttesterSlot != slot {
-			continue
-		}
-		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
-	}
-	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeysV2(ctx, attestingPubKeys)
-	if err != nil {
-		return errors.Wrap(err, "could not get attester history")
-	}
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = attHistoryByPubKey
-	v.attesterHistoryByPubKeyLock.Unlock()
-	return nil
-}
-
-// ResetAttesterProtectionData reset validators protection data.
-func (v *validator) ResetAttesterProtectionData() {
-	v.attesterHistoryByPubKeyLock.Lock()
-	v.attesterHistoryByPubKey = make(map[[48]byte]kv.EncHistoryData)
-	v.attesterHistoryByPubKeyLock.Unlock()
-}
-
-// SaveProtection saves the attestation information currently in validator state.
-func (v *validator) SaveProtection(ctx context.Context, pubKey [48]byte) error {
-	v.attesterHistoryByPubKeyLock.RLock()
-	defer v.attesterHistoryByPubKeyLock.RUnlock()
-	if err := v.db.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, v.attesterHistoryByPubKey[pubKey]); err != nil {
-		return errors.Wrapf(err, "could not save attester with public key %#x history to DB", pubKey)
-	}
-
-	return nil
-}
-
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey [48]byte) (bool, error) {
@@ -675,9 +626,11 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
-				"slot":      slotOffset + i,
-				"attesters": fmt.Sprintf("%d/%d", len(attesterKeys[i]), totalAttestingKeys),
-				"pubKeys":   attesterKeys[i],
+				"slot":                  slotOffset + i,
+				"slotInEpoch":           (slotOffset + i) % params.BeaconConfig().SlotsPerEpoch,
+				"attesterDutiesAtSlot":  len(attesterKeys[i]),
+				"totalAttestersInEpoch": totalAttestingKeys,
+				"pubKeys":               attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {

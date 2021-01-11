@@ -151,6 +151,11 @@ func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ uint64, _ 
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
+// LogNextDutyCountDown for mocking.
+func (fv *FakeValidator) LogNextDutyTimeLeft(slot uint64) error {
+	return nil
+}
+
 // UpdateDomainDataCaches for mocking.
 func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}
 
@@ -181,3 +186,6 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 	}
 	return ctx.Value(allValidatorsAreExitedCtxKey).(bool), nil
 }
+
+// ReceiveBlocks for mocking
+func (fv *FakeValidator) ReceiveBlocks(ctx context.Context) {}
