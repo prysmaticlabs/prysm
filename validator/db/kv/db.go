@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -32,7 +31,6 @@ const (
 // ProtectionDbFileName Validator slashing protection db file name.
 var (
 	ProtectionDbFileName = "validator.db"
-	log                  = logrus.WithField("prefix", "db")
 )
 
 // Store defines an implementation of the Prysm Database interface

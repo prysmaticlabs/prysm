@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 // SlashingKind used for helpful information upon detection.
@@ -157,14 +158,14 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 				log.WithField("numRecords", attestationBatchCapacity).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
-				store.flushAttestationRecords()
+				store.flushAttestationRecords(ctx)
 			}
 		case <-ticker.C:
 			if len(store.batchedAttestations) > 0 {
 				log.WithField("numRecords", len(store.batchedAttestations)).Debug(
 					"Batched attestation records write interval reached, flushing to DB",
 				)
-				store.flushAttestationRecords()
+				store.flushAttestationRecords(ctx)
 			}
 		case <-ctx.Done():
 			return
@@ -176,8 +177,8 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 // and resets the list of batched attestations for future writes.
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
-func (store *Store) flushAttestationRecords() {
-	err := store.saveAttestationRecords(store.batchedAttestations)
+func (store *Store) flushAttestationRecords(ctx context.Context) {
+	err := store.saveAttestationRecords(ctx, store.batchedAttestations)
 	// If there was no error, we reset the batched attestations slice.
 	if err == nil {
 		log.Debug("Successfully flushed batched attestations to DB")
@@ -194,7 +195,9 @@ func (store *Store) flushAttestationRecords() {
 // Saves a list of attestation records to the database in a single boltDB
 // transaction to minimize write lock contention compared to doing them
 // all in individual, isolated boltDB transactions.
-func (store *Store) saveAttestationRecords(atts []*attestationRecord) error {
+func (store *Store) saveAttestationRecords(ctx context.Context, atts []*attestationRecord) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.saveAttestationRecords")
+	defer span.End()
 	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		for _, att := range atts {
