@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "external.go",
+        "log.go",
         "protector.go",
         "slasher_client.go",
     ],

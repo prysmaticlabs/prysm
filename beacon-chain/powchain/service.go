@@ -40,8 +40,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "powchain")
-
 var (
 	validDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_valid_deposits_received",
