@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -44,7 +43,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
 	require.NoError(t, err)
 	preBeaconStateBase := &pb.BeaconState{}
-	require.NoError(t, ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase), "Failed to unmarshal")
+	require.NoError(t, preBeaconStateBase.Unmarshal(preBeaconStateFile), "Failed to unmarshal")
 	preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 

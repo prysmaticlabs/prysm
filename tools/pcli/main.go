@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -9,9 +10,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/kr/pretty"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -79,6 +81,8 @@ func main() {
 					data = &ethpb.BeaconBlockHeader{}
 				case "deposit":
 					data = &ethpb.Deposit{}
+				case "deposit_message":
+					data = &pb.DepositMessage{}
 				case "proposer_slashing":
 					data = &ethpb.ProposerSlashing{}
 				case "signed_block_header":
@@ -188,7 +192,15 @@ func main() {
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					if !ssz.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
+					expectedRoot, err := expectedState.HashTreeRoot()
+					if err != nil {
+						log.Fatal(err)
+					}
+					receivedRoot, err := postState.InnerStateUnsafe().HashTreeRoot()
+					if err != nil {
+						log.Fatal(err)
+					}
+					if !bytes.Equal(expectedRoot[:], receivedRoot[:]) {
 						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}

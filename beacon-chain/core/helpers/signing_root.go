@@ -4,7 +4,6 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -54,7 +53,7 @@ func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 		if v, ok := object.(fssz.HashRoot); ok {
 			return v.HashTreeRoot()
 		}
-		return ssz.HashTreeRoot(object)
+		return [32]byte{}, errors.New("object does not ")
 	}, domain)
 }
 
