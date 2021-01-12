@@ -43,7 +43,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
 	require.NoError(t, err)
 	preBeaconStateBase := &pb.BeaconState{}
-	require.NoError(t, preBeaconStateBase.Unmarshal(preBeaconStateFile), "Failed to unmarshal")
+	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile), "Failed to unmarshal")
 	preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
