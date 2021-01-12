@@ -44,6 +44,10 @@ var reconnectPeriod = 5 * time.Second
 // in case no keys were fetched previously.
 var keyRefetchPeriod = 30 * time.Second
 
+// chainStartPollingInterval client will poll chain start event in case beacon chain is
+// offline every at this interval.
+var chainStartPollingInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
 	msgNoKeysFetched     = "No validating keys fetched. Trying again"
@@ -131,11 +135,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	stream, err := v.queryChainStart(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
 	}
-
 	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
 	chainStartRes, err := stream.Recv()
 	if err != io.EOF {
@@ -174,6 +177,32 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
+}
+
+// Poll the beacon node every chainStartPollingInterval until the node
+// is available.
+func (v *validator) queryChainStart(ctx context.Context) (ethpb.BeaconNodeValidator_WaitForChainStartClient, error) {
+	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	if err == nil {
+		return stream, nil
+	}
+	log.WithError(err).Error("Could not fetch chain start from beacon node")
+	ticker := time.NewTicker(chainStartPollingInterval)
+	defer ticker.Stop()
+	log.Info("Waiting for chain start... Beacon chain might be offline")
+	for {
+		select {
+		case <-ticker.C:
+			stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
+			if err == nil {
+				return stream, nil
+			}
+			log.WithError(err).Error("Could not fetch chain start event from beacon node. Beacon chain might be offline")
+		case <-ctx.Done():
+			log.Debug("Context closed, exiting routine")
+			return nil, ctx.Err()
+		}
+	}
 }
 
 // WaitForSync checks whether the beacon node has sync to the latest head.
