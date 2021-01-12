@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"runtime"
 
+	"google.golang.org/grpc/codes"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -24,7 +26,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 
 	serializedEnr, err := p2p.SerializeENR(ns.PeerManager.ENR())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not obtain enr")
+		return nil, status.Errorf(codes.Internal, "could not obtain enr: %v", err)
 	}
 	enr := "enr:" + serializedEnr
 
@@ -36,7 +38,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 
 	sourceDisc, err := ns.PeerManager.DiscoveryAddresses()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not obtain discovery address")
+		return nil, status.Errorf(codes.Internal, "could not obtain discovery address: %v", err)
 	}
 	discoveryAddresses := make([]string, len(sourceDisc))
 	for i := range sourceDisc {
