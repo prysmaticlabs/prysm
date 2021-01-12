@@ -69,6 +69,9 @@ type Flags struct {
 	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 
+	// Bug fixes related flags.
+	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -232,6 +235,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(disableBlst.Name) {
 		log.Warn("Disabling new BLS library blst")
 		cfg.EnableBlst = false
+	}
+	if ctx.Bool(attestTimely.Name) {
+		log.Warn("Enabled attest timely fix for #8185")
+		cfg.AttestTimely = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)

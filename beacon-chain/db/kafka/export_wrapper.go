@@ -14,14 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	_ "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka/librdkafka" // Required for c++ kafka library.
 )
 
 var _ iface.Database = (*Exporter)(nil)
-var log = logrus.WithField("prefix", "exporter")
 var marshaler = &jsonpb.Marshaler{}
 
 // Exporter wraps a database interface and exports certain objects to kafka topics.
