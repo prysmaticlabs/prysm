@@ -101,6 +101,20 @@ func TestGetDuties_OK(t *testing.T) {
 	}
 }
 
+func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
+	chain := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
+	vs := &Server{
+		TimeFetcher: chain,
+	}
+	req := &ethpb.DutiesRequest{
+		Epoch: chain.CurrentSlot()/params.BeaconConfig().SlotsPerEpoch + 2,
+	}
+	_, err := vs.duties(context.Background(), req)
+	require.ErrorContains(t, "can not be greater than next epoch", err)
+}
+
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
 

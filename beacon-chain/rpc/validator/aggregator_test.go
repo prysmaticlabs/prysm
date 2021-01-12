@@ -218,6 +218,14 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	assert.Equal(t, 0, len(aggregatedAtts), "Wanted aggregated attestation")
 }
 
+func TestSubmitSignedAggregateSelectionProof_SlotOutOfUpperBound(t *testing.T) {
+	c := &mock.ChainService{Genesis: time.Now()}
+	aggregatorServer := &Server{TimeFetcher: c}
+	req := &ethpb.AggregateSelectionRequest{Slot: c.CurrentSlot() + 1}
+	_, err := aggregatorServer.SubmitAggregateSelectionProof(context.Background(), req)
+	require.ErrorContains(t, "can not be greater than current slot", err)
+}
+
 func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)

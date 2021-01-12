@@ -182,6 +182,14 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	assert.ErrorContains(t, "Syncing to latest head", err)
 }
 
+func TestGetAttestationData_SlotOutOfUpperBound(t *testing.T) {
+	c := &mock.ChainService{Genesis: time.Now()}
+	server := &Server{TimeFetcher: c}
+	req := &ethpb.AttestationDataRequest{Slot: c.CurrentSlot() + 1}
+	_, err := server.GetAttestationData(context.Background(), req)
+	require.ErrorContains(t, "can not be greater than current slot", err)
+}
+
 func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// Scenario:
 	//
