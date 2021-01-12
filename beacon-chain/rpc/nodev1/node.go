@@ -26,11 +26,11 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain enr")
 	}
-	enr := fmt.Sprint("enr:", serializedEnr)
+	enr := "enr:" + serializedEnr
 
 	sourcep2p := ns.PeerManager.Host().Addrs()
 	p2pAddresses := make([]string, len(sourcep2p))
-	for i, _ := range sourcep2p {
+	for i := range sourcep2p {
 		p2pAddresses[i] = sourcep2p[i].String() + "/p2p/" + peerId
 	}
 
@@ -39,7 +39,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 		return nil, errors.Wrap(err, "could not obtain discovery address")
 	}
 	discoveryAddresses := make([]string, len(sourceDisc))
-	for i, _ := range sourceDisc {
+	for i := range sourceDisc {
 		discoveryAddresses[i] = sourceDisc[i].String()
 	}
 
