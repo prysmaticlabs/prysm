@@ -571,3 +571,24 @@ func TestDedupEndpoints(t *testing.T) {
 	assert.DeepEqual(t, []string{"A", "B"}, dedupEndpoints([]string{"A", "A", "A", "B"}), "did not dedup correctly")
 	assert.DeepEqual(t, []string{"A", "B"}, dedupEndpoints([]string{"A", "A", "A", "B", "B"}), "did not dedup correctly")
 }
+
+func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
+	srv := &Service{}
+	start := uint64(100)
+	end := uint64(100)
+	headers, err := srv.batchRequestHeaders(start, end)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(headers))
+
+	start = uint64(101)
+	end = uint64(100)
+	headers, err = srv.batchRequestHeaders(start, end)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(headers))
+
+	start = uint64(200)
+	end = uint64(100)
+	headers, err = srv.batchRequestHeaders(start, end)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(headers))
+}
