@@ -84,7 +84,7 @@ func prepareWallet(cliCtx *cli.Context) ([][48]byte, keymanager.IKeymanager, err
 
 	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not initialize keymanager")
+		return nil, nil, errors.Wrap(err, MsgCouldNotInitializeKeymanager)
 	}
 	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {

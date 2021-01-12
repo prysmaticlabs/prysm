@@ -86,7 +86,7 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 			}
 			// First we write the accounts store file.
 			ctx := context.Background()
-			store, err := dr.createAccountsKeystore(ctx, randomPrivateKeys, randomPublicKeys)
+			store, err := dr.CreateAccountsKeystore(ctx, randomPrivateKeys, randomPublicKeys)
 			require.NoError(t, err)
 			existingDisabledKeysStr := make([]string, len(tt.existingDisabledKeys))
 			for i := 0; i < len(tt.existingDisabledKeys); i++ {
@@ -95,7 +95,7 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 			store.DisabledPublicKeys = existingDisabledKeysStr
 			encoded, err := json.Marshal(store)
 			require.NoError(t, err)
-			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded)
+			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded)
 			require.NoError(t, err)
 
 			if err := dr.DisableAccounts(ctx, tt.keysToDisable); (err != nil) != tt.wantErr {
@@ -107,7 +107,7 @@ func TestKeymanager_DisableAccounts(t *testing.T) {
 					wanted[bytesutil.ToBytes48(pubKey)] = true
 				}
 				// We verify that the updated disabled keys are reflected on disk as well.
-				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 				require.NoError(t, err)
 				keystore := &accountsKeystoreRepresentation{}
 				require.NoError(t, json.Unmarshal(encoded, keystore))
@@ -197,7 +197,7 @@ func TestKeymanager_EnableAccounts(t *testing.T) {
 			}
 			// First we write the accounts store file.
 			ctx := context.Background()
-			store, err := dr.createAccountsKeystore(ctx, randomPrivateKeys, randomPublicKeys)
+			store, err := dr.CreateAccountsKeystore(ctx, randomPrivateKeys, randomPublicKeys)
 			require.NoError(t, err)
 			existingDisabledKeysStr := make([]string, len(tt.existingDisabledKeys))
 			for i := 0; i < len(tt.existingDisabledKeys); i++ {
@@ -206,7 +206,7 @@ func TestKeymanager_EnableAccounts(t *testing.T) {
 			store.DisabledPublicKeys = existingDisabledKeysStr
 			encoded, err := json.Marshal(store)
 			require.NoError(t, err)
-			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded)
+			err = dr.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded)
 			require.NoError(t, err)
 
 			if err := dr.EnableAccounts(ctx, tt.keysToEnable); (err != nil) != tt.wantErr {
@@ -223,7 +223,7 @@ func TestKeymanager_EnableAccounts(t *testing.T) {
 					}
 				}
 				// We verify that the updated disabled keys are reflected on disk as well.
-				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+				encoded, err := wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 				require.NoError(t, err)
 				keystore := &accountsKeystoreRepresentation{}
 				require.NoError(t, json.Unmarshal(encoded, keystore))

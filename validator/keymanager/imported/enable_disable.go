@@ -38,7 +38,7 @@ func (dr *Keymanager) EnableAccounts(ctx context.Context, pubKeys [][]byte) erro
 }
 
 func (dr *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 	if err != nil {
 		return errors.Wrap(err, "could not read keystore file for accounts")
 	}
@@ -55,7 +55,7 @@ func (dr *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
 		return errors.Wrap(err, "could not write keystore file for accounts")
 	}
 	return nil
