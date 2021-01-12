@@ -12,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var log = logrus.WithField("prefix", "validator")
+
 type attSubmitted struct {
 	data              *ethpb.AttestationData
 	attesterIndices   []uint64
