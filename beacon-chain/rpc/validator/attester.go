@@ -31,10 +31,6 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 
-	if req.Slot > vs.TimeFetcher.CurrentSlot() {
-		return nil, status.Errorf(codes.InvalidArgument, "Request slot %d can not be greater than current slot %d", req.Slot, vs.TimeFetcher.CurrentSlot())
-	}
-
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}

@@ -63,6 +63,7 @@ func TestGetDuties_OK(t *testing.T) {
 		BeaconDB:           db,
 		HeadFetcher:        chain,
 		GenesisTimeFetcher: chain,
+		TimeFetcher:        chain,
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -146,6 +147,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		BeaconDB:           db,
 		HeadFetcher:        chain,
 		GenesisTimeFetcher: chain,
+		TimeFetcher:        chain,
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -188,6 +190,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		HeadFetcher:        chain,
 		GenesisTimeFetcher: chain,
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:        chain,
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -249,15 +252,17 @@ func TestStreamDuties_OK(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
 	vs := &Server{
-		Ctx:         ctx,
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now(),
-		},
-		StateNotifier: &mockChain.MockStateNotifier{},
+		Ctx:                ctx,
+		BeaconDB:           db,
+		HeadFetcher:        &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: c,
+		StateNotifier:      &mockChain.MockStateNotifier{},
+		TimeFetcher:        c,
 	}
 
 	// Test the first validator in registry.
@@ -308,15 +313,17 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
 	vs := &Server{
-		Ctx:         ctx,
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now(),
-		},
-		StateNotifier: &mockChain.MockStateNotifier{},
+		Ctx:                ctx,
+		BeaconDB:           db,
+		HeadFetcher:        &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: c,
+		StateNotifier:      &mockChain.MockStateNotifier{},
+		TimeFetcher:        c,
 	}
 
 	// Test the first validator in registry.

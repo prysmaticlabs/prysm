@@ -54,10 +54,6 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
-	if req.Slot > vs.TimeFetcher.CurrentSlot() {
-		return nil, status.Errorf(codes.InvalidArgument, "Request slot %d can not be greater than current slot %d", req.Slot, vs.TimeFetcher.CurrentSlot())
-	}
-
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}

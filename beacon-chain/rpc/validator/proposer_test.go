@@ -5,7 +5,6 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
@@ -287,14 +286,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 
 	_, err = proposerServer.computeStateRoot(context.Background(), req)
 	require.NoError(t, err)
-}
-
-func TestProposer_ProposeBlock_SlotOutOfUpperBound(t *testing.T) {
-	c := &mock.ChainService{Genesis: time.Now()}
-	server := &Server{TimeFetcher: c}
-	req := &ethpb.BlockRequest{Slot: c.CurrentSlot() + 1}
-	_, err := server.GetBlock(context.Background(), req)
-	require.ErrorContains(t, "can not be greater than current slot", err)
 }
 
 func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
