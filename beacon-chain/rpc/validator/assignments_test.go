@@ -31,7 +31,7 @@ func pubKey(i uint64) []byte {
 }
 
 func TestGetDuties_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -102,7 +102,7 @@ func TestGetDuties_OK(t *testing.T) {
 }
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -145,7 +145,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(64)
@@ -209,7 +209,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestStreamDuties_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -268,7 +268,7 @@ func TestStreamDuties_OK(t *testing.T) {
 }
 
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -349,9 +349,9 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
 	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	require.Equal(t, true, ok, "No cache entry found for validator")
-	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
+	assert.Equal(t, params.BeaconConfig().RandomSubnetsPerValidator, uint64(len(coms)))
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
-	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
+	totalTime := time.Duration(params.BeaconConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
 	receivedTime := time.Until(exp.Round(time.Second))
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
@@ -359,7 +359,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
-	db, _ := dbutil.SetupDB(b)
+	db := dbutil.SetupDB(b)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)

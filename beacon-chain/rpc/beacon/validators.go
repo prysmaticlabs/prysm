@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strconv"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -70,7 +72,7 @@ func (bs *Server) ListValidatorBalances(
 		return nil, status.Errorf(codes.Internal, "Could not get state")
 	}
 
-	validators := requestedState.Validators()
+	vals := requestedState.Validators()
 	balances := requestedState.Balances()
 	balancesCount := len(balances)
 	for _, pubKey := range req.PublicKeys {
@@ -85,6 +87,7 @@ func (bs *Server) ListValidatorBalances(
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				Status: "UNKNOWN",
 			})
+			balancesCount = len(res)
 			continue
 		}
 		filtered[index] = true
@@ -94,7 +97,7 @@ func (bs *Server) ListValidatorBalances(
 				index, len(balances))
 		}
 
-		val := validators[index]
+		val := vals[index]
 		st := validatorStatus(val, requestedEpoch)
 		res = append(res, &ethpb.ValidatorBalances_Balance{
 			PublicKey: pubKey,
@@ -112,10 +115,10 @@ func (bs *Server) ListValidatorBalances(
 		}
 
 		if !filtered[index] {
-			val := validators[index]
+			val := vals[index]
 			st := validatorStatus(val, requestedEpoch)
 			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: validators[index].PublicKey,
+				PublicKey: vals[index].PublicKey,
 				Index:     index,
 				Balance:   balances[index],
 				Status:    st.String(),
@@ -152,7 +155,7 @@ func (bs *Server) ListValidatorBalances(
 		// Return everything.
 		for i := start; i < end; i++ {
 			pubkey := requestedState.PubkeyAtIndex(uint64(i))
-			val := validators[i]
+			val := vals[i]
 			st := validatorStatus(val, requestedEpoch)
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: pubkey[:],
@@ -283,7 +286,7 @@ func (bs *Server) ListValidators(
 
 	if len(req.PublicKeys) == 0 && len(req.Indices) == 0 {
 		for i := uint64(0); i < uint64(reqState.NumValidators()); i++ {
-			val, err := reqState.ValidatorAtIndex(uint64(i))
+			val, err := reqState.ValidatorAtIndex(i)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 			}
@@ -499,16 +502,30 @@ func (bs *Server) GetValidatorParticipation(
 	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
 	// This ensures that we don't miss previous attestations when input requested epochs.
 	startSlot += params.BeaconConfig().SlotsPerEpoch - 1
-	state, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	// The start slot should be a canonical slot.
+	canonical, err := bs.isSlotCanonical(ctx, startSlot)
+	if err != nil {
+		return nil, err
+	}
+	// Keep looking back until there's a canonical slot.
+	for i := int(startSlot - 1); !canonical && i >= 0; i-- {
+		canonical, err = bs.isSlotCanonical(ctx, uint64(i))
+		if err != nil {
+			return nil, err
+		}
+		startSlot = uint64(i)
+	}
+
+	beaconState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	v, b, err := precompute.New(ctx, state)
+	v, b, err := precompute.New(ctx, beaconState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
 	}
-	_, b, err = precompute.ProcessAttestations(ctx, state, v, b)
+	_, b, err = precompute.ProcessAttestations(ctx, beaconState, v, b)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 	}
@@ -837,6 +854,24 @@ func (bs *Server) GetIndividualVotes(
 	return &ethpb.IndividualVotesRespond{
 		IndividualVotes: votes,
 	}, nil
+}
+
+// isSlotCanonical returns true if the input slot has a canonical block in the chain,
+// if the input slot has a skip block, false is returned,
+// if the input slot has more than one block, an error is returned.
+func (bs *Server) isSlotCanonical(ctx context.Context, slot uint64) (bool, error) {
+	filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
+	roots, err := bs.BeaconDB.BlockRoots(ctx, filter)
+	if err != nil {
+		return false, err
+	}
+	if len(roots) == 0 {
+		return false, nil
+	}
+	if len(roots) != 1 {
+		return false, errors.New("more than one block existed in slot")
+	}
+	return bs.CanonicalFetcher.IsCanonical(ctx, roots[0])
 }
 
 // Determines whether a validator has already exited.

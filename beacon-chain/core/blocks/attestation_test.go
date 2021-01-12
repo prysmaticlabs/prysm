@@ -211,15 +211,13 @@ func TestProcessAttestations_OK(t *testing.T) {
 	aggBits.SetBitAt(0, true)
 	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
-	att := &ethpb.Attestation{
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{Root: mockRoot[:]},
+			Target: &ethpb.Checkpoint{Root: mockRoot[:]},
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, 96),
-	}
+	})
 
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = mockRoot[:]
@@ -489,13 +487,9 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 	var sig [96]byte
 	copy(sig[:], "signed")
-	attestation := &ethpb.Attestation{
+	attestation := testutil.HydrateAttestation(&ethpb.Attestation{
 		Signature: sig[:],
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-		},
-	}
+	})
 	for _, tt := range tests {
 		attestation.AggregationBits = tt.aggregationBitfield
 		wanted := &ethpb.IndexedAttestation{
@@ -539,58 +533,39 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		attestation *ethpb.IndexedAttestation
 	}{
 		{attestation: &ethpb.IndexedAttestation{
-			Data: &ethpb.AttestationData{
+			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 2,
-					Root:  make([]byte, 32),
 				},
-				Source: &ethpb.Checkpoint{
-					Root: make([]byte, 32),
-				},
-				BeaconBlockRoot: make([]byte, 32),
-			},
+				Source: &ethpb.Checkpoint{},
+			}),
 			AttestingIndices: []uint64{1},
 			Signature:        make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: &ethpb.AttestationData{
+			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 1,
-					Root:  make([]byte, 32),
 				},
-				Source: &ethpb.Checkpoint{
-					Root: make([]byte, 32),
-				},
-				BeaconBlockRoot: make([]byte, 32),
-			},
+			}),
 			AttestingIndices: []uint64{47, 99, 101},
 			Signature:        make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: &ethpb.AttestationData{
+			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 4,
-					Root:  make([]byte, 32),
 				},
-				Source: &ethpb.Checkpoint{
-					Root: make([]byte, 32),
-				},
-				BeaconBlockRoot: make([]byte, 32),
-			},
+			}),
 			AttestingIndices: []uint64{21, 72},
 			Signature:        make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: &ethpb.AttestationData{
+			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 7,
-					Root:  make([]byte, 32),
 				},
-				Source: &ethpb.Checkpoint{
-					Root: make([]byte, 32),
-				},
-				BeaconBlockRoot: make([]byte, 32),
-			},
+			}),
 			AttestingIndices: []uint64{100, 121, 122},
 			Signature:        make([]byte, 96),
 		}},
@@ -696,17 +671,12 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 
 	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := &ethpb.Attestation{
+	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  0,
-			BeaconBlockRoot: make([]byte, 32),
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Slot: 1,
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(att1.Data, domain)
@@ -720,17 +690,13 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 
 	comm2, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := &ethpb.Attestation{
+	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: make([]byte, 32),
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Slot:           1,
+			CommitteeIndex: 1,
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
 	sigs = nil
@@ -771,17 +737,12 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := &ethpb.Attestation{
+	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  0,
-			BeaconBlockRoot: make([]byte, 32),
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Slot: 1,
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 	prevDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(att1.Data, prevDomain)
@@ -795,17 +756,13 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 	comm2, err := helpers.BeaconCommitteeFromState(st, 1*params.BeaconConfig().SlotsPerEpoch+1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := &ethpb.Attestation{
+	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
-			Slot:            1*params.BeaconConfig().SlotsPerEpoch + 1,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: make([]byte, 32),
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Slot:           1*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex: 1,
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 	currDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
 	root, err = helpers.ComputeSigningRoot(att2.Data, currDomain)
@@ -842,17 +799,12 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 
 	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := &ethpb.Attestation{
+	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  0,
-			BeaconBlockRoot: make([]byte, 32),
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Slot: 1,
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
 	root, err := helpers.ComputeSigningRoot(att1.Data, domain)
@@ -866,17 +818,13 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 
 	comm2, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := &ethpb.Attestation{
+	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: make([]byte, 32),
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+			Slot:           1,
+			CommitteeIndex: 1,
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
 	sigs = nil

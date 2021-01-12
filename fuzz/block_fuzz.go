@@ -14,10 +14,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -29,7 +27,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -39,7 +36,6 @@ import (
 const topic = p2p.BlockSubnetTopicFormat
 
 var db1 db.Database
-var ssc *cache.StateSummaryCache
 var dbPath = path.Join(os.TempDir(), "fuzz_beacondb", randomHex(6))
 
 func randomHex(n int) string {
@@ -51,16 +47,12 @@ func randomHex(n int) string {
 }
 
 func init() {
-	featureconfig.Init(&featureconfig.Flags{SkipBLSVerify: true})
-
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	ssc = cache.NewStateSummaryCache()
-
 	var err error
 
-	db1, err = db.NewDB(dbPath, ssc)
+	db1, err = db.NewDB(context.Background(), dbPath)
 	if err != nil {
 		panic(err)
 	}
@@ -94,10 +86,12 @@ type fakeChecker struct{}
 func (fakeChecker) Syncing() bool {
 	return false
 }
+func (fakeChecker) Initialized() bool {
+	return false
+}
 func (fakeChecker) Status() error {
 	return nil
 }
-
 func (fakeChecker) Resync() error {
 	return nil
 }
@@ -117,7 +111,7 @@ func BeaconFuzzBlock(b []byte) {
 	setupDB()
 
 	p2p := p2pt.NewFuzzTestP2P()
-	sgen := stategen.New(db1, ssc)
+	sgen := stategen.New(db1)
 	sn := &testing.MockStateNotifier{}
 	bn := &testing.MockBlockNotifier{}
 	an := &testing.MockOperationNotifier{}
@@ -158,7 +152,6 @@ func BeaconFuzzBlock(b []byte) {
 		AttPool:             ap,
 		ExitPool:            ep,
 		SlashingPool:        sp,
-		StateSummaryCache:   ssc,
 		StateGen:            sgen,
 	})
 

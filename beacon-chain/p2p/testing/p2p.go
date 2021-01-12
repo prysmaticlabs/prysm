@@ -101,6 +101,8 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 
 	n, err := p.Encoding().EncodeWithMaxLength(s, msg)
 	if err != nil {
+		_err := s.Reset()
+		_ = _err
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 
@@ -234,6 +236,11 @@ func (p *TestP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
+// DiscoveryAddresses --
+func (p *TestP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
+	return nil, nil
+}
+
 // AddConnectionHandler handles the connection with a newly connected peer.
 func (p *TestP2P) AddConnectionHandler(f, _ func(ctx context.Context, id peer.ID) error) {
 	p.BHost.Network().Notify(&network.NotifyBundle{
@@ -276,23 +283,27 @@ func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID
 
 // Send a message to a specific peer.
 func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid peer.ID) (network.Stream, error) {
-	protocol := topic
-	if protocol == "" {
+	t := topic
+	if t == "" {
 		return nil, fmt.Errorf("protocol doesnt exist for proto message: %v", msg)
 	}
-	stream, err := p.BHost.NewStream(ctx, pid, core.ProtocolID(protocol+p.Encoding().ProtocolSuffix()))
+	stream, err := p.BHost.NewStream(ctx, pid, core.ProtocolID(t+p.Encoding().ProtocolSuffix()))
 	if err != nil {
 		return nil, err
 	}
 
 	if topic != "/eth2/beacon_chain/req/metadata/1" {
 		if _, err := p.Encoding().EncodeWithMaxLength(stream, msg); err != nil {
+			_err := stream.Reset()
+			_ = _err
 			return nil, err
 		}
 	}
 
 	// Close stream for writing.
-	if err := stream.Close(); err != nil {
+	if err := stream.CloseWrite(); err != nil {
+		_err := stream.Reset()
+		_ = _err
 		return nil, err
 	}
 	// Delay returning the stream for testing purposes

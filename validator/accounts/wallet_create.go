@@ -116,7 +116,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
+		return nil, errors.Wrapf(err, msgKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return w, nil
 }
@@ -165,7 +165,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "y" {
+		if strings.EqualFold(resp, "y") {
 			mnemonicPassphrase, err := promptutil.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,

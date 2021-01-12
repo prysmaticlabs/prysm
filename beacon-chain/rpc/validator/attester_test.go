@@ -29,7 +29,7 @@ import (
 )
 
 func TestProposeAttestation_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	attesterServer := &Server{
@@ -79,7 +79,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 }
 
 func TestProposeAttestation_IncorrectSignature(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
@@ -90,14 +90,7 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	req := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
-		},
-		Signature: make([]byte, 96),
-	}
+	req := testutil.HydrateAttestation(&ethpb.Attestation{})
 	wanted := "Incorrect attestation signature"
 	_, err := attesterServer.ProposeAttestation(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
@@ -105,7 +98,7 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 
 func TestGetAttestationData_OK(t *testing.T) {
 	ctx := context.Background()
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
@@ -198,7 +191,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
 	// This test breaks if it doesnt use mainnet config
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	// Ensure HistoricalRootsLimit matches scenario
 	params.SetupTestConfigCleanup(t)
@@ -354,7 +347,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	// attestation is referencing be less than or equal to the attestation data slot.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5164
 	ctx := context.Background()
-	db, sc := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	block := testutil.NewBeaconBlock()
@@ -378,11 +371,9 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	beaconState := testutil.NewBeaconState()
 	require.NoError(t, beaconState.SetSlot(slot))
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix()-int64(slot*params.BeaconConfig().SecondsPerSlot))))
-	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		ParentRoot: blockRoot2[:],
-		StateRoot:  make([]byte, 32),
-		BodyRoot:   make([]byte, 32),
-	})
+	}))
 	require.NoError(t, err)
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 2,
@@ -411,7 +402,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
 		GenesisTimeFetcher:  &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
-		StateGen:            stategen.New(db, sc),
+		StateGen:            stategen.New(db),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
 	require.NoError(t, db.SaveBlock(ctx, block))
@@ -444,7 +435,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 
 func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	ctx := context.Background()
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	slot := uint64(5)
 	block := testutil.NewBeaconBlock()
@@ -519,7 +510,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 }
 
 func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
@@ -539,7 +530,7 @@ func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
 }
 
 func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	// fixed seed
 	s := rand.NewSource(10)
@@ -576,7 +567,7 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 }
 
 func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	// fixed seed
 	s := rand.NewSource(10)
 	randGen := rand.New(s)

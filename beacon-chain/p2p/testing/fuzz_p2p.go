@@ -56,6 +56,11 @@ func (p *FakeP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
+// DiscoveryAddresses -- fake
+func (p *FakeP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
+	return nil, nil
+}
+
 // FindPeersWithSubnet mocks the p2p func.
 func (p *FakeP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
 	return false, nil

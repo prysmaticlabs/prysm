@@ -39,6 +39,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/bls:go_default_library",
+        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",

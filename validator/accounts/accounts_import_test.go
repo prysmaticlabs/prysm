@@ -165,7 +165,7 @@ func TestImport_NonImportedWallet(t *testing.T) {
 
 	// Create a key
 	createKeystore(t, keysDir)
-	require.ErrorContains(t, "Only imported wallets", ImportAccountsCli(cliCtx))
+	require.ErrorContains(t, "only imported wallets", ImportAccountsCli(cliCtx))
 }
 
 func TestImport_Noninteractive_RandomName(t *testing.T) {

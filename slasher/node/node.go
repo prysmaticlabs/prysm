@@ -34,8 +34,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "node")
-
 // SlasherNode defines a struct that handles the services running a slashing detector
 // for eth2. It handles the lifecycle of the entire system and registers
 // services to a service registry.
@@ -89,14 +87,14 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 		stop:                  make(chan struct{}),
 	}
 
+	if err := slasher.startDB(); err != nil {
+		return nil, err
+	}
+
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := slasher.registerPrometheusService(cliCtx); err != nil {
 			return nil, err
 		}
-	}
-
-	if err := slasher.startDB(); err != nil {
-		return nil, err
 	}
 
 	if err := slasher.registerBeaconClientService(); err != nil {

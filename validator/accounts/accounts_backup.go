@@ -114,13 +114,13 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
-		return errors.New("keymanager kind not supported")
+		return fmt.Errorf(msgKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
 
 // Ask user to select accounts via an interactive prompt.
-func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey, error) {
+func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (filteredPubKeys []bls.PublicKey, err error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")
@@ -138,7 +138,6 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey
 {{ "Name:" | faint }}	{{ .Name }}`,
 	}
 	var result string
-	var err error
 	exit := "Done selecting"
 	results := make([]int, 0)
 	au := aurora.NewAurora(true)
@@ -184,7 +183,7 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey
 	}
 
 	// Filter the public keys based on user input.
-	filteredPubKeys := make([]bls.PublicKey, 0)
+	filteredPubKeys = make([]bls.PublicKey, 0)
 	for selectedIndex := range seen {
 		pk, err := bls.PublicKeyFromBytes(pubKeys[selectedIndex][:])
 		if err != nil {

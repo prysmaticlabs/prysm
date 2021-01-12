@@ -5,13 +5,13 @@ go_library(
     name = "go_default_library",
     srcs = [
         "helper.go",
+        "log.go",
         "node.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/node",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
-        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/kv:go_default_library",

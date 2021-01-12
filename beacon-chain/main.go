@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	runtimeDebug "runtime/debug"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
@@ -111,7 +113,6 @@ func init() {
 }
 
 func main() {
-	log := logrus.WithField("prefix", "main")
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
@@ -187,6 +188,13 @@ func main() {
 }
 
 func startNode(ctx *cli.Context) error {
+	// Fix data dir for Windows users.
+	outdatedDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2")
+	currentDataDir := ctx.String(cmd.DataDirFlag.Name)
+	if err := cmd.FixDefaultDataDir(outdatedDataDir, currentDataDir); err != nil {
+		return err
+	}
+
 	// verify if ToS accepted
 	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 		return err

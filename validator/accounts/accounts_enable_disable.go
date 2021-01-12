@@ -62,7 +62,7 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		} else {
@@ -76,7 +76,7 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		}
@@ -110,7 +110,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	}
 	disabledPublicKeys := importedKM.DisabledPublicKeys()
 	if len(disabledPublicKeys) == 0 {
-		return errors.New("No accounts are disabled.")
+		return errors.New("no accounts are disabled")
 	}
 	disabledPublicKeys48 := make([][48]byte, len(disabledPublicKeys))
 	for i := range disabledPublicKeys {
@@ -145,7 +145,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		} else {
@@ -159,7 +159,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		}

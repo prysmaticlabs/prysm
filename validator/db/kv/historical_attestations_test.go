@@ -80,7 +80,7 @@ func TestSetTargetData(t *testing.T) {
 			target:      0,
 			source:      100,
 			signingRoot: []byte{1, 2, 3},
-			expected:    (EncHistoryData)(nil),
+			expected:    EncHistoryData(nil),
 			error:       "encapsulated data size",
 		},
 		{

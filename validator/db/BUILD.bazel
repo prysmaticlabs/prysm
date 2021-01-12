@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "alias.go",
         "cmd.go",
+        "log.go",
         "restore.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db",
