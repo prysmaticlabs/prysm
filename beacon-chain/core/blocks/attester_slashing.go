@@ -10,6 +10,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
@@ -120,7 +121,10 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 		return false
 	}
 	isDoubleVote := !attestationutil.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
-	isSurroundVote := data1.Source.Epoch < data2.Source.Epoch && data2.Target.Epoch < data1.Target.Epoch
+	att1 := &ethpb.IndexedAttestation{Data: data1}
+	att2 := &ethpb.IndexedAttestation{Data: data2}
+	// Check if att1 is surrounding att2.
+	isSurroundVote := slashutil.IsSurround(att1, att2)
 	return isDoubleVote || isSurroundVote
 }
 
