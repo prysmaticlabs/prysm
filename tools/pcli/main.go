@@ -4,14 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 
-	"github.com/prysmaticlabs/go-ssz"
-
+	fssz "github.com/ferranbt/fastssz"
 	"github.com/kr/pretty"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -221,7 +221,11 @@ func dataFetcher(fPath string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ssz.Unmarshal(rawFile, data)
+	fsszData, ok := data.(fssz.Unmarshaler)
+	if !ok {
+		return errors.New("could not cast object, not a fssz object")
+	}
+	return fsszData.UnmarshalSSZ(rawFile)
 }
 
 func prettyPrint(sszPath string, data interface{}) {

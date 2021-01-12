@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"sort"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -302,7 +302,15 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if ssz.DeepEqual(blk, b) {
+		expectedRoot, err := blk.HashTreeRoot()
+		if err != nil {
+			log.Fatal(err)
+		}
+		receivedRoot, err := b.HashTreeRoot()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if bytes.Equal(expectedRoot[:], receivedRoot[:]) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
