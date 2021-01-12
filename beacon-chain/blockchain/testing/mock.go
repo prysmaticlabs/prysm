@@ -22,7 +22,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -205,7 +204,7 @@ func (ms *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.Sig
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if ms.State == nil {
-		ms.State = testutil.NewBeaconState()
+		ms.State = &stateTrie.BeaconState{}
 	}
 	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)

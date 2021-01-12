@@ -297,6 +297,5 @@ type Checker interface {
 	Initialized() bool
 	Syncing() bool
 	Status() error
-	HeadSlot() uint64
 	Resync() error
 }

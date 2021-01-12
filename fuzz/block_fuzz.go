@@ -92,9 +92,6 @@ func (fakeChecker) Initialized() bool {
 func (fakeChecker) Status() error {
 	return nil
 }
-func (fakeChecker) HeadSlot() uint64 {
-	return 0
-}
 func (fakeChecker) Resync() error {
 	return nil
 }
