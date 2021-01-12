@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -159,10 +160,12 @@ func TestCreateWallet_Imported(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
+	_, err = w.ReadFileAtPath(cliCtx.Context, imported.AccountsPath, imported.AccountsKeystoreFileName)
+	require.NoError(t, err)
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
