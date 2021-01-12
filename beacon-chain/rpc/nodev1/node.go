@@ -3,7 +3,6 @@ package nodev1
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"runtime"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -11,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -64,5 +64,5 @@ func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		return &ptypes.Empty{}, nil
 	}
-	return &ptypes.Empty{}, status.Error(http.StatusInternalServerError, "node not initialized or having issues")
+	return &ptypes.Empty{}, status.Error(codes.Internal, "node not initialized or having issues")
 }
