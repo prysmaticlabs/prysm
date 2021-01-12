@@ -69,8 +69,7 @@ func main() {
 		// If the state is not available, roll back
 		for state == nil {
 			slot--
-			filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
-			rts, err := db.BlockRoots(context.Background(), filter)
+			_, rts, err := db.BlockRootsBySlot(context.Background(), slot)
 			if err != nil {
 				panic(err)
 			}

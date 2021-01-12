@@ -69,9 +69,13 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 		}
 	} else {
-		blks, blkRoots, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(req.Slot).SetEndSlot(req.Slot))
+		_, blks, err = bs.BeaconDB.BlocksBySlot(ctx, req.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", req.Slot, err)
+		}
+		_, blkRoots, err = bs.BeaconDB.BlockRootsBySlot(ctx, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve block roots for slot %d: %v", req.Slot, err)
 		}
 	}
 	if blks == nil {
@@ -213,17 +217,16 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not decode block id: %v", err)
 			}
-			roots, err := bs.BeaconDB.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
+			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", slot, err)
 			}
 
-			numRoots := len(roots)
-			if numRoots == 0 {
+			if !hasRoots {
 				return nil, status.Error(codes.NotFound, "Could not find any blocks with given slot")
 			}
 			root = roots[0][:]
-			if numRoots == 1 {
+			if len(roots) == 1 {
 				break
 			}
 			for _, blockRoot := range roots {
@@ -297,9 +300,13 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 			if err != nil {
 				return nil, errors.Wrap(err, "could not decode block id")
 			}
-			blks, roots, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
+			_, blks, err := bs.BeaconDB.BlocksBySlot(ctx, slot)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
+			}
+			_, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not retrieve block roots for slot %d", slot)
 			}
 
 			numBlks := len(blks)
