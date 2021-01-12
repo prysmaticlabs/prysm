@@ -35,8 +35,6 @@ type ValidatorDB interface {
 	// Attester protection related methods.
 	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
 	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, error)
-	SaveLowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
-	SaveLowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte, epoch uint64) error
 	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 	CheckSlashableAttestation(
 		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
