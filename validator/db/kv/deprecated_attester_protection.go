@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -21,17 +19,17 @@ const (
 	minimalSize            = latestEpochWrittenSize
 )
 
-// HistoryData stores the needed data to confirm if an attestation is slashable
+// deprecatedHistoryData stores the needed data to confirm if an attestation is slashable
 // or repeated.
-type HistoryData struct {
+type deprecatedHistoryData struct {
 	Source      uint64
 	SigningRoot []byte
 }
 
-// EncHistoryData encapsulated history data.
-type EncHistoryData []byte
+// deprecatedEncodedAttestingHistory encapsulated history data.
+type deprecatedEncodedAttestingHistory []byte
 
-func (hd EncHistoryData) assertSize() error {
+func (hd deprecatedEncodedAttestingHistory) assertSize() error {
 	if hd == nil || len(hd) < minimalSize {
 		return fmt.Errorf("encapsulated data size: %d is smaller then minimal size: %d", len(hd), minimalSize)
 	}
@@ -41,8 +39,8 @@ func (hd EncHistoryData) assertSize() error {
 	return nil
 }
 
-func (h *HistoryData) IsEmpty() bool {
-	if h == (*HistoryData)(nil) {
+func (h *deprecatedHistoryData) isEmpty() bool {
+	if h == (*deprecatedHistoryData)(nil) {
 		return true
 	}
 	if h.Source == params.BeaconConfig().FarFutureEpoch {
@@ -51,23 +49,23 @@ func (h *HistoryData) IsEmpty() bool {
 	return false
 }
 
-func emptyHistoryData() *HistoryData {
-	h := &HistoryData{Source: params.BeaconConfig().FarFutureEpoch, SigningRoot: bytesutil.PadTo([]byte{}, 32)}
+func emptyHistoryData() *deprecatedHistoryData {
+	h := &deprecatedHistoryData{Source: params.BeaconConfig().FarFutureEpoch, SigningRoot: bytesutil.PadTo([]byte{}, 32)}
 	return h
 }
 
-// NewAttestationHistoryArray creates a new encapsulated attestation history byte array
+// newDeprecatedAttestingHistory creates a new encapsulated attestation history byte array
 // sized by the latest epoch written.
-func NewAttestationHistoryArray(target uint64) EncHistoryData {
+func newDeprecatedAttestingHistory(target uint64) deprecatedEncodedAttestingHistory {
 	relativeTarget := target % params.BeaconConfig().WeakSubjectivityPeriod
 	historyDataSize := (relativeTarget + 1) * historySize
 	arraySize := latestEpochWrittenSize + historyDataSize
-	en := make(EncHistoryData, arraySize)
+	en := make(deprecatedEncodedAttestingHistory, arraySize)
 	enc := en
 	ctx := context.Background()
 	var err error
 	for i := uint64(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
-		enc, err = enc.SetTargetData(ctx, i, emptyHistoryData())
+		enc, err = enc.setTargetData(ctx, i, emptyHistoryData())
 		if err != nil {
 			log.WithError(err).Error("Failed to set empty target data")
 		}
@@ -75,14 +73,14 @@ func NewAttestationHistoryArray(target uint64) EncHistoryData {
 	return enc
 }
 
-func (hd EncHistoryData) GetLatestEpochWritten(ctx context.Context) (uint64, error) {
+func (hd deprecatedEncodedAttestingHistory) getLatestEpochWritten(ctx context.Context) (uint64, error) {
 	if err := hd.assertSize(); err != nil {
 		return 0, err
 	}
 	return bytesutil.FromBytes8(hd[:latestEpochWrittenSize]), nil
 }
 
-func (hd EncHistoryData) SetLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (EncHistoryData, error) {
+func (hd deprecatedEncodedAttestingHistory) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (deprecatedEncodedAttestingHistory, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -90,7 +88,7 @@ func (hd EncHistoryData) SetLatestEpochWritten(ctx context.Context, latestEpochW
 	return hd, nil
 }
 
-func (hd EncHistoryData) GetTargetData(ctx context.Context, target uint64) (*HistoryData, error) {
+func (hd deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, target uint64) (*deprecatedHistoryData, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -100,7 +98,7 @@ func (hd EncHistoryData) GetTargetData(ctx context.Context, target uint64) (*His
 	if uint64(len(hd)) < cursor+historySize {
 		return nil, nil
 	}
-	history := &HistoryData{}
+	history := &deprecatedHistoryData{}
 	history.Source = bytesutil.FromBytes8(hd[cursor : cursor+sourceSize])
 	sr := make([]byte, 32)
 	copy(sr, hd[cursor+sourceSize:cursor+historySize])
@@ -108,7 +106,7 @@ func (hd EncHistoryData) GetTargetData(ctx context.Context, target uint64) (*His
 	return history, nil
 }
 
-func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, historyData *HistoryData) (EncHistoryData, error) {
+func (hd deprecatedEncodedAttestingHistory) setTargetData(ctx context.Context, target uint64, historyData *deprecatedHistoryData) (deprecatedEncodedAttestingHistory, error) {
 	if err := hd.assertSize(); err != nil {
 		return nil, err
 	}
@@ -124,50 +122,4 @@ func (hd EncHistoryData) SetTargetData(ctx context.Context, target uint64, histo
 	copy(hd[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
 
 	return hd, nil
-}
-
-// MarkAllAsAttestedSinceLatestWrittenEpoch returns an attesting history with specified target+epoch pairs
-// since the latest written epoch up to the incoming attestation's target epoch as attested for.
-func MarkAllAsAttestedSinceLatestWrittenEpoch(
-	ctx context.Context,
-	hist EncHistoryData,
-	incomingTarget uint64,
-	incomingAtt *HistoryData,
-) (EncHistoryData, error) {
-	ctx, span := trace.StartSpan(ctx, "kv.MarkAllAttestedSinceLastWrittenEpoch")
-	defer span.End()
-
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	latestEpochWritten, err := hist.GetLatestEpochWritten(ctx)
-	if err != nil {
-		return EncHistoryData{}, errors.Wrap(err, "could not get latest epoch written from history")
-	}
-	currentHD := hist
-	if incomingTarget > latestEpochWritten {
-		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
-		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		maxToWrite := latestEpochWritten + wsPeriod
-		for i := latestEpochWritten + 1; i < incomingTarget && i <= maxToWrite; i++ {
-			newHD, err := hist.SetTargetData(ctx, i%wsPeriod, &HistoryData{
-				Source: params.BeaconConfig().FarFutureEpoch,
-			})
-			if err != nil {
-				return EncHistoryData{}, errors.Wrap(err, "could not set target data")
-			}
-			currentHD = newHD
-		}
-		newHD, err := currentHD.SetLatestEpochWritten(ctx, incomingTarget)
-		if err != nil {
-			return EncHistoryData{}, errors.Wrap(err, "could not set latest epoch written")
-		}
-		currentHD = newHD
-	}
-	newHD, err := currentHD.SetTargetData(ctx, incomingTarget%wsPeriod, &HistoryData{
-		Source:      incomingAtt.Source,
-		SigningRoot: incomingAtt.SigningRoot,
-	})
-	if err != nil {
-		return EncHistoryData{}, errors.Wrap(err, "could not set target data")
-	}
-	return newHD, nil
 }
