@@ -9,9 +9,8 @@ import (
 var log = logrus.WithField("prefix", "accounts")
 
 var (
-	msgKeymanagerNotSupported = "keymanager kind not supported: %s"
-	// MsgCouldNotInitializeKeymanager informs about failed keymanager initialization
-	MsgCouldNotInitializeKeymanager = "could not initialize keymanager"
+	// ErrCouldNotInitializeKeymanager informs about failed keymanager initialization
+	ErrCouldNotInitializeKeymanager = "could not initialize keymanager"
 )
 
 // AccountsConfig specifies parameters to run to delete, enable, disable accounts.
