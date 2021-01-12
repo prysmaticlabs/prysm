@@ -3,7 +3,6 @@ package nodev1
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"runtime"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -11,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -45,8 +45,14 @@ func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Versi
 
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
-func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncingResponse, error) {
-	return nil, errors.New("unimplemented")
+func (ns *Server) GetSyncStatus(_ context.Context, _ *ptypes.Empty) (*ethpb.SyncingResponse, error) {
+	headSlot := ns.HeadFetcher.HeadSlot()
+	return &ethpb.SyncingResponse{
+		Data: &ethpb.SyncInfo{
+			HeadSlot:     headSlot,
+			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
+		},
+	}, nil
 }
 
 // GetHealth returns node health status in http status codes. Useful for load balancers.
@@ -64,5 +70,5 @@ func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		return &ptypes.Empty{}, nil
 	}
-	return &ptypes.Empty{}, status.Error(http.StatusInternalServerError, "node not initialized or having issues")
+	return &ptypes.Empty{}, status.Error(codes.Internal, "node not initialized or having issues")
 }
