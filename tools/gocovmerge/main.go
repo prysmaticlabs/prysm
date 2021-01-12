@@ -1,7 +1,7 @@
 // gocovmerge takes the results from multiple `go test -coverprofile` runs and
 // merges them into one profile
 //
-// Copied from https://github.com/wadey/gocovmerge under BSD-2-Clause License
+// Copied, with minor changes, from https://github.com/wadey/gocovmerge under BSD-2-Clause License
 package main
 
 import (
