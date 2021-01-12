@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -62,8 +61,7 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 			},
@@ -122,8 +120,7 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 
@@ -150,8 +147,7 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 			},
