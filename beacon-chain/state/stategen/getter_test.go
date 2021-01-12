@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -372,22 +371,22 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	r0, err := ssz.HashTreeRoot(b0.Block)
+	r0, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
-	r1, err := ssz.HashTreeRoot(b1.Block)
+	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 2
 	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
-	r2, err := ssz.HashTreeRoot(b2.Block)
+	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 3
 	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
-	r3, err := ssz.HashTreeRoot(b3.Block)
+	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	b1State := testutil.NewBeaconState()
@@ -411,22 +410,22 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 
 	b0 := testutil.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	r0, err := ssz.HashTreeRoot(b0.Block)
+	r0, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
-	r1, err := ssz.HashTreeRoot(b1.Block)
+	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 2
 	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
-	r2, err := ssz.HashTreeRoot(b2.Block)
+	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 3
 	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
-	r3, err := ssz.HashTreeRoot(b3.Block)
+	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	b1State := testutil.NewBeaconState()
