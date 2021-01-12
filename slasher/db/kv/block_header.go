@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -62,7 +61,7 @@ func (db *Store) HasBlockHeader(ctx context.Context, slot, validatorID uint64) b
 		hasBlockHeader = false
 		return nil
 	}); err != nil {
-		logrus.WithError(err).Error("Failed to lookup block header from DB")
+		log.WithError(err).Error("Failed to lookup block header from DB")
 	}
 
 	return hasBlockHeader

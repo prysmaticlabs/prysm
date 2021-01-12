@@ -2,7 +2,6 @@ package flags
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 

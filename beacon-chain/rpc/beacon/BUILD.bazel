@@ -9,6 +9,7 @@ go_library(
         "blocks.go",
         "committees.go",
         "config.go",
+        "log.go",
         "server.go",
         "slashings.go",
         "validators.go",

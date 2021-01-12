@@ -61,12 +61,12 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	if err != nil {
 		return err
 	}
-	for _, log := range logs {
+	for _, filterLog := range logs {
 		// ignore logs that are not of the required block number
-		if log.BlockNumber != blkNum.Uint64() {
+		if filterLog.BlockNumber != blkNum.Uint64() {
 			continue
 		}
-		if err := s.ProcessLog(ctx, log); err != nil {
+		if err := s.ProcessLog(ctx, filterLog); err != nil {
 			return errors.Wrap(err, "could not process log")
 		}
 	}
@@ -331,16 +331,16 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			}
 		}
 
-		for _, log := range logs {
-			if log.BlockNumber > currentBlockNum {
-				if err := s.checkHeaderRange(currentBlockNum, log.BlockNumber-1, headersMap, requestHeaders); err != nil {
+		for _, filterLog := range logs {
+			if filterLog.BlockNumber > currentBlockNum {
+				if err := s.checkHeaderRange(currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
 					return err
 				}
 				// set new block number after checking for chainstart for previous block.
 				s.latestEth1Data.LastRequestedBlock = currentBlockNum
-				currentBlockNum = log.BlockNumber
+				currentBlockNum = filterLog.BlockNumber
 			}
-			if err := s.ProcessLog(ctx, log); err != nil {
+			if err := s.ProcessLog(ctx, filterLog); err != nil {
 				return err
 			}
 		}

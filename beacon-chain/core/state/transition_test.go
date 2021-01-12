@@ -453,25 +453,20 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	require.NoError(t, err)
 	proposerIndex, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
-	block := &ethpb.SignedBeaconBlock{
+	block := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
 			Slot:          beaconState.Slot() + 1,
 			ProposerIndex: proposerIndex,
 			Body: &ethpb.BeaconBlockBody{
-				Graffiti:          make([]byte, 32),
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
 				AttesterSlashings: attesterSlashings,
 				Attestations:      []*ethpb.Attestation{blockAtt},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{exit},
-				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: bytesutil.PadTo([]byte{2}, 32),
-					BlockHash:   bytesutil.PadTo([]byte{3}, 32),
-				},
 			},
 		},
-	}
+	})
 
 	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
 	require.NoError(t, err)

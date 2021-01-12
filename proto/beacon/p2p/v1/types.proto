@@ -106,3 +106,14 @@ message CheckPtInfo {
   Fork fork = 5;
 }
 
+// DepositMessage serves as a subset of deposit data in order to derive the signing root.
+message DepositMessage {
+  // 48 byte BLS public key of the validator.
+  bytes public_key = 1 [(ethereum.eth.v1alpha1.ssz_size) = "48", (ethereum.eth.v1alpha1.spec_name) = "pubkey"];
+
+  // A 32 byte hash of the withdrawal address public key.
+  bytes withdrawal_credentials = 2 [(ethereum.eth.v1alpha1.ssz_size) = "32"];
+
+  // Deposit amount in gwei.
+  uint64 amount = 3;
+}

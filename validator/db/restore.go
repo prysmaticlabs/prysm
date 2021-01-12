@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -29,7 +28,7 @@ func restore(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not validate choice")
 		}
 		if strings.EqualFold(resp, "n") {
-			logrus.Info("Restore aborted")
+			log.Info("Restore aborted")
 			return nil
 		}
 	}
@@ -40,6 +39,6 @@ func restore(cliCtx *cli.Context) error {
 		return err
 	}
 
-	logrus.Info("Restore completed successfully")
+	log.Info("Restore completed successfully")
 	return nil
 }

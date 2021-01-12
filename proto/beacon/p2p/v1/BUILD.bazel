@@ -21,7 +21,7 @@ go_proto_library(
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
     ],
 )
-#
+
 #ssz_gen_marshal(
 #    name = "ssz_generated_files",
 #    go_proto = ":v1_go_proto",
@@ -30,6 +30,7 @@ go_proto_library(
 #    ],
 #    objs = [
 #        "BeaconBlocksByRangeRequest",
+#        "DepositMessage",
 #        "ENRForkID",
 #        "MetaData",
 #        "Fork",

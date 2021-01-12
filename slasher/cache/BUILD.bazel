@@ -7,6 +7,7 @@ go_library(
         "doc.go",
         "flat_span_cache.go",
         "highest_attestation_cache.go",
+        "log.go",
         "span_cache.go",
         "validators_cache.go",
     ],

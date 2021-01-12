@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "chain_data.go",
         "historical_data_retrieval.go",
+        "log.go",
         "metrics.go",
         "receivers.go",
         "service.go",

@@ -185,20 +185,9 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{
-					Signature: make([]byte, 96),
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
-						ParentRoot: make([]byte, 32),
-						StateRoot:  make([]byte, 32),
-						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
-							Eth1Data: &ethpb.Eth1Data{
-								BlockHash:   make([]byte, 32),
-								DepositRoot: make([]byte, 32),
-							},
-						},
-						Slot: 5}},
+						Slot: 5}}),
 					BlockRoot: blkContainers[5].BlockRoot}},
 				NextPageToken: "",
 				TotalSize:     1}},
@@ -207,38 +196,16 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{
-					Signature: make([]byte, 96),
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
-						ParentRoot: make([]byte, 32),
-						StateRoot:  make([]byte, 32),
-						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
-							Eth1Data: &ethpb.Eth1Data{
-								BlockHash:   make([]byte, 32),
-								DepositRoot: make([]byte, 32),
-							},
-						},
-						Slot: 6}},
+						Slot: 6}}),
 					BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{
-					Signature: make([]byte, 96),
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
-						ParentRoot: make([]byte, 32),
-						StateRoot:  make([]byte, 32),
-						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
-							Eth1Data: &ethpb.Eth1Data{
-								BlockHash:   make([]byte, 32),
-								DepositRoot: make([]byte, 32),
-							},
-						},
-						Slot: 6}},
+						Slot: 6}}),
 					BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{
