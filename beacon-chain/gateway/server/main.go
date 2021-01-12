@@ -29,8 +29,6 @@ func init() {
 	logrus.SetFormatter(joonix.NewFormatter())
 }
 
-var log = logrus.New()
-
 func main() {
 	flag.Parse()
 	if *debug {

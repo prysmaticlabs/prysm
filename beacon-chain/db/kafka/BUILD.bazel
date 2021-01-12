@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "export_wrapper.go",
+        "log.go",
         "passthrough.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kafka",

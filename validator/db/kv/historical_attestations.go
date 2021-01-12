@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 

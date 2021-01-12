@@ -9,11 +9,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
-
-var log = logrus.WithField("prefix", "gateway")
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
