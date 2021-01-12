@@ -5,7 +5,6 @@ import (
 	"context"
 
 	bolt "go.etcd.io/bbolt"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/progressutil"
 )
