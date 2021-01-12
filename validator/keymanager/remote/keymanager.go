@@ -16,13 +16,11 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
 var (
-	log = logrus.WithField("prefix", "remote-keymanager")
 	// ErrSigningFailed defines a failure from the remote server
 	// when performing a signing operation.
 	ErrSigningFailed = errors.New("signing failed in the remote server")
@@ -97,6 +95,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		tlsCfg := &tls.Config{
 			Certificates: []tls.Certificate{clientPair},
 			RootCAs:      cp,
+			MinVersion:   tls.VersionTLS13,
 		}
 		clientCreds = credentials.NewTLS(tlsCfg)
 	}

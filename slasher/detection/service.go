@@ -16,8 +16,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "detection")
-
 // Status detection statuses type.
 type Status int
 

@@ -202,16 +202,13 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
-	savedBlock := &ethpb.SignedBeaconBlockHeader{
+	savedBlock := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
-			StateRoot:     make([]byte, 32),
-			ParentRoot:    make([]byte, 32),
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 
 	cfg := &detection.Config{
 		SlasherDB: db,

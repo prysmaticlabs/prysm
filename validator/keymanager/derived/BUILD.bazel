@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "keymanager.go",
+        "log.go",
         "mnemonic.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/derived",

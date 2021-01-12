@@ -159,14 +159,10 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	targetEpoch := uint64(7)
 
 	blocks := []*ethpb.SignedBeaconBlock{
-		{
-			Signature: make([]byte, 96),
+		testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
-				Slot:       4,
-				ParentRoot: make([]byte, 32),
-				StateRoot:  make([]byte, 32),
+				Slot: 4,
 				Body: &ethpb.BeaconBlockBody{
-					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
@@ -185,22 +181,13 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 							Signature:       bytesutil.PadTo([]byte("sig"), 96),
 						},
 					},
-					Eth1Data: &ethpb.Eth1Data{
-						DepositRoot: make([]byte, 32),
-						BlockHash:   make([]byte, 32),
-					},
-					Graffiti: make([]byte, 32),
 				},
 			},
-		},
-		{
-			Signature: make([]byte, 96),
+		}),
+		testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
-				Slot:       5 + params.BeaconConfig().SlotsPerEpoch,
-				ParentRoot: make([]byte, 32),
-				StateRoot:  make([]byte, 32),
+				Slot: 5 + params.BeaconConfig().SlotsPerEpoch,
 				Body: &ethpb.BeaconBlockBody{
-					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
@@ -219,22 +206,13 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 							Signature:       bytesutil.PadTo([]byte("sig"), 96),
 						},
 					},
-					Eth1Data: &ethpb.Eth1Data{
-						DepositRoot: make([]byte, 32),
-						BlockHash:   make([]byte, 32),
-					},
-					Graffiti: make([]byte, 32),
 				},
 			},
-		},
-		{
-			Signature: make([]byte, 96),
+		}),
+		testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
-				Slot:       5,
-				ParentRoot: make([]byte, 32),
-				StateRoot:  make([]byte, 32),
+				Slot: 5,
 				Body: &ethpb.BeaconBlockBody{
-					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
@@ -253,14 +231,9 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 							Signature:       bytesutil.PadTo([]byte("sig"), 96),
 						},
 					},
-					Eth1Data: &ethpb.Eth1Data{
-						DepositRoot: make([]byte, 32),
-						BlockHash:   make([]byte, 32),
-					},
-					Graffiti: make([]byte, 32),
 				},
 			},
-		},
+		}),
 	}
 
 	require.NoError(t, db.SaveBlocks(ctx, blocks))
@@ -397,33 +370,24 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	count := uint64(1)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		blockExample := &ethpb.SignedBeaconBlock{
-			Signature: make([]byte, 96),
+		blockExample := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
-				ParentRoot: make([]byte, 32),
-				StateRoot:  make([]byte, 32),
 				Body: &ethpb.BeaconBlockBody{
-					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
 								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
-								Slot:            i,
 								Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 								Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+								Slot:            i,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
 							Signature:       make([]byte, 96),
 						},
 					},
-					Eth1Data: &ethpb.Eth1Data{
-						DepositRoot: make([]byte, 32),
-						BlockHash:   make([]byte, 32),
-					},
-					Graffiti: make([]byte, 32),
 				},
 			},
-		}
+		})
 		require.NoError(t, db.SaveBlock(ctx, blockExample))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
@@ -1062,9 +1026,9 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	}
 
 	atts := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1101}},
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}),
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}),
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}),
 	}
 
 	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)

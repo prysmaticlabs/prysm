@@ -188,10 +188,10 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 
 	for {
 		select {
-		case event := <-blocksChannel:
+		case blockEvent := <-blocksChannel:
 			if req.VerifiedOnly {
-				if event.Type == statefeed.BlockProcessed {
-					data, ok := event.Data.(*statefeed.BlockProcessedData)
+				if blockEvent.Type == statefeed.BlockProcessed {
+					data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
 					if !ok || data == nil {
 						continue
 					}
@@ -200,8 +200,8 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 					}
 				}
 			} else {
-				if event.Type == blockfeed.ReceivedBlock {
-					data, ok := event.Data.(*blockfeed.ReceivedBlockData)
+				if blockEvent.Type == blockfeed.ReceivedBlock {
+					data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
 					if !ok {
 						// Got bad data over the stream.
 						continue
@@ -242,8 +242,8 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.BlockProcessed {
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.BlockProcessed {
 				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)

@@ -71,7 +71,7 @@ func (bs *Server) ListValidatorBalances(
 		return nil, status.Errorf(codes.Internal, "Could not get state")
 	}
 
-	validators := requestedState.Validators()
+	vals := requestedState.Validators()
 	balances := requestedState.Balances()
 	balancesCount := len(balances)
 	for _, pubKey := range req.PublicKeys {
@@ -96,7 +96,7 @@ func (bs *Server) ListValidatorBalances(
 				index, len(balances))
 		}
 
-		val := validators[index]
+		val := vals[index]
 		st := validatorStatus(val, requestedEpoch)
 		res = append(res, &ethpb.ValidatorBalances_Balance{
 			PublicKey: pubKey,
@@ -114,10 +114,10 @@ func (bs *Server) ListValidatorBalances(
 		}
 
 		if !filtered[index] {
-			val := validators[index]
+			val := vals[index]
 			st := validatorStatus(val, requestedEpoch)
 			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: validators[index].PublicKey,
+				PublicKey: vals[index].PublicKey,
 				Index:     index,
 				Balance:   balances[index],
 				Status:    st.String(),
@@ -154,7 +154,7 @@ func (bs *Server) ListValidatorBalances(
 		// Return everything.
 		for i := start; i < end; i++ {
 			pubkey := requestedState.PubkeyAtIndex(uint64(i))
-			val := validators[i]
+			val := vals[i]
 			st := validatorStatus(val, requestedEpoch)
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: pubkey[:],

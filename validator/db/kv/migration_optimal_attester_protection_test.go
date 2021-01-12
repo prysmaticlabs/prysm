@@ -3,11 +3,14 @@ package kv
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"testing"
 
-	"github.com/golang/snappy"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
 )
@@ -15,19 +18,19 @@ import (
 func Test_migrateOptimalAttesterProtection(t *testing.T) {
 	tests := []struct {
 		name  string
-		setup func(t *testing.T, db *bolt.DB)
-		eval  func(t *testing.T, db *bolt.DB)
+		setup func(t *testing.T, validatorDB *Store)
+		eval  func(t *testing.T, validatorDB *Store)
 	}{
 		{
 			name: "only runs once",
-			setup: func(t *testing.T, db *bolt.DB) {
-				err := db.Update(func(tx *bolt.Tx) error {
+			setup: func(t *testing.T, validatorDB *Store) {
+				err := validatorDB.update(func(tx *bolt.Tx) error {
 					return tx.Bucket(migrationsBucket).Put(migrationOptimalAttesterProtectionKey, migrationCompleted)
 				})
 				require.NoError(t, err)
 			},
-			eval: func(t *testing.T, db *bolt.DB) {
-				err := db.View(func(tx *bolt.Tx) error {
+			eval: func(t *testing.T, validatorDB *Store) {
+				err := validatorDB.view(func(tx *bolt.Tx) error {
 					data := tx.Bucket(migrationsBucket).Get(migrationOptimalAttesterProtectionKey)
 					require.DeepEqual(t, data, migrationCompleted)
 					return nil
@@ -37,36 +40,35 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 		},
 		{
 			name: "populates optimized schema buckets",
-			setup: func(t *testing.T, db *bolt.DB) {
+			setup: func(t *testing.T, validatorDB *Store) {
 				ctx := context.Background()
 				pubKey := [48]byte{1}
-				history := NewAttestationHistoryArray(0)
+				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
 				numEpochs := uint64(50)
 				for i := uint64(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.SetTargetData(ctx, i, &HistoryData{
+					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.SetLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
 				require.NoError(t, err)
 
-				err = db.Update(func(tx *bolt.Tx) error {
+				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 			},
-			eval: func(t *testing.T, db *bolt.DB) {
+			eval: func(t *testing.T, validatorDB *Store) {
 				// Verify we indeed have the data for all epochs
 				// since genesis to epoch 50 under the new schema.
-				err := db.View(func(tx *bolt.Tx) error {
+				err := validatorDB.view(func(tx *bolt.Tx) error {
 					pubKey := [48]byte{1}
 					bucket := tx.Bucket(pubKeysBucket)
 					pkBucket := bucket.Bucket(pubKey[:])
@@ -97,37 +99,36 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 		},
 		{
 			name: "partial data saved for both types still completes the migration successfully",
-			setup: func(t *testing.T, db *bolt.DB) {
+			setup: func(t *testing.T, validatorDB *Store) {
 				ctx := context.Background()
 				pubKey := [48]byte{1}
-				history := NewAttestationHistoryArray(0)
+				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
 				numEpochs := uint64(50)
 				for i := uint64(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.SetTargetData(ctx, i, &HistoryData{
+					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.SetLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
 				require.NoError(t, err)
 
-				err = db.Update(func(tx *bolt.Tx) error {
+				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 
 				// Run the migration.
-				require.NoError(t, db.Update(migrateOptimalAttesterProtection))
+				require.NoError(t, validatorDB.migrateOptimalAttesterProtection(ctx))
 
 				// Then delete the migration completed key.
-				err = db.Update(func(tx *bolt.Tx) error {
+				err = validatorDB.update(func(tx *bolt.Tx) error {
 					mb := tx.Bucket(migrationsBucket)
 					return mb.Delete(migrationOptimalAttesterProtectionKey)
 				})
@@ -136,25 +137,24 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 				// Write one more entry to the DB with the old format.
 				var sr [32]byte
 				copy(sr[:], fmt.Sprintf("%d", numEpochs+1))
-				newHist, err = newHist.SetTargetData(ctx, numEpochs+1, &HistoryData{
+				newHist, err = newHist.setTargetData(ctx, numEpochs+1, &deprecatedHistoryData{
 					Source:      numEpochs,
 					SigningRoot: sr[:],
 				})
 				require.NoError(t, err)
-				newHist, err = newHist.SetLatestEpochWritten(ctx, numEpochs+1)
+				newHist, err = newHist.setLatestEpochWritten(ctx, numEpochs+1)
 				require.NoError(t, err)
 
-				err = db.Update(func(tx *bolt.Tx) error {
+				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 			},
-			eval: func(t *testing.T, db *bolt.DB) {
+			eval: func(t *testing.T, validatorDB *Store) {
 				// Verify we indeed have the data for all epochs
 				// since genesis to epoch 50+1 under the new schema.
-				err := db.View(func(tx *bolt.Tx) error {
+				err := validatorDB.view(func(tx *bolt.Tx) error {
 					pubKey := [48]byte{1}
 					bucket := tx.Bucket(pubKeysBucket)
 					pkBucket := bucket.Bucket(pubKey[:])
@@ -186,10 +186,58 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := setupDB(t, nil).db
-			tt.setup(t, db)
-			assert.NoError(t, db.Update(migrateOptimalAttesterProtection), "migrateOptimalAttesterProtection(tx) error")
-			tt.eval(t, db)
+			validatorDB, err := setupDBWithoutMigration(t.TempDir())
+			require.NoError(t, err, "Failed to instantiate DB")
+			t.Cleanup(func() {
+				require.NoError(t, validatorDB.Close(), "Failed to close database")
+				require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+			})
+			tt.setup(t, validatorDB)
+			require.NoError(t, validatorDB.migrateOptimalAttesterProtection(context.Background()))
+			tt.eval(t, validatorDB)
 		})
 	}
+}
+
+func setupDBWithoutMigration(dirPath string) (*Store, error) {
+	hasDir, err := fileutil.HasDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	if !hasDir {
+		if err := fileutil.MkdirAll(dirPath); err != nil {
+			return nil, err
+		}
+	}
+	datafile := filepath.Join(dirPath, ProtectionDbFileName)
+	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
+	if err != nil {
+		if errors.Is(err, bolt.ErrTimeout) {
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
+		}
+		return nil, err
+	}
+
+	kv := &Store{
+		db:           boltDB,
+		databasePath: dirPath,
+	}
+
+	if err := kv.db.Update(func(tx *bolt.Tx) error {
+		return createBuckets(
+			tx,
+			genesisInfoBucket,
+			historicAttestationsBucket,
+			historicProposalsBucket,
+			lowestSignedSourceBucket,
+			lowestSignedTargetBucket,
+			lowestSignedProposalsBucket,
+			highestSignedProposalsBucket,
+			pubKeysBucket,
+			migrationsBucket,
+		)
+	}); err != nil {
+		return nil, err
+	}
+	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
