@@ -113,7 +113,6 @@ func init() {
 }
 
 func main() {
-	log := logrus.WithField("prefix", "main")
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"

@@ -9,6 +9,7 @@ go_library(
         "enable_disable.go",
         "import.go",
         "keymanager.go",
+        "log.go",
         "refresh.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/imported",

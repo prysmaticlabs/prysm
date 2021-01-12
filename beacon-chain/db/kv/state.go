@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )

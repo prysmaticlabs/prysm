@@ -29,8 +29,6 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-var log = logrus.WithField("prefix", "main")
-
 func startNode(ctx *cli.Context) error {
 	// verify if ToS accepted
 	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
