@@ -6,11 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+var walletPassword = "OhWOWthisisatest42!$"
 
 func cancelledContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -182,4 +185,26 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 	}()
 	run(ctx, v)
 	assert.LogsContain(t, hook, "All validators are exited")
+}
+
+func TestHandleAccountsChanged(t *testing.T) {
+	ctx := context.Background()
+	defer ctx.Done()
+
+	km := &mockKeymanager{accountsChangedFeed: &event.Feed{}}
+	v := &FakeValidator{Keymanager: km}
+	channel := make(chan struct{})
+	go handleAccountsChanged(ctx, v, channel)
+	time.Sleep(time.Second) // Allow time for subscribing to changes.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	select {
+	case _, ok := <-channel:
+		if !ok {
+			t.Error("Account changed channel is closed")
+		}
+	default:
+		t.Error("Accounts changed channel is empty")
+	}
 }

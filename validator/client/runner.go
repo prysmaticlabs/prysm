@@ -13,8 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -189,14 +187,7 @@ func handleAssignmentError(err error, slot uint64) {
 func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan struct{}) {
 	validatingPubKeysChan := make(chan [][48]byte, 1)
 	var sub event.Subscription
-	switch km := v.GetKeymanager().(type) {
-	case *imported.Keymanager:
-		sub = km.SubscribeAccountChanges(validatingPubKeysChan)
-	case *derived.Keymanager:
-		sub = km.SubscribeAccountChanges(validatingPubKeysChan)
-	default:
-		return
-	}
+	v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
 
 	defer func() {
 		sub.Unsubscribe()
