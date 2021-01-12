@@ -47,8 +47,6 @@ func (v *validator) slashableAttestationCheck(
 		return errors.Wrap(err, "could not save attestation history for validator public key")
 	}
 
-	// TODO(#7813): Add back the saving of lowest target and lowest source epoch
-	// after we have implemented batch saving of attestation metadata.
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
 			if v.emitAccountMetrics {

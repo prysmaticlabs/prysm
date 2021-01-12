@@ -160,6 +160,124 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	}
 }
 
+func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
+	ctx := context.Background()
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, validatorDB.Close(), "Failed to close database")
+		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+	})
+	p0 := [48]byte{0}
+	p1 := [48]byte{1}
+	// Can save.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(100, 101)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(200, 201)),
+	)
+	got, err := validatorDB.LowestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(100), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(200), got)
+
+	// Can replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(99, 100)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(199, 200)),
+	)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+
+	// Can not replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(100, 101)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(200, 201)),
+	)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+}
+
+func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
+	ctx := context.Background()
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, validatorDB.Close(), "Failed to close database")
+		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+	})
+	p0 := [48]byte{0}
+	p1 := [48]byte{1}
+	// Can save.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(99, 100)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(199, 200)),
+	)
+	got, err := validatorDB.LowestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(100), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(200), got)
+
+	// Can replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(98, 99)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(198, 199)),
+	)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+
+	// Can not replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(99, 100)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(199, 200)),
+	)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+}
+
 func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx, cancel := context.WithCancel(context.Background())
