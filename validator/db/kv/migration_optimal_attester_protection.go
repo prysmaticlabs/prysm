@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/progressutil"
 	bolt "go.etcd.io/bbolt"
@@ -63,18 +62,12 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 
 	bar := progressutil.InitializeProgressBar(numKeys, "Migrating attesting history to more efficient format")
 	for i, publicKey := range publicKeyBytes {
-		attestingHistoryForPubKey := attestingHistoryBytes[i]
+		var attestingHistory EncHistoryData
+		attestingHistory = attestingHistoryBytes[i]
 		err = store.db.Update(func(tx *bolt.Tx) error {
-			if attestingHistoryForPubKey == nil {
+			if attestingHistory == nil {
 				return nil
 			}
-			var attestingHistory EncHistoryData
-			var err error
-			attestingHistory, err = snappy.Decode(nil /*dst*/, attestingHistoryForPubKey)
-			if err != nil {
-				return err
-			}
-
 			bucket := tx.Bucket(pubKeysBucket)
 			pkBucket := bucket.Bucket(publicKey)
 			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
