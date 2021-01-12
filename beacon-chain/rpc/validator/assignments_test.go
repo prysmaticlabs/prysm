@@ -60,10 +60,10 @@ func TestGetDuties_OK(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        chain,
-		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		HeadFetcher: chain,
+		TimeFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -101,6 +101,20 @@ func TestGetDuties_OK(t *testing.T) {
 	}
 }
 
+func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
+	chain := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
+	vs := &Server{
+		TimeFetcher: chain,
+	}
+	req := &ethpb.DutiesRequest{
+		Epoch: chain.CurrentSlot()/params.BeaconConfig().SlotsPerEpoch + 2,
+	}
+	_, err := vs.duties(context.Background(), req)
+	require.ErrorContains(t, "can not be greater than next epoch", err)
+}
+
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
@@ -129,10 +143,10 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		State: bState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        chain,
-		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		HeadFetcher: chain,
+		TimeFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -170,10 +184,10 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        chain,
-		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		HeadFetcher: chain,
+		TimeFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -235,14 +249,15 @@ func TestStreamDuties_OK(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
 	vs := &Server{
-		Ctx:         ctx,
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now(),
-		},
+		Ctx:           ctx,
+		BeaconDB:      db,
+		HeadFetcher:   &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker:   &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:   c,
 		StateNotifier: &mockChain.MockStateNotifier{},
 	}
 
@@ -294,14 +309,15 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
 	vs := &Server{
-		Ctx:         ctx,
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now(),
-		},
+		Ctx:           ctx,
+		BeaconDB:      db,
+		HeadFetcher:   &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker:   &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:   c,
 		StateNotifier: &mockChain.MockStateNotifier{},
 	}
 
