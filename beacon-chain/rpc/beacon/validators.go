@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -860,12 +859,11 @@ func (bs *Server) GetIndividualVotes(
 // if the input slot has a skip block, false is returned,
 // if the input slot has more than one block, an error is returned.
 func (bs *Server) isSlotCanonical(ctx context.Context, slot uint64) (bool, error) {
-	filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
-	roots, err := bs.BeaconDB.BlockRoots(ctx, filter)
+	hasBlockRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
 	if err != nil {
 		return false, err
 	}
-	if len(roots) == 0 {
+	if !hasBlockRoots {
 		return false, nil
 	}
 	if len(roots) != 1 {
