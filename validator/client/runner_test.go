@@ -187,7 +187,7 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 	assert.LogsContain(t, hook, "All validators are exited")
 }
 
-func TestHandleAccountsChanged(t *testing.T) {
+func TestHandleAccountsChanged_Ok(t *testing.T) {
 	ctx := context.Background()
 	defer ctx.Done()
 
@@ -207,4 +207,34 @@ func TestHandleAccountsChanged(t *testing.T) {
 	default:
 		t.Error("Accounts changed channel is empty")
 	}
+}
+
+func TestHandleAccountsChanged_CtxCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	km := &mockKeymanager{accountsChangedFeed: &event.Feed{}}
+	v := &FakeValidator{Keymanager: km}
+	channel := make(chan struct{}, 2)
+	go handleAccountsChanged(ctx, v, channel)
+	time.Sleep(time.Second) // Allow time for subscribing to changes.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	cancel()
+	time.Sleep(time.Second) // Allow time for handling cancellation.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	var values int
+	for loop := true; loop == true; {
+		select {
+		case _, ok := <-channel:
+			if ok {
+				values++
+			}
+		default:
+			loop = false
+		}
+	}
+	assert.Equal(t, 1, values, "Incorrect number of values were passed to the channel")
 }

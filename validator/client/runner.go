@@ -2,14 +2,12 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -186,9 +184,7 @@ func handleAssignmentError(err error, slot uint64) {
 
 func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan struct{}) {
 	validatingPubKeysChan := make(chan [][48]byte, 1)
-	var sub event.Subscription
-	v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
-
+	var sub = v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
 	defer func() {
 		sub.Unsubscribe()
 		close(validatingPubKeysChan)
@@ -198,12 +194,11 @@ func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan
 		select {
 		case <-validatingPubKeysChan:
 			accountsChangedChan <- struct{}{}
+		case err := <-sub.Err():
+			log.WithError(err).Error("accounts changed subscription failed")
+			return
 		case <-ctx.Done():
 			return
-		default:
-			if errors.Is(ctx.Err(), context.Canceled) {
-				return
-			}
 		}
 	}
 }
