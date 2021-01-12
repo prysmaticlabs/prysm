@@ -1608,3 +1608,94 @@ func (f *ForkData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.Merkleize(indx)
 	return
 }
+
+// MarshalSSZ ssz marshals the DepositMessage object
+func (d *DepositMessage) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(d)
+}
+
+// MarshalSSZTo ssz marshals the DepositMessage object to a target array
+func (d *DepositMessage) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'PublicKey'
+	if len(d.PublicKey) != 48 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, d.PublicKey...)
+
+	// Field (1) 'WithdrawalCredentials'
+	if len(d.WithdrawalCredentials) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, d.WithdrawalCredentials...)
+
+	// Field (2) 'Amount'
+	dst = ssz.MarshalUint64(dst, d.Amount)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the DepositMessage object
+func (d *DepositMessage) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 88 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'PublicKey'
+	if cap(d.PublicKey) == 0 {
+		d.PublicKey = make([]byte, 0, len(buf[0:48]))
+	}
+	d.PublicKey = append(d.PublicKey, buf[0:48]...)
+
+	// Field (1) 'WithdrawalCredentials'
+	if cap(d.WithdrawalCredentials) == 0 {
+		d.WithdrawalCredentials = make([]byte, 0, len(buf[48:80]))
+	}
+	d.WithdrawalCredentials = append(d.WithdrawalCredentials, buf[48:80]...)
+
+	// Field (2) 'Amount'
+	d.Amount = ssz.UnmarshallUint64(buf[80:88])
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the DepositMessage object
+func (d *DepositMessage) SizeSSZ() (size int) {
+	size = 88
+	return
+}
+
+// HashTreeRoot ssz hashes the DepositMessage object
+func (d *DepositMessage) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(d)
+}
+
+// HashTreeRootWith ssz hashes the DepositMessage object with a hasher
+func (d *DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'PublicKey'
+	if len(d.PublicKey) != 48 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(d.PublicKey)
+
+	// Field (1) 'WithdrawalCredentials'
+	if len(d.WithdrawalCredentials) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(d.WithdrawalCredentials)
+
+	// Field (2) 'Amount'
+	hh.PutUint64(d.Amount)
+
+	hh.Merkleize(indx)
+	return
+}
