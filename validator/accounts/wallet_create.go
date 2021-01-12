@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -34,10 +36,6 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	keymanagerKind, err := extractKeymanagerKindFromCli(cliCtx)
 	if err != nil {
 		return nil, err
-	}
-	if keymanagerKind == keymanager.Imported {
-		log.Warning("Creating an imported wallet does not provide anything beneficial. " +
-			"This option will be removed in v1.0.0. Please use `validator accounts import` instead.")
 	}
 	createWalletConfig, err := extractWalletCreationConfigFromCli(cliCtx, keymanagerKind)
 	if err != nil {
@@ -74,6 +72,26 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
+		km, err := w.InitializeKeymanager(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
+		}
+		importedKm, ok := km.(*imported.Keymanager)
+		if !ok {
+			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
+		}
+		accountsKeystore, err := importedKm.CreateAccountsKeystore(ctx, make([][]byte, 0), make([][]byte, 0))
+		if err != nil {
+			return nil, err
+		}
+		encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
+		if err != nil {
+			return nil, err
+		}
+		if err = w.WriteFileAtPath(ctx, imported.AccountsPath, imported.AccountsKeystoreFileName, encodedAccounts); err != nil {
+			return nil, err
+		}
+
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with ability to import keystores",
 		)

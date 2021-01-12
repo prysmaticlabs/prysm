@@ -25,7 +25,7 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 	}
 	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
 	validatingPublicKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
@@ -102,7 +102,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	}
 	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
 	importedKM, ok := km.(*imported.Keymanager)
 	if !ok {
