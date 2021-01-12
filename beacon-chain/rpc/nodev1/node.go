@@ -6,14 +6,13 @@ import (
 	"net/http"
 	"runtime"
 
-	"google.golang.org/grpc/codes"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
