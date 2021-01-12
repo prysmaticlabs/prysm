@@ -33,8 +33,9 @@ const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
 	// AccountsPath where all imported keymanager keystores are kept.
-	AccountsPath             = "accounts"
-	accountsKeystoreFileName = "all-accounts.keystore.json"
+	AccountsPath = "accounts"
+	// AccountsKeystoreFileName exposes the name of the keystore file.
+	AccountsKeystoreFileName = "all-accounts.keystore.json"
 )
 
 // Keymanager implementation for imported keystores utilizing EIP-2335.
@@ -58,10 +59,10 @@ type accountStore struct {
 	PublicKeys  [][]byte `json:"public_keys"`
 }
 
-// Defines an internal Prysm representation
+// AccountsKeystoreRepresentation defines an internal Prysm representation
 // of validator accounts, encrypted according to the EIP-2334 standard
 // but containing extra fields such as markers for disabled public keys.
-type accountsKeystoreRepresentation struct {
+type AccountsKeystoreRepresentation struct {
 	Crypto             map[string]interface{} `json:"crypto"`
 	ID                 string                 `json:"uuid"`
 	Version            uint                   `json:"version"`
@@ -189,7 +190,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
 		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
 
-		newStore, err := dr.createAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+		newStore, err := dr.CreateAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
 		if err != nil {
 			return errors.Wrap(err, "could not rewrite accounts keystore")
 		}
@@ -199,7 +200,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 		if err != nil {
 			return err
 		}
-		if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+		if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
 			return errors.Wrap(err, "could not write keystore file for accounts")
 		}
 
@@ -285,16 +286,16 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 }
 
 func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.
 		return nil
 	} else if err != nil {
-		return errors.Wrapf(err, "could not read keystore file for accounts %s", accountsKeystoreFileName)
+		return errors.Wrapf(err, "could not read keystore file for accounts %s", AccountsKeystoreFileName)
 	}
-	keystoreFile := &accountsKeystoreRepresentation{}
+	keystoreFile := &AccountsKeystoreRepresentation{}
 	if err := json.Unmarshal(encoded, keystoreFile); err != nil {
-		return errors.Wrapf(err, "could not decode keystore file for accounts %s", accountsKeystoreFileName)
+		return errors.Wrapf(err, "could not decode keystore file for accounts %s", AccountsKeystoreFileName)
 	}
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password and initialize a new BLS secret key from
@@ -337,10 +338,11 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	return err
 }
 
-func (dr *Keymanager) createAccountsKeystore(
+// CreateAccountsKeystore creates a new keystore holding the provided keys.
+func (dr *Keymanager) CreateAccountsKeystore(
 	_ context.Context,
 	privateKeys, publicKeys [][]byte,
-) (*accountsKeystoreRepresentation, error) {
+) (*AccountsKeystoreRepresentation, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -395,7 +397,7 @@ func (dr *Keymanager) createAccountsKeystore(
 	for pubKey := range dr.disabledPublicKeys {
 		disabledPubKeys = append(disabledPubKeys, fmt.Sprintf("%x", pubKey))
 	}
-	return &accountsKeystoreRepresentation{
+	return &AccountsKeystoreRepresentation{
 		Crypto:             cryptoFields,
 		ID:                 id.String(),
 		Version:            encryptor.Version(),
