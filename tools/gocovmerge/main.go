@@ -15,7 +15,7 @@ import (
 	"golang.org/x/tools/cover"
 )
 
-func mergeProfiles(p *cover.Profile, merge *cover.Profile) {
+func mergeProfiles(p, merge *cover.Profile) {
 	if p.Mode != merge.Mode {
 		log.Fatalf("cannot merge profiles with different modes")
 
@@ -38,7 +38,7 @@ func mergeProfileBlock(p *cover.Profile, pb cover.ProfileBlock, startIndex int) 
 	}
 
 	i := 0
-	if sortFunc(i) != true {
+	if !sortFunc(i) {
 		i = sort.Search(len(p.Blocks)-startIndex, sortFunc)
 
 	}
