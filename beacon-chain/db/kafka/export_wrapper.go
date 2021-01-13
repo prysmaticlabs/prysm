@@ -6,8 +6,6 @@ import (
 	"bytes"
 	"context"
 
-	"gopkg.in/errgo.v2/fmt/errors"
-
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
@@ -18,6 +16,7 @@ import (
 	"go.opencensus.io/trace"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	_ "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka/librdkafka" // Required for c++ kafka library.
+	"gopkg.in/errgo.v2/fmt/errors"
 )
 
 var _ iface.Database = (*Exporter)(nil)
@@ -60,7 +59,7 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 	if v, ok := msg.(fssz.HashRoot); ok {
 		key, err = v.HashTreeRoot()
 	} else {
-		return errors.New("object does not follow hash tree root interface")
+		err = errors.New("object does not follow hash tree root interface")
 	}
 	if err != nil {
 		traceutil.AnnotateError(span, err)
