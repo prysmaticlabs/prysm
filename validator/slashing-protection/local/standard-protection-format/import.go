@@ -76,7 +76,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// not importing those which are slashable with respect to other data within the same JSON.
 	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, proposalHistoryByPubKey)
 	slashableAttesterKeys, err := filterSlashablePubKeysFromAttestations(
-		ctx, attestingHistoryByPubKey,
+		ctx, validatorDB, attestingHistoryByPubKey,
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
@@ -263,19 +263,28 @@ func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[
 
 func filterSlashablePubKeysFromAttestations(
 	ctx context.Context,
+	validatorDB db.Database,
 	signedAttsByPubKey map[[48]byte][]*kv.AttestationRecord,
 ) ([][48]byte, error) {
 	slashablePubKeys := make([][48]byte, 0)
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		for _, att := range signedAtts {
-			_ = att
+			indexedAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Epoch: att.Target,
+					},
+					Source: &ethpb.Checkpoint{
+						Epoch: att.Source,
+					},
+				},
+			}
+			slashable, err := validatorDB.CheckSlashableAttestation(ctx, pubKey, att.SigningRoot, indexedAtt)
+			if err != nil {
+				return nil, err
+			}
 			// Malformed data should not prevent us from completing this function.
-			//slashable, err := attestinghistory.IsNewAttSlashable(ctx, history, source, target, signingRoot)
-			//if err != nil {
-			//	continue
-			//}
-			slashable := false
-			if slashable {
+			if slashable != kv.NotSlashable {
 				slashablePubKeys = append(slashablePubKeys, pubKey)
 				break
 			}

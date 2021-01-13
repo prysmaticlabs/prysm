@@ -904,6 +904,7 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 			wantedPubKeys := make(map[[48]byte]bool)
 			for _, pk := range tt.expected {
 				wantedPubKeys[pk] = true
+				wantedPubKeys[pk] = true
 			}
 			for _, pk := range slashablePubKeys {
 				ok := wantedPubKeys[pk]
@@ -1036,12 +1037,21 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			attestingHistoriesByPubKey := make(map[[48]byte][]*kv.AttestationRecord)
+			pubKeys := make([][48]byte, 0)
+			for pubKey, _ := range tt.incomingAttsByPubKey {
+				pubKeys = append(pubKeys, pubKey)
+			}
+			validatorDB := dbtest.SetupDB(t, pubKeys)
 			for pubKey, signedAtts := range tt.incomingAttsByPubKey {
 				attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
 				require.NoError(t, err)
-				attestingHistoriesByPubKey[pubKey] = attestingHistory
+				for _, att := range attestingHistory {
+					indexedAtt := createAttestation(att.Source, att.Target)
+					err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, att.SigningRoot, indexedAtt)
+					require.NoError(t, err)
+				}
 			}
-			got, err := filterSlashablePubKeysFromAttestations(ctx, attestingHistoriesByPubKey)
+			got, err := filterSlashablePubKeysFromAttestations(ctx, validatorDB, attestingHistoriesByPubKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("filterSlashablePubKeysFromAttestations() error = %v, wantErr %v", err, tt.wantErr)
 				return
