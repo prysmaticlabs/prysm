@@ -238,11 +238,12 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	assert.ErrorContains(t, cancelledCtx, v.WaitForChainStart(ctx))
 }
 
-func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
+func TestWaitForChainStart_StreamSetupFailsContextCancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+	chainStartPollingInterval = 100 * time.Millisecond
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
+	ctx, cancel := context.WithCancel(context.Background())
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [48]byte{}
@@ -258,17 +259,54 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
-	).Return(clientStream, errors.New("failed stream"))
-	err = v.WaitForChainStart(context.Background())
-	want := "could not setup beacon chain ChainStart streaming client"
+	).AnyTimes().Return(clientStream, errors.New("failed stream"))
+
+	go func() {
+		err = v.WaitForChainStart(ctx)
+	}()
+	time.Sleep(chainStartPollingInterval)
+	cancel()
+	time.Sleep(100 * time.Millisecond)
+	want := "ChainStart streaming client: context canceled"
 	assert.ErrorContains(t, want, err)
+}
+
+func TestWaitForChainStart_StreamSetupPolling(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	chainStartPollingInterval = 100 * time.Millisecond
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := [48]byte{}
+	copy(pubKey[:], privKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		keysMap: make(map[[48]byte]bls.SecretKey),
+	}
+	v := validator{
+		validatorClient: client,
+		keyManager:      km,
+	}
+	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	client.EXPECT().WaitForChainStart(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Times(11).Return(clientStream, errors.New("failed stream"))
+
+	go func() {
+		err = v.WaitForChainStart(ctx)
+	}()
+	time.Sleep(chainStartPollingInterval * 10)
+	cancel()
+	time.Sleep(10 * time.Millisecond)
+
 }
 
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
 	v := validator{
 		validatorClient: client,
 	}
