@@ -614,6 +614,34 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []
 	return targetEpoch, potentialPIDs
 }
 
+func (p *Status) PeersToPrune() []peer.ID {
+	// Exit early if we are still below our max
+	// limit.
+	if !p.IsAboveInboundLimit() {
+		return []peer.ID{}
+	}
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	badPeer := func(peerData *peerdata.PeerData) bool {
+		return peerData.BadResponses >= p.scorers.BadResponsesScorer().Params().Threshold
+	}
+	type peerResp struct {
+		pid     peer.ID
+		badResp int
+	}
+	peersToPrune := make([]*peerResp, 0)
+	// Select disconnected peers with a smaller bad response count.
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && badPeer(peerData) {
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:     pid,
+				badResp: peerData.BadResponses,
+			})
+		}
+	}
+}
+
 // HighestEpoch returns the highest epoch reported epoch amongst peers.
 func (p *Status) HighestEpoch() uint64 {
 	p.store.RLock()
