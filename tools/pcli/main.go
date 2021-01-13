@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -192,15 +192,7 @@ func main() {
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					expectedRoot, err := expectedState.HashTreeRoot()
-					if err != nil {
-						log.Fatal(err)
-					}
-					receivedRoot, err := postState.InnerStateUnsafe().HashTreeRoot()
-					if err != nil {
-						log.Fatal(err)
-					}
-					if !bytes.Equal(expectedRoot[:], receivedRoot[:]) {
+					if !sszutil.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
 						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}
