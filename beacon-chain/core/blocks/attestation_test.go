@@ -249,11 +249,10 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	data := &ethpb.AttestationData{
-		Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-		Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-		BeaconBlockRoot: make([]byte, 32),
-	}
+	data := testutil.HydrateAttestationData(&ethpb.AttestationData{
+		Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+		Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+	})
 	aggBits1 := bitfield.NewBitlist(4)
 	aggBits1.SetBitAt(0, true)
 	aggBits1.SetBitAt(1, true)
@@ -314,11 +313,10 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
-	data := &ethpb.AttestationData{
-		Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-		Target:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
-		BeaconBlockRoot: make([]byte, 32),
-	}
+	data := testutil.HydrateAttestationData(&ethpb.AttestationData{
+		Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+		Target: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+	})
 	aggBits1 := bitfield.NewBitlist(9)
 	aggBits1.SetBitAt(0, true)
 	aggBits1.SetBitAt(1, true)
