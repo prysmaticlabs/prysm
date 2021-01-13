@@ -45,7 +45,7 @@ var reconnectPeriod = 5 * time.Second
 var keyRefetchPeriod = 30 * time.Second
 
 // chainStartPollingInterval client will poll chain start event in case beacon chain is
-// offline every at this interval.
+// offline at this interval.
 var chainStartPollingInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 
 var (
