@@ -1,7 +1,6 @@
 package attestations
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"sort"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
@@ -54,12 +54,7 @@ func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	for _, tt := range tests {
 		got, err := AggregatePair(tt.a1, tt.a2)
 		require.NoError(t, err)
-
-		expectedRoot, err := got.HashTreeRoot()
-		require.NoError(t, err)
-		receivedRoot, err := tt.want.HashTreeRoot()
-		require.NoError(t, err)
-		require.Equal(t, true, bytes.Equal(expectedRoot[:], receivedRoot[:]))
+		require.Equal(t, true, sszutil.DeepEqual(got, tt.want))
 	}
 }
 

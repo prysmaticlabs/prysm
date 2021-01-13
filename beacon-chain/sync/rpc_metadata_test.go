@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -108,11 +108,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	expectedRoot, err := metadata.HashTreeRoot()
-	require.NoError(t, err)
-	receivedRoot, err := p2.LocalMetadata.HashTreeRoot()
-	require.NoError(t, err)
-	if !bytes.Equal(expectedRoot[:], receivedRoot[:]) {
+	if !sszutil.DeepEqual(metadata, p2.LocalMetadata) {
 		t.Fatalf("Metadata unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 

@@ -61,6 +61,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/sszutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

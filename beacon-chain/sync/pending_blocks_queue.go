@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"sort"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -302,15 +302,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		expectedRoot, err := blk.HashTreeRoot()
-		if err != nil {
-			log.Fatal(err)
-		}
-		receivedRoot, err := b.HashTreeRoot()
-		if err != nil {
-			log.Fatal(err)
-		}
-		if bytes.Equal(expectedRoot[:], receivedRoot[:]) {
+		if sszutil.DeepEqual(blk, b) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
