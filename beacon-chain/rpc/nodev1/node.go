@@ -26,6 +26,9 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 
 // ListPeers retrieves data about the node's network peers.
 func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeersResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "nodev1.ListPeers")
+	defer span.End()
+
 	return nil, errors.New("unimplemented")
 }
 
@@ -45,7 +48,10 @@ func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Versi
 
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
-func (ns *Server) GetSyncStatus(_ context.Context, _ *ptypes.Empty) (*ethpb.SyncingResponse, error) {
+func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncingResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "nodev1.GetSyncStatus")
+	defer span.End()
+
 	headSlot := ns.HeadFetcher.HeadSlot()
 	return &ethpb.SyncingResponse{
 		Data: &ethpb.SyncInfo{
