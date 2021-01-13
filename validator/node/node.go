@@ -41,8 +41,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "node")
-
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
@@ -411,6 +409,7 @@ func (s *ValidatorClient) registerClientService(
 		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      s.walletInitialized,
 		GraffitiStruct:             gStruct,
+		LogDutyCountDown:           s.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})
 
 	if err != nil {
@@ -454,24 +453,35 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
+	beaconClientEndpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	grpcHeaders := s.cliCtx.String(flags.GrpcHeadersFlag.Name)
+	clientCert := s.cliCtx.String(flags.CertFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
-		ValDB:                   s.db,
-		Host:                    rpcHost,
-		Port:                    fmt.Sprintf("%d", rpcPort),
-		WalletInitializedFeed:   s.walletInitialized,
-		ValidatorService:        vs,
-		SyncChecker:             vs,
-		GenesisFetcher:          vs,
-		BeaconNodeInfoFetcher:   vs,
-		NodeGatewayEndpoint:     nodeGatewayEndpoint,
-		WalletDir:               walletDir,
-		Wallet:                  s.wallet,
-		Keymanager:              km,
-		ValidatorGatewayHost:    validatorGatewayHost,
-		ValidatorGatewayPort:    validatorGatewayPort,
-		ValidatorMonitoringHost: validatorMonitoringHost,
-		ValidatorMonitoringPort: validatorMonitoringPort,
+		ValDB:                    s.db,
+		Host:                     rpcHost,
+		Port:                     fmt.Sprintf("%d", rpcPort),
+		WalletInitializedFeed:    s.walletInitialized,
+		ValidatorService:         vs,
+		SyncChecker:              vs,
+		GenesisFetcher:           vs,
+		NodeGatewayEndpoint:      nodeGatewayEndpoint,
+		WalletDir:                walletDir,
+		Wallet:                   s.wallet,
+		Keymanager:               km,
+		ValidatorGatewayHost:     validatorGatewayHost,
+		ValidatorGatewayPort:     validatorGatewayPort,
+		ValidatorMonitoringHost:  validatorMonitoringHost,
+		ValidatorMonitoringPort:  validatorMonitoringPort,
+		BeaconClientEndpoint:     beaconClientEndpoint,
+		ClientMaxCallRecvMsgSize: maxCallRecvMsgSize,
+		ClientGrpcRetries:        grpcRetries,
+		ClientGrpcRetryDelay:     grpcRetryDelay,
+		ClientGrpcHeaders:        strings.Split(grpcHeaders, ","),
+		ClientWithCert:           clientCert,
 	})
 	return s.services.RegisterService(server)
 }

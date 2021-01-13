@@ -9,12 +9,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	slashTest "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -40,6 +41,125 @@ func TestStore_ImportInterchangeData_NilData_FailsSilently(t *testing.T) {
 	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "No slashing protection data to import")
+}
+
+func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 10
+	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory := slashTest.MockAttestingAndProposalHistories(numValidators)
+	standardProtectionFormat, err := slashTest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
+
+	// We replace a slot of one of the blocks with junk data.
+	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
+
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(standardProtectionFormat)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database and check that
+	// we obtain an error during the import process.
+	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	assert.NotNil(t, err)
+
+	// Next, we attempt to retrieve the attesting and proposals histories from our database and
+	// verify nothing was saved to the DB. If there is an error in the import process, we need to make
+	// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
+	// data to our DB, or it does not.
+	for i := 0; i < len(publicKeys); i++ {
+		for _, att := range attestingHistory[i] {
+			indexedAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: att.Source,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: att.Target,
+					},
+				},
+			}
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], [32]byte{}, indexedAtt)
+			// We expect we do not have an attesting history for each attestation
+			require.NoError(t, err)
+			require.Equal(t, kv.NotSlashable, slashingKind)
+		}
+		proposals := proposalHistory[i].Proposals
+		for _, proposal := range proposals {
+			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
+			require.NoError(t, err)
+			require.DeepEqual(
+				t,
+				params.BeaconConfig().ZeroHash,
+				receivedProposalSigningRoot,
+				"Imported proposal signing root is different than the empty default",
+			)
+		}
+	}
+}
+
+func TestStore_ImportInterchangeData_OK(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 10
+	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory := slashTest.MockAttestingAndProposalHistories(numValidators)
+	standardProtectionFormat, err := slashTest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
+
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(standardProtectionFormat)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database.
+	err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	require.NoError(t, err)
+
+	// Next, we attempt to retrieve the attesting and proposals histories from our database and
+	// verify those indeed match the originally generated mock histories.
+	for i := 0; i < len(publicKeys); i++ {
+		for _, att := range attestingHistory[i] {
+			indexedAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: att.Source,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: att.Target,
+					},
+				},
+			}
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], [32]byte{}, indexedAtt)
+			// We expect we have an attesting history for the attestation and when
+			// attempting to verify the same att is slashable with a different signing root,
+			// we expect to receive a double vote slashing kind.
+			require.NotNil(t, err)
+			require.Equal(t, kv.DoubleVote, slashingKind)
+		}
+
+		proposals := proposalHistory[i].Proposals
+		for _, proposal := range proposals {
+			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
+			require.NoError(t, err)
+			require.DeepEqual(
+				t,
+				receivedProposalSigningRoot[:],
+				proposal.SigningRoot,
+				"Imported proposals are different then the generated ones",
+			)
+		}
+	}
 }
 
 func Test_validateMetadata(t *testing.T) {
@@ -166,8 +286,9 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 
 func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	numValidators := 4
-	pubKeys := createRandomPubKeys(t, numValidators)
-	roots := createRandomRoots(t, numValidators)
+	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	roots := slashTest.CreateMockRoots(numValidators)
 	tests := []struct {
 		name    string
 		data    []*ProtectionData
@@ -178,7 +299,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 			name: "nil values are skipped",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "1",
@@ -188,7 +309,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "3",
@@ -198,7 +319,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedBlock{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						Slot:        "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -214,7 +335,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 			name: "same blocks but different public keys are parsed correctly",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "1",
@@ -227,7 +348,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[1]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[1]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "1",
@@ -241,7 +362,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedBlock{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						Slot:        "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -251,7 +372,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 						SigningRoot: fmt.Sprintf("%x", roots[1]),
 					},
 				},
-				pubKeys[1]: {
+				publicKeys[1]: {
 					{
 						Slot:        "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -267,7 +388,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "1",
@@ -280,7 +401,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "3",
@@ -290,7 +411,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedBlock{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						Slot:        "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -310,7 +431,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 			name: "full duplicate entries are uniquely parsed",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "1",
@@ -319,7 +440,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "1",
@@ -329,7 +450,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedBlock{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						Slot:        "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -345,7 +466,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 			name: "intersecting duplicate public key entries are handled properly",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "1",
@@ -358,7 +479,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedBlocks: []*SignedBlock{
 						{
 							Slot:        "2",
@@ -372,7 +493,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedBlock{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						Slot:        "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -409,8 +530,9 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 
 func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	numValidators := 4
-	pubKeys := createRandomPubKeys(t, numValidators)
-	roots := createRandomRoots(t, numValidators)
+	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	roots := slashTest.CreateMockRoots(numValidators)
 	tests := []struct {
 		name    string
 		data    []*ProtectionData
@@ -421,7 +543,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			name: "nil values are skipped",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "1",
@@ -432,7 +554,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "3",
@@ -443,7 +565,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedAttestation{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
 						TargetEpoch: "3",
@@ -461,7 +583,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			name: "same attestations but different public keys are parsed correctly",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "1",
@@ -474,7 +596,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[1]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[1]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "1",
@@ -488,7 +610,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedAttestation{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -498,7 +620,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 						SigningRoot: fmt.Sprintf("%x", roots[1]),
 					},
 				},
-				pubKeys[1]: {
+				publicKeys[1]: {
 					{
 						SourceEpoch: "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -514,7 +636,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			name: "disjoint sets of signed attestations by the same public key are parsed correctly",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "1",
@@ -529,7 +651,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "3",
@@ -540,7 +662,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedAttestation{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
 						TargetEpoch: "3",
@@ -563,7 +685,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			name: "full duplicate entries are uniquely parsed",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "1",
@@ -572,7 +694,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "1",
@@ -582,7 +704,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedAttestation{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -598,7 +720,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			name: "intersecting duplicate public key entries are handled properly",
 			data: []*ProtectionData{
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "1",
@@ -611,7 +733,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 				{
-					Pubkey: fmt.Sprintf("%x", pubKeys[0]),
+					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
 					SignedAttestations: []*SignedAttestation{
 						{
 							SourceEpoch: "2",
@@ -625,7 +747,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 			},
 			want: map[[48]byte][]*SignedAttestation{
-				pubKeys[0]: {
+				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
 						SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -658,35 +780,6 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_saveLowestSourceTargetToDBt_Ok(t *testing.T) {
-	ctx := context.Background()
-	numValidators := 2
-	publicKeys := createRandomPubKeys(t, numValidators)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
-
-	m := make(map[[48]byte][]*SignedAttestation)
-	m[publicKeys[0]] = []*SignedAttestation{{SourceEpoch: "1", TargetEpoch: "2"}, {SourceEpoch: "3", TargetEpoch: "4"}}
-	m[publicKeys[1]] = []*SignedAttestation{{SourceEpoch: "8", TargetEpoch: "7"}, {SourceEpoch: "6", TargetEpoch: "5"}}
-	require.NoError(t, saveLowestSourceTargetToDB(ctx, validatorDB, m))
-
-	got, e, err := validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[0])
-	require.NoError(t, err)
-	require.Equal(t, true, e)
-	require.Equal(t, uint64(2), got)
-	got, e, err = validatorDB.LowestSignedTargetEpoch(ctx, publicKeys[1])
-	require.NoError(t, err)
-	require.Equal(t, true, e)
-	require.Equal(t, uint64(5), got)
-	got, e, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[0])
-	require.NoError(t, err)
-	require.Equal(t, true, e)
-	require.Equal(t, uint64(1), got)
-	got, e, err = validatorDB.LowestSignedSourceEpoch(ctx, publicKeys[1])
-	require.NoError(t, err)
-	require.Equal(t, true, e)
-	require.Equal(t, uint64(6), got)
 }
 
 func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
@@ -941,13 +1034,13 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
+			attestingHistoriesByPubKey := make(map[[48]byte][]*kv.AttestationRecord)
 			for pubKey, signedAtts := range tt.incomingAttsByPubKey {
 				attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
 				require.NoError(t, err)
-				attestingHistoryByPubKey[pubKey] = *attestingHistory
+				attestingHistoriesByPubKey[pubKey] = attestingHistory
 			}
-			got, err := filterSlashablePubKeysFromAttestations(ctx, attestingHistoryByPubKey, tt.incomingAttsByPubKey)
+			got, err := filterSlashablePubKeysFromAttestations(ctx, attestingHistoriesByPubKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("filterSlashablePubKeysFromAttestations() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -958,22 +1051,4 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 			}
 		})
 	}
-}
-
-func createRandomPubKeys(t *testing.T, numValidators int) [][48]byte {
-	pubKeys := make([][48]byte, numValidators)
-	for i := 0; i < numValidators; i++ {
-		randKey, err := bls.RandKey()
-		require.NoError(t, err)
-		copy(pubKeys[i][:], randKey.PublicKey().Marshal())
-	}
-	return pubKeys
-}
-
-func createRandomRoots(t *testing.T, numRoots int) [][32]byte {
-	roots := make([][32]byte, numRoots)
-	for i := 0; i < numRoots; i++ {
-		roots[i] = hashutil.Hash([]byte(fmt.Sprintf("%d", i)))
-	}
-	return roots
 }

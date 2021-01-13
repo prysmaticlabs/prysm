@@ -120,7 +120,7 @@ var depositsReqForChainStart = 64
 
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -149,7 +149,7 @@ func TestStart_OK(t *testing.T) {
 
 func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	s, err := NewService(context.Background(), &Web3ServiceConfig{
@@ -184,7 +184,7 @@ func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 
 func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	st, _ := testutil.DeterministicGenesisState(t, 10)
@@ -215,7 +215,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 
 func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
@@ -239,7 +239,7 @@ func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
@@ -264,7 +264,7 @@ func TestStop_OK(t *testing.T) {
 func TestService_Eth1Synced(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
@@ -285,7 +285,7 @@ func TestService_Eth1Synced(t *testing.T) {
 func TestFollowBlock_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
@@ -298,9 +298,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	conf := params.BeaconConfig()
 	conf.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(conf)
-	defer func() {
-		params.UseMainnetConfig()
-	}()
+	defer params.UseMainnetConfig()
 
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
@@ -360,7 +358,7 @@ func TestStatus(t *testing.T) {
 
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
@@ -399,7 +397,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
@@ -431,7 +429,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
 		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
 		chainStartData: &protodb.ChainStartData{Chainstarted: false},
 		beaconDB:       beaconDB,
@@ -456,7 +454,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 func TestNewService_EarliestVotingBlock(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
@@ -470,9 +468,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	conf.SecondsPerETH1Block = 10
 	conf.Eth1FollowDistance = 50
 	params.OverrideBeaconConfig(conf)
-	defer func() {
-		params.UseMainnetConfig()
-	}()
+	defer params.UseMainnetConfig()
 
 	// Genesis not set
 	followBlock := uint64(2000)
@@ -508,7 +504,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 
 	s1, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
@@ -534,7 +530,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := dbutil.SetupDB(t)
+	beaconDB := dbutil.SetupDB(t)
 
 	s1, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{firstEndpoint},

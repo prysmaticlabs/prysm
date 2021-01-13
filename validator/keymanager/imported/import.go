@@ -50,7 +50,7 @@ func (dr *Keymanager) ImportKeystores(
 	}
 
 	// Write the accounts to disk into a single keystore.
-	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	accountsKeystore, err := dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
 		return err
 	}
@@ -58,13 +58,13 @@ func (dr *Keymanager) ImportKeystores(
 	if err != nil {
 		return err
 	}
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
 }
 
 // ImportKeypairs directly into the keymanager.
 func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]byte) error {
 	// Write the accounts to disk into a single keystore.
-	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	accountsKeystore, err := dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not import account keypairs")
 	}
@@ -72,7 +72,7 @@ func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 	if err != nil {
 		return errors.Wrap(err, "could not marshal accounts keystore into JSON")
 	}
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
+	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
 }
 
 // Retrieves the private key and public key from an EIP-2335 keystore file

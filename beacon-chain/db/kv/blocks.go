@@ -134,6 +134,55 @@ func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return exists
 }
 
+// BlocksBySlot retrieves a list of beacon blocks and its respective roots by slot.
+func (s *Store) BlocksBySlot(ctx context.Context, slot uint64) (bool, []*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
+	defer span.End()
+	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+
+		keys, err := getBlockRootsBySlot(ctx, tx, slot)
+		if err != nil {
+			return err
+		}
+
+		for i := 0; i < len(keys); i++ {
+			encoded := bkt.Get(keys[i])
+			block := &ethpb.SignedBeaconBlock{}
+			if err := decode(ctx, encoded, block); err != nil {
+				return err
+			}
+			blocks = append(blocks, block)
+		}
+		return nil
+	})
+	return len(blocks) > 0, blocks, err
+}
+
+// BlockRootsBySlot retrieves a list of beacon block roots by slot
+func (s *Store) BlockRootsBySlot(ctx context.Context, slot uint64) (bool, [][32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRootsBySlot")
+	defer span.End()
+	blockRoots := make([][32]byte, 0)
+	err := s.db.View(func(tx *bolt.Tx) error {
+		keys, err := getBlockRootsBySlot(ctx, tx, slot)
+		if err != nil {
+			return err
+		}
+
+		for i := 0; i < len(keys); i++ {
+			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
+		}
+		return nil
+	})
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not retrieve block roots by slot")
+	}
+	return len(blockRoots) > 0, blockRoots, nil
+}
+
 // deleteBlock by block root.
 func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlock")
@@ -240,10 +289,9 @@ func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
-		hasStateSummaryInCache := s.stateSummaryCache.Has(blockRoot)
-		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
+		hasStateSummaryInDB := s.HasStateSummary(ctx, blockRoot)
 		hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
-		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+		if !(hasStateInDB || hasStateSummaryInDB) {
 			return errors.New("no state or state summary found with head block root")
 		}
 
@@ -448,6 +496,24 @@ func fetchBlockRootsBySlotRange(
 			splitRoots = append(splitRoots, v[i:i+32])
 		}
 		roots = append(roots, splitRoots...)
+	}
+	return roots, nil
+}
+
+// getBlockRootsByFilter retrieves the block roots by slot
+func getBlockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot uint64) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.getBlockRootsBySlot")
+	defer span.End()
+
+	roots := make([][]byte, 0)
+	bkt := tx.Bucket(blockSlotIndicesBucket)
+	key := bytesutil.Uint64ToBytesBigEndian(slot)
+	c := bkt.Cursor()
+	k, v := c.Seek(key)
+	if k != nil && bytes.Equal(k, key) {
+		for i := 0; i < len(v); i += 32 {
+			roots = append(roots, v[i:i+32])
+		}
 	}
 	return roots, nil
 }

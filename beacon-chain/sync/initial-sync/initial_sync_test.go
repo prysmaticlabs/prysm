@@ -73,7 +73,7 @@ func TestMain(m *testing.M) {
 
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
 	cache.initializeRootCache(blocks, t)
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 
 	p := p2pt.NewTestP2P(t)
 	connectPeers(t, p, peers, p.Peers())

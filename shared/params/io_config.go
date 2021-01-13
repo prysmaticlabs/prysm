@@ -2,6 +2,7 @@ package params
 
 import (
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -18,8 +19,17 @@ var defaultIoConfig = &IoConfig{
 	BoltTimeout:                 1 * time.Second, // 1 second for the bolt DB to timeout.
 }
 
+var defaultWindowsIoConfig = &IoConfig{
+	ReadWritePermissions:        0666,
+	ReadWriteExecutePermissions: 0777,
+	BoltTimeout:                 1 * time.Second,
+}
+
 // BeaconIoConfig returns the current io config for
 // the beacon chain.
 func BeaconIoConfig() *IoConfig {
+	if runtime.GOOS == "windows" {
+		return defaultWindowsIoConfig
+	}
 	return defaultIoConfig
 }

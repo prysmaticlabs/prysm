@@ -14,6 +14,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -88,8 +89,8 @@ func (m *POWChain) BlockTimeByHeight(_ context.Context, height *big.Int) (uint64
 	return m.TimesByHeight[h], nil
 }
 
-// BlockNumberByTimestamp --
-func (m *POWChain) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.Int, error) {
+// BlockByTimestamp --
+func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.HeaderInfo, error) {
 	var chosenTime uint64
 	var chosenNumber *big.Int
 	for t, num := range m.BlockNumberByTime {
@@ -98,7 +99,7 @@ func (m *POWChain) BlockNumberByTimestamp(_ context.Context, time uint64) (*big.
 			chosenTime = t
 		}
 	}
-	return chosenNumber, nil
+	return &types.HeaderInfo{Number: chosenNumber, Time: chosenTime}, nil
 }
 
 // DepositRoot --
@@ -124,7 +125,7 @@ func (m *POWChain) PreGenesisState() *beaconstate.BeaconState {
 
 // ClearPreGenesisData --
 func (m *POWChain) ClearPreGenesisData() {
-	//no-op
+	// no-op
 }
 
 // IsConnectedToETH1 --

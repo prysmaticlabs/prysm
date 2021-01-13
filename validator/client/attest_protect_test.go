@@ -12,14 +12,16 @@ import (
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
-func Test_slashableAttestationCheck_Allowed(t *testing.T) {
+func Test_slashableAttestationCheck(t *testing.T) {
 	config := &featureconfig.Flags{
-		SlasherProtection: false,
+		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, _, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
 		Data: &ethpb.AttestationData{
@@ -36,8 +38,12 @@ func Test_slashableAttestationCheck_Allowed(t *testing.T) {
 			},
 		},
 	}
-	fakePubkey := bytesutil.ToBytes48([]byte("eip3076TestCase"))
-	err := validator.slashableAttestationCheck(context.Background(), att, fakePubkey, [32]byte{})
+	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
+	validator.protector = mockProtector
+	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{})
+	require.ErrorContains(t, failedPostAttSignExternalErr, err)
+	mockProtector.AllowAttestation = true
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 

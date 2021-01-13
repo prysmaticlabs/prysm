@@ -12,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var log = logrus.WithField("prefix", "validator")
+
 type attSubmitted struct {
 	data              *ethpb.AttestationData
 	attesterIndices   []uint64
@@ -40,17 +42,27 @@ func (v *validator) LogAttestationsSubmitted() {
 }
 
 func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
+	if !v.logDutyCountDown {
+		return nil
+	}
+	if v.duties == nil {
+		return nil
+	}
+
 	var nextDutySlot uint64
-	var role string
+	attestingCounts := make(map[uint64]uint64)
+	proposingCounts := make(map[uint64]uint64)
 	for _, duty := range v.duties.CurrentEpochDuties {
+		attestingCounts[duty.AttesterSlot]++
+
 		if duty.AttesterSlot > slot && (nextDutySlot > duty.AttesterSlot || nextDutySlot == 0) {
 			nextDutySlot = duty.AttesterSlot
-			role = "attester"
 		}
 		for _, proposerSlot := range duty.ProposerSlots {
+			proposingCounts[proposerSlot]++
+
 			if proposerSlot > slot && (nextDutySlot > proposerSlot || nextDutySlot == 0) {
 				nextDutySlot = proposerSlot
-				role = "proposer"
 			}
 		}
 	}
@@ -67,9 +79,10 @@ func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
 		if uint64(timeLeft) >= params.BeaconConfig().SecondsPerSlot {
 			log.WithFields(
 				logrus.Fields{
-					"role":        role,
 					"currentSlot": slot,
 					"dutySlot":    nextDutySlot,
+					"attesting":   attestingCounts[nextDutySlot],
+					"proposing":   proposingCounts[nextDutySlot],
 					"slotInEpoch": slot % params.BeaconConfig().SlotsPerEpoch,
 					"secondsLeft": timeLeft,
 				}).Info("Next duty")

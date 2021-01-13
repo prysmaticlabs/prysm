@@ -229,17 +229,17 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 	for i := 0; i < numPeers; i++ {
 		addPeer(t, p, peers.PeerDisconnected)
 	}
-	peers := p.SubscribedToSubnet(2)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps := p.SubscribedToSubnet(2)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 
-	peers = p.SubscribedToSubnet(8)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps = p.SubscribedToSubnet(8)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 
-	peers = p.SubscribedToSubnet(9)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps = p.SubscribedToSubnet(9)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 }
 
 func TestPeerImplicitAdd(t *testing.T) {
@@ -650,7 +650,7 @@ func TestAtInboundPeerLimit(t *testing.T) {
 		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}
 	assert.Equal(t, false, p.IsAboveInboundLimit(), "Inbound limit exceeded")
-	for i := 0; i < 15; i++ {
+	for i := 0; i < 31; i++ {
 		// Peer added to peer handler.
 		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}

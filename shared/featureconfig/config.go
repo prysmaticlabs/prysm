@@ -21,6 +21,7 @@ package featureconfig
 
 import (
 	"sync"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -57,6 +58,7 @@ type Flags struct {
 	// Slasher toggles.
 	EnableHistoricalDetection bool // EnableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
+	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -66,6 +68,13 @@ type Flags struct {
 
 	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
+
+	// Bug fixes related flags.
+	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
+
+	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
+	// changed on disk. This feature is for advanced use cases only.
+	KeystoreImportDebounceInterval time.Duration
 }
 
 var featureConfig *Flags
@@ -182,6 +191,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Using a larger gossip history for the node")
 		cfg.EnableLargerGossipHistory = true
 	}
+	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
+		log.Warn("Disabling slashing broadcasting to p2p network")
+		cfg.DisableBroadcastSlashings = true
+	}
 	Init(cfg)
 }
 
@@ -223,6 +236,11 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Disabling new BLS library blst")
 		cfg.EnableBlst = false
 	}
+	if ctx.Bool(attestTimely.Name) {
+		log.Warn("Enabled attest timely fix for #8185")
+		cfg.AttestTimely = true
+	}
+	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)
 }
 

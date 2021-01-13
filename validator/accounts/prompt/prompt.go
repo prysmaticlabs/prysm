@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,10 +36,7 @@ const (
 	SelectAccountsEnablePromptText = "Select the account(s) you would like to enable"
 )
 
-var (
-	au  = aurora.NewAurora(true)
-	log = logrus.WithField("prefix", "prompt")
-)
+var au = aurora.NewAurora(true)
 
 // InputDirectory from the cli.
 func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {

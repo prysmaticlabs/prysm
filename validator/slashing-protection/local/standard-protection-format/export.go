@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	"sort"
-	"strings"
 )
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
@@ -97,7 +98,7 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 	// If a key does not have an attestation history in our database, we return nil.
 	// This way, a user will be able to export their slashing protection history
 	// even if one of their keys does not have a history of signed attestations.
-	history, err := validatorDB.AttestationHistoryForPubKeyV2(ctx, pubKey)
+	history, err := validatorDB.AttestationHistoryForPubKey(ctx, pubKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get attestation history for public key")
 	}
@@ -105,37 +106,19 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 		return nil, nil
 	}
 	signedAttestations := make([]*SignedAttestation, 0)
-	lowestEpoch, exists, err := validatorDB.LowestSignedTargetEpoch(ctx, pubKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot get lowest signed target epoch for public key")
-	}
-	if !exists {
-		return nil, nil
-	}
-	highestEpoch, err := history.GetLatestEpochWritten(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for i := lowestEpoch; i <= highestEpoch; i++ {
-		historyAtTarget, err := history.GetTargetData(ctx, i)
-		if err != nil {
-			return nil, err
-		}
-		if !historyAtTarget.IsEmpty() {
-			var root string
-			if historyAtTarget.SigningRoot != nil &&
-				!bytes.Equal(historyAtTarget.SigningRoot, params.BeaconConfig().ZeroHash[:]) {
-				root, err = rootToHexString(historyAtTarget.SigningRoot)
-				if err != nil {
-					return nil, err
-				}
+	for _, att := range history {
+		var root string
+		if !bytes.Equal(att.SigningRoot[:], params.BeaconConfig().ZeroHash[:]) {
+			root, err = rootToHexString(att.SigningRoot[:])
+			if err != nil {
+				return nil, err
 			}
-			signedAttestations = append(signedAttestations, &SignedAttestation{
-				TargetEpoch: fmt.Sprintf("%d", i),
-				SourceEpoch: fmt.Sprintf("%d", historyAtTarget.Source),
-				SigningRoot: root,
-			})
 		}
+		signedAttestations = append(signedAttestations, &SignedAttestation{
+			TargetEpoch: fmt.Sprintf("%d", att.Target),
+			SourceEpoch: fmt.Sprintf("%d", att.Source),
+			SigningRoot: root,
+		})
 	}
 	return signedAttestations, nil
 }

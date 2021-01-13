@@ -3,12 +3,6 @@
 // is critical to allow safe interoperability between eth2 clients.
 package interchangeformat
 
-import (
-	"github.com/sirupsen/logrus"
-)
-
-var log = logrus.WithField("prefix", "slashing-protection-format")
-
 // INTERCHANGE_FORMAT_VERSION specified by https://eips.ethereum.org/EIPS/eip-3076.
 // The version Prysm supports is version 5.
 const INTERCHANGE_FORMAT_VERSION = "5"

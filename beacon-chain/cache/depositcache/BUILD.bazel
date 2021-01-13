@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "deposits_cache.go",
+        "log.go",
         "pending_deposits.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache",

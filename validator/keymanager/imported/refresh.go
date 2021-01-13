@@ -8,19 +8,15 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/asyncutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-)
-
-var (
-	debounceFileChangesInterval = time.Second
 )
 
 // Listen for changes to the all-accounts.keystore.json file in our wallet
@@ -28,7 +24,8 @@ var (
 // library to listen for file-system changes and debounces these events to
 // ensure we can handle thousands of events fired in a short time-span.
 func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
-	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
+	debounceFileChangesInterval := featureconfig.Get().KeystoreImportDebounceInterval
+	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
 	if !fileutil.FileExists(accountsFilePath) {
 		return
 	}
@@ -69,7 +66,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.WithError(err).Errorf("Loaded in an empty file: %s", ev.Name)
 			return
 		}
-		accountsKeystore := &accountsKeystoreRepresentation{}
+		accountsKeystore := &AccountsKeystoreRepresentation{}
 		if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
 			log.WithError(
 				err,
@@ -98,7 +95,7 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 
 // Replaces the accounts store struct in the imported keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
-func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepresentation) error {
+func (dr *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepresentation) error {
 	decryptor := keystorev4.New()
 	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.wallet.Password())
 	if err != nil {
@@ -107,9 +104,6 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepre
 	newAccountsStore := &accountStore{}
 	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
 		return err
-	}
-	if len(newAccountsStore.PublicKeys) == 0 || len(newAccountsStore.PrivateKeys) == 0 {
-		return errors.New("attempted to reload a keystore with 0 public/private keys")
 	}
 	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
 		return errors.New("number of public and private keys in keystore do not match")

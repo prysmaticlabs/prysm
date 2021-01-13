@@ -22,8 +22,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "wallet")
-
 const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"
@@ -47,9 +45,9 @@ const (
 var (
 	// ErrNoWalletFound signifies there was no wallet directory found on-disk.
 	ErrNoWalletFound = errors.New(
-		"no wallet found. You can create a new wallet with validator wallet create. " +
+		"no wallet found. You can create a new wallet with `validator wallet create`. " +
 			"If you already did, perhaps you created a wallet in a custom directory, which you can specify using " +
-			"--wallet-dir=/path/to/my/wallet",
+			"`--wallet-dir=/path/to/my/wallet`",
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
@@ -336,11 +334,11 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([
 		return []byte{}, errors.Wrap(err, "could not find file")
 	}
 	if len(matches) == 0 {
-		return []byte{}, fmt.Errorf("no files found %s", fullPath)
+		return []byte{}, fmt.Errorf("no files found in path: %s", fullPath)
 	}
 	rawData, err := ioutil.ReadFile(matches[0])
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not read %s", filePath)
+		return nil, errors.Wrapf(err, "could not read path: %s", filePath)
 	}
 	return rawData, nil
 }
@@ -358,7 +356,7 @@ func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (s
 		return "", errors.Wrap(err, "could not find file")
 	}
 	if len(matches) == 0 {
-		return "", fmt.Errorf("no files found %s", fullPath)
+		return "", fmt.Errorf("no files found in path: %s", fullPath)
 	}
 	fullFileName := filepath.Base(matches[0])
 	return fullFileName, nil
@@ -382,7 +380,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) 
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
 	// Write the config file to disk.
 	if err := fileutil.WriteFile(configFilePath, encoded); err != nil {
-		return errors.Wrapf(err, "could not write %s", configFilePath)
+		return errors.Wrapf(err, "could not write config to path: %s", configFilePath)
 	}
 	log.WithField("configFilePath", configFilePath).Debug("Wrote keymanager config file to disk")
 	return nil
@@ -410,7 +408,7 @@ func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error
 			return keymanagerKind, nil
 		}
 	}
-	return 0, errors.New("no keymanager folder, 'imported', 'remote', nor 'derived' found in wallet path")
+	return 0, errors.New("no keymanager folder (imported, remote, derived) found in wallet path")
 }
 
 func inputPassword(

@@ -10,9 +10,7 @@ var migrationCompleted = []byte("done")
 
 type migration func(*bolt.Tx) error
 
-var migrations = []migration{
-	migrateUnattestedEpochsForAttestingHistory,
-}
+var migrations = []migration{}
 
 // RunMigrations defined in the migrations array.
 func (s *Store) RunMigrations(ctx context.Context) error {
@@ -20,6 +18,7 @@ func (s *Store) RunMigrations(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+
 		if err := s.db.Update(m); err != nil {
 			return err
 		}

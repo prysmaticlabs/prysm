@@ -19,7 +19,10 @@ go_test(
 
 go_library(
     name = "go_default_library",
-    srcs = ["node.go"],
+    srcs = [
+        "log.go",
+        "node.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator/node",
     visibility = ["//validator:__subpackages__"],
     deps = [

@@ -5,27 +5,42 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 )
 
+const (
+	// Number of attestation records we can hold in memory
+	// before we flush them to the database. Roughly corresponds
+	// to the max number of keys per validator client, but there is no
+	// detriment if there are more keys than this capacity, as attestations
+	// for those keys will simply be flushed at the next flush interval.
+	attestationBatchCapacity = 2048
+	// Time interval after which we flush attestation records to the database
+	// from a batch kept in memory for slashing protection.
+	attestationBatchWriteInterval = time.Millisecond * 100
+)
+
 // ProtectionDbFileName Validator slashing protection db file name.
-var ProtectionDbFileName = "validator.db"
+var (
+	ProtectionDbFileName = "validator.db"
+)
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                         *bolt.DB
-	databasePath               string
-	lock                       sync.Mutex
-	attestingHistoriesByPubKey map[[48]byte]EncHistoryData
+	db                           *bolt.DB
+	databasePath                 string
+	batchedAttestations          []*AttestationRecord
+	batchedAttestationsChan      chan *AttestationRecord
+	batchAttestationsFlushedFeed *event.Feed
 }
 
 // Close closes the underlying boltdb database.
@@ -87,24 +102,25 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	}
 
 	kv := &Store{
-		db:                         boltDB,
-		databasePath:               dirPath,
-		attestingHistoriesByPubKey: make(map[[48]byte]EncHistoryData),
+		db:                           boltDB,
+		databasePath:                 dirPath,
+		batchedAttestations:          make([]*AttestationRecord, 0, attestationBatchCapacity),
+		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
+		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
 			tx,
 			genesisInfoBucket,
-			historicProposalsBucket,
 			historicAttestationsBucket,
-			newHistoricAttestationsBucket,
-			newHistoricProposalsBucket,
+			historicProposalsBucket,
 			lowestSignedSourceBucket,
 			lowestSignedTargetBucket,
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
 			slashablePublicKeysBucket,
+			pubKeysBucket,
 			migrationsBucket,
 		)
 	}); err != nil {
@@ -118,26 +134,27 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 		}
 	}
 
-	// We then fetch the attestation histories for each public key
-	// and store them in a map for usage at runtime.
-	if !featureconfig.Get().DisableAttestingHistoryDBCache {
-		// No need for a lock here as this function is only called once
-		// to initialize the database and would lead to deadlocks otherwise.
-		for _, pubKey := range pubKeys {
-			history, err := kv.AttestationHistoryForPubKeyV2(ctx, pubKey)
-			if err != nil {
-				return nil, err
-			}
-			kv.attestingHistoriesByPubKey[pubKey] = history
-		}
+	// Perform a special migration to an optimal attester protection DB schema.
+	if err := kv.migrateOptimalAttesterProtection(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not migrate attester protection to more efficient format")
 	}
+
+	// Prune attesting records older than the current weak subjectivity period.
+	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not prune old attestations from DB")
+	}
+
+	// Batch save attestation records for slashing protection at timed
+	// intervals to our database.
+	go kv.batchAttestationWrites(ctx)
+
 	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
 
 // UpdatePublicKeysBuckets for a specified list of keys.
 func (store *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	return store.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(newHistoricProposalsBucket)
+		bucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKey := range pubKeys {
 			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
 				return errors.Wrap(err, "failed to create proposal history bucket")

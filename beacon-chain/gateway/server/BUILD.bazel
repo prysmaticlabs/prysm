@@ -6,7 +6,10 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 
 go_library(
     name = "go_default_library",
-    srcs = ["main.go"],
+    srcs = [
+        "log.go",
+        "main.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/gateway/server",
     visibility = ["//visibility:private"],
     deps = [
