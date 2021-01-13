@@ -35,8 +35,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "ssz_regression_test.go",
-        "ssz_static_test.go",
         "tags_test.go",
     ],
     data = [

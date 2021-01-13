@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
@@ -257,7 +259,8 @@ func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data
 	if err != nil {
 		return nil, err
 	}
-	root, err := helpers.ComputeSigningRoot(data.Slot, d)
+	sszUint := p2ptypes.SSZUint64(data.Slot)
+	root, err := helpers.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err
 	}

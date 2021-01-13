@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -123,7 +125,8 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 	}
 
 	var sig bls.Signature
-	root, err := helpers.ComputeSigningRoot(slot, domain.SignatureDomain)
+	sszUint := p2ptypes.SSZUint64(slot)
+	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}

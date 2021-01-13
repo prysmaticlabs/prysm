@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+
 	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -191,7 +193,8 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	}
 
 	var randaoReveal bls.Signature
-	root, err := helpers.ComputeSigningRoot(epoch, domain.SignatureDomain)
+	sszUint := p2ptypes.SSZUint64(epoch)
+	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
