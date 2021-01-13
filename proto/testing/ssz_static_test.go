@@ -9,7 +9,6 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
@@ -52,7 +51,13 @@ func runSSZStaticTests(t *testing.T, config string) {
 						return beaconState.HashTreeRoot(context.Background())
 					}
 				} else {
-					htr = ssz.HashTreeRoot
+					htr = func(s interface{}) ([32]byte, error) {
+						sszObj, ok := s.(fssz.HashRoot)
+						if !ok {
+							return [32]byte{}, errors.New("could not get hash root, not compatible object")
+						}
+						return sszObj.HashTreeRoot()
+					}
 				}
 
 				root, err := htr(object)
