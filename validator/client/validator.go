@@ -186,7 +186,7 @@ func (v *validator) queryChainStart(ctx context.Context) (ethpb.BeaconNodeValida
 	if err == nil {
 		return stream, nil
 	}
-	log.WithError(err).Error("Could not fetch chain start from beacon node")
+	log.WithError(err).Warn("Could not fetch chain start from beacon node. Beacon chain might be offline")
 	ticker := time.NewTicker(chainStartPollingInterval)
 	defer ticker.Stop()
 	log.Info("Waiting for chain start... Beacon chain might be offline")
@@ -197,7 +197,7 @@ func (v *validator) queryChainStart(ctx context.Context) (ethpb.BeaconNodeValida
 			if err == nil {
 				return stream, nil
 			}
-			log.WithError(err).Error("Could not fetch chain start event from beacon node. Beacon chain might be offline")
+			log.WithError(err).Warn("Could not fetch chain start event from beacon node. Beacon chain might be offline")
 		case <-ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return nil, ctx.Err()
