@@ -53,7 +53,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	}
 	km, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
-		return errors.Wrap(err, MsgCouldNotInitializeKeymanager)
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
 	pubKeys, err := km.FetchAllValidatingPublicKeys(cliCtx.Context)
 	if err != nil {

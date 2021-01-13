@@ -62,7 +62,7 @@ type Service struct {
 	canonicalFetcher        blockchain.CanonicalFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
-	genesisTimeFetcher      blockchain.TimeFetcher
+	timeFetcher             blockchain.TimeFetcher
 	genesisFetcher          blockchain.GenesisFetcher
 	attestationReceiver     blockchain.AttestationReceiver
 	blockReceiver           blockchain.BlockReceiver
@@ -150,7 +150,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
 		canonicalFetcher:        cfg.CanonicalFetcher,
-		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
+		timeFetcher:             cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		attestationReceiver:     cfg.AttestationReceiver,
 		blockReceiver:           cfg.BlockReceiver,
@@ -237,7 +237,7 @@ func (s *Service) Start() {
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
 		FinalizationFetcher:    s.finalizationFetcher,
-		GenesisTimeFetcher:     s.genesisTimeFetcher,
+		TimeFetcher:            s.timeFetcher,
 		CanonicalStateChan:     s.canonicalStateChan,
 		BlockFetcher:           s.powChainService,
 		DepositFetcher:         s.depositFetcher,
@@ -261,7 +261,7 @@ func (s *Service) Start() {
 		BeaconDB:             s.beaconDB,
 		Server:               s.grpcServer,
 		SyncChecker:          s.syncService,
-		GenesisTimeFetcher:   s.genesisTimeFetcher,
+		GenesisTimeFetcher:   s.timeFetcher,
 		PeersFetcher:         s.peersFetcher,
 		PeerManager:          s.peerManager,
 		GenesisFetcher:       s.genesisFetcher,
@@ -272,10 +272,11 @@ func (s *Service) Start() {
 		BeaconDB:           s.beaconDB,
 		Server:             s.grpcServer,
 		SyncChecker:        s.syncService,
-		GenesisTimeFetcher: s.genesisTimeFetcher,
+		GenesisTimeFetcher: s.timeFetcher,
 		PeersFetcher:       s.peersFetcher,
 		PeerManager:        s.peerManager,
 		GenesisFetcher:     s.genesisFetcher,
+		HeadFetcher:        s.headFetcher,
 	}
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
@@ -289,7 +290,7 @@ func (s *Service) Start() {
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,
 		CanonicalStateChan:          s.canonicalStateChan,
-		GenesisTimeFetcher:          s.genesisTimeFetcher,
+		GenesisTimeFetcher:          s.timeFetcher,
 		StateNotifier:               s.stateNotifier,
 		BlockNotifier:               s.blockNotifier,
 		AttestationNotifier:         s.operationNotifier,
@@ -309,7 +310,7 @@ func (s *Service) Start() {
 		DepositFetcher:      s.depositFetcher,
 		BlockFetcher:        s.powChainService,
 		CanonicalStateChan:  s.canonicalStateChan,
-		GenesisTimeFetcher:  s.genesisTimeFetcher,
+		GenesisTimeFetcher:  s.timeFetcher,
 		StateNotifier:       s.stateNotifier,
 		BlockNotifier:       s.blockNotifier,
 		AttestationNotifier: s.operationNotifier,
@@ -325,7 +326,7 @@ func (s *Service) Start() {
 	if s.enableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debug.Server{
-			GenesisTimeFetcher: s.genesisTimeFetcher,
+			GenesisTimeFetcher: s.timeFetcher,
 			BeaconDB:           s.beaconDB,
 			StateGen:           s.stateGen,
 			HeadFetcher:        s.headFetcher,

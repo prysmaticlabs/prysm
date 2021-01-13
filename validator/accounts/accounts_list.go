@@ -32,7 +32,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		return errors.New("wrong wallet password entered")
 	}
 	if err != nil {
-		return errors.Wrap(err, MsgCouldNotInitializeKeymanager)
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)

@@ -74,11 +74,11 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		}
 		km, err := w.InitializeKeymanager(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, MsgCouldNotInitializeKeymanager)
+			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 		}
 		importedKm, ok := km.(*imported.Keymanager)
 		if !ok {
-			return nil, errors.Wrap(err, MsgCouldNotInitializeKeymanager)
+			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 		}
 		accountsKeystore, err := importedKm.CreateAccountsKeystore(ctx, make([][]byte, 0), make([][]byte, 0))
 		if err != nil {
