@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	"github.com/prysmaticlabs/go-ssz"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -108,7 +108,11 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !ssz.DeepEqual(metadata, p2.LocalMetadata) {
+	expectedRoot, err := metadata.HashTreeRoot()
+	require.NoError(t, err)
+	receivedRoot, err := p2.LocalMetadata.HashTreeRoot()
+	require.NoError(t, err)
+	if !bytes.Equal(expectedRoot[:], receivedRoot[:]) {
 		t.Fatalf("Metadata unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 

@@ -1,6 +1,7 @@
 package attestations
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"sort"
@@ -8,7 +9,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -54,7 +54,12 @@ func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	for _, tt := range tests {
 		got, err := AggregatePair(tt.a1, tt.a2)
 		require.NoError(t, err)
-		require.Equal(t, true, ssz.DeepEqual(got, tt.want))
+
+		expectedRoot, err := got.HashTreeRoot()
+		require.NoError(t, err)
+		receivedRoot, err := tt.want.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, true, bytes.Equal(expectedRoot[:], receivedRoot[:]))
 	}
 }
 

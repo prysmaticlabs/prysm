@@ -1,6 +1,7 @@
 package state_test
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"strconv"
@@ -8,7 +9,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -225,7 +225,11 @@ func TestForkManualCopy_OK(t *testing.T) {
 	require.NoError(t, a.SetFork(wantedFork))
 
 	newState := a.CloneInnerState()
-	if !ssz.DeepEqual(newState.Fork, wantedFork) {
+	expectedRoot, err := newState.Fork.HashTreeRoot()
+	require.NoError(t, err)
+	receivedRoot, err := wantedFork.HashTreeRoot()
+	require.NoError(t, err)
+	if !bytes.Equal(expectedRoot[:], receivedRoot[:]) {
 		t.Errorf("Wanted %v but got %v", wantedFork, newState.Fork)
 	}
 

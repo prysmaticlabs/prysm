@@ -24,5 +24,6 @@ type Server struct {
 	PeerManager        p2p.PeerManager
 	GenesisTimeFetcher blockchain.TimeFetcher
 	GenesisFetcher     blockchain.GenesisFetcher
+	HeadFetcher        blockchain.HeadFetcher
 	ethpb.UnimplementedBeaconNodeServer
 }

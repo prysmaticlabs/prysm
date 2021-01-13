@@ -9,8 +9,13 @@ go_library(
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/testutil:__pkg__",
+        "//validator/client:__pkg__",
+    ],
     deps = [
+        "//shared/htrutils:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

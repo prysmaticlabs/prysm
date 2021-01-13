@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/progressutil"
 	bolt "go.etcd.io/bbolt"
@@ -63,18 +62,12 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 
 	bar := progressutil.InitializeProgressBar(numKeys, "Migrating attesting history to more efficient format")
 	for i, publicKey := range publicKeyBytes {
-		attestingHistoryForPubKey := attestingHistoryBytes[i]
+		var attestingHistory deprecatedEncodedAttestingHistory
+		attestingHistory = attestingHistoryBytes[i]
 		err = store.db.Update(func(tx *bolt.Tx) error {
-			if attestingHistoryForPubKey == nil {
+			if attestingHistory == nil {
 				return nil
 			}
-			var attestingHistory EncHistoryData
-			var err error
-			attestingHistory, err = snappy.Decode(nil /*dst*/, attestingHistoryForPubKey)
-			if err != nil {
-				return err
-			}
-
 			bucket := tx.Bucket(pubKeysBucket)
 			pkBucket := bucket.Bucket(publicKey)
 			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
@@ -84,18 +77,18 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 			// Extract every single source, target, signing root
 			// from the attesting history then insert them into the
 			// respective buckets under the new db schema.
-			latestEpochWritten, err := attestingHistory.GetLatestEpochWritten(ctx)
+			latestEpochWritten, err := attestingHistory.getLatestEpochWritten(ctx)
 			if err != nil {
 				return err
 			}
 			// For every epoch since genesis up to the highest epoch written, we then
 			// extract historical data and insert it into the new schema.
 			for targetEpoch := uint64(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
-				historicalAtt, err := attestingHistory.GetTargetData(ctx, targetEpoch)
+				historicalAtt, err := attestingHistory.getTargetData(ctx, targetEpoch)
 				if err != nil {
 					return err
 				}
-				if historicalAtt.IsEmpty() {
+				if historicalAtt.isEmpty() {
 					continue
 				}
 				targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)

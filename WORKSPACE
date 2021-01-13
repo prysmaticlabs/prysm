@@ -391,10 +391,6 @@ load("//:deps.bzl", "prysm_deps")
 # gazelle:repository_macro deps.bzl%prysm_deps
 prysm_deps()
 
-load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-
-go_ssz_dependencies()
-
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -44,26 +43,25 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 			setup: func(t *testing.T, validatorDB *Store) {
 				ctx := context.Background()
 				pubKey := [48]byte{1}
-				history := NewAttestationHistoryArray(0)
+				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
 				numEpochs := uint64(50)
 				for i := uint64(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.SetTargetData(ctx, i, &HistoryData{
+					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.SetLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 			},
@@ -104,26 +102,25 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 			setup: func(t *testing.T, validatorDB *Store) {
 				ctx := context.Background()
 				pubKey := [48]byte{1}
-				history := NewAttestationHistoryArray(0)
+				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
 				numEpochs := uint64(50)
 				for i := uint64(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.SetTargetData(ctx, i, &HistoryData{
+					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.SetLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 
@@ -140,18 +137,17 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 				// Write one more entry to the DB with the old format.
 				var sr [32]byte
 				copy(sr[:], fmt.Sprintf("%d", numEpochs+1))
-				newHist, err = newHist.SetTargetData(ctx, numEpochs+1, &HistoryData{
+				newHist, err = newHist.setTargetData(ctx, numEpochs+1, &deprecatedHistoryData{
 					Source:      numEpochs,
 					SigningRoot: sr[:],
 				})
 				require.NoError(t, err)
-				newHist, err = newHist.SetLatestEpochWritten(ctx, numEpochs+1)
+				newHist, err = newHist.setLatestEpochWritten(ctx, numEpochs+1)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
 					bucket := tx.Bucket(historicAttestationsBucket)
-					enc := snappy.Encode(nil /*dst*/, newHist)
-					return bucket.Put(pubKey[:], enc)
+					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 			},

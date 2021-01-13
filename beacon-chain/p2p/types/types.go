@@ -6,6 +6,7 @@ package types
 import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -31,6 +32,17 @@ func (s *SSZUint64) MarshalSSZ() ([]byte, error) {
 	return marshalledObj, nil
 }
 
+// HashTreeRoot hashes the uint64 object following the SSZ standard.
+func (s *SSZUint64) HashTreeRoot() ([32]byte, error) {
+	return htrutils.Uint64Root(uint64(*s)), nil
+}
+
+// HashTreeRootWith hashes the uint64 object with the given hasher.
+func (s *SSZUint64) HashTreeRootWith(hh *ssz.Hasher) error {
+	hh.PutUint64(uint64(*s))
+	return nil
+}
+
 // SizeSSZ returns the size of the serialized representation.
 func (s *SSZUint64) SizeSSZ() int {
 	return 8
@@ -43,6 +55,22 @@ func (s *SSZUint64) UnmarshalSSZ(buf []byte) error {
 		return errors.Errorf("expected buffer with length of %d but received length %d", s.SizeSSZ(), len(buf))
 	}
 	*s = SSZUint64(ssz.UnmarshallUint64(buf))
+	return nil
+}
+
+// SSZUint64 is a uint64 type that satisfies the fast-ssz interface.
+type SSZBytes []byte
+
+// HashTreeRoot hashes the uint64 object following the SSZ standard.
+func (s *SSZBytes) HashTreeRoot() ([32]byte, error) {
+	hasher := ssz.NewHasher()
+	hasher.PutBytes(*s)
+	return hasher.HashRoot()
+}
+
+// HashTreeRootWith hashes the uint64 object with the given hasher.
+func (s *SSZBytes) HashTreeRootWith(hh *ssz.Hasher) error {
+	hh.PutBytes(*s)
 	return nil
 }
 

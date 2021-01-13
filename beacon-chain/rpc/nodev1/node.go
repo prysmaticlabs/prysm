@@ -46,7 +46,13 @@ func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.Vers
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
 func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncingResponse, error) {
-	return nil, errors.New("unimplemented")
+	headSlot := ns.HeadFetcher.HeadSlot()
+	return &ethpb.SyncingResponse{
+		Data: &ethpb.SyncInfo{
+			HeadSlot:     headSlot,
+			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
+		},
+	}, nil
 }
 
 // GetHealth returns node health status in http status codes. Useful for load balancers.

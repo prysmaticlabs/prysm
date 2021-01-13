@@ -47,6 +47,7 @@ type ChainService struct {
 	ValidAttestation            bool
 	ForkChoiceStore             *protoarray.Store
 	VerifyBlkDescendantErr      error
+	Slot                        *uint64 // Pointer because 0 is a useful value, so checking against it can be incorrect.
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -323,6 +324,9 @@ func (ms *ChainService) GenesisValidatorRoot() [32]byte {
 
 // CurrentSlot mocks the same method in the chain service.
 func (ms *ChainService) CurrentSlot() uint64 {
+	if ms.Slot != nil {
+		return *ms.Slot
+	}
 	return uint64(time.Now().Unix()-ms.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot
 }
 
