@@ -5,11 +5,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
-
-var log = logrus.WithField("prefix", "slashing-protection")
 
 // Commands for slashing protection.
 var Commands = &cli.Command{

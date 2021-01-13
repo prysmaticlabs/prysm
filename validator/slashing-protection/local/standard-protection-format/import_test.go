@@ -15,7 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	slashTest "github.com/prysmaticlabs/prysm/validator/testing"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	valtest "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -33,7 +34,7 @@ func TestStore_ImportInterchangeData_NilData_FailsSilently(t *testing.T) {
 	ctx := context.Background()
 	validatorDB := dbtest.SetupDB(t, nil)
 
-	interchangeJSON := &EIPSlashingProtectionFormat{}
+	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	encoded, err := json.Marshal(interchangeJSON)
 	require.NoError(t, err)
 
@@ -46,14 +47,14 @@ func TestStore_ImportInterchangeData_NilData_FailsSilently(t *testing.T) {
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
-	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := slashTest.MockAttestingAndProposalHistories(numValidators)
-	standardProtectionFormat, err := slashTest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(numValidators)
+	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
 	// We replace a slot of one of the blocks with junk data.
@@ -107,14 +108,14 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 func TestStore_ImportInterchangeData_OK(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10
-	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := slashTest.MockAttestingAndProposalHistories(numValidators)
-	standardProtectionFormat, err := slashTest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(numValidators)
+	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
 	// We encode the standard slashing protection struct into a JSON format.
@@ -168,14 +169,14 @@ func Test_validateMetadata(t *testing.T) {
 	hex.Encode(goodStr, goodRoot[:])
 	tests := []struct {
 		name                   string
-		interchangeJSON        *EIPSlashingProtectionFormat
+		interchangeJSON        *format.EIPSlashingProtectionFormat
 		dbGenesisValidatorRoot []byte
 		wantErr                bool
 		wantFatal              string
 	}{
 		{
 			name: "Incorrect version for EIP format should fail",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &format.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
@@ -188,7 +189,7 @@ func Test_validateMetadata(t *testing.T) {
 		},
 		{
 			name: "Junk data for version should fail",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &format.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
@@ -201,12 +202,12 @@ func Test_validateMetadata(t *testing.T) {
 		},
 		{
 			name: "Proper version field should pass",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &format.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
-					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+					InterchangeFormatVersion: format.INTERCHANGE_FORMAT_VERSION,
 					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
@@ -235,18 +236,18 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 
 	tests := []struct {
 		name                   string
-		interchangeJSON        *EIPSlashingProtectionFormat
+		interchangeJSON        *format.EIPSlashingProtectionFormat
 		dbGenesisValidatorRoot []byte
 		wantErr                bool
 	}{
 		{
 			name: "Same genesis roots should not fail",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &format.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
-					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+					InterchangeFormatVersion: format.INTERCHANGE_FORMAT_VERSION,
 					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
@@ -255,12 +256,12 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 		},
 		{
 			name: "Different genesis roots should not fail",
-			interchangeJSON: &EIPSlashingProtectionFormat{
+			interchangeJSON: &format.EIPSlashingProtectionFormat{
 				Metadata: struct {
 					InterchangeFormatVersion string `json:"interchange_format_version"`
 					GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 				}{
-					InterchangeFormatVersion: INTERCHANGE_FORMAT_VERSION,
+					InterchangeFormatVersion: format.INTERCHANGE_FORMAT_VERSION,
 					GenesisValidatorsRoot:    string(secondStr),
 				},
 			},
@@ -286,21 +287,21 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 
 func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	numValidators := 4
-	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	roots := slashTest.CreateMockRoots(numValidators)
+	roots := valtest.CreateMockRoots(numValidators)
 	tests := []struct {
 		name    string
-		data    []*ProtectionData
-		want    map[[48]byte][]*SignedBlock
+		data    []*format.ProtectionData
+		want    map[[48]byte][]*format.SignedBlock
 		wantErr bool
 	}{
 		{
 			name: "nil values are skipped",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -310,7 +311,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "3",
 							SigningRoot: fmt.Sprintf("%x", roots[2]),
@@ -318,7 +319,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*format.SignedBlock{
 				publicKeys[0]: {
 					{
 						Slot:        "1",
@@ -333,10 +334,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "same blocks but different public keys are parsed correctly",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -349,7 +350,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[1]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -361,7 +362,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*format.SignedBlock{
 				publicKeys[0]: {
 					{
 						Slot:        "1",
@@ -386,10 +387,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -402,7 +403,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "3",
 							SigningRoot: fmt.Sprintf("%x", roots[2]),
@@ -410,7 +411,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*format.SignedBlock{
 				publicKeys[0]: {
 					{
 						Slot:        "1",
@@ -429,10 +430,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "full duplicate entries are uniquely parsed",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -441,7 +442,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -449,7 +450,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*format.SignedBlock{
 				publicKeys[0]: {
 					{
 						Slot:        "1",
@@ -464,10 +465,10 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 		},
 		{
 			name: "intersecting duplicate public key entries are handled properly",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -480,7 +481,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*SignedBlock{
+					SignedBlocks: []*format.SignedBlock{
 						{
 							Slot:        "2",
 							SigningRoot: fmt.Sprintf("%x", roots[1]),
@@ -492,7 +493,7 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedBlock{
+			want: map[[48]byte][]*format.SignedBlock{
 				publicKeys[0]: {
 					{
 						Slot:        "1",
@@ -530,21 +531,21 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 
 func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	numValidators := 4
-	publicKeys, err := slashTest.CreateRandomPubKeys(numValidators)
+	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	roots := slashTest.CreateMockRoots(numValidators)
+	roots := valtest.CreateMockRoots(numValidators)
 	tests := []struct {
 		name    string
-		data    []*ProtectionData
-		want    map[[48]byte][]*SignedAttestation
+		data    []*format.ProtectionData
+		want    map[[48]byte][]*format.SignedAttestation
 		wantErr bool
 	}{
 		{
 			name: "nil values are skipped",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							TargetEpoch: "3",
@@ -555,7 +556,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "3",
 							TargetEpoch: "5",
@@ -564,7 +565,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*format.SignedAttestation{
 				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -581,10 +582,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "same attestations but different public keys are parsed correctly",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -597,7 +598,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[1]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -609,7 +610,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*format.SignedAttestation{
 				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -634,10 +635,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "disjoint sets of signed attestations by the same public key are parsed correctly",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							TargetEpoch: "3",
@@ -652,7 +653,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "3",
 							TargetEpoch: "5",
@@ -661,7 +662,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*format.SignedAttestation{
 				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -683,10 +684,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "full duplicate entries are uniquely parsed",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -695,7 +696,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -703,7 +704,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*format.SignedAttestation{
 				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -718,10 +719,10 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 		},
 		{
 			name: "intersecting duplicate public key entries are handled properly",
-			data: []*ProtectionData{
+			data: []*format.ProtectionData{
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "1",
 							SigningRoot: fmt.Sprintf("%x", roots[0]),
@@ -734,7 +735,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 				},
 				{
 					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedAttestations: []*SignedAttestation{
+					SignedAttestations: []*format.SignedAttestation{
 						{
 							SourceEpoch: "2",
 							SigningRoot: fmt.Sprintf("%x", roots[1]),
@@ -746,7 +747,7 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 					},
 				},
 			},
-			want: map[[48]byte][]*SignedAttestation{
+			want: map[[48]byte][]*format.SignedAttestation{
 				publicKeys[0]: {
 					{
 						SourceEpoch: "1",
@@ -786,12 +787,12 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 	var tests = []struct {
 		name     string
 		expected [][48]byte
-		given    map[[48]byte][]*SignedBlock
+		given    map[[48]byte][]*format.SignedBlock
 	}{
 		{
 			name:     "No slashable keys returns empty",
 			expected: make([][48]byte, 0),
-			given: map[[48]byte][]*SignedBlock{
+			given: map[[48]byte][]*format.SignedBlock{
 				{1}: {
 					{
 						Slot: "1",
@@ -813,14 +814,14 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 		{
 			name:     "Empty data returns empty",
 			expected: make([][48]byte, 0),
-			given:    make(map[[48]byte][]*SignedBlock),
+			given:    make(map[[48]byte][]*format.SignedBlock),
 		},
 		{
 			name: "Properly finds public keys with slashable data",
 			expected: [][48]byte{
 				{1}, {3},
 			},
-			given: map[[48]byte][]*SignedBlock{
+			given: map[[48]byte][]*format.SignedBlock{
 				{1}: {
 					{
 						Slot: "1",
@@ -855,7 +856,7 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 			expected: [][48]byte{
 				{2}, {3},
 			},
-			given: map[[48]byte][]*SignedBlock{
+			given: map[[48]byte][]*format.SignedBlock{
 				// Different signing roots and same slot should not be slashable.
 				{1}: {
 					{
@@ -916,14 +917,14 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		name                 string
-		previousAttsByPubKey map[[48]byte][]*SignedAttestation
-		incomingAttsByPubKey map[[48]byte][]*SignedAttestation
+		previousAttsByPubKey map[[48]byte][]*format.SignedAttestation
+		incomingAttsByPubKey map[[48]byte][]*format.SignedAttestation
 		want                 map[[48]byte]bool
 		wantErr              bool
 	}{
 		{
 			name: "Properly filters out double voting attester keys",
-			previousAttsByPubKey: map[[48]byte][]*SignedAttestation{
+			previousAttsByPubKey: map[[48]byte][]*format.SignedAttestation{
 				{1}: {
 					{
 						SourceEpoch: "2",
@@ -962,7 +963,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 		},
 		{
 			name: "Returns empty if no keys are slashable",
-			previousAttsByPubKey: map[[48]byte][]*SignedAttestation{
+			previousAttsByPubKey: map[[48]byte][]*format.SignedAttestation{
 				{1}: {
 					{
 						SourceEpoch: "2",
@@ -994,7 +995,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 		},
 		{
 			name: "Properly filters out surround voting attester keys",
-			previousAttsByPubKey: map[[48]byte][]*SignedAttestation{
+			previousAttsByPubKey: map[[48]byte][]*format.SignedAttestation{
 				{1}: {
 					{
 						SourceEpoch: "2",

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
 
 func Test_getSignedAttestationsByPubKey(t *testing.T) {
@@ -40,7 +41,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 	signedAttestations, err = getSignedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
 
-	wanted := []*SignedAttestation{
+	wanted := []*format.SignedAttestation{
 		{
 			SourceEpoch: "0",
 			TargetEpoch: "4",
@@ -85,7 +86,7 @@ func Test_getSignedBlocksByPubKey(t *testing.T) {
 	// when we attempt to retrieve it from disk.
 	signedBlocks, err = getSignedBlocksByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
-	wanted := []*SignedBlock{
+	wanted := []*format.SignedBlock{
 		{
 			Slot:        "1",
 			SigningRoot: fmt.Sprintf("%#x", dummyRoot1),

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -24,7 +25,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not read slashing protection JSON file")
 	}
-	interchangeJSON := &EIPSlashingProtectionFormat{}
+	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	if err := json.Unmarshal(encodedJSON, interchangeJSON); err != nil {
 		return errors.Wrap(err, "could not unmarshal slashing protection JSON file")
 	}
@@ -139,14 +140,14 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	return nil
 }
 
-func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
+func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *format.EIPSlashingProtectionFormat) error {
 	// We need to ensure the version in the metadata field matches the one we support.
 	version := interchangeJSON.Metadata.InterchangeFormatVersion
-	if version != INTERCHANGE_FORMAT_VERSION {
+	if version != format.INTERCHANGE_FORMAT_VERSION {
 		return fmt.Errorf(
 			"slashing protection JSON version '%s' is not supported, wanted '%s'",
 			version,
-			INTERCHANGE_FORMAT_VERSION,
+			format.INTERCHANGE_FORMAT_VERSION,
 		)
 	}
 
@@ -188,8 +189,8 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 // "0x2932232930: {
 //   SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
 //  }
-func parseBlocksForUniquePublicKeys(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
-	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
+func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte][]*format.SignedBlock, error) {
+	signedBlocksByPubKey := make(map[[48]byte][]*format.SignedBlock)
 	for _, validatorData := range data {
 		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
@@ -220,8 +221,8 @@ func parseBlocksForUniquePublicKeys(data []*ProtectionData) (map[[48]byte][]*Sig
 // "0x2932232930: {
 //   SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
 //  }
-func parseAttestationsForUniquePublicKeys(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
-	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
+func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte][]*format.SignedAttestation, error) {
+	signedAttestationsByPubKey := make(map[[48]byte][]*format.SignedAttestation)
 	for _, validatorData := range data {
 		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
@@ -283,7 +284,7 @@ func filterSlashablePubKeysFromAttestations(
 	return slashablePubKeys, nil
 }
 
-func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
+func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
 		slot, err := Uint64FromString(proposal.Slot)
@@ -308,7 +309,7 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*k
 	}, nil
 }
 
-func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) ([]*kv.AttestationRecord, error) {
+func transformSignedAttestations(ctx context.Context, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
 	historicalAtts := make([]*kv.AttestationRecord, 0)
 	for _, attestation := range atts {
 		target, err := Uint64FromString(attestation.TargetEpoch)

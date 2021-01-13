@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	protectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
 
 // MockSlashingProtectionJSON creates a mock, full slashing protection JSON struct
@@ -17,23 +17,23 @@ func MockSlashingProtectionJSON(
 	publicKeys [][48]byte,
 	attestingHistories [][]*kv.AttestationRecord,
 	proposalHistories []kv.ProposalHistoryForPubkey,
-) (*protectionFormat.EIPSlashingProtectionFormat, error) {
-	standardProtectionFormat := &protectionFormat.EIPSlashingProtectionFormat{}
+) (*format.EIPSlashingProtectionFormat, error) {
+	standardProtectionFormat := &format.EIPSlashingProtectionFormat{}
 	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{32}, 32))
-	standardProtectionFormat.Metadata.InterchangeFormatVersion = protectionFormat.INTERCHANGE_FORMAT_VERSION
+	standardProtectionFormat.Metadata.InterchangeFormatVersion = format.INTERCHANGE_FORMAT_VERSION
 	for i := 0; i < len(publicKeys); i++ {
-		data := &protectionFormat.ProtectionData{
+		data := &format.ProtectionData{
 			Pubkey: fmt.Sprintf("%#x", publicKeys[i]),
 		}
 		for _, att := range attestingHistories[i] {
-			data.SignedAttestations = append(data.SignedAttestations, &protectionFormat.SignedAttestation{
+			data.SignedAttestations = append(data.SignedAttestations, &format.SignedAttestation{
 				TargetEpoch: fmt.Sprintf("%d", att.Target),
 				SourceEpoch: fmt.Sprintf("%d", att.Source),
 				SigningRoot: fmt.Sprintf("%#x", att.SigningRoot),
 			})
 		}
 		for _, proposal := range proposalHistories[i].Proposals {
-			block := &protectionFormat.SignedBlock{
+			block := &format.SignedBlock{
 				Slot:        fmt.Sprintf("%d", proposal.Slot),
 				SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
 			}

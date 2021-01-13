@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	protectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 	slashtest "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -50,7 +51,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	// so we create a map to verify we have the data we expected.
 	require.Equal(t, len(wanted.Data), len(eipStandard.Data))
 
-	dataByPubKey := make(map[string]*protectionFormat.ProtectionData)
+	dataByPubKey := make(map[string]*format.ProtectionData)
 	for _, item := range wanted.Data {
 		dataByPubKey[item.Pubkey] = item
 	}
@@ -67,18 +68,18 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	pubKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, pubKeys)
-	wanted := &protectionFormat.EIPSlashingProtectionFormat{
+	wanted := &format.EIPSlashingProtectionFormat{
 		Metadata: struct {
 			InterchangeFormatVersion string `json:"interchange_format_version"`
 			GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 		}{
-			InterchangeFormatVersion: protectionFormat.INTERCHANGE_FORMAT_VERSION,
+			InterchangeFormatVersion: format.INTERCHANGE_FORMAT_VERSION,
 			GenesisValidatorsRoot:    fmt.Sprintf("%#x", [32]byte{}),
 		},
-		Data: []*protectionFormat.ProtectionData{
+		Data: []*format.ProtectionData{
 			{
 				Pubkey: fmt.Sprintf("%#x", pubKeys[0]),
-				SignedAttestations: []*protectionFormat.SignedAttestation{
+				SignedAttestations: []*format.SignedAttestation{
 					{
 						SourceEpoch: "1",
 						TargetEpoch: "2",
@@ -88,7 +89,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 						TargetEpoch: "9",
 					},
 				},
-				SignedBlocks: make([]*protectionFormat.SignedBlock, 0),
+				SignedBlocks: make([]*format.SignedBlock, 0),
 			},
 		},
 	}
@@ -177,11 +178,11 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey0 := standardProtectionFormat.Data[0].Pubkey
 	standardProtectionFormat.Data[0].SignedBlocks = append(
 		standardProtectionFormat.Data[0].SignedBlocks,
-		&protectionFormat.SignedBlock{
+		&format.SignedBlock{
 			Slot:        "700",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		&protectionFormat.SignedBlock{
+		&format.SignedBlock{
 			Slot:        "700",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{2}),
 		},
@@ -192,12 +193,12 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey1 := standardProtectionFormat.Data[1].Pubkey
 	standardProtectionFormat.Data[1].SignedAttestations = append(
 		standardProtectionFormat.Data[1].SignedAttestations,
-		&protectionFormat.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "700",
 			SourceEpoch: "699",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		&protectionFormat.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "700",
 			SourceEpoch: "699",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{2}),
@@ -209,12 +210,12 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey2 := standardProtectionFormat.Data[2].Pubkey
 	standardProtectionFormat.Data[2].SignedAttestations = append(
 		standardProtectionFormat.Data[2].SignedAttestations,
-		&protectionFormat.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "800",
 			SourceEpoch: "805",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{4}),
 		},
-		&protectionFormat.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "801",
 			SourceEpoch: "804",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{5}),
