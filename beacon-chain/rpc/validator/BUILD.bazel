@@ -8,6 +8,7 @@ go_library(
         "assignments.go",
         "attester.go",
         "exit.go",
+        "log.go",
         "proposer.go",
         "proposer_utils.go",
         "server.go",

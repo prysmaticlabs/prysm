@@ -114,6 +114,18 @@ message CheckPtInfo {
   Fork fork = 5;
 }
 
+// DepositMessage serves as a subset of deposit data in order to derive the signing root.
+message DepositMessage {
+  // 48 byte BLS public key of the validator.
+  bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
+
+  // A 32 byte hash of the withdrawal address public key.
+  bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+  // Deposit amount in gwei.
+  uint64 amount = 3;
+}
+
 message SyncCommittee {
   repeated bytes pubkeys = 1  [(gogoproto.moretags) = "ssz-size:\"1024,48\""];
   repeated bytes pubkey_aggregates = 2  [(gogoproto.moretags) = "ssz-size:\"16,48\""];

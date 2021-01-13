@@ -12,6 +12,7 @@ go_library(
     srcs = [
         "alias.go",
         "cmd.go",
+        "log.go",
         "restore.go",
     ] + select({
         ":kafka_disabled": [

@@ -6,6 +6,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "log.go",
         "skip_slot_cache.go",
         "state.go",
         "transition.go",

@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "helper.go",
+        "log.go",
         "node.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/node",

@@ -156,8 +156,10 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 		},
 
 		// Validator registry fields.
-		Validators: preState.Validators(),
-		Balances:   preState.Balances(),
+		Validators:                 preState.Validators(),
+		Balances:                   preState.Balances(),
+		PreviousEpochParticipation: preState.PreviousEpochParticipation(),
+		CurrentEpochParticipation:  preState.CurrentEpochParticipation(),
 
 		// Randomness and committees.
 		RandaoMixes: randaoMixes,
@@ -177,12 +179,10 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots:           [][]byte{},
-		BlockRoots:                blockRoots,
-		StateRoots:                stateRoots,
-		Slashings:                 slashings,
-		CurrentEpochAttestations:  []*pb.PendingAttestation{},
-		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		HistoricalRoots: [][]byte{},
+		BlockRoots:      blockRoots,
+		StateRoots:      stateRoots,
+		Slashings:       slashings,
 
 		// Eth1 data.
 		Eth1Data:         eth1Data,
@@ -244,10 +244,10 @@ func EmptyGenesisState() (*stateTrie.BeaconState, error) {
 		Validators: []*ethpb.Validator{},
 		Balances:   []uint64{},
 
-		JustificationBits:         []byte{0},
-		HistoricalRoots:           [][]byte{},
-		CurrentEpochAttestations:  []*pb.PendingAttestation{},
-		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		JustificationBits:          []byte{0},
+		HistoricalRoots:            [][]byte{},
+		CurrentEpochParticipation:  []*pb.ParticipationBits{},
+		PreviousEpochParticipation: []*pb.ParticipationBits{},
 
 		// Eth1 data.
 		Eth1Data:         &ethpb.Eth1Data{},

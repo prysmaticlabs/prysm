@@ -22,8 +22,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "wallet")
-
 const (
 	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
 	KeymanagerConfigFileName = "keymanageropts.json"

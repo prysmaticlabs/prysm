@@ -5,7 +5,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	log "github.com/sirupsen/logrus"
 )
 
 var (

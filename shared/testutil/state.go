@@ -28,8 +28,8 @@ var st, _ = stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{
 	JustificationBits:           bitfield.Bitvector4{0x0},
 	FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 	LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
-	PreviousEpochAttestations:   make([]*pb.PendingAttestation, 0),
-	CurrentEpochAttestations:    make([]*pb.PendingAttestation, 0),
+	PreviousEpochParticipation:  make([]*pb.ParticipationBits, 0),
+	CurrentEpochParticipation:   make([]*pb.ParticipationBits, 0),
 	PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	CurrentSyncCommittee: &pb.SyncCommittee{
 		Pubkeys:          filledByteSlice2D(params.BeaconConfig().SyncCommitteeSize, uint64(params.BeaconConfig().BLSPubkeyLength)),

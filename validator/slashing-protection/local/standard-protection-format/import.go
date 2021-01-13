@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -49,7 +50,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
-	attestingHistoryByPubKey := make(map[[48]byte]kv.EncHistoryData)
+	attestingHistoryByPubKey := make(map[[48]byte][]*historicalAttestation)
 	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Transform the processed signed blocks data from the JSON
@@ -64,11 +65,11 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		// Transform the processed signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
-		attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
+		historicalAtt, err := transformSignedAttestations(ctx, signedAtts)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
-		attestingHistoryByPubKey[pubKey] = *attestingHistory
+		attestingHistoryByPubKey[pubKey] = historicalAtt
 	}
 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
@@ -92,15 +93,27 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		len(attestingHistoryByPubKey),
 		"Importing attesting history for validator public keys",
 	)
-	for pubKey, history := range attestingHistoryByPubKey {
+	for pubKey, attestations := range attestingHistoryByPubKey {
 		if err := bar.Add(1); err != nil {
 			log.WithError(err).Debug("Could not increase progress bar")
 		}
-		if err := validatorDB.SaveAttestationHistoryForPubKeyV2(ctx, pubKey, history); err != nil {
-			return errors.Wrap(err, "could not save attesting history from imported JSON to database")
+		for _, att := range attestations {
+			indexedAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: att.sourceEpoch,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: att.targetEpoch,
+					},
+				},
+			}
+			if err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, att.signingRoot, indexedAtt); err != nil {
+				return errors.Wrap(err, "could not save attestation from imported JSON to database")
+			}
 		}
 	}
-	return saveLowestSourceTargetToDB(ctx, validatorDB, signedAttsByPubKey)
+	return nil
 }
 
 func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
@@ -222,18 +235,12 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*k
 	}, nil
 }
 
-func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) (*kv.EncHistoryData, error) {
-	attestingHistory := kv.NewAttestationHistoryArray(0)
-	highestEpochWritten := uint64(0)
-	var err error
+func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation) ([]*historicalAttestation, error) {
+	historicalAtts := make([]*historicalAttestation, 0)
 	for _, attestation := range atts {
 		target, err := uint64FromString(attestation.TargetEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid epoch: %v", target, err)
-		}
-		// Keep track of the highest epoch written from the imported JSON.
-		if target > highestEpochWritten {
-			highestEpochWritten = target
 		}
 		source, err := uint64FromString(attestation.SourceEpoch)
 		if err != nil {
@@ -247,64 +254,11 @@ func transformSignedAttestations(ctx context.Context, atts []*SignedAttestation)
 				return nil, fmt.Errorf("%#x is not a valid root: %v", signingRoot, err)
 			}
 		}
-		attestingHistory, err = attestingHistory.SetTargetData(
-			ctx, target, &kv.HistoryData{Source: source, SigningRoot: signingRoot[:]},
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not set target data for attesting history")
-		}
+		historicalAtts = append(historicalAtts, &historicalAttestation{
+			sourceEpoch: source,
+			targetEpoch: target,
+			signingRoot: signingRoot,
+		})
 	}
-	attestingHistory, err = attestingHistory.SetLatestEpochWritten(ctx, highestEpochWritten)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not set latest epoch written")
-	}
-	return &attestingHistory, nil
-}
-
-// This saves the lowest source and target epoch from the individual validator to the DB.
-func saveLowestSourceTargetToDB(ctx context.Context, validatorDB db.Database, signedAttsByPubKey map[[48]byte][]*SignedAttestation) error {
-	validatorLowestSourceEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested source epoch.
-	validatorLowestTargetEpoch := make(map[[48]byte]uint64) // Validator public key to lowest attested target epoch.
-	for pubKey, signedAtts := range signedAttsByPubKey {
-		for _, att := range signedAtts {
-			source, err := uint64FromString(att.SourceEpoch)
-			if err != nil {
-				return fmt.Errorf("%d is not a valid source: %v", source, err)
-			}
-			target, err := uint64FromString(att.TargetEpoch)
-			if err != nil {
-				return fmt.Errorf("%d is not a valid target: %v", target, err)
-			}
-			se, ok := validatorLowestSourceEpoch[pubKey]
-			if !ok {
-				validatorLowestSourceEpoch[pubKey] = source
-			} else if source < se {
-				validatorLowestSourceEpoch[pubKey] = source
-			}
-			te, ok := validatorLowestTargetEpoch[pubKey]
-			if !ok {
-				validatorLowestTargetEpoch[pubKey] = target
-			} else if target < te {
-				validatorLowestTargetEpoch[pubKey] = target
-			}
-		}
-	}
-
-	// This should not happen.
-	if len(validatorLowestTargetEpoch) != len(validatorLowestSourceEpoch) {
-		return errors.New("incorrect source and target map length")
-	}
-
-	// Save lowest source and target epoch to DB for every validator in the map.
-	for k, v := range validatorLowestSourceEpoch {
-		if err := validatorDB.SaveLowestSignedSourceEpoch(ctx, k, v); err != nil {
-			return err
-		}
-	}
-	for k, v := range validatorLowestTargetEpoch {
-		if err := validatorDB.SaveLowestSignedTargetEpoch(ctx, k, v); err != nil {
-			return err
-		}
-	}
-	return nil
+	return historicalAtts, nil
 }

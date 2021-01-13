@@ -12,6 +12,7 @@ go_library(
         "encoding.go",
         "finalized_block_roots.go",
         "kv.go",
+        "log.go",
         "migration.go",
         "migration_archived_index.go",
         "migration_block_slot_index.go",

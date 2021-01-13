@@ -134,7 +134,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uin
 	if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 		// If validator is performing optimally, this cancels all rewards for a neutral balance.
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
-		p += (baseRewardsPerEpoch-1)*br - proposerReward
+		p += baseRewardsPerEpoch*br - proposerReward
 		// Apply an additional penalty to validators that did not vote on the correct target or has been slashed.
 		// Equivalent to the following condition from the spec:
 		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`

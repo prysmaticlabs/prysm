@@ -6,13 +6,14 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 	hashLen := 32
-	blk := &eth.BeaconBlock{
+	blk := testutil.HydrateBeaconBlock(&eth.BeaconBlock{
 		Slot:          200,
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
@@ -23,15 +24,10 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 				DepositRoot:  bytesutil.PadTo([]byte("deposit root"), hashLen),
 				DepositCount: 1,
 			},
-			RandaoReveal:      bytesutil.PadTo([]byte("randao"), params.BeaconConfig().BLSSignatureLength),
-			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
-			ProposerSlashings: []*eth.ProposerSlashing{},
-			AttesterSlashings: []*eth.AttesterSlashing{},
-			Attestations:      []*eth.Attestation{},
-			Deposits:          []*eth.Deposit{},
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
+			RandaoReveal: bytesutil.PadTo([]byte("randao"), params.BeaconConfig().BLSSignatureLength),
+			Graffiti:     bytesutil.PadTo([]byte("teehee"), hashLen),
 		},
-	}
+	})
 	bodyRoot, err := blk.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.BeaconBlockHeader{
@@ -49,19 +45,20 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 
 func TestBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 	hashLen := 32
-	blk := &eth.BeaconBlock{
+	blk := testutil.HydrateBeaconBlock(&eth.BeaconBlock{
 		Slot:          200,
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-	}
+	})
+	blk.Body = nil
 	_, err := BeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block body", err)
 }
 
 func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 	hashLen := 32
-	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
+	blk := testutil.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
 		Slot:          200,
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
@@ -72,17 +69,11 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 				DepositRoot:  bytesutil.PadTo([]byte("deposit root"), hashLen),
 				DepositCount: 1,
 			},
-			RandaoReveal:      bytesutil.PadTo([]byte("randao"), params.BeaconConfig().BLSSignatureLength),
-			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
-			ProposerSlashings: []*eth.ProposerSlashing{},
-			AttesterSlashings: []*eth.AttesterSlashing{},
-			Attestations:      []*eth.Attestation{},
-			Deposits:          []*eth.Deposit{},
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
+			RandaoReveal: bytesutil.PadTo([]byte("randao"), params.BeaconConfig().BLSSignatureLength),
+			Graffiti:     bytesutil.PadTo([]byte("teehee"), hashLen),
 		},
 	},
-		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
-	}
+		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength)})
 	bodyRoot, err := blk.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.SignedBeaconBlockHeader{Header: &eth.BeaconBlockHeader{
@@ -102,14 +93,15 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 
 func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 	hashLen := 32
-	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
+	blk := testutil.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
 		Slot:          200,
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
-	}
+	})
+	blk.Block.Body = nil
 	_, err := SignedBeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block", err)
 }
