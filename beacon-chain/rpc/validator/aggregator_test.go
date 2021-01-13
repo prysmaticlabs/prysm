@@ -430,7 +430,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 
 func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
 	c := &mock.ChainService{Genesis: time.Now()}
-	aggregatorServer := &Server{GenesisTimeFetcher: c}
+	aggregatorServer := &Server{TimeFetcher: c}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Signature: []byte{'a'},

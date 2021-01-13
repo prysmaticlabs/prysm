@@ -120,7 +120,7 @@ func (vs *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *
 	}
 
 	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
-	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot, vs.GenesisTimeFetcher.GenesisTime()); err != nil {
+	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot, vs.TimeFetcher.GenesisTime()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
 	}
 

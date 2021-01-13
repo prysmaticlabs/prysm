@@ -33,10 +33,12 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/version:go_default_library",

@@ -14,10 +14,12 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -143,4 +145,22 @@ func TestGetIdentity(t *testing.T) {
 		_, err = s.GetIdentity(ctx, &ptypes.Empty{})
 		assert.ErrorContains(t, "could not obtain discovery address", err)
 	})
+}
+
+func TestSyncStatus(t *testing.T) {
+	currentSlot := new(uint64)
+	*currentSlot = 110
+	state := testutil.NewBeaconState()
+	err := state.SetSlot(100)
+	require.NoError(t, err)
+	chainService := &mock.ChainService{Slot: currentSlot, State: state}
+
+	s := &Server{
+		HeadFetcher:        chainService,
+		GenesisTimeFetcher: chainService,
+	}
+	resp, err := s.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	require.NoError(t, err)
+	assert.Equal(t, uint64(100), resp.Data.HeadSlot)
+	assert.Equal(t, uint64(10), resp.Data.SyncDistance)
 }
