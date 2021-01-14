@@ -40,10 +40,10 @@ func Test_slashableAttestationCheck(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
-	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{})
+	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.ErrorContains(t, failedPostAttSignExternalErr, err)
 	mockProtector.AllowAttestation = true
-	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{})
+	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
