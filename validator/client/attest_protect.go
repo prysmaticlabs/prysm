@@ -26,46 +26,35 @@ func (v *validator) slashableAttestationCheck(
 	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
 	defer span.End()
 
+	// Based on EIP3076, validator should refuse to sign any attestation with source epoch less
+	// than the minimum source epoch present in that signer’s attestations.
+	lowestSourceEpoch, exists, err := v.db.LowestSignedSourceEpoch(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	if exists && lowestSourceEpoch > indexedAtt.Data.Source.Epoch {
+		return fmt.Errorf(
+			"could not sign attestation lower than lowest source epoch in db, %d > %d",
+			lowestSourceEpoch,
+			indexedAtt.Data.Source.Epoch,
+		)
+	}
+	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
+	// than or equal to the minimum target epoch present in that signer’s attestations.
+	lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	if exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
+		return fmt.Errorf(
+			"could not sign attestation lower than or equal to lowest target epoch in db, %d >= %d",
+			lowestTargetEpoch,
+			indexedAtt.Data.Target.Epoch,
+		)
+	}
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	slashingKind, err := v.db.CheckSlashableAttestation(ctx, pubKey, signingRoot, indexedAtt)
 	if err != nil {
-		//	return errors.Wrap(err, "could not get attester history")
-		//}
-		//if attesterHistory == nil {
-		//	return nil
-		//}
-		//historicalAttestation, err := attesterHistory.GetTargetData(ctx, indexedAtt.Data.Target.Epoch)
-		//if err != nil {
-		//	return err
-		//}
-		//var prevSigningRoot [32]byte
-		//if !historicalAttestation.IsEmpty() {
-		//	copy(prevSigningRoot[:], historicalAttestation.SigningRoot)
-		//}
-		//signingRootIsDifferent := prevSigningRoot == params.BeaconConfig().ZeroHash || prevSigningRoot != signingRoot
-		//
-		//// Based on EIP3076, validator should refuse to sign any attestation with source epoch less
-		//// than the minimum source epoch present in that signer’s attestations.
-		//lowestSourceEpoch, exists, err := v.db.LowestSignedSourceEpoch(ctx, pubKey)
-		//if err != nil {
-		//	return err
-		//}
-		//if exists && lowestSourceEpoch > indexedAtt.Data.Source.Epoch {
-		//	return fmt.Errorf("could not sign attestation lower than lowest source epoch in db, %d > %d", lowestSourceEpoch, indexedAtt.Data.Source.Epoch)
-		//}
-		//// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
-		//// than or equal to the minimum target epoch present in that signer’s attestations.
-		//lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, pubKey)
-		//if err != nil {
-		//	return err
-		//}
-		//if exists && signingRootIsDifferent && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
-		//	return fmt.Errorf(
-		//		"could not sign attestation lower than or equal to lowest target epoch in db, %d >= %d",
-		//		lowestTargetEpoch,
-		//		indexedAtt.Data.Target.Epoch,
-		//	)
-		//}
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
