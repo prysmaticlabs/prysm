@@ -100,14 +100,14 @@ http_archive(
 # https://github.com/gogo/protobuf/pull/582 is merged.
 git_repository(
     name = "com_github_gogo_protobuf",
-    commit = "5628607bb4c51c3157aacc3a50f0ab707582b805",
+    commit = "b03c65ea87cdc3521ede29f62fe3ce239267c1bc",
     patch_args = ["-p1"],
     patches = [
         "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
         "//third_party:com_github_gogo_protobuf-equal.patch",
     ],
     remote = "https://github.com/gogo/protobuf",
-    shallow_since = "1571033717 +0200",
+    shallow_since = "1610265707 +0000",
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
