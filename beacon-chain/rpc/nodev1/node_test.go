@@ -48,7 +48,7 @@ func TestGetHealth(t *testing.T) {
 	}
 
 	_, err := s.GetHealth(ctx, &ptypes.Empty{})
-	require.ErrorContains(t, "node not initialized or having issues", err)
+	require.ErrorContains(t, "Node not initialized or having issues", err)
 	checker.IsInitialized = true
 	_, err = s.GetHealth(ctx, &ptypes.Empty{})
 	require.NoError(t, err)

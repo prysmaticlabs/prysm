@@ -113,5 +113,5 @@ func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		return &ptypes.Empty{}, nil
 	}
-	return &ptypes.Empty{}, status.Error(codes.Internal, "node not initialized or having issues")
+	return &ptypes.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
