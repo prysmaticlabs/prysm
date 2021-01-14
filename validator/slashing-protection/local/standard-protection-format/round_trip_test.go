@@ -56,13 +56,14 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	for _, item := range eipStandard.Data {
 		want, ok := dataByPubKey[item.Pubkey]
 		require.Equal(t, true, ok)
-		for _, att := range item.SignedAttestations {
-			fmt.Println(att)
-		}
 		for _, att := range want.SignedAttestations {
-			fmt.Println(att)
+			fmt.Printf("Wanted att %v\n", att)
+		}
+		for _, att := range item.SignedAttestations {
+			fmt.Printf("Got att %v\n", att)
 		}
 		require.DeepEqual(t, want.SignedAttestations, item.SignedAttestations)
+		require.DeepEqual(t, want.SignedBlocks, item.SignedBlocks)
 	}
 }
 

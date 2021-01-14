@@ -1043,7 +1043,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 			}
 			validatorDB := dbtest.SetupDB(t, pubKeys)
 			for pubKey, signedAtts := range tt.incomingAttsByPubKey {
-				attestingHistory, err := transformSignedAttestations(ctx, signedAtts)
+				attestingHistory, err := transformSignedAttestations(pubKey, signedAtts)
 				require.NoError(t, err)
 				for _, att := range attestingHistory {
 					indexedAtt := createAttestation(att.Source, att.Target)

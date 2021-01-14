@@ -65,7 +65,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		// Transform the processed signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
-		historicalAtt, err := transformSignedAttestations(ctx, signedAtts)
+		historicalAtt, err := transformSignedAttestations(pubKey, signedAtts)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
@@ -318,7 +318,7 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlo
 	}, nil
 }
 
-func transformSignedAttestations(ctx context.Context, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
+func transformSignedAttestations(pubKey [48]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
 	historicalAtts := make([]*kv.AttestationRecord, 0)
 	for _, attestation := range atts {
 		target, err := Uint64FromString(attestation.TargetEpoch)
@@ -338,6 +338,7 @@ func transformSignedAttestations(ctx context.Context, atts []*format.SignedAttes
 			}
 		}
 		historicalAtts = append(historicalAtts, &kv.AttestationRecord{
+			PubKey:      pubKey,
 			Source:      source,
 			Target:      target,
 			SigningRoot: signingRoot,

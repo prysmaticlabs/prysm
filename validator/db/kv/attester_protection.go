@@ -318,18 +318,18 @@ func (store *Store) saveAttestationRecords(ctx context.Context, atts []*Attestat
 	})
 }
 
-// AttestedPublicKeys retrieves all public keys in our attestation history bucket.
+// AttestedPublicKeys retrieves all public keys that have attested.
 func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestedPublicKeys")
 	defer span.End()
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(historicAttestationsBucket)
-		return bucket.ForEach(func(key []byte, _ []byte) error {
-			pubKeyBytes := [48]byte{}
-			copy(pubKeyBytes[:], key)
-			attestedPublicKeys = append(attestedPublicKeys, pubKeyBytes)
+		bucket := tx.Bucket(pubKeysBucket)
+		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
+			var pk [48]byte
+			copy(pk[:], pubKey)
+			attestedPublicKeys = append(attestedPublicKeys, pk)
 			return nil
 		})
 	})
