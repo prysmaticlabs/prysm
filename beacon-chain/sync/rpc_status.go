@@ -63,11 +63,11 @@ func (s *Service) maintainPeerStatuses() {
 				}
 			}(pid)
 		}
+		// Wait for all status checks to finish and then proceed onwards to
+		// pruning excess peers.
 		wg.Wait()
 		peerIds := s.p2p.Peers().PeersToPrune()
-		log.Infof("disconnecting %d peers", len(peerIds))
 		for _, id := range peerIds {
-			log.Infof("disconnecting peer: %s", id.String())
 			if err := s.sendGoodByeAndDisconnect(s.ctx, p2ptypes.GoodbyeCodeTooManyPeers, id); err != nil {
 				log.WithField("peer", id).WithError(err).Debug("Could not disconnect with peer")
 			}

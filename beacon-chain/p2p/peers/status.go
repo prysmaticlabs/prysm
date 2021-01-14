@@ -27,8 +27,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -622,7 +620,6 @@ func (p *Status) PeersToPrune() []peer.ID {
 	// Exit early if we are still below our max
 	// limit.
 	if len(activePeers) <= int(connLimit) {
-		logrus.Info("no peers")
 		return []peer.ID{}
 	}
 	p.store.Lock()
@@ -643,14 +640,17 @@ func (p *Status) PeersToPrune() []peer.ID {
 		}
 	}
 
+	// Sort in descending order to favour pruning peers with a
+	// higher bad response count.
 	sort.Slice(peersToPrune, func(i, j int) bool {
-		return peersToPrune[i].badResp < peersToPrune[j].badResp
+		return peersToPrune[i].badResp > peersToPrune[j].badResp
 	})
 
+	// Determine amount of peers to prune using our
+	// max connection limit.
 	amountToPrune := len(activePeers) - int(connLimit)
 
 	if amountToPrune < len(peersToPrune) {
-		logrus.Infof("below reqs: limit %d and got %d", connLimit, len(peersToPrune))
 		peersToPrune = peersToPrune[:amountToPrune]
 	}
 	ids := make([]peer.ID, 0, len(peersToPrune))
