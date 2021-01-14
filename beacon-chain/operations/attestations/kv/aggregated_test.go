@@ -39,13 +39,10 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
 	genData := func(slot, committeeIndex uint64) *ethpb.AttestationData {
-		return &ethpb.AttestationData{
-			Slot:            slot,
-			CommitteeIndex:  committeeIndex,
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
-		}
+		return testutil.HydrateAttestationData(&ethpb.AttestationData{
+			Slot:           slot,
+			CommitteeIndex: committeeIndex,
+		})
 	}
 	genSign := func() []byte {
 		priv, err := bls.RandKey()
@@ -110,12 +107,8 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		},
 		{
 			name: "not aggregated",
-			att: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				}, AggregationBits: bitfield.Bitlist{0b10100}},
+			att: testutil.HydrateAttestation(&ethpb.Attestation{
+				Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b10100}}),
 			wantErrString: "attestation is not aggregated",
 		},
 		{
@@ -149,12 +142,9 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			count: 1,
 		},
 	}
-	r, err := hashFn(&ethpb.AttestationData{
-		Slot:            100,
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		BeaconBlockRoot: make([]byte, 32),
-	})
+	r, err := hashFn(testutil.HydrateAttestationData(&ethpb.AttestationData{
+		Slot: 100,
+	}))
 	require.NoError(t, err)
 
 	for _, tt := range tests {

@@ -76,17 +76,13 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	}
 
-	att := &ethpb.Attestation{
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(0),
-		Signature:       make([]byte, 96),
 		Data: &ethpb.AttestationData{
-			Slot:            2,
-			CommitteeIndex:  1,
-			Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-			Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Slot:           2,
+			CommitteeIndex: 1,
 		},
-	}
+	})
 
 	parentRoot := [32]byte{1, 2, 3}
 	signedBlock := testutil.NewBeaconBlock()
@@ -265,17 +261,13 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 			blockExample := testutil.NewBeaconBlock()
 			blockExample.Block.Slot = i
 			blockExample.Block.Body.Attestations = []*ethpb.Attestation{
-				{
+				testutil.HydrateAttestation(&ethpb.Attestation{
 					Data: &ethpb.AttestationData{
-						CommitteeIndex:  s,
-						Slot:            i,
-						BeaconBlockRoot: make([]byte, 32),
-						Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-						Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+						CommitteeIndex: s,
+						Slot:           i,
 					},
 					AggregationBits: bitfield.Bitlist{0b11},
-					Signature:       make([]byte, 96),
-				},
+				}),
 			}
 			require.NoError(t, db.SaveBlock(ctx, blockExample))
 			atts = append(atts, blockExample.Block.Body.Attestations...)
