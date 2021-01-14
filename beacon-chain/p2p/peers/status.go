@@ -27,6 +27,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -619,6 +621,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 	// Exit early if we are still below our max
 	// limit.
 	if len(p.Active()) <= int(connLimit) {
+		logrus.Info("no peers")
 		return []peer.ID{}
 	}
 	p.store.Lock()
@@ -644,6 +647,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 	})
 
 	if int(connLimit) >= len(peersToPrune) {
+		logrus.Infof("below reqs: limit %d and got %d", connLimit, len(peersToPrune))
 		return []peer.ID{}
 	}
 	peersToPrune = peersToPrune[connLimit:]
