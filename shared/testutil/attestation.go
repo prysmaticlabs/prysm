@@ -43,7 +43,6 @@ func NewAttestation() *ethpb.Attestation {
 func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
-
 	bState = bState.Copy()
 	if slot > bState.Slot() {
 		// Going back a slot here so there's no inclusion delay issues.
