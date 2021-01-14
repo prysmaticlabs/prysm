@@ -25,19 +25,23 @@ func MockSlashingProtectionJSON(
 		data := &format.ProtectionData{
 			Pubkey: fmt.Sprintf("%#x", publicKeys[i]),
 		}
-		for _, att := range attestingHistories[i] {
-			data.SignedAttestations = append(data.SignedAttestations, &format.SignedAttestation{
-				TargetEpoch: fmt.Sprintf("%d", att.Target),
-				SourceEpoch: fmt.Sprintf("%d", att.Source),
-				SigningRoot: fmt.Sprintf("%#x", att.SigningRoot),
-			})
-		}
-		for _, proposal := range proposalHistories[i].Proposals {
-			block := &format.SignedBlock{
-				Slot:        fmt.Sprintf("%d", proposal.Slot),
-				SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
+		if len(attestingHistories) > 0 {
+			for _, att := range attestingHistories[i] {
+				data.SignedAttestations = append(data.SignedAttestations, &format.SignedAttestation{
+					TargetEpoch: fmt.Sprintf("%d", att.Target),
+					SourceEpoch: fmt.Sprintf("%d", att.Source),
+					SigningRoot: fmt.Sprintf("%#x", att.SigningRoot),
+				})
 			}
-			data.SignedBlocks = append(data.SignedBlocks, block)
+		}
+		if len(proposalHistories) > 0 {
+			for _, proposal := range proposalHistories[i].Proposals {
+				block := &format.SignedBlock{
+					Slot:        fmt.Sprintf("%d", proposal.Slot),
+					SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
+				}
+				data.SignedBlocks = append(data.SignedBlocks, block)
+			}
 		}
 		standardProtectionFormat.Data = append(standardProtectionFormat.Data, data)
 	}
