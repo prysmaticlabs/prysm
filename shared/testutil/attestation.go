@@ -41,7 +41,6 @@ func NewAttestation() *ethpb.Attestation {
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
-	currentEpoch := helpers.SlotToEpoch(slot)
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
 	bState = bState.Copy()
@@ -50,6 +49,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 		slot--
 		generateHeadState = true
 	}
+	currentEpoch := helpers.SlotToEpoch(slot)
 
 	targetRoot := make([]byte, 32)
 	var headRoot []byte
