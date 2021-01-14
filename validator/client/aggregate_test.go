@@ -157,14 +157,9 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 
 	agg := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 0,
-		Aggregate: &ethpb.Attestation{
-			AggregationBits: bitfield.NewBitlist(1), Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			},
-			Signature: make([]byte, 96),
-		},
+		Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
+			AggregationBits: bitfield.NewBitlist(1),
+		}),
 		SelectionProof: make([]byte, 96),
 	}
 	sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg)

@@ -87,6 +87,31 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	}
 }
 
+func TestStore_CheckSlashableAttestation_SurroundVote_MultipleTargetsPerSource(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 1
+	pubKeys := make([][48]byte, numValidators)
+	validatorDB := setupDB(t, pubKeys)
+
+	// Create an attestation with source 1 and target 50, save it.
+	firstAtt := createAttestation(1, 50)
+	err := validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{0}, firstAtt)
+	require.NoError(t, err)
+
+	// Create an attestation with source 1 and target 100, save it.
+	secondAtt := createAttestation(1, 100)
+	err = validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{1}, secondAtt)
+	require.NoError(t, err)
+
+	// Create an attestation with source 0 and target 51, which should surround
+	// our first attestation. Given there can be multiple attested target epochs per
+	// source epoch, we expect our logic to be able to catch this slashable offense.
+	evilAtt := createAttestation(firstAtt.Data.Source.Epoch-1, firstAtt.Data.Target.Epoch+1)
+	slashable, err := validatorDB.CheckSlashableAttestation(ctx, pubKeys[0], [32]byte{2}, evilAtt)
+	require.NotNil(t, err)
+	assert.Equal(t, SurroundingVote, slashable)
+}
+
 func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1

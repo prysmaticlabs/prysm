@@ -34,18 +34,12 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 }
 
 func TestProposer_ProposerAtts_dedup(t *testing.T) {
-	data1 := &ethpb.AttestationData{
-		Slot:            4,
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
-	data2 := &ethpb.AttestationData{
-		Slot:            5,
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
+	data1 := testutil.HydrateAttestationData(&ethpb.AttestationData{
+		Slot: 4,
+	})
+	data2 := testutil.HydrateAttestationData(&ethpb.AttestationData{
+		Slot: 5,
+	})
 	tests := []struct {
 		name string
 		atts proposerAtts
