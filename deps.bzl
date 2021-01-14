@@ -1604,8 +1604,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_kisielk_errcheck",
         importpath = "github.com/kisielk/errcheck",
-        sum = "h1:reN85Pxc5larApoH1keMBiu2GWtPqXQ1nc9gx+jOU+E=",
-        version = "v1.2.0",
+        sum = "h1:e8esj/e4R+SAOwFwN+n3zr0nYeCyeweozKfO23MvHzY=",
+        version = "v1.5.0",
     )
     go_repository(
         name = "com_github_kisielk_gotool",
@@ -3607,8 +3607,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_tools",
         importpath = "golang.org/x/tools",
-        sum = "h1:lHDhNNs7asPT3p01mm8EP3B+bNyyVfg0bcYjhJUYgxw=",
-        version = "v0.0.0-20201218024724-ae774e9781d2",
+        sum = "h1:CB3a9Nez8M13wwlr/E2YtwoU+qYHKfC+JrDa45RXXoQ=",
+        version = "v0.0.0-20210106214847-113979e3529a",
     )
 
     go_repository(
