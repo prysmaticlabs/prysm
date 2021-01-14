@@ -33,6 +33,7 @@ func (s *Service) maintainPeerStatuses() {
 		for _, pid := range s.p2p.Peers().Connected() {
 			wg.Add(1)
 			go func(id peer.ID) {
+				defer wg.Done()
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
@@ -62,7 +63,7 @@ func (s *Service) maintainPeerStatuses() {
 				}
 			}(pid)
 		}
-		wg.Done()
+		wg.Wait()
 		peerIds := s.p2p.Peers().PeersToPrune()
 		for _, id := range peerIds {
 			log.Infof("disconnecting peer: %s", id.String())
