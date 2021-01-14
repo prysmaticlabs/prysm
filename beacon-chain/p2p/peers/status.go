@@ -623,9 +623,6 @@ func (p *Status) PeersToPrune() []peer.ID {
 	p.store.Lock()
 	defer p.store.Unlock()
 
-	badPeer := func(peerData *peerdata.PeerData) bool {
-		return peerData.BadResponses >= p.scorers.BadResponsesScorer().Params().Threshold
-	}
 	type peerResp struct {
 		pid     peer.ID
 		badResp int
@@ -633,13 +630,28 @@ func (p *Status) PeersToPrune() []peer.ID {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && badPeer(peerData) {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
 				badResp: peerData.BadResponses,
 			})
 		}
 	}
+
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].badResp < peersToPrune[j].badResp
+	})
+
+	connLimit := p.ConnectedPeerLimit()
+	if int(connLimit) >= len(peersToPrune) {
+		return []peer.ID{}
+	}
+	peersToPrune = peersToPrune[connLimit:]
+	ids := make([]peer.ID, 0, len(peersToPrune))
+	for _, pr := range peersToPrune {
+		ids = append(ids, pr.pid)
+	}
+	return ids
 }
 
 // HighestEpoch returns the highest epoch reported epoch amongst peers.
