@@ -19,7 +19,46 @@ import (
 
 // GetIdentity retrieves data about the node's network presence.
 func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.IdentityResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "nodeV1.GetIdentity")
+	defer span.End()
+
+	peerId := ns.PeerManager.PeerID().Pretty()
+
+	serializedEnr, err := p2p.SerializeENR(ns.PeerManager.ENR())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not obtain enr: %v", err)
+	}
+	enr := "enr:" + serializedEnr
+
+	sourcep2p := ns.PeerManager.Host().Addrs()
+	p2pAddresses := make([]string, len(sourcep2p))
+	for i := range sourcep2p {
+		p2pAddresses[i] = sourcep2p[i].String() + "/p2p/" + peerId
+	}
+
+	sourceDisc, err := ns.PeerManager.DiscoveryAddresses()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not obtain discovery address: %v", err)
+	}
+	discoveryAddresses := make([]string, len(sourceDisc))
+	for i := range sourceDisc {
+		discoveryAddresses[i] = sourceDisc[i].String()
+	}
+
+	metadata := &ethpb.Metadata{
+		SeqNumber: ns.MetadataProvider.MetadataSeq(),
+		Attnets:   ns.MetadataProvider.Metadata().Attnets,
+	}
+
+	return &ethpb.IdentityResponse{
+		Data: &ethpb.Identity{
+			PeerId:             peerId,
+			Enr:                enr,
+			P2PAddresses:       p2pAddresses,
+			DiscoveryAddresses: discoveryAddresses,
+			Metadata:           metadata,
+		},
+	}, nil
 }
 
 // GetPeer retrieves data about the given peer.
