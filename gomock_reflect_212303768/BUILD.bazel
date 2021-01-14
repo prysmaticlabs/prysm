@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["prog.go"],
+    importpath = "github.com/prysmaticlabs/prysm/gomock_reflect_212303768",
+    visibility = ["//visibility:private"],
+    deps = [
+        "@com_github_golang_mock//mockgen/model:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1_gateway:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "gomock_reflect_212303768",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

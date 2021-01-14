@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	fastssz "github.com/ferranbt/fastssz"
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -35,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestProposer_GetBlock_OK(t *testing.T) {

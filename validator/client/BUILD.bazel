@@ -46,7 +46,6 @@ go_library(
         "//validator/keymanager/imported:go_default_library",
         "//validator/slashing-protection:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
@@ -66,6 +65,7 @@ go_library(
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//resolver:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )

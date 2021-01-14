@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 func unmarshalAttSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {

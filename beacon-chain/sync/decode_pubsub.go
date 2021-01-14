@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/gogo/protobuf/proto"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"google.golang.org/protobuf/proto"
 )
 
 var errNilPubsubMessage = errors.New("nil pubsub message")
