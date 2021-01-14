@@ -657,6 +657,67 @@ func TestAtInboundPeerLimit(t *testing.T) {
 	assert.Equal(t, true, p.IsAboveInboundLimit(), "Inbound limit not exceeded")
 }
 
+func TestPrunePeers(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
+	for i := 0; i < 15; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	// Assert there are no prunable peers.
+	peersToPrune := p.PeersToPrune()
+	assert.Equal(t, 0, len(peersToPrune))
+
+	for i := 0; i < 18; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Assert there are the correct prunable peers.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 3, len(peersToPrune))
+
+	// Add in more peers.
+	for i := 0; i < 13; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Set up bad scores for inbound peers.
+	inboundPeers := p.Inbound()
+	for i, pid := range inboundPeers {
+		modulo := i % 5
+		// Increment bad scores for peers.
+		for j := 0; j < modulo; j++ {
+			p.Scorers().BadResponsesScorer().Increment(pid)
+		}
+	}
+	// Assert all peers more than max are prunable.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 16, len(peersToPrune))
+	for _, pid := range peersToPrune {
+		dir, err := p.Direction(pid)
+		require.NoError(t, err)
+		assert.Equal(t, network.DirInbound, dir)
+	}
+
+	// Ensure it is in the descending order.
+	currCount, err := p.Scorers().BadResponsesScorer().Count(peersToPrune[0])
+	require.NoError(t, err)
+	for _, pid := range peersToPrune {
+		count, err := p.Scorers().BadResponsesScorer().Count(pid)
+		require.NoError(t, err)
+		assert.Equal(t, true, currCount >= count)
+		currCount = count
+	}
+}
+
 func TestStatus_BestPeer(t *testing.T) {
 	type peerConfig struct {
 		headSlot       uint64
