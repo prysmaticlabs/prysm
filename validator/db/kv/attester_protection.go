@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -101,9 +102,17 @@ func (store *Store) CheckSlashableAttestation(
 		if signingRootsBucket != nil {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.Data.Target.Epoch)
 			existingSigningRoot := signingRootsBucket.Get(targetEpochBytes)
-			if existingSigningRoot != nil && !bytes.Equal(signingRoot[:], existingSigningRoot) {
-				slashKind = DoubleVote
-				return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
+			if existingSigningRoot != nil {
+				var signingRootIsDifferent bool
+				if signingRoot == params.BeaconConfig().ZeroHash && bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
+					signingRootIsDifferent = true
+				} else {
+					signingRootIsDifferent = !bytes.Equal(existingSigningRoot, signingRoot[:])
+				}
+				if signingRootIsDifferent {
+					slashKind = DoubleVote
+					return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
+				}
 			}
 		}
 
@@ -338,11 +347,10 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 
 // SigningRootAtTargetEpoch checks for an existing signing root at a specified
 // target epoch for a given validator public key.
-func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, target uint64) ([32]byte, bool, error) {
+func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, target uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
 	defer span.End()
 	var signingRoot [32]byte
-	var exists bool
 	err := store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])
@@ -354,14 +362,10 @@ func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byt
 			return nil
 		}
 		sr := signingRootsBucket.Get(bytesutil.Uint64ToBytesBigEndian(target))
-		if sr == nil {
-			return nil
-		}
 		copy(signingRoot[:], sr)
-		exists = true
 		return nil
 	})
-	return signingRoot, exists, err
+	return signingRoot, err
 }
 
 // LowestSignedSourceEpoch returns the lowest signed Source epoch for a validator public key.

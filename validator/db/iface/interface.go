@@ -38,7 +38,7 @@ type ValidatorDB interface {
 	// slashing protection imports.
 	EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error)
 	SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error
-	SigningRootAtTargetEpoch(ctx context.Context, publicKey [48]byte, target uint64) ([32]byte, bool, error)
+	SigningRootAtTargetEpoch(ctx context.Context, publicKey [48]byte, target uint64) ([32]byte, error)
 	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
