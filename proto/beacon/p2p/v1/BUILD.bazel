@@ -22,29 +22,29 @@ go_proto_library(
     ],
 )
 
-#ssz_gen_marshal(
-#    name = "ssz_generated_files",
-#    go_proto = ":v1_go_proto",
-#    includes = [
-#        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-#    ],
-#    objs = [
-#        "BeaconBlocksByRangeRequest",
-#        "DepositMessage",
-#        "ENRForkID",
-#        "MetaData",
-#        "Fork",
-#        "ForkData",
-#        "HistoricalBatch",
-#        "Status",
-#        "BeaconState",
-#        "SigningData",
-#    ],
-#)
+ssz_gen_marshal(
+    name = "ssz_generated_files",
+    go_proto = ":v1_go_proto",
+    includes = [
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
+    objs = [
+        "BeaconBlocksByRangeRequest",
+        "DepositMessage",
+        "ENRForkID",
+        "MetaData",
+        "Fork",
+        "ForkData",
+        "HistoricalBatch",
+        "Status",
+        "BeaconState",
+        "SigningData",
+    ],
+)
 
 go_library(
     name = "go_default_library",
-    srcs = ["generated.ssz.go"],
+    srcs = [":generated.ssz.go"],
     embed = [":v1_go_proto"],
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS,

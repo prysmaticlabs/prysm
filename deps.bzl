@@ -1120,8 +1120,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_grpc_ecosystem_grpc_gateway",
         importpath = "github.com/grpc-ecosystem/grpc-gateway",
-        sum = "h1:8ERzHx8aj1Sc47mu9n/AksaKCSWrMchFtkdrS4BIj5o=",
-        version = "v1.14.6",
+        sum = "h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=",
+        version = "v1.16.0",
     )
     go_repository(
         name = "com_github_gxed_hashland_keccakpg",
@@ -1604,8 +1604,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_kisielk_errcheck",
         importpath = "github.com/kisielk/errcheck",
-        sum = "h1:reN85Pxc5larApoH1keMBiu2GWtPqXQ1nc9gx+jOU+E=",
-        version = "v1.2.0",
+        sum = "h1:e8esj/e4R+SAOwFwN+n3zr0nYeCyeweozKfO23MvHzY=",
+        version = "v1.5.0",
     )
     go_repository(
         name = "com_github_kisielk_gotool",
@@ -2580,8 +2580,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:ytHd8fTsYXsZODAcKdWkH/WK+ToSuTK8y0+/6xehGsk=",
-        version = "v0.0.0-20210112172249-60d8fe0c931c",
+        sum = "h1:fOITjhF61AijxINnSoAvBZAWEkWJ5JRP3oeErkbpEvg=",
+        version = "v0.0.0-20210114085516-412aad9ca272",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -3600,8 +3600,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_tools",
         importpath = "golang.org/x/tools",
-        sum = "h1:lHDhNNs7asPT3p01mm8EP3B+bNyyVfg0bcYjhJUYgxw=",
-        version = "v0.0.0-20201218024724-ae774e9781d2",
+        sum = "h1:K+NlvTLy0oONtRtkl1jRD9xIhnItbG2PiE7YOdjPb+k=",
+        version = "v0.0.0-20210114065538-d78b04bdf963",
     )
 
     go_repository(
