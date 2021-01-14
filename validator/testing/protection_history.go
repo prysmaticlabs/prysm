@@ -67,7 +67,7 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			historicalAtts = append(historicalAtts, &kv.AttestationRecord{
-				Source:      uint64(gen.Intn(100000)),
+				Source:      uint64(i - 1),
 				Target:      uint64(i),
 				SigningRoot: signingRoot,
 			})
