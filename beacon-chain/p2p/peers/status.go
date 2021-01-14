@@ -618,9 +618,10 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []
 
 func (p *Status) PeersToPrune() []peer.ID {
 	connLimit := p.ConnectedPeerLimit()
+	activePeers := p.Active()
 	// Exit early if we are still below our max
 	// limit.
-	if len(p.Active()) <= int(connLimit) {
+	if len(activePeers) <= int(connLimit) {
 		logrus.Info("no peers")
 		return []peer.ID{}
 	}
@@ -646,11 +647,12 @@ func (p *Status) PeersToPrune() []peer.ID {
 		return peersToPrune[i].badResp < peersToPrune[j].badResp
 	})
 
-	if int(connLimit) >= len(peersToPrune) {
+	amountToPrune := len(activePeers) - int(connLimit)
+
+	if amountToPrune < len(peersToPrune) {
 		logrus.Infof("below reqs: limit %d and got %d", connLimit, len(peersToPrune))
-		return []peer.ID{}
+		peersToPrune = peersToPrune[:amountToPrune]
 	}
-	peersToPrune = peersToPrune[connLimit:]
 	ids := make([]peer.ID, 0, len(peersToPrune))
 	for _, pr := range peersToPrune {
 		ids = append(ids, pr.pid)
