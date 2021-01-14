@@ -60,16 +60,23 @@ func (store *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 
-		return sourceEpochsBucket.ForEach(func(sourceBytes, targetBytes []byte) error {
-			record := &AttestationRecord{
-				Source: bytesutil.BytesToUint64BigEndian(sourceBytes),
-				Target: bytesutil.BytesToUint64BigEndian(targetBytes),
+		return sourceEpochsBucket.ForEach(func(sourceBytes, targetEpochsList []byte) error {
+			targetEpochs := make([]uint64, 0)
+			for i := 0; i < len(targetEpochsList); i += 8 {
+				epoch := bytesutil.BytesToUint64BigEndian(targetEpochsList[i : i+8])
+				targetEpochs = append(targetEpochs, epoch)
 			}
-			signingRoot := signingRootsBucket.Get(targetBytes)
-			if signingRoot != nil {
-				copy(record.SigningRoot[:], signingRoot)
+			for _, targetEpoch := range targetEpochs {
+				record := &AttestationRecord{
+					Source: bytesutil.BytesToUint64BigEndian(sourceBytes),
+					Target: targetEpoch,
+				}
+				signingRoot := signingRootsBucket.Get(bytesutil.Uint64ToBytesBigEndian(targetEpoch))
+				if signingRoot != nil {
+					copy(record.SigningRoot[:], signingRoot)
+				}
+				records = append(records, record)
 			}
-			records = append(records, record)
 			return nil
 		})
 	})
