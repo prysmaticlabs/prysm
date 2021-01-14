@@ -3,6 +3,7 @@
 package shared
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -21,6 +22,30 @@ type Service interface {
 	Stop() error
 	// Returns error if the service is not considered healthy.
 	Status() error
+}
+
+// ServiceBase TODO
+type ServiceBase struct {
+	Ctx    context.Context    // Ctx TODO
+	cancel context.CancelFunc // YOU SHALT NOT CANCEL
+}
+
+// Stop TODO
+func (s *ServiceBase) Stop() {
+	defer func() {
+		if s.cancel != nil {
+			s.cancel()
+		}
+	}()
+}
+
+// NewServiceBase TODO
+func NewServiceBase(ctx context.Context) *ServiceBase {
+	ctx, cancel := context.WithCancel(ctx)
+	return &ServiceBase{
+		Ctx:    ctx,
+		cancel: cancel,
+	}
 }
 
 // ServiceRegistry provides a useful pattern for managing services.

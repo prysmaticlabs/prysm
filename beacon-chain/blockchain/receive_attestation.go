@@ -111,10 +111,10 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	st := slotutil.GetSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.base.Ctx.Done():
 			return
 		case <-st.C():
-			ctx := s.ctx
+			ctx := s.base.Ctx
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
 				// Based on the spec, don't process the attestation until the subsequent slot.
