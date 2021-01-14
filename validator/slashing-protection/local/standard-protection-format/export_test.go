@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -102,18 +101,5 @@ func Test_getSignedBlocksByPubKey(t *testing.T) {
 	}
 	for i, blk := range wanted {
 		assert.DeepEqual(t, blk, signedBlocks[i])
-	}
-}
-
-func createAttestation(source, target uint64) *ethpb.IndexedAttestation {
-	return &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: source,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: target,
-			},
-		},
 	}
 }

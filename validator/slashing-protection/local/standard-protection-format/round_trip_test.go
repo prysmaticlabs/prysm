@@ -59,6 +59,8 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	for _, item := range eipStandard.Data {
 		want, ok := dataByPubKey[item.Pubkey]
 		require.Equal(t, true, ok)
+		require.Equal(t, len(want.SignedAttestations), len(item.SignedAttestations))
+		require.Equal(t, len(want.SignedBlocks), len(item.SignedBlocks))
 		wantedAttsByRoot := make(map[string]*format.SignedAttestation)
 		for _, att := range want.SignedAttestations {
 			wantedAttsByRoot[att.SigningRoot] = att
@@ -181,7 +183,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 
 func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	ctx := context.Background()
-	numValidators := 10
+	numValidators := 3
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
