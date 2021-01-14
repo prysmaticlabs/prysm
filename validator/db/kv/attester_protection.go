@@ -336,6 +336,34 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	return attestedPublicKeys, err
 }
 
+// SigningRootAtTargetEpoch checks for an existing signing root at a specified
+// target epoch for a given validator public key.
+func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, target uint64) ([32]byte, bool, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
+	defer span.End()
+	var signingRoot [32]byte
+	var exists bool
+	err := store.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket := bucket.Bucket(pubKey[:])
+		if pkBucket == nil {
+			return nil
+		}
+		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+		if signingRootsBucket == nil {
+			return nil
+		}
+		sr := signingRootsBucket.Get(bytesutil.Uint64ToBytesBigEndian(target))
+		if sr == nil {
+			return nil
+		}
+		copy(signingRoot[:], sr)
+		exists = true
+		return nil
+	})
+	return signingRoot, exists, err
+}
+
 // LowestSignedSourceEpoch returns the lowest signed Source epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
 func (store *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {

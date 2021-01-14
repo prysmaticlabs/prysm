@@ -39,13 +39,19 @@ func (v *validator) slashableAttestationCheck(
 			indexedAtt.Data.Source.Epoch,
 		)
 	}
+	existingSigningRoot, exists, err := v.db.SigningRootAtTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
+	if err != nil {
+		return err
+	}
+	signingRootIsDifferent := !exists || existingSigningRoot != signingRoot
+
 	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
 	// than or equal to the minimum target epoch present in that signer’s attestations.
 	lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, pubKey)
 	if err != nil {
 		return err
 	}
-	if exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
+	if signingRootIsDifferent && exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
 		return fmt.Errorf(
 			"could not sign attestation lower than or equal to lowest target epoch in db, %d >= %d",
 			lowestTargetEpoch,
