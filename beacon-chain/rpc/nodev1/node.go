@@ -6,8 +6,11 @@ import (
 	"runtime"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -21,7 +24,47 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 
 // GetPeer retrieves data about the given peer.
 func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.PeerResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "nodev1.GetPeer")
+	defer span.End()
+
+	peerStatus := ns.PeersFetcher.Peers()
+	id, err := peer.IDFromString(req.PeerId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Invalid peer ID: "+req.PeerId)
+	}
+	enr, err := peerStatus.ENR(id)
+	if err != nil {
+		if errors.Is(err, peerdata.ErrPeerUnknown) {
+			return nil, status.Error(codes.NotFound, "Peer not found")
+		}
+		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+	}
+	serializedEnr, err := p2p.SerializeENR(enr)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+	}
+	p2pAddress, err := peerStatus.Address(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain address: %v", err)
+	}
+	state, err := peerStatus.ConnectionState(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain state: %v", err)
+	}
+	direction, err := peerStatus.Direction(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
+	}
+
+	return &ethpb.PeerResponse{
+		Data: &ethpb.Peer{
+			PeerId:    req.PeerId,
+			Enr:       "enr:" + serializedEnr,
+			Address:   p2pAddress.String(),
+			State:     ethpb.ConnectionState(state),
+			Direction: ethpb.PeerDirection(direction),
+		},
+	}, nil
 }
 
 // ListPeers retrieves data about the node's network peers.
