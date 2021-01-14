@@ -615,9 +615,10 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []
 }
 
 func (p *Status) PeersToPrune() []peer.ID {
+	connLimit := p.ConnectedPeerLimit()
 	// Exit early if we are still below our max
 	// limit.
-	if !p.IsAboveInboundLimit() {
+	if len(p.Active()) <= int(connLimit) {
 		return []peer.ID{}
 	}
 	p.store.Lock()
@@ -642,7 +643,6 @@ func (p *Status) PeersToPrune() []peer.ID {
 		return peersToPrune[i].badResp < peersToPrune[j].badResp
 	})
 
-	connLimit := p.ConnectedPeerLimit()
 	if int(connLimit) >= len(peersToPrune) {
 		return []peer.ID{}
 	}
