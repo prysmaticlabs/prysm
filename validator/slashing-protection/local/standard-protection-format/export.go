@@ -83,9 +83,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		if item.SignedAttestations == nil {
 			item.SignedAttestations = make([]*format.SignedAttestation, 0)
 		} else {
-			// Sort by source epoch.
+			// Sort by target epoch.
 			sort.Slice(item.SignedAttestations, func(i, j int) bool {
-				return item.SignedAttestations[i].SourceEpoch < item.SignedAttestations[j].SourceEpoch
+				return item.SignedAttestations[i].TargetEpoch < item.SignedAttestations[j].TargetEpoch
 			})
 		}
 		if item.SignedBlocks == nil {
