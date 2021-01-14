@@ -105,38 +105,47 @@ func (store *Store) CheckSlashableAttestation(
 			return nil
 		}
 		// Check for surround votes.
-		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochBytes []byte) error {
+		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochsBytes []byte) error {
 			existingSourceEpoch := bytesutil.BytesToUint64BigEndian(sourceEpochBytes)
-			existingTargetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
-			existingAtt := &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
-					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
-				},
+
+			// There can be multiple target epochs attested per source epoch.
+			attestedTargetEpochs := make([]uint64, 0)
+			for i := 0; i < len(targetEpochsBytes); i += 8 {
+				targetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochsBytes[i : i+8])
+				attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
 			}
-			// Checks if the incoming attestation is surrounding or
-			// is surrounded by an existing one.
-			surrounding := slashutil.IsSurround(att, existingAtt)
-			surrounded := slashutil.IsSurround(existingAtt, att)
-			if surrounding {
-				slashKind = SurroundingVote
-				return fmt.Errorf(
-					surroundingVoteMessage,
-					att.Data.Source.Epoch,
-					att.Data.Target.Epoch,
-					existingSourceEpoch,
-					existingTargetEpoch,
-				)
-			}
-			if surrounded {
-				slashKind = SurroundedVote
-				return fmt.Errorf(
-					surroundedVoteMessage,
-					att.Data.Source.Epoch,
-					att.Data.Target.Epoch,
-					existingSourceEpoch,
-					existingTargetEpoch,
-				)
+
+			for _, existingTargetEpoch := range attestedTargetEpochs {
+				existingAtt := &ethpb.IndexedAttestation{
+					Data: &ethpb.AttestationData{
+						Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+						Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+					},
+				}
+				// Checks if the incoming attestation is surrounding or
+				// is surrounded by an existing one.
+				surrounding := slashutil.IsSurround(att, existingAtt)
+				surrounded := slashutil.IsSurround(existingAtt, att)
+				if surrounding {
+					slashKind = SurroundingVote
+					return fmt.Errorf(
+						surroundingVoteMessage,
+						att.Data.Source.Epoch,
+						att.Data.Target.Epoch,
+						existingSourceEpoch,
+						existingTargetEpoch,
+					)
+				}
+				if surrounded {
+					slashKind = SurroundedVote
+					return fmt.Errorf(
+						surroundedVoteMessage,
+						att.Data.Source.Epoch,
+						att.Data.Target.Epoch,
+						existingSourceEpoch,
+						existingTargetEpoch,
+					)
+				}
 			}
 			return nil
 		})
@@ -246,8 +255,19 @@ func (store *Store) saveAttestationRecords(ctx context.Context, atts []*Attestat
 			if err != nil {
 				return errors.Wrap(err, "could not create Source epochs bucket")
 			}
-			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
-				return errors.Wrapf(err, "could not save Source epoch %d for epoch %d", att.Source, att.Target)
+
+			// There can be multiple attested target epochs per source epoch.
+			// If a previous list exists, we append to that list with the incoming target epoch.
+			// Otherwise, we initialize it using the incoming target epoch.
+			var existingAttestedTargetsBytes []byte
+			if existing := sourceEpochsBucket.Get(sourceEpochBytes); existing != nil {
+				existingAttestedTargetsBytes = append(existing, targetEpochBytes...)
+			} else {
+				existingAttestedTargetsBytes = targetEpochBytes
+			}
+
+			if err := sourceEpochsBucket.Put(sourceEpochBytes, existingAttestedTargetsBytes); err != nil {
+				return errors.Wrapf(err, "could not save source epoch %d for epoch %d", att.Source, att.Target)
 			}
 			// Initialize buckets for the lowest Target and Source epochs.
 			lowestSourceBucket, err := tx.CreateBucketIfNotExists(lowestSignedSourceBucket)

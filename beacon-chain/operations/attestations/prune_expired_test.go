@@ -84,33 +84,9 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	ad1 := &ethpb.AttestationData{
-		Slot:            0,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
-	ad2 := &ethpb.AttestationData{
-		Slot:            0,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad2 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
 	att1 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101}}
 	att2 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1111}}
