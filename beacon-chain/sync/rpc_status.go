@@ -65,7 +65,7 @@ func (s *Service) maintainPeerStatuses() {
 		wg.Done()
 		peerIds := s.p2p.Peers().PeersToPrune()
 		for _, id := range peerIds {
-			log.Info("disconnecting peer: %s", id.String())
+			log.Infof("disconnecting peer: %s", id.String())
 			if err := s.sendGoodByeAndDisconnect(s.ctx, p2ptypes.GoodbyeCodeTooManyPeers, id); err != nil {
 				log.WithField("peer", id).WithError(err).Debug("Could not disconnect with peer")
 			}
