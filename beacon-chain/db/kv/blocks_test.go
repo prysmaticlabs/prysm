@@ -118,7 +118,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 	zeroFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(0)
 	retrieved, _, err := db.Blocks(ctx, zeroFilter)
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(retrieved), "Unexpected number of blocks received, expected none")
+	assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
 }
 
 func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
