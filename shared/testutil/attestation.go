@@ -41,7 +41,6 @@ func NewAttestation() *ethpb.Attestation {
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
-	currentEpoch := helpers.SlotToEpoch(slot)
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
 	bState = bState.Copy()
@@ -50,6 +49,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 		slot--
 		generateHeadState = true
 	}
+	currentEpoch := helpers.SlotToEpoch(slot)
 
 	targetRoot := make([]byte, 32)
 	var headRoot []byte
@@ -170,6 +170,8 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 	return attestations, nil
 }
 
+// HydrateAttestation hydrates an attestation object with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
 func HydrateAttestation(a *ethpb.Attestation) *ethpb.Attestation {
 	if a.Signature == nil {
 		a.Signature = make([]byte, 96)
@@ -184,6 +186,8 @@ func HydrateAttestation(a *ethpb.Attestation) *ethpb.Attestation {
 	return a
 }
 
+// HydrateAttestationData hydrates an attestation data object with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
 func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
 	if d.BeaconBlockRoot == nil {
 		d.BeaconBlockRoot = make([]byte, 32)
@@ -201,4 +205,17 @@ func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
 		d.Source.Root = make([]byte, 32)
 	}
 	return d
+}
+
+// HydrateIndexedAttestation hydrates an indexed attestation with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateIndexedAttestation(a *ethpb.IndexedAttestation) *ethpb.IndexedAttestation {
+	if a.Signature == nil {
+		a.Signature = make([]byte, 96)
+	}
+	if a.Data == nil {
+		a.Data = &ethpb.AttestationData{}
+	}
+	a.Data = HydrateAttestationData(a.Data)
+	return a
 }
