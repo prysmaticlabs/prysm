@@ -239,6 +239,9 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	// Finally, we clear the migration key.
 	return store.update(func(tx *bolt.Tx) error {
