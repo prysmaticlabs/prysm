@@ -46,9 +46,13 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if !ok {
 		return pubsub.ValidationReject
 	}
-	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
+	if m.Message == nil {
 		return pubsub.ValidationReject
 	}
+	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
+		return pubsub.ValidationReject
+	}
+
 	if helpers.SlotToEpoch(m.Message.Aggregate.Data.Slot) != m.Message.Aggregate.Data.Target.Epoch {
 		return pubsub.ValidationReject
 	}
