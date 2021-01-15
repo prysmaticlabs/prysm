@@ -268,7 +268,7 @@ func filterSlashablePubKeysFromAttestations(
 		for _, att := range signedAtts {
 			// Check for double votes.
 			if sr, ok := signingRootsByTarget[att.Target]; ok {
-				if sr != att.SigningRoot {
+				if slashutil.SigningRootsDiffer(sr, att.SigningRoot) {
 					slashablePubKeys = append(slashablePubKeys, pubKey)
 					break Loop
 				}
