@@ -107,8 +107,16 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 }
 
 // ListPeers retrieves data about the node's network peers.
-func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeersResponse, error) {
+func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethpb.PeersResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.ListPeers")
+	defer span.End()
+
+	return nil, errors.New("unimplemented")
+}
+
+// PeerCount retrieves retrieves number of known peers.
+func (ns *Server) PeerCount(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeerCountResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "nodev1.PeerCount")
 	defer span.End()
 
 	return nil, errors.New("unimplemented")
