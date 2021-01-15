@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -899,4 +900,40 @@ func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	require.NoError(t, s.SetSlot(2*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.handleEpochBoundary(ctx, s))
 	require.Equal(t, 3*params.BeaconConfig().SlotsPerEpoch, service.nextEpochBoundarySlot)
+}
+
+func TestOnBlock_CanFinalize(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	cfg := &Config{
+		BeaconDB:        beaconDB,
+		StateGen:        stategen.New(beaconDB),
+		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
+		DepositCache:    depositCache,
+	}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	gs, keys := testutil.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.beaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+
+	testState := gs.Copy()
+	for i := uint64(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
+		blk, err := testutil.GenerateFullBlock(testState, keys, testutil.DefaultBlockGenConfig(), i)
+		require.NoError(t, err)
+		r, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, blk, r))
+		testState, err = service.stateGen.StateByRoot(ctx, r)
+		require.NoError(t, err)
+	}
+	require.Equal(t, uint64(3), service.CurrentJustifiedCheckpt().Epoch)
+	require.Equal(t, uint64(2), service.FinalizedCheckpt().Epoch)
 }
