@@ -12,6 +12,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
+        "//slasher/rpc:__pkg__",
         "//validator/client:__pkg__",
     ],
     deps = [
