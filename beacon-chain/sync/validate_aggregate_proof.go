@@ -49,7 +49,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject
 	}
 	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
-		log.WithError(err).Debug("Invalid attestation")
 		return pubsub.ValidationReject
 	}
 

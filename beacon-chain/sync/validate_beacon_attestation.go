@@ -60,7 +60,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	if err := helpers.ValidateNilAttestation(att); err != nil {
-		log.WithError(err).Debug("Invalid attestation")
 		return pubsub.ValidationReject
 	}
 
