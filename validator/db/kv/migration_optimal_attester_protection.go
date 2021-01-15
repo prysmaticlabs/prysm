@@ -118,6 +118,7 @@ func (store *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) erro
 	})
 }
 
+// Migrate attester protection from the more optimal format to the old format in the DB.
 func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
 	// First we extract the public keys we are migrating down for.
 	pubKeys := make([][48]byte, 0)
@@ -148,6 +149,8 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 		return err
 	}
 
+	// Next up, we extract the data for attested epochs and signing roots
+	// from the optimized db schema into maps we can use later.
 	signingRootsByTarget := make(map[uint64][]byte)
 	targetEpochsBySource := make(map[uint64][]uint64)
 	err = store.view(func(tx *bolt.Tx) error {
