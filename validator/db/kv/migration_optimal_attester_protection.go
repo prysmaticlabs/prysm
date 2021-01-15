@@ -133,7 +133,7 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 			return nil
 		}
 		return bkt.ForEach(func(pubKey, v []byte) error {
-			if v == nil {
+			if pubKey == nil {
 				return nil
 			}
 			pkBucket := bkt.Bucket(pubKey)
@@ -230,7 +230,9 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 			if err != nil {
 				return err
 			}
-			return deprecatedBkt.Put(pubKey[:], history)
+			if err := deprecatedBkt.Put(pubKey[:], history); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
