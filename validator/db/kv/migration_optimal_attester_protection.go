@@ -199,6 +199,7 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 		if bkt == nil {
 			return nil
 		}
+		bar := progressutil.InitializeProgressBar(len(pubKeys), "Migrating attesting history to old format")
 		for _, pubKey := range pubKeys {
 			// Now we write the attesting history using the data we extracted
 			// from the buckets accordingly.
@@ -233,6 +234,9 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 				return err
 			}
 			if err := deprecatedBkt.Put(pubKey[:], history); err != nil {
+				return err
+			}
+			if err := bar.Add(1); err != nil {
 				return err
 			}
 		}
