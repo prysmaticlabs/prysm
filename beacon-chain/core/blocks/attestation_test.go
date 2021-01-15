@@ -24,12 +24,12 @@ import (
 
 func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*ethpb.Attestation{
-		{
+		testutil.HydrateAttestation(&ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				Slot:   5,
 			},
-		},
+		}),
 	}
 	b := testutil.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
@@ -50,10 +50,10 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 }
 
 func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
-	att := &ethpb.Attestation{
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0}}}
+			Target: &ethpb.Checkpoint{Epoch: 0}}})
 
 	b := testutil.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
@@ -383,12 +383,12 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 1)
 
-	att := &ethpb.Attestation{
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   params.BeaconConfig().SlotsPerEpoch,
 			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
-	}
+	})
 	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)
 	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.ErrorContains(t, wanted, err)
