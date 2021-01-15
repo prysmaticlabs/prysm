@@ -168,11 +168,6 @@ func (store *Store) Size() (int64, error) {
 	return size, err
 }
 
-// KV returns the underlying boltDB struct.
-func (store *Store) KV() (*bolt.DB, error) {
-	return store.db, nil
-}
-
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
 	return prombolt.New("boltDB", db)
