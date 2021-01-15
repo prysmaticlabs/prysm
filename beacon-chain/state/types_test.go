@@ -8,12 +8,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
@@ -225,7 +225,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	require.NoError(t, a.SetFork(wantedFork))
 
 	newState := a.CloneInnerState()
-	if !ssz.DeepEqual(newState.Fork, wantedFork) {
+	if !sszutil.DeepEqual(newState.Fork, wantedFork) {
 		t.Errorf("Wanted %v but got %v", wantedFork, newState.Fork)
 	}
 
