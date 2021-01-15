@@ -214,6 +214,19 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 			},
 		},
 		{
+			name:  "unsets the migration, even if unset already (no panic)",
+			setup: func(t *testing.T, validatorDB *Store) {},
+			eval: func(t *testing.T, validatorDB *Store) {
+				// Ensure the migration is not marked as complete.
+				err := validatorDB.view(func(tx *bolt.Tx) error {
+					data := tx.Bucket(migrationsBucket).Get(migrationOptimalAttesterProtectionKey)
+					require.DeepNotEqual(t, data, migrationCompleted)
+					return nil
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
 			name: "populates old format from data using the new schema",
 			setup: func(t *testing.T, validatorDB *Store) {
 				pubKeys := [][48]byte{{1}, {2}}
