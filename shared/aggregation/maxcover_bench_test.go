@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -136,6 +138,31 @@ func BenchmarkMaxCoverProblem_Cover(b *testing.B) {
 					require.NoError(b, err)
 					require.DeepEqual(b, tt.want, got)
 				}
+			}
+		})
+	}
+}
+
+func BenchmarkMaxCoverProblem_Cover1(b *testing.B) {
+	bitlistLen := params.BeaconConfig().MaxValidatorsPerCommittee
+	tests := []struct {
+		name          string
+		numCandidates uint64
+		numMarkedBits uint64
+		allowOverlaps bool
+	}{
+		{
+			name:          "1024_attestations_with_single_bit_set",
+			numCandidates: 1024,
+			numMarkedBits: 8,
+		},
+	}
+	for _, tt := range tests {
+		bitlists := aggtesting.BitlistsWithSingleBitSet(tt.numCandidates, bitlistLen)
+		b.Run(tt.name, func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				Cover(bitlists, len(bitlists), tt.allowOverlaps)
 			}
 		})
 	}
