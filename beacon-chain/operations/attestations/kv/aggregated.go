@@ -82,8 +82,8 @@ func (p *AttCaches) aggregateUnaggregatedAttestations(unaggregatedAtts []*ethpb.
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
 func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
-	if att == nil || att.Data == nil {
-		return nil
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return err
 	}
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
@@ -169,8 +169,8 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot, committeeIndex uint6
 
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
 func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
-	if att == nil || att.Data == nil {
-		return nil
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return err
 	}
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
@@ -208,8 +208,8 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 
 // HasAggregatedAttestation checks if the input attestations has already existed in cache.
 func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, error) {
-	if att == nil || att.Data == nil {
-		return false, nil
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return false, err
 	}
 	r, err := hashFn(att.Data)
 	if err != nil {
