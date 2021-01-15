@@ -25,5 +25,5 @@ var (
 	attestationSourceEpochsBucket = []byte("att-source-epochs-bucket")
 
 	// Migrations
-	migrationsBucket = []byte("migrations")
+	migrationsBucket = []byte("upMigrations")
 )

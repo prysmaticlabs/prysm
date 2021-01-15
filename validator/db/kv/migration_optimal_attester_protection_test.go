@@ -3,19 +3,15 @@ package kv
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"testing"
 
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func Test_migrateOptimalAttesterProtection(t *testing.T) {
+func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, validatorDB *Store)
@@ -186,58 +182,10 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			validatorDB, err := setupDBWithoutMigration(t.TempDir())
-			require.NoError(t, err, "Failed to instantiate DB")
-			t.Cleanup(func() {
-				require.NoError(t, validatorDB.Close(), "Failed to close database")
-				require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
-			})
+			validatorDB := setupDB(t, nil)
 			tt.setup(t, validatorDB)
 			require.NoError(t, validatorDB.migrateOptimalAttesterProtectionUp(context.Background()))
 			tt.eval(t, validatorDB)
 		})
 	}
-}
-
-func setupDBWithoutMigration(dirPath string) (*Store, error) {
-	hasDir, err := fileutil.HasDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-	if !hasDir {
-		if err := fileutil.MkdirAll(dirPath); err != nil {
-			return nil, err
-		}
-	}
-	datafile := filepath.Join(dirPath, ProtectionDbFileName)
-	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
-	if err != nil {
-		if errors.Is(err, bolt.ErrTimeout) {
-			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
-		}
-		return nil, err
-	}
-
-	kv := &Store{
-		db:           boltDB,
-		databasePath: dirPath,
-	}
-
-	if err := kv.db.Update(func(tx *bolt.Tx) error {
-		return createBuckets(
-			tx,
-			genesisInfoBucket,
-			deprecatedAttestationHistoryBucket,
-			historicProposalsBucket,
-			lowestSignedSourceBucket,
-			lowestSignedTargetBucket,
-			lowestSignedProposalsBucket,
-			highestSignedProposalsBucket,
-			pubKeysBucket,
-			migrationsBucket,
-		)
-	}); err != nil {
-		return nil, err
-	}
-	return kv, prometheus.Register(createBoltCollector(kv.db))
 }
