@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -69,7 +68,7 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				var data interface{}
+				var data fssz.Unmarshaler
 				switch sszType {
 				case "block":
 					data = &ethpb.BeaconBlock{}
@@ -208,19 +207,15 @@ func main() {
 }
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
-func dataFetcher(fPath string, data interface{}) error {
+func dataFetcher(fPath string, data fssz.Unmarshaler) error {
 	rawFile, err := ioutil.ReadFile(fPath)
 	if err != nil {
 		return err
 	}
-	fsszData, ok := data.(fssz.Unmarshaler)
-	if !ok {
-		return errors.New("could not cast object, not a fssz object")
-	}
-	return fsszData.UnmarshalSSZ(rawFile)
+	return data.UnmarshalSSZ(rawFile)
 }
 
-func prettyPrint(sszPath string, data interface{}) {
+func prettyPrint(sszPath string, data fssz.Unmarshaler) {
 	if err := dataFetcher(sszPath, data); err != nil {
 		log.Fatal(err)
 	}
