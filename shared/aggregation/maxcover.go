@@ -41,6 +41,15 @@ type MaxCoverCandidate struct {
 // MaxCoverCandidates is defined to allow group operations (filtering, sorting) on all candidates.
 type MaxCoverCandidates []*MaxCoverCandidate
 
+type MaxCoverCandidateInterface interface {
+	Bits() *bitfield.Bitlist
+}
+
+type IndexedBitlist struct {
+	*bitfield.Bitlist
+	key uint16
+}
+
 // NewMaxCoverCandidate returns initialized candidate.
 func NewMaxCoverCandidate(key int, bits *bitfield.Bitlist) *MaxCoverCandidate {
 	return &MaxCoverCandidate{
@@ -95,6 +104,104 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error
 	return solution, nil
 }
 
+// Todo 1: try to turn to []*bitfield.Bitlist
+// Todo 2: remove previous implementation
+func Cover(candidates []bitfield.Bitlist, k int, allowOverlaps bool) (selected, coverage bitfield.Bitlist, err error) {
+	if len(candidates) == 0 {
+		return nil, nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
+	}
+	if len(candidates) < k {
+		k = len(candidates)
+	}
+
+	// Track usable candidates, and candidates selected for coverage as two bitlists.
+	// This allows to filter incoming candidate list without any extra re-allocations.
+	selectedCandidates := bitfield.NewBitlist(uint64(len(candidates)))
+	usableCandidates := bitfield.NewBitlist(uint64(len(candidates))).Not()
+
+	coveredBits := bitfield.NewBitlist(candidates[0].Len())
+	remainingBits := union(candidates)
+	if remainingBits == nil {
+		return nil, nil, errors.Wrap(ErrInvalidMaxCoverProblem, "empty bitlists")
+	}
+
+	attempts := 0
+	for selectedCandidates.Count() < uint64(k) && usableCandidates.Count() > 0 {
+		// Safe-guard, each iteration should come with at least one candidate selected.
+		if attempts > k {
+			break
+		}
+		attempts += 1
+
+		// Greedy select the next best candidate (from usable ones) to cover the remaining bits maximally.
+		maxScore := uint64(0)
+		bestIdx := 0
+		for _, idx := range usableCandidates.BitIndices() {
+			//fmt.Printf("item: %v\n", idx)
+
+			// Score is calculated by taking into account uncovered bits only.
+			score := uint64(0)
+			if candidates[idx].Len() == remainingBits.Len() {
+				score = candidates[idx].And(remainingBits).Count()
+			}
+
+			// Filter out zero-score candidates.
+			if score == 0 {
+				usableCandidates.SetBitAt(uint64(idx), false)
+				continue
+			}
+
+			// Filter out overlapping candidates (if overlapping is not allowed).
+			wrongLen := coveredBits.Len() != candidates[idx].Len()
+			overlaps := func(idx int) bool {
+				return coveredBits.And(candidates[idx]).Count() > 0
+				//return coveredBits.Overlaps(candidates[idx])
+			}
+			if wrongLen || !allowOverlaps && overlaps(idx) {
+				usableCandidates.SetBitAt(uint64(idx), false)
+				continue
+			}
+
+			// Track the candidate with the best score.
+			if score > maxScore {
+				maxScore = score
+				bestIdx = idx
+			}
+		}
+		// Process greedy selected candidate.
+		if maxScore > 0 {
+			coveredBits = coveredBits.Or(candidates[bestIdx])
+			selectedCandidates.SetBitAt(uint64(bestIdx), true)
+			remainingBits = remainingBits.And(candidates[bestIdx].Not())
+			usableCandidates.SetBitAt(uint64(bestIdx), false)
+		}
+		//	// Score candidates against remaining bits.
+		//	// Filter out processed and overlapping (when disallowed).
+		//	// Sort by score in a descending order.
+		//	mc.Candidates.score(remainingBits).filter(solution.Coverage, allowOverlaps).sort()
+		//
+		//
+		//	for _, candidate := range mc.Candidates {
+		//		if len(solution.Keys) >= k {
+		//			break
+		//		}
+		//		if !candidate.processed {
+		//			if !allowOverlaps && solution.Coverage.Overlaps(*candidate.bits) {
+		//				// Overlapping candidates violate non-intersection invariant.
+		//				candidate.processed = true
+		//				continue
+		//			}
+		//			solution.Coverage = solution.Coverage.Or(*candidate.bits)
+		//			solution.Keys = append(solution.Keys, candidate.key)
+		//			remainingBits = remainingBits.And(candidate.bits.Not())
+		//			candidate.processed = true
+		//			break
+		//		}
+		//	}
+	}
+	return selectedCandidates, coveredBits, nil
+}
+
 // score updates scores of candidates, taking into account the uncovered elements only.
 func (cl *MaxCoverCandidates) score(uncovered bitfield.Bitlist) *MaxCoverCandidates {
 	for i := 0; i < len(*cl); i++ {
@@ -147,6 +254,19 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 	for i := 0; i < len(*cl); i++ {
 		if *(*cl)[i].bits != nil && ret.Len() == (*cl)[i].bits.Len() {
 			ret = ret.Or(*(*cl)[i].bits)
+		}
+	}
+	return ret
+}
+
+func union(candidates []bitfield.Bitlist) bitfield.Bitlist {
+	if len(candidates) == 0 || candidates[0].Len() == 0 {
+		return nil
+	}
+	ret := bitfield.NewBitlist(candidates[0].Len())
+	for _, bl := range candidates {
+		if ret.Len() == bl.Len() {
+			ret = ret.Or(bl)
 		}
 	}
 	return ret

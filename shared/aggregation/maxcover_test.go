@@ -491,3 +491,137 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		})
 	}
 }
+
+func TestMaxCover_MaxCoverProblem_Cover1(t *testing.T) {
+	problemSet := func() []bitfield.Bitlist {
+		// test vectors originally from:
+		// https://github.com/sigp/lighthouse/blob/master/beacon_node/operation_pool/src/max_cover.rs
+		return []bitfield.Bitlist{
+			{0b00000100, 0b1},
+			{0b00011011, 0b1},
+			{0b00011011, 0b1},
+			{0b00000001, 0b1},
+			{0b00011010, 0b1},
+		}
+	}
+	type args struct {
+		k             int
+		candidates    []bitfield.Bitlist
+		allowOverlaps bool
+	}
+	tests := []struct {
+		name      string
+		args      args
+		want      *Aggregation
+		wantedErr string
+	}{
+		{
+			name:      "nil problem",
+			args:      args{},
+			wantedErr: ErrInvalidMaxCoverProblem.Error(),
+		},
+		{
+			name: "different bitlengths",
+			args: args{k: 3, candidates: []bitfield.Bitlist{
+				{0b00000000, 0b00011111, 0xf1},
+				{0b00000001, 0b11100000, 0b1},
+				{0b00000110, 0b00000000, 0b1},
+			}},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b00000000, 0b00011111, 0xf1},
+				Keys:     []int{0},
+			},
+		},
+		{
+			name: "k=0",
+			args: args{k: 0, candidates: problemSet()},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b0000000, 0b1},
+				Keys:     []int{},
+			},
+		},
+		{
+			name: "k=1",
+			args: args{k: 1, candidates: problemSet()},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b0011011, 0b1},
+				Keys:     []int{1},
+			},
+		},
+		{
+			name: "k=2",
+			args: args{k: 2, candidates: problemSet()},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b0011111, 0b1},
+				Keys:     []int{0, 1},
+			},
+		},
+		{
+			name: "k=3",
+			args: args{k: 3, candidates: problemSet()},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b0011111, 0b1},
+				Keys:     []int{0, 1},
+			},
+		},
+		{
+			name: "k=5",
+			args: args{k: 5, candidates: problemSet()},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b0011111, 0b1},
+				Keys:     []int{0, 1},
+			},
+		},
+		{
+			name: "k=50",
+			args: args{k: 50, candidates: problemSet()},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b0011111, 0b1},
+				Keys:     []int{0, 1},
+			},
+		},
+		{
+			name: "suboptimal", // Greedy algorithm selects: 0, 2, 3, while 1,4,5 is optimal.
+			args: args{k: 3, candidates: []bitfield.Bitlist{
+				{0b00000000, 0b00011111, 0b1},
+				{0b00000001, 0b11100000, 0b1},
+				{0b00000110, 0b00000000, 0b1},
+				{0b00110000, 0b01110000, 0b1},
+				{0b00000110, 0b10001100, 0b1},
+				{0b01001001, 0b00000011, 0b1},
+			}},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b00000111, 0b11111111, 0b1},
+				Keys:     []int{0, 1, 2},
+			},
+		},
+		{
+			name: "allow overlaps",
+			args: args{k: 5, allowOverlaps: true, candidates: []bitfield.Bitlist{
+				{0b00000000, 0b00000001, 0b11111110, 0b1},
+				{0b00000000, 0b00001110, 0b00001110, 0b1},
+				{0b00000000, 0b01110000, 0b01110000, 0b1},
+				{0b00000111, 0b10000001, 0b10000000, 0b1},
+				{0b00000000, 0b00000110, 0b00000110, 0b1},
+				{0b00000000, 0b00000001, 0b01100010, 0b1},
+				{0b00001000, 0b00001000, 0b10000010, 0b1},
+			}},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0b00001111, 0xff, 0b11111110, 0b1},
+				Keys:     []int{0, 1, 2, 3, 6},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			selectedCandidates, coverage, err := Cover(tt.args.candidates, tt.args.k, tt.args.allowOverlaps)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+				assert.DeepEqual(t, tt.want.Coverage, coverage)
+				assert.DeepEqual(t, tt.want.Keys, selectedCandidates.BitIndices())
+			}
+		})
+	}
+}
