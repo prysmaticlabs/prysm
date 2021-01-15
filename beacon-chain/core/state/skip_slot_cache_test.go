@@ -6,10 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -34,7 +34,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	bState, err = state.ExecuteStateTransition(context.Background(), bState, blk)
 	require.NoError(t, err, "Could not process state transition")
 
-	if !ssz.DeepEqual(originalState.CloneInnerState(), bState.CloneInnerState()) {
+	if !sszutil.DeepEqual(originalState.CloneInnerState(), bState.CloneInnerState()) {
 		t.Fatal("Skipped slots cache leads to different states")
 	}
 }

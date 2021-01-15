@@ -100,19 +100,19 @@ func (bs *Server) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
-
-		numBlks := len(blks)
-		if numBlks == 0 {
+		if !hasBlocks {
 			return &ethpb.ListBlocksResponse{
 				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 				TotalSize:       0,
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
+
+		numBlks := len(blks)
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {

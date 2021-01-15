@@ -1479,15 +1479,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	}
 
 	atts := []*pb.PendingAttestation{{
-		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: make([]byte, 32),
-			Source: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
-			},
-			Target: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
-			},
-		},
+		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
 		AggregationBits: bitfield.NewBitlist(2),
 	}}
@@ -1562,15 +1554,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	}
 
 	atts := []*pb.PendingAttestation{{
-		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: make([]byte, 32),
-			Source: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
-			},
-			Target: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
-			},
-		},
+		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
 		AggregationBits: bitfield.NewBitlist(2),
 	}}
@@ -1597,6 +1581,11 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 		StateGen:    stategen.New(beaconDB),
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: timeutils.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		},
+		CanonicalFetcher: &mock.ChainService{
+			CanonicalRoots: map[[32]byte]bool{
+				bRoot: true,
+			},
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}

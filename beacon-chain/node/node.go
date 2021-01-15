@@ -52,8 +52,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var log = logrus.WithField("prefix", "node")
-
 const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -622,6 +620,7 @@ func (b *BeaconNode) registerRPCService() error {
 		Broadcaster:             p2pService,
 		PeersFetcher:            p2pService,
 		PeerManager:             p2pService,
+		MetadataProvider:        p2pService,
 		ChainInfoFetcher:        chainService,
 		HeadFetcher:             chainService,
 		CanonicalFetcher:        chainService,

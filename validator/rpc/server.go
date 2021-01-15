@@ -29,12 +29,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var log logrus.FieldLogger
-
-func init() {
-	log = logrus.WithField("prefix", "rpc")
-}
-
 // Config options for the gRPC server.
 type Config struct {
 	ValidatorGatewayHost     string

@@ -2,14 +2,17 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -20,9 +23,9 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	validatorDB := setupDB(t, pubKeys)
 	tests := []struct {
 		name                string
-		existingAttestation *ethpb.Attestation
+		existingAttestation *ethpb.IndexedAttestation
 		existingSigningRoot [32]byte
-		incomingAttestation *ethpb.Attestation
+		incomingAttestation *ethpb.IndexedAttestation
 		incomingSigningRoot [32]byte
 		want                bool
 	}{
@@ -61,7 +64,7 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validatorDB.ApplyAttestationForPubKey(
+			err := validatorDB.SaveAttestationForPubKey(
 				ctx,
 				pubKeys[0],
 				tt.existingSigningRoot,
@@ -82,6 +85,31 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStore_CheckSlashableAttestation_SurroundVote_MultipleTargetsPerSource(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 1
+	pubKeys := make([][48]byte, numValidators)
+	validatorDB := setupDB(t, pubKeys)
+
+	// Create an attestation with source 1 and target 50, save it.
+	firstAtt := createAttestation(1, 50)
+	err := validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{0}, firstAtt)
+	require.NoError(t, err)
+
+	// Create an attestation with source 1 and target 100, save it.
+	secondAtt := createAttestation(1, 100)
+	err = validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{1}, secondAtt)
+	require.NoError(t, err)
+
+	// Create an attestation with source 0 and target 51, which should surround
+	// our first attestation. Given there can be multiple attested target epochs per
+	// source epoch, we expect our logic to be able to catch this slashable offense.
+	evilAtt := createAttestation(firstAtt.Data.Source.Epoch-1, firstAtt.Data.Target.Epoch+1)
+	slashable, err := validatorDB.CheckSlashableAttestation(ctx, pubKeys[0], [32]byte{2}, evilAtt)
+	require.NotNil(t, err)
+	assert.Equal(t, SurroundingVote, slashable)
 }
 
 func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
@@ -118,7 +146,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	tests := []struct {
 		name        string
 		signingRoot [32]byte
-		attestation *ethpb.Attestation
+		attestation *ethpb.IndexedAttestation
 		want        SlashingKind
 	}{
 		{
@@ -155,6 +183,234 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 			assert.Equal(t, tt.want, slashingKind)
 		})
 	}
+}
+
+func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
+	ctx := context.Background()
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, validatorDB.Close(), "Failed to close database")
+		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+	})
+	p0 := [48]byte{0}
+	p1 := [48]byte{1}
+	// Can save.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(100, 101)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(200, 201)),
+	)
+	got, err := validatorDB.LowestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(100), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(200), got)
+
+	// Can replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(99, 100)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(199, 200)),
+	)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+
+	// Can not replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(100, 101)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(200, 201)),
+	)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+}
+
+func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
+	ctx := context.Background()
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, validatorDB.Close(), "Failed to close database")
+		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
+	})
+	p0 := [48]byte{0}
+	p1 := [48]byte{1}
+	// Can save.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(99, 100)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(199, 200)),
+	)
+	got, err := validatorDB.LowestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(100), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(200), got)
+
+	// Can replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(98, 99)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(198, 199)),
+	)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+
+	// Can not replace.
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p0, [32]byte{}, createAttestation(99, 100)),
+	)
+	require.NoError(
+		t,
+		validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(199, 200)),
+	)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(99), got)
+	got, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(199), got)
+}
+
+func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	numValidators := attestationBatchCapacity
+	pubKeys := make([][48]byte, numValidators)
+	validatorDB := setupDB(t, pubKeys)
+
+	// For each public key, we attempt to save an attestation with signing root.
+	var wg sync.WaitGroup
+	for i, pubKey := range pubKeys {
+		wg.Add(1)
+		go func(j int, pk [48]byte, w *sync.WaitGroup) {
+			defer w.Done()
+			var signingRoot [32]byte
+			copy(signingRoot[:], fmt.Sprintf("%d", j))
+			att := createAttestation(uint64(j), uint64(j)+1)
+			err := validatorDB.SaveAttestationForPubKey(ctx, pk, signingRoot, att)
+			require.NoError(t, err)
+		}(i, pubKey, &wg)
+	}
+	wg.Wait()
+
+	// We verify that we reached the max capacity of batched attestations
+	// before we are required to force flush them to the DB.
+	require.LogsContain(t, hook, "Reached max capacity of batched attestation records")
+	require.LogsDoNotContain(t, hook, "Batched attestation records write interval reached")
+	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
+	require.Equal(t, 0, len(validatorDB.batchedAttestations))
+
+	// We then verify all the data we wanted to save is indeed saved to disk.
+	err := validatorDB.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		for i, pubKey := range pubKeys {
+			var signingRoot [32]byte
+			copy(signingRoot[:], fmt.Sprintf("%d", i))
+			pkBucket := bucket.Bucket(pubKey[:])
+			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
+
+			source := bytesutil.Uint64ToBytesBigEndian(uint64(i))
+			target := bytesutil.Uint64ToBytesBigEndian(uint64(i) + 1)
+			savedSigningRoot := signingRootsBucket.Get(target)
+			require.DeepEqual(t, signingRoot[:], savedSigningRoot)
+			savedTarget := sourceEpochsBucket.Get(source)
+			require.DeepEqual(t, signingRoot[:], savedSigningRoot)
+			require.DeepEqual(t, target, savedTarget)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+}
+
+func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// Number of validators equal to half the total capacity
+	// of batch attestation processing. This will allow us to
+	// test force flushing to the DB based on a timer instead
+	// of the max capacity being reached.
+	numValidators := attestationBatchCapacity / 2
+	pubKeys := make([][48]byte, numValidators)
+	validatorDB := setupDB(t, pubKeys)
+
+	// For each public key, we attempt to save an attestation with signing root.
+	var wg sync.WaitGroup
+	for i, pubKey := range pubKeys {
+		wg.Add(1)
+		go func(j int, pk [48]byte, w *sync.WaitGroup) {
+			defer w.Done()
+			var signingRoot [32]byte
+			copy(signingRoot[:], fmt.Sprintf("%d", j))
+			att := createAttestation(uint64(j), uint64(j)+1)
+			err := validatorDB.SaveAttestationForPubKey(ctx, pk, signingRoot, att)
+			require.NoError(t, err)
+		}(i, pubKey, &wg)
+	}
+	wg.Wait()
+
+	// We verify that we reached a timer interval for force flushing records
+	// before we are required to force flush them to the DB.
+	require.LogsDoNotContain(t, hook, "Reached max capacity of batched attestation records")
+	require.LogsContain(t, hook, "Batched attestation records write interval reached")
+	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
+	require.Equal(t, 0, len(validatorDB.batchedAttestations))
+
+	// We then verify all the data we wanted to save is indeed saved to disk.
+	err := validatorDB.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		for i, pubKey := range pubKeys {
+			var signingRoot [32]byte
+			copy(signingRoot[:], fmt.Sprintf("%d", i))
+			pkBucket := bucket.Bucket(pubKey[:])
+			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
+
+			source := bytesutil.Uint64ToBytesBigEndian(uint64(i))
+			target := bytesutil.Uint64ToBytesBigEndian(uint64(i) + 1)
+			savedSigningRoot := signingRootsBucket.Get(target)
+			require.DeepEqual(t, signingRoot[:], savedSigningRoot)
+			savedTarget := sourceEpochsBucket.Get(source)
+			require.DeepEqual(t, signingRoot[:], savedSigningRoot)
+			require.DeepEqual(t, target, savedTarget)
+		}
+		return nil
+	})
+	require.NoError(t, err)
 }
 
 func BenchmarkStore_CheckSlashableAttestation_Surround_SafeAttestation_54kEpochs(b *testing.B) {
@@ -211,7 +467,7 @@ func benchCheckSurroundVote(
 	require.NoError(b, err)
 
 	// Will surround many attestations.
-	var surroundingVote *ethpb.Attestation
+	var surroundingVote *ethpb.IndexedAttestation
 	if shouldSurround {
 		surroundingVote = createAttestation(numEpochs/2, numEpochs)
 	} else {
@@ -231,8 +487,8 @@ func benchCheckSurroundVote(
 	}
 }
 
-func createAttestation(source, target uint64) *ethpb.Attestation {
-	return &ethpb.Attestation{
+func createAttestation(source, target uint64) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
 				Epoch: source,

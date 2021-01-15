@@ -40,8 +40,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "node")
-
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {

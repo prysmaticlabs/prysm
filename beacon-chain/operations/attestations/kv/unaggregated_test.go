@@ -155,11 +155,7 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 }
 
 func TestKV_Unaggregated_DeleteSeenUnaggregatedAttestations(t *testing.T) {
-	d := &ethpb.AttestationData{
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		BeaconBlockRoot: make([]byte, 32),
-	}
+	d := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
 	t.Run("no attestations", func(t *testing.T) {
 		cache := NewAttCaches()

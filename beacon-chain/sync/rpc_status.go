@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"sync"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
@@ -28,8 +29,11 @@ func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
 	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
 	runutil.RunEvery(s.ctx, interval, func() {
+		wg := new(sync.WaitGroup)
 		for _, pid := range s.p2p.Peers().Connected() {
+			wg.Add(1)
 			go func(id peer.ID) {
+				defer wg.Done()
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
 				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
@@ -58,6 +62,15 @@ func (s *Service) maintainPeerStatuses() {
 					}
 				}
 			}(pid)
+		}
+		// Wait for all status checks to finish and then proceed onwards to
+		// pruning excess peers.
+		wg.Wait()
+		peerIds := s.p2p.Peers().PeersToPrune()
+		for _, id := range peerIds {
+			if err := s.sendGoodByeAndDisconnect(s.ctx, p2ptypes.GoodbyeCodeTooManyPeers, id); err != nil {
+				log.WithField("peer", id).WithError(err).Debug("Could not disconnect with peer")
+			}
 		}
 	})
 }
