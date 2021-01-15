@@ -6,6 +6,8 @@ import (
 	"io"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	bolt "go.etcd.io/bbolt"
+
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
@@ -42,4 +44,6 @@ type ValidatorDB interface {
 	SaveAttestationForPubKey(
 		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 	) error
+	// Returns an underlying boltDB struct. If the database does not use boltDB, returns an error.
+	KV() (*bolt.DB, error)
 }

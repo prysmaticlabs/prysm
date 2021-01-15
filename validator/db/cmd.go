@@ -27,5 +27,19 @@ var DatabaseCommands = &cli.Command{
 				return nil
 			},
 		},
+		{
+			Name:        "rollback",
+			Description: `rolls back any database migrations to their previous version`,
+			Flags: cmd.WrapFlags([]cli.Flag{
+				cmd.DataDirFlag,
+			}),
+			Before: tos.VerifyTosAcceptedOrPrompt,
+			Action: func(cliCtx *cli.Context) error {
+				if err := rollback(cliCtx); err != nil {
+					log.Fatalf("Could not rollback database migrations: %v", err)
+				}
+				return nil
+			},
+		},
 	},
 }

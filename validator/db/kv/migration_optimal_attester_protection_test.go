@@ -60,7 +60,7 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
-					bucket := tx.Bucket(historicAttestationsBucket)
+					bucket := tx.Bucket(deprecatedAttestationHistoryBucket)
 					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
@@ -119,13 +119,13 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
-					bucket := tx.Bucket(historicAttestationsBucket)
+					bucket := tx.Bucket(deprecatedAttestationHistoryBucket)
 					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
 
 				// Run the migration.
-				require.NoError(t, validatorDB.migrateOptimalAttesterProtection(ctx))
+				require.NoError(t, validatorDB.migrateOptimalAttesterProtectionUp(ctx))
 
 				// Then delete the migration completed key.
 				err = validatorDB.update(func(tx *bolt.Tx) error {
@@ -146,7 +146,7 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
-					bucket := tx.Bucket(historicAttestationsBucket)
+					bucket := tx.Bucket(deprecatedAttestationHistoryBucket)
 					return bucket.Put(pubKey[:], newHist)
 				})
 				require.NoError(t, err)
@@ -193,7 +193,7 @@ func Test_migrateOptimalAttesterProtection(t *testing.T) {
 				require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
 			})
 			tt.setup(t, validatorDB)
-			require.NoError(t, validatorDB.migrateOptimalAttesterProtection(context.Background()))
+			require.NoError(t, validatorDB.migrateOptimalAttesterProtectionUp(context.Background()))
 			tt.eval(t, validatorDB)
 		})
 	}
@@ -227,7 +227,7 @@ func setupDBWithoutMigration(dirPath string) (*Store, error) {
 		return createBuckets(
 			tx,
 			genesisInfoBucket,
-			historicAttestationsBucket,
+			deprecatedAttestationHistoryBucket,
 			historicProposalsBucket,
 			lowestSignedSourceBucket,
 			lowestSignedTargetBucket,

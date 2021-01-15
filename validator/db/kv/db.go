@@ -113,7 +113,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 		return createBuckets(
 			tx,
 			genesisInfoBucket,
-			historicAttestationsBucket,
+			deprecatedAttestationHistoryBucket,
 			historicProposalsBucket,
 			lowestSignedSourceBucket,
 			lowestSignedTargetBucket,
@@ -134,7 +134,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	}
 
 	// Perform a special migration to an optimal attester protection DB schema.
-	if err := kv.migrateOptimalAttesterProtection(ctx); err != nil {
+	if err := kv.migrateOptimalAttesterProtectionUp(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not migrate attester protection to more efficient format")
 	}
 
@@ -171,6 +171,11 @@ func (store *Store) Size() (int64, error) {
 		return nil
 	})
 	return size, err
+}
+
+// KV returns the underlying boltDB struct.
+func (store *Store) KV() (*bolt.DB, error) {
+	return store.db, nil
 }
 
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
