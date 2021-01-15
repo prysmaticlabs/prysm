@@ -27,7 +27,7 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 
 		bkt := tx.Bucket(historicAttestationsBucket)
 		numKeys = bkt.Stats().KeyN
-		if err := bkt.ForEach(func(k, v []byte) error {
+		return bkt.ForEach(func(k, v []byte) error {
 			if v == nil {
 				return nil
 			}
@@ -51,10 +51,7 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 			publicKeyBytes = append(publicKeyBytes, nk)
 			attestingHistoryBytes = append(attestingHistoryBytes, nv)
 			return nil
-		}); err != nil {
-			return err
-		}
-		return nil
+		})
 	})
 	if err != nil {
 		return err
@@ -62,8 +59,7 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 
 	bar := progressutil.InitializeProgressBar(numKeys, "Migrating attesting history to more efficient format")
 	for i, publicKey := range publicKeyBytes {
-		var attestingHistory deprecatedEncodedAttestingHistory
-		attestingHistory = attestingHistoryBytes[i]
+		attestingHistory := deprecatedEncodedAttestingHistory(attestingHistoryBytes[i])
 		err = store.db.Update(func(tx *bolt.Tx) error {
 			if attestingHistory == nil {
 				return nil
@@ -109,9 +105,6 @@ func (store *Store) migrateOptimalAttesterProtection(ctx context.Context) error 
 
 	return store.db.Update(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
-		if err := mb.Put(migrationOptimalAttesterProtectionKey, migrationCompleted); err != nil {
-			return err
-		}
-		return nil
+		return mb.Put(migrationOptimalAttesterProtectionKey, migrationCompleted)
 	})
 }

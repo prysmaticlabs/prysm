@@ -1038,7 +1038,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			attestingHistoriesByPubKey := make(map[[48]byte][]*kv.AttestationRecord)
 			pubKeys := make([][48]byte, 0)
-			for pubKey, _ := range tt.incomingAttsByPubKey {
+			for pubKey := range tt.incomingAttsByPubKey {
 				pubKeys = append(pubKeys, pubKey)
 			}
 			validatorDB := dbtest.SetupDB(t, pubKeys)
