@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"go.opencensus.io/trace"
 )
@@ -44,12 +44,7 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return err
 	}
-	var signingRootIsDifferent bool
-	if signingRoot == params.BeaconConfig().ZeroHash && existingSigningRoot == params.BeaconConfig().ZeroHash {
-		signingRootIsDifferent = true
-	} else {
-		signingRootIsDifferent = existingSigningRoot != signingRoot
-	}
+	signingRootsDiffer := slashutil.SigningRootsDiffer(existingSigningRoot, signingRoot)
 
 	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
 	// than or equal to the minimum target epoch present in that signer’s attestations.
@@ -57,7 +52,7 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return err
 	}
-	if signingRootIsDifferent && exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
+	if signingRootsDiffer && exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
 		return fmt.Errorf(
 			"could not sign attestation lower than or equal to lowest target epoch in db, %d >= %d",
 			lowestTargetEpoch,

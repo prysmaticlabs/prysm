@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -9,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -103,13 +101,9 @@ func (store *Store) CheckSlashableAttestation(
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.Data.Target.Epoch)
 			existingSigningRoot := signingRootsBucket.Get(targetEpochBytes)
 			if existingSigningRoot != nil {
-				var signingRootIsDifferent bool
-				if signingRoot == params.BeaconConfig().ZeroHash && bytes.Equal(existingSigningRoot, params.BeaconConfig().ZeroHash[:]) {
-					signingRootIsDifferent = true
-				} else {
-					signingRootIsDifferent = !bytes.Equal(existingSigningRoot, signingRoot[:])
-				}
-				if signingRootIsDifferent {
+				var existing [32]byte
+				copy(existing[:], existingSigningRoot)
+				if slashutil.SigningRootsDiffer(existing, signingRoot) {
 					slashKind = DoubleVote
 					return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
 				}

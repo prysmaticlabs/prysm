@@ -34,6 +34,7 @@ go_library(
         "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
+        "//shared/slashutil:go_default_library",
         "//shared/slotutil:go_default_library",
         "//shared/timeutils:go_default_library",
         "//shared/traceutil:go_default_library",
