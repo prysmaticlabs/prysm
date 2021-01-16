@@ -2142,3 +2142,11 @@ func TestServer_isSlotCanonical(t *testing.T) {
 		}
 	}
 }
+
+func TestServer_isSlotCanonicalForSlot0(t *testing.T) {
+	ctx := context.Background()
+	bs := &Server{}
+	c, err := bs.isSlotCanonical(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, true, c)
+}
