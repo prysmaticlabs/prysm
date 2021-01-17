@@ -61,6 +61,10 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
 	}
 
+	// Note that target root check is ignored here because it was performed in sync's validation pipeline:
+	// validate_aggregate_proof.go and validate_beacon_attestation.go
+	// If missing target root were to fail in this method, it would have just failed in `getAttPreState`.
+
 	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
 	// save it to the cache.
 	baseState, err := s.getAttPreState(ctx, tgt)
@@ -73,11 +77,6 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	// Verify attestation target is from current epoch or previous epoch.
 	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(timeutils.Now().Unix()), tgt); err != nil {
 		return nil, err
-	}
-
-	// Verify attestation beacon block is known and not from the future.
-	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
 	// Verify LMG GHOST and FFG votes are consistent with each other.
