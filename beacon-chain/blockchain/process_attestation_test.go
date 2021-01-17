@@ -76,11 +76,6 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantedErr: "data slot is not in the same epoch as target 1 != 0",
 		},
 		{
-			name:      "attestation's target root not in db",
-			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}},
-			wantedErr: "target root does not exist in db",
-		},
-		{
 			name:      "no pre state for attestations's target block",
 			a:         &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			wantedErr: "could not get pre state for epoch 0",

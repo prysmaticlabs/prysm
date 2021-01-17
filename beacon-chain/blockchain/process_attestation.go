@@ -61,11 +61,6 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
 	}
 
-	// Verify beacon node has seen the target block before.
-	if !s.hasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return nil, ErrTargetRootNotInDB
-	}
-
 	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
 	// save it to the cache.
 	baseState, err := s.getAttPreState(ctx, tgt)
