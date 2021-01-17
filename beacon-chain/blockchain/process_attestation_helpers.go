@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -103,23 +102,6 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if b.Block.Slot > data.Slot {
 		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)
 	}
-	return nil
-}
-
-// verifyLMDFFGConsistent verifies LMD GHOST and FFG votes are consistent with each other.
-func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot, lmdRoot []byte) error {
-	ffgSlot, err := helpers.StartSlot(ffgEpoch)
-	if err != nil {
-		return err
-	}
-	r, err := s.ancestor(ctx, lmdRoot, ffgSlot)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(ffgRoot, r) {
-		return errors.New("FFG and LMD votes are not consistent")
-	}
-
 	return nil
 }
 

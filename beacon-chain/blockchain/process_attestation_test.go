@@ -325,54 +325,6 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	assert.NoError(t, service.verifyBeaconBlock(ctx, d), "Did not receive the wanted error")
 }
 
-func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
-	require.NoError(t, err)
-
-	b32 := testutil.NewBeaconBlock()
-	b32.Block.Slot = 32
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
-	r32, err := b32.Block.HashTreeRoot()
-	require.NoError(t, err)
-	b33 := testutil.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	wanted := "FFG and LMD votes are not consistent"
-	assert.ErrorContains(t, wanted, service.verifyLMDFFGConsistent(context.Background(), 1, []byte{'a'}, r33[:]))
-}
-
-func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
-	require.NoError(t, err)
-
-	b32 := testutil.NewBeaconBlock()
-	b32.Block.Slot = 32
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
-	r32, err := b32.Block.HashTreeRoot()
-	require.NoError(t, err)
-	b33 := testutil.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	err = service.verifyLMDFFGConsistent(context.Background(), 1, r32[:], r33[:])
-	assert.NoError(t, err, "Could not verify LMD and FFG votes to be consistent")
-}
-
 func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
