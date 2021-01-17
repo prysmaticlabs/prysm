@@ -52,7 +52,7 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 		wallet: wallet,
 	}
 	ctx := context.Background()
-	_, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	_, err := dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	require.NoError(t, err)
 
 	// We expect the 50 keys in the account store to match.
@@ -65,7 +65,7 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 	}
 
 	// Re-run the create accounts keystore function with the same pubkeys.
-	_, err = dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	_, err = dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	require.NoError(t, err)
 
 	// We expect nothing to change.
@@ -84,7 +84,7 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 	privKeys = append(privKeys, privKey.Marshal())
 	pubKeys = append(pubKeys, privKey.PublicKey().Marshal())
 
-	_, err = dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	_, err = dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	require.NoError(t, err)
 	require.Equal(t, len(dr.accountsStore.PublicKeys), len(dr.accountsStore.PrivateKeys))
 

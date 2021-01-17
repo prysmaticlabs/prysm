@@ -13,7 +13,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -27,7 +26,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -48,8 +46,6 @@ func randomHex(n int) string {
 }
 
 func init() {
-	featureconfig.Init(&featureconfig.Flags{SkipBLSVerify: true})
-
 	logrus.SetLevel(logrus.PanicLevel)
 	logrus.SetOutput(ioutil.Discard)
 
@@ -72,7 +68,7 @@ func setupDB() {
 	if err := db1.SaveBlock(ctx, b); err != nil {
 		panic(err)
 	}
-	br, err := ssz.HashTreeRoot(b)
+	br, err := b.HashTreeRoot()
 	if err != nil {
 		panic(err)
 	}
@@ -89,10 +85,12 @@ type fakeChecker struct{}
 func (fakeChecker) Syncing() bool {
 	return false
 }
+func (fakeChecker) Initialized() bool {
+	return false
+}
 func (fakeChecker) Status() error {
 	return nil
 }
-
 func (fakeChecker) Resync() error {
 	return nil
 }

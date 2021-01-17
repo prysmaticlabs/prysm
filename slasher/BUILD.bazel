@@ -7,6 +7,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = [
+        "log.go",
         "main.go",
         "usage.go",
     ],

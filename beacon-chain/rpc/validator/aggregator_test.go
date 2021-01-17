@@ -222,16 +222,10 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.Se
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
-	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			CommitteeIndex:  1,
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
-		},
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
+		Data:            &ethpb.AttestationData{CommitteeIndex: 1},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, 96),
-	}
+	})
 	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
@@ -262,16 +256,12 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.Se
 func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
-	att := &ethpb.Attestation{
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			CommitteeIndex:  1,
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			CommitteeIndex: 1,
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, 96),
-	}
+	})
 	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
@@ -440,7 +430,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 
 func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
 	c := &mock.ChainService{Genesis: time.Now()}
-	aggregatorServer := &Server{GenesisTimeFetcher: c}
+	aggregatorServer := &Server{TimeFetcher: c}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Signature: []byte{'a'},

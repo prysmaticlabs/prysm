@@ -52,8 +52,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var log = logrus.WithField("prefix", "node")
-
 const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -358,8 +356,8 @@ func readbootNodes(fileName string) ([]string, error) {
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	// Bootnode ENR may be a filepath to a YAML file
-	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes //actual CLI values
-	bootnodeAddrs := make([]string, 0)                           //dest of final list of nodes
+	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes // actual CLI values
+	bootnodeAddrs := make([]string, 0)                           // dest of final list of nodes
 	for _, addr := range bootnodesTemp {
 		if filepath.Ext(addr) == ".yaml" {
 			fileNodes, err := readbootNodes(addr)
@@ -622,6 +620,7 @@ func (b *BeaconNode) registerRPCService() error {
 		Broadcaster:             p2pService,
 		PeersFetcher:            p2pService,
 		PeerManager:             p2pService,
+		MetadataProvider:        p2pService,
 		ChainInfoFetcher:        chainService,
 		HeadFetcher:             chainService,
 		CanonicalFetcher:        chainService,

@@ -109,10 +109,9 @@ func ProcessAttestationNoVerifySignature(
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
-	if att == nil || att.Data == nil || att.Data.Target == nil {
-		return nil, errors.New("nil attestation data target")
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return nil, err
 	}
-
 	currEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	var prevEpoch uint64
 	if currEpoch == 0 {
@@ -274,8 +273,8 @@ func VerifyAttestationsSignatures(ctx context.Context, beaconState *stateTrie.Be
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestationSignature(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
-	if att == nil || att.Data == nil || att.AggregationBits.Count() == 0 {
-		return fmt.Errorf("nil or missing attestation data: %v", att)
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return err
 	}
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {

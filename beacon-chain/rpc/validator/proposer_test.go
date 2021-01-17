@@ -1834,15 +1834,11 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			inputAtts: func() []*ethpb.Attestation {
 				atts := make([]*ethpb.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
-					atts[i] = &ethpb.Attestation{
+					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
-							CommitteeIndex:  uint64(i),
-							Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-							Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-							BeaconBlockRoot: make([]byte, 32),
+							CommitteeIndex: uint64(i),
 						},
-						Signature: make([]byte, 96),
-					}
+					})
 				}
 				return atts
 			},
@@ -1855,16 +1851,13 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			inputAtts: func() []*ethpb.Attestation {
 				atts := make([]*ethpb.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
-					atts[i] = &ethpb.Attestation{
+					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
-							CommitteeIndex:  uint64(i),
-							Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-							Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
-							BeaconBlockRoot: make([]byte, 32),
+							CommitteeIndex: uint64(i),
+							Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 						},
 						AggregationBits: bitfield.Bitlist{0b00000110},
-						Signature:       make([]byte, 96),
-					}
+					})
 					committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
 					assert.NoError(t, err)
 					attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
@@ -2090,8 +2083,12 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("foo")).Marshal()
-	aggregatedAtts := []*ethpb.Attestation{{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
-	unaggregatedAtts := []*ethpb.Attestation{{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
+	aggregatedAtts := []*ethpb.Attestation{
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
+	unaggregatedAtts := []*ethpb.Attestation{
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}),
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig})}
 
 	require.NoError(t, s.AttPool.SaveAggregatedAttestations(aggregatedAtts))
 	require.NoError(t, s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts))

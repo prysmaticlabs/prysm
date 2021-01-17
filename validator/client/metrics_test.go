@@ -15,7 +15,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		startBalances:        make(map[[48]byte]uint64),
 		prevBalance:          make(map[[48]byte]uint64),
 		voteStats: voteStats{
-			startEpoch: 0, //this would otherwise have been previously set in LogValidatorGainsAndLosses()
+			startEpoch: 0, // this would otherwise have been previously set in LogValidatorGainsAndLosses()
 		},
 	}
 
@@ -36,7 +36,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []uint64{^uint64(0), 10, 11}, //exact slot doesn't matter, only if it is == or != ^uint64(0)
+			InclusionSlots:       []uint64{^uint64(0), 10, 11}, // exact slot doesn't matter, only if it is == or != ^uint64(0)
 			InclusionDistances:   []uint64{0, 5, 2},
 			CorrectlyVotedHead:   []bool{false, true, false},
 			CorrectlyVotedSource: []bool{false, true, true},

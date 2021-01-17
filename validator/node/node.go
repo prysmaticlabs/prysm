@@ -40,8 +40,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "node")
-
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
@@ -224,7 +222,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := valDB.RunMigrations(cliCtx.Context); err != nil {
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
 	}
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
@@ -310,7 +308,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-	if err := valDB.RunMigrations(cliCtx.Context); err != nil {
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
 	}
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {

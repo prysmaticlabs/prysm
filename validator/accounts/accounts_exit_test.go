@@ -116,7 +116,7 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanager.Imported,
-			WalletPassword: "Passwordz0320$",
+			WalletPassword: password,
 		},
 	})
 	require.NoError(t, err)
