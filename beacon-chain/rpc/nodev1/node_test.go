@@ -266,7 +266,7 @@ func TestListPeers(t *testing.T) {
 		require.NoError(t, err)
 		serializedEnr, err := p2p.SerializeENR(expectedEnr)
 		require.NoError(t, err)
-		assert.Equal(t, serializedEnr, returnedPeer.Enr)
+		assert.Equal(t, "enr:"+serializedEnr, returnedPeer.Enr)
 		expectedP2PAddr, err := peerStatus.Address(expectedId)
 		require.NoError(t, err)
 		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.Address)

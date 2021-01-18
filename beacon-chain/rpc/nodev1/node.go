@@ -171,7 +171,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			}
 			p := ethpb.Peer{
 				PeerId:    id.Pretty(),
-				Enr:       serializedEnr,
+				Enr:       "enr:" + serializedEnr,
 				Address:   address.String(),
 				State:     ethpb.ConnectionState(connectionState),
 				Direction: ethpb.PeerDirection(direction),
@@ -264,7 +264,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		}
 		p := ethpb.Peer{
 			PeerId:    id.Pretty(),
-			Enr:       serializedEnr,
+			Enr:       "enr:" + serializedEnr,
 			Address:   address.String(),
 			State:     ethpb.ConnectionState(connectionState),
 			Direction: ethpb.PeerDirection(direction),
