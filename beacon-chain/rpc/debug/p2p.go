@@ -124,6 +124,19 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	if !lastUpdated.IsZero() {
 		unixTime = uint64(lastUpdated.Unix())
 	}
+	gScore, bPenalty, topicMaps, err := peers.Scorers().GossipScorer().GossipData(pid)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	scoreInfo := &pbrpc.ScoreInfo{
+		OverallScore:       float32(peers.Scorers().Score(pid)),
+		ProcessedBlocks:    peers.Scorers().BlockProviderScorer().ProcessedBlocks(pid),
+		BlockProviderScore: float32(peers.Scorers().BlockProviderScorer().Score(pid)),
+		TopicScores:        topicMaps,
+		GossipScore:        float32(gScore),
+		BehaviourPenalty:   float32(bPenalty),
+		ValidationError:    peers.Scorers().ValidationError(pid).Error(),
+	}
 	return &pbrpc.DebugPeerResponse{
 		ListeningAddresses: stringAddrs,
 		Direction:          pbDirection,
@@ -133,5 +146,6 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		PeerInfo:           peerInfo,
 		PeerStatus:         pStatus,
 		LastUpdated:        unixTime,
+		ScoreInfo:          scoreInfo,
 	}, nil
 }
