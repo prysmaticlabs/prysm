@@ -12,7 +12,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-peerstore/test"
+	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
 	ma "github.com/multiformats/go-multiaddr"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -201,8 +201,38 @@ func TestGetPeer(t *testing.T) {
 	})
 
 	t.Run("Peer not found", func(t *testing.T) {
-		generatedId := string(test.GeneratePeerIDs(1)[0])
+		generatedId := string(libp2ptest.GeneratePeerIDs(1)[0])
 		_, err = s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: generatedId})
 		assert.ErrorContains(t, "Peer not found", err)
 	})
+}
+
+func BenchmarkListPeers(b *testing.B) {
+	// We simulate having a lot of peers.
+	ids := libp2ptest.GeneratePeerIDs(2000)
+	peerFetcher := &mockp2p.MockPeersProvider{}
+
+	for _, id := range ids {
+		enrRecord := &enr.Record{}
+		err := enrRecord.SetSig(dummyIdentity{1}, []byte{42})
+		require.NoError(b, err)
+		enrRecord.Set(enr.IPv4{7, 7, 7, 7})
+		err = enrRecord.SetSig(dummyIdentity{}, []byte{})
+		require.NoError(b, err)
+		const p2pAddr = "/ip4/7.7.7.7/udp/30303/p2p/QmYyQSo1c1Ym7orWxLYvCrM2EmxFTANf8wXmmE7DWjhx5N"
+		p2pMultiAddr, err := ma.NewMultiaddr(p2pAddr)
+		require.NoError(b, err)
+		peerFetcher.Peers().Add(enrRecord, id, p2pMultiAddr, network.DirInbound)
+	}
+
+	s := Server{PeersFetcher: peerFetcher}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.ListPeers(context.Background(), &ethpb.PeersRequest{
+			State:     make([]string, 0),
+			Direction: make([]string, 0),
+		})
+		require.NoError(b, err)
+	}
 }
