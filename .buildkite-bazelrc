@@ -31,6 +31,7 @@ build --curses=yes --color=no
 build --keep_going
 build --test_output=errors
 build --flaky_test_attempts=5
+build --remote_local_fallback --remote_cache=grpc://bazel-remote-cache:9092
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
 
