@@ -9,7 +9,7 @@
 #build:remote-cache --strategy=Genrule=standalone
 
 # Prysm specific remote-cache properties.
-#build:remote-cache --disk_cache=
+build:remote-cache --disk_cache=
 #build:remote-cache --remote_download_minimal
 
 # Import workspace options.
