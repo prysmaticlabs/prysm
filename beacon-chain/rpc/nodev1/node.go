@@ -3,25 +3,107 @@ package nodev1
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"runtime"
 
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetIdentity retrieves data about the node's network presence.
 func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.IdentityResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "nodeV1.GetIdentity")
+	defer span.End()
+
+	peerId := ns.PeerManager.PeerID().Pretty()
+
+	serializedEnr, err := p2p.SerializeENR(ns.PeerManager.ENR())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not obtain enr: %v", err)
+	}
+	enr := "enr:" + serializedEnr
+
+	sourcep2p := ns.PeerManager.Host().Addrs()
+	p2pAddresses := make([]string, len(sourcep2p))
+	for i := range sourcep2p {
+		p2pAddresses[i] = sourcep2p[i].String() + "/p2p/" + peerId
+	}
+
+	sourceDisc, err := ns.PeerManager.DiscoveryAddresses()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not obtain discovery address: %v", err)
+	}
+	discoveryAddresses := make([]string, len(sourceDisc))
+	for i := range sourceDisc {
+		discoveryAddresses[i] = sourceDisc[i].String()
+	}
+
+	metadata := &ethpb.Metadata{
+		SeqNumber: ns.MetadataProvider.MetadataSeq(),
+		Attnets:   ns.MetadataProvider.Metadata().Attnets,
+	}
+
+	return &ethpb.IdentityResponse{
+		Data: &ethpb.Identity{
+			PeerId:             peerId,
+			Enr:                enr,
+			P2PAddresses:       p2pAddresses,
+			DiscoveryAddresses: discoveryAddresses,
+			Metadata:           metadata,
+		},
+	}, nil
 }
 
 // GetPeer retrieves data about the given peer.
 func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.PeerResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "nodev1.GetPeer")
+	defer span.End()
+
+	peerStatus := ns.PeersFetcher.Peers()
+	id, err := peer.IDFromString(req.PeerId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Invalid peer ID: "+req.PeerId)
+	}
+	enr, err := peerStatus.ENR(id)
+	if err != nil {
+		if errors.Is(err, peerdata.ErrPeerUnknown) {
+			return nil, status.Error(codes.NotFound, "Peer not found")
+		}
+		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+	}
+	serializedEnr, err := p2p.SerializeENR(enr)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+	}
+	p2pAddress, err := peerStatus.Address(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain address: %v", err)
+	}
+	state, err := peerStatus.ConnectionState(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain state: %v", err)
+	}
+	direction, err := peerStatus.Direction(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
+	}
+
+	return &ethpb.PeerResponse{
+		Data: &ethpb.Peer{
+			PeerId:    req.PeerId,
+			Enr:       "enr:" + serializedEnr,
+			Address:   p2pAddress.String(),
+			State:     ethpb.ConnectionState(state),
+			Direction: ethpb.PeerDirection(direction),
+		},
+	}, nil
 }
 
 // ListPeers retrieves data about the node's network peers.
@@ -70,5 +152,5 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		return &emptypb.Empty{}, nil
 	}
-	return &emptypb.Empty{}, status.Error(http.StatusInternalServerError, "node not initialized or having issues")
+	return &emptypb.Empty{}, status.Error(codes.Internal, "node not initialized or having issues")
 }

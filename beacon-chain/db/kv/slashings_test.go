@@ -44,37 +44,14 @@ func TestStore_AttesterSlashing_CRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	att := &ethpb.AttesterSlashing{
-		Attestation_1: &ethpb.IndexedAttestation{
+		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Slot:            5,
-				Source: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  make([]byte, 32),
-				},
-				Target: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  make([]byte, 32),
-				},
-			},
-			Signature: make([]byte, 96),
-		},
-		Attestation_2: &ethpb.IndexedAttestation{
+				Slot: 5,
+			}}),
+		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Slot:            7,
-				Source: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  make([]byte, 32),
-				},
-				Target: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  make([]byte, 32),
-				},
-			},
-			Signature: make([]byte, 96),
-		},
-	}
+				Slot: 7,
+			}})}
 	slashingRoot, err := att.HashTreeRoot()
 	require.NoError(t, err)
 	retrieved, err := db.AttesterSlashing(ctx, slashingRoot)

@@ -78,38 +78,47 @@ func (store *Store) CheckSlashableAttestation(
 			return nil
 		}
 		// Check for surround votes.
-		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochBytes []byte) error {
+		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochsBytes []byte) error {
 			existingSourceEpoch := bytesutil.BytesToUint64BigEndian(sourceEpochBytes)
-			existingTargetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
-			existingAtt := &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
-					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
-				},
+
+			// There can be multiple target epochs attested per source epoch.
+			attestedTargetEpochs := make([]uint64, 0)
+			for i := 0; i < len(targetEpochsBytes); i += 8 {
+				targetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochsBytes[i : i+8])
+				attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
 			}
-			// Checks if the incoming attestation is surrounding or
-			// is surrounded by an existing one.
-			surrounding := slashutil.IsSurround(att, existingAtt)
-			surrounded := slashutil.IsSurround(existingAtt, att)
-			if surrounding {
-				slashKind = SurroundingVote
-				return fmt.Errorf(
-					surroundingVoteMessage,
-					att.Data.Source.Epoch,
-					att.Data.Target.Epoch,
-					existingSourceEpoch,
-					existingTargetEpoch,
-				)
-			}
-			if surrounded {
-				slashKind = SurroundedVote
-				return fmt.Errorf(
-					surroundedVoteMessage,
-					att.Data.Source.Epoch,
-					att.Data.Target.Epoch,
-					existingSourceEpoch,
-					existingTargetEpoch,
-				)
+
+			for _, existingTargetEpoch := range attestedTargetEpochs {
+				existingAtt := &ethpb.IndexedAttestation{
+					Data: &ethpb.AttestationData{
+						Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+						Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+					},
+				}
+				// Checks if the incoming attestation is surrounding or
+				// is surrounded by an existing one.
+				surrounding := slashutil.IsSurround(att, existingAtt)
+				surrounded := slashutil.IsSurround(existingAtt, att)
+				if surrounding {
+					slashKind = SurroundingVote
+					return fmt.Errorf(
+						surroundingVoteMessage,
+						att.Data.Source.Epoch,
+						att.Data.Target.Epoch,
+						existingSourceEpoch,
+						existingTargetEpoch,
+					)
+				}
+				if surrounded {
+					slashKind = SurroundedVote
+					return fmt.Errorf(
+						surroundedVoteMessage,
+						att.Data.Source.Epoch,
+						att.Data.Target.Epoch,
+						existingSourceEpoch,
+						existingTargetEpoch,
+					)
+				}
 			}
 			return nil
 		})
@@ -219,7 +228,18 @@ func (store *Store) saveAttestationRecords(ctx context.Context, atts []*attestat
 			if err != nil {
 				return errors.Wrap(err, "could not create source epochs bucket")
 			}
-			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
+
+			// There can be multiple attested target epochs per source epoch.
+			// If a previous list exists, we append to that list with the incoming target epoch.
+			// Otherwise, we initialize it using the incoming target epoch.
+			var existingAttestedTargetsBytes []byte
+			if existing := sourceEpochsBucket.Get(sourceEpochBytes); existing != nil {
+				existingAttestedTargetsBytes = append(existing, targetEpochBytes...)
+			} else {
+				existingAttestedTargetsBytes = targetEpochBytes
+			}
+
+			if err := sourceEpochsBucket.Put(sourceEpochBytes, existingAttestedTargetsBytes); err != nil {
 				return errors.Wrapf(err, "could not save source epoch %d for epoch %d", att.source, att.target)
 			}
 			// Initialize buckets for the lowest target and source epochs.
@@ -271,7 +291,7 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(historicAttestationsBucket)
+		bucket := tx.Bucket(deprecatedAttestationHistoryBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			pubKeyBytes := [48]byte{}
 			copy(pubKeyBytes[:], key)

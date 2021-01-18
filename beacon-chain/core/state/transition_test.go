@@ -359,15 +359,12 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	require.NoError(t, beaconState.SetValidators(validators))
 
 	mockRoot2 := [32]byte{'A'}
-	att1 := &ethpb.IndexedAttestation{
+	att1 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
 		},
 		AttestingIndices: []uint64{0, 1},
-		Signature:        make([]byte, 96),
-	}
+	})
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
@@ -378,15 +375,13 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	att1.Signature = aggregateSig.Marshal()
 
 	mockRoot3 := [32]byte{'B'}
-	att2 := &ethpb.IndexedAttestation{
+	att2 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AttestingIndices: []uint64{0, 1},
-		Signature:        make([]byte, 96),
-	}
+	})
 
 	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
@@ -595,22 +590,12 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	// Set up attester slashing object for block
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
-			Attestation_1: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				},
+			Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2, 3},
-			},
-			Attestation_2: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				},
+			}),
+			Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2, 3},
-			},
+			}),
 		},
 	}
 

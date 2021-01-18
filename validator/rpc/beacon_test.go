@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -46,8 +47,7 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
-	timeStamp, err := ptypes.TimestampProto(time.Unix(0, 0))
-	require.NoError(t, err)
+	timeStamp := timestamppb.New(time.Unix(0, 0))
 	nodeClient.EXPECT().GetGenesis(
 		gomock.Any(), // ctx
 		gomock.Any(),

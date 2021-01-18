@@ -17,7 +17,7 @@ go_library(
     ] + select({
         "//fuzz:fuzzing_enabled": [
             "committee_disabled.go",
-            "proposer_indices_disabled.go"
+            "proposer_indices_disabled.go",
         ],
         "//conditions:default": [
             "committee.go",
@@ -44,6 +44,7 @@ go_library(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@io_k8s_client_go//tools/cache:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
 
@@ -52,13 +53,13 @@ go_test(
     size = "small",
     srcs = [
         "attestation_data_test.go",
+        "cache_test.go",
         "checkpoint_state_test.go",
         "committee_fuzz_test.go",
         "committee_test.go",
-        "cache_test.go",
+        "proposer_indices_test.go",
         "skip_slot_cache_test.go",
         "subnet_ids_test.go",
-        "proposer_indices_test.go"
     ],
     embed = [":go_default_library"],
     deps = [
