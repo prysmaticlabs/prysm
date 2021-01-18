@@ -2,15 +2,15 @@
 # across machines, developers, and workspaces.
 # 
 # This config is loaded from https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/latest.bazelrc
-build:remote-cache --remote_timeout=3600
+#build:remote-cache --remote_timeout=3600
 #build:remote-cache --spawn_strategy=standalone
 #build:remote-cache --strategy=Javac=standalone
 #build:remote-cache --strategy=Closure=standalone
 #build:remote-cache --strategy=Genrule=standalone
 
 # Prysm specific remote-cache properties.
-#build:remote-cache --disk_cache=
-build:remote-cache --remote_download_minimal
+build:remote-cache --disk_cache=
+#build:remote-cache --remote_download_minimal
 
 # Import workspace options.
 import %workspace%/.bazelrc
@@ -31,6 +31,7 @@ build --curses=yes --color=no
 build --keep_going
 build --test_output=errors
 build --flaky_test_attempts=5
+build --remote_local_fallback --remote_cache=grpc://bazel-remote-cache:9092
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
 
