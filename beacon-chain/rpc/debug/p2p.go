@@ -135,7 +135,7 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		TopicScores:        topicMaps,
 		GossipScore:        float32(gScore),
 		BehaviourPenalty:   float32(bPenalty),
-		ValidationError:    peers.Scorers().ValidationError(pid).Error(),
+		ValidationError:    errorToString(peers.Scorers().ValidationError(pid)),
 	}
 	return &pbrpc.DebugPeerResponse{
 		ListeningAddresses: stringAddrs,
@@ -148,4 +148,11 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		LastUpdated:        unixTime,
 		ScoreInfo:          scoreInfo,
 	}, nil
+}
+
+func errorToString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
