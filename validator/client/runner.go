@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// time to wait before trying to reconnect with the eth1 node.
+var backOffPeriod = 15 * time.Second
+var connectionIssueMsg = ", beacon chain may be offline..."
 
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
@@ -36,7 +41,7 @@ type Validator interface {
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
-	ReceiveBlocks(ctx context.Context)
+	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -62,25 +67,52 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Slasher is not ready: %v", err)
 		}
 	}
-	if err := v.WaitForChainStart(ctx); err != nil {
-		log.Fatalf("Could not determine if beacon chain started: %v", err)
+	ticker := time.NewTicker(backOffPeriod)
+	var headSlot uint64
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			err := v.WaitForChainStart(ctx)
+			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+				log.Warnf("Could not determine if beacon chain started: %v", err)
+				continue
+			}
+			if err != nil {
+				log.Fatalf("Could not determine if beacon chain started: %v", err)
+			}
+			err = v.WaitForSync(ctx)
+			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+				log.Warnf("Could not determine if beacon chain started: %v", err)
+				continue
+			}
+			if err != nil {
+				log.Fatalf("Could not determine if beacon node synced: %v", err)
+			}
+			err = v.WaitForActivation(ctx)
+			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+				log.Warnf("Could not wait for validator activation: %v", err)
+				continue
+			}
+			if err != nil {
+				log.Fatalf("Could not wait for validator activation: %v", err)
+			}
+			headSlot, err = v.CanonicalHeadSlot(ctx)
+			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+				log.Warnf("Could not get current canonical head slot: %v", err)
+				continue
+			}
+			if err != nil {
+				log.Fatalf("Could not get current canonical head slot: %v", err)
+			}
+		}
+		break
 	}
-	if err := v.WaitForSync(ctx); err != nil {
-		log.Fatalf("Could not determine if beacon node synced: %v", err)
-	}
-	if err := v.WaitForActivation(ctx); err != nil {
-		log.Fatalf("Could not wait for validator activation: %v", err)
-	}
-	go v.ReceiveBlocks(ctx)
-
-	headSlot, err := v.CanonicalHeadSlot(ctx)
-	if err != nil {
-		log.Fatalf("Could not get current canonical head slot: %v", err)
-	}
+	connectionErrorChannel := make(chan error)
+	go v.ReceiveBlocks(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
-
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
@@ -89,6 +121,12 @@ func run(ctx context.Context, v Validator) {
 			log.Info("Context canceled, stopping validator")
 			span.End()
 			return // Exit if context is canceled.
+		case blocksError := <-connectionErrorChannel:
+			if blocksError != nil && strings.Contains(blocksError.Error(), connectionIssueMsg) {
+				go v.ReceiveBlocks(ctx, connectionErrorChannel)
+				continue
+			}
+			log.WithError(blocksError).Fatal("block stream interrupted")
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 

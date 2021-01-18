@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -29,6 +31,7 @@ type FakeValidator struct {
 	SaveProtectionsCalled             bool
 	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
+	errorBlock                        bool
 	ProposeBlockArg1                  uint64
 	AttestToBlockHeadArg1             uint64
 	RoleAtArg1                        uint64
@@ -188,4 +191,8 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 }
 
 // ReceiveBlocks for mocking
-func (fv *FakeValidator) ReceiveBlocks(ctx context.Context) {}
+func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
+	if fv.errorBlock {
+		connectionErrorChannel <- errors.New(connectionIssueMsg)
+	}
+}
