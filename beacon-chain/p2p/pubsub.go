@@ -5,7 +5,6 @@ import (
 	"time"
 
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
