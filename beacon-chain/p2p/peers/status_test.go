@@ -690,7 +690,7 @@ func TestPrunePeers(t *testing.T) {
 	}
 
 	// Set up bad scores for inbound peers.
-	inboundPeers := p.Inbound()
+	inboundPeers := p.InboundConnected()
 	for i, pid := range inboundPeers {
 		modulo := i % 5
 		// Increment bad scores for peers.

@@ -369,8 +369,8 @@ func (p *Status) Connected() []peer.ID {
 	return peers
 }
 
-// Inbound returns the current batch of inbound peers that are connected.
-func (p *Status) Inbound() []peer.ID {
+// InboundConnected returns the current batch of inbound peers that are connected.
+func (p *Status) InboundConnected() []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
@@ -382,8 +382,8 @@ func (p *Status) Inbound() []peer.ID {
 	return peers
 }
 
-// Outbound returns the current batch of outbound peers that are connected.
-func (p *Status) Outbound() []peer.ID {
+// OutboundConnected returns the current batch of outbound peers that are connected.
+func (p *Status) OutboundConnected() []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
