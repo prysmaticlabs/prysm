@@ -369,6 +369,19 @@ func (p *Status) Connected() []peer.ID {
 	return peers
 }
 
+// Inbound returns the current batch of inbound peers.
+func (p *Status) Inbound() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.Direction == network.DirInbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
 // InboundConnected returns the current batch of inbound peers that are connected.
 func (p *Status) InboundConnected() []peer.ID {
 	p.store.RLock()
@@ -376,6 +389,19 @@ func (p *Status) InboundConnected() []peer.ID {
 	peers := make([]peer.ID, 0)
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// Outbound returns the current batch of outbound peers.
+func (p *Status) Outbound() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.Direction == network.DirOutbound {
 			peers = append(peers, pid)
 		}
 	}
