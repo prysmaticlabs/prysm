@@ -34,8 +34,8 @@ import (
 //	  # Process deposits
 //	  leaves = list(map(lambda deposit: deposit.data, deposits))
 //	  for index, deposit in enumerate(deposits):
-//	    DepositData_list = List[DepositData, 2**DEPOSIT_CONTRACT_TREE_DEPTH](*leaves[:index + 1])
-//	    state.eth1_data.deposit_root = hash_tree_root(DepositData_list)
+//	    deposit_data_list = List[DepositData, 2**DEPOSIT_CONTRACT_TREE_DEPTH](*leaves[:index + 1])
+//	    state.eth1_data.deposit_root = hash_tree_root(deposit_data_list)
 //	    process_deposit(state, deposit)
 //
 //	  # Process activations
