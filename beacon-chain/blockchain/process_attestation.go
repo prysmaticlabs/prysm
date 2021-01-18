@@ -79,6 +79,11 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, err
 	}
 
+	// Verify attestation beacon block is known and not from the future.
+	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
+		return nil, errors.Wrap(err, "could not verify attestation beacon block")
+	}
+
 	// Verify LMG GHOST and FFG votes are consistent with each other.
 	if err := s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
