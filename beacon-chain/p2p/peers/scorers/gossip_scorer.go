@@ -88,7 +88,7 @@ func (s *GossipScorer) SetGossipData(pid peer.ID, gScore float64,
 	peerData.TopicScores = topicScores
 }
 
-// PeerStatus gets the gossip related information of the given remote peer.
+// GossipData gets the gossip related information of the given remote peer.
 // This can return nil if there is no known gossip record the peer.
 // This will error if the peer does not exist.
 func (s *GossipScorer) GossipData(pid peer.ID) (float64, float64, map[string]*pbrpc.TopicScoreSnapshot, error) {
