@@ -214,7 +214,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		}
 	}
 	var directionIds []peer.ID
-	for _, directionFilter := range req.State {
+	for _, directionFilter := range req.Direction {
 		normalized := strings.ToUpper(directionFilter)
 		if normalized == directionInbound {
 			ids := peersFetcher.Inbound()
@@ -231,17 +231,17 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			continue
 		}
 	}
-	var allIds []peer.ID
+	var filteredIds []peer.ID
 	for _, stateId := range stateIds {
 		for _, directionId := range directionIds {
 			if stateId.Pretty() == directionId.Pretty() {
-				allIds = append(allIds, stateId)
+				filteredIds = append(filteredIds, stateId)
 				break
 			}
 		}
 	}
-	allPeers := make([]*ethpb.Peer, 0, len(allIds))
-	for _, id := range allIds {
+	filteredPeers := make([]*ethpb.Peer, 0, len(filteredIds))
+	for _, id := range filteredIds {
 		enr, err := peersFetcher.ENR(id)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
@@ -269,9 +269,9 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			State:     ethpb.ConnectionState(connectionState),
 			Direction: ethpb.PeerDirection(direction),
 		}
-		allPeers = append(allPeers, &p)
+		filteredPeers = append(filteredPeers, &p)
 	}
-	return &ethpb.PeersResponse{Data: allPeers}, nil
+	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
 
 // PeerCount retrieves retrieves number of known peers.
