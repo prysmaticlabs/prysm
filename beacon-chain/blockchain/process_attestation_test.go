@@ -17,9 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
-func TestStore_OnAttestation(t *testing.T) {
+func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -126,6 +127,35 @@ func TestStore_OnAttestation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStore_OnAttestation_Ok(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	cfg := &Config{
+		BeaconDB:        beaconDB,
+		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
+		StateGen:        stategen.New(beaconDB),
+	}
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
+	require.NoError(t, genesisState.SetGenesisTime(uint64(timeutils.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
+	require.NoError(t, service.saveGenesisData(ctx, genesisState))
+	att, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
+	require.NoError(t, err)
+	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
+	copied := genesisState.Copy()
+	copied, err = state.ProcessSlots(ctx, copied, 1)
+	require.NoError(t, err)
+	service.beaconDB.SaveState(ctx, copied, tRoot)
+	service.forkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1)
+	indices, err := service.onAttestation(ctx, att[0])
+	require.NoError(t, err)
+	wanted, err := helpers.BeaconCommitteeFromState(copied, 0, 0)
+	require.NoError(t, err)
+	require.DeepEqual(t, wanted, indices)
 }
 
 func TestStore_SaveCheckpointState(t *testing.T) {
