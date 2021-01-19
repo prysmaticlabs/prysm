@@ -52,7 +52,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject
 	}
 
-	if helpers.SlotToEpoch(m.Message.Aggregate.Data.Slot) != m.Message.Aggregate.Data.Target.Epoch {
+	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
 		return pubsub.ValidationReject
 	}
 	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.chain.GenesisTime()); err != nil {
