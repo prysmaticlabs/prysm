@@ -128,8 +128,8 @@ func ProcessAttestationNoVerifySignature(
 			currEpoch,
 		)
 	}
-	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
-		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
+	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
+		return nil, err
 	}
 
 	s := att.Data.Slot
