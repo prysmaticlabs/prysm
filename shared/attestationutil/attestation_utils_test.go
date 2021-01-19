@@ -21,6 +21,7 @@ func TestAttestingIndices(t *testing.T) {
 		name string
 		args args
 		want []uint64
+		err  string
 	}{
 		{
 			name: "Full committee attested",
@@ -38,12 +39,24 @@ func TestAttestingIndices(t *testing.T) {
 			},
 			want: []uint64{0, 2},
 		},
+		{
+			name: "Invalid bit length",
+			args: args{
+				bf:        bitfield.Bitlist{0b11111},
+				committee: []uint64{0, 1, 2},
+			},
+			err: "bitfield length 4 is greater than committee length 3",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
-			require.NoError(t, err)
-			assert.DeepEqual(t, tt.want, got)
+			if tt.err == "" {
+				require.NoError(t, err)
+				assert.DeepEqual(t, tt.want, got)
+			} else {
+				require.ErrorContains(t, tt.err, err)
+			}
 		})
 	}
 }
