@@ -11,11 +11,21 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	stateConnecting    = ethpb.ConnectionState_CONNECTING.String()
+	stateConnected     = ethpb.ConnectionState_CONNECTED.String()
+	stateDisconnecting = ethpb.ConnectionState_DISCONNECTING.String()
+	stateDisconnected  = ethpb.ConnectionState_DISCONNECTED.String()
+	directionInbound   = ethpb.PeerDirection_INBOUND.String()
+	directionOutbound  = ethpb.PeerDirection_OUTBOUND.String()
 )
 
 // GetIdentity retrieves data about the node's network presence.
@@ -112,101 +122,41 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	ctx, span := trace.StartSpan(ctx, "nodev1.ListPeers")
 	defer span.End()
 
-	var (
-		stateConnecting    = ethpb.ConnectionState_CONNECTING.String()
-		stateConnected     = ethpb.ConnectionState_CONNECTED.String()
-		stateDisconnecting = ethpb.ConnectionState_DISCONNECTING.String()
-		stateDisconnected  = ethpb.ConnectionState_DISCONNECTED.String()
-		directionInbound   = ethpb.PeerDirection_INBOUND.String()
-		directionOutbound  = ethpb.PeerDirection_OUTBOUND.String()
-	)
-
-	// TODO: Extract to private function
-	anyValidFilters := false
-	for _, stateFilter := range req.State {
-		normalized := strings.ToUpper(stateFilter)
-		filterValid := normalized == stateConnecting || normalized == stateConnected ||
-			normalized == stateDisconnecting || normalized == stateDisconnected
-		if filterValid {
-			anyValidFilters = true
-			break
-		}
+	peerStatus := ns.PeersFetcher.Peers()
+	response, err := ns.handleEmptyFilters(req, peerStatus)
+	if err != nil {
+		return nil, err
 	}
-	if anyValidFilters == false {
-		for _, directionFilter := range req.Direction {
-			normalized := strings.ToUpper(directionFilter)
-			filterValid := normalized == directionInbound || normalized == directionOutbound
-			if filterValid {
-				anyValidFilters = true
-				break
-			}
-		}
-	}
-
-	peersFetcher := ns.PeersFetcher.Peers()
-
-	if anyValidFilters == false {
-		allIds := peersFetcher.All()
-		allPeers := make([]*ethpb.Peer, 0, len(allIds))
-		for _, id := range allIds {
-			enr, err := peersFetcher.ENR(id)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
-			}
-			serializedEnr, err := p2p.SerializeENR(enr)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not serialize ENR: %v", err)
-			}
-			address, err := peersFetcher.Address(id)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not obtain address: %v", err)
-			}
-			connectionState, err := peersFetcher.ConnectionState(id)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not obtain connection state: %v", err)
-			}
-			direction, err := peersFetcher.Direction(id)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
-			}
-			p := ethpb.Peer{
-				PeerId:    id.Pretty(),
-				Enr:       "enr:" + serializedEnr,
-				Address:   address.String(),
-				State:     ethpb.ConnectionState(connectionState),
-				Direction: ethpb.PeerDirection(direction),
-			}
-			allPeers = append(allPeers, &p)
-		}
-		return &ethpb.PeersResponse{Data: allPeers}, nil
+	if response != nil {
+		return response, nil
 	}
 
 	var stateIds []peer.ID
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter)
 		if normalized == stateConnecting {
-			ids := peersFetcher.Connecting()
+			ids := peerStatus.Connecting()
 			for _, id := range ids {
 				stateIds = append(stateIds, id)
 			}
 			continue
 		}
 		if normalized == stateConnected {
-			ids := peersFetcher.Connected()
+			ids := peerStatus.Connected()
 			for _, id := range ids {
 				stateIds = append(stateIds, id)
 			}
 			continue
 		}
 		if normalized == stateDisconnecting {
-			ids := peersFetcher.Disconnecting()
+			ids := peerStatus.Disconnecting()
 			for _, id := range ids {
 				stateIds = append(stateIds, id)
 			}
 			continue
 		}
 		if normalized == stateDisconnected {
-			ids := peersFetcher.Disconnected()
+			ids := peerStatus.Disconnected()
 			for _, id := range ids {
 				stateIds = append(stateIds, id)
 			}
@@ -217,14 +167,14 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	for _, directionFilter := range req.Direction {
 		normalized := strings.ToUpper(directionFilter)
 		if normalized == directionInbound {
-			ids := peersFetcher.Inbound()
+			ids := peerStatus.Inbound()
 			for _, id := range ids {
 				directionIds = append(directionIds, id)
 			}
 			continue
 		}
 		if normalized == directionOutbound {
-			ids := peersFetcher.Outbound()
+			ids := peerStatus.Outbound()
 			for _, id := range ids {
 				directionIds = append(directionIds, id)
 			}
@@ -242,34 +192,11 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	}
 	filteredPeers := make([]*ethpb.Peer, 0, len(filteredIds))
 	for _, id := range filteredIds {
-		enr, err := peersFetcher.ENR(id)
+		p, err := getPeer(peerStatus, id)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+			return nil, err
 		}
-		serializedEnr, err := p2p.SerializeENR(enr)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not serialize ENR: %v", err)
-		}
-		address, err := peersFetcher.Address(id)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain address: %v", err)
-		}
-		connectionState, err := peersFetcher.ConnectionState(id)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain connection state: %v", err)
-		}
-		direction, err := peersFetcher.Direction(id)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
-		}
-		p := ethpb.Peer{
-			PeerId:    id.Pretty(),
-			Enr:       "enr:" + serializedEnr,
-			Address:   address.String(),
-			State:     ethpb.ConnectionState(connectionState),
-			Direction: ethpb.PeerDirection(direction),
-		}
-		filteredPeers = append(filteredPeers, &p)
+		filteredPeers = append(filteredPeers, p)
 	}
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
@@ -327,4 +254,73 @@ func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty
 		return &ptypes.Empty{}, nil
 	}
 	return &ptypes.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
+}
+
+func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (*ethpb.PeersResponse, error) {
+	anyValidFilters := false
+	for _, stateFilter := range req.State {
+		normalized := strings.ToUpper(stateFilter)
+		filterValid := normalized == stateConnecting || normalized == stateConnected ||
+			normalized == stateDisconnecting || normalized == stateDisconnected
+		if filterValid {
+			anyValidFilters = true
+			break
+		}
+	}
+	if anyValidFilters == false {
+		for _, directionFilter := range req.Direction {
+			normalized := strings.ToUpper(directionFilter)
+			filterValid := normalized == directionInbound || normalized == directionOutbound
+			if filterValid {
+				anyValidFilters = true
+				break
+			}
+		}
+	}
+
+	if anyValidFilters == false {
+		allIds := peerStatus.All()
+		allPeers := make([]*ethpb.Peer, 0, len(allIds))
+		for _, id := range allIds {
+			p, err := getPeer(peerStatus, id)
+			if err != nil {
+				return nil, err
+			}
+			allPeers = append(allPeers, p)
+		}
+		return &ethpb.PeersResponse{Data: allPeers}, nil
+	}
+	return nil, nil
+}
+
+func getPeer(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
+	enr, err := peerStatus.ENR(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+	}
+	serializedEnr, err := p2p.SerializeENR(enr)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not serialize ENR: %v", err)
+	}
+	address, err := peerStatus.Address(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain address: %v", err)
+	}
+	connectionState, err := peerStatus.ConnectionState(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain connection state: %v", err)
+	}
+	direction, err := peerStatus.Direction(id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
+	}
+	p := ethpb.Peer{
+		PeerId:    id.Pretty(),
+		Enr:       "enr:" + serializedEnr,
+		Address:   address.String(),
+		State:     ethpb.ConnectionState(connectionState),
+		Direction: ethpb.PeerDirection(direction),
+	}
+
+	return &p, nil
 }
