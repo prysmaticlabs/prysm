@@ -576,19 +576,16 @@ func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
 	srv := &Service{}
 	start := uint64(100)
 	end := uint64(100)
-	headers, err := srv.batchRequestHeaders(start, end)
-	require.NoError(t, err)
-	require.Equal(t, 0, len(headers))
+	_, err := srv.batchRequestHeaders(start, end)
+	require.ErrorContains(t, "cannot be >=", err)
 
 	start = uint64(101)
 	end = uint64(100)
-	headers, err = srv.batchRequestHeaders(start, end)
-	require.NoError(t, err)
-	require.Equal(t, 0, len(headers))
+	_, err = srv.batchRequestHeaders(start, end)
+	require.ErrorContains(t, "cannot be >=", err)
 
 	start = uint64(200)
 	end = uint64(100)
-	headers, err = srv.batchRequestHeaders(start, end)
-	require.NoError(t, err)
-	require.Equal(t, 0, len(headers))
+	_, err = srv.batchRequestHeaders(start, end)
+	require.ErrorContains(t, "cannot be >=", err)
 }

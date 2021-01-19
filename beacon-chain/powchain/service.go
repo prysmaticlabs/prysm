@@ -616,10 +616,10 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
 func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
-	var requestRange uint64
-	if startBlock <= endBlock {
-		requestRange = (endBlock - startBlock) + 1
+	if startBlock >= endBlock {
+		return nil, fmt.Errorf("start block height %d cannot be >= end block height %d", startBlock, endBlock)
 	}
+	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
 	errs := make([]error, 0, requestRange)
