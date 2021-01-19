@@ -617,7 +617,7 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 // each block in one call, it batches all requests into a single rpc call.
 func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
 	var requestRange uint64
-	if startBlock < endBlock {
+	if startBlock <= endBlock {
 		requestRange = (endBlock - startBlock) + 1
 	}
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
