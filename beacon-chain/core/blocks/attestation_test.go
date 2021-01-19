@@ -472,11 +472,11 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			wantedAttestingIndices: []uint64{43, 47},
 		},
 		{
-			aggregationBitfield:    bitfield.Bitlist{0x03},
+			aggregationBitfield:    bitfield.Bitlist{0x05},
 			wantedAttestingIndices: []uint64{47},
 		},
 		{
-			aggregationBitfield:    bitfield.Bitlist{0x01},
+			aggregationBitfield:    bitfield.Bitlist{0x04},
 			wantedAttestingIndices: []uint64{},
 		},
 	}
@@ -607,10 +607,10 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 }
 
 func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
-	beaconState, keys := testutil.DeterministicGenesisState(t, 1000)
+	beaconState, keys := testutil.DeterministicGenesisState(t, 128)
 
 	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
-	list := bitfield.Bitlist{0b11111111}
+	list := bitfield.Bitlist{0b11111}
 	var atts []*ethpb.Attestation
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
@@ -628,7 +628,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	assert.ErrorContains(t, want, err)
 
 	atts = []*ethpb.Attestation{}
-	list = bitfield.Bitlist{0b00000000}
+	list = bitfield.Bitlist{0b10000}
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{

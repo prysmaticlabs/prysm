@@ -33,11 +33,11 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	validators := uint64(64)
+	validators := uint64(32)
 	s, _ := testutil.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bf := bitfield.NewBitlist(helpers.SlotCommitteeCount(validators))
+	bf := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
 	bf.SetBitAt(0, true)
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}},
@@ -303,7 +303,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(3)
+	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -391,7 +391,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(3)
+	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -496,7 +496,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(3)
+	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -584,7 +584,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	s := testutil.NewBeaconState()
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(3)
+	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{

@@ -517,7 +517,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 					Slot:           i,
 					CommitteeIndex: 0,
 				},
-				AggregationBits: bitfield.Bitlist{0b11},
+				AggregationBits: bitfield.NewBitlist(128 / params.BeaconConfig().SlotsPerEpoch),
 			},
 		}
 		require.NoError(t, db.SaveBlock(ctx, blockExample))
