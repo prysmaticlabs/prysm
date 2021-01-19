@@ -146,30 +146,22 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			normalized := strings.ToUpper(stateFilter)
 			if normalized == stateConnecting {
 				ids := peerStatus.Connecting()
-				for _, id := range ids {
-					stateIds = append(stateIds, id)
-				}
+				stateIds = append(stateIds, ids...)
 				continue
 			}
 			if normalized == stateConnected {
 				ids := peerStatus.Connected()
-				for _, id := range ids {
-					stateIds = append(stateIds, id)
-				}
+				stateIds = append(stateIds, ids...)
 				continue
 			}
 			if normalized == stateDisconnecting {
 				ids := peerStatus.Disconnecting()
-				for _, id := range ids {
-					stateIds = append(stateIds, id)
-				}
+				stateIds = append(stateIds, ids...)
 				continue
 			}
 			if normalized == stateDisconnected {
 				ids := peerStatus.Disconnected()
-				for _, id := range ids {
-					stateIds = append(stateIds, id)
-				}
+				stateIds = append(stateIds, ids...)
 				continue
 			}
 		}
@@ -183,16 +175,12 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			normalized := strings.ToUpper(directionFilter)
 			if normalized == directionInbound {
 				ids := peerStatus.Inbound()
-				for _, id := range ids {
-					directionIds = append(directionIds, id)
-				}
+				directionIds = append(directionIds, ids...)
 				continue
 			}
 			if normalized == directionOutbound {
 				ids := peerStatus.Outbound()
-				for _, id := range ids {
-					directionIds = append(directionIds, id)
-				}
+				directionIds = append(directionIds, ids...)
 				continue
 			}
 		}
@@ -273,7 +261,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty
 	return &ptypes.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
-func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState bool, emptyDirection bool) {
+func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter)
