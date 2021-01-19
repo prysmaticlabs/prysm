@@ -69,8 +69,8 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    return set(index for i, index in enumerate(committee) if bits[i])
 func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error) {
-	if bf.Len() > uint64(len(committee)) {
-		return nil, fmt.Errorf("bitfield length %d is greater than committee length %d", bf.Len(), len(committee))
+	if bf.Len() != uint64(len(committee)) {
+		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", bf.Len(), len(committee))
 	}
 	indices := make([]uint64, 0, bf.Count())
 	for _, idx := range bf.BitIndices() {
