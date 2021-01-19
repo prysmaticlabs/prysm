@@ -129,7 +129,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		allIds := peerStatus.All()
 		allPeers := make([]*ethpb.Peer, 0, len(allIds))
 		for _, id := range allIds {
-			p, err := getPeer(peerStatus, id)
+			p, err := peerInfo(peerStatus, id)
 			if err != nil {
 				return nil, err
 			}
@@ -197,7 +197,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	}
 	filteredPeers := make([]*ethpb.Peer, 0, len(filteredIds))
 	for _, id := range filteredIds {
-		p, err := getPeer(peerStatus, id)
+		p, err := peerInfo(peerStatus, id)
 		if err != nil {
 			return nil, err
 		}
@@ -286,7 +286,7 @@ func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.
 	return emptyState, emptyDirection
 }
 
-func getPeer(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
+func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
