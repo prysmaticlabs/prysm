@@ -15,10 +15,10 @@ type proposerAtts []*ethpb.Attestation
 // filter separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
-func (al proposerAtts) filter(ctx context.Context, state *stateTrie.BeaconState) (proposerAtts, proposerAtts) {
-	validAtts := make([]*ethpb.Attestation, 0, len(al))
-	invalidAtts := make([]*ethpb.Attestation, 0, len(al))
-	for _, att := range al {
+func (a proposerAtts) filter(ctx context.Context, state *stateTrie.BeaconState) (proposerAtts, proposerAtts) {
+	validAtts := make([]*ethpb.Attestation, 0, len(a))
+	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
+	for _, att := range a {
 		if _, err := blocks.ProcessAttestationNoVerifySignature(ctx, state, att); err == nil {
 			validAtts = append(validAtts, att)
 			continue
@@ -29,36 +29,36 @@ func (al proposerAtts) filter(ctx context.Context, state *stateTrie.BeaconState)
 }
 
 // sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
-func (al proposerAtts) sortByProfitability() proposerAtts {
-	if len(al) < 2 {
-		return al
+func (a proposerAtts) sortByProfitability() proposerAtts {
+	if len(a) < 2 {
+		return a
 	}
-	sort.Slice(al, func(i, j int) bool {
-		if al[i].Data.Slot == al[j].Data.Slot {
-			return al[i].AggregationBits.Count() > al[j].AggregationBits.Count()
+	sort.Slice(a, func(i, j int) bool {
+		if a[i].Data.Slot == a[j].Data.Slot {
+			return a[i].AggregationBits.Count() > a[j].AggregationBits.Count()
 		}
-		return al[i].Data.Slot > al[j].Data.Slot
+		return a[i].Data.Slot > a[j].Data.Slot
 	})
-	return al
+	return a
 }
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
-func (al proposerAtts) limitToMaxAttestations() proposerAtts {
-	if uint64(len(al)) > params.BeaconConfig().MaxAttestations {
-		return al[:params.BeaconConfig().MaxAttestations]
+func (a proposerAtts) limitToMaxAttestations() proposerAtts {
+	if uint64(len(a)) > params.BeaconConfig().MaxAttestations {
+		return a[:params.BeaconConfig().MaxAttestations]
 	}
-	return al
+	return a
 }
 
 // dedup removes duplicate attestations (ones with the same bits set on).
 // Important: not only exact duplicates are removed, but proper subsets are removed too
 // (their known bits are redundant and are already contained in their supersets).
-func (al proposerAtts) dedup() proposerAtts {
-	if len(al) < 2 {
-		return al
+func (a proposerAtts) dedup() proposerAtts {
+	if len(a) < 2 {
+		return a
 	}
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(al))
-	for _, att := range al {
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(a))
+	for _, att := range a {
 		attDataRoot, err := att.Data.HashTreeRoot()
 		if err != nil {
 			continue
@@ -66,7 +66,7 @@ func (al proposerAtts) dedup() proposerAtts {
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
-	uniqAtts := make([]*ethpb.Attestation, 0, len(al))
+	uniqAtts := make([]*ethpb.Attestation, 0, len(a))
 	for _, atts := range attsByDataRoot {
 		for i := 0; i < len(atts); i++ {
 			a := atts[i]
