@@ -21,13 +21,14 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	validatorCount := uint64(2048)
 	base := buildState(e+3, validatorCount)
 	atts := make([]*pb.PendingAttestation, 3)
+	t.Log(helpers.SlotCommitteeCount(validatorCount))
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.NewBitlist(helpers.SlotCommitteeCount(validatorCount)),
 			InclusionDelay:  1,
 		}
 	}

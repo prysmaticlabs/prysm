@@ -150,10 +150,10 @@ func TestProcessAttestations(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	validators := uint64(64)
+	validators := uint64(128)
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-	c := helpers.SlotCommitteeCount(64)
+	c := helpers.SlotCommitteeCount(validators)
 	bf := bitfield.NewBitlist(c)
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}},
