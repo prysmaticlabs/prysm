@@ -150,11 +150,11 @@ func (s *SlasherNode) Close() {
 	defer s.lock.Unlock()
 
 	log.Info("Stopping hash slinging slasher")
-	s.cancel()
 	s.services.StopAll()
 	if err := s.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
 	}
+	s.cancel()
 	close(s.stop)
 }
 
