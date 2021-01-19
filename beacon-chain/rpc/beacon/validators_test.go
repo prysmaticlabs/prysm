@@ -1633,7 +1633,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{},
 			InclusionDelay:  1,
 		}
 	}
@@ -1971,7 +1971,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconState.SetValidators(stateWithValidators.Validators()))
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bf := []byte{0xff}
+	bf := bitfield.NewBitlist(helpers.SlotCommitteeCount(validators))
 	att1 := testutil.NewAttestation()
 	att1.AggregationBits = bf
 	att2 := testutil.NewAttestation()

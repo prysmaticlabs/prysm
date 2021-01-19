@@ -539,7 +539,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
+		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
@@ -547,7 +547,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts2[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts2[i], committee)
+		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts2[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i+len(atts)] = idxAtt
 	}
@@ -646,7 +646,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
+		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
@@ -949,7 +949,8 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		allAtts = append(allAtts, aggAtts...)
 		for _, att := range aggAtts {
 			committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
+			idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
+			require.NoError(t, err)
 			indexedAtts[dataRoot] = append(indexedAtts[dataRoot], idxAtt)
 		}
 	}

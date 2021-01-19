@@ -41,7 +41,8 @@ func TestAttestingIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
+			got, err := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
+			require.NoError(t, err)
 			assert.DeepEqual(t, tt.want, got)
 		})
 	}
@@ -135,7 +136,8 @@ func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = attestationutil.AttestingIndices(bf, committee)
+		_, err := attestationutil.AttestingIndices(bf, committee)
+		require.NoError(b, err)
 	}
 }
 

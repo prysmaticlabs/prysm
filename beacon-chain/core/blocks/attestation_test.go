@@ -226,7 +226,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
@@ -253,10 +253,9 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 	})
-	aggBits1 := bitfield.NewBitlist(4)
+	aggBits1 := bitfield.NewBitlist(3)
 	aggBits1.SetBitAt(0, true)
 	aggBits1.SetBitAt(1, true)
-	aggBits1.SetBitAt(2, true)
 	att1 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits1,
@@ -269,7 +268,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
@@ -281,10 +280,9 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	}
 	att1.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	aggBits2 := bitfield.NewBitlist(4)
+	aggBits2 := bitfield.NewBitlist(3)
 	aggBits2.SetBitAt(1, true)
 	aggBits2.SetBitAt(2, true)
-	aggBits2.SetBitAt(3, true)
 	att2 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits2,
@@ -292,7 +290,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
@@ -333,7 +331,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
@@ -356,7 +354,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
@@ -498,7 +496,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
 		require.NoError(t, err)
-		ia := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
+		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
+		require.NoError(t, err)
 		assert.DeepEqual(t, wanted, ia, "Convert attestation to indexed attestation didn't result as wanted")
 	}
 }
