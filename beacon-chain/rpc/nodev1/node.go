@@ -123,64 +123,81 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
-	response, err := ns.handleEmptyFilters(req, peerStatus)
-	if err != nil {
-		return nil, err
-	}
-	if response != nil {
-		return response, nil
+	emptyStateFilter, emptyDirectionFilter := ns.handleEmptyFilters(req, peerStatus)
+
+	if emptyStateFilter == false && emptyDirectionFilter {
+		allIds := peerStatus.All()
+		allPeers := make([]*ethpb.Peer, 0, len(allIds))
+		for _, id := range allIds {
+			p, err := getPeer(peerStatus, id)
+			if err != nil {
+				return nil, err
+			}
+			allPeers = append(allPeers, p)
+		}
+		return &ethpb.PeersResponse{Data: allPeers}, nil
 	}
 
 	var stateIds []peer.ID
-	for _, stateFilter := range req.State {
-		normalized := strings.ToUpper(stateFilter)
-		if normalized == stateConnecting {
-			ids := peerStatus.Connecting()
-			for _, id := range ids {
-				stateIds = append(stateIds, id)
+	if emptyStateFilter {
+		stateIds = peerStatus.All()
+	} else {
+		for _, stateFilter := range req.State {
+			normalized := strings.ToUpper(stateFilter)
+			if normalized == stateConnecting {
+				ids := peerStatus.Connecting()
+				for _, id := range ids {
+					stateIds = append(stateIds, id)
+				}
+				continue
 			}
-			continue
-		}
-		if normalized == stateConnected {
-			ids := peerStatus.Connected()
-			for _, id := range ids {
-				stateIds = append(stateIds, id)
+			if normalized == stateConnected {
+				ids := peerStatus.Connected()
+				for _, id := range ids {
+					stateIds = append(stateIds, id)
+				}
+				continue
 			}
-			continue
-		}
-		if normalized == stateDisconnecting {
-			ids := peerStatus.Disconnecting()
-			for _, id := range ids {
-				stateIds = append(stateIds, id)
+			if normalized == stateDisconnecting {
+				ids := peerStatus.Disconnecting()
+				for _, id := range ids {
+					stateIds = append(stateIds, id)
+				}
+				continue
 			}
-			continue
-		}
-		if normalized == stateDisconnected {
-			ids := peerStatus.Disconnected()
-			for _, id := range ids {
-				stateIds = append(stateIds, id)
+			if normalized == stateDisconnected {
+				ids := peerStatus.Disconnected()
+				for _, id := range ids {
+					stateIds = append(stateIds, id)
+				}
+				continue
 			}
-			continue
 		}
 	}
+
 	var directionIds []peer.ID
-	for _, directionFilter := range req.Direction {
-		normalized := strings.ToUpper(directionFilter)
-		if normalized == directionInbound {
-			ids := peerStatus.Inbound()
-			for _, id := range ids {
-				directionIds = append(directionIds, id)
+	if emptyDirectionFilter {
+		directionIds = peerStatus.All()
+	} else {
+		for _, directionFilter := range req.Direction {
+			normalized := strings.ToUpper(directionFilter)
+			if normalized == directionInbound {
+				ids := peerStatus.Inbound()
+				for _, id := range ids {
+					directionIds = append(directionIds, id)
+				}
+				continue
 			}
-			continue
-		}
-		if normalized == directionOutbound {
-			ids := peerStatus.Outbound()
-			for _, id := range ids {
-				directionIds = append(directionIds, id)
+			if normalized == directionOutbound {
+				ids := peerStatus.Outbound()
+				for _, id := range ids {
+					directionIds = append(directionIds, id)
+				}
+				continue
 			}
-			continue
 		}
 	}
+
 	var filteredIds []peer.ID
 	for _, stateId := range stateIds {
 		for _, directionId := range directionIds {
@@ -256,41 +273,29 @@ func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty
 	return &ptypes.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
-func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (*ethpb.PeersResponse, error) {
-	anyValidFilters := false
+func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState bool, emptyDirection bool) {
+	emptyState = true
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter)
 		filterValid := normalized == stateConnecting || normalized == stateConnected ||
 			normalized == stateDisconnecting || normalized == stateDisconnected
 		if filterValid {
-			anyValidFilters = true
+			emptyState = false
 			break
 		}
 	}
-	if anyValidFilters == false {
-		for _, directionFilter := range req.Direction {
-			normalized := strings.ToUpper(directionFilter)
-			filterValid := normalized == directionInbound || normalized == directionOutbound
-			if filterValid {
-				anyValidFilters = true
-				break
-			}
+
+	emptyDirection = true
+	for _, directionFilter := range req.Direction {
+		normalized := strings.ToUpper(directionFilter)
+		filterValid := normalized == directionInbound || normalized == directionOutbound
+		if filterValid {
+			emptyDirection = false
+			break
 		}
 	}
 
-	if anyValidFilters == false {
-		allIds := peerStatus.All()
-		allPeers := make([]*ethpb.Peer, 0, len(allIds))
-		for _, id := range allIds {
-			p, err := getPeer(peerStatus, id)
-			if err != nil {
-				return nil, err
-			}
-			allPeers = append(allPeers, p)
-		}
-		return &ethpb.PeersResponse{Data: allPeers}, nil
-	}
-	return nil, nil
+	return emptyState, emptyDirection
 }
 
 func getPeer(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
