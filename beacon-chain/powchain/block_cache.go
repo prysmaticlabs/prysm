@@ -78,11 +78,11 @@ func newHeaderCache() *headerCache {
 
 // HeaderInfoByHash fetches headerInfo by its header hash. Returns true with a
 // reference to the header info, if exists. Otherwise returns false, nil.
-func (b *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *types.HeaderInfo, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (c *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *types.HeaderInfo, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	obj, exists, err := b.hashCache.GetByKey(hash.Hex())
+	obj, exists, err := c.hashCache.GetByKey(hash.Hex())
 	if err != nil {
 		return false, nil, err
 	}
@@ -104,11 +104,11 @@ func (b *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *types.HeaderInf
 
 // HeaderInfoByHeight fetches headerInfo by its header number. Returns true with a
 // reference to the header info, if exists. Otherwise returns false, nil.
-func (b *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *types.HeaderInfo, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (c *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *types.HeaderInfo, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	obj, exists, err := b.heightCache.GetByKey(height.String())
+	obj, exists, err := c.heightCache.GetByKey(height.String())
 	if err != nil {
 		return false, nil, err
 	}
@@ -133,26 +133,26 @@ func (b *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *types.HeaderIn
 // size limit. This method should be called in sequential header number order if
 // the desired behavior is that the blocks with the highest header number should
 // be present in the cache.
-func (b *headerCache) AddHeader(hdr *gethTypes.Header) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+func (c *headerCache) AddHeader(hdr *gethTypes.Header) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
 	hInfo, err := types.HeaderToHeaderInfo(hdr)
 	if err != nil {
 		return err
 	}
 
-	if err := b.hashCache.AddIfNotPresent(hInfo); err != nil {
+	if err := c.hashCache.AddIfNotPresent(hInfo); err != nil {
 		return err
 	}
-	if err := b.heightCache.AddIfNotPresent(hInfo); err != nil {
+	if err := c.heightCache.AddIfNotPresent(hInfo); err != nil {
 		return err
 	}
 
-	trim(b.hashCache, maxCacheSize)
-	trim(b.heightCache, maxCacheSize)
+	trim(c.hashCache, maxCacheSize)
+	trim(c.heightCache, maxCacheSize)
 
-	headerCacheSize.Set(float64(len(b.hashCache.ListKeys())))
+	headerCacheSize.Set(float64(len(c.hashCache.ListKeys())))
 
 	return nil
 }
