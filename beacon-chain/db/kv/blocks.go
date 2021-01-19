@@ -442,6 +442,11 @@ func fetchBlockRootsBySlotRange(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.fetchBlockRootsBySlotRange")
 	defer span.End()
 
+	// Return nothing when all slot parameters are missing
+	if startSlotEncoded == nil && endSlotEncoded == nil && startEpochEncoded == nil && endEpochEncoded == nil {
+		return [][]byte{}, nil
+	}
+
 	var startSlot, endSlot, step uint64
 	var ok bool
 	if startSlot, ok = startSlotEncoded.(uint64); !ok {
@@ -475,10 +480,6 @@ func fetchBlockRootsBySlotRange(
 	}
 	if endSlot < startSlot {
 		return nil, errInvalidSlotRange
-	}
-	// Return nothing with an end slot of 0.
-	if endSlot == 0 {
-		return [][]byte{}, nil
 	}
 	rootsRange := (endSlot - startSlot) / step
 	roots := make([][]byte, 0, rootsRange)
