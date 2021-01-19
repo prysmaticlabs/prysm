@@ -22,53 +22,53 @@ func newStateSummaryCache() *stateSummaryCache {
 }
 
 // put saves a state summary to the initial sync state summaries cache.
-func (s *stateSummaryCache) put(r [32]byte, b *pb.StateSummary) {
-	s.initSyncStateSummariesLock.Lock()
-	defer s.initSyncStateSummariesLock.Unlock()
-	s.initSyncStateSummaries[r] = b
+func (c *stateSummaryCache) put(r [32]byte, b *pb.StateSummary) {
+	c.initSyncStateSummariesLock.Lock()
+	defer c.initSyncStateSummariesLock.Unlock()
+	c.initSyncStateSummaries[r] = b
 }
 
 // has checks if a state summary exists in the initial sync state summaries cache using the root
 // of the block.
-func (s *stateSummaryCache) has(r [32]byte) bool {
-	s.initSyncStateSummariesLock.RLock()
-	defer s.initSyncStateSummariesLock.RUnlock()
-	_, ok := s.initSyncStateSummaries[r]
+func (c *stateSummaryCache) has(r [32]byte) bool {
+	c.initSyncStateSummariesLock.RLock()
+	defer c.initSyncStateSummariesLock.RUnlock()
+	_, ok := c.initSyncStateSummaries[r]
 	return ok
 }
 
 // get retrieves a state summary from the initial sync state summaries cache using the root of
 // the block.
-func (s *stateSummaryCache) get(r [32]byte) *pb.StateSummary {
-	s.initSyncStateSummariesLock.RLock()
-	defer s.initSyncStateSummariesLock.RUnlock()
-	b := s.initSyncStateSummaries[r]
+func (c *stateSummaryCache) get(r [32]byte) *pb.StateSummary {
+	c.initSyncStateSummariesLock.RLock()
+	defer c.initSyncStateSummariesLock.RUnlock()
+	b := c.initSyncStateSummaries[r]
 	return b
 }
 
 // len retrieves the state summary count from the state summaries cache.
-func (s *stateSummaryCache) len() int {
-	s.initSyncStateSummariesLock.RLock()
-	defer s.initSyncStateSummariesLock.RUnlock()
-	return len(s.initSyncStateSummaries)
+func (c *stateSummaryCache) len() int {
+	c.initSyncStateSummariesLock.RLock()
+	defer c.initSyncStateSummariesLock.RUnlock()
+	return len(c.initSyncStateSummaries)
 }
 
 // GetAll retrieves all the beacon state summaries from the initial sync state summaries cache, the returned
 // state summaries are unordered.
-func (s *stateSummaryCache) getAll() []*pb.StateSummary {
-	s.initSyncStateSummariesLock.RLock()
-	defer s.initSyncStateSummariesLock.RUnlock()
+func (c *stateSummaryCache) getAll() []*pb.StateSummary {
+	c.initSyncStateSummariesLock.RLock()
+	defer c.initSyncStateSummariesLock.RUnlock()
 
-	summaries := make([]*pb.StateSummary, 0, len(s.initSyncStateSummaries))
-	for _, b := range s.initSyncStateSummaries {
+	summaries := make([]*pb.StateSummary, 0, len(c.initSyncStateSummaries))
+	for _, b := range c.initSyncStateSummaries {
 		summaries = append(summaries, b)
 	}
 	return summaries
 }
 
 // Clear clears out the initial sync state summaries cache.
-func (s *stateSummaryCache) clear() {
-	s.initSyncStateSummariesLock.Lock()
-	defer s.initSyncStateSummariesLock.Unlock()
-	s.initSyncStateSummaries = make(map[[32]byte]*pb.StateSummary)
+func (c *stateSummaryCache) clear() {
+	c.initSyncStateSummariesLock.Lock()
+	defer c.initSyncStateSummariesLock.Unlock()
+	c.initSyncStateSummaries = make(map[[32]byte]*pb.StateSummary)
 }

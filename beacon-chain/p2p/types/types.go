@@ -80,8 +80,8 @@ func (b *SSZBytes) HashTreeRootWith(hh *ssz.Hasher) error {
 type BeaconBlockByRootsReq [][rootLength]byte
 
 // MarshalSSZTo marshals the block by roots request with the provided byte slice.
-func (s *BeaconBlockByRootsReq) MarshalSSZTo(dst []byte) ([]byte, error) {
-	marshalledObj, err := s.MarshalSSZ()
+func (r *BeaconBlockByRootsReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalledObj, err := r.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -89,25 +89,25 @@ func (s *BeaconBlockByRootsReq) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ Marshals the block by roots request type into the serialized object.
-func (s *BeaconBlockByRootsReq) MarshalSSZ() ([]byte, error) {
-	if len(*s) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
-		return nil, errors.Errorf("beacon block by roots request exceeds max size: %d > %d", len(*s), params.BeaconNetworkConfig().MaxRequestBlocks)
+func (r *BeaconBlockByRootsReq) MarshalSSZ() ([]byte, error) {
+	if len(*r) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
+		return nil, errors.Errorf("beacon block by roots request exceeds max size: %d > %d", len(*r), params.BeaconNetworkConfig().MaxRequestBlocks)
 	}
-	buf := make([]byte, 0, s.SizeSSZ())
-	for _, r := range *s {
+	buf := make([]byte, 0, r.SizeSSZ())
+	for _, r := range *r {
 		buf = append(buf, r[:]...)
 	}
 	return buf, nil
 }
 
 // SizeSSZ returns the size of the serialized representation.
-func (s *BeaconBlockByRootsReq) SizeSSZ() int {
-	return len(*s) * rootLength
+func (r *BeaconBlockByRootsReq) SizeSSZ() int {
+	return len(*r) * rootLength
 }
 
 // UnmarshalSSZ unmarshals the provided bytes buffer into the
 // block by roots request object.
-func (s *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
+func (r *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)
 	maxLength := int(params.BeaconNetworkConfig().MaxRequestBlocks * rootLength)
 	if bufLen > maxLength {
@@ -123,7 +123,7 @@ func (s *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
 		copy(rt[:], buf[i*rootLength:(i+1)*rootLength])
 		roots = append(roots, rt)
 	}
-	*s = roots
+	*r = roots
 	return nil
 }
 
@@ -131,8 +131,8 @@ func (s *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
 type ErrorMessage []byte
 
 // MarshalSSZTo marshals the error message with the provided byte slice.
-func (s *ErrorMessage) MarshalSSZTo(dst []byte) ([]byte, error) {
-	marshalledObj, err := s.MarshalSSZ()
+func (m *ErrorMessage) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalledObj, err := m.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -140,23 +140,23 @@ func (s *ErrorMessage) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ Marshals the error message into the serialized object.
-func (s *ErrorMessage) MarshalSSZ() ([]byte, error) {
-	if len(*s) > maxErrorLength {
-		return nil, errors.Errorf("error message exceeds max size: %d > %d", len(*s), maxErrorLength)
+func (m *ErrorMessage) MarshalSSZ() ([]byte, error) {
+	if len(*m) > maxErrorLength {
+		return nil, errors.Errorf("error message exceeds max size: %d > %d", len(*m), maxErrorLength)
 	}
-	buf := make([]byte, s.SizeSSZ())
-	copy(buf, *s)
+	buf := make([]byte, m.SizeSSZ())
+	copy(buf, *m)
 	return buf, nil
 }
 
 // SizeSSZ returns the size of the serialized representation.
-func (s *ErrorMessage) SizeSSZ() int {
-	return len(*s)
+func (m *ErrorMessage) SizeSSZ() int {
+	return len(*m)
 }
 
 // UnmarshalSSZ unmarshals the provided bytes buffer into the
 // error message object.
-func (s *ErrorMessage) UnmarshalSSZ(buf []byte) error {
+func (m *ErrorMessage) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)
 	maxLength := maxErrorLength
 	if bufLen > maxLength {
@@ -164,6 +164,6 @@ func (s *ErrorMessage) UnmarshalSSZ(buf []byte) error {
 	}
 	errMsg := make([]byte, bufLen)
 	copy(errMsg, buf)
-	*s = errMsg
+	*m = errMsg
 	return nil
 }
