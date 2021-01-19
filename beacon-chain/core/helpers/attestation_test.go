@@ -225,3 +225,72 @@ func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 	assert.Equal(t, false, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 4}, genesis))
 	assert.Equal(t, false, helpers.VerifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 2}, genesis))
 }
+
+func TestValidateNilAttestation(t *testing.T) {
+	tests := []struct {
+		name        string
+		attestation *ethpb.Attestation
+		errString   string
+	}{
+		{
+			name:        "nil attestation",
+			attestation: nil,
+			errString:   "attestation can't be nil",
+		},
+		{
+			name:        "nil attestation data",
+			attestation: &ethpb.Attestation{},
+			errString:   "attestation's data can't be nil",
+		},
+		{
+			name: "nil attestation source",
+			attestation: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Source: nil,
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			errString: "attestation's source can't be nil",
+		},
+		{
+			name: "nil attestation target",
+			attestation: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Target: nil,
+					Source: &ethpb.Checkpoint{},
+				},
+			},
+			errString: "attestation's target can't be nil",
+		},
+		{
+			name: "nil attestation bitfield",
+			attestation: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{},
+					Source: &ethpb.Checkpoint{},
+				},
+			},
+			errString: "attestation's bitfield can't be nil",
+		},
+		{
+			name: "good attestation",
+			attestation: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{},
+					Source: &ethpb.Checkpoint{},
+				},
+				AggregationBits: []byte{},
+			},
+			errString: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.errString != "" {
+				require.ErrorContains(t, tt.errString, helpers.ValidateNilAttestation(tt.attestation))
+			} else {
+				require.NoError(t, helpers.ValidateNilAttestation(tt.attestation))
+			}
+		})
+	}
+}
