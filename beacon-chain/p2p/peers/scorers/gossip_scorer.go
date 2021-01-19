@@ -1,10 +1,9 @@
 package scorers
 
 import (
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
 var _ Scorer = (*GossipScorer)(nil)
