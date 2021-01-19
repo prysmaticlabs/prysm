@@ -328,7 +328,7 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(pubKeysBucket)
+		bucket := tx.Bucket(deprecatedAttestationHistoryBucket)
 		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
 			var pk [48]byte
 			copy(pk[:], pubKey)

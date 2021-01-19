@@ -223,9 +223,8 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-
-	if err := valDB.RunMigrations(cliCtx.Context); err != nil {
-		return errors.Wrap(err, "could not run database migrations")
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
@@ -311,9 +310,8 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize db")
 	}
 	s.db = valDB
-
-	if err := valDB.RunMigrations(cliCtx.Context); err != nil {
-		return errors.Wrap(err, "could not run database migrations")
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
