@@ -164,15 +164,11 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
-		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
-		if err != nil {
-			return nil, err
-		}
 		containers := []*ethpb.BeaconBlockContainer{
 			{
 				Block:     genBlk,
 				BlockRoot: root[:],
-				Canonical: canonical,
+				Canonical: true,
 			},
 		}
 

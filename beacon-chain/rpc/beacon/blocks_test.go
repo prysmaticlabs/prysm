@@ -71,14 +71,10 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 
 func TestServer_ListBlocks_Genesis(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	chain := &chainMock.ChainService{
-		CanonicalRoots: map[[32]byte]bool{},
-	}
 	ctx := context.Background()
 
 	bs := &Server{
-		BeaconDB:         db,
-		CanonicalFetcher: chain,
+		BeaconDB: db,
 	}
 
 	// Should throw an error if no genesis block is found.
@@ -97,7 +93,6 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-	chain.CanonicalRoots[root] = true
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: []*ethpb.BeaconBlockContainer{
 			{
@@ -122,14 +117,10 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 
 func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	chain := &chainMock.ChainService{
-		CanonicalRoots: map[[32]byte]bool{},
-	}
 	ctx := context.Background()
 
 	bs := &Server{
-		BeaconDB:         db,
-		CanonicalFetcher: chain,
+		BeaconDB: db,
 	}
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
@@ -139,7 +130,6 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-	chain.CanonicalRoots[root] = true
 
 	count := uint64(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
