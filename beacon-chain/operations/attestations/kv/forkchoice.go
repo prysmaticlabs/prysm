@@ -7,7 +7,7 @@ import (
 )
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
-func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
+func (c *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 	if att == nil {
 		return nil
 	}
@@ -17,17 +17,17 @@ func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 	}
 
 	att = stateTrie.CopyAttestation(att)
-	p.forkchoiceAttLock.Lock()
-	defer p.forkchoiceAttLock.Unlock()
-	p.forkchoiceAtt[r] = att
+	c.forkchoiceAttLock.Lock()
+	defer c.forkchoiceAttLock.Unlock()
+	c.forkchoiceAtt[r] = att
 
 	return nil
 }
 
 // SaveForkchoiceAttestations saves a list of forkchoice attestations in cache.
-func (p *AttCaches) SaveForkchoiceAttestations(atts []*ethpb.Attestation) error {
+func (c *AttCaches) SaveForkchoiceAttestations(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
-		if err := p.SaveForkchoiceAttestation(att); err != nil {
+		if err := c.SaveForkchoiceAttestation(att); err != nil {
 			return err
 		}
 	}
@@ -36,12 +36,12 @@ func (p *AttCaches) SaveForkchoiceAttestations(atts []*ethpb.Attestation) error 
 }
 
 // ForkchoiceAttestations returns the forkchoice attestations in cache.
-func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
-	p.forkchoiceAttLock.RLock()
-	defer p.forkchoiceAttLock.RUnlock()
+func (c *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
+	c.forkchoiceAttLock.RLock()
+	defer c.forkchoiceAttLock.RUnlock()
 
-	atts := make([]*ethpb.Attestation, 0, len(p.forkchoiceAtt))
-	for _, att := range p.forkchoiceAtt {
+	atts := make([]*ethpb.Attestation, 0, len(c.forkchoiceAtt))
+	for _, att := range c.forkchoiceAtt {
 		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 	}
 
@@ -49,7 +49,7 @@ func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 }
 
 // DeleteForkchoiceAttestation deletes a forkchoice attestation in cache.
-func (p *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
+func (c *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
 	if att == nil {
 		return nil
 	}
@@ -58,9 +58,9 @@ func (p *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	p.forkchoiceAttLock.Lock()
-	defer p.forkchoiceAttLock.Unlock()
-	delete(p.forkchoiceAtt, r)
+	c.forkchoiceAttLock.Lock()
+	defer c.forkchoiceAttLock.Unlock()
+	delete(c.forkchoiceAtt, r)
 
 	return nil
 }
