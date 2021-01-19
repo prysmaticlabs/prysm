@@ -287,7 +287,13 @@ func TestListPeers(t *testing.T) {
 			wantIds:    ids,
 		},
 		{
-			name:       "One filter empty - return all peers for that filter",
+			name:       "State filter empty - return peers for all states",
+			states:     []string{},
+			directions: []string{ethpb.PeerDirection_INBOUND.String()},
+			wantIds:    []peer.ID{ids[0], ids[2], ids[4], ids[6]},
+		},
+		{
+			name:       "Direction filter empty - return peers for all directions",
 			states:     []string{ethpb.ConnectionState_CONNECTED.String()},
 			directions: []string{},
 			wantIds:    []peer.ID{ids[2], ids[3]},

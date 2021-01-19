@@ -125,7 +125,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	peerStatus := ns.PeersFetcher.Peers()
 	emptyStateFilter, emptyDirectionFilter := ns.handleEmptyFilters(req, peerStatus)
 
-	if emptyStateFilter == false && emptyDirectionFilter {
+	if emptyStateFilter && emptyDirectionFilter {
 		allIds := peerStatus.All()
 		allPeers := make([]*ethpb.Peer, 0, len(allIds))
 		for _, id := range allIds {
