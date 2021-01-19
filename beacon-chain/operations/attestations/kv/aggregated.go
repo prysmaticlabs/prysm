@@ -12,23 +12,23 @@ import (
 // newly aggregated attestations in the pool.
 // It tracks the unaggregated attestations that weren't able to aggregate to prevent
 // the deletion of unaggregated attestations in the pool.
-func (p *AttCaches) AggregateUnaggregatedAttestations() error {
-	unaggregatedAtts, err := p.UnaggregatedAttestations()
+func (c *AttCaches) AggregateUnaggregatedAttestations() error {
+	unaggregatedAtts, err := c.UnaggregatedAttestations()
 	if err != nil {
 		return err
 	}
-	return p.aggregateUnaggregatedAttestations(unaggregatedAtts)
+	return c.aggregateUnaggregatedAttestations(unaggregatedAtts)
 }
 
 // AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves
 // newly aggregated attestations in the pool. Unaggregated attestations are filtered by slot and
 // committee index.
-func (p *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) error {
-	unaggregatedAtts := p.UnaggregatedAttestationsBySlotIndex(slot, committeeIndex)
-	return p.aggregateUnaggregatedAttestations(unaggregatedAtts)
+func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) error {
+	unaggregatedAtts := c.UnaggregatedAttestationsBySlotIndex(slot, committeeIndex)
+	return c.aggregateUnaggregatedAttestations(unaggregatedAtts)
 }
 
-func (p *AttCaches) aggregateUnaggregatedAttestations(unaggregatedAtts []*ethpb.Attestation) error {
+func (c *AttCaches) aggregateUnaggregatedAttestations(unaggregatedAtts []*ethpb.Attestation) error {
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := att.Data.HashTreeRoot()
@@ -58,7 +58,7 @@ func (p *AttCaches) aggregateUnaggregatedAttestations(unaggregatedAtts []*ethpb.
 				leftOverUnaggregatedAtt[h] = true
 			}
 		}
-		if err := p.SaveAggregatedAttestations(aggregatedAtts); err != nil {
+		if err := c.SaveAggregatedAttestations(aggregatedAtts); err != nil {
 			return err
 		}
 	}
@@ -72,7 +72,7 @@ func (p *AttCaches) aggregateUnaggregatedAttestations(unaggregatedAtts []*ethpb.
 		if leftOverUnaggregatedAtt[h] {
 			continue
 		}
-		if err := p.DeleteUnaggregatedAttestation(att); err != nil {
+		if err := c.DeleteUnaggregatedAttestation(att); err != nil {
 			return err
 		}
 	}
@@ -81,14 +81,14 @@ func (p *AttCaches) aggregateUnaggregatedAttestations(unaggregatedAtts []*ethpb.
 }
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
-func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
+func (c *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
-	has, err := p.HasAggregatedAttestation(att)
+	has, err := c.HasAggregatedAttestation(att)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return nil
 	}
 
-	seen, err := p.hasSeenBit(att)
+	seen, err := c.hasSeenBit(att)
 	if err != nil {
 		return err
 	}
@@ -109,12 +109,12 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 	copiedAtt := stateTrie.CopyAttestation(att)
-	p.aggregatedAttLock.Lock()
-	defer p.aggregatedAttLock.Unlock()
-	atts, ok := p.aggregatedAtt[r]
+	c.aggregatedAttLock.Lock()
+	defer c.aggregatedAttLock.Unlock()
+	atts, ok := c.aggregatedAtt[r]
 	if !ok {
 		atts := []*ethpb.Attestation{copiedAtt}
-		p.aggregatedAtt[r] = atts
+		c.aggregatedAtt[r] = atts
 		return nil
 	}
 
@@ -122,15 +122,15 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return err
 	}
-	p.aggregatedAtt[r] = atts
+	c.aggregatedAtt[r] = atts
 
 	return nil
 }
 
 // SaveAggregatedAttestations saves a list of aggregated attestations in cache.
-func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error {
+func (c *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
-		if err := p.SaveAggregatedAttestation(att); err != nil {
+		if err := c.SaveAggregatedAttestation(att); err != nil {
 			return err
 		}
 	}
@@ -138,13 +138,13 @@ func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error 
 }
 
 // AggregatedAttestations returns the aggregated attestations in cache.
-func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
-	p.aggregatedAttLock.RLock()
-	defer p.aggregatedAttLock.RUnlock()
+func (c *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
+	c.aggregatedAttLock.RLock()
+	defer c.aggregatedAttLock.RUnlock()
 
 	atts := make([]*ethpb.Attestation, 0)
 
-	for _, a := range p.aggregatedAtt {
+	for _, a := range c.aggregatedAtt {
 		atts = append(atts, a...)
 	}
 
@@ -153,12 +153,12 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
-func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) []*ethpb.Attestation {
+func (c *AttCaches) AggregatedAttestationsBySlotIndex(slot, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
-	p.aggregatedAttLock.RLock()
-	defer p.aggregatedAttLock.RUnlock()
-	for _, a := range p.aggregatedAtt {
+	c.aggregatedAttLock.RLock()
+	defer c.aggregatedAttLock.RUnlock()
+	for _, a := range c.aggregatedAtt {
 		if slot == a[0].Data.Slot && committeeIndex == a[0].Data.CommitteeIndex {
 			atts = append(atts, a...)
 		}
@@ -168,7 +168,7 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot, committeeIndex uint6
 }
 
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
-func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
+func (c *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
@@ -180,13 +180,13 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
 
-	if err := p.insertSeenBit(att); err != nil {
+	if err := c.insertSeenBit(att); err != nil {
 		return err
 	}
 
-	p.aggregatedAttLock.Lock()
-	defer p.aggregatedAttLock.Unlock()
-	attList, ok := p.aggregatedAtt[r]
+	c.aggregatedAttLock.Lock()
+	defer c.aggregatedAttLock.Unlock()
+	attList, ok := c.aggregatedAtt[r]
 	if !ok {
 		return nil
 	}
@@ -198,16 +198,16 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 		}
 	}
 	if len(filtered) == 0 {
-		delete(p.aggregatedAtt, r)
+		delete(c.aggregatedAtt, r)
 	} else {
-		p.aggregatedAtt[r] = filtered
+		c.aggregatedAtt[r] = filtered
 	}
 
 	return nil
 }
 
 // HasAggregatedAttestation checks if the input attestations has already existed in cache.
-func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, error) {
+func (c *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, error) {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return false, err
 	}
@@ -216,9 +216,9 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 		return false, errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	p.aggregatedAttLock.RLock()
-	defer p.aggregatedAttLock.RUnlock()
-	if atts, ok := p.aggregatedAtt[r]; ok {
+	c.aggregatedAttLock.RLock()
+	defer c.aggregatedAttLock.RUnlock()
+	if atts, ok := c.aggregatedAtt[r]; ok {
 		for _, a := range atts {
 			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
 				return true, nil
@@ -226,9 +226,9 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 		}
 	}
 
-	p.blockAttLock.RLock()
-	defer p.blockAttLock.RUnlock()
-	if atts, ok := p.blockAtt[r]; ok {
+	c.blockAttLock.RLock()
+	defer c.blockAttLock.RUnlock()
+	if atts, ok := c.blockAtt[r]; ok {
 		for _, a := range atts {
 			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
 				return true, nil
@@ -240,8 +240,8 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 }
 
 // AggregatedAttestationCount returns the number of aggregated attestations key in the pool.
-func (p *AttCaches) AggregatedAttestationCount() int {
-	p.aggregatedAttLock.RLock()
-	defer p.aggregatedAttLock.RUnlock()
-	return len(p.aggregatedAtt)
+func (c *AttCaches) AggregatedAttestationCount() int {
+	c.aggregatedAttLock.RLock()
+	defer c.aggregatedAttLock.RUnlock()
+	return len(c.aggregatedAtt)
 }
