@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -105,8 +104,8 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	return nil
 }
 
-// verifyAttestation validates input attestation is valid.
-func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+// verifyAttestationIndices validates input attestation has valid attesting indices.
+func (s *Service) verifyAttestationIndices(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
@@ -115,8 +114,8 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	if err != nil {
 		return nil, err
 	}
-	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
-		return nil, errors.Wrap(err, "could not verify indexed attestation")
+	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+		return nil, err
 	}
 	return indexedAtt, nil
 }
