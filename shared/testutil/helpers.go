@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,7 +27,8 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []b
 	binary.LittleEndian.PutUint64(buf, epoch)
 
 	// We make the previous validator's index sign the message instead of the proposer.
-	return helpers.ComputeDomainAndSign(beaconState, epoch, epoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
+	sszEpoch := p2ptypes.SSZUint64(epoch)
+	return helpers.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 }
 
 // BlockSignature calculates the post-state root of the block and returns the signature.
