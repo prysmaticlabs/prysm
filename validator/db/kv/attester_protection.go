@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -60,16 +59,24 @@ func (store *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 
-		return sourceEpochsBucket.ForEach(func(sourceBytes, targetBytes []byte) error {
-			record := &AttestationRecord{
-				Source: bytesutil.BytesToUint64BigEndian(sourceBytes),
-				Target: bytesutil.BytesToUint64BigEndian(targetBytes),
+		return sourceEpochsBucket.ForEach(func(sourceBytes, targetEpochsList []byte) error {
+			targetEpochs := make([]uint64, 0)
+			for i := 0; i < len(targetEpochsList); i += 8 {
+				epoch := bytesutil.BytesToUint64BigEndian(targetEpochsList[i : i+8])
+				targetEpochs = append(targetEpochs, epoch)
 			}
-			signingRoot := signingRootsBucket.Get(targetBytes)
-			if signingRoot != nil {
-				copy(record.SigningRoot[:], signingRoot)
+			sourceEpoch := bytesutil.BytesToUint64BigEndian(sourceBytes)
+			for _, targetEpoch := range targetEpochs {
+				record := &AttestationRecord{
+					Source: sourceEpoch,
+					Target: targetEpoch,
+				}
+				signingRoot := signingRootsBucket.Get(bytesutil.Uint64ToBytesBigEndian(targetEpoch))
+				if signingRoot != nil {
+					copy(record.SigningRoot[:], signingRoot)
+				}
+				records = append(records, record)
 			}
-			records = append(records, record)
 			return nil
 		})
 	})
@@ -94,9 +101,13 @@ func (store *Store) CheckSlashableAttestation(
 		if signingRootsBucket != nil {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(att.Data.Target.Epoch)
 			existingSigningRoot := signingRootsBucket.Get(targetEpochBytes)
-			if existingSigningRoot != nil && !bytes.Equal(signingRoot[:], existingSigningRoot) {
-				slashKind = DoubleVote
-				return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
+			if existingSigningRoot != nil {
+				var existing [32]byte
+				copy(existing[:], existingSigningRoot)
+				if slashutil.SigningRootsDiffer(existing, signingRoot) {
+					slashKind = DoubleVote
+					return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
+				}
 			}
 		}
 
@@ -311,22 +322,45 @@ func (store *Store) saveAttestationRecords(ctx context.Context, atts []*Attestat
 	})
 }
 
-// AttestedPublicKeys retrieves all public keys in our attestation history bucket.
+// AttestedPublicKeys retrieves all public keys that have attested.
 func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestedPublicKeys")
 	defer span.End()
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
 	err = store.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(deprecatedAttestationHistoryBucket)
-		return bucket.ForEach(func(key []byte, _ []byte) error {
-			pubKeyBytes := [48]byte{}
-			copy(pubKeyBytes[:], key)
-			attestedPublicKeys = append(attestedPublicKeys, pubKeyBytes)
+		bucket := tx.Bucket(pubKeysBucket)
+		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
+			var pk [48]byte
+			copy(pk[:], pubKey)
+			attestedPublicKeys = append(attestedPublicKeys, pk)
 			return nil
 		})
 	})
 	return attestedPublicKeys, err
+}
+
+// SigningRootAtTargetEpoch checks for an existing signing root at a specified
+// target epoch for a given validator public key.
+func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, target uint64) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.SigningRootAtTargetEpoch")
+	defer span.End()
+	var signingRoot [32]byte
+	err := store.view(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(pubKeysBucket)
+		pkBucket := bucket.Bucket(pubKey[:])
+		if pkBucket == nil {
+			return nil
+		}
+		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
+		if signingRootsBucket == nil {
+			return nil
+		}
+		sr := signingRootsBucket.Get(bytesutil.Uint64ToBytesBigEndian(target))
+		copy(signingRoot[:], sr)
+		return nil
+	})
+	return signingRoot, err
 }
 
 // LowestSignedSourceEpoch returns the lowest signed Source epoch for a validator public key.

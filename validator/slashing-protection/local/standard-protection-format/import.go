@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
@@ -65,7 +66,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		// Transform the processed signed attestation data from the JSON
 		// file into the internal Prysm representation of attesting history.
-		historicalAtt, err := transformSignedAttestations(ctx, signedAtts)
+		historicalAtt, err := transformSignedAttestations(pubKey, signedAtts)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
@@ -122,16 +123,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 			log.WithError(err).Debug("Could not increase progress bar")
 		}
 		for _, att := range attestations {
-			indexedAtt := &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{
-						Epoch: att.Source,
-					},
-					Target: &ethpb.Checkpoint{
-						Epoch: att.Target,
-					},
-				},
-			}
+			indexedAtt := createAttestation(att.Source, att.Target)
 			if err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, att.SigningRoot, indexedAtt); err != nil {
 				return errors.Wrap(err, "could not save attestation from imported JSON to database")
 			}
@@ -267,18 +259,39 @@ func filterSlashablePubKeysFromAttestations(
 	signedAttsByPubKey map[[48]byte][]*kv.AttestationRecord,
 ) ([][48]byte, error) {
 	slashablePubKeys := make([][48]byte, 0)
+	// First we need to find attestations that are slashable with respect to other
+	// attestations within the same JSON import.
+	for pubKey, signedAtts := range signedAttsByPubKey {
+		signingRootsByTarget := make(map[uint64][32]byte)
+		targetEpochsBySource := make(map[uint64][]uint64)
+	Loop:
+		for _, att := range signedAtts {
+			// Check for double votes.
+			if sr, ok := signingRootsByTarget[att.Target]; ok {
+				if slashutil.SigningRootsDiffer(sr, att.SigningRoot) {
+					slashablePubKeys = append(slashablePubKeys, pubKey)
+					break Loop
+				}
+			}
+			// Check for surround voting.
+			for source, targets := range targetEpochsBySource {
+				for _, target := range targets {
+					a := createAttestation(source, target)
+					b := createAttestation(att.Source, att.Target)
+					if slashutil.IsSurround(a, b) || slashutil.IsSurround(b, a) {
+						slashablePubKeys = append(slashablePubKeys, pubKey)
+						break Loop
+					}
+				}
+			}
+			signingRootsByTarget[att.Target] = att.SigningRoot
+			targetEpochsBySource[att.Source] = append(targetEpochsBySource[att.Source], att.Target)
+		}
+	}
+	// Then, we need to find attestations that are slashable with respect to our database.
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		for _, att := range signedAtts {
-			indexedAtt := &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Target: &ethpb.Checkpoint{
-						Epoch: att.Target,
-					},
-					Source: &ethpb.Checkpoint{
-						Epoch: att.Source,
-					},
-				},
-			}
+			indexedAtt := createAttestation(att.Source, att.Target)
 			slashable, err := validatorDB.CheckSlashableAttestation(ctx, pubKey, att.SigningRoot, indexedAtt)
 			if err != nil {
 				return nil, err
@@ -318,7 +331,7 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlo
 	}, nil
 }
 
-func transformSignedAttestations(ctx context.Context, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
+func transformSignedAttestations(pubKey [48]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
 	historicalAtts := make([]*kv.AttestationRecord, 0)
 	for _, attestation := range atts {
 		target, err := Uint64FromString(attestation.TargetEpoch)
@@ -338,10 +351,24 @@ func transformSignedAttestations(ctx context.Context, atts []*format.SignedAttes
 			}
 		}
 		historicalAtts = append(historicalAtts, &kv.AttestationRecord{
+			PubKey:      pubKey,
 			Source:      source,
 			Target:      target,
 			SigningRoot: signingRoot,
 		})
 	}
 	return historicalAtts, nil
+}
+
+func createAttestation(source, target uint64) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: source,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: target,
+			},
+		},
+	}
 }

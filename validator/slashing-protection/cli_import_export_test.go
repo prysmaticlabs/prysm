@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
@@ -94,10 +95,17 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	for _, item := range receivedJSON.Data {
 		wanted, ok := wantedHistoryByPublicKey[item.Pubkey]
 		require.Equal(t, true, ok)
+		wantedAttsByRoot := make(map[string]*format.SignedAttestation)
+		for _, att := range wanted.SignedAttestations {
+			wantedAttsByRoot[att.SigningRoot] = att
+		}
+		for _, att := range item.SignedAttestations {
+			wantedAtt, ok := wantedAttsByRoot[att.SigningRoot]
+			require.Equal(t, true, ok)
+			require.DeepEqual(t, wantedAtt, att)
+		}
 		require.Equal(t, len(wanted.SignedBlocks), len(item.SignedBlocks))
-		require.Equal(t, len(wanted.SignedAttestations), len(item.SignedAttestations))
 		require.DeepEqual(t, wanted.SignedBlocks, item.SignedBlocks)
-		require.DeepEqual(t, wanted.SignedAttestations, item.SignedAttestations)
 	}
 }
 
@@ -111,8 +119,11 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	// Create some mock slashing protection history. and JSON file
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	attestingHistory, proposalHistory := mocks.MockAttestingAndProposalHistories(numValidators)
-	require.NoError(t, err)
+	attestingHistory := make([][]*kv.AttestationRecord, 0)
+	proposalHistory := make([]kv.ProposalHistoryForPubkey, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+	}
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 

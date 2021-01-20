@@ -25,19 +25,23 @@ func MockSlashingProtectionJSON(
 		data := &format.ProtectionData{
 			Pubkey: fmt.Sprintf("%#x", publicKeys[i]),
 		}
-		for _, att := range attestingHistories[i] {
-			data.SignedAttestations = append(data.SignedAttestations, &format.SignedAttestation{
-				TargetEpoch: fmt.Sprintf("%d", att.Target),
-				SourceEpoch: fmt.Sprintf("%d", att.Source),
-				SigningRoot: fmt.Sprintf("%#x", att.SigningRoot),
-			})
-		}
-		for _, proposal := range proposalHistories[i].Proposals {
-			block := &format.SignedBlock{
-				Slot:        fmt.Sprintf("%d", proposal.Slot),
-				SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
+		if len(attestingHistories) > 0 {
+			for _, att := range attestingHistories[i] {
+				data.SignedAttestations = append(data.SignedAttestations, &format.SignedAttestation{
+					TargetEpoch: fmt.Sprintf("%d", att.Target),
+					SourceEpoch: fmt.Sprintf("%d", att.Source),
+					SigningRoot: fmt.Sprintf("%#x", att.SigningRoot),
+				})
 			}
-			data.SignedBlocks = append(data.SignedBlocks, block)
+		}
+		if len(proposalHistories) > 0 {
+			for _, proposal := range proposalHistories[i].Proposals {
+				block := &format.SignedBlock{
+					Slot:        fmt.Sprintf("%d", proposal.Slot),
+					SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
+				}
+				data.SignedBlocks = append(data.SignedBlocks, block)
+			}
 		}
 		standardProtectionFormat.Data = append(standardProtectionFormat.Data, data)
 	}
@@ -53,6 +57,11 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 	gen := rand.NewGenerator()
 	for v := 0; v < numValidators; v++ {
 		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000)
+		// If 0, we change the value to 1 as the we compute source by doing (target-1)
+		// to prevent any underflows in this setup helper.
+		if latestTarget == 0 {
+			latestTarget = 1
+		}
 		historicalAtts := make([]*kv.AttestationRecord, 0)
 		proposals := make([]kv.Proposal, 0)
 		for i := 1; i < latestTarget; i++ {
@@ -60,7 +69,7 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			historicalAtts = append(historicalAtts, &kv.AttestationRecord{
-				Source:      uint64(gen.Intn(100000)),
+				Source:      uint64(i - 1),
 				Target:      uint64(i),
 				SigningRoot: signingRoot,
 			})

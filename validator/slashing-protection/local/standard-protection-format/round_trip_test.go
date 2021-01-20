@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	protectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
@@ -58,7 +59,18 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	for _, item := range eipStandard.Data {
 		want, ok := dataByPubKey[item.Pubkey]
 		require.Equal(t, true, ok)
-		require.DeepEqual(t, want, item)
+		require.Equal(t, len(want.SignedAttestations), len(item.SignedAttestations))
+		require.Equal(t, len(want.SignedBlocks), len(item.SignedBlocks))
+		wantedAttsByRoot := make(map[string]*format.SignedAttestation)
+		for _, att := range want.SignedAttestations {
+			wantedAttsByRoot[att.SigningRoot] = att
+		}
+		for _, att := range item.SignedAttestations {
+			wantedAtt, ok := wantedAttsByRoot[att.SigningRoot]
+			require.Equal(t, true, ok)
+			require.DeepEqual(t, wantedAtt, att)
+		}
+		require.DeepEqual(t, want.SignedBlocks, item.SignedBlocks)
 	}
 }
 
@@ -144,7 +156,17 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	for i := 0; i < len(publicKeys); i++ {
 		receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKey(ctx, publicKeys[i])
 		require.NoError(t, err)
-		require.DeepEqual(t, attestingHistory[i], receivedAttestingHistory)
+
+		wantedAttsByRoot := make(map[[32]byte]*kv.AttestationRecord)
+		for _, att := range attestingHistory[i] {
+			wantedAttsByRoot[att.SigningRoot] = att
+		}
+		for _, att := range receivedAttestingHistory {
+			wantedAtt, ok := wantedAttsByRoot[att.SigningRoot]
+			require.Equal(t, true, ok)
+			require.DeepEqual(t, wantedAtt, att)
+		}
+
 		proposals := proposalHistory[i].Proposals
 		for _, proposal := range proposals {
 			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
@@ -161,7 +183,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 
 func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	ctx := context.Background()
-	numValidators := 10
+	numValidators := 3
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
@@ -249,7 +271,7 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	ctx := context.Background()
-	numValidators := 10
+	numValidators := 5
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)

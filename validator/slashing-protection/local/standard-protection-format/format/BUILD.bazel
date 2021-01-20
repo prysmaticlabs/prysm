@@ -4,5 +4,5 @@ go_library(
     name = "go_default_library",
     srcs = ["format.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
 )
