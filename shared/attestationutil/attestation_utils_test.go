@@ -45,7 +45,7 @@ func TestAttestingIndices(t *testing.T) {
 				bf:        bitfield.Bitlist{0b11111},
 				committee: []uint64{0, 1, 2},
 			},
-			err: "bitfield length 4 is greater than committee length 3",
+			err: "bitfield length 4 is not equal to committee length 3",
 		},
 	}
 	for _, tt := range tests {
