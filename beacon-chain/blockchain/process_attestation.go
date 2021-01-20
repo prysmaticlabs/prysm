@@ -52,10 +52,9 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
 
-	// Verify beacon node has seen the target block before.
-	if !s.hasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return nil, ErrTargetRootNotInDB
-	}
+	// Note that target root check is ignored here because it was performed in sync's validation pipeline:
+	// validate_aggregate_proof.go and validate_beacon_attestation.go
+	// If missing target root were to fail in this method, it would have just failed in `getAttPreState`.
 
 	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
 	// save it to the cache.
