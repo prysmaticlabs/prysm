@@ -50,6 +50,13 @@ var processOperationsNoVerifyAttsSigsPipeline = []processFunc{
 	b.ProcessVoluntaryExits,
 }
 
+var processBlockForStateRootPipeline = []processFunc{
+	b.ProcessBlockHeaderNoVerify,
+	b.ProcessRandaoNoVerify,
+	b.ProcessEth1DataInBlock,
+	ProcessOperationsNoVerifyAttsSigs,
+}
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
@@ -625,28 +632,12 @@ func ProcessBlockForStateRoot(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockForStateRoot")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(ctx, state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process block header")
-	}
-
-	state, err = b.ProcessRandaoNoVerify(ctx, state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not verify and process randao")
-	}
-
-	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process eth1 data")
-	}
-
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process block operation")
+	var err error
+	for _, p := range processBlockForStateRootPipeline {
+		state, err = p(ctx, state, signed)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block")
+		}
 	}
 
 	return state, nil
