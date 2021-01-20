@@ -17,9 +17,12 @@ test --host_force_python=PY2
 run --host_force_python=PY2
 
 # Networking is blocked for tests by default, add "requires-network" tag to your test if networking
-# is required within the sandbox. This flag is no longer experimental after 0.29.0.
-# Network sandboxing only works on linux.
---experimental_sandbox_default_allow_network=false
+# is required within the sandbox. Network sandboxing only works on linux.
+build --sandbox_default_allow_network=false
+
+# Stamp binaries with git information
+build --workspace_status_command=./scripts/workspace_status.sh
+build --stamp
 
 # Use mainnet protobufs at runtime
 run --define ssz=mainnet
@@ -48,8 +51,6 @@ build:blst_enabled --define blst_enabled=true
 build:blst_enabled --define gotags=blst_enabled
 
 # Release flags
-build:release --workspace_status_command=./scripts/workspace_status.sh
-build:release --stamp
 build:release --compilation_mode=opt
 build:release --config=llvm
 

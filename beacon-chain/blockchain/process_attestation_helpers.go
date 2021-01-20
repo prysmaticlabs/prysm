@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -106,30 +105,16 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	return nil
 }
 
-// verifyLMDFFGConsistent verifies LMD GHOST and FFG votes are consistent with each other.
-func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot, lmdRoot []byte) error {
-	ffgSlot, err := helpers.StartSlot(ffgEpoch)
-	if err != nil {
-		return err
-	}
-	r, err := s.ancestor(ctx, lmdRoot, ffgSlot)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(ffgRoot, r) {
-		return errors.New("FFG and LMD votes are not consistent")
-	}
-
-	return nil
-}
-
 // verifyAttestation validates input attestation is valid.
 func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt := attestationutil.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
+	if err != nil {
+		return nil, err
+	}
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}

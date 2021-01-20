@@ -29,21 +29,21 @@ type deprecatedHistoryData struct {
 // deprecatedEncodedAttestingHistory encapsulated history data.
 type deprecatedEncodedAttestingHistory []byte
 
-func (hd deprecatedEncodedAttestingHistory) assertSize() error {
-	if hd == nil || len(hd) < minimalSize {
-		return fmt.Errorf("encapsulated data size: %d is smaller then minimal size: %d", len(hd), minimalSize)
+func (dh deprecatedEncodedAttestingHistory) assertSize() error {
+	if dh == nil || len(dh) < minimalSize {
+		return fmt.Errorf("encapsulated data size: %d is smaller then minimal size: %d", len(dh), minimalSize)
 	}
-	if (len(hd)-minimalSize)%historySize != 0 {
-		return fmt.Errorf("encapsulated data size: %d is not a multiple of entry size: %d", len(hd), historySize)
+	if (len(dh)-minimalSize)%historySize != 0 {
+		return fmt.Errorf("encapsulated data size: %d is not a multiple of entry size: %d", len(dh), historySize)
 	}
 	return nil
 }
 
-func (h *deprecatedHistoryData) isEmpty() bool {
-	if h == (*deprecatedHistoryData)(nil) {
+func (dhd *deprecatedHistoryData) isEmpty() bool {
+	if dhd == (*deprecatedHistoryData)(nil) {
 		return true
 	}
-	if h.Source == params.BeaconConfig().FarFutureEpoch {
+	if dhd.Source == params.BeaconConfig().FarFutureEpoch {
 		return true
 	}
 	return false
@@ -73,60 +73,53 @@ func newDeprecatedAttestingHistory(target uint64) deprecatedEncodedAttestingHist
 	return enc
 }
 
-func (hd deprecatedEncodedAttestingHistory) getLatestEpochWritten(ctx context.Context) (uint64, error) {
-	if err := hd.assertSize(); err != nil {
+func (dh deprecatedEncodedAttestingHistory) getLatestEpochWritten(ctx context.Context) (uint64, error) {
+	if err := dh.assertSize(); err != nil {
 		return 0, err
 	}
-	return bytesutil.FromBytes8(hd[:latestEpochWrittenSize]), nil
+	return bytesutil.FromBytes8(dh[:latestEpochWrittenSize]), nil
 }
 
-func (hd deprecatedEncodedAttestingHistory) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (deprecatedEncodedAttestingHistory, error) {
-	if err := hd.assertSize(); err != nil {
+func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(ctx context.Context, latestEpochWritten uint64) (deprecatedEncodedAttestingHistory, error) {
+	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
-	copy(hd[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten))
-	return hd, nil
+	copy(dh[:latestEpochWrittenSize], bytesutil.Uint64ToBytesLittleEndian(latestEpochWritten))
+	return dh, nil
 }
 
-func (hd deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, target uint64) (*deprecatedHistoryData, error) {
-	if err := hd.assertSize(); err != nil {
+func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, target uint64) (*deprecatedHistoryData, error) {
+	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
 	// Cursor for the location to read Target epoch from.
 	// Modulus of Target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
-	if uint64(len(hd)) < cursor+historySize {
+	if uint64(len(dh)) < cursor+historySize {
 		return nil, nil
 	}
 	history := &deprecatedHistoryData{}
-	history.Source = bytesutil.FromBytes8(hd[cursor : cursor+sourceSize])
+	history.Source = bytesutil.FromBytes8(dh[cursor : cursor+sourceSize])
 	sr := make([]byte, 32)
-	copy(sr, hd[cursor+sourceSize:cursor+historySize])
+	copy(sr, dh[cursor+sourceSize:cursor+historySize])
 	history.SigningRoot = sr
 	return history, nil
 }
 
-func (hd deprecatedEncodedAttestingHistory) setTargetData(ctx context.Context, target uint64, historyData *deprecatedHistoryData) (deprecatedEncodedAttestingHistory, error) {
-	if err := hd.assertSize(); err != nil {
+func (dh deprecatedEncodedAttestingHistory) setTargetData(ctx context.Context, target uint64, historyData *deprecatedHistoryData) (deprecatedEncodedAttestingHistory, error) {
+	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
-	// Cursor for the location to write Target epoch to.
-	cursorToWrite := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
-	if uint64(len(hd)) < cursorToWrite+historySize {
-		start := uint64(len(hd))
-		ext := make([]byte, cursorToWrite+historySize-uint64(len(hd)))
-		hd = append(hd, ext...)
-		// We need to mark the epochs in between the latest written one and the newest one
-		// we are writing as not attested by setting the Source epoch to FAR_FUTURE_EPOCH.
-		for i := start; i < uint64(len(hd)); i += historySize {
-			copy(
-				hd[i:i+sourceSize],
-				bytesutil.Uint64ToBytesLittleEndian(params.BeaconConfig().FarFutureEpoch),
-			)
-			copy(hd[i+sourceSize:i+sourceSize+signingRootSize], make([]byte, 32))
-		}
+	// Cursor for the location to write target epoch to.
+	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
+	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize
+
+	if uint64(len(dh)) < cursor+historySize {
+		ext := make([]byte, cursor+historySize-uint64(len(dh)))
+		dh = append(dh, ext...)
 	}
-	copy(hd[cursorToWrite:cursorToWrite+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
-	copy(hd[cursorToWrite+sourceSize:cursorToWrite+sourceSize+signingRootSize], historyData.SigningRoot)
-	return hd, nil
+	copy(dh[cursor:cursor+sourceSize], bytesutil.Uint64ToBytesLittleEndian(historyData.Source))
+	copy(dh[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
+
+	return dh, nil
 }

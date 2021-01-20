@@ -85,11 +85,11 @@ func (store *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]
 
 // CheckSlashableAttestation verifies an incoming attestation is
 // not a double vote for a validator public key nor a surround vote.
-func (store *Store) CheckSlashableAttestation(
+func (s *Store) CheckSlashableAttestation(
 	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
 	var slashKind SlashingKind
-	err := store.view(func(tx *bolt.Tx) error {
+	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])
 		if pkBucket == nil {
@@ -166,10 +166,10 @@ func (store *Store) CheckSlashableAttestation(
 
 // SaveAttestationForPubKey saves an attestation for a validator public
 // key for local validator slashing protection.
-func (store *Store) SaveAttestationForPubKey(
+func (s *Store) SaveAttestationForPubKey(
 	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) error {
-	store.batchedAttestationsChan <- &AttestationRecord{
+	s.batchedAttestationsChan <- &AttestationRecord{
 		PubKey:      pubKey,
 		Source:      att.Data.Source.Epoch,
 		Target:      att.Data.Target.Epoch,
@@ -182,7 +182,7 @@ func (store *Store) SaveAttestationForPubKey(
 	// to prevent blocking the sender from notifying us of the result.
 	responseChan := make(chan saveAttestationsResponse, 1)
 	defer close(responseChan)
-	sub := store.batchAttestationsFlushedFeed.Subscribe(responseChan)
+	sub := s.batchAttestationsFlushedFeed.Subscribe(responseChan)
 	defer sub.Unsubscribe()
 	res := <-responseChan
 	return res.err
@@ -194,25 +194,25 @@ func (store *Store) SaveAttestationForPubKey(
 // Based on whichever comes first, this function then proceeds
 // to flush the attestations to the DB all at once in a single boltDB
 // transaction for efficiency. Then, batched attestations slice is emptied out.
-func (store *Store) batchAttestationWrites(ctx context.Context) {
+func (s *Store) batchAttestationWrites(ctx context.Context) {
 	ticker := time.NewTicker(attestationBatchWriteInterval)
 	defer ticker.Stop()
 	for {
 		select {
-		case v := <-store.batchedAttestationsChan:
-			store.batchedAttestations = append(store.batchedAttestations, v)
-			if len(store.batchedAttestations) == attestationBatchCapacity {
+		case v := <-s.batchedAttestationsChan:
+			s.batchedAttestations = append(s.batchedAttestations, v)
+			if len(s.batchedAttestations) == attestationBatchCapacity {
 				log.WithField("numRecords", attestationBatchCapacity).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
-				store.flushAttestationRecords(ctx)
+				s.flushAttestationRecords(ctx)
 			}
 		case <-ticker.C:
-			if len(store.batchedAttestations) > 0 {
-				log.WithField("numRecords", len(store.batchedAttestations)).Debug(
+			if len(s.batchedAttestations) > 0 {
+				log.WithField("numRecords", len(s.batchedAttestations)).Debug(
 					"Batched attestation records write interval reached, flushing to DB",
 				)
-				store.flushAttestationRecords(ctx)
+				s.flushAttestationRecords(ctx)
 			}
 		case <-ctx.Done():
 			return
@@ -224,17 +224,17 @@ func (store *Store) batchAttestationWrites(ctx context.Context) {
 // and resets the list of batched attestations for future writes.
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
-func (store *Store) flushAttestationRecords(ctx context.Context) {
-	err := store.saveAttestationRecords(ctx, store.batchedAttestations)
+func (s *Store) flushAttestationRecords(ctx context.Context) {
+	err := s.saveAttestationRecords(ctx, s.batchedAttestations)
 	// If there was no error, we reset the batched attestations slice.
 	if err == nil {
 		log.Debug("Successfully flushed batched attestations to DB")
-		store.batchedAttestations = make([]*AttestationRecord, 0, attestationBatchCapacity)
+		s.batchedAttestations = make([]*AttestationRecord, 0, attestationBatchCapacity)
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
 	// We use a struct wrapper around the error as the event feed
 	// cannot handle sending a raw `nil` in case there is no error.
-	store.batchAttestationsFlushedFeed.Send(saveAttestationsResponse{
+	s.batchAttestationsFlushedFeed.Send(saveAttestationsResponse{
 		err: err,
 	})
 }
@@ -242,10 +242,10 @@ func (store *Store) flushAttestationRecords(ctx context.Context) {
 // Saves a list of attestation records to the database in a single boltDB
 // transaction to minimize write lock contention compared to doing them
 // all in individual, isolated boltDB transactions.
-func (store *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationRecord) error {
+func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationRecord) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.saveAttestationRecords")
 	defer span.End()
-	return store.update(func(tx *bolt.Tx) error {
+	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		for _, att := range atts {
 			pkBucket, err := bucket.CreateBucketIfNotExists(att.PubKey[:])
@@ -323,12 +323,12 @@ func (store *Store) saveAttestationRecords(ctx context.Context, atts []*Attestat
 }
 
 // AttestedPublicKeys retrieves all public keys that have attested.
-func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (s *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestedPublicKeys")
 	defer span.End()
 	var err error
 	attestedPublicKeys := make([][48]byte, 0)
-	err = store.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
 			var pk [48]byte
@@ -365,14 +365,14 @@ func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byt
 
 // LowestSignedSourceEpoch returns the lowest signed Source epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
 	defer span.End()
 
 	var err error
 	var lowestSignedSourceEpoch uint64
 	var exists bool
-	err = store.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedSourceBucket)
 		lowestSignedSourceBytes := bucket.Get(publicKey[:])
 		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
@@ -388,14 +388,14 @@ func (store *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]b
 
 // LowestSignedTargetEpoch returns the lowest signed Target epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (store *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (s *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedTargetEpoch")
 	defer span.End()
 
 	var err error
 	var lowestSignedTargetEpoch uint64
 	var exists bool
-	err = store.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedTargetBucket)
 		lowestSignedTargetBytes := bucket.Get(publicKey[:])
 		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.

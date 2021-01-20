@@ -24,12 +24,12 @@ type Proposal struct {
 }
 
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.
-func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (s *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
 	defer span.End()
 	var err error
 	proposedPublicKeys := make([][48]byte, 0)
-	err = store.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			pubKeyBytes := [48]byte{}
@@ -44,14 +44,14 @@ func (store *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) 
 // ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root as well
 // as a boolean that tells us if we have a proposal history stored at the slot. It is possible we have proposed
 // a slot but stored a nil signing root, so the boolean helps give full information.
-func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([32]byte, bool, error) {
+func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([32]byte, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
 	defer span.End()
 
 	var err error
 	var proposalExists bool
 	signingRoot := [32]byte{}
-	err = store.update(func(tx *bolt.Tx) error {
+	err = s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
 		if err != nil {
@@ -71,11 +71,11 @@ func (store *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]by
 // SaveProposalHistoryForSlot saves the proposal history for the requested validator public key.
 // We also check if the incoming proposal slot is lower than the lowest signed proposal slot
 // for the validator and override its value on disk.
-func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot uint64, signingRoot []byte) error {
+func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot uint64, signingRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
-	err := store.update(func(tx *bolt.Tx) error {
+	err := s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
 		if err != nil {
@@ -118,14 +118,14 @@ func (store *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]b
 
 // LowestSignedProposal returns the lowest signed proposal slot for a validator public key.
 // If no data exists, a boolean of value false is returned.
-func (store *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (s *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedProposal")
 	defer span.End()
 
 	var err error
 	var lowestSignedProposalSlot uint64
 	var exists bool
-	err = store.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedProposalsBucket)
 		lowestSignedProposalBytes := bucket.Get(publicKey[:])
 		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
@@ -141,14 +141,14 @@ func (store *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte
 
 // HighestSignedProposal returns the highest signed proposal slot for a validator public key.
 // If no data exists, a boolean of value false is returned.
-func (store *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (s *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.HighestSignedProposal")
 	defer span.End()
 
 	var err error
 	var highestSignedProposalSlot uint64
 	var exists bool
-	err = store.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestSignedProposalsBucket)
 		highestSignedProposalBytes := bucket.Get(publicKey[:])
 		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.

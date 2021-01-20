@@ -124,12 +124,12 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
-func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
-	return dr.accountsChangedFeed.Subscribe(pubKeysChan)
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
 // ValidatingAccountNames for a imported keymanager.
-func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
+func (km *Keymanager) ValidatingAccountNames() ([]string, error) {
 	lock.RLock()
 	names := make([]string, len(orderedPublicKeys))
 	for i, pubKey := range orderedPublicKeys {
@@ -140,9 +140,9 @@ func (dr *Keymanager) ValidatingAccountNames() ([]string, error) {
 }
 
 // DisabledPublicKeys returns the currently disabled public keys in the keymanager.
-func (dr *Keymanager) DisabledPublicKeys() [][]byte {
+func (km *Keymanager) DisabledPublicKeys() [][]byte {
 	disabledPubKeys := make([][]byte, 0)
-	for pubKey := range dr.disabledPublicKeys {
+	for pubKey := range km.disabledPublicKeys {
 		pubKeyBytes := make([]byte, 48)
 		copy(pubKeyBytes, pubKey[:])
 		disabledPubKeys = append(disabledPubKeys, pubKeyBytes)
@@ -152,16 +152,16 @@ func (dr *Keymanager) DisabledPublicKeys() [][]byte {
 
 // Initialize public and secret key caches that are used to speed up the functions
 // FetchValidatingPublicKeys and Sign
-func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
+func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 	lock.Lock()
 	defer lock.Unlock()
-	count := len(dr.accountsStore.PrivateKeys)
+	count := len(km.accountsStore.PrivateKeys)
 	orderedPublicKeys = make([][48]byte, count)
 	secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
-	for i, publicKey := range dr.accountsStore.PublicKeys {
+	for i, publicKey := range km.accountsStore.PublicKeys {
 		publicKey48 := bytesutil.ToBytes48(publicKey)
 		orderedPublicKeys[i] = publicKey48
-		secretKey, err := bls.SecretKeyFromBytes(dr.accountsStore.PrivateKeys[i])
+		secretKey, err := bls.SecretKeyFromBytes(km.accountsStore.PrivateKeys[i])
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize keys caches from account keystore")
 		}
@@ -171,11 +171,11 @@ func (dr *Keymanager) initializeKeysCachesFromKeystore() error {
 }
 
 // DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
-func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
+func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
 	for _, publicKey := range publicKeys {
 		var index int
 		var found bool
-		for i, pubKey := range dr.accountsStore.PublicKeys {
+		for i, pubKey := range km.accountsStore.PublicKeys {
 			if bytes.Equal(pubKey, publicKey) {
 				index = i
 				found = true
@@ -185,12 +185,12 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 		if !found {
 			return fmt.Errorf("could not find public key %#x", publicKey)
 		}
-		deletedPublicKey := dr.accountsStore.PublicKeys[index]
+		deletedPublicKey := km.accountsStore.PublicKeys[index]
 		accountName := petnames.DeterministicName(deletedPublicKey, "-")
-		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys[:index], dr.accountsStore.PrivateKeys[index+1:]...)
-		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys[:index], dr.accountsStore.PublicKeys[index+1:]...)
+		km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys[:index], km.accountsStore.PrivateKeys[index+1:]...)
+		km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys[:index], km.accountsStore.PublicKeys[index+1:]...)
 
-		newStore, err := dr.CreateAccountsKeystore(ctx, dr.accountsStore.PrivateKeys, dr.accountsStore.PublicKeys)
+		newStore, err := km.CreateAccountsKeystore(ctx, km.accountsStore.PrivateKeys, km.accountsStore.PublicKeys)
 		if err != nil {
 			return errors.Wrap(err, "could not rewrite accounts keystore")
 		}
@@ -200,7 +200,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 		if err != nil {
 			return err
 		}
-		if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
+		if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
 			return errors.Wrap(err, "could not write keystore file for accounts")
 		}
 
@@ -208,7 +208,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 			"name":      accountName,
 			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
 		}).Info("Successfully deleted validator account")
-		err = dr.initializeKeysCachesFromKeystore()
+		err = km.initializeKeysCachesFromKeystore()
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize keys caches")
 		}
@@ -217,7 +217,7 @@ func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 }
 
 // FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
-func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
@@ -225,7 +225,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	keys := orderedPublicKeys
 	result := make([][48]byte, 0)
 	for _, pk := range keys {
-		if _, ok := dr.disabledPublicKeys[pk]; !ok {
+		if _, ok := km.disabledPublicKeys[pk]; !ok {
 			result = append(result, pk)
 		}
 	}
@@ -234,7 +234,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the imported account keystores.
-func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (km *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
@@ -247,16 +247,16 @@ func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]b
 }
 
 // FetchValidatingPrivateKeys fetches the list of private keys from the secret keys cache
-func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
+func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
 	lock.RLock()
 	defer lock.RUnlock()
 	privKeys := make([][32]byte, len(secretKeysCache))
-	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve public keys")
 	}
 	for i, pk := range pubKeys {
-		if _, ok := dr.disabledPublicKeys[pk]; !ok {
+		if _, ok := km.disabledPublicKeys[pk]; !ok {
 			seckey, ok := secretKeysCache[pk]
 			if !ok {
 				return nil, errors.New("Could not fetch private key")
@@ -268,7 +268,7 @@ func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 }
 
 // Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	ctx, span := trace.StartSpan(ctx, "keymanager.Sign")
 	defer span.End()
 
@@ -285,8 +285,8 @@ func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
-func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
+func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
+	encoded, err := km.wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {
 		// If there are no keys to initialize at all, just exit.
 		return nil
@@ -300,7 +300,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password and initialize a new BLS secret key from
 	// its raw bytes.
-	password := dr.wallet.Password()
+	password := km.wallet.Password()
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
@@ -319,7 +319,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	if len(store.PublicKeys) == 0 {
 		return nil
 	}
-	dr.accountsStore = store
+	km.accountsStore = store
 
 	lock.Lock()
 	for _, pubKey := range keystoreFile.DisabledPublicKeys {
@@ -328,10 +328,10 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 			lock.Unlock()
 			return err
 		}
-		dr.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
+		km.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
 	}
 	lock.Unlock()
-	err = dr.initializeKeysCachesFromKeystore()
+	err = km.initializeKeysCachesFromKeystore()
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize keys caches")
 	}
@@ -339,7 +339,7 @@ func (dr *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 }
 
 // CreateAccountsKeystore creates a new keystore holding the provided keys.
-func (dr *Keymanager) CreateAccountsKeystore(
+func (km *Keymanager) CreateAccountsKeystore(
 	_ context.Context,
 	privateKeys, publicKeys [][]byte,
 ) (*AccountsKeystoreRepresentation, error) {
@@ -353,17 +353,17 @@ func (dr *Keymanager) CreateAccountsKeystore(
 			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
 		)
 	}
-	if dr.accountsStore == nil {
-		dr.accountsStore = &accountStore{
+	if km.accountsStore == nil {
+		km.accountsStore = &accountStore{
 			PrivateKeys: privateKeys,
 			PublicKeys:  publicKeys,
 		}
 	} else {
 		existingPubKeys := make(map[string]bool)
 		existingPrivKeys := make(map[string]bool)
-		for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
-			existingPrivKeys[string(dr.accountsStore.PrivateKeys[i])] = true
-			existingPubKeys[string(dr.accountsStore.PublicKeys[i])] = true
+		for i := 0; i < len(km.accountsStore.PrivateKeys); i++ {
+			existingPrivKeys[string(km.accountsStore.PrivateKeys[i])] = true
+			existingPubKeys[string(km.accountsStore.PublicKeys[i])] = true
 		}
 		// We append to the accounts store keys only
 		// if the private/secret key do not already exist, to prevent duplicates.
@@ -375,26 +375,26 @@ func (dr *Keymanager) CreateAccountsKeystore(
 			if privKeyExists || pubKeyExists {
 				continue
 			}
-			dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pk)
-			dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, sk)
+			km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys, pk)
+			km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys, sk)
 		}
 	}
-	err = dr.initializeKeysCachesFromKeystore()
+	err = km.initializeKeysCachesFromKeystore()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize keys caches")
 	}
-	encodedStore, err := json.MarshalIndent(dr.accountsStore, "", "\t")
+	encodedStore, err := json.MarshalIndent(km.accountsStore, "", "\t")
 	if err != nil {
 		return nil, err
 	}
-	cryptoFields, err := encryptor.Encrypt(encodedStore, dr.wallet.Password())
+	cryptoFields, err := encryptor.Encrypt(encodedStore, km.wallet.Password())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not encrypt accounts")
 	}
 	disabledPubKeys := make([]string, 0)
 	lock.Lock()
 	defer lock.Unlock()
-	for pubKey := range dr.disabledPublicKeys {
+	for pubKey := range km.disabledPublicKeys {
 		disabledPubKeys = append(disabledPubKeys, fmt.Sprintf("%x", pubKey))
 	}
 	return &AccountsKeystoreRepresentation{

@@ -70,7 +70,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 			BeaconBlockRoot: make([]byte, 32),
 			Slot:            1,
 		},
-		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
 		Signature:       make([]byte, 96),
 	}
 	b := testutil.NewBeaconBlock()
