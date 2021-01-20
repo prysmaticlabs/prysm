@@ -228,5 +228,4 @@ func TestForkManualCopy_OK(t *testing.T) {
 	if !sszutil.DeepEqual(newState.Fork, wantedFork) {
 		t.Errorf("Wanted %v but got %v", wantedFork, newState.Fork)
 	}
-
 }
