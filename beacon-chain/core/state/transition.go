@@ -29,7 +29,7 @@ type processFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBeac
 
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
-var processingPipeline = []processFunc{
+var processBlockPipeline = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
 	b.ProcessEth1DataInBlock,
@@ -37,6 +37,15 @@ var processingPipeline = []processFunc{
 	b.ProcessProposerSlashings,
 	b.ProcessAttesterSlashings,
 	b.ProcessAttestations,
+	b.ProcessDeposits,
+	b.ProcessVoluntaryExits,
+}
+
+var processOperationsNoVerifyAttsSigsPipeline = []processFunc{
+	VerifyOperationLengths,
+	b.ProcessProposerSlashings,
+	b.ProcessAttesterSlashings,
+	b.ProcessAttestationsNoVerifySignature,
 	b.ProcessDeposits,
 	b.ProcessVoluntaryExits,
 }
@@ -374,7 +383,7 @@ func ProcessBlock(
 	defer span.End()
 
 	var err error
-	for _, p := range processingPipeline {
+	for _, p := range processBlockPipeline {
 		state, err = p(ctx, state, signed)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not process block")
@@ -480,29 +489,12 @@ func ProcessOperationsNoVerifyAttsSigs(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 
-	if _, err := VerifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
-		return nil, errors.Wrap(err, "could not verify operation lengths")
-	}
-
-	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block proposer slashings")
-	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attester slashings")
-	}
-	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attestations")
-	}
-	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block validator deposits")
-	}
-	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process validator exits")
+	var err error
+	for _, p := range processOperationsNoVerifyAttsSigsPipeline {
+		state, err = p(ctx, state, signedBeaconBlock)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not process block")
+		}
 	}
 
 	return state, nil
