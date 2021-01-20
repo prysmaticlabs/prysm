@@ -386,7 +386,7 @@ func ProcessBlock(
 	for _, p := range processBlockPipeline {
 		state, err = p(ctx, state, signed)
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not process block")
+			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
 
@@ -413,41 +413,46 @@ func ProcessBlockNoVerifyAnySig(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process block header")
-	}
-	bSet, err := b.BlockSignatureSet(state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
-	}
-	rSet, err := b.RandaoSignatureSet(state, signed.Block.Body)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
-	}
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not verify and process randao")
+	var bSet *bls.SignatureSet
+	var rSet *bls.SignatureSet
+	var aSet *bls.SignatureSet
+	var pipeline = []processFunc{
+		b.ProcessBlockHeaderNoVerify,
+		func(ctx context.Context,
+			state *stateTrie.BeaconState,
+			signed *ethpb.SignedBeaconBlock,
+		) (*stateTrie.BeaconState, error) {
+			var err error
+			bSet, err = b.BlockSignatureSet(state, signed)
+			return state, err
+		},
+		func(ctx context.Context,
+			state *stateTrie.BeaconState,
+			signed *ethpb.SignedBeaconBlock,
+		) (*stateTrie.BeaconState, error) {
+			var err error
+			rSet, err = b.RandaoSignatureSet(state, signed.Block.Body)
+			return state, err
+		},
+		b.ProcessRandaoNoVerify,
+		b.ProcessEth1DataInBlock,
+		ProcessOperationsNoVerifyAttsSigs,
+		func(ctx context.Context,
+			state *stateTrie.BeaconState,
+			signed *ethpb.SignedBeaconBlock,
+		) (*stateTrie.BeaconState, error) {
+			var err error
+			aSet, err = b.AttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
+			return state, err
+		},
 	}
 
-	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process eth1 data")
-	}
-
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process block operation")
-	}
-	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
+	var err error
+	for _, p := range pipeline {
+		state, err = p(ctx, state, signed)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not process block")
+		}
 	}
 
 	// Merge beacon block, randao and attestations signatures into a set.
@@ -493,7 +498,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	for _, p := range processOperationsNoVerifyAttsSigsPipeline {
 		state, err = p(ctx, state, signedBeaconBlock)
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not process block")
+			return nil, errors.Wrap(err, "could not process operations")
 		}
 	}
 
@@ -620,13 +625,13 @@ func ProcessBlockForStateRoot(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlockForStateRoot")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	state, err := b.ProcessBlockHeaderNoVerify(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
+	state, err = b.ProcessRandaoNoVerify(ctx, state, signed)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
