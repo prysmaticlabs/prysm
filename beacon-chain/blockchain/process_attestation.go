@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -45,21 +44,13 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
-	if a == nil {
-		return nil, errors.New("nil attestation")
+	if err := helpers.ValidateNilAttestation(a); err != nil {
+		return nil, err
 	}
-	if a.Data == nil {
-		return nil, errors.New("nil attestation.Data field")
+	if err := helpers.ValidateSlotTargetEpoch(a.Data); err != nil {
+		return nil, err
 	}
-	if a.Data.Target == nil {
-		return nil, errors.New("nil attestation.Data.Target field")
-	}
-
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
-
-	if helpers.SlotToEpoch(a.Data.Slot) != a.Data.Target.Epoch {
-		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
-	}
 
 	// Note that target root check is ignored here because it was performed in sync's validation pipeline:
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
@@ -84,10 +75,8 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
-	// Verify LMG GHOST and FFG votes are consistent with each other.
-	if err := s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestation beacon block")
-	}
+	// Note that LMG GHOST and FFG consistency check is ignored because it was performed in sync's validation pipeline:
+	// validate_aggregate_proof.go and validate_beacon_attestation.go
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {

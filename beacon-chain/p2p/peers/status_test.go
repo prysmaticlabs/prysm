@@ -690,7 +690,7 @@ func TestPrunePeers(t *testing.T) {
 	}
 
 	// Set up bad scores for inbound peers.
-	inboundPeers := p.Inbound()
+	inboundPeers := p.InboundConnected()
 	for i, pid := range inboundPeers {
 		modulo := i % 5
 		// Increment bad scores for peers.
@@ -948,6 +948,44 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 	})
 
 	assert.Equal(t, uint64(5), p.HighestEpoch(), "Expected current epoch to be 5")
+}
+
+func TestInbound(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	inbound := createPeer(t, p, addr, network.DirInbound, peers.PeerConnected)
+	createPeer(t, p, addr, network.DirOutbound, peers.PeerConnected)
+
+	result := p.Inbound()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, inbound.Pretty(), result[0].Pretty())
+}
+
+func TestOutbound(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	createPeer(t, p, addr, network.DirInbound, peers.PeerConnected)
+	outbound := createPeer(t, p, addr, network.DirOutbound, peers.PeerConnected)
+
+	result := p.Outbound()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, outbound.Pretty(), result[0].Pretty())
 }
 
 // addPeer is a helper to add a peer with a given connection state)

@@ -13,8 +13,8 @@ import (
 // public key in the public keys bucket and prunes all attestation data
 // that has target epochs older than the highest weak subjectivity period
 // in our database. This routine is meant to run on startup.
-func (store *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Context) error {
-	return store.update(func(tx *bolt.Tx) error {
+func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Context) error {
+	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
 			pkBucket := bucket.Bucket(pubKey)
