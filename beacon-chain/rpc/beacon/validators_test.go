@@ -1461,10 +1461,11 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 }
 
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
+	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
 
 	ctx := context.Background()
-	validatorCount := uint64(100)
+	validatorCount := uint64(32)
 
 	validators := make([]*ethpb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
@@ -1481,7 +1482,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	atts := []*pb.PendingAttestation{{
 		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
-		AggregationBits: bitfield.NewBitlist(2),
+		AggregationBits: bitfield.NewBitlist(validatorCount / params.BeaconConfig().SlotsPerEpoch),
 	}}
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(2*params.BeaconConfig().SlotsPerEpoch-1))
@@ -1556,7 +1557,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	atts := []*pb.PendingAttestation{{
 		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
-		AggregationBits: bitfield.NewBitlist(2),
+		AggregationBits: bitfield.NewBitlist(validatorCount / params.BeaconConfig().SlotsPerEpoch),
 	}}
 	headState := testutil.NewBeaconState()
 	require.NoError(t, headState.SetSlot(2*params.BeaconConfig().SlotsPerEpoch-1))
@@ -1633,7 +1634,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{},
 			InclusionDelay:  1,
 		}
 	}
@@ -1965,13 +1966,13 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	validators := uint64(64)
+	validators := uint64(32)
 	stateWithValidators, _ := testutil.DeterministicGenesisState(t, validators)
 	beaconState := testutil.NewBeaconState()
 	require.NoError(t, beaconState.SetValidators(stateWithValidators.Validators()))
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bf := []byte{0xff}
+	bf := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
 	att1 := testutil.NewAttestation()
 	att1.AggregationBits = bf
 	att2 := testutil.NewAttestation()
@@ -2141,4 +2142,12 @@ func TestServer_isSlotCanonical(t *testing.T) {
 			require.Equal(t, false, c)
 		}
 	}
+}
+
+func TestServer_isSlotCanonicalForSlot0(t *testing.T) {
+	ctx := context.Background()
+	bs := &Server{}
+	c, err := bs.isSlotCanonical(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, true, c)
 }
