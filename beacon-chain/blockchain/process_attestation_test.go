@@ -77,11 +77,6 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 			wantedErr: "slot 32 does not match target epoch 0",
 		},
 		{
-			name:      "attestation's target root not in db",
-			a:         testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)}}}),
-			wantedErr: "target root does not exist in db",
-		},
-		{
 			name:      "no pre state for attestations's target block",
 			a:         testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
 			wantedErr: "could not get pre state for epoch 0",
