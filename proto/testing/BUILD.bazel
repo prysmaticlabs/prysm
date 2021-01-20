@@ -35,7 +35,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "ssz_regression_test.go",
         "ssz_static_test.go",
         "tags_test.go",
     ],
@@ -59,8 +58,6 @@ go_test(
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//spectests:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
@@ -94,8 +91,6 @@ go_test(
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//spectests:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
@@ -125,8 +120,6 @@ go_test(
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//spectests:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
