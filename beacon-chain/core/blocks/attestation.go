@@ -128,8 +128,8 @@ func ProcessAttestationNoVerifySignature(
 			currEpoch,
 		)
 	}
-	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
-		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
+	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
+		return nil, err
 	}
 
 	s := att.Data.Slot
@@ -208,7 +208,10 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	if err != nil {
+		return nil, err
+	}
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return nil, err
 	}
@@ -280,7 +283,10 @@ func VerifyAttestationSignature(ctx context.Context, beaconState *stateTrie.Beac
 	if err != nil {
 		return err
 	}
-	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	if err != nil {
+		return err
+	}
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 

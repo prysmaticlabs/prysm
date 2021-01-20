@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -45,21 +44,13 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
-	if a == nil {
-		return nil, errors.New("nil attestation")
+	if err := helpers.ValidateNilAttestation(a); err != nil {
+		return nil, err
 	}
-	if a.Data == nil {
-		return nil, errors.New("nil attestation.Data field")
+	if err := helpers.ValidateSlotTargetEpoch(a.Data); err != nil {
+		return nil, err
 	}
-	if a.Data.Target == nil {
-		return nil, errors.New("nil attestation.Data.Target field")
-	}
-
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
-
-	if helpers.SlotToEpoch(a.Data.Slot) != a.Data.Target.Epoch {
-		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
-	}
 
 	// Verify beacon node has seen the target block before.
 	if !s.hasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {

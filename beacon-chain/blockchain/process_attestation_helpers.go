@@ -111,7 +111,10 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt := attestationutil.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
+	if err != nil {
+		return nil, err
+	}
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
