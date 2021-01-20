@@ -20,7 +20,7 @@ type MockSpanDetector struct{}
 // epoch equal to or greater than 6, it will "detect" a surrounded vote for the target epoch + 1.
 // If the target epoch is greater than 12, it will "detect" a surrounding vote for target epoch - 1.
 // Lastly, if it has a target epoch less than 6, it will "detect" a double vote for the target epoch.
-func (s *MockSpanDetector) DetectSlashingsForAttestation(
+func (m *MockSpanDetector) DetectSlashingsForAttestation(
 	_ context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*types.DetectionResult, error) {
@@ -58,21 +58,21 @@ func (s *MockSpanDetector) DetectSlashingsForAttestation(
 
 // SpanForEpochByValidator returns the specific min-max span for a
 // validator index in a given epoch.
-func (s *MockSpanDetector) SpanForEpochByValidator(_ context.Context, _, _ uint64) (types.Span, error) {
+func (m *MockSpanDetector) SpanForEpochByValidator(_ context.Context, _, _ uint64) (types.Span, error) {
 	return types.Span{MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{}, HasAttested: false}, nil
 }
 
 // ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
-func (s *MockSpanDetector) ValidatorSpansByEpoch(_ context.Context, _ uint64) map[uint64]types.Span {
+func (m *MockSpanDetector) ValidatorSpansByEpoch(_ context.Context, _ uint64) map[uint64]types.Span {
 	return make(map[uint64]types.Span)
 }
 
 // DeleteValidatorSpansByEpoch mocks the delete spans by epoch function.
-func (s *MockSpanDetector) DeleteValidatorSpansByEpoch(_ context.Context, _, _ uint64) error {
+func (m *MockSpanDetector) DeleteValidatorSpansByEpoch(_ context.Context, _, _ uint64) error {
 	return nil
 }
 
 // UpdateSpans is a mock for updating the spans for a given attestation..
-func (s *MockSpanDetector) UpdateSpans(_ context.Context, _ *ethpb.IndexedAttestation) error {
+func (m *MockSpanDetector) UpdateSpans(_ context.Context, _ *ethpb.IndexedAttestation) error {
 	return nil
 }

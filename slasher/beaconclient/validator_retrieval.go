@@ -10,7 +10,7 @@ import (
 
 // FindOrGetPublicKeys gets public keys from cache or request validators public
 // keys from a beacon node via gRPC.
-func (bs *Service) FindOrGetPublicKeys(
+func (s *Service) FindOrGetPublicKeys(
 	ctx context.Context,
 	validatorIndices []uint64,
 ) (map[uint64][]byte, error) {
@@ -20,7 +20,7 @@ func (bs *Service) FindOrGetPublicKeys(
 	validators := make(map[uint64][]byte, len(validatorIndices))
 	notFound := 0
 	for _, validatorIdx := range validatorIndices {
-		pub, exists := bs.publicKeyCache.Get(validatorIdx)
+		pub, exists := s.publicKeyCache.Get(validatorIdx)
 		if exists {
 			validators[validatorIdx] = pub
 			continue
@@ -42,7 +42,7 @@ func (bs *Service) FindOrGetPublicKeys(
 	if notFound == 0 {
 		return validators, nil
 	}
-	vc, err := bs.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+	vc, err := s.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 		Indices: validatorIndices,
 	})
 	if err != nil {
@@ -50,7 +50,7 @@ func (bs *Service) FindOrGetPublicKeys(
 	}
 	for _, v := range vc.ValidatorList {
 		validators[v.Index] = v.Validator.PublicKey
-		bs.publicKeyCache.Set(v.Index, v.Validator.PublicKey)
+		s.publicKeyCache.Set(v.Index, v.Validator.PublicKey)
 	}
 	log.Tracef(
 		"Retrieved validators id public key map: %v",

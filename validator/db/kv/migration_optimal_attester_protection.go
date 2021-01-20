@@ -16,11 +16,11 @@ var migrationOptimalAttesterProtectionKey = []byte("optimal_attester_protection_
 // stored attesting history as large, 2Mb arrays per validator, we need to perform
 // this migration differently than the rest, ensuring we perform each expensive bolt
 // update in its own transaction to prevent having everything on the heap.
-func (store *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
+func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 	publicKeyBytes := make([][]byte, 0)
 	attestingHistoryBytes := make([][]byte, 0)
 	numKeys := 0
-	err := store.db.Update(func(tx *bolt.Tx) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		if b := mb.Get(migrationOptimalAttesterProtectionKey); bytes.Equal(b, migrationCompleted) {
 			return nil // Migration already completed.
@@ -65,7 +65,7 @@ func (store *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) erro
 	for i, publicKey := range publicKeyBytes {
 		var attestingHistory deprecatedEncodedAttestingHistory
 		attestingHistory = attestingHistoryBytes[i]
-		err = store.db.Update(func(tx *bolt.Tx) error {
+		err = s.db.Update(func(tx *bolt.Tx) error {
 			if attestingHistory == nil {
 				return nil
 			}
@@ -108,7 +108,7 @@ func (store *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) erro
 		}
 	}
 
-	return store.db.Update(func(tx *bolt.Tx) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		if err := mb.Put(migrationOptimalAttesterProtectionKey, migrationCompleted); err != nil {
 			return err
@@ -118,10 +118,10 @@ func (store *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) erro
 }
 
 // Migrate attester protection from the more optimal format to the old format in the DB.
-func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
+func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
 	// First we extract the public keys we are migrating down for.
 	pubKeys := make([][48]byte, 0)
-	err := store.view(func(tx *bolt.Tx) error {
+	err := s.view(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		if b := mb.Get(migrationOptimalAttesterProtectionKey); b == nil {
 			// Migration has not occurred, meaning data is already in old format
@@ -152,7 +152,7 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 	// from the optimized db schema into maps we can use later.
 	signingRootsByTarget := make(map[uint64][]byte)
 	targetEpochsBySource := make(map[uint64][]uint64)
-	err = store.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(pubKeysBucket)
 		if bkt == nil {
 			return nil
@@ -194,7 +194,7 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 	// Then, we use the data we extracted to recreate the old
 	// attesting history format and for each public key, we save it
 	// to the appropriate bucket.
-	err = store.update(func(tx *bolt.Tx) error {
+	err = s.update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(pubKeysBucket)
 		if bkt == nil {
 			return nil
@@ -247,7 +247,7 @@ func (store *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) er
 	}
 
 	// Finally, we clear the migration key.
-	return store.update(func(tx *bolt.Tx) error {
+	return s.update(func(tx *bolt.Tx) error {
 		migrationsBkt := tx.Bucket(migrationsBucket)
 		return migrationsBkt.Delete(migrationOptimalAttesterProtectionKey)
 	})

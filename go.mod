@@ -20,7 +20,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20210107123522-4c3c34260bd9
+	github.com/ferranbt/fastssz v0.0.0-20210118190430-6ca267833c4b
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
@@ -83,8 +83,8 @@ require (
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20210105190001-13193818c0df
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20210107162333-9e9cf77d4921
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20210115110118-c595a4e0c0a5
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20210120104942-c3214972eb2e
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
