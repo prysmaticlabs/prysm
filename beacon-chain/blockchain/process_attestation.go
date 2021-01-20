@@ -39,7 +39,6 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //
 //    # Update latest messages for attesting indices
 //    update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-// TODO(#6072): This code path is highly untested. Requires comprehensive tests and simpler refactoring.
 func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
@@ -84,14 +83,14 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Use the target state to validate attestation and calculate the committees.
-	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
+	indexedAtt, err := s.verifyAttestationIndices(ctx, baseState, a)
 	if err != nil {
 		return nil, err
 	}
 
-	if indexedAtt.AttestingIndices == nil {
-		return nil, errors.New("nil attesting indices")
-	}
+	// Note that signature verification is ignored here because it was performed in sync's validation pipeline:
+	// validate_aggregate_proof.go and validate_beacon_attestation.go
+	// We assume trusted attestation in this function has verified signature.
 
 	// Update forkchoice store with the new attestation for updating weight.
 	s.forkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
