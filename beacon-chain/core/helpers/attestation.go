@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,37 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
+
+// ValidateNilAttestation checks if any composite field of input attestation is nil.
+// Access to these nil fields will result in run time panic,
+// it is recommended to run these checks as first line of defense.
+func ValidateNilAttestation(attestation *ethpb.Attestation) error {
+	if attestation == nil {
+		return errors.New("attestation can't be nil")
+	}
+	if attestation.Data == nil {
+		return errors.New("attestation's data can't be nil")
+	}
+	if attestation.Data.Source == nil {
+		return errors.New("attestation's source can't be nil")
+	}
+	if attestation.Data.Target == nil {
+		return errors.New("attestation's target can't be nil")
+	}
+	if attestation.AggregationBits == nil {
+		return errors.New("attestation's bitfield can't be nil")
+	}
+	return nil
+}
+
+// ValidateSlotTargetEpoch checks if attestation data's epoch matches target checkpoint's epoch.
+// It is recommended to run `ValidateNilAttestation` first to ensure `data.Target` can't be nil.
+func ValidateSlotTargetEpoch(data *ethpb.AttestationData) error {
+	if SlotToEpoch(data.Slot) != data.Target.Epoch {
+		return fmt.Errorf("slot %d does not match target epoch %d", data.Slot, data.Target.Epoch)
+	}
+	return nil
+}
 
 // IsAggregator returns true if the signature is from the input validator. The committee
 // count is provided as an argument rather than imported implementation from spec. Having
