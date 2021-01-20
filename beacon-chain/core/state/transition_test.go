@@ -415,7 +415,8 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	assert.NoError(t, err)
-	attestingIndices := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
+	require.NoError(t, err)
 	assert.NoError(t, err)
 	hashTreeRoot, err = helpers.ComputeSigningRoot(blockAtt.Data, domain)
 	assert.NoError(t, err)
@@ -712,7 +713,8 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 
 		committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 		assert.NoError(t, err)
-		attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		require.NoError(t, err)
 		domain, err := helpers.Domain(s.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
 		require.NoError(t, err)
 		sigs := make([]bls.Signature, len(attestingIndices))
