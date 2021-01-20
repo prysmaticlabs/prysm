@@ -35,6 +35,15 @@ func ValidateNilAttestation(attestation *ethpb.Attestation) error {
 	return nil
 }
 
+// ValidateSlotTargetEpoch checks if attestation data's epoch matches target checkpoint's epoch.
+// It is recommended to run `ValidateNilAttestation` first to ensure `data.Target` can't be nil.
+func ValidateSlotTargetEpoch(data *ethpb.AttestationData) error {
+	if SlotToEpoch(data.Slot) != data.Target.Epoch {
+		return fmt.Errorf("slot %d does not match target epoch %d", data.Slot, data.Target.Epoch)
+	}
+	return nil
+}
+
 // IsAggregator returns true if the signature is from the input validator. The committee
 // count is provided as an argument rather than imported implementation from spec. Having
 // committee count as an argument allows cheaper computation at run time.

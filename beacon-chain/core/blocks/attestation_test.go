@@ -226,7 +226,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
@@ -253,10 +253,9 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 	})
-	aggBits1 := bitfield.NewBitlist(4)
+	aggBits1 := bitfield.NewBitlist(3)
 	aggBits1.SetBitAt(0, true)
 	aggBits1.SetBitAt(1, true)
-	aggBits1.SetBitAt(2, true)
 	att1 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits1,
@@ -269,7 +268,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
@@ -281,10 +280,9 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	}
 	att1.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	aggBits2 := bitfield.NewBitlist(4)
+	aggBits2 := bitfield.NewBitlist(3)
 	aggBits2.SetBitAt(1, true)
 	aggBits2.SetBitAt(2, true)
-	aggBits2.SetBitAt(3, true)
 	att2 := &ethpb.Attestation{
 		Data:            data,
 		AggregationBits: aggBits2,
@@ -292,7 +290,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
@@ -333,7 +331,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
@@ -356,7 +354,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
@@ -389,7 +387,7 @@ func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
 			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		},
 	})
-	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)
+	wanted := "slot 32 does not match target epoch 0"
 	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.ErrorContains(t, wanted, err)
 }
@@ -474,11 +472,11 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			wantedAttestingIndices: []uint64{43, 47},
 		},
 		{
-			aggregationBitfield:    bitfield.Bitlist{0x03},
+			aggregationBitfield:    bitfield.Bitlist{0x05},
 			wantedAttestingIndices: []uint64{47},
 		},
 		{
-			aggregationBitfield:    bitfield.Bitlist{0x01},
+			aggregationBitfield:    bitfield.Bitlist{0x04},
 			wantedAttestingIndices: []uint64{},
 		},
 	}
@@ -498,7 +496,8 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
 		require.NoError(t, err)
-		ia := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
+		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
+		require.NoError(t, err)
 		assert.DeepEqual(t, wanted, ia, "Convert attestation to indexed attestation didn't result as wanted")
 	}
 }
@@ -608,10 +607,10 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 }
 
 func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
-	beaconState, keys := testutil.DeterministicGenesisState(t, 1000)
+	beaconState, keys := testutil.DeterministicGenesisState(t, 128)
 
 	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
-	list := bitfield.Bitlist{0b11111111}
+	list := bitfield.Bitlist{0b11111}
 	var atts []*ethpb.Attestation
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
@@ -629,7 +628,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	assert.ErrorContains(t, want, err)
 
 	atts = []*ethpb.Attestation{}
-	list = bitfield.Bitlist{0b00000000}
+	list = bitfield.Bitlist{0b10000}
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
