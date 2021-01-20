@@ -57,8 +57,10 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 	gen := rand.NewGenerator()
 	for v := 0; v < numValidators; v++ {
 		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000)
+		// If 0, we change the value to 1 as the we compute source by doing (target-1)
+		// to prevent any underflows in this setup helper.
 		if latestTarget == 0 {
-			latestTarget = 2
+			latestTarget = 1
 		}
 		historicalAtts := make([]*kv.AttestationRecord, 0)
 		proposals := make([]kv.Proposal, 0)

@@ -60,7 +60,7 @@ func (v *validator) slashableAttestationCheck(
 			lowestTargetEpoch,
 		)
 	}
-	fmtKey := hex.EncodeToString(pubKey[:])
+	fmtKey := "0x" + hex.EncodeToString(pubKey[:])
 	slashingKind, err := v.db.CheckSlashableAttestation(ctx, pubKey, signingRoot, indexedAtt)
 	if err != nil {
 		if v.emitAccountMetrics {
