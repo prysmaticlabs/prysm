@@ -65,9 +65,10 @@ func (store *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]
 				epoch := bytesutil.BytesToUint64BigEndian(targetEpochsList[i : i+8])
 				targetEpochs = append(targetEpochs, epoch)
 			}
+			sourceEpoch := bytesutil.BytesToUint64BigEndian(sourceBytes)
 			for _, targetEpoch := range targetEpochs {
 				record := &AttestationRecord{
-					Source: bytesutil.BytesToUint64BigEndian(sourceBytes),
+					Source: sourceEpoch,
 					Target: targetEpoch,
 				}
 				signingRoot := signingRootsBucket.Get(bytesutil.Uint64ToBytesBigEndian(targetEpoch))
@@ -342,7 +343,7 @@ func (store *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) 
 // SigningRootAtTargetEpoch checks for an existing signing root at a specified
 // target epoch for a given validator public key.
 func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, target uint64) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
+	ctx, span := trace.StartSpan(ctx, "Validator.SigningRootAtTargetEpoch")
 	defer span.End()
 	var signingRoot [32]byte
 	err := store.view(func(tx *bolt.Tx) error {

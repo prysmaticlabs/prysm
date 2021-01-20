@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -33,11 +34,11 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return err
 	}
-	if exists && lowestSourceEpoch > indexedAtt.Data.Source.Epoch {
+	if exists && indexedAtt.Data.Source.Epoch < lowestSourceEpoch {
 		return fmt.Errorf(
-			"could not sign attestation lower than lowest source epoch in db, %d > %d",
-			lowestSourceEpoch,
+			"could not sign attestation lower than lowest source epoch in db, %d < %d",
 			indexedAtt.Data.Source.Epoch,
+			lowestSourceEpoch,
 		)
 	}
 	existingSigningRoot, err := v.db.SigningRootAtTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
@@ -52,14 +53,14 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return err
 	}
-	if signingRootsDiffer && exists && lowestTargetEpoch >= indexedAtt.Data.Target.Epoch {
+	if signingRootsDiffer && exists && indexedAtt.Data.Target.Epoch <= lowestTargetEpoch {
 		return fmt.Errorf(
-			"could not sign attestation lower than or equal to lowest target epoch in db, %d >= %d",
-			lowestTargetEpoch,
+			"could not sign attestation lower than or equal to lowest target epoch in db, %d <= %d",
 			indexedAtt.Data.Target.Epoch,
+			lowestTargetEpoch,
 		)
 	}
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	fmtKey := hex.EncodeToString(pubKey[:])
 	slashingKind, err := v.db.CheckSlashableAttestation(ctx, pubKey, signingRoot, indexedAtt)
 	if err != nil {
 		if v.emitAccountMetrics {
