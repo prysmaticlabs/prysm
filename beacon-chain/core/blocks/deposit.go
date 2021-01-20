@@ -251,19 +251,11 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
 			Amount:                dep.Data.Amount,
 		}
-		root, err := depositMessage.HashTreeRoot()
+		sr, err := helpers.ComputeSigningRoot(depositMessage, domain)
 		if err != nil {
-			return errors.Wrap(err, "could not get signing root")
+			return err
 		}
-		signingData := &pb.SigningData{
-			ObjectRoot: root[:],
-			Domain:     domain,
-		}
-		ctrRoot, err := signingData.HashTreeRoot()
-		if err != nil {
-			return errors.Wrap(err, "could not get container root")
-		}
-		msgs[i] = ctrRoot
+		msgs[i] = sr
 	}
 	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
 	if err != nil {
