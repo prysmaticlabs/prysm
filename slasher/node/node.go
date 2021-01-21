@@ -150,12 +150,12 @@ func (n *SlasherNode) Close() {
 	defer n.lock.Unlock()
 
 	log.Info("Stopping hash slinging slasher")
-	s.services.StopAll()
-	if err := s.db.Close(); err != nil {
+	n.services.StopAll()
+	if err := n.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
 	}
-	s.cancel()
-	close(s.stop)
+	n.cancel()
+	close(n.stop)
 }
 
 func (n *SlasherNode) registerPrometheusService(cliCtx *cli.Context) error {
