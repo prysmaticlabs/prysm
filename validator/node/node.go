@@ -113,17 +113,17 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 }
 
 // Start every service in the validator client.
-func (s *ValidatorClient) Start() {
-	s.lock.Lock()
+func (c *ValidatorClient) Start() {
+	c.lock.Lock()
 
 	log.WithFields(logrus.Fields{
 		"version": version.GetVersion(),
 	}).Info("Starting validator node")
 
-	s.services.StartAll()
+	c.services.StartAll()
 
-	stop := s.stop
-	s.lock.Unlock()
+	stop := c.stop
+	c.lock.Unlock()
 
 	go func() {
 		sigc := make(chan os.Signal, 1)
@@ -131,8 +131,8 @@ func (s *ValidatorClient) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
-		debug.Exit(s.cliCtx) // Ensure trace and CPU profile data are flushed.
-		go s.Close()
+		debug.Exit(c.cliCtx) // Ensure trace and CPU profile data are flushed.
+		go c.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
@@ -147,16 +147,16 @@ func (s *ValidatorClient) Start() {
 }
 
 // Close handles graceful shutdown of the system.
-func (s *ValidatorClient) Close() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+func (c *ValidatorClient) Close() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	s.services.StopAll()
+	c.services.StopAll()
 	log.Info("Stopping Prysm validator")
-	close(s.stop)
+	close(c.stop)
 }
 
-func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
@@ -174,7 +174,7 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not open wallet")
 		}
-		s.wallet = w
+		c.wallet = w
 		log.WithFields(logrus.Fields{
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
@@ -185,8 +185,8 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if s.wallet != nil {
-		dataDir = s.wallet.AccountsDir()
+	if c.wallet != nil {
+		dataDir = c.wallet.AccountsDir()
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
@@ -194,11 +194,11 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
-		if dataDir == "" && s.wallet != nil {
-			dataDir = s.wallet.AccountsDir()
+		if dataDir == "" && c.wallet != nil {
+			dataDir = c.wallet.AccountsDir()
 			if dataDir == "" {
 				log.Fatal(
-					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
 				)
 			}
@@ -221,35 +221,35 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
-	s.db = valDB
+	c.db = valDB
 	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
 	}
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := s.registerPrometheusService(cliCtx); err != nil {
+		if err := c.registerPrometheusService(cliCtx); err != nil {
 			return err
 		}
 	}
 	if featureconfig.Get().SlasherProtection {
-		if err := s.registerSlasherClientService(); err != nil {
+		if err := c.registerSlasherClientService(); err != nil {
 			return err
 		}
 	}
-	if err := s.registerClientService(keyManager); err != nil {
+	if err := c.registerClientService(keyManager); err != nil {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
-		if err := s.registerRPCService(cliCtx, keyManager); err != nil {
+		if err := c.registerRPCService(cliCtx, keyManager); err != nil {
 			return err
 		}
-		if err := s.registerRPCGatewayService(cliCtx); err != nil {
+		if err := c.registerRPCGatewayService(cliCtx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
@@ -267,7 +267,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	if w != nil {
-		s.wallet = w
+		c.wallet = w
 		log.WithFields(logrus.Fields{
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
@@ -278,8 +278,8 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if s.wallet != nil {
-		dataDir = s.wallet.AccountsDir()
+	if c.wallet != nil {
+		dataDir = c.wallet.AccountsDir()
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
@@ -292,7 +292,7 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			dataDir = cmd.DefaultDataDir()
 			if dataDir == "" {
 				log.Fatal(
-					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
 				)
 			}
@@ -307,27 +307,27 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
-	s.db = valDB
+	c.db = valDB
 	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
 	}
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := s.registerPrometheusService(cliCtx); err != nil {
+		if err := c.registerPrometheusService(cliCtx); err != nil {
 			return err
 		}
 	}
 	if featureconfig.Get().SlasherProtection {
-		if err := s.registerSlasherClientService(); err != nil {
+		if err := c.registerSlasherClientService(); err != nil {
 			return err
 		}
 	}
-	if err := s.registerClientService(keyManager); err != nil {
+	if err := c.registerClientService(keyManager); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx, keyManager); err != nil {
+	if err := c.registerRPCService(cliCtx, keyManager); err != nil {
 		return err
 	}
-	if err := s.registerRPCGatewayService(cliCtx); err != nil {
+	if err := c.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
@@ -339,55 +339,55 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (s *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
+func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
 		additionalHandlers = append(
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backuputil.BackupHandler(s.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+				Handler: backuputil.BackupHandler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
 	service := prometheus.NewService(
-		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
-		s.services,
+		fmt.Sprintf("%s:%d", c.cliCtx.String(cmd.MonitoringHostFlag.Name), c.cliCtx.Int(flags.MonitoringPortFlag.Name)),
+		c.services,
 		additionalHandlers...,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
-	return s.services.RegisterService(service)
+	return c.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(
+func (c *ValidatorClient) registerClientService(
 	keyManager keymanager.IKeymanager,
 ) error {
-	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
-	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := !s.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
-	cert := s.cliCtx.String(flags.CertFlag.Name)
-	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
+	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
+	emitAccountMetrics := !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
+	cert := c.cliCtx.String(flags.CertFlag.Name)
+	graffiti := c.cliCtx.String(flags.GraffitiFlag.Name)
+	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	var sp *slashing_protection.Service
 	var protector slashing_protection.Protector
-	if err := s.services.FetchService(&sp); err == nil {
+	if err := c.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
 
 	gStruct := &g.Graffiti{}
 	var err error
-	if s.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
-		n := s.cliCtx.String(flags.GraffitiFileFlag.Name)
+	if c.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
+		n := c.cliCtx.String(flags.GraffitiFileFlag.Name)
 		gStruct, err = g.ParseGraffitiFile(n)
 		if err != nil {
 			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
 
-	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
+	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
@@ -398,47 +398,47 @@ func (s *ValidatorClient) registerClientService(
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
-		ValDB:                      s.db,
-		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
-		WalletInitializedFeed:      s.walletInitialized,
+		ValDB:                      c.db,
+		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
-		LogDutyCountDown:           s.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})
 
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
 	}
-	return s.services.RegisterService(v)
+	return c.services.RegisterService(v)
 }
-func (s *ValidatorClient) registerSlasherClientService() error {
-	endpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
+func (c *ValidatorClient) registerSlasherClientService() error {
+	endpoint := c.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
 	if endpoint == "" {
 		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
 
 	}
-	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
-	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewService(s.cliCtx.Context, &slashing_protection.Config{
+	cert := c.cliCtx.String(flags.SlasherCertFlag.Name)
+	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	sp, err := slashing_protection.NewService(c.cliCtx.Context, &slashing_protection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
 	}
-	return s.services.RegisterService(sp)
+	return c.services.RegisterService(sp)
 }
 
-func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
+func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
 	var vs *client.ValidatorService
-	if err := s.services.FetchService(&vs); err != nil {
+	if err := c.services.FetchService(&vs); err != nil {
 		return err
 	}
 	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
@@ -449,23 +449,23 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	beaconClientEndpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	grpcHeaders := s.cliCtx.String(flags.GrpcHeadersFlag.Name)
-	clientCert := s.cliCtx.String(flags.CertFlag.Name)
+	grpcHeaders := c.cliCtx.String(flags.GrpcHeadersFlag.Name)
+	clientCert := c.cliCtx.String(flags.CertFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
-		ValDB:                    s.db,
+		ValDB:                    c.db,
 		Host:                     rpcHost,
 		Port:                     fmt.Sprintf("%d", rpcPort),
-		WalletInitializedFeed:    s.walletInitialized,
+		WalletInitializedFeed:    c.walletInitialized,
 		ValidatorService:         vs,
 		SyncChecker:              vs,
 		GenesisFetcher:           vs,
 		NodeGatewayEndpoint:      nodeGatewayEndpoint,
 		WalletDir:                walletDir,
-		Wallet:                   s.wallet,
+		Wallet:                   c.wallet,
 		Keymanager:               km,
 		ValidatorGatewayHost:     validatorGatewayHost,
 		ValidatorGatewayPort:     validatorGatewayPort,
@@ -478,10 +478,10 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		ClientGrpcHeaders:        strings.Split(grpcHeaders, ","),
 		ClientWithCert:           clientCert,
 	})
-	return s.services.RegisterService(server)
+	return c.services.RegisterService(server)
 }
 
-func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
+func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
 	if gatewayHost != flags.DefaultGatewayHost {
 		log.WithField("web-host", gatewayHost).Warn(
@@ -501,7 +501,7 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gatewayAddress,
 		allowedOrigins,
 	)
-	return s.services.RegisterService(gatewaySrv)
+	return c.services.RegisterService(gatewaySrv)
 }
 
 func clearDB(ctx context.Context, dataDir string, force bool) error {
