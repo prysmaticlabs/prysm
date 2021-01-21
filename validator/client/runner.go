@@ -3,10 +3,10 @@ package client
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -18,7 +18,7 @@ import (
 
 // time to wait before trying to reconnect with the eth1 node.
 var backOffPeriod = 15 * time.Second
-var connectionIssueMsg = ", beacon chain may be offline..."
+var errConnectionIssue = errors.New("connection issue, beacon node might be offline...")
 
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
@@ -74,7 +74,7 @@ func run(ctx context.Context, v Validator) {
 		select {
 		case <-ticker.C:
 			err := v.WaitForChainStart(ctx)
-			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+			if err != nil && errors.Is(err, errConnectionIssue) {
 				log.Warnf("Could not determine if beacon chain started: %v", err)
 				continue
 			}
@@ -82,7 +82,7 @@ func run(ctx context.Context, v Validator) {
 				log.Fatalf("Could not determine if beacon chain started: %v", err)
 			}
 			err = v.WaitForSync(ctx)
-			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+			if err != nil && errors.Is(err, errConnectionIssue) {
 				log.Warnf("Could not determine if beacon chain started: %v", err)
 				continue
 			}
@@ -90,7 +90,7 @@ func run(ctx context.Context, v Validator) {
 				log.Fatalf("Could not determine if beacon node synced: %v", err)
 			}
 			err = v.WaitForActivation(ctx)
-			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+			if err != nil && errors.Is(err, errConnectionIssue) {
 				log.Warnf("Could not wait for validator activation: %v", err)
 				continue
 			}
@@ -98,7 +98,7 @@ func run(ctx context.Context, v Validator) {
 				log.Fatalf("Could not wait for validator activation: %v", err)
 			}
 			headSlot, err = v.CanonicalHeadSlot(ctx)
-			if err != nil && strings.Contains(err.Error(), connectionIssueMsg) {
+			if err != nil && errors.Is(err, errConnectionIssue) {
 				log.Warnf("Could not get current canonical head slot: %v", err)
 				continue
 			}
@@ -108,7 +108,7 @@ func run(ctx context.Context, v Validator) {
 		}
 		break
 	}
-	connectionErrorChannel := make(chan error)
+	connectionErrorChannel := make(chan error, 1)
 	go v.ReceiveBlocks(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
@@ -122,7 +122,7 @@ func run(ctx context.Context, v Validator) {
 			span.End()
 			return // Exit if context is canceled.
 		case blocksError := <-connectionErrorChannel:
-			if blocksError != nil && strings.Contains(blocksError.Error(), connectionIssueMsg) {
+			if blocksError != nil && errors.Is(blocksError, errConnectionIssue) {
 				go v.ReceiveBlocks(ctx, connectionErrorChannel)
 				continue
 			}

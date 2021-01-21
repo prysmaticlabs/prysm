@@ -133,7 +133,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// First, check if the beacon chain has started.
 	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client"+connectionIssueMsg)
+		return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error())
 	}
 
 	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
@@ -143,7 +143,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
-			return errors.Wrap(err, "could not receive ChainStart from stream"+connectionIssueMsg)
+			return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not receive ChainStart from stream").Error())
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
@@ -168,7 +168,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			}
 		}
 	} else {
-		return errors.New(connectionIssueMsg)
+		return errConnectionIssue
 	}
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
@@ -185,7 +185,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "could not get sync status"+connectionIssueMsg)
+		return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
 	if !s.Syncing {
 		return nil
@@ -197,7 +197,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
-				return errors.Wrap(err, "could not get sync status"+connectionIssueMsg)
+				return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
 			if !s.Syncing {
 				return nil
@@ -246,8 +246,8 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
 	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve blocks stream" + connectionIssueMsg)
-		connectionErrorChannel <- err
+		log.WithError(err).Error("Failed to retrieve blocks stream, " + errConnectionIssue.Error())
+		connectionErrorChannel <- errors.Wrap(errConnectionIssue, err.Error())
 		return
 	}
 
@@ -258,8 +258,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive blocks from beacon node" + connectionIssueMsg)
-			connectionErrorChannel <- err
+			log.WithError(err).Error("Could not receive blocks from beacon node, " + errConnectionIssue.Error())
+			connectionErrorChannel <- errors.Wrap(errConnectionIssue, err.Error())
 			return
 		}
 		if res == nil || res.Block == nil {
@@ -330,7 +330,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	defer span.End()
 	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return 0, errors.Wrap(err, connectionIssueMsg)
+		return 0, errors.Wrap(errConnectionIssue, err.Error())
 	}
 	return head.HeadSlot, nil
 }
