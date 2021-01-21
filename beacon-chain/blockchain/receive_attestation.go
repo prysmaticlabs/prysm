@@ -36,7 +36,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	defer span.End()
 
 	if err := s.onAttestation(ctx, att); err != nil {
-		errors.Wrap(err, "could not process attestation")
+		return errors.Wrap(err, "could not process attestation")
 	}
 
 	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
