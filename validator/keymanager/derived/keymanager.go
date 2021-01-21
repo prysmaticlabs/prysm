@@ -53,7 +53,7 @@ func NewKeymanager(
 // RecoverAccountsFromMnemonic given a mnemonic phrase, is able to regenerate N accounts
 // from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
 // to disk. Then, the mnemonic is never stored nor used by the validator.
-func (dr *Keymanager) RecoverAccountsFromMnemonic(
+func (km *Keymanager) RecoverAccountsFromMnemonic(
 	ctx context.Context, mnemonic, mnemonicPassphrase string, numAccounts int,
 ) error {
 	seed, err := seedFromMnemonic(mnemonic, mnemonicPassphrase)
@@ -72,46 +72,46 @@ func (dr *Keymanager) RecoverAccountsFromMnemonic(
 		privKeys[i] = privKey.Marshal()
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}
-	return dr.importedKM.ImportKeypairs(ctx, privKeys, pubKeys)
+	return km.importedKM.ImportKeypairs(ctx, privKeys, pubKeys)
 }
 
 // ExtractKeystores retrieves the secret keys for specified public keys
 // in the function input, encrypts them using the specified password,
 // and returns their respective EIP-2335 keystores.
-func (dr *Keymanager) ExtractKeystores(
+func (km *Keymanager) ExtractKeystores(
 	ctx context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
-	return dr.importedKM.ExtractKeystores(ctx, publicKeys, password)
+	return km.importedKM.ExtractKeystores(ctx, publicKeys, password)
 }
 
 // ValidatingAccountNames for the derived keymanager.
-func (dr *Keymanager) ValidatingAccountNames(_ context.Context) ([]string, error) {
-	return dr.importedKM.ValidatingAccountNames()
+func (km *Keymanager) ValidatingAccountNames(_ context.Context) ([]string, error) {
+	return km.importedKM.ValidatingAccountNames()
 }
 
 // Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	return dr.importedKM.Sign(ctx, req)
+func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	return km.importedKM.Sign(ctx, req)
 }
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
-func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return dr.importedKM.FetchValidatingPublicKeys(ctx)
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return km.importedKM.FetchValidatingPublicKeys(ctx)
 }
 
 // FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the keymanager.
-func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return dr.importedKM.FetchAllValidatingPublicKeys(ctx)
+func (km *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return km.importedKM.FetchAllValidatingPublicKeys(ctx)
 }
 
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
-func (dr *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
-	return dr.importedKM.FetchValidatingPrivateKeys(ctx)
+func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
+	return km.importedKM.FetchValidatingPrivateKeys(ctx)
 }
 
 // DeleteAccounts for a derived keymanager.
-func (dr *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
-	return dr.importedKM.DeleteAccounts(ctx, publicKeys)
+func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
+	return km.importedKM.DeleteAccounts(ctx, publicKeys)
 }
 
 // SubscribeAccountChanges creates an event subscription for a channel

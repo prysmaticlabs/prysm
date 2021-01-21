@@ -39,7 +39,6 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //
 //    # Update latest messages for attesting indices
 //    update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-// TODO(#6072): This code path is highly untested. Requires comprehensive tests and simpler refactoring.
 func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
@@ -52,10 +51,9 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
 
-	// Verify beacon node has seen the target block before.
-	if !s.hasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return nil, ErrTargetRootNotInDB
-	}
+	// Note that target root check is ignored here because it was performed in sync's validation pipeline:
+	// validate_aggregate_proof.go and validate_beacon_attestation.go
+	// If missing target root were to fail in this method, it would have just failed in `getAttPreState`.
 
 	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
 	// save it to the cache.
@@ -76,10 +74,8 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
-	// Verify LMG GHOST and FFG votes are consistent with each other.
-	if err := s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestation beacon block")
-	}
+	// Note that LMG GHOST and FFG consistency check is ignored because it was performed in sync's validation pipeline:
+	// validate_aggregate_proof.go and validate_beacon_attestation.go
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
@@ -87,14 +83,14 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Use the target state to validate attestation and calculate the committees.
-	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
+	indexedAtt, err := s.verifyAttestationIndices(ctx, baseState, a)
 	if err != nil {
 		return nil, err
 	}
 
-	if indexedAtt.AttestingIndices == nil {
-		return nil, errors.New("nil attesting indices")
-	}
+	// Note that signature verification is ignored here because it was performed in sync's validation pipeline:
+	// validate_aggregate_proof.go and validate_beacon_attestation.go
+	// We assume trusted attestation in this function has verified signature.
 
 	// Update forkchoice store with the new attestation for updating weight.
 	s.forkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)

@@ -7,6 +7,7 @@ import (
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -52,6 +53,10 @@ func BenchmarkAggregateAttestations_Aggregate(b *testing.B) {
 			inputs: aggtesting.BitlistsWithMultipleBitSet(b, 256, bitlistLen, 32),
 		},
 		{
+			name:   "256 attestations with 64 random bits set",
+			inputs: aggtesting.BitlistsWithMultipleBitSet(b, 256, bitlistLen, 64),
+		},
+		{
 			name:   "128 attestations with single bit set",
 			inputs: aggtesting.BitlistsWithSingleBitSet(128, bitlistLen),
 		},
@@ -69,14 +74,34 @@ func BenchmarkAggregateAttestations_Aggregate(b *testing.B) {
 		},
 	}
 
-	for _, tt := range tests {
-		b.Run(tt.name, func(b *testing.B) {
-			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				_, err := Aggregate(atts)
-				require.NoError(b, err)
-			}
+	b.Run("max-cover", func(b *testing.B) {
+		for _, tt := range tests {
+			b.Run(tt.name, func(b *testing.B) {
+				atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					_, err := Aggregate(atts)
+					require.NoError(b, err)
+				}
+			})
+		}
+	})
+
+	b.Run("naive", func(b *testing.B) {
+		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			AttestationAggregationStrategy: string(NaiveAggregation),
 		})
-	}
+		defer resetCfg()
+
+		for _, tt := range tests {
+			b.Run(tt.name, func(b *testing.B) {
+				atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					_, err := Aggregate(atts)
+					require.NoError(b, err)
+				}
+			})
+		}
+	})
 }
