@@ -588,7 +588,5 @@ func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
 func TestDepositContractAddress(t *testing.T) {
 	s := &Service{depositContractAddress: [20]byte{1, 2, 3}}
 	address := s.DepositContractAddress()
-	if !bytes.Equal(s.depositContractAddress[:], address[:]) {
-		t.Errorf("Expected address %v vs received %v", s.depositContractAddress, address)
-	}
+	assert.DeepEqual(t, s.depositContractAddress[:], address[:])
 }
