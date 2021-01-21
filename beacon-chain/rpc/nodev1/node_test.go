@@ -354,6 +354,54 @@ func TestListPeers(t *testing.T) {
 	}
 }
 
+func TestPeerCount(t *testing.T) {
+	ids := libp2ptest.GeneratePeerIDs(10)
+	peerFetcher := &mockp2p.MockPeersProvider{}
+	peerFetcher.ClearPeers()
+	peerStatus := peerFetcher.Peers()
+
+	for i, id := range ids {
+		enrRecord := &enr.Record{}
+		err := enrRecord.SetSig(dummyIdentity{1}, []byte{42})
+		require.NoError(t, err)
+		enrRecord.Set(enr.IPv4{127, 0, 0, byte(i)})
+		err = enrRecord.SetSig(dummyIdentity{}, []byte{})
+		require.NoError(t, err)
+		var p2pAddr = "/ip4/127.0.0." + strconv.Itoa(i) + "/udp/30303/p2p/QmYyQSo1c1Ym7orWxLYvCrM2EmxFTANf8wXmmE7DWjhx5N"
+		p2pMultiAddr, err := ma.NewMultiaddr(p2pAddr)
+		require.NoError(t, err)
+
+		var direction network.Direction
+		if i%2 == 0 {
+			direction = network.DirInbound
+		} else {
+			direction = network.DirOutbound
+		}
+		peerStatus.Add(enrRecord, id, p2pMultiAddr, direction)
+
+		switch i {
+		case 0:
+			peerStatus.SetConnectionState(id, peers.PeerConnecting)
+		case 1, 2:
+			peerStatus.SetConnectionState(id, peers.PeerConnected)
+		case 3, 4, 5:
+			peerStatus.SetConnectionState(id, peers.PeerDisconnecting)
+		case 6, 7, 8, 9:
+			peerStatus.SetConnectionState(id, peers.PeerDisconnected)
+		default:
+			t.Fatalf("Failed to set connection state for peer")
+		}
+	}
+
+	s := Server{PeersFetcher: peerFetcher}
+	resp, err := s.PeerCount(context.Background(), &ptypes.Empty{})
+	require.NoError(t, err)
+	assert.Equal(t, uint64(1), uint64(resp.Data.Connecting), "Wrong number of connecting peers")
+	assert.Equal(t, uint64(2), uint64(resp.Data.Connected), "Wrong number of connected peers")
+	assert.Equal(t, uint64(3), uint64(resp.Data.Disconnecting), "Wrong number of disconnecting peers")
+	assert.Equal(t, uint64(4), uint64(resp.Data.Disconnected), "Wrong number of disconnected peers")
+}
+
 func BenchmarkListPeers(b *testing.B) {
 	// We simulate having a lot of peers.
 	ids := libp2ptest.GeneratePeerIDs(2000)
