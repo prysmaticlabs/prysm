@@ -122,11 +122,15 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		if err := bar.Add(1); err != nil {
 			log.WithError(err).Debug("Could not increase progress bar")
 		}
-		for _, att := range attestations {
+		indexedAtts := make([]*ethpb.IndexedAttestation, len(attestations))
+		signingRoots := make([][32]byte, len(attestations))
+		for i, att := range attestations {
 			indexedAtt := createAttestation(att.Source, att.Target)
-			if err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, att.SigningRoot, indexedAtt); err != nil {
-				return errors.Wrap(err, "could not save attestation from imported JSON to database")
-			}
+			indexedAtts[i] = indexedAtt
+			signingRoots[i] = att.SigningRoot
+		}
+		if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, signingRoots, indexedAtts); err != nil {
+			return errors.Wrap(err, "could not save attestations from imported JSON to database")
 		}
 	}
 	return nil

@@ -107,7 +107,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 func TestStore_ImportInterchangeData_OK(t *testing.T) {
 	ctx := context.Background()
-	numValidators := 10
+	numValidators := 1
 	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, publicKeys)
