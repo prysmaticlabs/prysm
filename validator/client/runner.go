@@ -17,7 +17,7 @@ import (
 )
 
 // time to wait before trying to reconnect with the eth1 node.
-var backOffPeriod = 15 * time.Second
+var backOffPeriod = 10 * time.Second
 var errConnectionIssue = errors.New("connection issue, beacon node might be offline...")
 
 // Validator interface defines the primary methods of a validator client.
@@ -71,40 +71,49 @@ func run(ctx context.Context, v Validator) {
 	var headSlot uint64
 	defer ticker.Stop()
 	for {
+		var done bool
+		err := v.WaitForChainStart(ctx)
+		if err != nil && errors.Is(err, errConnectionIssue) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon chain started: %v", err)
+		}
+		err = v.WaitForSync(ctx)
+		if err != nil && errors.Is(err, errConnectionIssue) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon node synced: %v", err)
+		}
+		err = v.WaitForActivation(ctx)
+		if err != nil && errors.Is(err, errConnectionIssue) {
+			log.Warnf("Could not wait for validator activation: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not wait for validator activation: %v", err)
+		}
+		headSlot, err = v.CanonicalHeadSlot(ctx)
+		if err != nil && errors.Is(err, errConnectionIssue) {
+			log.Warnf("Could not get current canonical head slot: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not get current canonical head slot: %v", err)
+		}
+		done = true
 		select {
+		case <-ctx.Done():
+			log.Info("Context canceled, stopping validator")
+			return // Exit if context is canceled.
 		case <-ticker.C:
-			err := v.WaitForChainStart(ctx)
-			if err != nil && errors.Is(err, errConnectionIssue) {
-				log.Warnf("Could not determine if beacon chain started: %v", err)
-				continue
+			if done {
+				break
 			}
-			if err != nil {
-				log.Fatalf("Could not determine if beacon chain started: %v", err)
-			}
-			err = v.WaitForSync(ctx)
-			if err != nil && errors.Is(err, errConnectionIssue) {
-				log.Warnf("Could not determine if beacon chain started: %v", err)
-				continue
-			}
-			if err != nil {
-				log.Fatalf("Could not determine if beacon node synced: %v", err)
-			}
-			err = v.WaitForActivation(ctx)
-			if err != nil && errors.Is(err, errConnectionIssue) {
-				log.Warnf("Could not wait for validator activation: %v", err)
-				continue
-			}
-			if err != nil {
-				log.Fatalf("Could not wait for validator activation: %v", err)
-			}
-			headSlot, err = v.CanonicalHeadSlot(ctx)
-			if err != nil && errors.Is(err, errConnectionIssue) {
-				log.Warnf("Could not get current canonical head slot: %v", err)
-				continue
-			}
-			if err != nil {
-				log.Fatalf("Could not get current canonical head slot: %v", err)
-			}
+			continue
 		}
 		break
 	}
@@ -114,12 +123,14 @@ func run(ctx context.Context, v Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 	for {
+		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
 			span.End()
+			cancel()
 			return // Exit if context is canceled.
 		case blocksError := <-connectionErrorChannel:
 			if blocksError != nil && errors.Is(blocksError, errConnectionIssue) {
@@ -140,7 +151,7 @@ func run(ctx context.Context, v Validator) {
 			}
 
 			deadline := v.SlotDeadline(slot)
-			slotCtx, cancel := context.WithDeadline(ctx, deadline)
+			slotCtx, cancel = context.WithDeadline(ctx, deadline)
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 
