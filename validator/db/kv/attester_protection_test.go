@@ -319,6 +319,13 @@ func TestStore_SaveAttestationsForPubKey(t *testing.T) {
 	err := validatorDB.SaveAttestationsForPubKey(
 		ctx,
 		pubKeys[0],
+		signingRoots[:1],
+		atts,
+	)
+	require.ErrorContains(t, "does not match number of attestations", err)
+	err = validatorDB.SaveAttestationsForPubKey(
+		ctx,
+		pubKeys[0],
 		signingRoots,
 		atts,
 	)
