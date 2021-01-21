@@ -90,10 +90,10 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 	}
 	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Note that signature verification is ignored here because it was performed in sync's validation pipeline:
