@@ -42,7 +42,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
-		baseState = baseState.Copy()
 		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
