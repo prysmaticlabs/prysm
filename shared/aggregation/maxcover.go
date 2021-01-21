@@ -168,29 +168,6 @@ func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (sele
 			remainingBits.NoAllocAnd(ret, remainingBits)
 			usableCandidates.SetBitAt(bestIdx, false)
 		}
-		//	// Score candidates against remaining bits.
-		//	// Filter out processed and overlapping (when disallowed).
-		//	// Sort by score in a descending order.
-		//	mc.Candidates.score(remainingBits).filter(solution.Coverage, allowOverlaps).sort()
-		//
-		//
-		//	for _, candidate := range mc.Candidates {
-		//		if len(solution.Keys) >= k {
-		//			break
-		//		}
-		//		if !candidate.processed {
-		//			if !allowOverlaps && solution.Coverage.Overlaps(*candidate.bits) {
-		//				// Overlapping candidates violate non-intersection invariant.
-		//				candidate.processed = true
-		//				continue
-		//			}
-		//			solution.Coverage = solution.Coverage.Or(*candidate.bits)
-		//			solution.Keys = append(solution.Keys, candidate.key)
-		//			remainingBits = remainingBits.And(candidate.bits.Not())
-		//			candidate.processed = true
-		//			break
-		//		}
-		//	}
 	}
 	return selectedCandidates, coveredBits, nil
 }
