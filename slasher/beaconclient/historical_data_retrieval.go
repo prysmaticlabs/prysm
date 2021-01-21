@@ -10,7 +10,7 @@ import (
 
 // RequestHistoricalAttestations requests all indexed attestations for a
 // given epoch from a beacon node via gRPC.
-func (bs *Service) RequestHistoricalAttestations(
+func (s *Service) RequestHistoricalAttestations(
 	ctx context.Context,
 	epoch uint64,
 ) ([]*ethpb.IndexedAttestation, error) {
@@ -26,7 +26,7 @@ func (bs *Service) RequestHistoricalAttestations(
 		if res == nil {
 			res = &ethpb.ListIndexedAttestationsResponse{}
 		}
-		res, err = bs.beaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
+		res, err = s.beaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 			QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 				Epoch: epoch,
 			},
