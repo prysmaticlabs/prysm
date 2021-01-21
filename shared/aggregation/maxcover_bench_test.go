@@ -143,7 +143,7 @@ func BenchmarkMaxCoverProblem_Cover(b *testing.B) {
 	}
 }
 
-func BenchmarkMaxCoverProblem_Cover1(b *testing.B) {
+func BenchmarkMaxCoverProblem_MaxCover(b *testing.B) {
 	bitlistLen := params.BeaconConfig().MaxValidatorsPerCommittee
 	tests := []struct {
 		name          string
@@ -152,17 +152,27 @@ func BenchmarkMaxCoverProblem_Cover1(b *testing.B) {
 		allowOverlaps bool
 	}{
 		{
+			name:          "128_attestations_with_single_bit_set",
+			numCandidates: 128,
+			numMarkedBits: 8,
+		},
+		{
 			name:          "1024_attestations_with_single_bit_set",
 			numCandidates: 1024,
 			numMarkedBits: 8,
 		},
+		{
+			name:          "2048_attestations_with_single_bit_set",
+			numCandidates: 2048,
+			numMarkedBits: 8,
+		},
 	}
 	for _, tt := range tests {
-		bitlists := aggtesting.BitlistsWithSingleBitSet(tt.numCandidates, bitlistLen)
+		bitlists := aggtesting.Bitlists64WithSingleBitSet(tt.numCandidates, bitlistLen)
 		b.Run(tt.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				Cover(bitlists, len(bitlists), tt.allowOverlaps)
+				MaxCover(bitlists, len(bitlists), tt.allowOverlaps)
 			}
 		})
 	}
