@@ -41,15 +41,6 @@ type MaxCoverCandidate struct {
 // MaxCoverCandidates is defined to allow group operations (filtering, sorting) on all candidates.
 type MaxCoverCandidates []*MaxCoverCandidate
 
-type MaxCoverCandidateInterface interface {
-	Bits() *bitfield.Bitlist
-}
-
-type IndexedBitlist struct {
-	*bitfield.Bitlist
-	key uint16
-}
-
 // NewMaxCoverCandidate returns initialized candidate.
 func NewMaxCoverCandidate(key int, bits *bitfield.Bitlist) *MaxCoverCandidate {
 	return &MaxCoverCandidate{
