@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/event"
-
 	"github.com/google/uuid"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
