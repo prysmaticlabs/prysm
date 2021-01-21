@@ -80,6 +80,7 @@ type ChainStartFetcher interface {
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 	IsConnectedToETH1() bool
+	DepositContractAddress() common.Address
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -325,6 +326,11 @@ func (s *Service) Status() error {
 // IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
 func (s *Service) IsConnectedToETH1() bool {
 	return s.connectedETH1
+}
+
+// DepositContractAddress returns the address of the ETH1 deposit contract.
+func (s *Service) DepositContractAddress() common.Address {
+	return s.depositContractAddress
 }
 
 // DepositRoot returns the Merkle root of the latest deposit trie
