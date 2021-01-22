@@ -576,6 +576,57 @@ func TestUpdateDuties_OK(t *testing.T) {
 	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
 }
 
+func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	slot := params.BeaconConfig().SlotsPerEpoch
+
+	numValidators := 10
+	keysMap := make(map[[48]byte]bls.SecretKey)
+	blacklistedPublicKeys := make(map[[48]byte]bool)
+	for i := 0; i < numValidators; i++ {
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		pubKey := [48]byte{}
+		copy(pubKey[:], priv.PublicKey().Marshal())
+		keysMap[pubKey] = priv
+		blacklistedPublicKeys[pubKey] = true
+	}
+
+	km := &mockKeymanager{
+		keysMap: keysMap,
+	}
+	resp := &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{},
+	}
+	v := validator{
+		keyManager:                     km,
+		validatorClient:                client,
+		eipImportBlacklistedPublicKeys: blacklistedPublicKeys,
+	}
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
+
+	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+	for range blacklistedPublicKeys {
+		assert.LogsContain(t, hook, "Not including slashable public key")
+	}
+}
+
 func TestRolesAt_OK(t *testing.T) {
 	v, m, validatorKey, finish := setup(t)
 	defer finish()

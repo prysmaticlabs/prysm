@@ -93,7 +93,7 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 		return nil, err
 	}
 	// Cursor for the location to read target epoch from.
-	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
+	// Modulus of target epoch X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
 	if uint64(len(dh)) < cursor+historySize {
 		return nil, nil

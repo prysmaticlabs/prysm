@@ -38,8 +38,8 @@ var (
 type Store struct {
 	db                           *bolt.DB
 	databasePath                 string
-	batchedAttestations          []*attestationRecord
-	batchedAttestationsChan      chan *attestationRecord
+	batchedAttestations          []*AttestationRecord
+	batchedAttestationsChan      chan *AttestationRecord
 	batchAttestationsFlushedFeed *event.Feed
 }
 
@@ -104,8 +104,8 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                           boltDB,
 		databasePath:                 dirPath,
-		batchedAttestations:          make([]*attestationRecord, 0, attestationBatchCapacity),
-		batchedAttestationsChan:      make(chan *attestationRecord, attestationBatchCapacity),
+		batchedAttestations:          make([]*AttestationRecord, 0, attestationBatchCapacity),
+		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 
@@ -119,6 +119,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 			lowestSignedTargetBucket,
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
+			slashablePublicKeysBucket,
 			pubKeysBucket,
 			migrationsBucket,
 		)

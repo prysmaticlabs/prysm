@@ -31,7 +31,7 @@ import (
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -68,6 +68,7 @@ type validator struct {
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
+	slashableKeysLock                  sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	blockFeed                          *event.Feed
 	genesisTime                        uint64
@@ -83,11 +84,12 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          slashingprotection.Protector
+	protector                          iface.Protector
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
 	graffitiStruct                     *graffiti.Graffiti
+	eipImportBlacklistedPublicKeys     map[[48]byte]bool
 }
 
 // Done cleans up the validator.
@@ -364,9 +366,25 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	if err != nil {
 		return err
 	}
+
+	// Filter out the slashable public keys from the duties request.
+	filteredKeys := make([][48]byte, 0, len(validatingKeys))
+	v.slashableKeysLock.RLock()
+	for _, pubKey := range validatingKeys {
+		if ok := v.eipImportBlacklistedPublicKeys[pubKey]; !ok {
+			filteredKeys = append(filteredKeys, pubKey)
+		} else {
+			log.WithField(
+				"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
+			).Warn("Not including slashable public key from slashing protection import " +
+				"in request to update validator duties")
+		}
+	}
+	v.slashableKeysLock.RUnlock()
+
 	req := &ethpb.DutiesRequest{
 		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
+		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
 	}
 
 	// If duties is nil it means we have had no prior duties and just started up.
