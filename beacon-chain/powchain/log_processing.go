@@ -37,23 +37,15 @@ const depositlogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
 
-// GenesisPowchainInfo contains information about the genesis event.
-type GenesisPowchainInfo struct {
-	Time        uint64   // Genesis time.
-	BlockNumber *big.Int // Eth1 block number.
-}
-
 func tooMuchDataRequestedError(err error) bool {
 	// this error is only infura specific (other providers might have different error messages)
 	return err.Error() == "query returned more than 10000 results"
 }
 
-// Eth2GenesisPowchainInfo retrieves information about genesis.
-func (s *Service) Eth2GenesisPowchainInfo() GenesisPowchainInfo {
-	return GenesisPowchainInfo{
-		Time:        s.chainStartData.GenesisTime,
-		BlockNumber: big.NewInt(int64(s.chainStartData.GenesisBlock)),
-	}
+// Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
+// from the deposit contract.
+func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
+	return s.chainStartData.GenesisTime, big.NewInt(int64(s.chainStartData.GenesisBlock))
 }
 
 // ProcessETH1Block processes the logs from the provided eth1Block.

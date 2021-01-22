@@ -78,7 +78,7 @@ type ChainStartFetcher interface {
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
 type ChainInfoFetcher interface {
-	Eth2GenesisPowchainInfo() GenesisPowchainInfo
+	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 	IsConnectedToETH1() bool
 	DepositContractAddress() common.Address
 }
