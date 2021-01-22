@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"go.opencensus.io/trace"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 )
@@ -23,5 +25,7 @@ func (bs *Server) GetSpec(ctx context.Context, req *ptypes.Empty) (*ethpb.SpecRe
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
 func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
+	defer span.End()
 	return nil, errors.New("unimplemented")
 }
