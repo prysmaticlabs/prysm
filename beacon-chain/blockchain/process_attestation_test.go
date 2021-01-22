@@ -114,7 +114,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := service.onAttestation(ctx, tt.a)
+			err := service.onAttestation(ctx, tt.a)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -146,11 +146,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveState(ctx, copied, tRoot))
 	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
-	indices, err := service.onAttestation(ctx, att[0])
-	require.NoError(t, err)
-	wanted, err := helpers.BeaconCommitteeFromState(copied, 0, 0)
-	require.NoError(t, err)
-	require.DeepEqual(t, wanted, indices)
+	require.NoError(t, service.onAttestation(ctx, att[0]))
 }
 
 func TestStore_SaveCheckpointState(t *testing.T) {
