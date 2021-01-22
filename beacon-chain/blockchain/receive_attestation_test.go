@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
@@ -88,6 +89,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 }
 
 func TestProcessAttestations_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -114,4 +116,5 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	require.NoError(t, service.attPool.SaveForkchoiceAttestations(atts))
 	service.processAttestations(ctx)
 	require.Equal(t, 0, len(service.attPool.ForkchoiceAttestations()))
+	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
 }
