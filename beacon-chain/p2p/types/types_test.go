@@ -1,7 +1,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/hex"
 	"testing"
 
@@ -132,11 +131,11 @@ func TestSSZUint64(t *testing.T) {
 
 			serializedBytes, err := s.MarshalSSZ()
 			require.NoError(t, err)
-			require.Equal(t, true, bytes.Equal(serializedBytes, tt.serializedBytes), "serialized does not equal")
+			require.DeepEqual(t, tt.serializedBytes, serializedBytes)
 
 			htr, err := s.HashTreeRoot()
 			require.NoError(t, err)
-			require.Equal(t, true, bytes.Equal(htr[:], tt.root), "root does not equal")
+			require.DeepEqual(t, tt.root, htr[:])
 		})
 	}
 }
@@ -172,7 +171,7 @@ func TestSSZBytes_HashTreeRoot(t *testing.T) {
 			s := SSZBytes(tt.actualValue)
 			htr, err := s.HashTreeRoot()
 			require.NoError(t, err)
-			require.Equal(t, true, bytes.Equal(htr[:], tt.root), "root does not equal")
+			require.DeepEqual(t, tt.root, htr[:])
 		})
 	}
 }

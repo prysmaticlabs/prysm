@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
 	"math/rand"
 	"os"
@@ -249,12 +248,8 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 
 	resp, err := retrieveForkEntry(localNode.Node().Record())
 	require.NoError(t, err)
-	if !bytes.Equal(resp.CurrentForkDigest, want[:]) {
-		t.Errorf("Wanted fork digest: %v, received %v", want, resp.CurrentForkDigest)
-	}
-	if !bytes.Equal(resp.NextForkVersion, nextForkVersion) {
-		t.Errorf("Wanted next fork version: %v, received %v", nextForkVersion, resp.NextForkVersion)
-	}
+	assert.DeepEqual(t, want[:], resp.CurrentForkDigest)
+	assert.DeepEqual(t, nextForkVersion, resp.NextForkVersion)
 	assert.Equal(t, nextForkEpoch, resp.NextForkEpoch, "Unexpected next fork epoch")
 }
 
@@ -273,7 +268,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	require.NoError(t, err)
 	forkEntry, err := retrieveForkEntry(localNode.Node().Record())
 	require.NoError(t, err)
-	if !bytes.Equal(forkEntry.NextForkVersion, params.BeaconConfig().GenesisForkVersion) {
-		t.Errorf("Wanted Next Fork Version to be equal to genesis fork version, instead got %#x", forkEntry.NextForkVersion)
-	}
+	assert.DeepEqual(t,
+		params.BeaconConfig().GenesisForkVersion, forkEntry.NextForkVersion,
+		"Wanted Next Fork Version to be equal to genesis fork version")
 }
