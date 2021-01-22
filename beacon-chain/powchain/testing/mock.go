@@ -135,7 +135,7 @@ func (m *POWChain) IsConnectedToETH1() bool {
 
 // DepositContractAddress --
 func (m *POWChain) DepositContractAddress() common.Address {
-	return common.Address{}
+	return common.Address{1, 2, 3, 4}
 }
 
 // RPCClient defines the mock rpc client.

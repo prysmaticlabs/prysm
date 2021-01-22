@@ -313,6 +313,7 @@ func (s *Service) Start() {
 		ChainStartFetcher:   s.chainStartFetcher,
 		DepositFetcher:      s.depositFetcher,
 		BlockFetcher:        s.powChainService,
+		PowchainInfoFetcher: s.powChainService,
 		CanonicalStateChan:  s.canonicalStateChan,
 		GenesisTimeFetcher:  s.timeFetcher,
 		StateNotifier:       s.stateNotifier,

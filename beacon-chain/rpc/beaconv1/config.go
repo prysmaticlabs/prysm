@@ -1,13 +1,18 @@
 package beaconv1
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
-
-	"go.opencensus.io/trace"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/status-im/keycard-go/hexutils"
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
@@ -27,5 +32,19 @@ func (bs *Server) GetSpec(ctx context.Context, req *ptypes.Empty) (*ethpb.SpecRe
 func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
 	defer span.End()
-	return nil, errors.New("unimplemented")
+
+	buf := bytes.NewBuffer(params.BeaconConfig().GenesisForkVersion)
+	chainId, err := binary.ReadUvarint(buf)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not obtain genesis fork version: %v", err)
+	}
+	byteAddress := [20]byte(bs.PowchainInfoFetcher.DepositContractAddress())
+	hexAddress := hexutils.BytesToHex(byteAddress[:])
+
+	return &ethpb.DepositContractResponse{
+		Data: &ethpb.DepositContract{
+			ChainId: uint64(chainId),
+			Address: hexAddress,
+		},
+	}, nil
 }

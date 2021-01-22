@@ -32,6 +32,7 @@ type Server struct {
 	ChainInfoFetcher    blockchain.ChainInfoFetcher
 	DepositFetcher      depositcache.DepositFetcher
 	BlockFetcher        powchain.POWBlockFetcher
+	PowchainInfoFetcher powchain.ChainInfoFetcher
 	GenesisTimeFetcher  blockchain.TimeFetcher
 	BlockReceiver       blockchain.BlockReceiver
 	StateNotifier       statefeed.Notifier
