@@ -125,7 +125,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	tmp2, err := state.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
 	require.NoError(t, err)
 	gotRoot = tmp2.StateRoots()[problemSlot]
-	require.DeepEqual(t, expectedRoot2[:], gotRoot, "state roots for chain 2 are bad, expected root doesn't match")
+	require.DeepEqual(t, expectedRoot2[:], gotRoot, "State roots for chain 2 are bad, expected root doesn't match")
 
 	var wg sync.WaitGroup
 	wg.Add(len(setups))
