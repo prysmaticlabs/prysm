@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -101,20 +100,4 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)
 	}
 	return nil
-}
-
-// verifyAttestationIndices validates input attestation has valid attesting indices.
-func (s *Service) verifyAttestationIndices(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
-	if err != nil {
-		return nil, err
-	}
-	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
-	if err != nil {
-		return nil, err
-	}
-	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
-		return nil, err
-	}
-	return indexedAtt, nil
 }
