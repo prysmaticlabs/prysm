@@ -10,39 +10,27 @@ import (
 )
 
 func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
-	t.Skip("skipped for now")
 	type args struct {
 		atts []*ethpb.Attestation
 	}
 	tests := []struct {
-		name      string
-		args      args
-		want      *aggregation.MaxCoverProblem
-		wantedErr string
+		name string
+		args args
+		want *aggregation.MaxCoverProblem
 	}{
 		{
 			name: "nil attestations",
 			args: args{
 				atts: nil,
 			},
-			wantedErr: ErrInvalidAttestationCount.Error(),
+			want: &aggregation.MaxCoverProblem{Candidates: []*aggregation.MaxCoverCandidate{}},
 		},
 		{
 			name: "no attestations",
 			args: args{
 				atts: []*ethpb.Attestation{},
 			},
-			wantedErr: ErrInvalidAttestationCount.Error(),
-		},
-		{
-			name: "attestations of different bitlist length",
-			args: args{
-				atts: []*ethpb.Attestation{
-					{AggregationBits: bitfield.NewBitlist(64)},
-					{AggregationBits: bitfield.NewBitlist(128)},
-				},
-			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
+			want: &aggregation.MaxCoverProblem{Candidates: []*aggregation.MaxCoverCandidate{}},
 		},
 		{
 			name: "single attestation",
