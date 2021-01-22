@@ -32,7 +32,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			eval: func(t *testing.T, db *bbolt.DB) {
 				err := db.View(func(tx *bbolt.Tx) error {
 					v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytesLittleEndian(2048))
-					assert.DeepEqual(t, []byte("foo"), v, "did not receive correct data for key 2048")
+					assert.DeepEqual(t, []byte("foo"), v, "Did not receive correct data for key 2048")
 					return nil
 				})
 				assert.NoError(t, err)
