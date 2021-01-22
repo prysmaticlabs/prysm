@@ -47,9 +47,10 @@ func genMockKeymanger(numKeys int) *mockKeymanager {
 }
 
 type mockKeymanager struct {
-	lock        sync.RWMutex
-	keysMap     map[[48]byte]bls.SecretKey
-	fetchNoKeys bool
+	lock                sync.RWMutex
+	keysMap             map[[48]byte]bls.SecretKey
+	fetchNoKeys         bool
+	accountsChangedFeed *event.Feed
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
@@ -87,6 +88,14 @@ func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest)
 	}
 	sig := privKey.Sign(req.SigningRoot)
 	return sig, nil
+}
+
+func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	return m.accountsChangedFeed.Subscribe(pubKeysChan)
+}
+
+func (m *mockKeymanager) SimulateAccountChanges() {
+	m.accountsChangedFeed.Send(make([][48]byte, 0))
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
@@ -351,7 +360,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	require.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
 
@@ -389,7 +398,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
 }
 
 func TestWaitSync_ContextCanceled(t *testing.T) {

@@ -16,6 +16,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -226,4 +227,12 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, ErrSigningFailed
 	}
 	return bls.SignatureFromBytes(resp.Signature)
+}
+
+// SubscribeAccountChanges is currently NOT IMPLEMENTED for the remote keymanager.
+// INVOKING THIS FUNCTION HAS NO EFFECT!
+func (k *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+	return event.NewSubscription(func(i <-chan struct{}) error {
+		return nil
+	})
 }
