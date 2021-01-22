@@ -285,8 +285,8 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 }
 
 func (vs *Server) slotStartTime(slot uint64) uint64 {
-	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return helpers.VotingPeriodStartTime(startTime, slot)
+	genesisInfo := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+	return helpers.VotingPeriodStartTime(genesisInfo.Time, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
@@ -444,8 +444,8 @@ func (vs *Server) deposits(
 		return nil, err
 	}
 
-	_, genesisEth1Block := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	if genesisEth1Block.Cmp(canonicalEth1DataHeight) == 0 {
+	genesisInfo := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+	if genesisInfo.BlockNumber.Cmp(canonicalEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
 
