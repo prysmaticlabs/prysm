@@ -6,10 +6,10 @@ import (
 	"encoding/binary"
 	"errors"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/status-im/keycard-go/hexutils"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,7 +39,7 @@ func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*e
 		return nil, status.Errorf(codes.Internal, "could not obtain genesis fork version: %v", err)
 	}
 	byteAddress := [20]byte(bs.PowchainInfoFetcher.DepositContractAddress())
-	hexAddress := hexutils.BytesToHex(byteAddress[:])
+	hexAddress := hexutil.Encode(byteAddress[:])
 
 	return &ethpb.DepositContractResponse{
 		Data: &ethpb.DepositContract{
