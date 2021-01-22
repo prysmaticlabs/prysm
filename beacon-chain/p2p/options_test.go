@@ -1,12 +1,13 @@
 package p2p
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"io/ioutil"
 	"net"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 
 	gethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -40,9 +41,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 	require.NoError(t, err)
 	newRaw, err := newPkey.Raw()
 	require.NoError(t, err)
-	if !bytes.Equal(newRaw, rawBytes) {
-		t.Errorf("Private keys do not match got %#x but wanted %#x", rawBytes, newRaw)
-	}
+	assert.DeepEqual(t, rawBytes, newRaw, "Private keys do not match")
 }
 
 func TestIPV6Support(t *testing.T) {

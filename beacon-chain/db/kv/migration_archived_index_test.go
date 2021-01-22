@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -34,9 +33,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			eval: func(t *testing.T, db *bbolt.DB) {
 				err := db.View(func(tx *bbolt.Tx) error {
 					v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytesLittleEndian(2048))
-					if !bytes.Equal(v, []byte("foo")) {
-						return fmt.Errorf("did not receive correct data for key 2048, wanted 'foo' got %s", v)
-					}
+					assert.DeepEqual(t, []byte("foo"), v, "did not receive correct data for key 2048")
 					return nil
 				})
 				assert.NoError(t, err)
@@ -66,9 +63,8 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			eval: func(t *testing.T, db *bbolt.DB) {
 				err := db.View(func(tx *bbolt.Tx) error {
 					k := uint64(2048)
-					if v := tx.Bucket(stateSlotIndicesBucket).Get(bytesutil.Uint64ToBytesBigEndian(k)); !bytes.Equal(v, []byte("foo")) {
-						return fmt.Errorf("did not receive correct data for key %d, wanted 'foo' got %v", k, v)
-					}
+					v := tx.Bucket(stateSlotIndicesBucket).Get(bytesutil.Uint64ToBytesBigEndian(k))
+					assert.DeepEqual(t, []byte("foo"), v, fmt.Sprintf("did not receive correct data for key %d", k))
 					return nil
 				})
 				assert.NoError(t, err)

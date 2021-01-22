@@ -1,10 +1,11 @@
 package state_test
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -113,9 +114,8 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 
 	tmp1, err := state.ProcessSlots(context.Background(), expected1.Copy(), problemSlot+1)
 	require.NoError(t, err)
-	if gotRoot := tmp1.StateRoots()[problemSlot]; !bytes.Equal(gotRoot, expectedRoot1[:]) {
-		t.Fatalf("state roots for chain 1 are bad, expected root doesn't match: %x <> %x", gotRoot, expectedRoot1[:])
-	}
+	gotRoot := tmp1.StateRoots()[problemSlot]
+	require.DeepEqual(t, expectedRoot1[:], gotRoot, "state roots for chain 1 are bad, expected root doesn't match")
 
 	expected2, err := state.ProcessSlots(context.Background(), state2.Copy(), problemSlot)
 	require.NoError(t, err)
@@ -125,9 +125,8 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 
 	tmp2, err := state.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
 	require.NoError(t, err)
-	if gotRoot := tmp2.StateRoots()[problemSlot]; !bytes.Equal(gotRoot, expectedRoot2[:]) {
-		t.Fatalf("state roots for chain 2 are bad, expected root doesn't match %x <> %x", gotRoot, expectedRoot2[:])
-	}
+	gotRoot = tmp2.StateRoots()[problemSlot]
+	require.DeepEqual(t, expectedRoot2[:], gotRoot, "state roots for chain 2 are bad, expected root doesn't match")
 
 	var wg sync.WaitGroup
 	wg.Add(len(setups))
@@ -139,13 +138,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		roots := outState.StateRoots()
 		gotRoot := roots[problemSlot]
 		if i%2 == 0 {
-			if !bytes.Equal(gotRoot, expectedRoot1[:]) {
-				t.Errorf("unexpected root on chain 1, item %3d: %x", i, gotRoot)
-			}
+			assert.DeepEqual(t, expectedRoot1[:], gotRoot, "unexpected root on chain 1")
 		} else {
-			if !bytes.Equal(gotRoot, expectedRoot2[:]) {
-				t.Errorf("unexpected root on chain 2, item %3d: %x", i, gotRoot)
-			}
+			assert.DeepEqual(t, expectedRoot2[:], gotRoot, "unexpected root on chain 2")
 		}
 		wg.Done()
 	}

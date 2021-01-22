@@ -1,11 +1,12 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -61,9 +62,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 		if !ok {
 			t.Error("Object is not of type *pb.TestSimpleMessage")
 		}
-		if !bytes.Equal(m.CurrentVersion, []byte("fooo")) {
-			t.Errorf("Unexpected incoming message: %+v", m)
-		}
+		assert.DeepEqual(t, []byte("fooo"), m.CurrentVersion, "Unexpected incoming message")
 		wg.Done()
 
 		return nil
