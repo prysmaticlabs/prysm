@@ -728,8 +728,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:lBcqQHaZyB0AYEUohFpsIDWY1sHo28VgGXOCBdnPCWo=",
-        version = "v0.0.0-20210107123522-4c3c34260bd9",
+        sum = "h1:Xun9jB2EhB8JZbVhjpW7/o6pLEwXb89tHkN8Q08kEZM=",
+        version = "v0.0.0-20210118190430-6ca267833c4b",
     )
 
     go_repository(
@@ -2570,32 +2570,19 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_protolambda_zssz",
-        importpath = "github.com/protolambda/zssz",
-        sum = "h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1ouek=",
-        version = "v0.1.5",
-    )
-
-    go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:69URSziUFhCVzHIDtPGMwYeP1G3JWhuBdB3enLRne6Y=",
-        version = "v0.0.0-20210105190001-13193818c0df",
+        sum = "h1:roqXwVG8cKjq6sOCbB+T5Kh+dYr1wpkk00c7/DdrqLg=",
+        version = "v0.0.0-20210115110118-c595a4e0c0a5",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:T86rPg76THT+xHx54zNu/4dgR3gWDm3VTdYocAj1NCE=",
-        version = "v0.0.0-20210107162333-9e9cf77d4921",
+        sum = "h1:SMro7Z5L2ACvcKREIVJDn8LvoVTY1TY2rTlPJmDlUWc=",
+        version = "v0.0.0-20210121075346-fee7b721f342",
     )
 
-    go_repository(
-        name = "com_github_prysmaticlabs_go_ssz",
-        importpath = "github.com/prysmaticlabs/go-ssz",
-        sum = "h1:7qd0Af1ozWKBU3c93YW2RH+/09hJns9+ftqWUZyts9c=",
-        version = "v0.0.0-20200612203617-6d5c9aa213ae",
-    )
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
         importpath = "github.com/prysmaticlabs/prombbolt",
@@ -3004,7 +2991,6 @@ def prysm_deps():
         name = "com_github_wealdtech_go_eth2_types_v2",
         build_directives = [
             "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
-            "gazelle:resolve go github.com/prysmaticlabs/go-ssz @com_github_prysmaticlabs_go_ssz//:go_default_library",
         ],
         importpath = "github.com/wealdtech/go-eth2-types/v2",
         sum = "h1:59VZuwgqRaTjBu3b3CCaxG05XTmANtuTKA8hy3C6IFQ=",

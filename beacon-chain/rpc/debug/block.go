@@ -77,7 +77,10 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}
-			indices := attestationutil.AttestingIndices(a.AggregationBits, c)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, c)
+			if err != nil {
+				return nil, err
+			}
 			for _, i := range indices {
 				if req.Id == i && req.Slot == a.Data.Slot {
 					inclusionSlot = blk.Block.Slot

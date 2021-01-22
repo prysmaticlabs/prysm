@@ -138,7 +138,10 @@ func createAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.B
 		if err != nil {
 			return nil, err
 		}
-		ia := attestationutil.ConvertToIndexed(ctx, a, c)
+		ia, err := attestationutil.ConvertToIndexed(ctx, a, c)
+		if err != nil {
+			return nil, err
+		}
 		if err := attestationutil.IsValidAttestationIndices(ctx, ia); err != nil {
 			return nil, err
 		}

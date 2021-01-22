@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -52,7 +53,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject
 	}
 
-	if helpers.SlotToEpoch(m.Message.Aggregate.Data.Slot) != m.Message.Aggregate.Data.Target.Epoch {
+	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
 		return pubsub.ValidationReject
 	}
 	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.chain.GenesisTime()); err != nil {
@@ -261,7 +262,8 @@ func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data
 	if err != nil {
 		return nil, err
 	}
-	root, err := helpers.ComputeSigningRoot(data.Slot, d)
+	sszUint := p2ptypes.SSZUint64(data.Slot)
+	root, err := helpers.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err
 	}

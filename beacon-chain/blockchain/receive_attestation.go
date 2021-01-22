@@ -35,8 +35,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	_, err := s.onAttestation(ctx, att)
-	if err != nil {
+	if err := s.onAttestation(ctx, att); err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
 
@@ -62,7 +61,18 @@ func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestatio
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
-	return s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot)
+	targetSlot, err := helpers.StartSlot(a.Data.Target.Epoch)
+	if err != nil {
+		return err
+	}
+	r, err := s.ancestor(ctx, a.Data.BeaconBlockRoot, targetSlot)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(a.Data.Target.Root, r) {
+		return errors.New("FFG and LMD votes are not consistent")
+	}
+	return nil
 }
 
 // VerifyFinalizedConsistency verifies input root is consistent with finalized store.

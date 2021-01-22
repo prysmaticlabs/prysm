@@ -37,11 +37,11 @@ func unmarshalAttSlashings(encoded [][]byte) ([]*ethpb.AttesterSlashing, error) 
 
 // AttesterSlashings accepts a status and returns all slashings with this status.
 // returns empty []*ethpb.AttesterSlashing if no slashing has been found with this status.
-func (db *Store) AttesterSlashings(ctx context.Context, status types.SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
+func (s *Store) AttesterSlashings(ctx context.Context, status types.SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.AttesterSlashings")
 	defer span.End()
 	encoded := make([][]byte, 0)
-	err := db.view(func(tx *bolt.Tx) error {
+	err := s.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(slashingBucket).Cursor()
 		prefix := encodeType(types.SlashingType(types.Attestation))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
@@ -58,14 +58,14 @@ func (db *Store) AttesterSlashings(ctx context.Context, status types.SlashingSta
 }
 
 // DeleteAttesterSlashing deletes an attester slashing proof from db.
-func (db *Store) DeleteAttesterSlashing(ctx context.Context, attesterSlashing *ethpb.AttesterSlashing) error {
+func (s *Store) DeleteAttesterSlashing(ctx context.Context, attesterSlashing *ethpb.AttesterSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.deleteAttesterSlashing")
 	defer span.End()
 	root, err := hashutil.HashProto(attesterSlashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
-	return db.update(func(tx *bolt.Tx) error {
+	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(slashingBucket)
 		k := encodeTypeRoot(types.SlashingType(types.Attestation), root)
 		if err != nil {
@@ -79,7 +79,7 @@ func (db *Store) DeleteAttesterSlashing(ctx context.Context, attesterSlashing *e
 }
 
 // HasAttesterSlashing returns true and slashing status if a slashing is found in the db.
-func (db *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) (bool, types.SlashingStatus, error) {
+func (s *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) (bool, types.SlashingStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.HasAttesterSlashing")
 	defer span.End()
 	var status types.SlashingStatus
@@ -89,7 +89,7 @@ func (db *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.Attest
 		return found, status, errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
 	key := encodeTypeRoot(types.SlashingType(types.Attestation), root)
-	err = db.view(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		enc := b.Get(key)
 		if enc != nil {
@@ -102,7 +102,7 @@ func (db *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.Attest
 }
 
 // SaveAttesterSlashing accepts a slashing proof and its status and writes it to disk.
-func (db *Store) SaveAttesterSlashing(ctx context.Context, status types.SlashingStatus, slashing *ethpb.AttesterSlashing) error {
+func (s *Store) SaveAttesterSlashing(ctx context.Context, status types.SlashingStatus, slashing *ethpb.AttesterSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveAttesterSlashing")
 	defer span.End()
 	enc, err := proto.Marshal(slashing)
@@ -114,7 +114,7 @@ func (db *Store) SaveAttesterSlashing(ctx context.Context, status types.Slashing
 		return err
 	}
 	key := encodeTypeRoot(types.SlashingType(types.Attestation), root)
-	return db.update(func(tx *bolt.Tx) error {
+	return s.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		e := b.Put(key, append([]byte{byte(status)}, enc...))
 		return e
@@ -122,7 +122,7 @@ func (db *Store) SaveAttesterSlashing(ctx context.Context, status types.Slashing
 }
 
 // SaveAttesterSlashings accepts a slice of slashing proof and its status and writes it to disk.
-func (db *Store) SaveAttesterSlashings(ctx context.Context, status types.SlashingStatus, slashings []*ethpb.AttesterSlashing) error {
+func (s *Store) SaveAttesterSlashings(ctx context.Context, status types.SlashingStatus, slashings []*ethpb.AttesterSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveAttesterSlashings")
 	defer span.End()
 	enc := make([][]byte, len(slashings))
@@ -140,7 +140,7 @@ func (db *Store) SaveAttesterSlashings(ctx context.Context, status types.Slashin
 		key[i] = encodeTypeRoot(types.SlashingType(types.Attestation), root)
 	}
 
-	return db.update(func(tx *bolt.Tx) error {
+	return s.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		for i := 0; i < len(enc); i++ {
 			e := b.Put(key[i], append([]byte{byte(status)}, enc[i]...))
@@ -153,11 +153,11 @@ func (db *Store) SaveAttesterSlashings(ctx context.Context, status types.Slashin
 }
 
 // GetLatestEpochDetected returns the latest detected epoch from db.
-func (db *Store) GetLatestEpochDetected(ctx context.Context) (uint64, error) {
+func (s *Store) GetLatestEpochDetected(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.GetLatestEpochDetected")
 	defer span.End()
 	var epoch uint64
-	err := db.view(func(tx *bolt.Tx) error {
+	err := s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		enc := b.Get([]byte(latestEpochKey))
 		if enc == nil {
@@ -171,10 +171,10 @@ func (db *Store) GetLatestEpochDetected(ctx context.Context) (uint64, error) {
 }
 
 // SetLatestEpochDetected sets the latest slashing detected epoch in db.
-func (db *Store) SetLatestEpochDetected(ctx context.Context, epoch uint64) error {
+func (s *Store) SetLatestEpochDetected(ctx context.Context, epoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SetLatestEpochDetected")
 	defer span.End()
-	return db.update(func(tx *bolt.Tx) error {
+	return s.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(epoch))
 		return err

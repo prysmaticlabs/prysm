@@ -51,19 +51,19 @@ type ChainService struct {
 }
 
 // StateNotifier mocks the same method in the chain service.
-func (ms *ChainService) StateNotifier() statefeed.Notifier {
-	if ms.stateNotifier == nil {
-		ms.stateNotifier = &MockStateNotifier{}
+func (s *ChainService) StateNotifier() statefeed.Notifier {
+	if s.stateNotifier == nil {
+		s.stateNotifier = &MockStateNotifier{}
 	}
-	return ms.stateNotifier
+	return s.stateNotifier
 }
 
 // BlockNotifier mocks the same method in the chain service.
-func (ms *ChainService) BlockNotifier() blockfeed.Notifier {
-	if ms.blockNotifier == nil {
-		ms.blockNotifier = &MockBlockNotifier{}
+func (s *ChainService) BlockNotifier() blockfeed.Notifier {
+	if s.blockNotifier == nil {
+		s.blockNotifier = &MockBlockNotifier{}
 	}
-	return ms.blockNotifier
+	return s.blockNotifier
 }
 
 // MockBlockNotifier mocks the block notifier.
@@ -72,11 +72,11 @@ type MockBlockNotifier struct {
 }
 
 // BlockFeed returns a block feed.
-func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
-	if msn.feed == nil {
-		msn.feed = new(event.Feed)
+func (mbn *MockBlockNotifier) BlockFeed() *event.Feed {
+	if mbn.feed == nil {
+		mbn.feed = new(event.Feed)
 	}
-	return msn.feed
+	return mbn.feed
 }
 
 // MockStateNotifier mocks the state notifier.
@@ -125,11 +125,11 @@ func (msn *MockStateNotifier) StateFeed() *event.Feed {
 }
 
 // OperationNotifier mocks the same method in the chain service.
-func (ms *ChainService) OperationNotifier() opfeed.Notifier {
-	if ms.opNotifier == nil {
-		ms.opNotifier = &MockOperationNotifier{}
+func (s *ChainService) OperationNotifier() opfeed.Notifier {
+	if s.opNotifier == nil {
+		s.opNotifier = &MockOperationNotifier{}
 	}
-	return ms.opNotifier
+	return s.opNotifier
 }
 
 // MockOperationNotifier mocks the operation notifier.
@@ -146,227 +146,227 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
-	if ms.State == nil {
-		ms.State = &stateTrie.BeaconState{}
+func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
+	if s.State == nil {
+		s.State = &stateTrie.BeaconState{}
 	}
-	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
-		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
+	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
 	}
-	if err := ms.State.SetSlot(block.Block.Slot); err != nil {
+	if err := s.State.SetSlot(block.Block.Slot); err != nil {
 		return err
 	}
-	ms.BlocksReceived = append(ms.BlocksReceived, block)
+	s.BlocksReceived = append(s.BlocksReceived, block)
 	signingRoot, err := block.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
-	if ms.DB != nil {
-		if err := ms.DB.SaveBlock(ctx, block); err != nil {
+	if s.DB != nil {
+		if err := s.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
 		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
 	}
-	ms.Root = signingRoot[:]
-	ms.Block = block
+	s.Root = signingRoot[:]
+	s.Block = block
 	return nil
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (ms *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, _ [][32]byte) error {
-	if ms.State == nil {
-		ms.State = &stateTrie.BeaconState{}
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, _ [][32]byte) error {
+	if s.State == nil {
+		s.State = &stateTrie.BeaconState{}
 	}
 	for _, block := range blks {
-		if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
-			return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
+		if !bytes.Equal(s.Root, block.Block.ParentRoot) {
+			return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
 		}
-		if err := ms.State.SetSlot(block.Block.Slot); err != nil {
+		if err := s.State.SetSlot(block.Block.Slot); err != nil {
 			return err
 		}
-		ms.BlocksReceived = append(ms.BlocksReceived, block)
+		s.BlocksReceived = append(s.BlocksReceived, block)
 		signingRoot, err := block.Block.HashTreeRoot()
 		if err != nil {
 			return err
 		}
-		if ms.DB != nil {
-			if err := ms.DB.SaveBlock(ctx, block); err != nil {
+		if s.DB != nil {
+			if err := s.DB.SaveBlock(ctx, block); err != nil {
 				return err
 			}
 			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
 		}
-		ms.Root = signingRoot[:]
-		ms.Block = block
+		s.Root = signingRoot[:]
+		s.Block = block
 	}
 	return nil
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
-	if ms.State == nil {
-		ms.State = &stateTrie.BeaconState{}
+func (s *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
+	if s.State == nil {
+		s.State = &stateTrie.BeaconState{}
 	}
-	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
-		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
+	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
 	}
-	if err := ms.State.SetSlot(block.Block.Slot); err != nil {
+	if err := s.State.SetSlot(block.Block.Slot); err != nil {
 		return err
 	}
-	ms.BlocksReceived = append(ms.BlocksReceived, block)
+	s.BlocksReceived = append(s.BlocksReceived, block)
 	signingRoot, err := block.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
-	if ms.DB != nil {
-		if err := ms.DB.SaveBlock(ctx, block); err != nil {
+	if s.DB != nil {
+		if err := s.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
 		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
 	}
-	ms.Root = signingRoot[:]
-	ms.Block = block
+	s.Root = signingRoot[:]
+	s.Block = block
 	return nil
 }
 
 // HeadSlot mocks HeadSlot method in chain service.
-func (ms *ChainService) HeadSlot() uint64 {
-	if ms.State == nil {
+func (s *ChainService) HeadSlot() uint64 {
+	if s.State == nil {
 		return 0
 	}
-	return ms.State.Slot()
+	return s.State.Slot()
 }
 
 // HeadRoot mocks HeadRoot method in chain service.
-func (ms *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
-	if len(ms.Root) > 0 {
-		return ms.Root, nil
+func (s *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
+	if len(s.Root) > 0 {
+		return s.Root, nil
 	}
 	return make([]byte, 32), nil
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (ms *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, error) {
-	return ms.Block, nil
+func (s *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, error) {
+	return s.Block, nil
 }
 
 // HeadState mocks HeadState method in chain service.
-func (ms *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
-	return ms.State, nil
+func (s *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
+	return s.State, nil
 }
 
 // CurrentFork mocks HeadState method in chain service.
-func (ms *ChainService) CurrentFork() *pb.Fork {
-	return ms.Fork
+func (s *ChainService) CurrentFork() *pb.Fork {
+	return s.Fork
 }
 
 // FinalizedCheckpt mocks FinalizedCheckpt method in chain service.
-func (ms *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
-	return ms.FinalizedCheckPoint
+func (s *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
+	return s.FinalizedCheckPoint
 }
 
 // CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
-func (ms *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	return ms.CurrentJustifiedCheckPoint
+func (s *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	return s.CurrentJustifiedCheckPoint
 }
 
 // PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
-func (ms *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	return ms.PreviousJustifiedCheckPoint
+func (s *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	return s.PreviousJustifiedCheckPoint
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
-func (ms *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
+func (s *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
 	return nil
 }
 
 // ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
-func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
+func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (ms *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (*stateTrie.BeaconState, error) {
-	return ms.State, nil
+func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (*stateTrie.BeaconState, error) {
+	return s.State, nil
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (ms *ChainService) HeadValidatorsIndices(_ context.Context, epoch uint64) ([]uint64, error) {
-	if ms.State == nil {
+func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch uint64) ([]uint64, error) {
+	if s.State == nil {
 		return []uint64{}, nil
 	}
-	return helpers.ActiveValidatorIndices(ms.State, epoch)
+	return helpers.ActiveValidatorIndices(s.State, epoch)
 }
 
 // HeadSeed mocks the same method in the chain service.
-func (ms *ChainService) HeadSeed(_ context.Context, epoch uint64) ([32]byte, error) {
-	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
+func (s *ChainService) HeadSeed(_ context.Context, epoch uint64) ([32]byte, error) {
+	return helpers.Seed(s.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // HeadETH1Data provides the current ETH1Data of the head state.
-func (ms *ChainService) HeadETH1Data() *ethpb.Eth1Data {
-	return ms.ETH1Data
+func (s *ChainService) HeadETH1Data() *ethpb.Eth1Data {
+	return s.ETH1Data
 }
 
 // ProtoArrayStore mocks the same method in the chain service.
-func (ms *ChainService) ProtoArrayStore() *protoarray.Store {
-	return ms.ForkChoiceStore
+func (s *ChainService) ProtoArrayStore() *protoarray.Store {
+	return s.ForkChoiceStore
 }
 
 // GenesisTime mocks the same method in the chain service.
-func (ms *ChainService) GenesisTime() time.Time {
-	return ms.Genesis
+func (s *ChainService) GenesisTime() time.Time {
+	return s.Genesis
 }
 
 // GenesisValidatorRoot mocks the same method in the chain service.
-func (ms *ChainService) GenesisValidatorRoot() [32]byte {
-	return ms.ValidatorsRoot
+func (s *ChainService) GenesisValidatorRoot() [32]byte {
+	return s.ValidatorsRoot
 }
 
 // CurrentSlot mocks the same method in the chain service.
-func (ms *ChainService) CurrentSlot() uint64 {
-	if ms.Slot != nil {
-		return *ms.Slot
+func (s *ChainService) CurrentSlot() uint64 {
+	if s.Slot != nil {
+		return *s.Slot
 	}
-	return uint64(time.Now().Unix()-ms.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot
+	return uint64(time.Now().Unix()-s.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot
 }
 
 // Participation mocks the same method in the chain service.
-func (ms *ChainService) Participation(_ uint64) *precompute.Balance {
-	return ms.Balance
+func (s *ChainService) Participation(_ uint64) *precompute.Balance {
+	return s.Balance
 }
 
 // IsValidAttestation always returns true.
-func (ms *ChainService) IsValidAttestation(_ context.Context, _ *ethpb.Attestation) bool {
-	return ms.ValidAttestation
+func (s *ChainService) IsValidAttestation(_ context.Context, _ *ethpb.Attestation) bool {
+	return s.ValidAttestation
 }
 
 // IsCanonical returns and determines whether a block with the provided root is part of
 // the canonical chain.
-func (ms *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) {
-	if ms.CanonicalRoots != nil {
-		_, ok := ms.CanonicalRoots[r]
+func (s *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) {
+	if s.CanonicalRoots != nil {
+		_, ok := s.CanonicalRoots[r]
 		return ok, nil
 	}
 	return true, nil
 }
 
 // HasInitSyncBlock mocks the same method in the chain service.
-func (ms *ChainService) HasInitSyncBlock(_ [32]byte) bool {
+func (s *ChainService) HasInitSyncBlock(_ [32]byte) bool {
 	return false
 }
 
 // HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
-func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
+func (s *ChainService) HeadGenesisValidatorRoot() [32]byte {
 	return [32]byte{}
 }
 
 // VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
-func (ms *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error {
-	return ms.VerifyBlkDescendantErr
+func (s *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error {
+	return s.VerifyBlkDescendantErr
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
+func (s *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
 	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
 		return errors.New("LMD and FFG miss matched")
 	}
@@ -374,8 +374,8 @@ func (ms *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Atte
 }
 
 // VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
-func (ms *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) error {
-	if !bytes.Equal(r, ms.FinalizedCheckPoint.Root) {
+func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) error {
+	if !bytes.Equal(r, s.FinalizedCheckPoint.Root) {
 		return errors.New("Root and finalized store are not consistent")
 	}
 	return nil
