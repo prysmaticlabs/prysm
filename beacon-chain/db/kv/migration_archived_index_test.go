@@ -64,7 +64,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 				err := db.View(func(tx *bbolt.Tx) error {
 					k := uint64(2048)
 					v := tx.Bucket(stateSlotIndicesBucket).Get(bytesutil.Uint64ToBytesBigEndian(k))
-					assert.DeepEqual(t, []byte("foo"), v, fmt.Sprintf("did not receive correct data for key %d", k))
+					assert.DeepEqual(t, []byte("foo"), v, "Did not receive correct data for key %d", k)
 					return nil
 				})
 				assert.NoError(t, err)
