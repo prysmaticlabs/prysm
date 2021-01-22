@@ -139,7 +139,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		if i%2 == 0 {
 			assert.DeepEqual(t, expectedRoot1[:], gotRoot, "Unexpected root on chain 1")
 		} else {
-			assert.DeepEqual(t, expectedRoot2[:], gotRoot, "unexpected root on chain 2")
+			assert.DeepEqual(t, expectedRoot2[:], gotRoot, "Unexpected root on chain 2")
 		}
 		wg.Done()
 	}
