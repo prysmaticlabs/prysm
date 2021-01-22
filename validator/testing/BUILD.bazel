@@ -3,8 +3,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "protector_mock.go",
-        "slasher_mock.go",
+        "mock_protector.go",
+        "mock_slasher.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/testing",
     visibility = ["//validator:__subpackages__"],
