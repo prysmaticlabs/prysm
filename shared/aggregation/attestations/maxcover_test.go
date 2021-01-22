@@ -10,7 +10,6 @@ import (
 )
 
 func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
-	t.Skip("skipped for now")
 	type args struct {
 		atts []*ethpb.Attestation
 	}
