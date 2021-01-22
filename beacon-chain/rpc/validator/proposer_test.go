@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"bytes"
 	"context"
 	"math/big"
 	"testing"
@@ -1284,9 +1283,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count at earliest valid time - choose highest count", func(t *testing.T) {
@@ -1321,9 +1318,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("earliest")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count at latest valid time - choose highest count", func(t *testing.T) {
@@ -1358,9 +1353,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("latest")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count before range - choose highest count within range", func(t *testing.T) {
@@ -1396,9 +1389,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count after range - choose highest count within range", func(t *testing.T) {
@@ -1434,9 +1425,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count on unknown block - choose known block with highest count", func(t *testing.T) {
@@ -1472,9 +1461,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no blocks in range - choose current eth1data", func(t *testing.T) {
@@ -1504,9 +1491,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("current")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no votes in range - choose most recent block", func(t *testing.T) {
@@ -1542,9 +1527,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "second")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no votes - choose more recent block", func(t *testing.T) {
@@ -1574,9 +1557,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "latest")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no votes and more recent block has less deposits - choose current eth1data", func(t *testing.T) {
@@ -1607,9 +1588,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("current")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("same count - choose more recent block", func(t *testing.T) {
@@ -1644,9 +1623,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("second")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count on block with less deposits - choose another block", func(t *testing.T) {
@@ -1682,7 +1659,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("second")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("only one block at earliest valid time - choose this block", func(t *testing.T) {
@@ -1712,7 +1689,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("earliest")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("vote on last block before range - choose next block", func(t *testing.T) {
@@ -1747,7 +1724,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "first")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no deposits - choose chain start eth1data", func(t *testing.T) {
@@ -1785,7 +1762,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("eth1data")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 }
 
