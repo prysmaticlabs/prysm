@@ -49,6 +49,9 @@ type ValidatorDB interface {
 	SaveAttestationForPubKey(
 		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 	) error
+	SaveAttestationsForPubKey(
+		ctx context.Context, pubKey [48]byte, signingRoots [][32]byte, atts []*ethpb.IndexedAttestation,
+	) error
 	AttestationHistoryForPubKey(
 		ctx context.Context, pubKey [48]byte,
 	) ([]*kv.AttestationRecord, error)

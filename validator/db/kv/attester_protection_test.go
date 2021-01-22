@@ -303,6 +303,46 @@ func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	require.Equal(t, uint64(199), got)
 }
 
+func TestStore_SaveAttestationsForPubKey(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 1
+	pubKeys := make([][48]byte, numValidators)
+	validatorDB := setupDB(t, pubKeys)
+	atts := make([]*ethpb.IndexedAttestation, 0)
+	signingRoots := make([][32]byte, 0)
+	for i := 1; i < 10; i++ {
+		atts = append(atts, createAttestation(uint64(i-1), uint64(i)))
+		var sr [32]byte
+		copy(sr[:], fmt.Sprintf("%d", i))
+		signingRoots = append(signingRoots, sr)
+	}
+	err := validatorDB.SaveAttestationsForPubKey(
+		ctx,
+		pubKeys[0],
+		signingRoots[:1],
+		atts,
+	)
+	require.ErrorContains(t, "does not match number of attestations", err)
+	err = validatorDB.SaveAttestationsForPubKey(
+		ctx,
+		pubKeys[0],
+		signingRoots,
+		atts,
+	)
+	require.NoError(t, err)
+	for _, att := range atts {
+		// Ensure the same attestations but different signing root lead to double votes.
+		slashingKind, err := validatorDB.CheckSlashableAttestation(
+			ctx,
+			pubKeys[0],
+			[32]byte{},
+			att,
+		)
+		require.NotNil(t, err)
+		require.Equal(t, DoubleVote, slashingKind)
+	}
+}
+
 func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx, cancel := context.WithCancel(context.Background())

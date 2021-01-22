@@ -164,6 +164,29 @@ func (s *Store) CheckSlashableAttestation(
 	return slashKind, err
 }
 
+// SaveAttestationsForPubKey stores a batch of attestations all at once.
+func (s *Store) SaveAttestationsForPubKey(
+	ctx context.Context, pubKey [48]byte, signingRoots [][32]byte, atts []*ethpb.IndexedAttestation,
+) error {
+	if len(signingRoots) != len(atts) {
+		return fmt.Errorf(
+			"number of signing roots %d does not match number of attestations %d",
+			len(signingRoots),
+			len(atts),
+		)
+	}
+	records := make([]*AttestationRecord, len(atts))
+	for i, a := range atts {
+		records[i] = &AttestationRecord{
+			PubKey:      pubKey,
+			Source:      a.Data.Source.Epoch,
+			Target:      a.Data.Target.Epoch,
+			SigningRoot: signingRoots[i],
+		}
+	}
+	return s.saveAttestationRecords(ctx, records)
+}
+
 // SaveAttestationForPubKey saves an attestation for a validator public
 // key for local validator slashing protection.
 func (s *Store) SaveAttestationForPubKey(
