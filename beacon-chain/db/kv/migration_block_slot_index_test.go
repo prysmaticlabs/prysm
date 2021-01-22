@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"

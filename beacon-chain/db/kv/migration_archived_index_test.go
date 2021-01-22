@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
