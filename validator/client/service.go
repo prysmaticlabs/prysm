@@ -330,7 +330,10 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 	}
 	validatingPubKeysChan := make(chan [][48]byte, 1)
 	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
 	for {
 		select {
 		case keys := <-validatingPubKeysChan:
