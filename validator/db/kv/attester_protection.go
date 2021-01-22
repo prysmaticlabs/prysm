@@ -48,6 +48,8 @@ var (
 	surroundedVoteMessage  = "attestation with (source %d, target %d) is surrounded by another with (source %d, target %d)"
 )
 
+// AttestationHistoryForPubKey retrieves a list of attestation records for data
+// we have stored in the database for the given validator public key.
 func (store *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte) ([]*AttestationRecord, error) {
 	records := make([]*AttestationRecord, 0)
 	err := store.view(func(tx *bolt.Tx) error {
