@@ -211,7 +211,16 @@ func (ns *Server) PeerCount(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeerCo
 	ctx, span := trace.StartSpan(ctx, "nodev1.PeerCount")
 	defer span.End()
 
-	return nil, errors.New("unimplemented")
+	peerStatus := ns.PeersFetcher.Peers()
+
+	return &ethpb.PeerCountResponse{
+		Data: &ethpb.PeerCountResponse_PeerCount{
+			Disconnected:  uint64(len(peerStatus.Disconnected())),
+			Connecting:    uint64(len(peerStatus.Connecting())),
+			Connected:     uint64(len(peerStatus.Connected())),
+			Disconnecting: uint64(len(peerStatus.Disconnecting())),
+		},
+	}, nil
 }
 
 // GetVersion requests that the beacon node identify information about its implementation in a

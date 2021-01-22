@@ -14,34 +14,23 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 		atts []*ethpb.Attestation
 	}
 	tests := []struct {
-		name      string
-		args      args
-		want      *aggregation.MaxCoverProblem
-		wantedErr string
+		name string
+		args args
+		want *aggregation.MaxCoverProblem
 	}{
 		{
 			name: "nil attestations",
 			args: args{
 				atts: nil,
 			},
-			wantedErr: ErrInvalidAttestationCount.Error(),
+			want: &aggregation.MaxCoverProblem{Candidates: []*aggregation.MaxCoverCandidate{}},
 		},
 		{
 			name: "no attestations",
 			args: args{
 				atts: []*ethpb.Attestation{},
 			},
-			wantedErr: ErrInvalidAttestationCount.Error(),
-		},
-		{
-			name: "attestations of different bitlist length",
-			args: args{
-				atts: []*ethpb.Attestation{
-					{AggregationBits: bitfield.NewBitlist(64)},
-					{AggregationBits: bitfield.NewBitlist(128)},
-				},
-			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
+			want: &aggregation.MaxCoverProblem{Candidates: []*aggregation.MaxCoverCandidate{}},
 		},
 		{
 			name: "single attestation",
@@ -80,13 +69,7 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewMaxCover(tt.args.atts)
-			if tt.wantedErr != "" {
-				assert.ErrorContains(t, tt.wantedErr, err)
-			} else {
-				assert.NoError(t, err)
-				assert.DeepEqual(t, tt.want, got)
-			}
+			assert.DeepEqual(t, tt.want, NewMaxCover(tt.args.atts))
 		})
 	}
 }
