@@ -72,7 +72,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 					sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 					numEpochs := uint64(50)
 
-					// Verify we have signing roots for Target epochs 1 to 50 correctly.
+					// Verify we have signing roots for target epochs 1 to 50 correctly.
 					for targetEpoch := uint64(1); targetEpoch <= numEpochs; targetEpoch++ {
 						var sr [32]byte
 						copy(sr[:], fmt.Sprintf("%d", targetEpoch))
@@ -81,7 +81,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 						require.DeepEqual(t, sr[:], migratedSigningRoot)
 					}
 
-					// Verify we have (Source epoch, Target epoch) pairs for epochs 0 to 50 correctly.
+					// Verify we have (source epoch, target epoch) pairs for epochs 0 to 50 correctly.
 					for sourceEpoch := uint64(0); sourceEpoch < numEpochs; sourceEpoch++ {
 						sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
 						targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)
@@ -158,7 +158,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 					sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 					numEpochs := uint64(50)
 
-					// Verify we have signing roots for Target epochs 1 to 50 correctly.
+					// Verify we have signing roots for target epochs 1 to 50 correctly.
 					for targetEpoch := uint64(1); targetEpoch <= numEpochs+1; targetEpoch++ {
 						var sr [32]byte
 						copy(sr[:], fmt.Sprintf("%d", targetEpoch))
@@ -167,7 +167,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 						require.DeepEqual(t, sr[:], migratedSigningRoot)
 					}
 
-					// Verify we have (Source epoch, Target epoch) pairs for epochs 0 to 50 correctly.
+					// Verify we have (source epoch, target epoch) pairs for epochs 0 to 50 correctly.
 					for sourceEpoch := uint64(0); sourceEpoch < numEpochs+1; sourceEpoch++ {
 						sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
 						targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)

@@ -93,7 +93,7 @@ func TestSetTargetData(t *testing.T) {
 			error:       "",
 		},
 		{
-			name:        "higher Target",
+			name:        "higher target",
 			enc:         newDeprecatedAttestingHistory(0),
 			target:      2,
 			source:      100,

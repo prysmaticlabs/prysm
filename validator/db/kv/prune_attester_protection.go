@@ -11,7 +11,7 @@ import (
 
 // PruneAttestationsOlderThanCurrentWeakSubjectivity loops through every
 // public key in the public keys bucket and prunes all attestation data
-// that has Target epochs older than the highest weak subjectivity period
+// that has target epochs older than the highest weak subjectivity period
 // in our database. This routine is meant to run on startup.
 func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Context) error {
 	return s.update(func(tx *bolt.Tx) error {
@@ -35,8 +35,8 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	if sourceEpochsBucket == nil {
 		return nil
 	}
-	// We obtain the highest Source epoch from the Source epochs bucket.
-	// Then, we obtain the corresponding Target epoch for that Source epoch.
+	// We obtain the highest source epoch from the source epochs bucket.
+	// Then, we obtain the corresponding target epoch for that source epoch.
 	highestSourceEpochBytes, _ := sourceEpochsBucket.Cursor().Last()
 	highestTargetEpochBytes := sourceEpochsBucket.Get(highestSourceEpochBytes)
 	highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
@@ -50,9 +50,9 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	return sourceEpochsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToUint64BigEndian(v)
 
-		// For each Source epoch we find, we check
-		// if its associated Target epoch is less than the weak
-		// subjectivity period of the highest written Target epoch
+		// For each source epoch we find, we check
+		// if its associated target epoch is less than the weak
+		// subjectivity period of the highest written target epoch
 		// in the bucket and delete if so.
 		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
 			return sourceEpochsBucket.Delete(k)
@@ -68,7 +68,7 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 		return nil
 	}
 
-	// We obtain the highest Target epoch from the signing roots bucket.
+	// We obtain the highest target epoch from the signing roots bucket.
 	highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
 	highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
 
@@ -80,9 +80,9 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 
 	return signingRootsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToUint64BigEndian(k)
-		// For each Target epoch we find in the bucket, we check
+		// For each target epoch we find in the bucket, we check
 		// if it less than the weak subjectivity period of the
-		// highest written Target epoch in the bucket and delete if so.
+		// highest written target epoch in the bucket and delete if so.
 		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
 			return signingRootsBucket.Delete(k)
 		}

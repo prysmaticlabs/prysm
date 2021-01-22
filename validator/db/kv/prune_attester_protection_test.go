@@ -65,7 +65,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 	require.NoError(t, err)
 
 	// Next, attempt to prune and realize that we pruned everything except for
-	// a signing root at Target = WEAK_SUBJECTIVITY_PERIOD + 1.
+	// a signing root at target = WEAK_SUBJECTIVITY_PERIOD + 1.
 	err = checkAttestingHistoryAfterPruning(
 		t, validatorDB, pubKey, numEpochs, true, /* should be pruned */
 	)
@@ -168,7 +168,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 		signingRoot := signingRootsBkt.Get(targetEpochBytes)
 		storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
 
-		// Expect the correct signing root and Target epoch.
+		// Expect the correct signing root and target epoch.
 		require.DeepEqual(t, expectedSigningRoot[:], signingRoot)
 		require.DeepEqual(t, targetEpochBytes, storedTargetEpoch)
 		return nil
@@ -176,7 +176,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 	require.NoError(t, err)
 }
 
-// Saves attesting history for every (Source, Target = Source + 1) pairs since genesis
+// Saves attesting history for every (source, target = source + 1) pairs since genesis
 // up to a given number of epochs for a validator public key.
 func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs uint64) error {
 	return validatorDB.update(func(tx *bolt.Tx) error {
@@ -196,11 +196,11 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 		for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
 			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
 			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
-			// Save (Source epoch, Target epoch) pairs.
+			// Save (source epoch, target epoch) pairs.
 			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
 				return err
 			}
-			// Save signing root for Target epoch.
+			// Save signing root for target epoch.
 			var signingRoot [32]byte
 			copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 			if err := signingRootsBucket.Put(targetEpochBytes, signingRoot[:]); err != nil {
@@ -236,7 +236,7 @@ func checkAttestingHistoryAfterPruning(
 				var expectedSigningRoot [32]byte
 				copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 				require.DeepEqual(t, expectedSigningRoot[:], signingRoot)
-				// Expect the correct Target epoch.
+				// Expect the correct target epoch.
 				require.DeepEqual(t, targetEpochBytes, storedTargetEpoch)
 			}
 		}

@@ -71,7 +71,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 
 			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 
-			// Extract every single Source, Target, signing root
+			// Extract every single source, target, signing root
 			// from the attesting history then insert them into the
 			// respective buckets under the new db schema.
 			latestEpochWritten, err := attestingHistory.getLatestEpochWritten(ctx)

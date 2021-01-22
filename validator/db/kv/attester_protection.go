@@ -43,9 +43,9 @@ const (
 )
 
 var (
-	doubleVoteMessage      = "double vote found, existing attestation at Target epoch %d with conflicting signing root %#x"
-	surroundingVoteMessage = "attestation with (Source %d, Target %d) surrounds another with (Source %d, Target %d)"
-	surroundedVoteMessage  = "attestation with (Source %d, Target %d) is surrounded by another with (Source %d, Target %d)"
+	doubleVoteMessage      = "double vote found, existing attestation at target epoch %d with conflicting signing root %#x"
+	surroundingVoteMessage = "attestation with (source %d, target %d) surrounds another with (source %d, target %d)"
+	surroundedVoteMessage  = "attestation with (source %d, target %d) is surrounded by another with (source %d, target %d)"
 )
 
 func (store *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte) ([]*AttestationRecord, error) {
@@ -287,7 +287,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			}
 			sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 			if err != nil {
-				return errors.Wrap(err, "could not create Source epochs bucket")
+				return errors.Wrap(err, "could not create source epochs bucket")
 			}
 
 			// There can be multiple attested target epochs per source epoch.
@@ -303,7 +303,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err := sourceEpochsBucket.Put(sourceEpochBytes, existingAttestedTargetsBytes); err != nil {
 				return errors.Wrapf(err, "could not save source epoch %d for epoch %d", att.Source, att.Target)
 			}
-			// Initialize buckets for the lowest Target and Source epochs.
+			// Initialize buckets for the lowest target and source epochs.
 			lowestSourceBucket, err := tx.CreateBucketIfNotExists(lowestSignedSourceBucket)
 			if err != nil {
 				return err
@@ -313,7 +313,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return err
 			}
 
-			// If the incoming Source epoch is lower than the lowest signed Source epoch, override.
+			// If the incoming source epoch is lower than the lowest signed source epoch, override.
 			lowestSignedSourceBytes := lowestSourceBucket.Get(att.PubKey[:])
 			var lowestSignedSourceEpoch uint64
 			if len(lowestSignedSourceBytes) >= 8 {
@@ -327,7 +327,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				}
 			}
 
-			// If the incoming Target epoch is lower than the lowest signed Target epoch, override.
+			// If the incoming target epoch is lower than the lowest signed target epoch, override.
 			lowestSignedTargetBytes := lowestTargetBucket.Get(att.PubKey[:])
 			var lowestSignedTargetEpoch uint64
 			if len(lowestSignedTargetBytes) >= 8 {
@@ -386,7 +386,7 @@ func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byt
 	return signingRoot, err
 }
 
-// LowestSignedSourceEpoch returns the lowest signed Source epoch for a validator public key.
+// LowestSignedSourceEpoch returns the lowest signed source epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
 func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
@@ -409,7 +409,7 @@ func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte)
 	return lowestSignedSourceEpoch, exists, err
 }
 
-// LowestSignedTargetEpoch returns the lowest signed Target epoch for a validator public key.
+// LowestSignedTargetEpoch returns the lowest signed target epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
 func (s *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedTargetEpoch")

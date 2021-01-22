@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// The size of each data entry in bytes for the Source epoch (8 bytes) and signing root (32 bytes).
+	// The size of each data entry in bytes for the source epoch (8 bytes) and signing root (32 bytes).
 	uint64Size             = 8
 	latestEpochWrittenSize = uint64Size
 	targetSize             = uint64Size
@@ -67,7 +67,7 @@ func newDeprecatedAttestingHistory(target uint64) deprecatedEncodedAttestingHist
 	for i := uint64(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
 		enc, err = enc.setTargetData(ctx, i, emptyHistoryData())
 		if err != nil {
-			log.WithError(err).Error("Failed to set empty Target data")
+			log.WithError(err).Error("Failed to set empty target data")
 		}
 	}
 	return enc
@@ -92,8 +92,8 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
-	// Cursor for the location to read Target epoch from.
-	// Modulus of Target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
+	// Cursor for the location to read target epoch from.
+	// Modulus of target epoch X weak subjectivity period in order to have maximum size to the encapsulated data array.
 	cursor := (target%params.BeaconConfig().WeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
 	if uint64(len(dh)) < cursor+historySize {
 		return nil, nil

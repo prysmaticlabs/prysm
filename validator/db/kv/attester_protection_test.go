@@ -30,7 +30,7 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 		want                bool
 	}{
 		{
-			name:                "different signing root at same Target equals a double vote",
+			name:                "different signing root at same target equals a double vote",
 			existingAttestation: createAttestation(0, 1 /* Target */),
 			existingSigningRoot: [32]byte{1},
 			incomingAttestation: createAttestation(0, 1 /* Target */),
@@ -38,7 +38,7 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 			want:                true,
 		},
 		{
-			name:                "same signing root at same Target is safe",
+			name:                "same signing root at same target is safe",
 			existingAttestation: createAttestation(0, 1 /* Target */),
 			existingSigningRoot: [32]byte{1},
 			incomingAttestation: createAttestation(0, 1 /* Target */),
@@ -46,7 +46,7 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 			want:                false,
 		},
 		{
-			name:                "different signing root at different Target is safe",
+			name:                "different signing root at different target is safe",
 			existingAttestation: createAttestation(0, 1 /* Target */),
 			existingSigningRoot: [32]byte{1},
 			incomingAttestation: createAttestation(0, 2 /* Target */),
@@ -54,7 +54,7 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 			want:                false,
 		},
 		{
-			name:                "no data stored at Target should not be considered a double vote",
+			name:                "no data stored at target should not be considered a double vote",
 			existingAttestation: createAttestation(0, 1 /* Target */),
 			existingSigningRoot: [32]byte{1},
 			incomingAttestation: createAttestation(0, 2 /* Target */),
@@ -119,7 +119,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	pubKeys := make([][48]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 
-	// Attest to every (Source = epoch, Target = epoch + 1) sequential pair
+	// Attest to every (source = epoch, target = epoch + 1) sequential pair
 	// since genesis up to and including the weak subjectivity period epoch (54,000).
 	err := validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
@@ -480,7 +480,7 @@ func benchCheckSurroundVote(
 		require.NoError(b, validatorDB.Close(), "Failed to close database")
 		require.NoError(b, validatorDB.ClearDB(), "Failed to clear database")
 	}()
-	// Every validator will have attested every (Source, Target) sequential pair
+	// Every validator will have attested every (source, target) sequential pair
 	// since genesis up to and including the weak subjectivity period epoch (54,000).
 	err = validatorDB.update(func(tx *bolt.Tx) error {
 		for _, pubKey := range pubKeys {

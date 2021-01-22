@@ -8,9 +8,9 @@ var (
 	historicProposalsBucket            = []byte("proposal-history-bucket-interchange")
 	deprecatedAttestationHistoryBucket = []byte("attestation-history-bucket-interchange")
 
-	// Buckets for lowest signed Source and Target epoch for individual validator.
-	lowestSignedSourceBucket = []byte("lowest-signed-Source-bucket")
-	lowestSignedTargetBucket = []byte("lowest-signed-Target-bucket")
+	// Buckets for lowest signed source and target epoch for individual validator.
+	lowestSignedSourceBucket = []byte("lowest-signed-source-bucket")
+	lowestSignedTargetBucket = []byte("lowest-signed-target-bucket")
 
 	// Lowest and highest signed proposals.
 	lowestSignedProposalsBucket  = []byte("lowest-signed-proposals-bucket")
@@ -25,7 +25,7 @@ var (
 	// Optimized slashing protection buckets and keys.
 	pubKeysBucket                 = []byte("pubkeys-bucket")
 	attestationSigningRootsBucket = []byte("att-signing-roots-bucket")
-	attestationSourceEpochsBucket = []byte("att-Source-epochs-bucket")
+	attestationSourceEpochsBucket = []byte("att-source-epochs-bucket")
 
 	// Migrations
 	migrationsBucket = []byte("migrations")
