@@ -302,9 +302,11 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 	}
 
 	// When specified, a graffiti from the ordered list in the file take fourth priority.
-	if len(v.graffitiStruct.Ordered) != 0 {
-		graffiti := v.graffitiStruct.Ordered[v.graffitiOrderedIndex]
-		v.graffitiOrderedIndex = (v.graffitiOrderedIndex + 1) % uint(len(v.graffitiStruct.Ordered))
+	if v.graffitiStruct.Ordered != nil && len(v.graffitiStruct.Ordered.List) != 0 {
+		ordered := v.graffitiStruct.Ordered
+		index := (ordered.StartingIndex + ordered.Offset) % uint64(len(ordered.List))
+		graffiti := ordered.List[index]
+		ordered.Offset = ordered.Offset + 1
 		return []byte(graffiti), nil
 	}
 

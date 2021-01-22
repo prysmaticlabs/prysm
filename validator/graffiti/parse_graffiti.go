@@ -9,8 +9,14 @@ import (
 type Graffiti struct {
 	Default  string            `yaml:"default,omitempty"`
 	Random   []string          `yaml:"random,omitempty"`
-	Ordered  []string          `yaml:"ordered,omitempty"`
+	Ordered  *Ordered          `yaml:"ordered,omitempty"`
 	Specific map[uint64]string `yaml:"specific,omitempty"`
+}
+
+type Ordered struct {
+	List          []string `yaml:"list,omitempty"`
+	StartingIndex uint64   `yaml:"starting_index,omitempty"`
+	Offset        uint64
 }
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.

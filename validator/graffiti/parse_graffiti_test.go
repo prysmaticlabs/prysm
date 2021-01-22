@@ -54,9 +54,11 @@ func TestParseGraffitiFile_Random(t *testing.T) {
 
 func TestParseGraffitiFile_Ordered(t *testing.T) {
 	input := []byte(`ordered:
-  - "Mr D was here"
-  - "Mr E was here"
-  - "Mr F was here"`)
+  list:
+    - "Mr D was here"
+    - "Mr E was here"
+    - "Mr F was here"
+  starting_index: 1`)
 
 	dirName := t.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, os.ModePerm)
@@ -68,10 +70,13 @@ func TestParseGraffitiFile_Ordered(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		Ordered: []string{
-			"Mr D was here",
-			"Mr E was here",
-			"Mr F was here",
+		Ordered: &Ordered{
+			List: []string{
+				"Mr D was here",
+				"Mr E was here",
+				"Mr F was here",
+			},
+			StartingIndex: uint64(1),
 		},
 	}
 	require.DeepEqual(t, wanted, got)
@@ -112,9 +117,11 @@ random:
   - "Mr C was here"
 
 ordered:
-  - "Mr D was here"
-  - "Mr E was here"
-  - "Mr F was here"
+  list:
+    - "Mr D was here"
+    - "Mr E was here"
+    - "Mr F was here"
+  starting_index: 1
 
 specific:
   1234: Yolo
@@ -137,10 +144,13 @@ specific:
 			"Mr B was here",
 			"Mr C was here",
 		},
-		Ordered: []string{
-			"Mr D was here",
-			"Mr E was here",
-			"Mr F was here",
+		Ordered: &Ordered{
+			List: []string{
+				"Mr D was here",
+				"Mr E was here",
+				"Mr F was here",
+			},
+			StartingIndex: uint64(1),
 		},
 		Specific: map[uint64]string{
 			1234:   "Yolo",

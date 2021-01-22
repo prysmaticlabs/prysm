@@ -88,7 +88,6 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	graffitiStruct                     *graffiti.Graffiti
-	graffitiOrderedIndex               uint
 }
 
 // Done cleans up the validator.

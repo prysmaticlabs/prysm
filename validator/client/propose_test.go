@@ -716,11 +716,14 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	v := &validator{
 		validatorClient: m.validatorClient,
 		graffitiStruct: &graffiti.Graffiti{
-			Ordered: []string{"a", "b", "c"},
+			Ordered: &graffiti.Ordered{
+				List:          []string{"a", "b", "c"},
+				StartingIndex: 1,
+			},
 			Default: "c",
 		},
 	}
-	for _, want := range [][]byte{[]byte{'a'}, []byte{'b'}, []byte{'c'}, []byte{'a'}} {
+	for _, want := range [][]byte{[]byte{'b'}, []byte{'c'}, []byte{'a'}, []byte{'b'}} {
 		got, err := v.getGraffiti(context.Background(), pubKey)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, got)
