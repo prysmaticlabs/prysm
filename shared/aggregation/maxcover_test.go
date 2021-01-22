@@ -492,7 +492,7 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 	}
 }
 
-func TestMaxCover_MaxCoverProblem_MaxCover(t *testing.T) {
+func TestMaxCover_MaxCover(t *testing.T) {
 	problemSet := func() []*bitfield.Bitlist64 {
 		return []*bitfield.Bitlist64{
 			bitfield.NewBitlist64From([]uint64{0b00000100}),

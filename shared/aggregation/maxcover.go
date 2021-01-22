@@ -95,7 +95,7 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error
 	return solution, nil
 }
 
-// Todo: remove previous implementation
+// MaxCover finds the k-cover of Maximum Coverage problem.
 func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (selected, coverage *bitfield.Bitlist64, err error) {
 	if len(candidates) == 0 {
 		return nil, nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
@@ -117,6 +117,7 @@ func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (sele
 
 	attempts := 0
 	ret := bitfield.NewBitlist64(candidates[0].Len())
+	indices := make([]int, usableCandidates.Count())
 	for selectedCandidates.Count() < uint64(k) && usableCandidates.Count() > 0 {
 		// Safe-guard, each iteration should come with at least one candidate selected.
 		if attempts > k {
@@ -127,9 +128,7 @@ func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (sele
 		// Greedy select the next best candidate (from usable ones) to cover the remaining bits maximally.
 		maxScore := uint64(0)
 		bestIdx := uint64(0)
-		// todo move up (no need to make indeces everytime,
-		// their number is strictly decreasing, so make once then indices[:0]
-		indices := make([]int, usableCandidates.Count())
+		indices = indices[0:usableCandidates.Count()]
 		usableCandidates.NoAllocBitIndices(indices)
 		for _, idx := range indices {
 			// Score is calculated by taking into account uncovered bits only.

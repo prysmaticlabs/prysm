@@ -172,7 +172,7 @@ func BenchmarkMaxCoverProblem_MaxCover(b *testing.B) {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				MaxCover(bitlists, len(bitlists), tt.allowOverlaps)
+				_, _, _ = MaxCover(bitlists, len(bitlists), tt.allowOverlaps)
 			}
 		})
 	}
