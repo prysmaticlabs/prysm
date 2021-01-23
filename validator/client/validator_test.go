@@ -616,17 +616,20 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
-	client.EXPECT().GetDuties(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(resp, nil)
-
+	var wg sync.WaitGroup
+	wg.Add(1)
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(nil, nil)
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error){
+		wg.Done()
+		return nil, nil
+	})
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+
+	testutil.WaitTimeout(&wg, 3*time.Second)
+
 	for range blacklistedPublicKeys {
 		assert.LogsContain(t, hook, "Not including slashable public key")
 	}
