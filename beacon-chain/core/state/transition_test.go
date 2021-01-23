@@ -1,7 +1,6 @@
 package state_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -101,9 +100,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	mix, err := beaconState.RandaoMixAtIndex(1)
 	require.NoError(t, err)
-	if bytes.Equal(mix, oldMix) {
-		t.Errorf("Did not expect new and old randao mix to equal, %#x == %#x", mix, oldMix)
-	}
+	assert.DeepNotEqual(t, oldMix, mix, "Did not expect new and old randao mix to equal")
 }
 
 func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {

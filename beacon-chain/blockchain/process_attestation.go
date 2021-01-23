@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -19,7 +20,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 
 // onAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
 // it to the DB. As a stateless function, this does not hold nor delay attestation based on the spec descriptions.
-// The delay is handled by the caller in `processAttestation`.
+// The delay is handled by the caller in `processAttestations`.
 //
 // Spec pseudocode definition:
 //   def on_attestation(store: Store, attestation: Attestation) -> None:
@@ -39,15 +40,15 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //
 //    # Update latest messages for attesting indices
 //    update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
+func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
 	if err := helpers.ValidateNilAttestation(a); err != nil {
-		return nil, err
+		return err
 	}
 	if err := helpers.ValidateSlotTargetEpoch(a.Data); err != nil {
-		return nil, err
+		return err
 	}
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
 
@@ -59,19 +60,19 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	// save it to the cache.
 	baseState, err := s.getAttPreState(ctx, tgt)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	genesisTime := baseState.GenesisTime()
 
 	// Verify attestation target is from current epoch or previous epoch.
 	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(timeutils.Now().Unix()), tgt); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Verify attestation beacon block is known and not from the future.
 	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestation beacon block")
+		return errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
 	// Note that LMG GHOST and FFG consistency check is ignored because it was performed in sync's validation pipeline:
@@ -79,13 +80,20 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-		return nil, err
+		return err
 	}
 
-	// Use the target state to validate attestation and calculate the committees.
-	indexedAtt, err := s.verifyAttestationIndices(ctx, baseState, a)
+	// Use the target state to verify attesting indices are valid.
+	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
+	if err != nil {
+		return err
+	}
+	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+		return err
 	}
 
 	// Note that signature verification is ignored here because it was performed in sync's validation pipeline:
@@ -95,5 +103,5 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	// Update forkchoice store with the new attestation for updating weight.
 	s.forkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 
-	return indexedAtt.AttestingIndices, nil
+	return nil
 }

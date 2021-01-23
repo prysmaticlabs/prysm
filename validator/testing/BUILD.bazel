@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "protection_history.go",
         "protector_mock.go",
         "slasher_mock.go",
     ],
@@ -10,6 +11,12 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/slashing:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
+        "//validator/db/kv:go_default_library",
+        "//validator/slashing-protection/local/standard-protection-format/format:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
