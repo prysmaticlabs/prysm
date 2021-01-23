@@ -115,8 +115,8 @@ func TestGetSlotTickerWithOffset_OK(t *testing.T) {
 	secondsPerSlot := uint64(4)
 	offset := time.Duration(secondsPerSlot/2) * time.Second
 
-	offsetTicker := StartWithOffset(genesisTime, offset, secondsPerSlot)
-	normalTicker := Start(genesisTime, secondsPerSlot)
+	offsetTicker := NewWithOffset(genesisTime, offset, secondsPerSlot)
+	normalTicker := New(genesisTime, secondsPerSlot)
 
 	firstTicked := 0
 	for {

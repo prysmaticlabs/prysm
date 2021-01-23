@@ -118,7 +118,7 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan struct
 		log.Warn("Genesis time received, now available to process attestations")
 	}
 
-	st := slotutil.Start(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	st := slotutil.New(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-s.ctx.Done():

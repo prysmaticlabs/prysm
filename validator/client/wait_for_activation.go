@@ -108,7 +108,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 		break
 	}
 
-	v.ticker = slotutil.Start(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slotutil.New(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	return nil
 }
 

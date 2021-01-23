@@ -38,8 +38,8 @@ func (s *SlotTicker) Done() {
 	}()
 }
 
-// Start starts and returns a new SlotTicker instance.
-func Start(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
+// New starts and returns a new SlotTicker instance.
+func New(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 	if genesisTime.IsZero() {
 		panic("zero genesis time")
 	}
@@ -51,9 +51,9 @@ func Start(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 	return ticker
 }
 
-// StartWithOffset starts and returns a SlotTicker instance that allows a offset of time from genesis,
+// NewWithOffset starts and returns a SlotTicker instance that allows a offset of time from genesis,
 // entering a offset greater than secondsPerSlot is not allowed.
-func StartWithOffset(genesisTime time.Time, offset time.Duration, secondsPerSlot uint64) *SlotTicker {
+func NewWithOffset(genesisTime time.Time, offset time.Duration, secondsPerSlot uint64) *SlotTicker {
 	if genesisTime.Unix() == 0 {
 		panic("zero genesis time")
 	}

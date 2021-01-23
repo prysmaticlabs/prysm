@@ -103,7 +103,7 @@ func (bs *Server) ListAttestations(
 }
 
 // ListIndexedAttestations retrieves indexed attestations by block root.
-// IndexedAttestationsForEpoch are sorted by data slot by default. Start-end epoch
+// IndexedAttestationsForEpoch are sorted by data slot by default. New-end epoch
 // filter is used to retrieve blocks with.
 //
 // The server may return an empty list when no attestations match the given
@@ -334,7 +334,7 @@ func (bs *Server) StreamIndexedAttestations(
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 	twoThirdsASlot := 2 * slotutil.DivideSlotBy(3) /* 2/3 slot duration */
-	ticker := slotutil.StartWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-ticker.C():
