@@ -239,7 +239,7 @@ func (b *BeaconNode) Start() {
 	b.lock.Lock()
 
 	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
+		"version": version.Version(),
 	}).Info("Starting beacon node")
 
 	b.services.StartAll()

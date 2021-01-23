@@ -118,7 +118,7 @@ func (c *ValidatorClient) Start() {
 	c.lock.Lock()
 
 	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
+		"version": version.Version(),
 	}).Info("Starting validator node")
 
 	c.services.StartAll()

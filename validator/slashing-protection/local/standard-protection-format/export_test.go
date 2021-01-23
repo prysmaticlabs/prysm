@@ -19,7 +19,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 	validatorDB := dbtest.SetupDB(t, pubKeys)
 
 	// No attestation history stored should return empty.
-	signedAttestations, err := getSignedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+	signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(signedAttestations))
 
@@ -37,7 +37,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 	)))
 
 	// We then retrieve the signed attestations and expect a correct result.
-	signedAttestations, err = getSignedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+	signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
 
 	wanted := []*format.SignedAttestation{
@@ -63,7 +63,7 @@ func Test_getSignedBlocksByPubKey(t *testing.T) {
 	validatorDB := dbtest.SetupDB(t, pubKeys)
 
 	// No highest and/or lowest signed blocks will return empty.
-	signedBlocks, err := getSignedBlocksByPubKey(ctx, validatorDB, pubKeys[0])
+	signedBlocks, err := signedBlocksByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(signedBlocks))
 
@@ -83,7 +83,7 @@ func Test_getSignedBlocksByPubKey(t *testing.T) {
 
 	// We expect a valid proposal history containing slot 1 and slot 5 only
 	// when we attempt to retrieve it from disk.
-	signedBlocks, err = getSignedBlocksByPubKey(ctx, validatorDB, pubKeys[0])
+	signedBlocks, err = signedBlocksByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
 	wanted := []*format.SignedBlock{
 		{

@@ -119,7 +119,7 @@ func (n *SlasherNode) Start() {
 	n.lock.Unlock()
 
 	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
+		"version": version.Version(),
 	}).Info("Starting slasher client")
 
 	stop := n.stop

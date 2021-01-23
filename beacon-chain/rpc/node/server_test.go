@@ -71,7 +71,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 }
 
 func TestNodeServer_GetVersion(t *testing.T) {
-	v := version.GetVersion()
+	v := version.Version()
 	ns := &Server{}
 	res, err := ns.GetVersion(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)
