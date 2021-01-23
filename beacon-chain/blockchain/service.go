@@ -263,7 +263,7 @@ func (s *Service) Start() {
 		}()
 	}
 
-	go s.processAttestation(attestationProcessorSubscribed)
+	go s.processAttestationsRoutine(attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1

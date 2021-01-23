@@ -5,10 +5,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
-var msgKeymanagerNotSupported = "keymanager kind not supported: %s"
-
 var (
-	// ErrCouldNotInitializeKeymanager informs about failed keymanager initialization
+	errKeymanagerNotSupported = "keymanager kind not supported: %s"
+	// MsgCouldNotInitializeKeymanager informs about failed keymanager initialization
 	ErrCouldNotInitializeKeymanager = "could not initialize keymanager"
 )
 

@@ -16,6 +16,9 @@ var (
 	lowestSignedProposalsBucket  = []byte("lowest-signed-proposals-bucket")
 	highestSignedProposalsBucket = []byte("highest-signed-proposals-bucket")
 
+	// Slashable public keys bucket.
+	slashablePublicKeysBucket = []byte("slashable-public-keys")
+
 	// Genesis validators root bucket key.
 	genesisValidatorsRootKey = []byte("genesis-val-root")
 

@@ -1,4 +1,4 @@
-package slashingprotection
+package iface
 
 import (
 	"context"

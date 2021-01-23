@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -111,4 +112,11 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 // DeleteAccounts for a derived keymanager.
 func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
 	return km.importedKM.DeleteAccounts(ctx, publicKeys)
+}
+
+// SubscribeAccountChanges creates an event subscription for a channel
+// to listen for public key changes at runtime, such as when new validator accounts
+// are imported into the keymanager while the validator process is running.
+func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	return dr.importedKM.SubscribeAccountChanges(pubKeysChan)
 }

@@ -114,7 +114,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
-		return fmt.Errorf(msgKeymanagerNotSupported, w.KeymanagerKind())
+		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }

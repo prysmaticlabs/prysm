@@ -7,11 +7,17 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
@@ -80,4 +86,35 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	a.Data.BeaconBlockRoot = r33[:]
 	err = service.VerifyLmdFfgConsistency(context.Background(), a)
 	require.NoError(t, err, "Could not verify LMD and FFG votes to be consistent")
+}
+
+func TestProcessAttestations_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	cfg := &Config{
+		BeaconDB:        beaconDB,
+		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
+		StateGen:        stategen.New(beaconDB),
+		AttPool:         attestations.NewPool(),
+	}
+	service, err := NewService(ctx, cfg)
+	service.genesisTime = timeutils.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	require.NoError(t, err)
+	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
+	require.NoError(t, genesisState.SetGenesisTime(uint64(timeutils.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
+	require.NoError(t, service.saveGenesisData(ctx, genesisState))
+	atts, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
+	require.NoError(t, err)
+	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
+	copied := genesisState.Copy()
+	copied, err = state.ProcessSlots(ctx, copied, 1)
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveState(ctx, copied, tRoot))
+	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
+	require.NoError(t, service.attPool.SaveForkchoiceAttestations(atts))
+	service.processAttestations(ctx)
+	require.Equal(t, 0, len(service.attPool.ForkchoiceAttestations()))
+	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
 }
