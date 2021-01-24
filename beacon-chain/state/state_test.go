@@ -62,10 +62,11 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	wg := new(sync.WaitGroup)
+	
+	wg.Add(1)
 	go func() {
 		// Continuously lock and unlock the state
 		// by acquiring the lock.
-		wg.Add(1)
 		for i := 0; i < 1000; i++ {
 			for _, f := range st.stateFieldLeaves {
 				f.Lock()
