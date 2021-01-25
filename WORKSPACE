@@ -211,6 +211,21 @@ http_archive(
 )
 
 http_archive(
+    name = "eip3076_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.json",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "91434d5fd5e1c6eb7b0174fed2afe25e09bddf00e1e4c431db931b2cee4e7773",
+    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
+)
+
+http_archive(
     name = "eth2_spec_tests_general",
     build_file_content = """
 filegroup(

@@ -88,7 +88,7 @@ func (km *Keymanager) attemptDecryptKeystore(
 	doesNotDecrypt := err != nil && strings.Contains(err.Error(), "invalid checksum")
 	for doesNotDecrypt {
 		password, err = promptutil.PasswordPrompt(
-			"Password incorrect for keystore, input correct password", promptutil.NotEmpty,
+			fmt.Sprintf("Password incorrect for key 0x%s, input correct password", keystore.Pubkey), promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, nil, "", fmt.Errorf("could not read keystore password: %w", err)
