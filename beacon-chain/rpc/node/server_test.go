@@ -5,16 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -25,6 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
@@ -61,7 +59,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	assert.DeepEqual(t, addr.Bytes(), res.DepositContractAddress)
 	pUnix, err := ptypes.TimestampProto(time.Unix(0, 0))
 	require.NoError(t, err)
-	assert.Equal(t, true, pUnix.Equal(res.GenesisTime))
+	assert.Equal(t, true, pUnix.AsTime().Equal(res.GenesisTime.AsTime()))
 	assert.DeepEqual(t, genValRoot[:], res.GenesisValidatorsRoot)
 
 	ns.GenesisTimeFetcher = &mock.ChainService{Genesis: time.Unix(10, 0)}
@@ -69,7 +67,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	require.NoError(t, err)
 	pUnix, err = ptypes.TimestampProto(time.Unix(10, 0))
 	require.NoError(t, err)
-	assert.Equal(t, true, pUnix.Equal(res.GenesisTime))
+	assert.Equal(t, true, pUnix.AsTime().Equal(res.GenesisTime.AsTime()))
 }
 
 func TestNodeServer_GetVersion(t *testing.T) {

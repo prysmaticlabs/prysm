@@ -17,7 +17,6 @@ go_library(
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//shared/version:go_default_library",
-        "@com_github_golang_protobuf//ptypes:go_default_library_gen",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
