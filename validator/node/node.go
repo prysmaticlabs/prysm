@@ -45,6 +45,8 @@ import (
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
 	cliCtx            *cli.Context
+	ctx               context.Context
+	cancel            context.CancelFunc
 	db                *kv.Store
 	services          *shared.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
@@ -76,8 +78,11 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
+	ctx, cancel := context.WithCancel(cliCtx.Context)
 	ValidatorClient := &ValidatorClient{
 		cliCtx:            cliCtx,
+		ctx:               ctx,
+		cancel:            cancel,
 		services:          registry,
 		walletInitialized: new(event.Feed),
 		stop:              make(chan struct{}),
@@ -154,6 +159,7 @@ func (c *ValidatorClient) Close() {
 
 	c.services.StopAll()
 	log.Info("Stopping Prysm validator")
+	c.cancel()
 	close(c.stop)
 }
 
