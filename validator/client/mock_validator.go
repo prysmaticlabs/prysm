@@ -14,12 +14,8 @@ var _ Validator = (*FakeValidator)(nil)
 type FakeValidator struct {
 	DoneCalled                        bool
 	WaitForWalletInitializationCalled bool
-	WaitForActivationCalled           bool
-	WaitForChainStartCalled           bool
-	WaitForSyncCalled                 bool
 	SlasherReadyCalled                bool
 	NextSlotCalled                    bool
-	CanonicalHeadSlotCalled           bool
 	UpdateDutiesCalled                bool
 	UpdateProtectionsCalled           bool
 	RoleAtCalled                      bool
@@ -29,7 +25,12 @@ type FakeValidator struct {
 	SaveProtectionsCalled             bool
 	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
-	errorBlock                        bool
+	ErrorBlock                        bool
+	WaitForChainStartCalled           int
+	WaitForSyncCalled                 int
+	WaitForActivationCalled           int
+	CanonicalHeadSlotCalled           int
+	RetryTillSuccess                  int
 	ProposeBlockArg1                  uint64
 	AttestToBlockHeadArg1             uint64
 	RoleAtArg1                        uint64
@@ -61,19 +62,28 @@ func (fv *FakeValidator) WaitForWalletInitialization(_ context.Context) error {
 
 // WaitForChainStart for mocking.
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
-	fv.WaitForChainStartCalled = true
+	fv.WaitForChainStartCalled++
+	if fv.RetryTillSuccess >= fv.WaitForChainStartCalled {
+		return errConnectionIssue
+	}
 	return nil
 }
 
 // WaitForActivation for mocking.
 func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
-	fv.WaitForActivationCalled = true
+	fv.WaitForActivationCalled++
+	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
+		return errConnectionIssue
+	}
 	return nil
 }
 
 // WaitForSync for mocking.
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
-	fv.WaitForSyncCalled = true
+	fv.WaitForSyncCalled++
+	if fv.RetryTillSuccess >= fv.WaitForSyncCalled {
+		return errConnectionIssue
+	}
 	return nil
 }
 
@@ -85,7 +95,10 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 
 // CanonicalHeadSlot for mocking.
 func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
-	fv.CanonicalHeadSlotCalled = true
+	fv.CanonicalHeadSlotCalled++
+	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
+		return 0, errConnectionIssue
+	}
 	return 0, nil
 }
 
@@ -190,7 +203,7 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 
 // ReceiveBlocks for mocking
 func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
-	if fv.errorBlock {
+	if fv.ErrorBlock {
 		connectionErrorChannel <- errConnectionIssue
 	}
 }
