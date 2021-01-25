@@ -58,7 +58,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
-		attempts := getStreamAttempts(ctx)
+		attempts := streamAttempts(ctx)
 		log.WithError(err).WithField("attempts", attempts).
 			Error("Stream broken while waiting for activation. Reconnecting...")
 		// Reconnection attempt backoff, up to 60s.
@@ -82,7 +82,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 			}
 			if err != nil {
 				traceutil.AnnotateError(span, err)
-				attempts := getStreamAttempts(ctx)
+				attempts := streamAttempts(ctx)
 				log.WithError(err).WithField("attempts", attempts).
 					Error("Stream broken while waiting for activation. Reconnecting...")
 				// Reconnection attempt backoff, up to 60s.
@@ -108,7 +108,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 		break
 	}
 
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	return nil
 }
 
@@ -117,7 +117,7 @@ type waitForActivationContextKey string
 
 const waitForActivationAttemptsContextKey = waitForActivationContextKey("WaitForActivation-attempts")
 
-func getStreamAttempts(ctx context.Context) int {
+func streamAttempts(ctx context.Context) int {
 	attempts, ok := ctx.Value(waitForActivationAttemptsContextKey).(int)
 	if !ok {
 		return 1
@@ -126,6 +126,6 @@ func getStreamAttempts(ctx context.Context) int {
 }
 
 func incrementRetries(ctx context.Context) context.Context {
-	attempts := getStreamAttempts(ctx)
+	attempts := streamAttempts(ctx)
 	return context.WithValue(ctx, waitForActivationAttemptsContextKey, attempts+1)
 }

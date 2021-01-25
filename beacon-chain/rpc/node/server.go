@@ -79,7 +79,7 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 // GetVersion checks the version information of the beacon node.
 func (ns *Server) GetVersion(_ context.Context, _ *ptypes.Empty) (*ethpb.Version, error) {
 	return &ethpb.Version{
-		Version: version.GetVersion(),
+		Version: version.Version(),
 	}, nil
 }
 
