@@ -36,6 +36,7 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 func TestCancelledContext_WithRetry(t *testing.T) {
 	retry := 10
 	v := &FakeValidator{
+		Keymanager:       &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 		RetryTillSuccess: retry,
 	}
 	backOffPeriod = 10 * time.Millisecond
