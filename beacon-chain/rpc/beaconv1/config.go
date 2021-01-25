@@ -25,6 +25,16 @@ func (bs *Server) GetSpec(ctx context.Context, _ *ptypes.Empty) (*ethpb.SpecResp
 	ctx, span := trace.StartSpan(ctx, "beaconV1.GetSpec")
 	defer span.End()
 
+	data := prepareConfigSpec()
+	return &ethpb.SpecResponse{Data: data}, nil
+}
+
+// GetDepositContract retrieves deposit contract address and genesis fork version.
+func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func prepareConfigSpec() map[string]string {
 	data := make(map[string]string)
 	data["config_name"] = params.BeaconConfig().NetworkName
 	data["max_committees_per_slot"] = strconv.FormatUint(params.BeaconConfig().MaxCommitteesPerSlot, 10)
@@ -86,11 +96,5 @@ func (bs *Server) GetSpec(ctx context.Context, _ *ptypes.Empty) (*ethpb.SpecResp
 	data["domain_voluntary_exit"] = hexutil.Encode(params.BeaconConfig().DomainVoluntaryExit[:])
 	data["domain_selection_proof"] = hexutil.Encode(params.BeaconConfig().DomainSelectionProof[:])
 	data["domain_aggregate_and_proof"] = hexutil.Encode(params.BeaconConfig().DomainAggregateAndProof[:])
-
-	return &ethpb.SpecResponse{Data: data}, nil
-}
-
-// GetDepositContract retrieves deposit contract address and genesis fork version.
-func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
-	return nil, errors.New("unimplemented")
+	return data
 }
