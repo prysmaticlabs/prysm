@@ -142,6 +142,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
 	}
+	fmt.Println(string(src))
 	metaData := &pbp2p.MetaData{}
 	if err := metaData.UnmarshalSSZ(src); err != nil {
 		return nil, err

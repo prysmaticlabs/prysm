@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -544,7 +546,7 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 
 			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, tt.incomingBlk)
 			require.NoError(t, err)
-			assert.DeepEqual(t, tt.slashing, slashing)
+			assert.Equal(t, sszutil.DeepEqual(tt.slashing, slashing), true, "not equal")
 			savedSlashings, err := db.ProposalSlashingsByStatus(ctx, status.Active)
 			require.NoError(t, err)
 			if tt.slashing != nil {
