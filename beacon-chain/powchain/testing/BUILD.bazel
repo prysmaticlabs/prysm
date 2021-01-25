@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "faulty_mock_powchain.go",
+        "mock_faulty_powchain.go",
         "mock_powchain.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing",
