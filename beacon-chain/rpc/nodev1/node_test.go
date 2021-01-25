@@ -35,7 +35,7 @@ func (id dummyIdentity) Verify(_ *enr.Record, _ []byte) error { return nil }
 func (id dummyIdentity) NodeAddr(_ *enr.Record) []byte        { return id[:] }
 
 func TestGetVersion(t *testing.T) {
-	semVer := version.GetSemanticVersion()
+	semVer := version.SemanticVersion()
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 	res, err := (&Server{}).GetVersion(context.Background(), &ptypes.Empty{})

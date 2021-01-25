@@ -15,22 +15,22 @@ var gitCommit = "Local build"
 var buildDate = "Moments ago"
 var gitTag = "Unknown"
 
-// GetVersion returns the version string of this build.
-func GetVersion() string {
+// Version returns the version string of this build.
+func Version() string {
 	if buildDate == "{DATE}" {
 		now := time.Now().Format(time.RFC3339)
 		buildDate = now
 	}
-	return fmt.Sprintf("%s. Built at: %s", GetBuildData(), buildDate)
+	return fmt.Sprintf("%s. Built at: %s", BuildData(), buildDate)
 }
 
-// GetSemanticVersion returns the Major.Minor.Patch version of this build.
-func GetSemanticVersion() string {
+// SemanticVersion returns the Major.Minor.Patch version of this build.
+func SemanticVersion() string {
 	return gitTag
 }
 
-// GetBuildData returns the git tag and commit of the current build.
-func GetBuildData() string {
+// BuildData returns the git tag and commit of the current build.
+func BuildData() string {
 	// if doing a local build, these values are not interpolated
 	if gitCommit == "{STABLE_GIT_COMMIT}" {
 		commit, err := exec.Command("git", "rev-parse", "HEAD").Output()

@@ -37,7 +37,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "pcli"
 	app.Usage = "A command line utility to run eth2 specific commands"
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		{
 			Name:    "pretty",

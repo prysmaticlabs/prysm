@@ -97,7 +97,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
 	tickingStartTime := genesisTime.Add(middleOfEpoch)
 
-	ticker := helpers.GetEpochTicker(tickingStartTime, epochSeconds)
+	ticker := helpers.NewEpochTicker(tickingStartTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.
