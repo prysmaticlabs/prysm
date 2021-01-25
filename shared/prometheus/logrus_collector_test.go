@@ -61,8 +61,8 @@ func TestLogrusCollector(t *testing.T) {
 				logExampleMessage(log.StandardLogger(), tt.level)
 			}
 			time.Sleep(time.Millisecond)
-			metrics := getMetrics(t)
-			count := getValueFor(t, metrics, prefix, tt.level)
+			metrics := metrics(t)
+			count := valueFor(t, metrics, prefix, tt.level)
 			if count != tt.want {
 				t.Errorf("Expecting %d and receive %d", tt.want, count)
 			}
@@ -70,7 +70,7 @@ func TestLogrusCollector(t *testing.T) {
 	}
 }
 
-func getMetrics(t *testing.T) []string {
+func metrics(t *testing.T) []string {
 	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", addr))
 	require.NoError(t, err)
 	body, err := ioutil.ReadAll(resp.Body)
@@ -78,7 +78,7 @@ func getMetrics(t *testing.T) []string {
 	return strings.Split(string(body), "\n")
 }
 
-func getValueFor(t *testing.T, metrics []string, prefix string, level log.Level) int {
+func valueFor(t *testing.T, metrics []string, prefix string, level log.Level) int {
 	// Expect line with this pattern:
 	//   # HELP log_entries_total Total number of log messages.
 	//   # TYPE log_entries_total counter

@@ -237,7 +237,7 @@ func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 		if peerData.Enr == nil || peerData.MetaData == nil {
 			return []uint64{}, nil
 		}
-		return retrieveIndicesFromBitfield(peerData.MetaData.Attnets), nil
+		return indicesFromBitfield(peerData.MetaData.Attnets), nil
 	}
 	return nil, peerdata.ErrPeerUnknown
 }
@@ -253,7 +253,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 		// look at active peers
 		connectedStatus := peerData.ConnState == PeerConnecting || peerData.ConnState == PeerConnected
 		if connectedStatus && peerData.MetaData != nil && peerData.MetaData.Attnets != nil {
-			indices := retrieveIndicesFromBitfield(peerData.MetaData.Attnets)
+			indices := indicesFromBitfield(peerData.MetaData.Attnets)
 			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)
@@ -796,7 +796,7 @@ func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
 	return firstIP.Equal(secondIP)
 }
 
-func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
+func indicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
 	committeeIdxs := make([]uint64, 0, bitV.Count())
 	for i := uint64(0); i < 64; i++ {
 		if bitV.BitAt(i) {
