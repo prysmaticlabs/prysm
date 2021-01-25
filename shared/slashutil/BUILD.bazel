@@ -3,15 +3,27 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["surround_votes.go"],
+    srcs = [
+        "double_votes.go",
+        "surround_votes.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/slashutil",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library"],
+    deps = [
+        "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["surround_votes_test.go"],
+    srcs = [
+        "double_votes_test.go",
+        "surround_votes_test.go",
+    ],
     embed = [":go_default_library"],
-    deps = ["@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library"],
+    deps = [
+        "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
 )

@@ -18,13 +18,13 @@ import (
 )
 
 // DetectAttesterSlashings detects double, surround and surrounding attestation offences given an attestation.
-func (ds *Service) DetectAttesterSlashings(
+func (s *Service) DetectAttesterSlashings(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.DetectAttesterSlashings")
 	defer span.End()
-	results, err := ds.minMaxSpanDetector.DetectSlashingsForAttestation(ctx, att)
+	results, err := s.minMaxSpanDetector.DetectSlashingsForAttestation(ctx, att)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (ds *Service) DetectAttesterSlashings(
 		return nil, nil
 	}
 
-	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
+	resultsToAtts, err := s.mapResultsToAtts(ctx, results)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +44,12 @@ func (ds *Service) DetectAttesterSlashings(
 		var slashing *ethpb.AttesterSlashing
 		switch result.Kind {
 		case types.DoubleVote:
-			slashing, err = ds.detectDoubleVote(ctx, resultsToAtts[resultKey], att, result)
+			slashing, err = s.detectDoubleVote(ctx, resultsToAtts[resultKey], att, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect double votes on attestation")
 			}
 		case types.SurroundVote:
-			slashing, err = ds.detectSurroundVotes(ctx, resultsToAtts[resultKey], att, result)
+			slashing, err = s.detectSurroundVotes(ctx, resultsToAtts[resultKey], att, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 			}
@@ -73,7 +73,7 @@ func (ds *Service) DetectAttesterSlashings(
 		}
 	}
 	if len(slashings) > 0 {
-		if err := ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+		if err := s.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
 			return nil, err
 		}
 	}
@@ -81,13 +81,13 @@ func (ds *Service) DetectAttesterSlashings(
 }
 
 // UpdateSpans passthrough function that updates span maps given an indexed attestation.
-func (ds *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
-	return ds.minMaxSpanDetector.UpdateSpans(ctx, att)
+func (s *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
+	return s.minMaxSpanDetector.UpdateSpans(ctx, att)
 }
 
 // detectDoubleVote cross references the passed in attestation with the bloom filter maintained
 // for every epoch for the validator in order to determine if it is a double vote.
-func (ds *Service) detectDoubleVote(
+func (s *Service) detectDoubleVote(
 	_ context.Context,
 	possibleAtts []*ethpb.IndexedAttestation,
 	incomingAtt *ethpb.IndexedAttestation,
@@ -122,7 +122,7 @@ func (ds *Service) detectDoubleVote(
 
 // detectSurroundVotes cross references the passed in attestation with the requested validator's
 // voting history in order to detect any possible surround votes.
-func (ds *Service) detectSurroundVotes(
+func (s *Service) detectSurroundVotes(
 	ctx context.Context,
 	possibleAtts []*ethpb.IndexedAttestation,
 	incomingAtt *ethpb.IndexedAttestation,
@@ -168,17 +168,17 @@ func (ds *Service) detectSurroundVotes(
 }
 
 // DetectDoubleProposals checks if the given signed beacon block is a slashable offense and returns the slashing.
-func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
-	return ds.proposalsDetector.DetectDoublePropose(ctx, incomingBlock)
+func (s *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
+	return s.proposalsDetector.DetectDoublePropose(ctx, incomingBlock)
 }
 
 // DetectDoubleProposeNoUpdate checks if the given beacon block header is a slashable offense.
-func (ds *Service) DetectDoubleProposeNoUpdate(ctx context.Context, incomingBlock *ethpb.BeaconBlockHeader) (bool, error) {
-	return ds.proposalsDetector.DetectDoubleProposeNoUpdate(ctx, incomingBlock)
+func (s *Service) DetectDoubleProposeNoUpdate(ctx context.Context, incomingBlock *ethpb.BeaconBlockHeader) (bool, error) {
+	return s.proposalsDetector.DetectDoubleProposeNoUpdate(ctx, incomingBlock)
 }
 
 // mapResultsToAtts handles any duplicate detections by ensuring they reuse the same pool of attestations, instead of re-checking the DB for the same data.
-func (ds *Service) mapResultsToAtts(ctx context.Context, results []*types.DetectionResult) (map[[32]byte][]*ethpb.IndexedAttestation, error) {
+func (s *Service) mapResultsToAtts(ctx context.Context, results []*types.DetectionResult) (map[[32]byte][]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.mapResultsToAtts")
 	defer span.End()
 	resultsToAtts := make(map[[32]byte][]*ethpb.IndexedAttestation)
@@ -187,7 +187,7 @@ func (ds *Service) mapResultsToAtts(ctx context.Context, results []*types.Detect
 		if _, ok := resultsToAtts[resultKey]; ok {
 			continue
 		}
-		matchingAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, result.SlashableEpoch, result.SigBytes[:])
+		matchingAtts, err := s.slasherDB.IndexedAttestationsWithPrefix(ctx, result.SlashableEpoch, result.SigBytes[:])
 		if err != nil {
 			return nil, err
 		}
@@ -212,9 +212,9 @@ func isDoubleVote(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
 }
 
 // UpdateHighestAttestation updates to the db the highest source and target attestations for a each validator.
-func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
+func (s *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	for _, idx := range att.AttestingIndices {
-		h, err := ds.slasherDB.HighestAttestation(ctx, idx)
+		h, err := s.slasherDB.HighestAttestation(ctx, idx)
 		if err != nil {
 			return err
 		}
@@ -238,7 +238,7 @@ func (ds *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Inde
 
 		// If it's not a new instance of HighestAttestation, changing it will also change the cached instance.
 		if update {
-			if err := ds.slasherDB.SaveHighestAttestation(ctx, h); err != nil {
+			if err := s.slasherDB.SaveHighestAttestation(ctx, h); err != nil {
 				return err
 			}
 		}

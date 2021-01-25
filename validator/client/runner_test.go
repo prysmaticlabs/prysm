@@ -6,11 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+var walletPassword = "OhWOWthisisatest42!$"
 
 func cancelledContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -19,13 +22,13 @@ func cancelledContext() context.Context {
 }
 
 func TestCancelledContext_CleansUpValidator(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
 }
 
-func TestCancelledContext_WaitsForChainStartWithRetry(t *testing.T) {
-	v := &FakeValidator{}
+func TestCancelledContext_WaitsForChainStart(t *testing.T) {
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
@@ -49,13 +52,13 @@ func TestCancelledContext_WithRetry(t *testing.T) {
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 }
 
 func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	cfg := &featureconfig.Flags{
 		SlasherProtection: true,
 	}
@@ -66,7 +69,7 @@ func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
 }
 
 func TestUpdateDuties_NextSlot(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -86,7 +89,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 
 func TestUpdateDuties_HandlesError(t *testing.T) {
 	hook := logTest.NewGlobal()
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -105,7 +108,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 }
 
 func TestRoleAt_NextSlot(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -124,7 +127,7 @@ func TestRoleAt_NextSlot(t *testing.T) {
 }
 
 func TestAttests_NextSlot(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -144,7 +147,7 @@ func TestAttests_NextSlot(t *testing.T) {
 }
 
 func TestProposes_NextSlot(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -164,7 +167,7 @@ func TestProposes_NextSlot(t *testing.T) {
 }
 
 func TestBothProposesAndAttests_NextSlot(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := uint64(55)
@@ -186,7 +189,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 }
 
 func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
-	v := &FakeValidator{}
+	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), allValidatorsAreExitedCtxKey, true))
 	hook := logTest.NewGlobal()
 
@@ -200,4 +203,56 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 	}()
 	run(ctx, v)
 	assert.LogsContain(t, hook, "All validators are exited")
+}
+
+func TestHandleAccountsChanged_Ok(t *testing.T) {
+	ctx := context.Background()
+	defer ctx.Done()
+
+	km := &mockKeymanager{accountsChangedFeed: &event.Feed{}}
+	v := &FakeValidator{Keymanager: km}
+	channel := make(chan struct{})
+	go handleAccountsChanged(ctx, v, channel)
+	time.Sleep(time.Second) // Allow time for subscribing to changes.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	select {
+	case _, ok := <-channel:
+		if !ok {
+			t.Error("Account changed channel is closed")
+		}
+	default:
+		t.Error("Accounts changed channel is empty")
+	}
+}
+
+func TestHandleAccountsChanged_CtxCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	km := &mockKeymanager{accountsChangedFeed: &event.Feed{}}
+	v := &FakeValidator{Keymanager: km}
+	channel := make(chan struct{}, 2)
+	go handleAccountsChanged(ctx, v, channel)
+	time.Sleep(time.Second) // Allow time for subscribing to changes.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	cancel()
+	time.Sleep(time.Second) // Allow time for handling cancellation.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	var values int
+	for loop := true; loop == true; {
+		select {
+		case _, ok := <-channel:
+			if ok {
+				values++
+			}
+		default:
+			loop = false
+		}
+	}
+	assert.Equal(t, 1, values, "Incorrect number of values were passed to the channel")
 }
