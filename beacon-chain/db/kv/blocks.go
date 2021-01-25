@@ -501,7 +501,7 @@ func blockRootsBySlotRange(
 	return roots, nil
 }
 
-// blockRootsByFilter retrieves the block roots by slot
+// blockRootsBySlot retrieves the block roots by slot
 func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot uint64) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
 	defer span.End()

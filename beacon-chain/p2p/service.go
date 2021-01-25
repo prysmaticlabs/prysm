@@ -83,7 +83,7 @@ type Service struct {
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
-// connections are made until the New function is called during the service registry startup.
+// connections are made until the Start function is called during the service registry startup.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(ctx)
