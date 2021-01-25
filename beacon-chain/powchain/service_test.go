@@ -584,9 +584,3 @@ func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
 	_, err = srv.batchRequestHeaders(start, end)
 	require.ErrorContains(t, "cannot be >", err)
 }
-
-func TestDepositContractAddress(t *testing.T) {
-	s := &Service{depositContractAddress: [20]byte{1, 2, 3}}
-	address := s.DepositContractAddress()
-	assert.DeepEqual(t, s.depositContractAddress[:], address[:])
-}
