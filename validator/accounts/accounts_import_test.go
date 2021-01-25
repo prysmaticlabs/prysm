@@ -103,18 +103,6 @@ func TestImport_DuplicateKeys(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := imported.NewKeymanager(
-		cliCtx.Context,
-		&imported.SetupConfig{
-			Wallet: w,
-		},
-	)
-	require.NoError(t, err)
-
-	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
-	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
 
 	// Create a key and then copy it to create a duplicate
 	_, keystorePath := createKeystore(t, keysDir)
