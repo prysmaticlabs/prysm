@@ -119,7 +119,7 @@ func (n *SlasherNode) Start() {
 	n.lock.Unlock()
 
 	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
+		"version": version.Version(),
 	}).Info("Starting slasher client")
 
 	stop := n.stop
@@ -150,11 +150,11 @@ func (n *SlasherNode) Close() {
 	defer n.lock.Unlock()
 
 	log.Info("Stopping hash slinging slasher")
-	n.cancel()
 	n.services.StopAll()
 	if err := n.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
 	}
+	n.cancel()
 	close(n.stop)
 }
 

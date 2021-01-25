@@ -205,7 +205,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, i), validator, handle)
 	}
 	genesis := s.chain.GenesisTime()
-	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {
@@ -252,7 +252,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 	genesis := s.chain.GenesisTime()
-	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {

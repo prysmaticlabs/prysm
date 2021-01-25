@@ -228,7 +228,7 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 // pads the leaves to a length of 32.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, htrutils.GetDepth(uint64(len(leaves)))+1)
+	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}

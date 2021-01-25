@@ -87,11 +87,11 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	if defaultKeysExist && privateKeyPath == "" {
 		privateKeyPath = defaultKeyPath
 	}
-	return retrievePrivKeyFromFile(privateKeyPath)
+	return privKeyFromFile(privateKeyPath)
 }
 
 // Retrieves a p2p networking private key from a file path.
-func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
+func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	src, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")

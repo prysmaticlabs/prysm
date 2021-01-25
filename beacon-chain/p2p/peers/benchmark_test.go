@@ -13,6 +13,6 @@ func Benchmark_retrieveIndicesFromBitfield(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		retrieveIndicesFromBitfield(bv)
+		indicesFromBitfield(bv)
 	}
 }
