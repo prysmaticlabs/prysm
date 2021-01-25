@@ -113,7 +113,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		timeSlot, err := getValueOfTopic(pageContent, "beacon_clock_time_slot")
+		timeSlot, err := valueOfTopic(pageContent, "beacon_clock_time_slot")
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 }
 
 func metricCheckLessThan(pageContent, topic string, value int) error {
-	topicValue, err := getValueOfTopic(pageContent, topic)
+	topicValue, err := valueOfTopic(pageContent, topic)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func metricCheckLessThan(pageContent, topic string, value int) error {
 }
 
 func metricCheckComparison(pageContent, topic1, topic2 string, comparison float64) error {
-	topic2Value, err := getValueOfTopic(pageContent, topic2)
+	topic2Value, err := valueOfTopic(pageContent, topic2)
 	// If we can't find the first topic (error metrics), then assume the test passes.
 	if topic2Value != -1 {
 		return nil
@@ -172,7 +172,7 @@ func metricCheckComparison(pageContent, topic1, topic2 string, comparison float6
 	if err != nil {
 		return err
 	}
-	topic1Value, err := getValueOfTopic(pageContent, topic1)
+	topic1Value, err := valueOfTopic(pageContent, topic1)
 	if topic1Value != -1 {
 		return nil
 	}
@@ -192,7 +192,7 @@ func metricCheckComparison(pageContent, topic1, topic2 string, comparison float6
 	return nil
 }
 
-func getValueOfTopic(pageContent, topic string) (int, error) {
+func valueOfTopic(pageContent, topic string) (int, error) {
 	regexExp, err := regexp.Compile(topic + " ")
 	if err != nil {
 		return -1, errors.Wrap(err, "could not create regex expression")

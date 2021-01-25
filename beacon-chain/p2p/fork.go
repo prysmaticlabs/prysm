@@ -36,11 +36,11 @@ func (s *Service) forkDigest() ([4]byte, error) {
 // local record values for current and next fork version/epoch.
 func (s *Service) compareForkENR(record *enr.Record) error {
 	currentRecord := s.dv5Listener.LocalNode().Node().Record()
-	peerForkENR, err := retrieveForkEntry(record)
+	peerForkENR, err := forkEntry(record)
 	if err != nil {
 		return err
 	}
-	currentForkENR, err := retrieveForkEntry(currentRecord)
+	currentForkENR, err := forkEntry(currentRecord)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func addForkEntry(
 
 // Retrieves an enrForkID from an ENR record by key lookup
 // under the eth2EnrKey.
-func retrieveForkEntry(record *enr.Record) (*pb.ENRForkID, error) {
+func forkEntry(record *enr.Record) (*pb.ENRForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
 	entry := enr.WithEntry(eth2ENRKey, &sszEncodedForkEntry)
 	err := record.Load(entry)

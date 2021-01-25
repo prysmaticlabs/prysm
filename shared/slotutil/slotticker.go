@@ -38,8 +38,8 @@ func (s *SlotTicker) Done() {
 	}()
 }
 
-// GetSlotTicker is the constructor for SlotTicker.
-func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
+// NewSlotTicker starts and returns a new SlotTicker instance.
+func NewSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 	if genesisTime.IsZero() {
 		panic("zero genesis time")
 	}
@@ -51,9 +51,9 @@ func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 	return ticker
 }
 
-// GetSlotTickerWithOffset is a constructor for SlotTicker that allows a offset of time from genesis,
+// NewSlotTickerWithOffset starts and returns a SlotTicker instance that allows a offset of time from genesis,
 // entering a offset greater than secondsPerSlot is not allowed.
-func GetSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, secondsPerSlot uint64) *SlotTicker {
+func NewSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, secondsPerSlot uint64) *SlotTicker {
 	if genesisTime.Unix() == 0 {
 		panic("zero genesis time")
 	}

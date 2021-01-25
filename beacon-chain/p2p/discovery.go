@@ -44,7 +44,7 @@ func (s *Service) RefreshENR() {
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+	currentBitV, err := bitvector(s.dv5Listener.Self().Record())
 	if err != nil {
 		log.Errorf("Could not retrieve bitfield: %v", err)
 		return
