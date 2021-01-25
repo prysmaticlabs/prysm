@@ -115,7 +115,7 @@ func TestImport_DuplicateKeys(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
