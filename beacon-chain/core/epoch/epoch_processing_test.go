@@ -25,7 +25,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
+			AggregationBits: bitfield.Bitlist{0x00, 0xFF, 0xFF, 0xFF},
 		}
 	}
 
@@ -71,7 +71,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Target: &ethpb.Checkpoint{Epoch: 0}},
-			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF},
+			AggregationBits: bitfield.Bitlist{0x00, 0xFF, 0xFF, 0xFF},
 		}
 	}
 

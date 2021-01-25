@@ -1,7 +1,7 @@
 // Package interchangeformat defines methods to parse, import, and export slashing protection data
 // from a standard JSON file according to EIP-3076 https://eips.ethereum.org/EIPS/eip-3076. This format
 // is critical to allow safe interoperability between eth2 clients.
-package interchangeformat
+package format
 
 // INTERCHANGE_FORMAT_VERSION specified by https://eips.ethereum.org/EIPS/eip-3076.
 // The version Prysm supports is version 5.
@@ -37,10 +37,4 @@ type SignedAttestation struct {
 type SignedBlock struct {
 	Slot        string `json:"slot"`
 	SigningRoot string `json:"signing_root,omitempty"`
-}
-
-type historicalAttestation struct {
-	sourceEpoch uint64
-	targetEpoch uint64
-	signingRoot [32]byte
 }

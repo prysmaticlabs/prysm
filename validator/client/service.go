@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -62,7 +62,7 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             Validator
-	protector             slashingprotection.Protector
+	protector             iface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -80,7 +80,7 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingprotection.Protector
+	Protector                  iface.Protector
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
@@ -175,6 +175,16 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
+	if err != nil {
+		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		return
+	}
+	slashablePublicKeys := make(map[[48]byte]bool)
+	for _, pubKey := range sPubKeys {
+		slashablePublicKeys[pubKey] = true
+	}
+
 	v.validator = &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -195,6 +205,7 @@ func (v *ValidatorService) Start() {
 		walletInitializedFeed:          v.walletInitializedFeed,
 		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
+		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 	}
 	go run(v.ctx, v.validator)
@@ -331,7 +342,10 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 	}
 	validatingPubKeysChan := make(chan [][48]byte, 1)
 	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
 	for {
 		select {
 		case keys := <-validatingPubKeysChan:

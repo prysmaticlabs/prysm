@@ -291,3 +291,44 @@ func TestValidateNilAttestation(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateSlotTargetEpoch(t *testing.T) {
+	tests := []struct {
+		name        string
+		attestation *ethpb.Attestation
+		errString   string
+	}{
+		{
+			name: "incorrect slot",
+			attestation: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{Epoch: 1},
+					Source: &ethpb.Checkpoint{},
+				},
+				AggregationBits: []byte{},
+			},
+			errString: "slot 0 does not match target epoch 1",
+		},
+		{
+			name: "good attestation",
+			attestation: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot:   2 * params.BeaconConfig().SlotsPerEpoch,
+					Target: &ethpb.Checkpoint{Epoch: 2},
+					Source: &ethpb.Checkpoint{},
+				},
+				AggregationBits: []byte{},
+			},
+			errString: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.errString != "" {
+				require.ErrorContains(t, tt.errString, helpers.ValidateSlotTargetEpoch(tt.attestation.Data))
+			} else {
+				require.NoError(t, helpers.ValidateSlotTargetEpoch(tt.attestation.Data))
+			}
+		})
+	}
+}
