@@ -60,6 +60,7 @@ const testSkipPowFlag = "test-skip-pow"
 type BeaconNode struct {
 	cliCtx          *cli.Context
 	ctx             context.Context
+	cancel          context.CancelFunc
 	services        *shared.ServiceRegistry
 	lock            sync.RWMutex
 	stop            chan struct{} // Channel to wait for termination notifications.
@@ -153,9 +154,11 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	registry := shared.NewServiceRegistry()
 
+	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
 		cliCtx:          cliCtx,
-		ctx:             cliCtx.Context,
+		ctx:             ctx,
+		cancel:          cancel,
 		services:        registry,
 		stop:            make(chan struct{}),
 		stateFeed:       new(event.Feed),
@@ -278,6 +281,7 @@ func (b *BeaconNode) Close() {
 	if err := b.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
 	}
+	b.cancel()
 	close(b.stop)
 }
 
