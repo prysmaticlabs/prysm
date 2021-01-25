@@ -213,9 +213,10 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
+		numOfRefs := uint64(f.Refs())
 		f.lock.RLock()
 		if len(f.fieldLayers) != 0 {
-			refMap[i.String()+"_trie"] = uint64(f.Refs())
+			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.lock.RUnlock()
 	}
