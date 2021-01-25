@@ -18,9 +18,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// There are 21 fields in the beacon state.
-const fieldCount = 21
-
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
@@ -33,6 +30,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, errors.New("received nil state")
 	}
 
+	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
@@ -77,6 +75,7 @@ func (b *BeaconState) Copy() *BeaconState {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	dst := &BeaconState{
 		state: &pbp2p.BeaconState{
 			// Primitive types, safe to copy.
@@ -189,7 +188,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, fieldCount)
+		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateFieldCount)
 	}
 
 	for field := range b.dirtyFields {
@@ -214,9 +213,10 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
+		numOfRefs := uint64(f.Refs())
 		f.lock.RLock()
 		if len(f.fieldLayers) != 0 {
-			refMap[i.String()+"_trie"] = uint64(f.Refs())
+			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.lock.RUnlock()
 	}
@@ -228,7 +228,7 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 // pads the leaves to a length of 32.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, htrutils.GetDepth(uint64(len(leaves)))+1)
+	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}

@@ -15,24 +15,21 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
-
-var log = logrus.WithField("prefix", "validator")
 
 // SyncChecker is able to determine if a beacon node is currently
 // going through chain synchronization.
@@ -46,18 +43,13 @@ type GenesisFetcher interface {
 	GenesisInfo(ctx context.Context) (*ethpb.Genesis, error)
 }
 
-// BeaconNodeInfoFetcher can retrieve information such as the logs endpoint
-// from a beacon node via RPC.
-type BeaconNodeInfoFetcher interface {
-	BeaconLogsEndpoint(ctx context.Context) (string, error)
-}
-
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
 	useWeb                bool
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
+	logDutyCountDown      bool
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
@@ -69,11 +61,12 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             Validator
-	protector             slashingprotection.Protector
+	protector             iface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
+	graffitiStruct        *graffiti.Graffiti
 }
 
 // Config for the validator service.
@@ -81,11 +74,12 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	LogDutyCountDown           bool
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingprotection.Protector
+	Protector                  iface.Protector
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
@@ -94,6 +88,7 @@ type Config struct {
 	CertFlag                   string
 	DataDir                    string
 	GrpcHeadersFlag            string
+	GraffitiStruct             *graffiti.Graffiti
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -119,6 +114,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		useWeb:                cfg.UseWeb,
+		graffitiStruct:        cfg.GraffitiStruct,
+		logDutyCountDown:      cfg.LogDutyCountDown,
 	}, nil
 }
 
@@ -144,11 +141,11 @@ func (v *ValidatorService) Start() {
 	for _, hdr := range v.grpcHeaders {
 		if hdr != "" {
 			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+			if len(ss) < 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", ss[0])
 				continue
 			}
-			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], ss[1])
+			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], strings.Join(ss[1:], "="))
 		}
 	}
 
@@ -177,6 +174,16 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
+	if err != nil {
+		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		return
+	}
+	slashablePublicKeys := make(map[[48]byte]bool)
+	for _, pubKey := range sPubKeys {
+		slashablePublicKeys[pubKey] = true
+	}
+
 	v.validator = &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -195,6 +202,10 @@ func (v *ValidatorService) Start() {
 		voteStats:                      voteStats{startEpoch: ^uint64(0)},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
+		blockFeed:                      new(event.Feed),
+		graffitiStruct:                 v.graffitiStruct,
+		eipImportBlacklistedPublicKeys: slashablePublicKeys,
+		logDutyCountDown:               v.logDutyCountDown,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
@@ -321,17 +332,6 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 	return nc.GetGenesis(ctx, &ptypes.Empty{})
 }
 
-// BeaconLogsEndpoint retrieves the websocket endpoint string at which
-// clients can subscribe to for beacon node logs.
-func (v *ValidatorService) BeaconLogsEndpoint(ctx context.Context) (string, error) {
-	hc := pbrpc.NewHealthClient(v.conn)
-	resp, err := hc.GetLogsEndpoint(ctx, &ptypes.Empty{})
-	if err != nil {
-		return "", err
-	}
-	return resp.BeaconLogsEndpoint, nil
-}
-
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keymanager.IKeymanager) {
@@ -341,7 +341,10 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 	}
 	validatingPubKeysChan := make(chan [][48]byte, 1)
 	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
 	for {
 		select {
 		case keys := <-validatingPubKeysChan:

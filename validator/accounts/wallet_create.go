@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -70,6 +72,26 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
+		km, err := w.InitializeKeymanager(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
+		}
+		importedKm, ok := km.(*imported.Keymanager)
+		if !ok {
+			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
+		}
+		accountsKeystore, err := importedKm.CreateAccountsKeystore(ctx, make([][]byte, 0), make([][]byte, 0))
+		if err != nil {
+			return nil, err
+		}
+		encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
+		if err != nil {
+			return nil, err
+		}
+		if err = w.WriteFileAtPath(ctx, imported.AccountsPath, imported.AccountsKeystoreFileName, encodedAccounts); err != nil {
+			return nil, err
+		}
+
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with ability to import keystores",
 		)
@@ -94,7 +116,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		return nil, errors.Wrapf(err, "keymanager type %s is not supported", w.KeymanagerKind())
+		return nil, errors.Wrapf(err, errKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return w, nil
 }
@@ -143,7 +165,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "y" {
+		if strings.EqualFold(resp, "y") {
 			mnemonicPassphrase, err := promptutil.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,

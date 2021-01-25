@@ -4,15 +4,19 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -34,6 +38,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
+	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
@@ -52,24 +59,25 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	g, err := v.getGraffiti(ctx, pubKey)
+	if err != nil {
+		// Graffiti is not a critical enough to fail block production and cause
+		// validator to miss block reward. When failed, validator should continue
+		// to produce the block.
+		log.WithError(err).Warn("Could not get graffiti")
+	}
+
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
-		Graffiti:     v.graffiti,
+		Graffiti:     g,
 	})
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		return
-	}
-
-	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, b, nil),
-		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
@@ -87,7 +95,23 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
+	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, b, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, b, sig),
 		).WithError(err).Error("Failed block slashing protection check")
@@ -177,7 +201,8 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	}
 
 	var randaoReveal bls.Signature
-	root, err := helpers.ComputeSigningRoot(epoch, domain.SignatureDomain)
+	sszUint := p2ptypes.SSZUint64(epoch)
+	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -256,4 +281,41 @@ func signVoluntaryExit(
 		return nil, errors.Wrap(err, signExitErr)
 	}
 	return sig.Marshal(), nil
+}
+
+// Gets the graffiti from cli or file for the validator public key.
+func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, error) {
+	// When specified, default graffiti from the command line takes the first priority.
+	if len(v.graffiti) != 0 {
+		return v.graffiti, nil
+	}
+
+	if v.graffitiStruct == nil {
+		return nil, errors.New("graffitiStruct can't be nil")
+	}
+
+	// When specified, individual validator specified graffiti takes the second priority.
+	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
+	if err != nil {
+		return []byte{}, err
+	}
+	g, ok := v.graffitiStruct.Specific[idx.Index]
+	if ok {
+		return []byte(g), nil
+	}
+
+	// When specified, a graffiti from the random list in the file take third priority.
+	if len(v.graffitiStruct.Random) != 0 {
+		r := rand.NewGenerator()
+		r.Seed(time.Now().Unix())
+		i := r.Uint64() % uint64(len(v.graffitiStruct.Random))
+		return []byte(v.graffitiStruct.Random[i]), nil
+	}
+
+	// Finally, default graffiti if specified in the file will be used.
+	if v.graffitiStruct.Default != "" {
+		return []byte(v.graffitiStruct.Default), nil
+	}
+
+	return []byte{}, nil
 }

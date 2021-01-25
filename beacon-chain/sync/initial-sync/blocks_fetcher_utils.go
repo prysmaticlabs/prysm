@@ -101,7 +101,7 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 
 	// Quickly find the close enough epoch where a non-empty slot definitely exists.
 	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
-	slot = slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
+	slot += nonSkippedSlotsFullSearchEpochs * slotsPerEpoch
 	upperBoundSlot, err := helpers.StartSlot(targetEpoch + 1)
 	if err != nil {
 		return 0, err
@@ -300,9 +300,7 @@ func (f *blocksFetcher) bestNonFinalizedSlot() uint64 {
 
 // calculateHeadAndTargetEpochs return node's current head epoch, along with the best known target
 // epoch. For the latter peers supporting that target epoch are returned as well.
-func (f *blocksFetcher) calculateHeadAndTargetEpochs() (uint64, uint64, []peer.ID) {
-	var targetEpoch, headEpoch uint64
-	var peers []peer.ID
+func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch uint64, peers []peer.ID) {
 	if f.mode == modeStopOnFinalizedEpoch {
 		headEpoch = f.chain.FinalizedCheckpt().Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)

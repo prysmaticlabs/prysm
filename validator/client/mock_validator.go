@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
 var _ Validator = (*FakeValidator)(nil)
@@ -41,6 +42,7 @@ type FakeValidator struct {
 	IndexToPubkeyMap                  map[uint64][48]byte
 	PubkeyToIndexMap                  map[[48]byte]uint64
 	PubkeysToStatusesMap              map[[48]byte]ethpb.ValidatorStatus
+	Keymanager                        keymanager.IKeymanager
 }
 
 type ctxKey string
@@ -65,7 +67,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan struct{}) error {
 	fv.WaitForActivationCalled = true
 	return nil
 }
@@ -151,6 +153,11 @@ func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ uint64, _ 
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
+// LogNextDutyCountDown for mocking.
+func (fv *FakeValidator) LogNextDutyTimeLeft(slot uint64) error {
+	return nil
+}
+
 // UpdateDomainDataCaches for mocking.
 func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}
 
@@ -181,3 +188,11 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 	}
 	return ctx.Value(allValidatorsAreExitedCtxKey).(bool), nil
 }
+
+// GetKeymanager for mocking
+func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
+	return fv.Keymanager
+}
+
+// ReceiveBlocks for mocking
+func (fv *FakeValidator) ReceiveBlocks(ctx context.Context) {}

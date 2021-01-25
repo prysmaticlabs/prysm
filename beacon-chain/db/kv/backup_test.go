@@ -12,7 +12,8 @@ import (
 )
 
 func TestStore_Backup(t *testing.T) {
-	db := setupDB(t)
+	db, err := NewKVStore(context.Background(), t.TempDir())
+	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
 	head := testutil.NewBeaconBlock()
@@ -34,12 +35,12 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, db.Close(), "Failed to close database")
 
 	oldFilePath := filepath.Join(backupsPath, files[0].Name())
-	newFilePath := filepath.Join(backupsPath, databaseFileName)
+	newFilePath := filepath.Join(backupsPath, DatabaseFileName)
 	// We rename the file to match the database file name
 	// our NewKVStore function expects when opening a database.
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
-	backedDB, err := NewKVStore(backupsPath, nil)
+	backedDB, err := NewKVStore(ctx, backupsPath)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")

@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -63,9 +63,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		expectSuccess(t, stream)
 		out := &pb.Status{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		if !bytes.Equal(out.FinalizedRoot, root[:]) {
-			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
-		}
+		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 		assert.NoError(t, stream.Close())
 	})
 
@@ -129,9 +127,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 		expectSuccess(t, stream)
 		out := &pb.Status{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		if !bytes.Equal(out.FinalizedRoot, root[:]) {
-			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
-		}
+		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
@@ -154,7 +150,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	db, _ := testingDB.SetupDB(t)
+	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	head := testutil.NewBeaconBlock()
@@ -240,7 +236,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
-	db, _ := testingDB.SetupDB(t)
+	db := testingDB.SetupDB(t)
 
 	p1.LocalMetadata = &pb.MetaData{
 		SeqNumber: 2,
@@ -446,7 +442,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
-	db, _ := testingDB.SetupDB(t)
+	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	head := testutil.NewBeaconBlock()
@@ -531,7 +527,8 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 }
 
 func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
-	db, _ := testingDB.SetupDB(t)
+	db, err := kv.NewKVStore(context.Background(), t.TempDir())
+	require.NoError(t, err)
 	bState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
@@ -828,10 +825,9 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 
 func TestShouldResync(t *testing.T) {
 	type args struct {
-		genesis     time.Time
-		syncing     bool
-		headSlot    uint64
-		genesisTime uint64
+		genesis  time.Time
+		syncing  bool
+		headSlot uint64
 	}
 	tests := []struct {
 		name string

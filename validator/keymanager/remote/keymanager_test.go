@@ -1,7 +1,9 @@
 package remote
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -305,4 +307,24 @@ func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		rawKeys[i] = keys[i][:]
 	}
 	assert.DeepEqual(t, pubKeys, rawKeys)
+}
+
+func TestUnmarshalOptionsFile_DefaultRequireTls(t *testing.T) {
+	optsWithoutTls := struct {
+		RemoteCertificate struct {
+			ClientCertPath string
+			ClientKeyPath  string
+			CACertPath     string
+		}
+	}{}
+	var buffer bytes.Buffer
+	b, err := json.Marshal(optsWithoutTls)
+	require.NoError(t, err)
+	_, err = buffer.Write(b)
+	require.NoError(t, err)
+	r := ioutil.NopCloser(&buffer)
+
+	opts, err := UnmarshalOptionsFile(r)
+	assert.NoError(t, err)
+	assert.Equal(t, true, opts.RemoteCertificate.RequireTls)
 }

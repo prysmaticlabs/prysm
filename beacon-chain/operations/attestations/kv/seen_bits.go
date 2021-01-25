@@ -7,13 +7,13 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
-func (p *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
+func (c *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return err
 	}
 
-	v, ok := p.seenAtt.Get(string(r[:]))
+	v, ok := c.seenAtt.Get(string(r[:]))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {
@@ -29,21 +29,21 @@ func (p *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
 		if !alreadyExists {
 			seenBits = append(seenBits, att.AggregationBits)
 		}
-		p.seenAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
+		c.seenAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
 		return nil
 	}
 
-	p.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
+	c.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
 	return nil
 }
 
-func (p *AttCaches) hasSeenBit(att *ethpb.Attestation) (bool, error) {
+func (c *AttCaches) hasSeenBit(att *ethpb.Attestation) (bool, error) {
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return false, err
 	}
 
-	v, ok := p.seenAtt.Get(string(r[:]))
+	v, ok := c.seenAtt.Get(string(r[:]))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {

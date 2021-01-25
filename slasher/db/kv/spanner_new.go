@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -69,15 +68,15 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 // for slashing detection.
 // Returns span byte array, and error in case of db error.
 // returns empty byte array if no entry for this epoch exists in db.
-func (db *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*types.EpochStore, error) {
+func (s *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*types.EpochStore, error) {
 	// Get from the cache if it exists or is requested, if not, go to DB.
-	if fromCache && db.flatSpanCache.Has(epoch) || db.flatSpanCache.Has(epoch) {
-		spans, _ := db.flatSpanCache.Get(epoch)
+	if fromCache && s.flatSpanCache.Has(epoch) || s.flatSpanCache.Has(epoch) {
+		spans, _ := s.flatSpanCache.Get(epoch)
 		return spans, nil
 	}
 
 	var copiedSpans []byte
-	err := db.view(func(tx *bolt.Tx) error {
+	err := s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucketNew)
 		if b == nil {
 			return nil
@@ -97,23 +96,23 @@ func (db *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*t
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
-func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
+func (s *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
 	if len(es.Bytes())%int(types.SpannerEncodedLength) != 0 {
 		return types.ErrWrongSize
 	}
-	//also prune indexed attestations older then weak subjectivity period
-	if err := db.setObservedEpochs(ctx, epoch); err != nil {
+	// Also prune indexed attestations older then weak subjectivity period.
+	if err := s.setObservedEpochs(ctx, epoch); err != nil {
 		return err
 	}
 	// Saving to the cache if it exists so cache and DB never conflict.
-	if toCache || db.flatSpanCache.Has(epoch) {
-		db.flatSpanCache.Set(epoch, es)
+	if toCache || s.flatSpanCache.Has(epoch) {
+		s.flatSpanCache.Set(epoch, es)
 	}
 	if toCache {
 		return nil
 	}
 
-	return db.update(func(tx *bolt.Tx) error {
+	return s.update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists(validatorsMinMaxSpanBucketNew)
 		if err != nil {
 			return err
@@ -123,27 +122,27 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 }
 
 // CacheLength returns the number of cached items.
-func (db *Store) CacheLength(ctx context.Context) int {
+func (s *Store) CacheLength(ctx context.Context) int {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.CacheLength")
 	defer span.End()
-	length := db.flatSpanCache.Length()
+	length := s.flatSpanCache.Length()
 	log.Debugf("Span cache length %d", length)
 	return length
 }
 
 // EnableSpanCache used to enable or disable span map cache in tests.
-func (db *Store) EnableSpanCache(enable bool) {
-	db.spanCacheEnabled = enable
+func (s *Store) EnableSpanCache(enable bool) {
+	s.spanCacheEnabled = enable
 }
 
-func (db *Store) setObservedEpochs(ctx context.Context, epoch uint64) error {
+func (s *Store) setObservedEpochs(ctx context.Context, epoch uint64) error {
 	var err error
 	if epoch > highestObservedEpoch {
 		slasherHighestObservedEpoch.Set(float64(epoch))
 		highestObservedEpoch = epoch
 		// Prune block header history every PruneSlasherStoragePeriod epoch.
 		if highestObservedEpoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-			if err = db.PruneAttHistory(ctx, epoch, params.BeaconConfig().WeakSubjectivityPeriod); err != nil {
+			if err = s.PruneAttHistory(ctx, epoch, params.BeaconConfig().WeakSubjectivityPeriod); err != nil {
 				return errors.Wrap(err, "failed to prune indexed attestations store")
 			}
 		}

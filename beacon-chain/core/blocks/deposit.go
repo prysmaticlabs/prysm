@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -223,7 +222,6 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 	return nil
 }
 
-// Deprecated: This method uses deprecated ssz.SigningRoot.
 func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error {
 	return depositutil.VerifyDepositSignature(obj, domain)
 }
@@ -248,19 +246,16 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		}
 		pks[i] = dpk
 		sigs[i] = dep.Data.Signature
-		root, err := ssz.SigningRoot(dep.Data)
+		depositMessage := &pb.DepositMessage{
+			PublicKey:             dep.Data.PublicKey,
+			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
+			Amount:                dep.Data.Amount,
+		}
+		sr, err := helpers.ComputeSigningRoot(depositMessage, domain)
 		if err != nil {
-			return errors.Wrap(err, "could not get signing root")
+			return err
 		}
-		signingData := &pb.SigningData{
-			ObjectRoot: root[:],
-			Domain:     domain,
-		}
-		ctrRoot, err := signingData.HashTreeRoot()
-		if err != nil {
-			return errors.Wrap(err, "could not get container root")
-		}
-		msgs[i] = ctrRoot
+		msgs[i] = sr
 	}
 	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
 	if err != nil {

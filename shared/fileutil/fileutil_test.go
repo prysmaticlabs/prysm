@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -114,6 +115,131 @@ func TestCopyFile(t *testing.T) {
 	assert.Equal(t, true, deepCompare(t, fName, fName+"copy"))
 }
 
+func TestCopyDir(t *testing.T) {
+	tmpDir1 := t.TempDir()
+	tmpDir2 := filepath.Join(t.TempDir(), "copyfolder")
+	type fileDesc struct {
+		path    string
+		content []byte
+	}
+	fds := []fileDesc{
+		{
+			path:    "testfile1",
+			content: []byte{1, 2, 3},
+		},
+		{
+			path:    "subfolder1/testfile1",
+			content: []byte{4, 5, 6},
+		},
+		{
+			path:    "subfolder1/testfile2",
+			content: []byte{7, 8, 9},
+		},
+		{
+			path:    "subfolder2/testfile1",
+			content: []byte{10, 11, 12},
+		},
+		{
+			path:    "testfile2",
+			content: []byte{13, 14, 15},
+		},
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder1"), 0777))
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder2"), 0777))
+	for _, fd := range fds {
+		require.NoError(t, fileutil.WriteFile(filepath.Join(tmpDir1, fd.path), fd.content))
+		assert.Equal(t, true, fileutil.FileExists(filepath.Join(tmpDir1, fd.path)))
+		assert.Equal(t, false, fileutil.FileExists(filepath.Join(tmpDir2, fd.path)))
+	}
+
+	// Make sure that files are copied into non-existent directory only. If directory exists function exits.
+	assert.ErrorContains(t, "destination directory already exists", fileutil.CopyDir(tmpDir1, t.TempDir()))
+	require.NoError(t, fileutil.CopyDir(tmpDir1, tmpDir2))
+
+	// Now, all files should have been copied.
+	for _, fd := range fds {
+		assert.Equal(t, true, fileutil.FileExists(filepath.Join(tmpDir2, fd.path)))
+		assert.Equal(t, true, deepCompare(t, filepath.Join(tmpDir1, fd.path), filepath.Join(tmpDir2, fd.path)))
+	}
+	assert.Equal(t, true, fileutil.DirsEqual(tmpDir1, tmpDir2))
+}
+
+func TestDirsEqual(t *testing.T) {
+	t.Run("non-existent source directory", func(t *testing.T) {
+		assert.Equal(t, false, fileutil.DirsEqual(filepath.Join(t.TempDir(), "nonexistent"), t.TempDir()))
+	})
+
+	t.Run("non-existent dest directory", func(t *testing.T) {
+		assert.Equal(t, false, fileutil.DirsEqual(t.TempDir(), filepath.Join(t.TempDir(), "nonexistent")))
+	})
+
+	t.Run("non-empty directory", func(t *testing.T) {
+		// Start with directories that do not have the same contents.
+		tmpDir1, tmpFileNames := tmpDirWithContents(t)
+		tmpDir2 := filepath.Join(t.TempDir(), "newfolder")
+		assert.Equal(t, false, fileutil.DirsEqual(tmpDir1, tmpDir2))
+
+		// Copy dir, and retest (hashes should match now).
+		require.NoError(t, fileutil.CopyDir(tmpDir1, tmpDir2))
+		assert.Equal(t, true, fileutil.DirsEqual(tmpDir1, tmpDir2))
+
+		// Tamper the data, make sure that hashes do not match anymore.
+		require.NoError(t, os.Remove(filepath.Join(tmpDir1, tmpFileNames[2])))
+		assert.Equal(t, false, fileutil.DirsEqual(tmpDir1, tmpDir2))
+	})
+}
+
+func TestHashDir(t *testing.T) {
+	t.Run("non-existent directory", func(t *testing.T) {
+		hash, err := fileutil.HashDir(filepath.Join(t.TempDir(), "nonexistent"))
+		assert.ErrorContains(t, "no such file or directory", err)
+		assert.Equal(t, "", hash)
+	})
+
+	t.Run("empty directory", func(t *testing.T) {
+		hash, err := fileutil.HashDir(t.TempDir())
+		assert.NoError(t, err)
+		assert.Equal(t, "hashdir:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=", hash)
+	})
+
+	t.Run("non-empty directory", func(t *testing.T) {
+		tmpDir, _ := tmpDirWithContents(t)
+		hash, err := fileutil.HashDir(tmpDir)
+		assert.NoError(t, err)
+		assert.Equal(t, "hashdir:oSp9wRacwTIrnbgJWcwTvihHfv4B2zRbLYa0GZ7DDk0=", hash)
+	})
+}
+
+func TestDirFiles(t *testing.T) {
+	tmpDir, tmpDirFnames := tmpDirWithContents(t)
+	tests := []struct {
+		name     string
+		path     string
+		outFiles []string
+	}{
+		{
+			name:     "dot path",
+			path:     filepath.Join(tmpDir, "/./"),
+			outFiles: tmpDirFnames,
+		},
+		{
+			name:     "non-empty folder",
+			path:     tmpDir,
+			outFiles: tmpDirFnames,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outFiles, err := fileutil.DirFiles(tt.path)
+			require.NoError(t, err)
+
+			sort.Strings(outFiles)
+			assert.DeepEqual(t, tt.outFiles, outFiles)
+		})
+	}
+}
+
 func deepCompare(t *testing.T, file1, file2 string) bool {
 	sf, err := os.Open(file1)
 	assert.NoError(t, err)
@@ -128,4 +254,29 @@ func deepCompare(t *testing.T, file1, file2 string) bool {
 		}
 	}
 	return true
+}
+
+// tmpDirWithContents returns path to temporary directory having some folders/files in it.
+// Directory is automatically removed by internal testing cleanup methods.
+func tmpDirWithContents(t *testing.T) (string, []string) {
+	dir := t.TempDir()
+	fnames := []string{
+		"file1",
+		"file2",
+		"subfolder1/file1",
+		"subfolder1/file2",
+		"subfolder1/subfolder11/file1",
+		"subfolder1/subfolder11/file2",
+		"subfolder1/subfolder12/file1",
+		"subfolder1/subfolder12/file2",
+		"subfolder2/file1",
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder11"), 0777))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder12"), 0777))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder2"), 0777))
+	for _, fname := range fnames {
+		require.NoError(t, ioutil.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))
+	}
+	sort.Strings(fnames)
+	return dir, fnames
 }

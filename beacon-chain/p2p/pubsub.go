@@ -4,11 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/snappy"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -77,7 +78,7 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	if featureconfig.Get().EnablePeerScorer {
 		scoringParams := topicScoreParams(topic)
 		if scoringParams != nil {
-			if err = topicHandle.SetScoreParams(scoringParams); err != nil {
+			if err := topicHandle.SetScoreParams(scoringParams); err != nil {
 				return nil, err
 			}
 		}
@@ -87,9 +88,13 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 
 // peerInspector will scrape all the relevant scoring data and add it to our
 // peer handler.
-// TODO(#6043): Add hooks to add in peer inspector to our global peer handler.
 func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
-	// no-op
+	// Iterate through all the connected peers and through any of their
+	// relevant topics.
+	for pid, snap := range peerMap {
+		s.peers.Scorers().GossipScorer().SetGossipData(pid, snap.Score,
+			snap.BehaviourPenalty, convertTopicScores(snap.Topics))
+	}
 }
 
 // Content addressable ID function.
@@ -104,7 +109,7 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 //    the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
 //    i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
 func msgIDFunction(pmsg *pubsub_pb.Message) string {
-	decodedData, err := snappy.Decode(nil /*dst*/, pmsg.Data)
+	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
 	if err != nil {
 		combinedData := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pmsg.Data...)
 		h := hashutil.Hash(combinedData)
@@ -132,4 +137,18 @@ func setPubSubParameters() {
 		pubsub.GossipSubHistoryLength = 12
 		pubsub.GossipSubHistoryLength = 5
 	}
+}
+
+// convert from libp2p's internal schema to a compatible prysm protobuf format.
+func convertTopicScores(topicMap map[string]*pubsub.TopicScoreSnapshot) map[string]*pbrpc.TopicScoreSnapshot {
+	newMap := make(map[string]*pbrpc.TopicScoreSnapshot, len(topicMap))
+	for t, s := range topicMap {
+		newMap[t] = &pbrpc.TopicScoreSnapshot{
+			TimeInMesh:               uint64(s.TimeInMesh.Milliseconds()),
+			FirstMessageDeliveries:   float32(s.FirstMessageDeliveries),
+			MeshMessageDeliveries:    float32(s.MeshMessageDeliveries),
+			InvalidMessageDeliveries: float32(s.InvalidMessageDeliveries),
+		}
+	}
+	return newMap
 }

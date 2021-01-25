@@ -263,7 +263,7 @@ func (s *Service) Start() {
 		}()
 	}
 
-	go s.processAttestation(attestationProcessorSubscribed)
+	go s.processAttestationsRoutine(attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
@@ -340,11 +340,6 @@ func (s *Service) Stop() error {
 		if err := s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
 			return err
 		}
-	}
-
-	// Save cached state summaries to the DB before stop.
-	if err := s.stateGen.SaveStateSummariesToDB(s.ctx); err != nil {
-		return err
 	}
 
 	// Save initial sync cached blocks to the DB before stop.

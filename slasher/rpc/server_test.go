@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -202,16 +203,13 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
-	savedBlock := &ethpb.SignedBeaconBlockHeader{
+	savedBlock := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          1,
 			ProposerIndex: 1,
 			BodyRoot:      bytesutil.PadTo([]byte("body root"), 32),
-			StateRoot:     make([]byte, 32),
-			ParentRoot:    make([]byte, 32),
 		},
-		Signature: make([]byte, 96),
-	}
+	})
 
 	cfg := &detection.Config{
 		SlasherDB: db,
@@ -238,7 +236,8 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			sbbh.Header.BodyRoot = bytesutil.PadTo([]byte(fmt.Sprintf("%d", j)), 32)
 			bhr, err := sbbh.Header.HashTreeRoot()
 			assert.NoError(t, err)
-			root, err := helpers.ComputeSigningRoot(bhr, domain)
+			sszBytes := types.SSZBytes(bhr[:])
+			root, err := helpers.ComputeSigningRoot(&sszBytes, domain)
 			assert.NoError(t, err)
 			sbbh.Signature = keys[sbbh.Header.ProposerIndex].Sign(root[:]).Marshal()
 			slashings, err := server.IsSlashableBlock(ctx, sbbh)
@@ -306,7 +305,8 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	require.NoError(t, err)
 	bhr, err := savedBlock.Header.HashTreeRoot()
 	require.NoError(t, err)
-	root, err := helpers.ComputeSigningRoot(bhr, domain)
+	sszBytes := types.SSZBytes(bhr[:])
+	root, err := helpers.ComputeSigningRoot(&sszBytes, domain)
 	require.NoError(t, err)
 	blockSig := keys[savedBlock.Header.ProposerIndex].Sign(root[:])
 	marshalledSig := blockSig.Marshal()

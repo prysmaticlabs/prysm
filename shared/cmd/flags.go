@@ -219,6 +219,18 @@ var (
 		Name:  "accept-terms-of-use",
 		Usage: "Accept Terms and Conditions (for non-interactive environments)",
 	}
+	// RestoreSourceFileFlag specifies the filepath to the backed-up database file
+	// which will be used to restore the database.
+	RestoreSourceFileFlag = &cli.StringFlag{
+		Name:  "restore-source-file",
+		Usage: "Filepath to the backed-up database file which will be used to restore the database",
+	}
+	// RestoreTargetDirFlag specifies the target directory of the restored database.
+	RestoreTargetDirFlag = &cli.StringFlag{
+		Name:  "restore-target-dir",
+		Usage: "Target directory of the restored database",
+		Value: DefaultDataDir(),
+	}
 )
 
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.

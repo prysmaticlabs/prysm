@@ -966,10 +966,7 @@ func (m *ListPublicKeysResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthKeymanager
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthKeymanager
 			}
 			if (iNdEx + skippy) > l {
@@ -1302,10 +1299,7 @@ func (m *SignRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthKeymanager
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthKeymanager
 			}
 			if (iNdEx + skippy) > l {
@@ -1409,10 +1403,7 @@ func (m *SignResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthKeymanager
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthKeymanager
 			}
 			if (iNdEx + skippy) > l {

@@ -7,6 +7,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = [
+        "log.go",
         "main.go",
         "usage.go",
     ],
@@ -20,6 +21,7 @@ go_library(
         "//shared/logutil:go_default_library",
         "//shared/tos:go_default_library",
         "//shared/version:go_default_library",
+        "//slasher/db:go_default_library",
         "//slasher/flags:go_default_library",
         "//slasher/node:go_default_library",
         "@com_github_joonix_log//:go_default_library",

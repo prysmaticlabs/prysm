@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	runtimeDebug "runtime/debug"
 
@@ -13,20 +14,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
-
-var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
 	// verify if ToS accepted
@@ -68,6 +70,8 @@ var appFlags = []cli.Flag{
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
+	flags.GraffitiFileFlag,
+	flags.EnableDutyCountDown,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,
@@ -101,13 +105,14 @@ func init() {
 func main() {
 	app := cli.App{}
 	app.Name = "validator"
-	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain,
-				 starts proposer and attester services, p2p connections, and more`
-	app.Version = version.GetVersion()
+	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more`
+	app.Version = version.Version()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
 		accounts.WalletCommands,
 		accounts.AccountCommands,
+		slashingprotection.Commands,
+		db.DatabaseCommands,
 	}
 
 	app.Flags = appFlags
@@ -149,6 +154,13 @@ func main() {
 			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
+		}
+
+		// Fix data dir for Windows users.
+		outdatedDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2Validators")
+		currentDataDir := flags.DefaultValidatorDir()
+		if err := cmd.FixDefaultDataDir(outdatedDataDir, currentDataDir); err != nil {
+			log.WithError(err).Error("Cannot update data directory")
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())

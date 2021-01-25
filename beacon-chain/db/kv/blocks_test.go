@@ -118,7 +118,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 	zeroFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(0)
 	retrieved, _, err := db.Blocks(ctx, zeroFilter)
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(retrieved), "Unexpected number of blocks received, expected none")
+	assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
 }
 
 func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
@@ -449,4 +449,55 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, roots[i], rt, "mismatch of block roots")
 	}
+}
+
+func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 20
+	require.NoError(t, db.SaveBlock(ctx, b1))
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 100
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte("parent1"), 32)
+	require.NoError(t, db.SaveBlock(ctx, b2))
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 100
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
+	require.NoError(t, db.SaveBlock(ctx, b3))
+
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	r2, err := b2.Block.HashTreeRoot()
+	require.NoError(t, err)
+	r3, err := b3.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	hasBlocks, retrievedBlocks, err := db.BlocksBySlot(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(retrievedBlocks), "Unexpected number of blocks received, expected none")
+	assert.Equal(t, false, hasBlocks, "Expected no blocks")
+	hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 20)
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(b1, retrievedBlocks[0]), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
+	assert.Equal(t, true, hasBlocks, "Expected to have blocks")
+	hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 100)
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(b2, retrievedBlocks[0]), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
+	assert.Equal(t, true, proto.Equal(b3, retrievedBlocks[1]), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
+	assert.Equal(t, true, hasBlocks, "Expected to have blocks")
+
+	hasBlockRoots, retrievedBlockRoots, err := db.BlockRootsBySlot(ctx, 1)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][32]byte{}, retrievedBlockRoots)
+	assert.Equal(t, false, hasBlockRoots, "Expected no block roots")
+	hasBlockRoots, retrievedBlockRoots, err = db.BlockRootsBySlot(ctx, 20)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][32]byte{r1}, retrievedBlockRoots)
+	assert.Equal(t, true, hasBlockRoots, "Expected no block roots")
+	hasBlockRoots, retrievedBlockRoots, err = db.BlockRootsBySlot(ctx, 100)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][32]byte{r2, r3}, retrievedBlockRoots)
+	assert.Equal(t, true, hasBlockRoots, "Expected no block roots")
 }

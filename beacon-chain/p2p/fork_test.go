@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
 	"math/rand"
 	"os"
@@ -230,7 +229,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	}
 	enc, err := enrForkID.MarshalSSZ()
 	require.NoError(t, err)
-	forkEntry := enr.WithEntry(eth2ENRKey, enc)
+	entry := enr.WithEntry(eth2ENRKey, enc)
 	// In epoch 1 of current time, the fork version should be
 	// {0, 0, 0, 1} according to the configuration override above.
 	temp := t.TempDir()
@@ -242,19 +241,15 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)
 	localNode := enode.NewLocalNode(db, pkey)
-	localNode.Set(forkEntry)
+	localNode.Set(entry)
 
 	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
 	require.NoError(t, err)
 
-	resp, err := retrieveForkEntry(localNode.Node().Record())
+	resp, err := forkEntry(localNode.Node().Record())
 	require.NoError(t, err)
-	if !bytes.Equal(resp.CurrentForkDigest, want[:]) {
-		t.Errorf("Wanted fork digest: %v, received %v", want, resp.CurrentForkDigest)
-	}
-	if !bytes.Equal(resp.NextForkVersion, nextForkVersion) {
-		t.Errorf("Wanted next fork version: %v, received %v", nextForkVersion, resp.NextForkVersion)
-	}
+	assert.DeepEqual(t, want[:], resp.CurrentForkDigest)
+	assert.DeepEqual(t, nextForkVersion, resp.NextForkVersion)
 	assert.Equal(t, nextForkEpoch, resp.NextForkEpoch, "Unexpected next fork epoch")
 }
 
@@ -271,9 +266,9 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
 	require.NoError(t, err)
-	forkEntry, err := retrieveForkEntry(localNode.Node().Record())
+	forkEntry, err := forkEntry(localNode.Node().Record())
 	require.NoError(t, err)
-	if !bytes.Equal(forkEntry.NextForkVersion, params.BeaconConfig().GenesisForkVersion) {
-		t.Errorf("Wanted Next Fork Version to be equal to genesis fork version, instead got %#x", forkEntry.NextForkVersion)
-	}
+	assert.DeepEqual(t,
+		params.BeaconConfig().GenesisForkVersion, forkEntry.NextForkVersion,
+		"Wanted Next Fork Version to be equal to genesis fork version")
 }

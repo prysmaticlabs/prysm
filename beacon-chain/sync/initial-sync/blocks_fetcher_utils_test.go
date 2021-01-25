@@ -145,7 +145,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	//       - C'- D'- E'- F'- G'
 	// Allow fetcher to proceed till E, then connect peer having alternative branch.
 	// Test that G' slot can be reached i.e. fetcher can track back and explore alternative paths.
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
 	// Chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
@@ -298,7 +298,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 }
 
 func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	p1 := p2pt.NewTestP2P(t)
 
 	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
@@ -404,7 +404,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 }
 
 func TestBlocksFetcher_findAncestor(t *testing.T) {
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
 	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)

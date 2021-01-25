@@ -7,16 +7,16 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -37,12 +37,9 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	state := testutil.NewBeaconState()
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetValidators(validators))
-	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:       10, // Must be less than block.Slot
-		ParentRoot: make([]byte, 32),
-		StateRoot:  make([]byte, 32),
-		BodyRoot:   make([]byte, 32),
-	}))
+	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+		Slot: 10, // Must be less than block.Slot
+	})))
 
 	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -74,12 +71,9 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	require.NoError(t, beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:       9,
-		ParentRoot: make([]byte, 32),
-		StateRoot:  make([]byte, 32),
-		BodyRoot:   make([]byte, 32),
-	}))
+	require.NoError(t, beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+		Slot: 9,
+	})))
 	require.NoError(t, beaconState.SetSlot(10))
 
 	lbhdr, err := beaconState.LatestBlockHeader().HashTreeRoot()
@@ -115,13 +109,9 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	state := testutil.NewBeaconState()
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
-	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:          9,
-		ProposerIndex: 0,
-		ParentRoot:    make([]byte, 32),
-		StateRoot:     make([]byte, 32),
-		BodyRoot:      make([]byte, 32),
-	}))
+	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+		Slot: 9,
+	})))
 
 	lbhsr, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -129,7 +119,8 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
+	sszBytes := p2ptypes.SSZBytes("hello")
+	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
@@ -168,7 +159,8 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
+	sszBytes := p2ptypes.SSZBytes("hello")
+	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	pID, err := helpers.BeaconProposerIndex(state)
@@ -207,7 +199,8 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, []byte("hello"), params.BeaconConfig().DomainBeaconProposer, priv)
+	sszBytes := p2ptypes.SSZBytes("hello")
+	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
@@ -239,13 +232,9 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	state := testutil.NewBeaconState()
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
-	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:          9,
-		ProposerIndex: 0,
-		ParentRoot:    make([]byte, 32),
-		StateRoot:     make([]byte, 32),
-		BodyRoot:      make([]byte, 32),
-	}))
+	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+		Slot: 9,
+	})))
 
 	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -300,13 +289,10 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	state := testutil.NewBeaconState()
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
-	require.NoError(t, state.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot:          9,
 		ProposerIndex: 0,
-		ParentRoot:    make([]byte, 32),
-		StateRoot:     make([]byte, 32),
-		BodyRoot:      make([]byte, 32),
-	}))
+	})))
 
 	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
