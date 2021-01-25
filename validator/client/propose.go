@@ -81,13 +81,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, b, nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		return
-	}
-
 	// Sign returned block from beacon node
 	sig, domain, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
@@ -102,7 +95,23 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
+	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, b, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, b, sig),
 		).WithError(err).Error("Failed block slashing protection check")

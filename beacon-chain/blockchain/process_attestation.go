@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -19,7 +20,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 
 // onAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
 // it to the DB. As a stateless function, this does not hold nor delay attestation based on the spec descriptions.
-// The delay is handled by the caller in `processAttestation`.
+// The delay is handled by the caller in `processAttestations`.
 //
 // Spec pseudocode definition:
 //   def on_attestation(store: Store, attestation: Attestation) -> None:
@@ -82,9 +83,16 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 		return err
 	}
 
-	// Use the target state to validate attestation and calculate the committees.
-	indexedAtt, err := s.verifyAttestationIndices(ctx, baseState, a)
+	// Use the target state to verify attesting indices are valid.
+	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
+		return err
+	}
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
+	if err != nil {
+		return err
+	}
+	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
 
