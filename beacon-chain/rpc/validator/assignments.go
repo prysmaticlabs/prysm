@@ -61,7 +61,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	defer stateSub.Unsubscribe()
 
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	epochTicker := slotutil.GetSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
+	epochTicker := slotutil.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
