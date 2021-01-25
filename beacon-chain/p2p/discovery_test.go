@@ -312,6 +312,15 @@ func TestMultipleDiscoveryAddresses(t *testing.T) {
 	assert.Equal(t, true, ipv6Found, "IPv6 discovery address not found")
 }
 
+func TestCorrectUDPVersion(t *testing.T) {
+	assert.Equal(t, "udp4", udpVersionFromIP(net.IPv4zero), "incorrect network version")
+	assert.Equal(t, "udp6", udpVersionFromIP(net.IPv6zero), "incorrect network version")
+	assert.Equal(t, "udp4", udpVersionFromIP(net.IP{200, 20, 12, 255}), "incorrect network version")
+	assert.Equal(t, "udp6", udpVersionFromIP(net.IP{22, 23, 24, 251, 17, 18, 0, 0, 0, 0, 12, 14, 212, 213, 16, 22}), "incorrect network version")
+	// v4 in v6
+	assert.Equal(t, "udp4", udpVersionFromIP(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 212, 213, 16, 22}), "incorrect network version")
+}
+
 // addPeer is a helper to add a peer with a given connection state)
 func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
 	// Set up some peers with different states
