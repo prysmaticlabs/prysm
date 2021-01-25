@@ -1037,8 +1037,8 @@ github.com/prometheus/tsdb v0.10.0 h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38i
 github.com/prometheus/tsdb v0.10.0/go.mod h1:oi49uRhEe9dPUTlS3JRZOwJuVi6tmh10QSgwXEyGCt4=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951 h1:Jncuyb/nIJgXbEe0iGz3MN5JmijPVGzwk3G5FR01phI=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210118164230-7eedb111a462 h1:/pdF9r+GHuDSmJ1RT+v5qfdyg9oDQ7z9+gTaSUTrWGE=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210118164230-7eedb111a462/go.mod h1:Ivz0q9+9GImUsieVZQSu79HIwRXQBOtlyX3ukdnzZB0=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210125072234-392411dc0ee1 h1:pODoZ43pXYW9LF5J6ZNJGRmp9HN8Le0L4IbelQFmNa4=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210125072234-392411dc0ee1/go.mod h1:Ivz0q9+9GImUsieVZQSu79HIwRXQBOtlyX3ukdnzZB0=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210108222456-8e92c3709aa0/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210121075346-fee7b721f342 h1:SMro7Z5L2ACvcKREIVJDn8LvoVTY1TY2rTlPJmDlUWc=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210121075346-fee7b721f342/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=

@@ -26,7 +26,6 @@ import (
 // Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
-// nolint: maligned
 type Server struct {
 	SlashingsPool       *slashings.Pool
 	StateGen            *stategen.State

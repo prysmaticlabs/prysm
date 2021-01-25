@@ -15,7 +15,6 @@ import (
 // Server defines a server implementation of the gRPC Node service,
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information.
-// nolint: maligned
 type Server struct {
 	SyncChecker        sync.Checker
 	Server             *grpc.Server
