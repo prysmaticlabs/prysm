@@ -104,12 +104,14 @@ func (s *Service) createListener(
 	// on which we will bind our listener on
 	// by default we will listen to all interfaces.
 	var bindIP net.IP
-	if ipAddr.To4() != nil {
-		networkVersion = "udp4"
+	networkVersion = udpVersionFromIP(ipAddr)
+	switch networkVersion {
+	case "udp4":
 		bindIP = net.IPv4zero
-	} else {
-		networkVersion = "udp6"
+	case "udp6":
 		bindIP = net.IPv6zero
+	default:
+		return nil, errors.New("invalid ip provided")
 	}
 
 	// If local ip is specified then use that instead.
@@ -119,6 +121,7 @@ func (s *Service) createListener(
 			return nil, errors.New("invalid local ip provided")
 		}
 		bindIP = ipAddr
+		networkVersion = udpVersionFromIP(ipAddr)
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   bindIP,
@@ -420,4 +423,11 @@ func multiAddrFromString(address string) (ma.Multiaddr, error) {
 		return nil, err
 	}
 	return addr.Multiaddr(), nil
+}
+
+func udpVersionFromIP(ipAddr net.IP) string {
+	if ipAddr.To4() != nil {
+		return "udp4"
+	}
+	return "udp6"
 }
