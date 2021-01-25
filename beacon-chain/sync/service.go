@@ -41,7 +41,6 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenAttSize = 10000
 const seenExitSize = 100
-const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
 
