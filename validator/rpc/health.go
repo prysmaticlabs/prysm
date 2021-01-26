@@ -51,7 +51,7 @@ func (s *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*pb.VersionRe
 
 	return &pb.VersionResponse{
 		Beacon:    beacon.Version,
-		Validator: version.GetVersion(),
+		Validator: version.Version(),
 	}, nil
 }
 

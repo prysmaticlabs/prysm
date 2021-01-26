@@ -304,7 +304,7 @@ func (f *blocksFetcher) requestBlocks(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	l := f.getPeerLock(pid)
+	l := f.peerLock(pid)
 	l.Lock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,
@@ -334,7 +334,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	l := f.getPeerLock(pid)
+	l := f.peerLock(pid)
 	l.Lock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,

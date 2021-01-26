@@ -62,7 +62,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
 	default:
-		return fmt.Errorf(msgKeymanagerNotSupported, w.KeymanagerKind().String())
+		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind().String())
 	}
 	return nil
 }

@@ -90,7 +90,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "hash slinging slasher"
 	app.Usage = `launches an Ethereum Serenity slasher server that interacts with a beacon chain.`
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		db.DatabaseCommands,
 	}

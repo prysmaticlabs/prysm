@@ -35,7 +35,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
-	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -44,6 +45,8 @@ import (
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
 	cliCtx            *cli.Context
+	ctx               context.Context
+	cancel            context.CancelFunc
 	db                *kv.Store
 	services          *shared.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
@@ -75,8 +78,11 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
+	ctx, cancel := context.WithCancel(cliCtx.Context)
 	ValidatorClient := &ValidatorClient{
 		cliCtx:            cliCtx,
+		ctx:               ctx,
+		cancel:            cancel,
 		services:          registry,
 		walletInitialized: new(event.Feed),
 		stop:              make(chan struct{}),
@@ -117,7 +123,7 @@ func (c *ValidatorClient) Start() {
 	c.lock.Lock()
 
 	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
+		"version": version.Version(),
 	}).Info("Starting validator node")
 
 	c.services.StartAll()
@@ -153,6 +159,7 @@ func (c *ValidatorClient) Close() {
 
 	c.services.StopAll()
 	log.Info("Stopping Prysm validator")
+	c.cancel()
 	close(c.stop)
 }
 
@@ -225,6 +232,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
 	}
+
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := c.registerPrometheusService(cliCtx); err != nil {
 			return err
@@ -311,6 +319,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
 	}
+
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := c.registerPrometheusService(cliCtx); err != nil {
 			return err
@@ -371,8 +380,8 @@ func (c *ValidatorClient) registerClientService(
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	var sp *slashing_protection.Service
-	var protector slashing_protection.Protector
+	var sp *slashingprotection.Service
+	var protector iface.Protector
 	if err := c.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
@@ -422,7 +431,7 @@ func (c *ValidatorClient) registerSlasherClientService() error {
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewService(c.cliCtx.Context, &slashing_protection.Config{
+	sp, err := slashingprotection.NewService(c.cliCtx.Context, &slashingprotection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,

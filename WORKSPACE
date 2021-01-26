@@ -156,7 +156,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.15.6",
+    go_version = "1.15.7",
     nogo = "@//:nogo",
 )
 
@@ -208,6 +208,21 @@ http_archive(
     sha256 = "b84fbd1173acee9d02a7d3698ad269fdf4f7aa081e9cecd40e012ad0ad8cfa2a",
     strip_prefix = "repo-infra-6537f2101fb432b679f3d103ee729dd8ac5d30a0",
     url = "https://github.com/kubernetes/repo-infra/archive/6537f2101fb432b679f3d103ee729dd8ac5d30a0.tar.gz",
+)
+
+http_archive(
+    name = "eip3076_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.json",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "91434d5fd5e1c6eb7b0174fed2afe25e09bddf00e1e4c431db931b2cee4e7773",
+    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
 http_archive(
