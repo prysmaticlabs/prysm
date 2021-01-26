@@ -4,8 +4,9 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "config.go",
+        "doc.go",
         "log.go",
+        "params.go",
         "receive.go",
         "service.go",
     ],
@@ -22,12 +23,14 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "config_test.go",
+        "params_test.go",
         "receive_test.go",
+        "service_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//shared/event:go_default_library",
+        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
