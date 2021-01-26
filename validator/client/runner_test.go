@@ -33,7 +33,7 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	assert.Equal(t, 1, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
-func TestCancelledContext_WithRetry(t *testing.T) {
+func TestRetry_On_ConnectionError(t *testing.T) {
 	retry := 10
 	v := &FakeValidator{
 		Keymanager:       &mockKeymanager{accountsChangedFeed: &event.Feed{}},
@@ -42,14 +42,16 @@ func TestCancelledContext_WithRetry(t *testing.T) {
 	backOffPeriod = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	go run(ctx, v)
-	time.Sleep(time.Duration(retry*4) * backOffPeriod)
+	// each step will fail (retry times)=10 this sleep times will wait more then
+	// the time it takes for all steps to succeed before main loop.
+	time.Sleep(time.Duration(retry*6) * backOffPeriod)
 	cancel()
 	// every call will fail retry=10 times so first one will be called 4 * retry=10.
 	assert.Equal(t, retry*4, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 	assert.Equal(t, retry*3, v.WaitForSyncCalled, "Expected WaitForSync() to be called")
 	assert.Equal(t, retry*2, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 	assert.Equal(t, retry, v.CanonicalHeadSlotCalled, "Expected WaitForActivation() to be called")
-	assert.Equal(t, retry, v.CanonicalHeadSlotCalled, "Expected WaitForActivation() to be called")
+	assert.Equal(t, retry, v.ReceiveBlocksCalled, "Expected WaitForActivation() to be called")
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {

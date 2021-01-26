@@ -26,11 +26,11 @@ type FakeValidator struct {
 	SaveProtectionsCalled             bool
 	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
-	ErrorBlock                        bool
 	WaitForChainStartCalled           int
 	WaitForSyncCalled                 int
 	WaitForActivationCalled           int
 	CanonicalHeadSlotCalled           int
+	ReceiveBlocksCalled               int
 	RetryTillSuccess                  int
 	ProposeBlockArg1                  uint64
 	AttestToBlockHeadArg1             uint64
@@ -210,7 +210,9 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 
 // ReceiveBlocks for mocking
 func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
-	if fv.ErrorBlock {
+	fv.ReceiveBlocksCalled++
+	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
 		connectionErrorChannel <- errConnectionIssue
 	}
+	return
 }
