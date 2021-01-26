@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -17,7 +17,7 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestConfig_cellIndex(t *testing.T) {
 	type args struct {
-		validatorIndex types.ValidatorIdx
+		validatorIndex types.ValidatorIndex
 		epoch          types.Epoch
 	}
 	tests := []struct {
@@ -252,7 +252,7 @@ func TestConfig_diskKey(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		validatorIndex types.ValidatorIdx
+		validatorIndex types.ValidatorIndex
 		epoch          types.Epoch
 		want           uint64
 	}{
@@ -308,7 +308,7 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		validatorIndex types.ValidatorIdx
+		validatorIndex types.ValidatorIndex
 		want           uint64
 	}{
 		{
@@ -396,7 +396,7 @@ func TestConfig_validatorOffset(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		validatorIndex types.ValidatorIdx
+		validatorIndex types.ValidatorIndex
 		want           uint64
 	}{
 		{

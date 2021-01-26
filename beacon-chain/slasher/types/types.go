@@ -17,14 +17,3 @@ type AttestationRecord struct {
 	Target      uint64
 	SigningRoot [32]byte
 }
-
-// Epoch in eth2 is a fixed period of slots.
-type Epoch uint64
-
-// ValidatorIdx in eth2.
-type ValidatorIdx uint64
-
-// Span is a difference between two epochs, with the max epoch
-// being WEAK_SUBJECTIVITY_PERIOD. This difference cannot grow beyond
-// uint16.
-type Span uint16

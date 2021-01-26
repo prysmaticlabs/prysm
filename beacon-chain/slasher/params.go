@@ -1,6 +1,6 @@
 package slasher
 
-import "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+import "github.com/prysmaticlabs/eth2-types"
 
 // Parameters for slashing detection.
 //
@@ -45,14 +45,14 @@ func DefaultParams() *Parameters {
 //  chunked = [[2, 2], [2, 2], [2, 2]]
 //                              |-> epoch 4, chunk idx 2
 func (p *Parameters) chunkIndex(epoch types.Epoch) uint64 {
-	return (uint64(epoch) % p.historyLength) / p.chunkSize
+	return uint64(epoch.Mod(p.historyLength).Div(p.chunkSize))
 }
 
 // When storing data on disk, we take K validators' chunks. To figure out
 // which validator chunk index a validator index is for, we simply divide
 // the validator index, i, by K.
-func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIdx) uint64 {
-	return uint64(validatorIndex) / p.validatorChunkSize
+func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIndex) uint64 {
+	return uint64(validatorIndex.Div(p.validatorChunkSize))
 }
 
 // Given a validator index, and epoch, we compute the exact index
@@ -78,7 +78,7 @@ func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIdx) uint
 //  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 //                        |-> epoch 1 for val2
 //
-func (p *Parameters) cellIndex(validatorIndex types.ValidatorIdx, epoch types.Epoch) uint64 {
+func (p *Parameters) cellIndex(validatorIndex types.ValidatorIndex, epoch types.Epoch) uint64 {
 	validatorChunkOffset := p.validatorOffset(validatorIndex)
 	chunkOffset := p.chunkOffset(epoch)
 	return validatorChunkOffset*p.chunkSize + chunkOffset
@@ -86,12 +86,12 @@ func (p *Parameters) cellIndex(validatorIndex types.ValidatorIdx, epoch types.Ep
 
 // Computes the start index of a chunk given an epoch.
 func (p *Parameters) chunkOffset(epoch types.Epoch) uint64 {
-	return uint64(epoch) % p.chunkSize
+	return uint64(epoch.Mod(p.chunkSize))
 }
 
 // Computes the start index of a validator chunk given a validator index.
-func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIdx) uint64 {
-	return uint64(validatorIndex) % p.validatorChunkSize
+func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64 {
+	return uint64(validatorIndex.Mod(p.validatorChunkSize))
 }
 
 // Construct a key for our database schema given a validator index and epoch.
@@ -113,7 +113,7 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIdx) uint64 {
 //
 //  validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
 //
-func (p *Parameters) flatSliceID(validatorIndex types.ValidatorIdx, epoch types.Epoch) uint64 {
+func (p *Parameters) flatSliceID(validatorIndex types.ValidatorIndex, epoch types.Epoch) uint64 {
 	validatorChunkIndex := p.validatorChunkIndex(validatorIndex)
 	chunkIndex := p.chunkIndex(epoch)
 	width := p.historyLength / p.chunkSize

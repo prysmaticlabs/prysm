@@ -8,9 +8,10 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -57,11 +58,11 @@ type ReadOnlyDatabase interface {
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 	// Slasher related helpers.
-	LatestEpochWrittenForValidator(ctx context.Context, validatorIdx types.ValidatorIdx) (types.Epoch, bool, error)
+	LatestEpochAttestedForValidator(ctx context.Context, validatorIdx types.ValidatorIndex) (types.Epoch, bool, error)
 	AttestationRecordForValidator(
-		ctx context.Context, validatorIdx types.ValidatorIdx, targetEpoch types.Epoch,
-	) (*types.AttestationRecord, error)
-	LoadChunk(ctx context.Context, kind types.ChunkKind, diskKey uint64) ([]types.Span, bool, error)
+		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+	) (*slashertypes.AttestationRecord, error)
+	LoadChunk(ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64) ([]uint16, bool, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -92,16 +93,16 @@ type NoHeadAccessDatabase interface {
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
 	// Slasher operations.
-	UpdateLatestEpochWrittenForValidators(
-		ctx context.Context, validatorIndices []types.ValidatorIdx, epoch types.Epoch,
+	SaveLatestEpochAttestedForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 	) error
 	SaveAttestationRecordForValidator(
 		ctx context.Context,
-		validatorIdx types.ValidatorIdx,
+		validatorIdx types.ValidatorIndex,
 		attestation *eth.IndexedAttestation,
 	) error
 	SaveChunks(
-		ctx context.Context, kind types.ChunkKind, chunkKeys []uint64, chunks [][]types.Span,
+		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 	) error
 
 	// Run any required database migrations.
