@@ -74,8 +74,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := Service{
 		ctx:                       ctx,
 		p2p:                       p2pService,
@@ -83,7 +81,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		slashingPool:              slashings.NewPool(),
 		chain:                     chainService,
 		db:                        d,
-		seenAttesterSlashingCache: c,
+		seenAttesterSlashingCache: make(map[uint64]bool),
 		chainStarted:              abool.New(),
 	}
 	topic := "/eth2/%x/attester_slashing"

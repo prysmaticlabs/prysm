@@ -192,7 +192,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.StaticPeers = staticPeers
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	cfg.NoDiscovery = true
-	s, err := NewService(context.Background(), cfg)
+	s, err := New(context.Background(), cfg)
 	require.NoError(t, err)
 
 	exitRoutine := make(chan bool)

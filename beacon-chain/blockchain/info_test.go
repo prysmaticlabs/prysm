@@ -32,7 +32,7 @@ func TestService_TreeHandler(t *testing.T) {
 		),
 		StateGen: stategen.New(beaconDB),
 	}
-	s, err := NewService(ctx, cfg)
+	s, err := New(ctx, cfg)
 	require.NoError(t, err)
 	require.NoError(t, s.forkChoiceStore.ProcessBlock(ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0))
 	require.NoError(t, s.forkChoiceStore.ProcessBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0))

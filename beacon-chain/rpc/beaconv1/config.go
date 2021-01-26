@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -23,5 +25,13 @@ func (bs *Server) GetSpec(ctx context.Context, req *emptypb.Empty) (*ethpb.SpecR
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
 func (bs *Server) GetDepositContract(ctx context.Context, req *emptypb.Empty) (*ethpb.DepositContractResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
+	defer span.End()
+
+	return &ethpb.DepositContractResponse{
+		Data: &ethpb.DepositContract{
+			ChainId: params.BeaconConfig().DepositChainID,
+			Address: params.BeaconConfig().DepositContractAddress,
+		},
+	}, nil
 }

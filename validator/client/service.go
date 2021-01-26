@@ -354,6 +354,9 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 			}
 		case <-ctx.Done():
 			return
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return
 		}
 	}
 }
