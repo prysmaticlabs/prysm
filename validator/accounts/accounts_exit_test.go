@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"google.golang.org/grpc/metadata"
-
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
