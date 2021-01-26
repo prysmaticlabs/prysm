@@ -106,7 +106,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "validator"
 	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more`
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
 		accounts.WalletCommands,
