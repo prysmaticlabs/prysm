@@ -22,14 +22,16 @@ func (s *Store) LatestEpochAttestedForValidator(
 	var exists bool
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(epochByValidatorBucket)
-		enc := ssz.MarshalUint64(make([]byte, 0), uint64(validatorIdx))
+		enc, err := validatorIdx.MarshalSSZ()
+		if err != nil {
+			return err
+		}
 		epochBytes := bkt.Get(enc)
 		if epochBytes == nil {
 			return nil
 		}
-		epoch = types.Epoch(ssz.UnmarshallUint64(epochBytes))
 		exists = true
-		return nil
+		return epoch.UnmarshalSSZ(epochBytes)
 	})
 	return epoch, exists, err
 }
@@ -44,8 +46,14 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(epochByValidatorBucket)
 		for _, valIdx := range validatorIndices {
-			key := ssz.MarshalUint64(make([]byte, 0), uint64(valIdx))
-			val := ssz.MarshalUint64(make([]byte, 0), uint64(epoch))
+			key, err := valIdx.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			val, err := epoch.MarshalSSZ()
+			if err != nil {
+				return err
+			}
 			if err := bkt.Put(key, val); err != nil {
 				return err
 			}
@@ -64,8 +72,14 @@ func (s *Store) AttestationRecordForValidator(
 	var record *slashertypes.AttestationRecord
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		encIdx := ssz.MarshalUint64(make([]byte, 0), uint64(validatorIdx))
-		encEpoch := ssz.MarshalUint64(make([]byte, 0), uint64(targetEpoch))
+		encIdx, err := validatorIdx.MarshalSSZ()
+		if err != nil {
+			return err
+		}
+		encEpoch, err := targetEpoch.MarshalSSZ()
+		if err != nil {
+			return err
+		}
 		key := append(encIdx, encEpoch...)
 		value := bkt.Get(key)
 		if value == nil {
@@ -90,7 +104,10 @@ func (s *Store) SaveAttestationRecordForValidator(
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		encIdx := ssz.MarshalUint64(make([]byte, 0), uint64(validatorIdx))
+		encIdx, err := validatorIdx.MarshalSSZ()
+		if err != nil {
+			return err
+		}
 		encEpoch := ssz.MarshalUint64(make([]byte, 0), attestation.Data.Target.Epoch)
 		key := append(encIdx, encEpoch...)
 		value := make([]byte, 16)
@@ -141,7 +158,7 @@ func (s *Store) SaveChunks(
 			keyBytes := ssz.MarshalUint64(make([]byte, 0), chunkKeys[i])
 			val := make([]byte, 0)
 			for j := 0; j < len(chunks[i]); j++ {
-				val = append(val, ssz.MarshalUint16(make([]byte, 0), uint16(chunks[i][j]))...)
+				val = append(val, ssz.MarshalUint16(make([]byte, 0), chunks[i][j])...)
 			}
 			keyBytes = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), keyBytes...)
 			if err := bkt.Put(keyBytes, val); err != nil {
