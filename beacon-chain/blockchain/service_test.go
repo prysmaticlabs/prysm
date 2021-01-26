@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -453,6 +456,28 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	s.saveInitSyncBlock(r, b)
 	require.NoError(t, s.Stop())
 	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
+}
+
+func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+	service.processChainStartTime(context.Background(), time.Now())
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		select {
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.Initialized {
+				_, ok := stateEvent.Data.(*statefeed.InitializedData)
+				require.Equal(t, true, ok, "Event feed data is not type")
+			}
+		}
+		wg.Done()
+	}()
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
