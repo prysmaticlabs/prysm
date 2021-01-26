@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -55,6 +56,21 @@ type ReadOnlyDatabase interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
+	// Slasher related helpers.
+	// Epochs written.
+	//UpdateLatestEpochWrittenForValidators(ctx context.Context, validatorIndices []uint64, epoch uint64) error
+	LatestEpochWrittenForValidator(ctx context.Context, validatorIdx types.ValidatorIdx) (types.Epoch, bool, error)
+	AttestationRecordForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIdx, targetEpoch types.Epoch,
+	) (*types.AttestationRecord, error)
+	//SaveAttestationRecordForValidator(
+	//	ctx context.Context,
+	//	validatorIdx uint64,
+	//	attestation *ethpb.IndexedAttestation,
+	//) error
+
+	// Chunks.
+	LoadChunk(ctx context.Context, kind types.ChunkKind, diskKey uint64) ([]uint16, bool, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
