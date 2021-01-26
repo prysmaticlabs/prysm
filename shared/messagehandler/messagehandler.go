@@ -8,7 +8,6 @@ import (
 	"runtime/debug"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )

@@ -10,8 +10,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var (

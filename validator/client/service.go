@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -30,6 +28,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // SyncChecker is able to determine if a beacon node is currently
