@@ -1,7 +1,6 @@
 package migration
 
 import (
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -32,7 +31,7 @@ func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBe
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v1Block := &ethpb.SignedBeaconBlock{}
-	if err := proto.Unmarshal(marshaledBlk, v1Block); err != nil {
+	if err := v1Block.UnmarshalSSZ(marshaledBlk); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1Block, nil
@@ -45,7 +44,7 @@ func V1ToV1Alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBe
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v1alpha1Block := &ethpb_alpha.SignedBeaconBlock{}
-	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
+	if err := v1alpha1Block.UnmarshalSSZ(marshaledBlk); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1alpha1Block, nil
