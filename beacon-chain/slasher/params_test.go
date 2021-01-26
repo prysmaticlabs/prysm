@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -16,8 +17,8 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestConfig_cellIndex(t *testing.T) {
 	type args struct {
-		validatorIndex uint64
-		epoch          uint64
+		validatorIndex types.ValidatorIdx
+		epoch          types.Epoch
 	}
 	tests := []struct {
 		name   string
@@ -158,7 +159,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields *Parameters
-		epoch  uint64
+		epoch  types.Epoch
 		want   uint64
 	}{
 		{
@@ -251,8 +252,8 @@ func TestConfig_diskKey(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		epoch          uint64
-		validatorIndex uint64
+		validatorIndex types.ValidatorIdx
+		epoch          types.Epoch
 		want           uint64
 	}{
 		{
@@ -307,7 +308,7 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		validatorIndex uint64
+		validatorIndex types.ValidatorIdx
 		want           uint64
 	}{
 		{
@@ -351,7 +352,7 @@ func TestConfig_chunkOffset(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields *Parameters
-		epoch  uint64
+		epoch  types.Epoch
 		want   uint64
 	}{
 		{
@@ -395,7 +396,7 @@ func TestConfig_validatorOffset(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		validatorIndex uint64
+		validatorIndex types.ValidatorIdx
 		want           uint64
 	}{
 		{
