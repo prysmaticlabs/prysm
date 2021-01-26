@@ -214,5 +214,4 @@ func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChann
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
 		connectionErrorChannel <- errConnectionIssue
 	}
-	return
 }
