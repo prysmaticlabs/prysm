@@ -8,33 +8,34 @@ import "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 // functions from these parameter values as nice abstractions. the following parameters are
 // required for the helper functions defined in this file.
 //
-// (C) ChunkSize defines how many elements are in a chunk for a validator
+// (C) chunkSize defines how many elements are in a chunk for a validator
 // min or max span slice.
-// (K) ValidatorChunkSize defines how many validators' chunks we store in a single
+// (K) validatorChunkSize defines how many validators' chunks we store in a single
 // flat byte slice on disk.
-// (H) HistoryLength defines how many epochs we keep of min or max spans.
+// (H) historyLength defines how many epochs we keep of min or max spans.
 type Parameters struct {
-	ChunkSize          uint64
-	ValidatorChunkSize uint64
-	HistoryLength      uint64
+	chunkSize          uint64
+	validatorChunkSize uint64
+	historyLength      uint64
 }
 
 // DefaultParams defines default values for slasher's important parameters, defined
 // based on optimization analysis for best and worst case scenarios for
 // slasher's performance.
+//
+// The default values for chunkSize and validatorChunkSize were
+// decided after an optimization analysis performed by the Sigma Prime team.
+// See: https://hackmd.io/@sproul/min-max-slasher#1D-vs-2D for more information.
+// We decide to keep 4096 epochs worth of data in each validator's min max spans.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		// The default values for ChunkSize and ValidatorChunkSize were
-		// decided after an optimization analysis performed by the Sigma Prime team.
-		// See: https://hackmd.io/@sproul/min-max-slasher#1D-vs-2D for more information.
-		// We decide to keep 4096 epochs worth of data in each validator's min max spans.
-		ChunkSize:          16,
-		ValidatorChunkSize: 256,
-		HistoryLength:      4096,
+		chunkSize:          16,
+		validatorChunkSize: 256,
+		historyLength:      4096,
 	}
 }
 
-// Validator min and max spans are split into chunks of length C = ChunkSize.
+// Validator min and max spans are split into chunks of length C = chunkSize.
 // That is, if we are keeping N epochs worth of attesting history, finding what
 // chunk a certain epoch, e, falls into can be computed as (e % N) / C. For example,
 // if we are keeping 6 epochs worth of data, and we have chunks of size 2, then epoch
@@ -44,14 +45,14 @@ func DefaultParams() *Parameters {
 //  chunked = [[2, 2], [2, 2], [2, 2]]
 //                              |-> epoch 4, chunk idx 2
 func (p *Parameters) chunkIndex(epoch types.Epoch) uint64 {
-	return (uint64(epoch) % p.HistoryLength) / p.ChunkSize
+	return (uint64(epoch) % p.historyLength) / p.chunkSize
 }
 
 // When storing data on disk, we take K validators' chunks. To figure out
 // which validator chunk index a validator index is for, we simply divide
 // the validator index, i, by K.
 func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIdx) uint64 {
-	return uint64(validatorIndex) / p.ValidatorChunkSize
+	return uint64(validatorIndex) / p.validatorChunkSize
 }
 
 // Given a validator index, and epoch, we compute the exact index
@@ -80,17 +81,17 @@ func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIdx) uint
 func (p *Parameters) cellIndex(validatorIndex types.ValidatorIdx, epoch types.Epoch) uint64 {
 	validatorChunkOffset := p.validatorOffset(validatorIndex)
 	chunkOffset := p.chunkOffset(epoch)
-	return validatorChunkOffset*p.ChunkSize + chunkOffset
+	return validatorChunkOffset*p.chunkSize + chunkOffset
 }
 
 // Computes the start index of a chunk given an epoch.
 func (p *Parameters) chunkOffset(epoch types.Epoch) uint64 {
-	return uint64(epoch) % p.ChunkSize
+	return uint64(epoch) % p.chunkSize
 }
 
 // Computes the start index of a validator chunk given a validator index.
 func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIdx) uint64 {
-	return uint64(validatorIndex) % p.ValidatorChunkSize
+	return uint64(validatorIndex) % p.validatorChunkSize
 }
 
 // Construct a key for our database schema given a validator index and epoch.
@@ -98,11 +99,11 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIdx) uint64 {
 // a 2D chunk given a validator index and epoch value.
 // First, we compute the validator chunk index for the validator index,
 // Then, we compute the chunk index for the epoch.
-// If ChunkSize C = 3 and ValidatorChunkSize K = 3, and HistoryLength H = 12,
+// If chunkSize C = 3 and validatorChunkSize K = 3, and historyLength H = 12,
 // if we are looking for epoch 6 and validator 6, then
 //
 //  validatorChunkIndex = 6 / 3 = 2
-//  chunkIndex = (6 % HistoryLength) / 3 = (6 % 12) / 3 = 2
+//  chunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
 //
 // Then we compute how many chunks there are per max span, known as the "width"
 //
@@ -115,7 +116,7 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIdx) uint64 {
 func (p *Parameters) flatSliceID(validatorIndex types.ValidatorIdx, epoch types.Epoch) uint64 {
 	validatorChunkIndex := p.validatorChunkIndex(validatorIndex)
 	chunkIndex := p.chunkIndex(epoch)
-	width := p.HistoryLength / p.ChunkSize
+	width := p.historyLength / p.chunkSize
 	return validatorChunkIndex*width + chunkIndex
 }
 
@@ -123,8 +124,8 @@ func (p *Parameters) flatSliceID(validatorIndex types.ValidatorIdx, epoch types.
 // indices that will belong in that chunk.
 func (p *Parameters) validatorIndicesInChunk(validatorChunkIdx uint64) []uint64 {
 	validatorIndices := make([]uint64, 0)
-	low := validatorChunkIdx * p.ValidatorChunkSize
-	high := (validatorChunkIdx + 1) * p.ValidatorChunkSize
+	low := validatorChunkIdx * p.validatorChunkSize
+	high := (validatorChunkIdx + 1) * p.validatorChunkSize
 	for i := low; i < high; i++ {
 		validatorIndices = append(validatorIndices, i)
 	}

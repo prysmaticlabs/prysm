@@ -13,7 +13,6 @@ import (
 // This struct allows us to specify required dependencies and
 // parameters for slasher to function as needed.
 type ServiceConfig struct {
-	*Parameters
 	IndexedAttsFeed *event.Feed
 	Database        db.Database
 }
@@ -32,7 +31,7 @@ type Service struct {
 func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		params:          srvCfg.Parameters,
+		params:          DefaultParams(),
 		serviceCfg:      srvCfg,
 		indexedAttsChan: make(chan *ethpb.IndexedAttestation, 1),
 		ctx:             ctx,
