@@ -123,7 +123,7 @@ func TestStart_OK(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -152,7 +152,7 @@ func TestStart_NoHTTPEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	s, err := NewService(context.Background(), &Web3ServiceConfig{
+	s, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{""}, // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -193,7 +193,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(context.Background(), genRoot))
-	s, err := NewService(context.Background(), &Web3ServiceConfig{
+	s, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{""}, // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -223,7 +223,7 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
 		Trie:           &protodb.SparseMerkleTrie{},
 	}))
-	s, err := NewService(context.Background(), &Web3ServiceConfig{
+	s, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{""}, // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -240,7 +240,7 @@ func TestStop_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -265,7 +265,7 @@ func TestService_Eth1Synced(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -286,7 +286,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -359,7 +359,7 @@ func TestStatus(t *testing.T) {
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
@@ -398,7 +398,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -451,11 +451,11 @@ func TestInitDepositCache_OK(t *testing.T) {
 	require.Equal(t, 3, len(s.depositCache.PendingContainers(context.Background(), nil)))
 }
 
-func TestNewService_EarliestVotingBlock(t *testing.T) {
+func TestNew_EarliestVotingBlock(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+	web3Service, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -501,12 +501,12 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 
 }
 
-func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
+func TestNew_Eth1HeaderRequLimit(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
-	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+	s1, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
@@ -514,7 +514,7 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	assert.Equal(t, defaultEth1HeaderReqLimit, s1.eth1HeaderReqLimit, "default eth1 header request limit not set")
 
-	s2, err := NewService(context.Background(), &Web3ServiceConfig{
+	s2, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:      []string{endpoint},
 		DepositContract:    testAcc.ContractAddr,
 		BeaconDB:           beaconDB,
@@ -532,7 +532,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
-	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+	s1, err := New(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{firstEndpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,

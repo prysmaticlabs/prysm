@@ -17,7 +17,7 @@ import (
 )
 
 func TestBatchAttestations_Multiple(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -114,7 +114,7 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 }
 
 func TestBatchAttestations_Single(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -156,7 +156,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -180,7 +180,7 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -231,7 +231,7 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 }
 
 func TestSeenAttestations_PresentInCache(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
@@ -305,7 +305,7 @@ func TestService_seen(t *testing.T) {
 		},
 	}
 
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	for i, tt := range tests {

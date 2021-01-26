@@ -82,7 +82,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 	cfg.StateNotifier = &mock.MockStateNotifier{}
-	s, err = NewService(context.Background(), cfg)
+	s, err = New(context.Background(), cfg)
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
