@@ -26,12 +26,12 @@ import (
 // gated behind the feature flag --enable-debug-rpc-endpoints.
 
 type Server struct {
-	StateGen           *stategen.State
+	BeaconDB           db.NoHeadAccessDatabase
 	GenesisTimeFetcher blockchain.TimeFetcher
+	StateGen           *stategen.State
 	HeadFetcher        blockchain.HeadFetcher
 	PeerManager        p2p.PeerManager
 	PeersFetcher       p2p.PeersProvider
-	BeaconDB           db.NoHeadAccessDatabase
 	ethpb.UnimplementedBeaconDebugServer
 }
 

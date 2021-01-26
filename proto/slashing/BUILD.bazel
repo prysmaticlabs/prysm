@@ -16,9 +16,7 @@ proto_library(
 
 go_proto_library(
     name = "ethereum_slashing_go_proto",
-    compilers = [
-        "@prysm//:grpc_proto_compiler",
-    ],
+    compilers = ["@prysm//:grpc_proto_compiler"],
     importpath = "github.com/prysmaticlabs/prysm/proto/slashing",
     proto = ":ethereum_slashing_proto",
     visibility = ["//visibility:public"],

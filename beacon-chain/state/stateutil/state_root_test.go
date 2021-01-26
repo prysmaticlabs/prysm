@@ -19,7 +19,8 @@ func TestState_FieldCount(t *testing.T) {
 	typ := reflect.TypeOf(pb.BeaconState{})
 	numFields := 0
 	for i := 0; i < typ.NumField(); i++ {
-		if strings.HasPrefix(typ.Field(i).Name, "XXX_") {
+		// If unexported, skip.
+		if typ.Field(i).Name[0] == strings.ToLower(typ.Field(i).Name)[0] {
 			continue
 		}
 		numFields++

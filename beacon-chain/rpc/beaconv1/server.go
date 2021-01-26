@@ -27,23 +27,23 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type Server struct {
-	SlashingsPool       *slashings.Pool
-	StateGen            *stategen.State
-	ChainStartChan      chan time.Time
-	CanonicalStateChan  chan *pbp2p.BeaconState
 	BeaconDB            db.ReadOnlyDatabase
-	BlockNotifier       blockfeed.Notifier
-	AttestationsPool    attestations.Pool
-	Broadcaster         p2p.Broadcaster
-	AttestationNotifier operation.Notifier
 	Ctx                 context.Context
-	StateNotifier       statefeed.Notifier
-	BlockReceiver       blockchain.BlockReceiver
-	GenesisTimeFetcher  blockchain.TimeFetcher
-	BlockFetcher        powchain.POWBlockFetcher
-	DepositFetcher      depositcache.DepositFetcher
-	ChainInfoFetcher    blockchain.ChainInfoFetcher
 	ChainStartFetcher   powchain.ChainStartFetcher
+	ChainInfoFetcher    blockchain.ChainInfoFetcher
+	DepositFetcher      depositcache.DepositFetcher
+	BlockFetcher        powchain.POWBlockFetcher
+	GenesisTimeFetcher  blockchain.TimeFetcher
+	BlockReceiver       blockchain.BlockReceiver
+	StateNotifier       statefeed.Notifier
+	BlockNotifier       blockfeed.Notifier
+	AttestationNotifier operation.Notifier
+	Broadcaster         p2p.Broadcaster
+	AttestationsPool    attestations.Pool
+	SlashingsPool       *slashings.Pool
+	CanonicalStateChan  chan *pbp2p.BeaconState
+	ChainStartChan      chan time.Time
+	StateGen            *stategen.State
 	SyncChecker         sync.Checker
 	ethpb.UnimplementedBeaconChainServer
 }

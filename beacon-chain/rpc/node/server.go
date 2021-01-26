@@ -33,15 +33,15 @@ import (
 type Server struct {
 	LogsStreamer         logutil.Streamer
 	StreamLogsBufferSize int
-	Server               *grpc.Server
-	BeaconMonitoringPort int
-	PeersFetcher         p2p.PeersProvider
-	GenesisFetcher       blockchain.GenesisFetcher
-	GenesisTimeFetcher   blockchain.TimeFetcher
-	PeerManager          p2p.PeerManager
-	BeaconMonitoringHost string
-	BeaconDB             db.ReadOnlyDatabase
 	SyncChecker          sync.Checker
+	Server               *grpc.Server
+	BeaconDB             db.ReadOnlyDatabase
+	PeersFetcher         p2p.PeersProvider
+	PeerManager          p2p.PeerManager
+	GenesisTimeFetcher   blockchain.TimeFetcher
+	GenesisFetcher       blockchain.GenesisFetcher
+	BeaconMonitoringHost string
+	BeaconMonitoringPort int
 	ethpb.UnimplementedNodeServer
 }
 
