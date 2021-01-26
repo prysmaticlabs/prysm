@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"reflect"
-	"sync"
 	"testing"
 	"time"
 
@@ -461,23 +460,15 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
-	service.processChainStartTime(context.Background(), time.Now())
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := service.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
+	service.processChainStartTime(context.Background(), time.Now())
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		select {
-		case stateEvent := <-stateChannel:
-			if stateEvent.Type == statefeed.Initialized {
-				_, ok := stateEvent.Data.(*statefeed.InitializedData)
-				require.Equal(t, true, ok, "Event feed data is not type")
-			}
-		}
-		wg.Done()
-	}()
+	stateEvent := <-stateChannel
+	require.Equal(t, int(stateEvent.Type), int(statefeed.Initialized))
+	_, ok := stateEvent.Data.(*statefeed.InitializedData)
+	require.Equal(t, true, ok)
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
