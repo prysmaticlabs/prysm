@@ -174,5 +174,5 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
-	return prombolt.New("boltDB", db)
+	return prombolt.New("boltDB", db, blocksBucket, stateSummaryBucket)
 }
