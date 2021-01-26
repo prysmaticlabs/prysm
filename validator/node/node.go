@@ -359,7 +359,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 			},
 		)
 	}
-	service := prometheus.NewService(
+	service := prometheus.New(
 		fmt.Sprintf("%s:%d", c.cliCtx.String(cmd.MonitoringHostFlag.Name), c.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		c.services,
 		additionalHandlers...,
@@ -431,7 +431,7 @@ func (c *ValidatorClient) registerSlasherClientService() error {
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashingprotection.NewService(c.cliCtx.Context, &slashingprotection.Config{
+	sp, err := slashingprotection.New(c.cliCtx.Context, &slashingprotection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
