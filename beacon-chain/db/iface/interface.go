@@ -57,12 +57,16 @@ type ReadOnlyDatabase interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
-	// Slasher related helpers.
-	LatestEpochAttestedForValidator(ctx context.Context, validatorIdx types.ValidatorIndex) (types.Epoch, bool, error)
+	// Slasher operations.
+	LatestEpochAttestedForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIndex,
+	) (types.Epoch, bool, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.AttestationRecord, error)
-	LoadChunk(ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64) ([]uint16, bool, error)
+	LoadSlasherChunk(
+		ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
+	) ([]uint16, bool, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -101,7 +105,7 @@ type NoHeadAccessDatabase interface {
 		validatorIdx types.ValidatorIndex,
 		attestation *eth.IndexedAttestation,
 	) error
-	SaveChunks(
+	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 	) error
 

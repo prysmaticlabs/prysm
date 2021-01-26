@@ -117,7 +117,7 @@ func (s *Store) SaveAttestationRecordForValidator(
 	})
 }
 
-// LoadChunk given a chunk kind and a disk key, retrieves a chunk for a validator
+// LoadSlasherChunk given a chunk kind and a disk key, retrieves a chunk for a validator
 // min or max span used by slasher from our database.
 func (s *Store) LoadChunk(
 	ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
@@ -145,9 +145,9 @@ func (s *Store) LoadChunk(
 	return chunk, exists, err
 }
 
-// SaveChunk given a chunk kind, list of disk keys, and list of chunks,
+// SaveSlasherChunk given a chunk kind, list of disk keys, and list of chunks,
 // saves the chunks to our database for use by slasher in slashing detection.
-func (s *Store) SaveChunks(
+func (s *Store) SaveSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveChunks")
