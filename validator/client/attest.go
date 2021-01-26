@@ -258,7 +258,9 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
 		case <-ctx.Done():
 			traceutil.AnnotateError(span, ctx.Err())
 			return
-
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return
 		case <-t.C:
 			return
 		}
