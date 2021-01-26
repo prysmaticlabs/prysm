@@ -2,6 +2,7 @@ package slashings
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -315,7 +316,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 			for i := range p.pendingProposerSlashing {
 				assert.DeepEqual(t, tt.want.pending[i], p.pendingProposerSlashing[i], "Unexpected pending proposer slashing at index %d", i)
 			}
-			assert.DeepEqual(t, tt.want.included, p.included)
+			assert.Equal(t, reflect.DeepEqual(tt.want.included, p.included), true)
 		})
 	}
 }

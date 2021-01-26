@@ -2,7 +2,6 @@ package detection
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -708,7 +707,7 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 
 	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
 	require.NoError(t, err)
-	if !reflect.DeepEqual(expectedResultsToAtts, resultsToAtts) {
+	if !sszutil.DeepEqual(expectedResultsToAtts, resultsToAtts) {
 		t.Error("Expected map:")
 		for key, value := range resultsToAtts {
 			t.Errorf("Key %#x: %d atts", key, len(value))

@@ -7,8 +7,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
-
 	"github.com/d4l3k/messagediff"
 	"github.com/sirupsen/logrus/hooks/test"
 )
@@ -41,7 +39,7 @@ func NotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...i
 
 // DeepEqual compares values using DeepEqual.
 func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if !sszutil.DeepEqual(expected, actual) {
+	if !reflect.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		diff, _ := messagediff.PrettyDiff(expected, actual)
@@ -51,7 +49,7 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 
 // DeepNotEqual compares values using DeepEqual.
 func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if sszutil.DeepEqual(expected, actual) {
+	if reflect.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
