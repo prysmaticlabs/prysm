@@ -37,7 +37,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := New(ctx, cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -65,7 +65,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := New(ctx, cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -99,7 +99,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 		StateGen:        stategen.New(beaconDB),
 		AttPool:         attestations.NewPool(),
 	}
-	service, err := NewService(ctx, cfg)
+	service, err := New(ctx, cfg)
 	service.genesisTime = timeutils.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	require.NoError(t, err)
 	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
