@@ -138,9 +138,9 @@ type Config struct {
 	MaxMsgSize              int
 }
 
-// NewService instantiates a new RPC service instance that will
+// New instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func New(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                     ctx,
