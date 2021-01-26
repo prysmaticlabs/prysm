@@ -121,6 +121,9 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 			return nil
 		case <-ctx.Done():
 			return errors.New("context canceled")
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return nil
 		}
 	}
 }
