@@ -9,26 +9,30 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
+// ServiceConfig for the slasher service in the beacon node.
+// This struct allows us to specify required dependencies and
+// parameters for slasher to function as needed.
 type ServiceConfig struct {
-	*Config
+	*Parameters
 	IndexedAttsFeed *event.Feed
 	Database        db.Database
 }
 
-// Service --
+// Service defining a slasher implementation as part of
+// the beacon node, able to detect eth2 slashable offenses.
 type Service struct {
-	cfg             *Config
+	params          *Parameters
 	serviceCfg      *ServiceConfig
 	indexedAttsChan chan *ethpb.IndexedAttestation
 	ctx             context.Context
 	cancel          context.CancelFunc
 }
 
-// NewService --
+// NewService instantiates a new slasher from configuration values.
 func NewService(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		cfg:             srvCfg.Config,
+		params:          srvCfg.Parameters,
 		serviceCfg:      srvCfg,
 		indexedAttsChan: make(chan *ethpb.IndexedAttestation, 1),
 		ctx:             ctx,
@@ -36,18 +40,19 @@ func NewService(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	}, nil
 }
 
-// Start --
+// Start listening for received indexed attestations and blocks
+// and perform slashing detection on them.
 func (s *Service) Start() {
 	s.receiveAttestations(s.ctx)
 }
 
-// Stop --
+// Stop the slasher service.
 func (s *Service) Stop() error {
 	s.cancel()
 	return nil
 }
 
-// Status --
+// Status of the slasher service.
 func (s *Service) Status() error {
 	return nil
 }

@@ -3,7 +3,16 @@ package slasher
 import (
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
+
+func TestDefaultConfig(t *testing.T) {
+	def := DefaultParams()
+	assert.Equal(t, true, def.ChunkSize > 0)
+	assert.Equal(t, true, def.ValidatorChunkSize > 0)
+	assert.Equal(t, true, def.HistoryLength > 0)
+}
 
 func TestConfig_cellIndex(t *testing.T) {
 	type args struct {
@@ -12,13 +21,13 @@ func TestConfig_cellIndex(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields *Config
+		fields *Parameters
 		args   args
 		want   uint64
 	}{
 		{
 			name: "epoch 0 and validator index 0",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 			},
@@ -35,7 +44,7 @@ func TestConfig_cellIndex(t *testing.T) {
 			//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 			//                        |-> epoch 1, validator 2
 			name: "epoch < ChunkSize and validatorIndex < ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 			},
@@ -52,7 +61,7 @@ func TestConfig_cellIndex(t *testing.T) {
 			//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 			//                        |-> epoch 4, validator 2 (wrap around)
 			name: "epoch > ChunkSize and validatorIndex < ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 			},
@@ -69,7 +78,7 @@ func TestConfig_cellIndex(t *testing.T) {
 			//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 			//                     |-> epoch 3, validator 2 (wrap around)
 			name: "epoch = ChunkSize and validatorIndex < ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 			},
@@ -86,7 +95,7 @@ func TestConfig_cellIndex(t *testing.T) {
 			//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 			//   |-> epoch 0, validator 3 (wrap around)
 			name: "epoch < ChunkSize and validatorIndex = ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 			},
@@ -103,7 +112,7 @@ func TestConfig_cellIndex(t *testing.T) {
 			//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 			//            |-> epoch 0, validator 4 (wrap around)
 			name: "epoch < ChunkSize and validatorIndex > ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 			},
@@ -120,7 +129,7 @@ func TestConfig_cellIndex(t *testing.T) {
 			//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 			//   |-> epoch 3, validator 3 (wrap around)
 			name: "epoch = ChunkSize and validatorIndex = ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 			},
@@ -133,7 +142,7 @@ func TestConfig_cellIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
+			c := &Parameters{
 				ChunkSize:          tt.fields.ChunkSize,
 				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
 				HistoryLength:      tt.fields.HistoryLength,
@@ -148,13 +157,13 @@ func TestConfig_cellIndex(t *testing.T) {
 func TestConfig_chunkIndex(t *testing.T) {
 	tests := []struct {
 		name   string
-		fields *Config
+		fields *Parameters
 		epoch  uint64
 		want   uint64
 	}{
 		{
 			name: "epoch 0",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     3,
 				HistoryLength: 3,
 			},
@@ -163,7 +172,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 		},
 		{
 			name: "epoch < HistoryLength, epoch < ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     3,
 				HistoryLength: 3,
 			},
@@ -172,7 +181,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 		},
 		{
 			name: "epoch = HistoryLength, epoch < ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     4,
 				HistoryLength: 3,
 			},
@@ -181,7 +190,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 		},
 		{
 			name: "epoch > HistoryLength, epoch < ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     5,
 				HistoryLength: 3,
 			},
@@ -190,7 +199,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 		},
 		{
 			name: "epoch < HistoryLength, epoch < ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     3,
 				HistoryLength: 3,
 			},
@@ -199,7 +208,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 		},
 		{
 			name: "epoch = HistoryLength, epoch < ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     4,
 				HistoryLength: 3,
 			},
@@ -208,7 +217,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 		},
 		{
 			name: "epoch < HistoryLength, epoch = ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     2,
 				HistoryLength: 3,
 			},
@@ -217,7 +226,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 		},
 		{
 			name: "epoch < HistoryLength, epoch > ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:     2,
 				HistoryLength: 4,
 			},
@@ -227,7 +236,7 @@ func TestConfig_chunkIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
+			c := &Parameters{
 				ChunkSize:     tt.fields.ChunkSize,
 				HistoryLength: tt.fields.HistoryLength,
 			}
@@ -241,14 +250,14 @@ func TestConfig_chunkIndex(t *testing.T) {
 func TestConfig_diskKey(t *testing.T) {
 	tests := []struct {
 		name           string
-		fields         *Config
+		fields         *Parameters
 		epoch          uint64
 		validatorIndex uint64
 		want           uint64
 	}{
 		{
 			name: "Proper disk key for epoch 0, validator 0",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 				HistoryLength:      6,
@@ -259,7 +268,7 @@ func TestConfig_diskKey(t *testing.T) {
 		},
 		{
 			name: "Proper disk key for epoch < HistoryLength, validator < ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 				HistoryLength:      6,
@@ -270,7 +279,7 @@ func TestConfig_diskKey(t *testing.T) {
 		},
 		{
 			name: "Proper disk key for epoch > HistoryLength, validator > ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize:          3,
 				ValidatorChunkSize: 3,
 				HistoryLength:      6,
@@ -282,7 +291,7 @@ func TestConfig_diskKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
+			c := &Parameters{
 				ChunkSize:          tt.fields.ChunkSize,
 				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
 				HistoryLength:      tt.fields.HistoryLength,
@@ -297,13 +306,13 @@ func TestConfig_diskKey(t *testing.T) {
 func TestConfig_validatorChunkIndex(t *testing.T) {
 	tests := []struct {
 		name           string
-		fields         *Config
+		fields         *Parameters
 		validatorIndex uint64
 		want           uint64
 	}{
 		{
 			name: "validator index < ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 3,
 			},
 			validatorIndex: 2,
@@ -311,7 +320,7 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 		},
 		{
 			name: "validator index = ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 3,
 			},
 			validatorIndex: 3,
@@ -319,7 +328,7 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 		},
 		{
 			name: "validator index > ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 3,
 			},
 			validatorIndex: 99,
@@ -328,7 +337,7 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
+			c := &Parameters{
 				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
 			}
 			if got := c.validatorChunkIndex(tt.validatorIndex); got != tt.want {
@@ -341,13 +350,13 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 func TestConfig_chunkOffset(t *testing.T) {
 	tests := []struct {
 		name   string
-		fields *Config
+		fields *Parameters
 		epoch  uint64
 		want   uint64
 	}{
 		{
 			name: "epoch < ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize: 3,
 			},
 			epoch: 2,
@@ -355,7 +364,7 @@ func TestConfig_chunkOffset(t *testing.T) {
 		},
 		{
 			name: "epoch = ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize: 3,
 			},
 			epoch: 3,
@@ -363,7 +372,7 @@ func TestConfig_chunkOffset(t *testing.T) {
 		},
 		{
 			name: "epoch > ChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ChunkSize: 3,
 			},
 			epoch: 5,
@@ -372,7 +381,7 @@ func TestConfig_chunkOffset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
+			c := &Parameters{
 				ChunkSize: tt.fields.ChunkSize,
 			}
 			if got := c.chunkOffset(tt.epoch); got != tt.want {
@@ -385,13 +394,13 @@ func TestConfig_chunkOffset(t *testing.T) {
 func TestConfig_validatorOffset(t *testing.T) {
 	tests := []struct {
 		name           string
-		fields         *Config
+		fields         *Parameters
 		validatorIndex uint64
 		want           uint64
 	}{
 		{
 			name: "validatorIndex < ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 3,
 			},
 			validatorIndex: 2,
@@ -399,7 +408,7 @@ func TestConfig_validatorOffset(t *testing.T) {
 		},
 		{
 			name: "validatorIndex = ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 3,
 			},
 			validatorIndex: 3,
@@ -407,7 +416,7 @@ func TestConfig_validatorOffset(t *testing.T) {
 		},
 		{
 			name: "validatorIndex > ValidatorChunkSize",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 3,
 			},
 			validatorIndex: 5,
@@ -416,7 +425,7 @@ func TestConfig_validatorOffset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
+			c := &Parameters{
 				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
 			}
 			if got := c.validatorOffset(tt.validatorIndex); got != tt.want {
@@ -429,13 +438,13 @@ func TestConfig_validatorOffset(t *testing.T) {
 func TestConfig_validatorIndicesInChunk(t *testing.T) {
 	tests := []struct {
 		name              string
-		fields            *Config
+		fields            *Parameters
 		validatorChunkIdx uint64
 		want              []uint64
 	}{
 		{
 			name: "Returns proper indices",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 3,
 			},
 			validatorChunkIdx: 2,
@@ -443,7 +452,7 @@ func TestConfig_validatorIndicesInChunk(t *testing.T) {
 		},
 		{
 			name: "0 validator chunk size returs empty",
-			fields: &Config{
+			fields: &Parameters{
 				ValidatorChunkSize: 0,
 			},
 			validatorChunkIdx: 100,
@@ -452,7 +461,7 @@ func TestConfig_validatorIndicesInChunk(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
+			c := &Parameters{
 				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
 			}
 			if got := c.validatorIndicesInChunk(tt.validatorChunkIdx); !reflect.DeepEqual(got, tt.want) {
