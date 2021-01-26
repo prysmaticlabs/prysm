@@ -2586,8 +2586,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
         importpath = "github.com/prysmaticlabs/prombbolt",
-        sum = "h1:SR8fjd293OjOBcLGeH1bGPwjQCgZbrNHGvVP5ko+LKg=",
-        version = "v0.0.0-20210126043352-880d3e862384",
+        sum = "h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=",
+        version = "v0.0.0-20210126082820-9b7adba6db7c",
     )
     go_repository(
         name = "com_github_puerkitobio_purell",
