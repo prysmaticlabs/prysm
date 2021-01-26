@@ -57,20 +57,11 @@ type ReadOnlyDatabase interface {
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 	// Slasher related helpers.
-	// Epochs written.
-	//UpdateLatestEpochWrittenForValidators(ctx context.Context, validatorIndices []uint64, epoch uint64) error
 	LatestEpochWrittenForValidator(ctx context.Context, validatorIdx types.ValidatorIdx) (types.Epoch, bool, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIdx, targetEpoch types.Epoch,
 	) (*types.AttestationRecord, error)
-	//SaveAttestationRecordForValidator(
-	//	ctx context.Context,
-	//	validatorIdx uint64,
-	//	attestation *ethpb.IndexedAttestation,
-	//) error
-
-	// Chunks.
-	LoadChunk(ctx context.Context, kind types.ChunkKind, diskKey uint64) ([]uint16, bool, error)
+	LoadChunk(ctx context.Context, kind types.ChunkKind, diskKey uint64) ([]types.Span, bool, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -100,6 +91,18 @@ type NoHeadAccessDatabase interface {
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
+	// Slasher operations.
+	UpdateLatestEpochWrittenForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIdx, epoch types.Epoch,
+	) error
+	SaveAttestationRecordForValidator(
+		ctx context.Context,
+		validatorIdx types.ValidatorIdx,
+		attestation *eth.IndexedAttestation,
+	) error
+	SaveChunks(
+		ctx context.Context, kind types.ChunkKind, chunkKeys []uint64, chunks [][]types.Span,
+	) error
 
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
