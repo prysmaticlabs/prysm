@@ -532,8 +532,8 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		fsm := &stateMachine{
 			state: stateScheduled,
 		}
-		assert.Equal(t, (peer.ID)(""), fsm.pid)
-		assert.DeepEqual(t, ([]*eth.SignedBeaconBlock)(nil), fsm.blocks)
+		assert.Equal(t, peer.ID(""), fsm.pid)
+		assert.DeepEqual(t, []*eth.SignedBeaconBlock(nil), fsm.blocks)
 		updatedState, err := handlerFn(fsm, response)
 		assert.NoError(t, err)
 		assert.Equal(t, stateDataParsed, updatedState)
@@ -1029,7 +1029,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	})
 	defer resetCfg()
 
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
 	// The chain1 contains 250 blocks and is a dead end.
@@ -1231,7 +1231,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
 	chain := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
@@ -1313,7 +1313,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	select {
 	case <-time.After(3 * time.Second):
-		t.Fatal("test takes to long to complete")
+		t.Fatal("test takes too long to complete")
 	case data := <-queue.fetchedData:
 		for _, blk := range data.blocks {
 			blkRoot, err := blk.Block.HashTreeRoot()

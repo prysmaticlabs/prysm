@@ -152,7 +152,7 @@ func TestService_InitStartStop(t *testing.T) {
 			}
 			// Initialize feed
 			notifier := &mock.MockStateNotifier{}
-			s := NewService(ctx, &Config{
+			s := New(ctx, &Config{
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: notifier,
@@ -319,7 +319,7 @@ func TestService_markSynced(t *testing.T) {
 	mc := &mock.ChainService{}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s := NewService(ctx, &Config{
+	s := New(ctx, &Config{
 		Chain:         mc,
 		StateNotifier: mc.StateNotifier(),
 	})
@@ -342,9 +342,9 @@ func TestService_markSynced(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Synced {
-				data, ok := event.Data.(*statefeed.SyncedData)
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.Synced {
+				data, ok := stateEvent.Data.(*statefeed.SyncedData)
 				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
 				receivedGenesisTime = data.StartTime
 			}
@@ -367,7 +367,7 @@ func TestService_Resync(t *testing.T) {
 		{blocks: makeSequence(1, 160), finalizedEpoch: 5, headSlot: 160},
 	}, p.Peers())
 	cache.initializeRootCache(makeSequence(1, 160), t)
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 	cache.RLock()
@@ -416,7 +416,7 @@ func TestService_Resync(t *testing.T) {
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
-			s := NewService(ctx, &Config{
+			s := New(ctx, &Config{
 				DB:            beaconDB,
 				P2P:           p,
 				Chain:         mc,
@@ -435,4 +435,12 @@ func TestService_Resync(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_Initialized(t *testing.T) {
+	s := New(context.Background(), &Config{})
+	s.chainStarted.Set()
+	assert.Equal(t, true, s.Initialized())
+	s.chainStarted.UnSet()
+	assert.Equal(t, false, s.Initialized())
 }

@@ -273,7 +273,7 @@ func TestService_roundRobinSync(t *testing.T) {
 			cache.initializeRootCache(tt.availableBlockSlots, t)
 
 			p := p2pt.NewTestP2P(t)
-			beaconDB, _ := dbtest.SetupDB(t)
+			beaconDB := dbtest.SetupDB(t)
 
 			connectPeers(t, p, tt.peers, p.Peers())
 			cache.RLock()
@@ -318,14 +318,14 @@ func TestService_roundRobinSync(t *testing.T) {
 }
 
 func TestService_processBlock(t *testing.T) {
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	genesisBlk := testutil.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewService(context.Background(), &Config{
+	s := New(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -378,14 +378,14 @@ func TestService_processBlock(t *testing.T) {
 }
 
 func TestService_processBlockBatch(t *testing.T) {
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	genesisBlk := testutil.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
 	st := testutil.NewBeaconState()
-	s := NewService(context.Background(), &Config{
+	s := New(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -478,7 +478,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	cache.initializeRootCache(makeSequence(1, 640), t)
 
 	p := p2pt.NewTestP2P(t)
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 
 	peerData := []*peerData{
 		{
@@ -569,7 +569,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	cache.initializeRootCache(makeSequence(1, 640), t)
 
 	p := p2pt.NewTestP2P(t)
-	beaconDB, _ := dbtest.SetupDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	cache.RLock()
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()

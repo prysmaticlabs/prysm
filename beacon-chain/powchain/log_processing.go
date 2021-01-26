@@ -31,8 +31,16 @@ var (
 
 const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
+const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
+const additiveFactorMultiplier = 0.10
+const multiplicativeDecreaseDivisor = 2
+
+func tooMuchDataRequestedError(err error) bool {
+	// this error is only infura specific (other providers might have different error messages)
+	return err.Error() == "query returned more than 10000 results"
+}
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
@@ -53,12 +61,12 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	if err != nil {
 		return err
 	}
-	for _, log := range logs {
+	for _, filterLog := range logs {
 		// ignore logs that are not of the required block number
-		if log.BlockNumber != blkNum.Uint64() {
+		if filterLog.BlockNumber != blkNum.Uint64() {
 			continue
 		}
-		if err := s.ProcessLog(ctx, log); err != nil {
+		if err := s.ProcessLog(ctx, filterLog); err != nil {
 			return errors.Wrap(err, "could not process log")
 		}
 	}
@@ -274,9 +282,13 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	batchSize := s.eth1HeaderReqLimit
+	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
+
 	for currentBlockNum < latestFollowHeight {
 		start := currentBlockNum
-		end := currentBlockNum + s.eth1HeaderReqLimit
+		end := currentBlockNum + batchSize
 		// Appropriately bound the request, as we do not
 		// want request blocks beyond the current follow distance.
 		if end > latestFollowHeight {
@@ -300,6 +312,15 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		logs, err := s.httpLogger.FilterLogs(ctx, query)
 		if err != nil {
+			if tooMuchDataRequestedError(err) {
+				if batchSize == 0 {
+					return errors.New("batch size is zero")
+				}
+
+				// multiplicative decrease
+				batchSize = batchSize / multiplicativeDecreaseDivisor
+				continue
+			}
 			return err
 		}
 		// Only request headers before chainstart to correctly determine
@@ -310,16 +331,16 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			}
 		}
 
-		for _, log := range logs {
-			if log.BlockNumber > currentBlockNum {
-				if err := s.checkHeaderRange(currentBlockNum, log.BlockNumber-1, headersMap, requestHeaders); err != nil {
+		for _, filterLog := range logs {
+			if filterLog.BlockNumber > currentBlockNum {
+				if err := s.checkHeaderRange(currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
 					return err
 				}
 				// set new block number after checking for chainstart for previous block.
 				s.latestEth1Data.LastRequestedBlock = currentBlockNum
-				currentBlockNum = log.BlockNumber
+				currentBlockNum = filterLog.BlockNumber
 			}
-			if err := s.ProcessLog(ctx, log); err != nil {
+			if err := s.ProcessLog(ctx, filterLog); err != nil {
 				return err
 			}
 		}
@@ -327,6 +348,14 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			return err
 		}
 		currentBlockNum = end
+
+		if batchSize < s.eth1HeaderReqLimit {
+			// update the batchSize with additive increase
+			batchSize = batchSize + additiveFactor
+			if batchSize > s.eth1HeaderReqLimit {
+				batchSize = s.eth1HeaderReqLimit
+			}
+		}
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
@@ -359,6 +388,11 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	requestedBlock, err := s.followBlockHeight(ctx)
 	if err != nil {
 		return err
+	}
+	if requestedBlock > s.latestEth1Data.LastRequestedBlock &&
+		requestedBlock-s.latestEth1Data.LastRequestedBlock > maxTolerableDifference {
+		log.Infof("Falling back to historical headers and logs sync. Current difference is %d", requestedBlock-s.latestEth1Data.LastRequestedBlock)
+		return s.processPastLogs(ctx)
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.

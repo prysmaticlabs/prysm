@@ -23,7 +23,7 @@ import (
 )
 
 func TestProposeExit_Notification(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	testutil.ResetCache()
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -41,14 +41,14 @@ func TestProposeExit_Notification(t *testing.T) {
 	genesisTime := time.Now().Add(time.Duration(-100*int64(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)) * time.Second)
 	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        mockChainService,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: mockChainService,
-		StateNotifier:      mockChainService.StateNotifier(),
-		OperationNotifier:  mockChainService.OperationNotifier(),
-		ExitPool:           voluntaryexits.NewPool(),
-		P2P:                mockp2p.NewTestP2P(t),
+		BeaconDB:          db,
+		HeadFetcher:       mockChainService,
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:       mockChainService,
+		StateNotifier:     mockChainService.StateNotifier(),
+		OperationNotifier: mockChainService.OperationNotifier(),
+		ExitPool:          voluntaryexits.NewPool(),
+		P2P:               mockp2p.NewTestP2P(t),
 	}
 
 	// Subscribe to operation notifications.
@@ -93,7 +93,7 @@ func TestProposeExit_Notification(t *testing.T) {
 }
 
 func TestProposeExit_NoPanic(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	testutil.ResetCache()
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -111,14 +111,14 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	genesisTime := time.Now().Add(time.Duration(-100*int64(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)) * time.Second)
 	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        mockChainService,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: mockChainService,
-		StateNotifier:      mockChainService.StateNotifier(),
-		OperationNotifier:  mockChainService.OperationNotifier(),
-		ExitPool:           voluntaryexits.NewPool(),
-		P2P:                mockp2p.NewTestP2P(t),
+		BeaconDB:          db,
+		HeadFetcher:       mockChainService,
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:       mockChainService,
+		StateNotifier:     mockChainService.StateNotifier(),
+		OperationNotifier: mockChainService.OperationNotifier(),
+		ExitPool:          voluntaryexits.NewPool(),
+		P2P:               mockp2p.NewTestP2P(t),
 	}
 
 	// Subscribe to operation notifications.

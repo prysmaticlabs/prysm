@@ -55,12 +55,12 @@ func (s *Service) CanSubscribe(topic string) bool {
 // FilterIncomingSubscriptions is invoked for all RPCs containing subscription notifications.
 // This method returns only the topics of interest and may return an error if the subscription
 // request contains too many topics.
-func (sf *Service) FilterIncomingSubscriptions(_ peer.ID, subs []*pubsubpb.RPC_SubOpts) ([]*pubsubpb.RPC_SubOpts, error) {
+func (s *Service) FilterIncomingSubscriptions(_ peer.ID, subs []*pubsubpb.RPC_SubOpts) ([]*pubsubpb.RPC_SubOpts, error) {
 	if len(subs) > pubsubSubscriptionRequestLimit {
 		return nil, pubsub.ErrTooManySubscriptions
 	}
 
-	return pubsub.FilterSubscriptions(subs, sf.CanSubscribe), nil
+	return pubsub.FilterSubscriptions(subs, s.CanSubscribe), nil
 }
 
 // scanfcheck uses fmt.Sscanf to check that a given string matches expected format. This method
@@ -73,7 +73,7 @@ func scanfcheck(input, format string) (int, error) {
 	// This method only checks that the input conforms to the format, the arguments are not used and
 	// therefore we can reuse the same integer pointer.
 	var cnt = strings.Count(format, "%")
-	var args = []interface{}{}
+	var args []interface{}
 	for i := 0; i < cnt; i++ {
 		args = append(args, &t)
 	}

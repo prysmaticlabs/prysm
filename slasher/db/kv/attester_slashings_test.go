@@ -7,6 +7,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 )
@@ -16,22 +17,12 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	ctx := context.Background()
 
 	as := &ethpb.AttesterSlashing{
-		Attestation_1: &ethpb.IndexedAttestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			},
+		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Signature: bytesutil.PadTo([]byte("hello"), 96),
-		},
-		Attestation_2: &ethpb.IndexedAttestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, 32),
-				Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			},
+		}),
+		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Signature: bytesutil.PadTo([]byte("hello"), 96),
-		},
+		}),
 	}
 	has, _, err := db.HasAttesterSlashing(ctx, as)
 	require.NoError(t, err, "HasAttesterSlashing should not return error")
@@ -47,11 +38,7 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	data := &ethpb.AttestationData{
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		BeaconBlockRoot: make([]byte, 32),
-	}
+	data := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 	att := &ethpb.IndexedAttestation{Data: data, Signature: make([]byte, 96)}
 	tests := []struct {
 		ss types.SlashingStatus
@@ -109,11 +96,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	data := &ethpb.AttestationData{
-		BeaconBlockRoot: make([]byte, 32),
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
+	data := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
 	tests := []struct {
 		ss types.SlashingStatus
@@ -158,7 +141,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 		has, st, err = db.HasAttesterSlashing(ctx, tt.as)
 		require.NoError(t, err, "Failed to get attester slashing")
 		require.Equal(t, true, has, "Failed to find attester slashing: %v", tt.as)
-		require.Equal(t, (types.SlashingStatus)(types.Included), st, "Failed to find attester slashing with the correct status: %v", tt.as)
+		require.Equal(t, types.SlashingStatus(types.Included), st, "Failed to find attester slashing with the correct status: %v", tt.as)
 	}
 }
 

@@ -7,11 +7,13 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -122,7 +124,8 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 	}
 
 	var sig bls.Signature
-	root, err := helpers.ComputeSigningRoot(slot, domain.SignatureDomain)
+	sszUint := p2ptypes.SSZUint64(slot)
+	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +146,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 // such that any attestations from this slot have time to reach the beacon node
 // before creating the aggregated attestation.
 func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
+	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
 	defer span.End()
 
 	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
@@ -152,7 +155,19 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	time.Sleep(timeutils.Until(finalTime))
+	wait := timeutils.Until(finalTime)
+	if wait <= 0 {
+		return
+	}
+	t := time.NewTimer(wait)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		traceutil.AnnotateError(span, ctx.Err())
+		return
+	case <-t.C:
+		return
+	}
 }
 
 // This returns the signature of validator signing over aggregate and

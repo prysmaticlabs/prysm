@@ -30,10 +30,10 @@ import (
 )
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
+	p2pService := p2ptest.NewTestP2P(t)
 	r := Service{
 		ctx:         context.Background(),
-		p2p:         p2p,
+		p2p:         p2pService,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mockChain.ChainService{
 			ValidatorsRoot: [32]byte{'A'},
@@ -42,7 +42,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		chainStarted: abool.New(),
 	}
 	var err error
-	p2p.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.forkDigest()
 	require.NoError(t, err)
 	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
@@ -59,7 +59,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	})
 	r.markForChainStart()
 
-	p2p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
+	p2pService.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -67,9 +67,9 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 }
 
 func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
+	p2pService := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	chainService := &mockChain.ChainService{
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
@@ -78,7 +78,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	require.NoError(t, err)
 	r := Service{
 		ctx:                       ctx,
-		p2p:                       p2p,
+		p2p:                       p2pService,
 		initialSync:               &mockSync.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
 		chain:                     chainService,
@@ -107,9 +107,9 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	require.NoError(t, err, "Error generating attester slashing")
 	err = r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
 	require.NoError(t, err)
-	p2p.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.forkDigest()
 	require.NoError(t, err)
-	p2p.ReceivePubSub(topic, attesterSlashing)
+	p2pService.ReceivePubSub(topic, attesterSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -119,18 +119,18 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 }
 
 func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
+	p2pService := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	chainService := &mockChain.ChainService{
 		ValidatorsRoot: [32]byte{'A'},
 		Genesis:        time.Now(),
 	}
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := Service{
 		ctx:                       ctx,
-		p2p:                       p2p,
+		p2p:                       p2pService,
 		initialSync:               &mockSync.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
 		chain:                     chainService,
@@ -157,9 +157,9 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating proposer slashing")
-	p2p.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.forkDigest()
 	require.NoError(t, err)
-	p2p.ReceivePubSub(topic, proposerSlashing)
+	p2pService.ReceivePubSub(topic, proposerSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")

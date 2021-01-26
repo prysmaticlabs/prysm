@@ -11,14 +11,17 @@ var (
 	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint",
-		Value: "",
+		Usage: "A mainchain web3 provider string http endpoint. This is our primary web3 provider",
+	}
+	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
+		Name:  "fallback-web3provider",
+		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag maybe used multiple times.",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
-		Value: params.BeaconNetworkConfig().DepositContractAddress,
+		Value: params.BeaconConfig().DepositContractAddress,
 	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{

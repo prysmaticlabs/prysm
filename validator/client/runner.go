@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,23 +21,24 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context) error
+	WaitForActivation(ctx context.Context, accountsChangedChan chan struct{}) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
-	UpdateProtections(ctx context.Context, slot uint64) error
 	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
-	ResetAttesterProtectionData()
+	LogNextDutyTimeLeft(slot uint64) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
+	GetKeymanager() keymanager.IKeymanager
+	ReceiveBlocks(ctx context.Context)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -68,9 +70,15 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForSync(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon node synced: %v", err)
 	}
-	if err := v.WaitForActivation(ctx); err != nil {
+
+	accountsChangedChan := make(chan struct{}, 1)
+	go handleAccountsChanged(ctx, v, accountsChangedChan)
+	if err := v.WaitForActivation(ctx, accountsChangedChan); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
+
+	go v.ReceiveBlocks(ctx)
+
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)
@@ -101,7 +109,6 @@ func run(ctx context.Context, v Validator) {
 
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
-
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 
@@ -110,12 +117,6 @@ func run(ctx context.Context, v Validator) {
 			if err := v.UpdateDuties(ctx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
-				span.End()
-				continue
-			}
-
-			if err := v.UpdateProtections(ctx, slot); err != nil {
-				log.WithError(err).Error("Could not update validator protection")
 				span.End()
 				continue
 			}
@@ -162,6 +163,9 @@ func run(ctx context.Context, v Validator) {
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 					log.WithError(err).Error("Could not report validator's rewards/penalties")
 				}
+				if err := v.LogNextDutyTimeLeft(slot); err != nil {
+					log.WithError(err).Error("Could not report next count down")
+				}
 				span.End()
 			}()
 		}
@@ -175,5 +179,26 @@ func handleAssignmentError(err error, slot uint64) {
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
+	}
+}
+
+func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan struct{}) {
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	var sub = v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
+
+	for {
+		select {
+		case <-validatingPubKeysChan:
+			accountsChangedChan <- struct{}{}
+		case err := <-sub.Err():
+			log.WithError(err).Error("accounts changed subscription failed")
+			return
+		case <-ctx.Done():
+			return
+		}
 	}
 }

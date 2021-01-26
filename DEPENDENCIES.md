@@ -34,7 +34,6 @@ also be updated and checked in as frequently.
 
 ```bash
 ./scripts/update-go-pbs.sh
-./scripts/update-go-ssz.sh
 ```
 
 *Recommendation: Use go build only for local development and use bazel build for production.*
@@ -67,3 +66,14 @@ bazel run //:gazelle -- update-repos -from_file=go.mod -to_macro=deps.bzl%prysm_
 The deps.bzl file should have been updated with the dependency and any transitive dependencies. 
 
 Do NOT add new `go_repository` to the WORKSPACE file. All dependencies should live in deps.bzl.
+
+## Running tests
+
+To enable conditional compilation and custom configuration for tests (where compiled code has more 
+debug info, while not being completely optimized), we rely on Go's build tags/constraints mechanism 
+(see official docs on [build constraints](https://golang.org/pkg/go/build/#hdr-Build_Constraints)). 
+Therefore, whenever using `go test`, do not forget to pass in extra build tag, eg:
+
+```bash
+go test ./beacon-chain/sync/initial-sync -tags develop 
+```

@@ -46,6 +46,16 @@ func (e Exporter) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32
 	return e.db.BlockRoots(ctx, f)
 }
 
+// BlocksBySlot -- passthrough.
+func (e Exporter) BlocksBySlot(ctx context.Context, slot uint64) (bool, []*eth.SignedBeaconBlock, error) {
+	return e.db.BlocksBySlot(ctx, slot)
+}
+
+// BlockRootsBySlot -- passthrough.
+func (e Exporter) BlockRootsBySlot(ctx context.Context, slot uint64) (bool, [][32]byte, error) {
+	return e.db.BlockRootsBySlot(ctx, slot)
+}
+
 // HasBlock -- passthrough.
 func (e Exporter) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.HasBlock(ctx, blockRoot)
@@ -127,8 +137,8 @@ func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) 
 }
 
 // SaveState -- passthrough.
-func (e Exporter) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
-	return e.db.SaveState(ctx, state, blockRoot)
+func (e Exporter) SaveState(ctx context.Context, st *state.BeaconState, blockRoot [32]byte) error {
+	return e.db.SaveState(ctx, st, blockRoot)
 }
 
 // SaveStateSummary -- passthrough.

@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -26,7 +25,7 @@ func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 
 	var err error
-	p, err = p2p.NewService(context.Background(), &p2p.Config{
+	p, err = p2p.New(context.Background(), &p2p.Config{
 		NoDiscovery: true,
 	})
 	if err != nil {
@@ -45,7 +44,7 @@ func init() {
 	if err := p.Connect(info); err != nil {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
-	regularsync.NewService(context.Background(), &regularsync.Config{
+	regularsync.New(context.Background(), &regularsync.Config{
 		P2P:          p,
 		DB:           nil,
 		AttPool:      nil,
@@ -59,7 +58,6 @@ func init() {
 		StateNotifier:       (&mock.ChainService{}).StateNotifier(),
 		AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		InitialSync:         &mockSync.Sync{IsSyncing: false},
-		StateSummaryCache:   cache.NewStateSummaryCache(),
 		BlockNotifier:       nil,
 	})
 }

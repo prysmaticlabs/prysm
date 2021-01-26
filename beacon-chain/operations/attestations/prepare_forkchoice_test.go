@@ -11,12 +11,13 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBatchAttestations_Multiple(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -113,7 +114,7 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 }
 
 func TestBatchAttestations_Single(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -155,7 +156,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -179,7 +180,7 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
@@ -230,22 +231,10 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 }
 
 func TestSeenAttestations_PresentInCache(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	ad1 := &ethpb.AttestationData{
-		Slot:            0,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 	att1 := &ethpb.Attestation{Data: ad1, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x13} /* 0b00010011 */}
 	got, err := s.seen(att1)
 	require.NoError(t, err)
@@ -263,33 +252,9 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 }
 
 func TestService_seen(t *testing.T) {
-	ad1 := &ethpb.AttestationData{
-		Slot:            1,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
-	ad2 := &ethpb.AttestationData{
-		Slot:            2,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad2 := testutil.HydrateAttestationData(&ethpb.AttestationData{Slot: 2})
 
 	// Attestation are checked in order of this list.
 	tests := []struct {
@@ -340,7 +305,7 @@ func TestService_seen(t *testing.T) {
 		},
 	}
 
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	for i, tt := range tests {

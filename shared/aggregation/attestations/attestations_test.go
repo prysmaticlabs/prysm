@@ -3,33 +3,30 @@ package attestations
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sort"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )
 
 func TestMain(m *testing.M) {
-	run := func() int {
-		logrus.SetLevel(logrus.DebugLevel)
-		logrus.SetOutput(ioutil.Discard)
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-			AttestationAggregationStrategy: string(MaxCoverAggregation),
-		})
-		defer resetCfg()
-		return m.Run()
-	}
-	os.Exit(run())
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		AttestationAggregationStrategy: string(MaxCoverAggregation),
+	})
+	defer resetCfg()
+	m.Run()
 }
 
 func TestAggregateAttestations_AggregatePair(t *testing.T) {
@@ -57,7 +54,7 @@ func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	for _, tt := range tests {
 		got, err := AggregatePair(tt.a1, tt.a2)
 		require.NoError(t, err)
-		require.Equal(t, true, ssz.DeepEqual(got, tt.want))
+		require.Equal(t, true, sszutil.DeepEqual(got, tt.want))
 	}
 }
 
@@ -242,6 +239,83 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 			})
 			defer resetCfg()
 			runner()
+		})
+	}
+}
+
+func TestAggregateAttestations_PerformanceComparison(t *testing.T) {
+	// Tests below are examples of cases where max-cover's greedy approach outperforms the original
+	// naive aggregation (which is very much dependent on order in which items are fed into it).
+	tests := []struct {
+		name     string
+		bitsList [][]byte
+	}{
+		{
+			name: "test1",
+			bitsList: [][]byte{
+				{0b00000100, 0b1},
+				{0b00000010, 0b1},
+				{0b00000001, 0b1},
+				{0b00011001, 0b1},
+			},
+		},
+		{
+			name: "test2",
+			bitsList: [][]byte{
+				{0b10010001, 0b1},
+				{0b00100000, 0b1},
+				{0b01101110, 0b1},
+			},
+		},
+		{
+			name: "test3",
+			bitsList: [][]byte{
+				{0b00100000, 0b00000011, 0b1},
+				{0b00011100, 0b11000000, 0b1},
+				{0b11111100, 0b00000000, 0b1},
+				{0b00000011, 0b10000000, 0b1},
+				{0b11100011, 0b00000000, 0b1},
+			},
+		},
+	}
+
+	scoreAtts := func(atts []*ethpb.Attestation) uint64 {
+		score := uint64(0)
+		sort.Slice(atts, func(i, j int) bool {
+			return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
+		})
+		// Score the best aggregate.
+		if len(atts) > 0 {
+			score = atts[0].AggregationBits.Count()
+		}
+		return score
+	}
+
+	generateAtts := func(bitsList [][]byte) []*ethpb.Attestation {
+		sign := bls.NewAggregateSignature().Marshal()
+		atts := make([]*ethpb.Attestation, 0)
+		for _, b := range bitsList {
+			atts = append(atts, &ethpb.Attestation{
+				AggregationBits: b,
+				Signature:       sign,
+			})
+		}
+		return atts
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			atts, err := NaiveAttestationAggregation(generateAtts(tt.bitsList))
+			require.NoError(t, err)
+			score1 := scoreAtts(atts)
+
+			atts, err = MaxCoverAttestationAggregation(generateAtts(tt.bitsList))
+			require.NoError(t, err)
+			score2 := scoreAtts(atts)
+
+			t.Logf("native = %d, max-cover: %d\n", score1, score2)
+			assert.Equal(t, true, score1 <= score2,
+				"max-cover failed to produce higher score (naive: %d, max-cover: %d)", score1, score2)
 		})
 	}
 }

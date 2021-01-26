@@ -27,30 +27,30 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
 	base.PreviousEpochAttestations = atts
 
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	vp, bp, err := New(context.Background(), state)
+	vp, bp, err := New(context.Background(), beaconState)
 	require.NoError(t, err)
-	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
+	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
 	require.NoError(t, err)
 
-	state, err = ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	beaconState, err = ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp)
 	require.NoError(t, err)
 
 	// Indices that voted everything except for head, lost a bit money
 	wanted := uint64(31999810265)
-	assert.Equal(t, wanted, state.Balances()[4], "Unexpected balance")
+	assert.Equal(t, wanted, beaconState.Balances()[4], "Unexpected balance")
 
 	// Indices that did not vote, lost more money
 	wanted = uint64(31999873505)
-	assert.Equal(t, wanted, state.Balances()[0], "Unexpected balance")
+	assert.Equal(t, wanted, beaconState.Balances()[0], "Unexpected balance")
 }
 
 func TestAttestationDeltaPrecompute(t *testing.T) {
@@ -70,39 +70,39 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 				},
 				BeaconBlockRoot: emptyRoot[:],
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x01},
 			InclusionDelay:  1,
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 	slashedAttestedIndices := []uint64{1413}
 	for _, i := range slashedAttestedIndices {
-		vs := state.Validators()
+		vs := beaconState.Validators()
 		vs[i].Slashed = true
-		require.Equal(t, nil, state.SetValidators(vs))
+		require.Equal(t, nil, beaconState.SetValidators(vs))
 	}
 
-	vp, bp, err := New(context.Background(), state)
+	vp, bp, err := New(context.Background(), beaconState)
 	require.NoError(t, err)
-	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
+	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
 	require.NoError(t, err)
 
 	// Add some variances to target and head balances.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5593
 	bp.PrevEpochTargetAttested = bp.PrevEpochTargetAttested / 2
 	bp.PrevEpochHeadAttested = bp.PrevEpochHeadAttested * 2 / 3
-	rewards, penalties, err := AttestationsDelta(state, bp, vp)
+	rewards, penalties, err := AttestationsDelta(beaconState, bp, vp)
 	require.NoError(t, err)
-	attestedBalance, err := epoch.AttestingBalance(state, atts)
+	attestedBalance, err := epoch.AttestingBalance(beaconState, atts)
 	require.NoError(t, err)
-	totalBalance, err := helpers.TotalActiveBalance(state)
+	totalBalance, err := helpers.TotalActiveBalance(beaconState)
 	require.NoError(t, err)
 
 	attestedIndices := []uint64{55, 1339, 1746, 1811, 1569}
 	for _, i := range attestedIndices {
-		base, err := epoch.BaseReward(state, i)
+		base, err := epoch.BaseReward(beaconState, i)
 		require.NoError(t, err, "Could not get base reward")
 
 		// Base rewards for getting source right
@@ -119,7 +119,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	}
 
 	for _, i := range slashedAttestedIndices {
-		base, err := epoch.BaseReward(state, i)
+		base, err := epoch.BaseReward(beaconState, i)
 		assert.NoError(t, err, "Could not get base reward")
 		assert.Equal(t, uint64(0), rewards[i], "Unexpected slashed indices reward balance")
 		assert.Equal(t, 3*base, penalties[i], "Unexpected slashed indices penalty balance")
@@ -127,7 +127,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 
 	nonAttestedIndices := []uint64{434, 677, 872, 791}
 	for _, i := range nonAttestedIndices {
-		base, err := epoch.BaseReward(state, i)
+		base, err := epoch.BaseReward(beaconState, i)
 		assert.NoError(t, err, "Could not get base reward")
 		wanted := 3 * base
 		// Since all these validators did not attest, they shouldn't get rewarded.
@@ -154,22 +154,22 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 				},
 				BeaconBlockRoot: emptyRoot[:],
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	pVals, pBal, err := New(context.Background(), state)
+	pVals, pBal, err := New(context.Background(), beaconState)
 	assert.NoError(t, err)
-	pVals, pBal, err = ProcessAttestations(context.Background(), state, pVals, pBal)
+	pVals, pBal, err = ProcessAttestations(context.Background(), beaconState, pVals, pBal)
 	require.NoError(t, err)
 
 	pBal.ActiveCurrentEpoch = 0 // Could cause a divide by zero panic.
 
-	_, _, err = AttestationsDelta(state, pBal, pVals)
+	_, _, err = AttestationsDelta(beaconState, pBal, pVals)
 	require.NoError(t, err)
 }
 
@@ -197,12 +197,12 @@ func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	pVals, pBal, err := New(context.Background(), state)
+	pVals, pBal, err := New(context.Background(), beaconState)
 	require.NoError(t, err)
-	_, _, err = ProcessAttestations(context.Background(), state, pVals, pBal)
+	_, _, err = ProcessAttestations(context.Background(), beaconState, pVals, pBal)
 	require.ErrorContains(t, "attestation with inclusion delay of 0", err)
 }
 
@@ -217,33 +217,33 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
 	base.PreviousEpochAttestations = atts
 
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
 
 	slashedAttestedIndices := []uint64{14, 37, 68, 77, 139}
 	for _, i := range slashedAttestedIndices {
-		vs := state.Validators()
+		vs := beaconState.Validators()
 		vs[i].Slashed = true
-		require.NoError(t, state.SetValidators(vs))
+		require.NoError(t, beaconState.SetValidators(vs))
 	}
 
-	vp, bp, err := New(context.Background(), state)
+	vp, bp, err := New(context.Background(), beaconState)
 	require.NoError(t, err)
-	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
+	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
 	require.NoError(t, err)
-	rewards, penalties, err := AttestationsDelta(state, bp, vp)
+	rewards, penalties, err := AttestationsDelta(beaconState, bp, vp)
 	require.NoError(t, err)
 
-	finalityDelay := helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	finalityDelay := helpers.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	for _, i := range slashedAttestedIndices {
-		base, err := epoch.BaseReward(state, i)
+		base, err := epoch.BaseReward(beaconState, i)
 		require.NoError(t, err, "Could not get base reward")
 		penalty := 3 * base
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
@@ -297,7 +297,7 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	proposerIndex := uint64(1)
@@ -305,7 +305,7 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
 	}
-	r, err := ProposersDelta(state, b, v)
+	r, err := ProposersDelta(beaconState, b, v)
 	require.NoError(t, err)
 
 	baseReward := v[0].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor /
@@ -319,7 +319,7 @@ func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	proposerIndex := validatorCount
@@ -327,7 +327,7 @@ func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
 	}
-	_, err = ProposersDelta(state, b, v)
+	_, err = ProposersDelta(beaconState, b, v)
 	assert.ErrorContains(t, "proposer index out of range", err)
 }
 
@@ -335,7 +335,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	proposerIndex := uint64(1)
@@ -343,7 +343,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex, IsSlashed: true},
 	}
-	r, err := ProposersDelta(state, b, v)
+	r, err := ProposersDelta(beaconState, b, v)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), r[proposerIndex], "Unexpected proposer reward for slashed")
 }
@@ -351,51 +351,51 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 func TestFinalityDelay(t *testing.T) {
 	base := buildState(params.BeaconConfig().SlotsPerEpoch*10, 1)
 	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 	prevEpoch := uint64(0)
 	finalizedEpoch := uint64(0)
 	// Set values for each test case
 	setVal := func() {
-		prevEpoch = helpers.PrevEpoch(state)
-		finalizedEpoch = state.FinalizedCheckpointEpoch()
+		prevEpoch = helpers.PrevEpoch(beaconState)
+		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
 	}
 	setVal()
 	d := finalityDelay(prevEpoch, finalizedEpoch)
-	w := helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	w := helpers.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 
-	require.NoError(t, state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
 	setVal()
 	d = finalityDelay(prevEpoch, finalizedEpoch)
-	w = helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	w = helpers.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 
-	require.NoError(t, state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
 	setVal()
 	d = finalityDelay(prevEpoch, finalizedEpoch)
-	w = helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	w = helpers.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 }
 
 func TestIsInInactivityLeak(t *testing.T) {
 	base := buildState(params.BeaconConfig().SlotsPerEpoch*10, 1)
 	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
-	state, err := state.InitializeFromProto(base)
+	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 	prevEpoch := uint64(0)
 	finalizedEpoch := uint64(0)
 	// Set values for each test case
 	setVal := func() {
-		prevEpoch = helpers.PrevEpoch(state)
-		finalizedEpoch = state.FinalizedCheckpointEpoch()
+		prevEpoch = helpers.PrevEpoch(beaconState)
+		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
 	}
 	setVal()
 	assert.Equal(t, true, isInInactivityLeak(prevEpoch, finalizedEpoch), "Wanted inactivity leak true")
-	require.NoError(t, state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
 	setVal()
 	assert.Equal(t, true, isInInactivityLeak(prevEpoch, finalizedEpoch), "Wanted inactivity leak true")
-	require.NoError(t, state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
 	setVal()
 	assert.Equal(t, false, isInInactivityLeak(prevEpoch, finalizedEpoch), "Wanted inactivity leak false")
 }

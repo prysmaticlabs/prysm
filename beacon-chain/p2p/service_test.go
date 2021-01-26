@@ -30,14 +30,16 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-type mockListener struct{}
+type mockListener struct {
+	localNode *enode.LocalNode
+}
 
-func (mockListener) Self() *enode.Node {
-	panic("implement me")
+func (m mockListener) Self() *enode.Node {
+	return m.localNode.Node()
 }
 
 func (mockListener) Close() {
-	//no-op
+	// no-op
 }
 
 func (mockListener) Lookup(enode.ID) []*enode.Node {
@@ -79,7 +81,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := New(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	s.started = true
 	s.dv5Listener = &mockListener{}
@@ -88,7 +90,7 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := New(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	assert.NoError(t, s.Stop())
 }
@@ -101,7 +103,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		UDPPort:       2000,
 		StateNotifier: &mock.MockStateNotifier{},
 	}
-	s, err := NewService(context.Background(), cfg)
+	s, err := New(context.Background(), cfg)
 	require.NoError(t, err)
 	s.stateNotifier = &mock.MockStateNotifier{}
 	s.dv5Listener = &mockListener{}
@@ -204,7 +206,7 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 
-	s, err = NewService(context.Background(), cfg)
+	s, err = New(context.Background(), cfg)
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -223,8 +225,7 @@ func TestListenForNewNodes(t *testing.T) {
 		})
 	}
 	time.Sleep(4 * time.Second)
-	peers := s.host.Network().Peers()
-	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
+	assert.Equal(t, 5, len(s.host.Network().Peers()), "Not all peers added to peerstore")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
@@ -262,7 +263,7 @@ func TestPeer_Disconnect(t *testing.T) {
 func TestService_JoinLeaveTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := New(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 
 	go s.awaitStateInitialized()

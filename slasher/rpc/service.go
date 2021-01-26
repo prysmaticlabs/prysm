@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -52,11 +51,9 @@ type Config struct {
 	BeaconClient *beaconclient.Service
 }
 
-var log = logrus.WithField("prefix", "rpc")
-
-// NewService instantiates a new RPC service instance that will
+// New instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func New(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:          ctx,

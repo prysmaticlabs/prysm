@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "doc.go",
         "keymanager.go",
+        "log.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote",
     visibility = [
@@ -16,6 +17,7 @@ go_library(
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/event:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

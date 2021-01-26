@@ -205,7 +205,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, i), validator, handle)
 	}
 	genesis := s.chain.GenesisTime()
-	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {
@@ -219,17 +219,14 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 				}
 				// Check every slot that there are enough peers
 				for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-					if !s.validPeersExist(topic, i) {
+					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, i)) {
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
-						go func(idx uint64) {
-							_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
-							if err != nil {
-								log.Debugf("Could not search for peers: %v", err)
-								return
-							}
-						}(i)
-						return
+						_, err := s.p2p.FindPeersWithSubnet(s.ctx, s.addDigestAndIndexToTopic(topic, i), i, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+						if err != nil {
+							log.WithError(err).Debug("Could not search for peers")
+							return
+						}
 					}
 				}
 			}
@@ -255,7 +252,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 	genesis := s.chain.GenesisTime()
-	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {
@@ -330,17 +327,13 @@ func (s *Service) subscribeAggregatorSubnet(
 	if _, exists := subscriptions[idx]; !exists {
 		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
-	if !s.validPeersExist(subnetTopic, idx) {
+	if !s.validPeersExist(subnetTopic) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		go func(idx uint64) {
-			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
-			if err != nil {
-				log.Debugf("Could not search for peers: %v", err)
-				return
-			}
-		}(idx)
-		return
+		_, err := s.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		if err != nil {
+			log.WithError(err).Debug("Could not search for peers")
+		}
 	}
 }
 
@@ -348,24 +341,21 @@ func (s *Service) subscribeAggregatorSubnet(
 func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
-	if !s.validPeersExist(subnetTopic, idx) {
+	if !s.validPeersExist(subnetTopic) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		go func(idx uint64) {
-			// perform a search for peers with the desired committee index.
-			_, err := s.p2p.FindPeersWithSubnet(s.ctx, idx)
-			if err != nil {
-				log.Debugf("Could not search for peers: %v", err)
-				return
-			}
-		}(idx)
+		// perform a search for peers with the desired committee index.
+		_, err := s.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		if err != nil {
+			log.WithError(err).Debug("Could not search for peers")
+		}
 	}
 }
 
 // find if we have peers who are subscribed to the same subnet
-func (s *Service) validPeersExist(subnetTopic string, idx uint64) bool {
+func (s *Service) validPeersExist(subnetTopic string) bool {
 	numOfPeers := s.p2p.PubSub().ListPeers(subnetTopic + s.p2p.Encoding().ProtocolSuffix())
-	return len(s.p2p.Peers().SubscribedToSubnet(idx)) > 0 || len(numOfPeers) > 0
+	return uint64(len(numOfPeers)) >= params.BeaconNetworkConfig().MinimumPeersInSubnet
 }
 
 // Add fork digest to topic.

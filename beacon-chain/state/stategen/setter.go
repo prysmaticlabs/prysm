@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -15,11 +14,11 @@ import (
 )
 
 // SaveState saves the state in the cache and/or DB.
-func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.BeaconState) error {
+func (s *State) SaveState(ctx context.Context, root [32]byte, st *state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
-	return s.saveStateByRoot(ctx, root, state)
+	return s.saveStateByRoot(ctx, root, st)
 }
 
 // ForceCheckpoint initiates a cold state save of the given state. This method does not update the
@@ -43,31 +42,10 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	return s.beaconDB.SaveState(ctx, fs, root32)
 }
 
-// SaveStateSummariesToDB saves cached state summaries to DB.
-func (s *State) SaveStateSummariesToDB(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "stateGen.SaveStateSummariesToDB")
-	defer span.End()
-	if err := s.beaconDB.SaveStateSummaries(ctx, s.stateSummaryCache.GetAll()); err != nil {
-		return err
-	}
-	s.stateSummaryCache.Clear()
-	return nil
-}
-
-// SaveStateSummary saves the relevant state summary for a block and its corresponding state slot in the
-// state summary cache.
-func (s *State) SaveStateSummary(_ context.Context, blk *ethpb.SignedBeaconBlock, blockRoot [32]byte) {
-	// Save State summary
-	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
-		Slot: blk.Block.Slot,
-		Root: blockRoot[:],
-	})
-}
-
 // This saves a post beacon state. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
-func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st *state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
@@ -75,40 +53,42 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, state *
 	duration := uint64(math.Max(float64(s.saveHotStateDB.duration), 1))
 
 	s.saveHotStateDB.lock.Lock()
-	if s.saveHotStateDB.enabled && state.Slot()%duration == 0 {
-		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
+	if s.saveHotStateDB.enabled && st.Slot()%duration == 0 {
+		if err := s.beaconDB.SaveState(ctx, st, blockRoot); err != nil {
 			s.saveHotStateDB.lock.Unlock()
 			return err
 		}
 		s.saveHotStateDB.savedStateRoots = append(s.saveHotStateDB.savedStateRoots, blockRoot)
 
 		log.WithFields(logrus.Fields{
-			"slot":                   state.Slot(),
+			"slot":                   st.Slot(),
 			"totalHotStateSavedInDB": len(s.saveHotStateDB.savedStateRoots),
 		}).Info("Saving hot state to DB")
 	}
 	s.saveHotStateDB.lock.Unlock()
 
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
-	if s.hotStateCache.Has(blockRoot) {
+	if s.hotStateCache.has(blockRoot) {
 		return nil
 	}
 
 	// Only on an epoch boundary slot, saves epoch boundary state in epoch boundary root state cache.
-	if helpers.IsEpochStart(state.Slot()) {
-		if err := s.epochBoundaryStateCache.put(blockRoot, state); err != nil {
+	if helpers.IsEpochStart(st.Slot()) {
+		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
 			return err
 		}
 	}
 
-	// On an intermediate slots, save the hot state summary.
-	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
-		Slot: state.Slot(),
+	// On an intermediate slots, save state summary.
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: st.Slot(),
 		Root: blockRoot[:],
-	})
+	}); err != nil {
+		return err
+	}
 
 	// Store the copied state in the hot state cache.
-	s.hotStateCache.Put(blockRoot, state)
+	s.hotStateCache.put(blockRoot, st)
 
 	return nil
 }

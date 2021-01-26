@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -30,7 +29,7 @@ import (
 )
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -71,7 +70,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Genesis(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -116,7 +115,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
@@ -154,7 +153,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -186,20 +185,9 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{
-					Signature: make([]byte, 96),
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
-						ParentRoot: make([]byte, 32),
-						StateRoot:  make([]byte, 32),
-						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
-							Eth1Data: &ethpb.Eth1Data{
-								BlockHash:   make([]byte, 32),
-								DepositRoot: make([]byte, 32),
-							},
-						},
-						Slot: 5}},
+						Slot: 5}}),
 					BlockRoot: blkContainers[5].BlockRoot}},
 				NextPageToken: "",
 				TotalSize:     1}},
@@ -208,38 +196,16 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{
-					Signature: make([]byte, 96),
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
-						ParentRoot: make([]byte, 32),
-						StateRoot:  make([]byte, 32),
-						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
-							Eth1Data: &ethpb.Eth1Data{
-								BlockHash:   make([]byte, 32),
-								DepositRoot: make([]byte, 32),
-							},
-						},
-						Slot: 6}},
+						Slot: 6}}),
 					BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{
-					Signature: make([]byte, 96),
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
-						ParentRoot: make([]byte, 32),
-						StateRoot:  make([]byte, 32),
-						Body: &ethpb.BeaconBlockBody{
-							RandaoReveal: make([]byte, 96),
-							Graffiti:     make([]byte, 32),
-							Eth1Data: &ethpb.Eth1Data{
-								BlockHash:   make([]byte, 32),
-								DepositRoot: make([]byte, 32),
-							},
-						},
-						Slot: 6}},
+						Slot: 6}}),
 					BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{
@@ -288,7 +254,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Errors(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{BeaconDB: db}
@@ -330,7 +296,7 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 }
 
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 
 	s := testutil.NewBeaconState()
 	require.NoError(t, s.SetSlot(1))
@@ -367,7 +333,7 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 }
 
 func TestServer_GetChainHead(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
@@ -432,7 +398,7 @@ func TestServer_GetChainHead(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -457,7 +423,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	params.UseMainnetConfig()
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
@@ -552,8 +518,36 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	<-exitRoutine
 }
 
+func TestServer_StreamBlocksVerified_ContextCanceled(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	chainService := &chainMock.ChainService{}
+	ctx, cancel := context.WithCancel(ctx)
+	server := &Server{
+		Ctx:           ctx,
+		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
+		BeaconDB:      db,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mock.NewMockBeaconChain_StreamBlocksServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
+	go func(tt *testing.T) {
+		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ethpb.StreamBlocksRequest{
+			VerifiedOnly: true,
+		}, mockStream))
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
 func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	chainService := &chainMock.ChainService{}
@@ -571,7 +565,7 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamBlocksServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ptypes.Empty{}, mockStream))
+		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ethpb.StreamBlocksRequest{}, mockStream))
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -599,7 +593,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamBlocks(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamBlocks(&ethpb.StreamBlocksRequest{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
@@ -612,10 +606,51 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	<-exitRoutine
 }
 
+func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
+	b, err := testutil.GenerateFullBlock(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, b))
+	chainService := &chainMock.ChainService{State: beaconState}
+	server := &Server{
+		Ctx:           ctx,
+		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
+		BeaconDB:      db,
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mock.NewMockBeaconChain_StreamBlocksServer(ctrl)
+	mockStream.EXPECT().Send(b).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+
+	go func(tt *testing.T) {
+		assert.NoError(tt, server.StreamBlocks(&ethpb.StreamBlocksRequest{
+			VerifiedOnly: true,
+		}, mockStream), "Could not call RPC method")
+	}(t)
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{Slot: b.Block.Slot, BlockRoot: r, SignedBlock: b},
+		})
+	}
+	<-exitRoutine
+}
+
 func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	params.UseMainnetConfig()
 
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState := testutil.NewBeaconState()
 	b := testutil.NewBeaconBlock()
@@ -630,7 +665,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 		BlockNotifier: chainService.BlockNotifier(),
 		HeadFetcher:   chainService,
 		BeaconDB:      db,
-		StateGen:      stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:      stategen.New(db),
 	}
 
 	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})

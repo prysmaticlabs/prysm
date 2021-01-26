@@ -12,9 +12,9 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,16 +34,18 @@ type Handler struct {
 	Handler func(http.ResponseWriter, *http.Request)
 }
 
-// NewService sets up a new instance for a given address host:port.
+// New sets up a new instance for a given address host:port.
 // An empty host will match with any IP so an address like ":2121" is perfectly acceptable.
-func NewService(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) *Service {
+func New(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) *Service {
 	s := &Service{svcRegistry: svcRegistry}
 
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
+		MaxRequestsInFlight: 5,
+		Timeout:             30 * time.Second,
+	}))
 	mux.HandleFunc("/healthz", s.healthzHandler)
 	mux.HandleFunc("/goroutinez", s.goroutinezHandler)
-	mux.HandleFunc("/logs", logutil.NewLogStreamServer().Handler)
 
 	// Register additional handlers.
 	for _, h := range additionalHandlers {

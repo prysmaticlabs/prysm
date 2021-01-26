@@ -32,7 +32,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		return errors.New("wrong wallet password entered")
 	}
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
@@ -62,7 +62,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
 	default:
-		return fmt.Errorf("keymanager kind %s not yet supported", w.KeymanagerKind().String())
+		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind().String())
 	}
 	return nil
 }
@@ -88,7 +88,7 @@ func listImportedKeymanagerAccounts(
 	}
 	fmt.Println(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
-			"by running `validator accounts list --show-deposit-data"),
+			"by running `validator accounts list --show-deposit-data`"),
 	)
 
 	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
@@ -116,7 +116,9 @@ func listImportedKeymanagerAccounts(
 		}
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if showPrivateKeys {
-			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+			if len(privateKeys) > i {
+				fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+			}
 		}
 		if !showDepositData {
 			continue

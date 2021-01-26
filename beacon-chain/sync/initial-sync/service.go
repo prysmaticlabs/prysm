@@ -56,9 +56,9 @@ type Service struct {
 	genesisChan   chan time.Time
 }
 
-// NewService configures the initial sync service responsible for bringing the node up to the
+// New configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func New(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &Service{
 		ctx:           ctx,
@@ -136,6 +136,11 @@ func (s *Service) Status() error {
 // Syncing returns true if initial sync is still running.
 func (s *Service) Syncing() bool {
 	return s.synced.IsNotSet()
+}
+
+// Initialized returns true if initial sync has been started.
+func (s *Service) Initialized() bool {
+	return s.chainStarted.IsSet()
 }
 
 // Resync allows a node to start syncing again if it has fallen
