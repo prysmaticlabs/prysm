@@ -46,8 +46,8 @@ type Config struct {
 	GossipScorerConfig        *GossipScorerConfig
 }
 
-// NewService provides fully initialized peer scoring service.
-func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Service {
+// New provides fully initialized peer scoring service.
+func New(ctx context.Context, store *peerdata.Store, config *Config) *Service {
 	s := &Service{
 		store:   store,
 		weights: make(map[Scorer]float64),

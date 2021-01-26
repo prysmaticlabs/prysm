@@ -74,8 +74,8 @@ type Config struct {
 	HistoricalDetection   bool
 }
 
-// NewService instantiation.
-func NewService(ctx context.Context, cfg *Config) *Service {
+// New instantiation.
+func New(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,

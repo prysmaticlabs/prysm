@@ -72,8 +72,8 @@ type Config struct {
 	NodeClient            ethpb.NodeClient
 }
 
-// NewService instantiation.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+// New instantiation.
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
