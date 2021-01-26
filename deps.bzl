@@ -2559,8 +2559,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prometheus_procfs",
         importpath = "github.com/prometheus/procfs",
-        sum = "h1:wH4vA7pcjKuZzjF7lM8awk4fnuJO6idemZXoKnULUx4=",
-        version = "v0.2.0",
+        sum = "h1:Uehi/mxLK0eiUc0H0++5tpMGTexB8wZ598MIgU8VpDM=",
+        version = "v0.3.0",
     )
     go_repository(
         name = "com_github_prometheus_tsdb",
@@ -2586,8 +2586,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
         importpath = "github.com/prysmaticlabs/prombbolt",
-        sum = "h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=",
-        version = "v0.0.0-20200324184628-09789ef63796",
+        sum = "h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=",
+        version = "v0.0.0-20210126082820-9b7adba6db7c",
     )
     go_repository(
         name = "com_github_puerkitobio_purell",
@@ -3568,8 +3568,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:AyodaIpKjppX+cBfTASF2E1US3H2JFBj920Ot3rtDjs=",
-        version = "v0.0.0-20201214210602-f9fddec55a1e",
+        sum = "h1:VwygUrnw9jn88c4u8GD3rZQbqrP/tgas88tPUbBxQrk=",
+        version = "v0.0.0-20210124154548-22da62e12c0c",
     )
     go_repository(
         name = "org_golang_x_term",
