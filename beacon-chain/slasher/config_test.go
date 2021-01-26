@@ -238,54 +238,47 @@ func TestConfig_chunkIndex(t *testing.T) {
 	}
 }
 
-func TestConfig_chunkOffset(t *testing.T) {
-	type fields struct {
-		ChunkSize          uint64
-		ValidatorChunkSize uint64
-		HistoryLength      uint64
-	}
-	type args struct {
-		epoch uint64
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   uint64
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
-				ChunkSize:          tt.fields.ChunkSize,
-				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
-				HistoryLength:      tt.fields.HistoryLength,
-			}
-			if got := c.chunkOffset(tt.args.epoch); got != tt.want {
-				t.Errorf("chunkOffset() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestConfig_diskKey(t *testing.T) {
-	type fields struct {
-		ChunkSize          uint64
-		ValidatorChunkSize uint64
-		HistoryLength      uint64
-	}
-	type args struct {
-		validatorChunkIndex uint64
-		chunkIndex          uint64
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   uint64
+		name           string
+		fields         *Config
+		epoch          uint64
+		validatorIndex uint64
+		want           uint64
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Proper disk key for epoch 0, validator 0",
+			fields: &Config{
+				ChunkSize:          3,
+				ValidatorChunkSize: 3,
+				HistoryLength:      6,
+			},
+			epoch:          0,
+			validatorIndex: 0,
+			want:           0,
+		},
+		{
+			name: "Proper disk key for epoch < HistoryLength, validator < ValidatorChunkSize",
+			fields: &Config{
+				ChunkSize:          3,
+				ValidatorChunkSize: 3,
+				HistoryLength:      6,
+			},
+			epoch:          1,
+			validatorIndex: 1,
+			want:           0,
+		},
+		{
+			name: "Proper disk key for epoch > HistoryLength, validator > ValidatorChunkSize",
+			fields: &Config{
+				ChunkSize:          3,
+				ValidatorChunkSize: 3,
+				HistoryLength:      6,
+			},
+			epoch:          10,
+			validatorIndex: 10,
+			want:           7,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -294,7 +287,7 @@ func TestConfig_diskKey(t *testing.T) {
 				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
 				HistoryLength:      tt.fields.HistoryLength,
 			}
-			if got := c.diskKey(tt.args.validatorChunkIndex, tt.args.chunkIndex); got != tt.want {
+			if got := c.flatSliceID(tt.validatorIndex, tt.epoch); got != tt.want {
 				t.Errorf("diskKey() = %v, want %v", got, tt.want)
 			}
 		})
@@ -345,63 +338,125 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 	}
 }
 
-func TestConfig_validatorIndicesInChunk(t *testing.T) {
-	type fields struct {
-		ChunkSize          uint64
-		ValidatorChunkSize uint64
-		HistoryLength      uint64
-	}
-	type args struct {
-		validatorChunkIdx uint64
-	}
+func TestConfig_chunkOffset(t *testing.T) {
 	tests := []struct {
 		name   string
-		fields fields
-		args   args
-		want   []uint64
+		fields *Config
+		epoch  uint64
+		want   uint64
 	}{
-		// TODO: Add test cases.
+		{
+			name: "epoch < ChunkSize",
+			fields: &Config{
+				ChunkSize: 3,
+			},
+			epoch: 2,
+			want:  2,
+		},
+		{
+			name: "epoch = ChunkSize",
+			fields: &Config{
+				ChunkSize: 3,
+			},
+			epoch: 3,
+			want:  0,
+		},
+		{
+			name: "epoch > ChunkSize",
+			fields: &Config{
+				ChunkSize: 3,
+			},
+			epoch: 5,
+			want:  2,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
-				ChunkSize:          tt.fields.ChunkSize,
-				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
-				HistoryLength:      tt.fields.HistoryLength,
+				ChunkSize: tt.fields.ChunkSize,
 			}
-			if got := c.validatorIndicesInChunk(tt.args.validatorChunkIdx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("validatorIndicesInChunk() = %v, want %v", got, tt.want)
+			if got := c.chunkOffset(tt.epoch); got != tt.want {
+				t.Errorf("chunkOffset() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func TestConfig_validatorOffset(t *testing.T) {
-	type fields struct {
-		ChunkSize          uint64
-		ValidatorChunkSize uint64
-		HistoryLength      uint64
-	}
-	type args struct {
-		validatorIndex uint64
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   uint64
+		name           string
+		fields         *Config
+		validatorIndex uint64
+		want           uint64
 	}{
-		// TODO: Add test cases.
+		{
+			name: "validatorIndex < ValidatorChunkSize",
+			fields: &Config{
+				ValidatorChunkSize: 3,
+			},
+			validatorIndex: 2,
+			want:           2,
+		},
+		{
+			name: "validatorIndex = ValidatorChunkSize",
+			fields: &Config{
+				ValidatorChunkSize: 3,
+			},
+			validatorIndex: 3,
+			want:           0,
+		},
+		{
+			name: "validatorIndex > ValidatorChunkSize",
+			fields: &Config{
+				ValidatorChunkSize: 3,
+			},
+			validatorIndex: 5,
+			want:           2,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
-				ChunkSize:          tt.fields.ChunkSize,
 				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
-				HistoryLength:      tt.fields.HistoryLength,
 			}
-			if got := c.validatorOffset(tt.args.validatorIndex); got != tt.want {
+			if got := c.validatorOffset(tt.validatorIndex); got != tt.want {
 				t.Errorf("validatorOffset() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConfig_validatorIndicesInChunk(t *testing.T) {
+	tests := []struct {
+		name              string
+		fields            *Config
+		validatorChunkIdx uint64
+		want              []uint64
+	}{
+		{
+			name: "Returns proper indices",
+			fields: &Config{
+				ValidatorChunkSize: 3,
+			},
+			validatorChunkIdx: 2,
+			want:              []uint64{6, 7, 8},
+		},
+		{
+			name: "0 validator chunk size returs empty",
+			fields: &Config{
+				ValidatorChunkSize: 0,
+			},
+			validatorChunkIdx: 100,
+			want:              []uint64{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				ValidatorChunkSize: tt.fields.ValidatorChunkSize,
+			}
+			if got := c.validatorIndicesInChunk(tt.validatorChunkIdx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("validatorIndicesInChunk() = %v, want %v", got, tt.want)
 			}
 		})
 	}

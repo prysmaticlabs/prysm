@@ -18,7 +18,7 @@ func TestSlasher_receiveAttestations(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			IndexedAttsFeed: new(event.Feed),
 		},
-		indexedAttsChan: make(chan *ethpb.IndexedAttestation, 0),
+		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
 	}
 	exitChan := make(chan struct{})
 	go func() {

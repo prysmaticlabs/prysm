@@ -100,7 +100,7 @@ func (c *Config) validatorChunkIndex(validatorIndex uint64) uint64 {
 //  [2, 2, 2, 2, 2, 2, 2, 2, 2]
 //                        |-> epoch 1 for val2
 //
-func (c *Config) cellIndex(validatorIndex uint64, epoch uint64) uint64 {
+func (c *Config) cellIndex(validatorIndex, epoch uint64) uint64 {
 	validatorChunkOffset := c.validatorOffset(validatorIndex)
 	chunkOffset := c.chunkOffset(epoch)
 	return validatorChunkOffset*c.ChunkSize + chunkOffset
@@ -119,7 +119,23 @@ func (c *Config) validatorOffset(validatorIndex uint64) uint64 {
 // Construct a key for our database schema given a validator index and epoch.
 // This calculation gives us a uint that uniquely represents
 // a 2D chunk given a validator index and epoch value.
-func (c *Config) diskKey(validatorIndex uint64, epoch uint64) uint64 {
+// First, we compute the validator chunk index for the validator index,
+// Then, we compute the chunk index for the epoch.
+// If ChunkSize C = 3 and ValidatorChunkSize K = 3, and HistoryLength H = 12,
+// if we are looking for epoch 6 and validator 6, then
+//
+//  validatorChunkIndex = 6 / 3 = 2
+//  chunkIndex = (6 % HistoryLength) / 3 = (6 % 12) / 3 = 2
+//
+// Then we compute how many chunks there are per max span, known as the "width"
+//
+//  width = H / C = 12 / 3 = 4
+//
+// So every span has 4 chunks. Then, we have a disk key calculated by
+//
+//  validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
+//
+func (c *Config) flatSliceID(validatorIndex, epoch uint64) uint64 {
 	validatorChunkIndex := c.validatorChunkIndex(validatorIndex)
 	chunkIndex := c.chunkIndex(epoch)
 	width := c.HistoryLength / c.ChunkSize
