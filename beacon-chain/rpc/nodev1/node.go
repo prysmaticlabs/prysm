@@ -226,10 +226,10 @@ func (ns *Server) PeerCount(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeerCo
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
 func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.VersionResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1.GetVersion")
+	ctx, span := trace.StartSpan(ctx, "nodev1.Version")
 	defer span.End()
 
-	v := fmt.Sprintf("Prysm/%s (%s %s)", version.GetSemanticVersion(), runtime.GOOS, runtime.GOARCH)
+	v := fmt.Sprintf("Prysm/%s (%s %s)", version.SemanticVersion(), runtime.GOOS, runtime.GOARCH)
 	return &ethpb.VersionResponse{
 		Data: &ethpb.Version{
 			Version: v,

@@ -45,7 +45,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		if err != nil {
 			return nil, err
 		}
-		signedBlocks, err := getSignedBlocksByPubKey(ctx, validatorDB, pubKey)
+		signedBlocks, err := signedBlocksByPubKey(ctx, validatorDB, pubKey)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +62,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		if err != nil {
 			return nil, err
 		}
-		signedAttestations, err := getSignedAttestationsByPubKey(ctx, validatorDB, pubKey)
+		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKey)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +95,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	return interchangeJSON, nil
 }
 
-func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedAttestation, error) {
+func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedAttestation, error) {
 	// If a key does not have an attestation history in our database, we return nil.
 	// This way, a user will be able to export their slashing protection history
 	// even if one of their keys does not have a history of signed attestations.
@@ -124,7 +124,7 @@ func getSignedAttestationsByPubKey(ctx context.Context, validatorDB db.Database,
 	return signedAttestations, nil
 }
 
-func getSignedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedBlock, error) {
+func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedBlock, error) {
 	// If a key does not have a lowest or highest signed proposal history
 	// in our database, we return nil. This way, a user will be able to export their
 	// slashing protection history even if one of their keys does not have a history

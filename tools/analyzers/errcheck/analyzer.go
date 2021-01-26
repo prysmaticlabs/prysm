@@ -341,7 +341,7 @@ func walkThroughEmbeddedInterfaces(sel *types.Selection) ([]types.Type, bool) {
 	// index because it would give the method itself.
 	indexes := sel.Index()
 	for _, fieldIndex := range indexes[:len(indexes)-1] {
-		currentT = getTypeAtFieldIndex(currentT, fieldIndex)
+		currentT = typeAtFieldIndex(currentT, fieldIndex)
 	}
 
 	// Now currentT is either a type implementing the actual function,
@@ -366,7 +366,7 @@ func walkThroughEmbeddedInterfaces(sel *types.Selection) ([]types.Type, bool) {
 	for !explicitlyDefinesMethod(interfaceT, fn) {
 		// Otherwise, we find which of the embedded interfaces _does_
 		// define the method, add it to our list, and loop.
-		namedInterfaceT, ok := getEmbeddedInterfaceDefiningMethod(interfaceT, fn)
+		namedInterfaceT, ok := embeddedInterfaceDefiningMethod(interfaceT, fn)
 		if !ok {
 			// This should be impossible as long as we type-checked: either the
 			// interface or one of its embedded ones must implement the method...
@@ -382,7 +382,7 @@ func walkThroughEmbeddedInterfaces(sel *types.Selection) ([]types.Type, bool) {
 	return result, true
 }
 
-func getTypeAtFieldIndex(startingAt types.Type, fieldIndex int) types.Type {
+func typeAtFieldIndex(startingAt types.Type, fieldIndex int) types.Type {
 	t := maybeUnname(maybeDereference(startingAt))
 	s, ok := t.(*types.Struct)
 	if !ok {
@@ -392,12 +392,12 @@ func getTypeAtFieldIndex(startingAt types.Type, fieldIndex int) types.Type {
 	return s.Field(fieldIndex).Type()
 }
 
-// getEmbeddedInterfaceDefiningMethod searches through any embedded interfaces of the
+// embeddedInterfaceDefiningMethod searches through any embedded interfaces of the
 // passed interface searching for one that defines the given function. If found, the
 // types.Named wrapping that interface will be returned along with true in the second value.
 //
 // If no such embedded interface is found, nil and false are returned.
-func getEmbeddedInterfaceDefiningMethod(interfaceT *types.Interface, fn *types.Func) (*types.Named, bool) {
+func embeddedInterfaceDefiningMethod(interfaceT *types.Interface, fn *types.Func) (*types.Named, bool) {
 	for i := 0; i < interfaceT.NumEmbeddeds(); i++ {
 		embedded := interfaceT.Embedded(i)
 		if definesMethod(embedded.Underlying().(*types.Interface), fn) {
