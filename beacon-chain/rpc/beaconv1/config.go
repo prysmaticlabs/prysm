@@ -31,7 +31,6 @@ func (bs *Server) GetSpec(ctx context.Context, _ *ptypes.Empty) (*ethpb.SpecResp
 
 	data, err := prepareConfigSpec()
 	if err != nil {
-		log.Error(err)
 		return nil, status.Errorf(codes.Internal, "Failed to prepare spec data: %v", err)
 	}
 	return &ethpb.SpecResponse{Data: data}, nil
