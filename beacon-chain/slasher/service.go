@@ -28,8 +28,8 @@ type Service struct {
 	cancel          context.CancelFunc
 }
 
-// NewService instantiates a new slasher from configuration values.
-func NewService(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
+// New instantiates a new slasher from configuration values.
+func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		params:          srvCfg.Parameters,

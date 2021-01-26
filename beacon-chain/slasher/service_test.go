@@ -9,7 +9,7 @@ import (
 )
 
 func TestService_StartStop(t *testing.T) {
-	srv, err := NewService(context.Background(), &ServiceConfig{
+	srv, err := New(context.Background(), &ServiceConfig{
 		Parameters:      DefaultParams(),
 		IndexedAttsFeed: new(event.Feed),
 	})
