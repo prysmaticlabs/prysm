@@ -10,7 +10,6 @@ import (
 
 func TestService_StartStop(t *testing.T) {
 	srv, err := New(context.Background(), &ServiceConfig{
-		Parameters:      DefaultParams(),
 		IndexedAttsFeed: new(event.Feed),
 	})
 	require.NoError(t, err)
