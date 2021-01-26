@@ -99,9 +99,9 @@ type Config struct {
 	WspEpoch          uint64
 }
 
-// NewService instantiates a new block service instance that will
+// New instantiates a new block service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                  ctx,

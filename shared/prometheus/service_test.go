@@ -21,7 +21,7 @@ func init() {
 }
 
 func TestLifecycle(t *testing.T) {
-	prometheusService := NewService(":2112", nil)
+	prometheusService := New(":2112", nil)
 	prometheusService.Start()
 	// Give service time to start.
 	time.Sleep(time.Second)
@@ -60,7 +60,7 @@ func TestHealthz(t *testing.T) {
 	registry := shared.NewServiceRegistry()
 	m := &mockService{}
 	require.NoError(t, registry.RegisterService(m), "Failed to register service")
-	s := NewService("" /*addr*/, registry)
+	s := New("" /*addr*/, registry)
 
 	req, err := http.NewRequest("GET", "/healthz", nil /*reader*/)
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestContentNegotiation(t *testing.T) {
 		registry := shared.NewServiceRegistry()
 		m := &mockService{}
 		require.NoError(t, registry.RegisterService(m), "Failed to register service")
-		s := NewService("", registry)
+		s := New("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
 		require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestContentNegotiation(t *testing.T) {
 		m := &mockService{}
 		m.status = errors.New("something is wrong")
 		require.NoError(t, registry.RegisterService(m), "Failed to register service")
-		s := NewService("", registry)
+		s := New("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
 		require.NoError(t, err)
