@@ -16,6 +16,11 @@ const (
 
 	// MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
 	MaxCoverAggregation AttestationAggregationStrategy = "max_cover"
+
+	// OptMaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
+	// This new variant is optimized and relies on Bitlist64 (once fully tested, `max_cover`
+	// strategy will be replaced with this one).
+	OptMaxCoverAggregation AttestationAggregationStrategy = "opt_max_cover"
 )
 
 // AttestationAggregationStrategy defines attestation aggregation strategy.
@@ -44,6 +49,8 @@ func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 		return NaiveAttestationAggregation(atts)
 	case MaxCoverAggregation:
 		return MaxCoverAttestationAggregation(atts)
+	case OptMaxCoverAggregation:
+		return optMaxCoverAttestationAggregation(atts)
 	default:
 		return nil, errors.Wrapf(aggregation.ErrInvalidStrategy, "%q", strategy)
 	}

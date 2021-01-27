@@ -212,8 +212,8 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		runner := func() {
-			got, err := Aggregate(aggtesting.MakeAttestationsFromBitlists(tt.inputs))
+		runner := func(atts []*ethpb.Attestation) {
+			got, err := Aggregate(atts)
 			require.NoError(t, err)
 			sort.Slice(got, func(i, j int) bool {
 				return got[i].AggregationBits.Bytes()[0] < got[j].AggregationBits.Bytes()[0]
@@ -231,14 +231,21 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 				AttestationAggregationStrategy: string(NaiveAggregation),
 			})
 			defer resetCfg()
-			runner()
+			runner(aggtesting.MakeAttestationsFromBitlists(tt.inputs))
 		})
 		t.Run(fmt.Sprintf("%s/%s", tt.name, MaxCoverAggregation), func(t *testing.T) {
 			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 				AttestationAggregationStrategy: string(MaxCoverAggregation),
 			})
 			defer resetCfg()
-			runner()
+			runner(aggtesting.MakeAttestationsFromBitlists(tt.inputs))
+		})
+		t.Run(fmt.Sprintf("%s/%s", tt.name, OptMaxCoverAggregation), func(t *testing.T) {
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				AttestationAggregationStrategy: string(OptMaxCoverAggregation),
+			})
+			defer resetCfg()
+			runner(aggtesting.MakeAttestationsFromBitlists(tt.inputs))
 		})
 	}
 }
