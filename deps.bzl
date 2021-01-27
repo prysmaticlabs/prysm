@@ -3670,3 +3670,9 @@ def prysm_deps():
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
     )
+    go_repository(
+        name = "com_github_prysmaticlabs_eth2_types",
+        importpath = "github.com/prysmaticlabs/eth2-types",
+        sum = "h1:aI+vcbn6qg7994feJt1nQDo/dujrVmqCGqsg2a9FvI8=",
+        version = "v0.0.0-20210126202605-943c664ec11d",
+    )

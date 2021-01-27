@@ -162,13 +162,6 @@ go_register_toolchains(
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
-go_repository(
-    name = "com_github_prysmaticlabs_eth2_types",
-    importpath = "github.com/prysmaticlabs/eth2-types",
-    sum = "h1:aI+vcbn6qg7994feJt1nQDo/dujrVmqCGqsg2a9FvI8=",
-    version = "v0.0.0-20210126202605-943c664ec11d",
-)
-
 gazelle_dependencies()
 
 load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
