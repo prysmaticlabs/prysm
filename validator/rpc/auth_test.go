@@ -74,28 +74,6 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestServer_Logout(t *testing.T) {
-	key, err := createRandomJWTKey()
-	require.NoError(t, err)
-	ss := &Server{
-		jwtKey: key,
-	}
-	tokenString, _, err := ss.createTokenString()
-	require.NoError(t, err)
-	checkParsedKey := func(*jwt.Token) (interface{}, error) {
-		return ss.jwtKey, nil
-	}
-	_, err = jwt.Parse(tokenString, checkParsedKey)
-	assert.NoError(t, err)
-
-	_, err = ss.Logout(context.Background(), &ptypes.Empty{})
-	require.NoError(t, err)
-
-	// Attempting to validate the same token string after logout should fail.
-	_, err = jwt.Parse(tokenString, checkParsedKey)
-	assert.ErrorContains(t, "signature is invalid", err)
-}
-
 func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
