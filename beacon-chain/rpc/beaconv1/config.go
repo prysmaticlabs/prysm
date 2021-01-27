@@ -3,6 +3,7 @@ package beaconv1
 import (
 	"context"
 	"errors"
+	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -15,7 +16,33 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *ptypes.Empty) (*ethpb.
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetForkSchedule")
 	defer span.End()
 
-	return nil, errors.New("unimplemented")
+	schedule := params.BeaconConfig().ForkVersionSchedule
+	if len(schedule) == 0 {
+		return &ethpb.ForkScheduleResponse{
+			Data: make([]*ethpb.Fork, 0),
+		}, nil
+	}
+
+	epochs := sortedEpochs(schedule)
+	forks := make([]*ethpb.Fork, len(schedule))
+	var previous, current []byte
+	for i, e := range epochs {
+		if i == 0 {
+			previous = params.BeaconConfig().GenesisForkVersion
+		} else {
+			previous = current
+		}
+		current = schedule[e]
+		forks[i] = &ethpb.Fork{
+			PreviousVersion: previous,
+			CurrentVersion:  current,
+			Epoch:           e,
+		}
+	}
+
+	return &ethpb.ForkScheduleResponse{
+		Data: forks,
+	}, nil
 }
 
 // GetSpec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
@@ -37,4 +64,15 @@ func (bs *Server) GetDepositContract(ctx context.Context, _ *ptypes.Empty) (*eth
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	}, nil
+}
+
+func sortedEpochs(forkSchedule map[uint64][]byte) []uint64 {
+	sortedEpochs := make([]uint64, len(forkSchedule))
+	i := 0
+	for k := range forkSchedule {
+		sortedEpochs[i] = k
+		i++
+	}
+	sort.Slice(sortedEpochs, func(i, j int) bool { return sortedEpochs[i] < sortedEpochs[j] })
+	return sortedEpochs
 }
