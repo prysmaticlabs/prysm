@@ -36,8 +36,15 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
 	var b strings.Builder
-	b.WriteByte(byte(roleAttester))
-	b.Write(pubKey[:])
+	if err := b.WriteByte(byte(roleAttester)); err != nil {
+		log.WithError(err).Error("Could not write role byte for lock key")
+		return
+	}
+	_, err := b.Write(pubKey[:])
+	if err != nil {
+		log.WithError(err).Error("Could not write pubkey bytes for lock key")
+		return
+	}
 	lock := mputil.NewMultilock(b.String())
 	lock.Lock()
 	defer lock.Unlock()
