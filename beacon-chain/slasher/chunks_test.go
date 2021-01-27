@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 
@@ -123,30 +124,88 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	require.Equal(t, slashertypes.SurroundingVote, kind)
 }
 
-func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
+func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	// Let's set H = historyLength = 2, meaning a min span
 	// will hold 2 epochs worth of attesting history. Then we set C = 2 meaning we will
-	// chunk the min span into arrays each of length 2.
+	// chunk the min span into arrays each of length 2 and K = 3 meaning we store each chunk index
+	// for 3 validators at a time.
 	//
-	// So assume we get a target 5 for source 4 and validator 0, then, we need to update every epoch in the span from
-	// 4 down to 2. First, we find out which chunk epoch 4 falls into, which is calculated as:
-	// chunk_idx = (epoch % H) / C = (4 % 2) / 2 = 0
+	// So assume we get a target 3 for source 0 and validator 0, then, we need to update every epoch in the span from
+	// 3 to 0 inclusive. First, we find out which chunk epoch 3 falls into, which is calculated as:
+	// chunk_idx = (epoch % H) / C = (3 % 4) / 2 = 1
+	//
+	//                                       val0        val1        val2
+	//                                     {     }     {      }    {      }
+	//   chunk_1_for_validators_0_to_3 = [[nil, nil], [nil, nil], [nil, nil]]
+	//                                           |
+	//                                           |-> epoch 3 for validator 0
 	//
 	//                                       val0        val1        val2
 	//                                     {     }     {      }    {      }
 	//   chunk_0_for_validators_0_to_3 = [[nil, nil], [nil, nil], [nil, nil]]
-	//                                     |
-	//                                     |-> epoch 4 for validator 0
+	//                                      |
+	//                                      |-> epoch 0 for validator 0
 	//
-	// Next up, we proceed with the update process for validator index 0, starting epoch 4
-	// al the way down to epoch 2. We will need to go down the array once
-	// and then wrap around at the end back down to epoch 2, updating every value along the way
-	// according to the update rules for min spans.
+	// Next up, we proceed with the update process for validator index 0, starting epoch 3
+	// updating every value along the way according to the update rules for min spans.
 	//
 	// Once we finish updating a chunk, we need to move on to the next chunk. This function
 	// returns a boolean named keepGoing which allows the caller to determine if we should
 	// continue and update another chunk index. We stop whenever we reach the min epoch we need
-	// to update, in our example, we stop at 2, which is still part of chunk 0, so there is no
+	// to update, in our example, we stop at 0, which is a part chunk 0, so we need to perform updates
+	// across 2 different min span chunk slices as shown above.
+	params := &Parameters{
+		chunkSize:          2,
+		validatorChunkSize: 3,
+		historyLength:      4,
+	}
+	chunk := EmptyMinSpanChunksSlice(params)
+	target := types.Epoch(3)
+	chunkIdx := uint64(1)
+	validatorIdx := types.ValidatorIndex(0)
+	startEpoch := target
+	currentEpoch := target
+	keepGoing, err := chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
+	require.NoError(t, err)
+
+	// We should keep going! We still have to update the data for chunk index 0.
+	require.Equal(t, true, keepGoing)
+	fmt.Println(chunk.Chunk())
+
+	// Now we update for chunk index 0.
+	chunkIdx = uint64(0)
+	validatorIdx = types.ValidatorIndex(0)
+	startEpoch = types.Epoch(1)
+	currentEpoch = target
+	keepGoing, err = chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
+	require.NoError(t, err)
+	require.Equal(t, false, keepGoing)
+	fmt.Println(chunk.Chunk())
+}
+
+func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
+	// Let's set H = historyLength = 2, meaning a min span
+	// will hold 2 epochs worth of attesting history. Then we set C = 2 meaning we will
+	// chunk the min span into arrays each of length 2 and K = 3 meaning we store each chunk index
+	// for 3 validators at a time.
+	//
+	// So assume we get a target 1 for source 0 and validator 0, then, we need to update every epoch in the span from
+	// 1 to 0 inclusive. First, we find out which chunk epoch 4 falls into, which is calculated as:
+	// chunk_idx = (epoch % H) / C = (1 % 2) / 2 = 0
+	//
+	//                                       val0        val1        val2
+	//                                     {     }     {      }    {      }
+	//   chunk_0_for_validators_0_to_3 = [[nil, nil], [nil, nil], [nil, nil]]
+	//                                           |
+	//                                           |-> epoch 1 for validator 0
+	//
+	// Next up, we proceed with the update process for validator index 0, starting epoch 1
+	// updating every value along the way according to the update rules for min spans.
+	//
+	// Once we finish updating a chunk, we need to move on to the next chunk. This function
+	// returns a boolean named keepGoing which allows the caller to determine if we should
+	// continue and update another chunk index. We stop whenever we reach the min epoch we need
+	// to update, in our example, we stop at 0, which is still part of chunk 0, so there is no
 	// need to keep going.
 	params := &Parameters{
 		chunkSize:          2,
@@ -154,7 +213,7 @@ func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 		historyLength:      2,
 	}
 	chunk := EmptyMinSpanChunksSlice(params)
-	target := types.Epoch(5)
+	target := types.Epoch(1)
 	chunkIdx := uint64(0)
 	validatorIdx := types.ValidatorIndex(0)
 	startEpoch := target
