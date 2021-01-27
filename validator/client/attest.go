@@ -31,7 +31,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock := mputil.NewMultilock(string(roleAttester), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 
