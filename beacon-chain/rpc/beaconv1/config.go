@@ -11,7 +11,10 @@ import (
 )
 
 // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
-func (bs *Server) GetForkSchedule(ctx context.Context, req *ptypes.Empty) (*ethpb.ForkScheduleResponse, error) {
+func (bs *Server) GetForkSchedule(ctx context.Context, _ *ptypes.Empty) (*ethpb.ForkScheduleResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetForkSchedule")
+	defer span.End()
+
 	return nil, errors.New("unimplemented")
 }
 
@@ -24,7 +27,7 @@ func (bs *Server) GetSpec(ctx context.Context, req *ptypes.Empty) (*ethpb.SpecRe
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
-func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
+func (bs *Server) GetDepositContract(ctx context.Context, _ *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
 	defer span.End()
 
