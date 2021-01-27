@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -264,4 +266,49 @@ func (e Exporter) RunMigrations(ctx context.Context) error {
 // CleanUpDirtyStates -- passthrough
 func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
 	return e.db.RunMigrations(ctx)
+}
+
+// LatestEpochAttestedForValidator -- passthrough
+func (e Exporter) LatestEpochAttestedForValidator(
+	ctx context.Context, validatorIdx types.ValidatorIndex,
+) (types.Epoch, bool, error) {
+	return e.db.LatestEpochAttestedForValidator(ctx, validatorIdx)
+}
+
+// AttestationRecordForValidator -- passthrough
+func (e Exporter) AttestationRecordForValidator(
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+) (*slashertypes.AttestationRecord, error) {
+	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch)
+}
+
+// LoadSlasherChunk -- passthrough
+func (e Exporter) LoadSlasherChunk(
+	ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
+) ([]uint16, bool, error) {
+	return e.db.LoadSlasherChunk(ctx, kind, diskKey)
+}
+
+// SaveLatestEpochAttestedForValidators -- passthrough
+func (e Exporter) SaveLatestEpochAttestedForValidators(
+	ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
+) error {
+	return e.db.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, epoch)
+}
+
+// SaveAttestationRecordForValidator -- passthrough
+func (e Exporter) SaveAttestationRecordForValidator(
+	ctx context.Context,
+	validatorIdx types.ValidatorIndex,
+	signingRoot [32]byte,
+	attestation *eth.IndexedAttestation,
+) error {
+	return e.db.SaveAttestationRecordForValidator(ctx, validatorIdx, signingRoot, attestation)
+}
+
+// SaveSlasherChunks -- passthrough
+func (e Exporter) SaveSlasherChunks(
+	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
+) error {
+	return e.db.SaveSlasherChunks(ctx, kind, chunkKeys, chunks)
 }
