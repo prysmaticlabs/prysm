@@ -140,12 +140,6 @@ service Auth {
             body: "*"
         };
     }
-    rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            post: "/v2/validator/logout",
-            body: "*"
-        };
-    }
 }
 
 // Type of key manager for the wallet, either direct, derived, or remote.
