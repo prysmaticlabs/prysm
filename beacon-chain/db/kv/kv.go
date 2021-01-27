@@ -120,8 +120,12 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
-			// New State Management service bucket.
+			// State management service bucket.
 			newStateServiceCompatibleBucket,
+			// Slasher buckets.
+			attestedEpochsByValidator,
+			attestationRecordsBucket,
+			slasherChunksBucket,
 			// Migrations
 			migrationsBucket,
 		)

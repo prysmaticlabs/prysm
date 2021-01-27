@@ -728,8 +728,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:Xun9jB2EhB8JZbVhjpW7/o6pLEwXb89tHkN8Q08kEZM=",
-        version = "v0.0.0-20210118190430-6ca267833c4b",
+        sum = "h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=",
+        version = "v0.0.0-20210120143747-11b9eff30ea9",
     )
 
     go_repository(
@@ -2157,8 +2157,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mitchellh_mapstructure",
         importpath = "github.com/mitchellh/mapstructure",
-        sum = "h1:7ks8ZkOP5/ujthUsT07rNv+nkLXCQWKNHuwzOAesEks=",
-        version = "v1.4.0",
+        sum = "h1:CpVNEelQCZBooIPDn+AR3NpivK/TIKU8bDxdASFVQag=",
+        version = "v1.4.1",
     )
 
     go_repository(
@@ -3669,4 +3669,10 @@ def prysm_deps():
         importpath = "gotest.tools",
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
+    )
+    go_repository(
+        name = "com_github_prysmaticlabs_eth2_types",
+        importpath = "github.com/prysmaticlabs/eth2-types",
+        sum = "h1:aI+vcbn6qg7994feJt1nQDo/dujrVmqCGqsg2a9FvI8=",
+        version = "v0.0.0-20210126202605-943c664ec11d",
     )

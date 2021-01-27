@@ -8,8 +8,10 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -55,6 +57,16 @@ type ReadOnlyDatabase interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
+	// Slasher operations.
+	LatestEpochAttestedForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIndex,
+	) (types.Epoch, bool, error)
+	AttestationRecordForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+	) (*slashertypes.AttestationRecord, error)
+	LoadSlasherChunk(
+		ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
+	) ([]uint16, bool, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -84,6 +96,19 @@ type NoHeadAccessDatabase interface {
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
+	// Slasher operations.
+	SaveLatestEpochAttestedForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
+	) error
+	SaveAttestationRecordForValidator(
+		ctx context.Context,
+		validatorIdx types.ValidatorIndex,
+		signingRoot [32]byte,
+		attestation *eth.IndexedAttestation,
+	) error
+	SaveSlasherChunks(
+		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
+	) error
 
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
