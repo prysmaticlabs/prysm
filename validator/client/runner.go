@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// time to wait before trying to reconnect with the eth1 node.
+// time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
 var errConnectionIssue = errors.New("connection issue, beacon node might be offline...")
 
@@ -70,13 +70,26 @@ func run(ctx context.Context, v Validator) {
 		}
 	}
 	ticker := time.NewTicker(backOffPeriod)
-	var headSlot uint64
 	defer ticker.Stop()
+
+	var headSlot uint64
+	firstTime := true
 	accountsChangedChan := make(chan struct{}, 1)
 	for {
-		var done bool
+		if ctx.Err() != nil {
+			log.Info("Context canceled, stopping validator")
+			return // Exit if context is canceled.
+		}
+		log.Warn("before wait")
+		if !firstTime {
+			<-ticker.C
+		} else {
+			firstTime = false
+		}
+
+		log.Warn("after wait")
 		err := v.WaitForChainStart(ctx)
-		if err != nil && errors.Is(err, errConnectionIssue) {
+		if isConnectionError(err) {
 			log.Warnf("Could not determine if beacon chain started: %v", err)
 			continue
 		}
@@ -84,7 +97,7 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Could not determine if beacon chain started: %v", err)
 		}
 		err = v.WaitForSync(ctx)
-		if err != nil && errors.Is(err, errConnectionIssue) {
+		if isConnectionError(err) {
 			log.Warnf("Could not determine if beacon chain started: %v", err)
 			continue
 		}
@@ -92,7 +105,7 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Could not determine if beacon node synced: %v", err)
 		}
 		err = v.WaitForActivation(ctx, accountsChangedChan)
-		if err != nil && errors.Is(err, errConnectionIssue) {
+		if isConnectionError(err) {
 			log.Warnf("Could not wait for validator activation: %v", err)
 			continue
 		}
@@ -100,23 +113,12 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Could not wait for validator activation: %v", err)
 		}
 		headSlot, err = v.CanonicalHeadSlot(ctx)
-		if err != nil && errors.Is(err, errConnectionIssue) {
+		if isConnectionError(err) {
 			log.Warnf("Could not get current canonical head slot: %v", err)
 			continue
 		}
 		if err != nil {
 			log.Fatalf("Could not get current canonical head slot: %v", err)
-		}
-		done = true
-		select {
-		case <-ctx.Done():
-			log.Info("Context canceled, stopping validator")
-			return // Exit if context is canceled.
-		case <-ticker.C:
-			if done {
-				break
-			}
-			continue
 		}
 		break
 	}
@@ -138,7 +140,7 @@ func run(ctx context.Context, v Validator) {
 			cancel()
 			return // Exit if context is canceled.
 		case blocksError := <-connectionErrorChannel:
-			if blocksError != nil && errors.Is(blocksError, errConnectionIssue) {
+			if isConnectionError(blocksError) {
 				go v.ReceiveBlocks(ctx, connectionErrorChannel)
 				continue
 			}
@@ -218,6 +220,10 @@ func run(ctx context.Context, v Validator) {
 			}()
 		}
 	}
+}
+
+func isConnectionError(err error) bool {
+	return err != nil && errors.Is(err, errConnectionIssue)
 }
 
 func handleAssignmentError(err error, slot uint64) {
