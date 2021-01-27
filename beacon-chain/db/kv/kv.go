@@ -123,7 +123,7 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 			// State management service bucket.
 			newStateServiceCompatibleBucket,
 			// Slasher buckets.
-			epochByValidatorBucket,
+			attestedEpochsByValidator,
 			attestationRecordsBucket,
 			slasherChunksBucket,
 			// Migrations

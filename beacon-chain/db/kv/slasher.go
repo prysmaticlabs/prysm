@@ -2,6 +2,8 @@ package kv
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/prysmaticlabs/eth2-types"
@@ -21,7 +23,7 @@ func (s *Store) LatestEpochAttestedForValidator(
 	var epoch types.Epoch
 	var exists bool
 	err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(epochByValidatorBucket)
+		bkt := tx.Bucket(attestedEpochsByValidator)
 		enc, err := validatorIdx.MarshalSSZ()
 		if err != nil {
 			return err
@@ -44,7 +46,7 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLatestEpochAttestedForValidator")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(epochByValidatorBucket)
+		bkt := tx.Bucket(attestedEpochsByValidator)
 		for _, valIdx := range validatorIndices {
 			key, err := valIdx.MarshalSSZ()
 			if err != nil {
@@ -85,13 +87,11 @@ func (s *Store) AttestationRecordForValidator(
 		if value == nil {
 			return nil
 		}
-		var sr [32]byte
-		copy(sr[:], value[16:])
-		record = &slashertypes.AttestationRecord{
-			Source:      ssz.UnmarshallUint64(value[0:8]),
-			Target:      ssz.UnmarshallUint64(value[8:16]),
-			SigningRoot: sr,
+		decoded, err := decodeAttestationRecord(value)
+		if err != nil {
+			return err
 		}
+		record = decoded
 		return nil
 	})
 	return record, err
@@ -114,10 +114,10 @@ func (s *Store) SaveAttestationRecordForValidator(
 		}
 		encEpoch := ssz.MarshalUint64(make([]byte, 0), attestation.Data.Target.Epoch)
 		key := append(encIdx, encEpoch...)
-		value := make([]byte, 48)
-		copy(value[0:8], ssz.MarshalUint64(make([]byte, 0), attestation.Data.Source.Epoch))
-		copy(value[8:16], ssz.MarshalUint64(make([]byte, 0), attestation.Data.Target.Epoch))
-		copy(value[16:], signingRoot[:])
+		value, err := encodeIndexedAttestationRecord(attestation, signingRoot)
+		if err != nil {
+			return err
+		}
 		return bkt.Put(key, value)
 	})
 }
@@ -127,7 +127,7 @@ func (s *Store) SaveAttestationRecordForValidator(
 func (s *Store) LoadSlasherChunk(
 	ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
 ) ([]uint16, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LoadChunk")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
 	defer span.End()
 	var chunk []uint16
 	var exists bool
@@ -155,7 +155,7 @@ func (s *Store) LoadSlasherChunk(
 func (s *Store) SaveSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveChunks")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
@@ -172,4 +172,30 @@ func (s *Store) SaveSlasherChunks(
 		}
 		return nil
 	})
+}
+
+// Encode an indexed attestation's required fields for slashing protection into bytes.
+func encodeIndexedAttestationRecord(att *ethpb.IndexedAttestation, signingRoot [32]byte) ([]byte, error) {
+	if att == nil || att.Data == nil || att.Data.Target == nil || att.Data.Source == nil {
+		return nil, errors.New("encoding nil attestation")
+	}
+	value := make([]byte, 48)
+	copy(value[0:8], ssz.MarshalUint64(make([]byte, 0), att.Data.Source.Epoch))
+	copy(value[8:16], ssz.MarshalUint64(make([]byte, 0), att.Data.Target.Epoch))
+	copy(value[16:], signingRoot[:])
+	return value, nil
+}
+
+// Decode attestation record from bytes.
+func decodeAttestationRecord(encoded []byte) (*slashertypes.AttestationRecord, error) {
+	if len(encoded) != 48 {
+		return nil, fmt.Errorf("wrong length for encoded attestation record, want 48, got %d", len(encoded))
+	}
+	var sr [32]byte
+	copy(sr[:], encoded[16:])
+	return &slashertypes.AttestationRecord{
+		Source:      ssz.UnmarshallUint64(encoded[0:8]),
+		Target:      ssz.UnmarshallUint64(encoded[8:16]),
+		SigningRoot: sr,
+	}, nil
 }
