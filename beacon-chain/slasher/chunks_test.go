@@ -2,7 +2,6 @@ package slasher
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"testing"
 
@@ -97,11 +96,14 @@ func TestMinSpanChunk_CheckSlashable(t *testing.T) {
 	source = types.Epoch(1)
 	target = types.Epoch(2)
 	att = createAttestation(source, target)
-	err = setChunkDataAtEpoch(params, chunk.Chunk(), validatorIdx, source, target)
+	chunkIdx := uint64(0)
+	startEpoch := target
+	currentEpoch := target
+	_, err = chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
 	require.NoError(t, err)
 
 	// Next up, we create a surrounding vote, but it should NOT be slashable
-	// because we have not stored the old attestation record in our database.
+	// because we have an existing attestation record in our database at the min target epoch.
 	source = types.Epoch(0)
 	target = types.Epoch(3)
 	surroundingVote := createAttestation(source, target)
@@ -116,7 +118,6 @@ func TestMinSpanChunk_CheckSlashable(t *testing.T) {
 	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, att)
 	require.NoError(t, err)
 
-	fmt.Println(chunk.Chunk())
 	slashable, kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
 	require.Equal(t, true, slashable)
