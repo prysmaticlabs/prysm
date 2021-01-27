@@ -8,6 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -71,8 +72,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	// Recent state checks.
 	assert.DeepEqual(t, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector), newState.Slashings(), "Slashings was not correctly initialized")
-	assert.DeepEqual(t, []*pb.PendingAttestation{}, newState.CurrentEpochAttestations(), "CurrentEpochAttestations was not correctly initialized")
-	assert.DeepEqual(t, []*pb.PendingAttestation{}, newState.PreviousEpochAttestations(), "PreviousEpochAttestations was not correctly initialized")
+	assert.DeepEqual(t, true, sszutil.DeepEqual([]*pb.PendingAttestation{}, newState.CurrentEpochAttestations()), "CurrentEpochAttestations was not correctly initialized")
+	assert.DeepEqual(t, true, sszutil.DeepEqual([]*pb.PendingAttestation{}, newState.PreviousEpochAttestations()), "PreviousEpochAttestations was not correctly initialized")
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
@@ -81,7 +82,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	// Deposit root checks.
 	assert.DeepEqual(t, eth1Data.DepositRoot, newState.Eth1Data().DepositRoot, "Eth1Data DepositRoot was not correctly initialized")
-	assert.DeepEqual(t, []*ethpb.Eth1Data{}, newState.Eth1DataVotes(), "Eth1DataVotes was not correctly initialized")
+	assert.DeepEqual(t, true, sszutil.DeepEqual([]*ethpb.Eth1Data{}, newState.Eth1DataVotes()), "Eth1DataVotes was not correctly initialized")
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
