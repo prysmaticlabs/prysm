@@ -12,6 +12,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -453,6 +455,20 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	s.saveInitSyncBlock(r, b)
 	require.NoError(t, s.Stop())
 	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
+}
+
+func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	service.processChainStartTime(context.Background(), time.Now())
+
+	stateEvent := <-stateChannel
+	require.Equal(t, int(stateEvent.Type), int(statefeed.Initialized))
+	_, ok := stateEvent.Data.(*statefeed.InitializedData)
+	require.Equal(t, true, ok)
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
