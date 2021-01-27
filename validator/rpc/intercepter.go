@@ -13,10 +13,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// authPaths  keeps track of the paths which require authentication.
+// noAuthPaths keeps track of the paths which do not require
+// authentication from our API.
 var (
-	authPaths = map[string]bool{}
-	authLock  sync.RWMutex
+	authPaths = map[string]bool{
+		"/ethereum.validator.accounts.v2.Wallet/CreateWallet":    true,
+		"/ethereum.validator.accounts.v2.Auth/ChangePassword":    true,
+		"/ethereum.validator.accounts.v2.Wallet/ImportKeystores": true,
+	}
+	authLock sync.RWMutex
 )
 
 // JWTInterceptor is a gRPC unary interceptor to authorize incoming requests
