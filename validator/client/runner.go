@@ -76,11 +76,11 @@ func run(ctx context.Context, v Validator) {
 	firstTime := true
 	accountsChangedChan := make(chan struct{}, 1)
 	for {
-		if ctx.Err() != nil {
-			log.Info("Context canceled, stopping validator")
-			return // Exit if context is canceled.
-		}
 		if !firstTime {
+			if ctx.Err() != nil {
+				log.Info("Context canceled, stopping validator")
+				return // Exit if context is canceled.
+			}
 			<-ticker.C
 		} else {
 			firstTime = false
