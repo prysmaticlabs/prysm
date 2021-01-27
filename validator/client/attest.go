@@ -31,6 +31,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+
+	v.waitOneThirdOrValidBlock(ctx, slot)
+
 	lock := mputil.NewMultilock(string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
@@ -49,8 +52,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.Debug("Empty committee for validator duty, not attesting")
 		return
 	}
-
-	v.waitOneThirdOrValidBlock(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
