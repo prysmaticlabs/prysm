@@ -97,19 +97,6 @@ func (s *Server) HasUsedWeb(ctx context.Context, _ *ptypes.Empty) (*pb.HasUsedWe
 	}, nil
 }
 
-// Sends an auth response via gRPC containing a new JWT token.
-func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
-	// If everything is fine here, construct the auth token.
-	tokenString, expirationTime, err := s.createTokenString()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not create jwt token string")
-	}
-	return &pb.AuthResponse{
-		Token:           tokenString,
-		TokenExpiration: expirationTime,
-	}, nil
-}
-
 // ChangePassword allows changing the RPC password via the API as an authenticated method.
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
 	if req.CurrentPassword == "" {
@@ -147,6 +134,19 @@ func (s *Server) SaveHashedPassword(password string) error {
 	}
 	hashFilePath := filepath.Join(s.walletDir, HashedRPCPassword)
 	return fileutil.WriteFile(hashFilePath, hashedPassword)
+}
+
+// Sends an auth response via gRPC containing a new JWT token.
+func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
+	// If everything is fine here, construct the auth token.
+	tokenString, expirationTime, err := s.createTokenString()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not create jwt token string")
+	}
+	return &pb.AuthResponse{
+		Token:           tokenString,
+		TokenExpiration: expirationTime,
+	}, nil
 }
 
 // Creates a JWT token string using the JWT key with an expiration timestamp.
