@@ -80,14 +80,11 @@ func run(ctx context.Context, v Validator) {
 			log.Info("Context canceled, stopping validator")
 			return // Exit if context is canceled.
 		}
-		log.Warn("before wait")
 		if !firstTime {
 			<-ticker.C
 		} else {
 			firstTime = false
 		}
-
-		log.Warn("after wait")
 		err := v.WaitForChainStart(ctx)
 		if isConnectionError(err) {
 			log.Warnf("Could not determine if beacon chain started: %v", err)
