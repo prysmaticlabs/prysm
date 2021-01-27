@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestExitAccountsCli_Ok(t *testing.T) {
@@ -122,4 +123,29 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = prepareWallet(cliCtx)
 	assert.ErrorContains(t, "wallet is empty", err)
+}
+
+func TestPrepareClients_AddsGRPCHeaders(t *testing.T) {
+	imported.ResetCaches()
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		keymanagerKind:      keymanager.Imported,
+		walletPasswordFile:  passwordFilePath,
+		accountPasswordFile: passwordFilePath,
+		grpcHeaders:         "Authorization=Basic some-token,Some-Other-Header=some-value",
+	})
+	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
+	})
+	require.NoError(t, err)
+	_, _, err = prepareClients(cliCtx)
+	require.NoError(t, err)
+	md, _ := metadata.FromOutgoingContext(cliCtx.Context)
+	assert.Equal(t, "Basic some-token", md.Get("Authorization")[0])
+	assert.Equal(t, "some-value", md.Get("Some-Other-Header")[0])
 }
