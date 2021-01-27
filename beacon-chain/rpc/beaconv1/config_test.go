@@ -30,7 +30,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	genesisForkVersion := []byte("Genesis")
 	firstForkVersion, firstForkEpoch := []byte("First"), uint64(100)
 	secondForkVersion, secondForkEpoch := []byte("Second"), uint64(200)
-	thirdForkVersion, thirdForEpoch := []byte("Third"), uint64(300)
+	thirdForkVersion, thirdForkEpoch := []byte("Third"), uint64(300)
 
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
@@ -39,7 +39,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	schedule := make(map[uint64][]byte, 3)
 	schedule[secondForkEpoch] = secondForkVersion
 	schedule[firstForkEpoch] = firstForkVersion
-	schedule[thirdForEpoch] = thirdForkVersion
+	schedule[thirdForkEpoch] = thirdForkVersion
 	config.ForkVersionSchedule = schedule
 	params.OverrideBeaconConfig(config)
 
@@ -58,7 +58,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	fork = resp.Data[2]
 	assert.DeepEqual(t, secondForkVersion, fork.PreviousVersion)
 	assert.DeepEqual(t, thirdForkVersion, fork.CurrentVersion)
-	assert.Equal(t, thirdForEpoch, fork.Epoch)
+	assert.Equal(t, thirdForkEpoch, fork.Epoch)
 }
 
 func TestForkSchedule_NoForks(t *testing.T) {
