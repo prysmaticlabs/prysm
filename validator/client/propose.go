@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -80,13 +81,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, b, nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		return
-	}
-
 	// Sign returned block from beacon node
 	sig, domain, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
@@ -101,7 +95,23 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
+	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, b, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, b, sig),
 		).WithError(err).Error("Failed block slashing protection check")
@@ -191,7 +201,8 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	}
 
 	var randaoReveal bls.Signature
-	root, err := helpers.ComputeSigningRoot(epoch, domain.SignatureDomain)
+	sszUint := p2ptypes.SSZUint64(epoch)
+	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}

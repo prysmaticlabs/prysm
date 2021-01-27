@@ -36,11 +36,11 @@ func StringSlice() {
 }
 
 func SliceFromFunction() {
-	x := getSlice()[:] // want "Expression is already a slice."
+	x := slice()[:] // want "Expression is already a slice."
 	if len(x) == 3 {
 	}
 }
 
-func getSlice() []string {
+func slice() []string {
 	return []string{"bar"}
 }

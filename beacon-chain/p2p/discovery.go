@@ -44,7 +44,7 @@ func (s *Service) RefreshENR() {
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+	currentBitV, err := bitvector(s.dv5Listener.Self().Record())
 	if err != nil {
 		log.Errorf("Could not retrieve bitfield: %v", err)
 		return
@@ -104,12 +104,14 @@ func (s *Service) createListener(
 	// on which we will bind our listener on
 	// by default we will listen to all interfaces.
 	var bindIP net.IP
-	if ipAddr.To4() != nil {
-		networkVersion = "udp4"
+	networkVersion = udpVersionFromIP(ipAddr)
+	switch networkVersion {
+	case "udp4":
 		bindIP = net.IPv4zero
-	} else {
-		networkVersion = "udp6"
+	case "udp6":
 		bindIP = net.IPv6zero
+	default:
+		return nil, errors.New("invalid ip provided")
 	}
 
 	// If local ip is specified then use that instead.
@@ -119,6 +121,7 @@ func (s *Service) createListener(
 			return nil, errors.New("invalid local ip provided")
 		}
 		bindIP = ipAddr
+		networkVersion = udpVersionFromIP(ipAddr)
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   bindIP,
@@ -172,11 +175,11 @@ func (s *Service) createListener(
 		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
 	}
 
-	network, err := discover.ListenV5(conn, localNode, dv5Cfg)
+	listener, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to discV5")
 	}
-	return network, nil
+	return listener, nil
 }
 
 func (s *Service) createLocalNode(
@@ -361,14 +364,33 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	return multiAddressBuilderWithID(node.IP().String(), "tcp", uint(node.TCP()), id)
 }
 
-func convertToUdpMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
+func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	pubkey := node.Pubkey()
 	assertedKey := convertToInterfacePubkey(pubkey)
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	return multiAddressBuilderWithID(node.IP().String(), "udp", uint(node.UDP()), id)
+
+	var addresses []ma.Multiaddr
+	var ip4 enr.IPv4
+	var ip6 enr.IPv6
+	if node.Load(&ip4) == nil {
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip4).String(), "udp", uint(node.UDP()), id)
+		if ipErr != nil {
+			return nil, errors.Wrap(ipErr, "could not build IPv4 address")
+		}
+		addresses = append(addresses, address)
+	}
+	if node.Load(&ip6) == nil {
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip6).String(), "udp", uint(node.UDP()), id)
+		if ipErr != nil {
+			return nil, errors.Wrap(ipErr, "could not build IPv6 address")
+		}
+		addresses = append(addresses, address)
+	}
+
+	return addresses, nil
 }
 
 func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
@@ -401,4 +423,11 @@ func multiAddrFromString(address string) (ma.Multiaddr, error) {
 		return nil, err
 	}
 	return addr.Multiaddr(), nil
+}
+
+func udpVersionFromIP(ipAddr net.IP) string {
+	if ipAddr.To4() != nil {
+		return "udp4"
+	}
+	return "udp6"
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -214,7 +215,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Failed attestation slashing protection")
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
@@ -266,7 +267,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Failed attestation slashing protection")
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
@@ -321,7 +322,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Failed attestation slashing protection")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
@@ -520,6 +521,9 @@ func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
 }
 
 func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{AttestTimely: true})
+	defer resetCfg()
+
 	currentTime := uint64(time.Now().Unix())
 	currentSlot := uint64(4)
 	genesisTime := currentTime - (currentSlot * params.BeaconConfig().SecondsPerSlot)

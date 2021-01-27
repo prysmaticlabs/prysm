@@ -88,7 +88,7 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 	return &Status{
 		ctx:       ctx,
 		store:     store,
-		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
+		scorers:   scorers.New(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
 	}
 }
@@ -237,7 +237,7 @@ func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 		if peerData.Enr == nil || peerData.MetaData == nil {
 			return []uint64{}, nil
 		}
-		return retrieveIndicesFromBitfield(peerData.MetaData.Attnets), nil
+		return indicesFromBitfield(peerData.MetaData.Attnets), nil
 	}
 	return nil, peerdata.ErrPeerUnknown
 }
@@ -253,7 +253,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 		// look at active peers
 		connectedStatus := peerData.ConnState == PeerConnecting || peerData.ConnState == PeerConnected
 		if connectedStatus && peerData.MetaData != nil && peerData.MetaData.Attnets != nil {
-			indices := retrieveIndicesFromBitfield(peerData.MetaData.Attnets)
+			indices := indicesFromBitfield(peerData.MetaData.Attnets)
 			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)
@@ -363,6 +363,58 @@ func (p *Status) Connected() []peer.ID {
 	peers := make([]peer.ID, 0)
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// Inbound returns the current batch of inbound peers.
+func (p *Status) Inbound() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.Direction == network.DirInbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// InboundConnected returns the current batch of inbound peers that are connected.
+func (p *Status) InboundConnected() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// Outbound returns the current batch of outbound peers.
+func (p *Status) Outbound() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.Direction == network.DirOutbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// OutboundConnected returns the current batch of outbound peers that are connected.
+func (p *Status) OutboundConnected() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound {
 			peers = append(peers, pid)
 		}
 	}
@@ -588,6 +640,57 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []
 	return targetEpoch, potentialPIDs
 }
 
+// PeersToPrune selects the most sutiable inbound peers
+// to disconnect the host peer from. As of this moment
+// the pruning relies on simple heuristics such as
+// bad response count. In the future scoring will be used
+// to determine the most suitable peers to take out.
+func (p *Status) PeersToPrune() []peer.ID {
+	connLimit := p.ConnectedPeerLimit()
+	activePeers := p.Active()
+	// Exit early if we are still below our max
+	// limit.
+	if len(activePeers) <= int(connLimit) {
+		return []peer.ID{}
+	}
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	type peerResp struct {
+		pid     peer.ID
+		badResp int
+	}
+	peersToPrune := make([]*peerResp, 0)
+	// Select disconnected peers with a smaller bad response count.
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:     pid,
+				badResp: peerData.BadResponses,
+			})
+		}
+	}
+
+	// Sort in descending order to favour pruning peers with a
+	// higher bad response count.
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].badResp > peersToPrune[j].badResp
+	})
+
+	// Determine amount of peers to prune using our
+	// max connection limit.
+	amountToPrune := len(activePeers) - int(connLimit)
+
+	if amountToPrune < len(peersToPrune) {
+		peersToPrune = peersToPrune[:amountToPrune]
+	}
+	ids := make([]peer.ID, 0, len(peersToPrune))
+	for _, pr := range peersToPrune {
+		ids = append(ids, pr.pid)
+	}
+	return ids
+}
+
 // HighestEpoch returns the highest epoch reported epoch amongst peers.
 func (p *Status) HighestEpoch() uint64 {
 	p.store.RLock()
@@ -693,7 +796,7 @@ func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
 	return firstIP.Equal(secondIP)
 }
 
-func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
+func indicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
 	committeeIdxs := make([]uint64, 0, bitV.Count())
 	for i := uint64(0); i < 64; i++ {
 		if bitV.BitAt(i) {

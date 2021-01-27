@@ -19,6 +19,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -32,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -80,9 +82,9 @@ type Service struct {
 	genesisValidatorsRoot []byte
 }
 
-// NewService initializes a new p2p service compatible with shared.Service interface. No
+// New initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
@@ -127,6 +129,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 
 	s.host = h
+	s.host.RemoveStreamHandler(identify.IDDelta)
 
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
@@ -229,6 +232,13 @@ func (s *Service) Start() {
 	runutil.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
+	runutil.RunEvery(s.ctx, 1*time.Minute, func() {
+		log.WithFields(logrus.Fields{
+			"inbound":     len(s.peers.InboundConnected()),
+			"outbound":    len(s.peers.OutboundConnected()),
+			"activePeers": len(s.peers.Active()),
+		}).Info("Peer summary")
+	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIPAddr(s.host.ID(), multiAddrs...)
@@ -327,9 +337,8 @@ func (s *Service) ENR() *enr.Record {
 	return s.dv5Listener.Self().Record()
 }
 
-// DiscoveryAddress is the multiaddress representation of
-// our enr.
-func (s *Service) DiscoveryAddress() (multiaddr.Multiaddr, error) {
+// DiscoveryAddresses represents our enr addresses as multiaddresses.
+func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	if s.dv5Listener == nil {
 		return nil, nil
 	}

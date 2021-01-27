@@ -16,13 +16,12 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
 var (
-	log = logrus.WithField("prefix", "remote-keymanager")
 	// ErrSigningFailed defines a failure from the remote server
 	// when performing a signing operation.
 	ErrSigningFailed = errors.New("signing failed in the remote server")
@@ -97,6 +96,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		tlsCfg := &tls.Config{
 			Certificates: []tls.Certificate{clientPair},
 			RootCAs:      cp,
+			MinVersion:   tls.VersionTLS13,
 		}
 		clientCreds = credentials.NewTLS(tlsCfg)
 	}
@@ -192,13 +192,13 @@ func (opts *KeymanagerOpts) String() string {
 }
 
 // KeymanagerOpts for the remote keymanager.
-func (k *Keymanager) KeymanagerOpts() *KeymanagerOpts {
-	return k.opts
+func (km *Keymanager) KeymanagerOpts() *KeymanagerOpts {
+	return km.opts
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
-func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	resp, err := k.client.ListValidatingPublicKeys(ctx, &ptypes.Empty{})
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	resp, err := km.client.ListValidatingPublicKeys(ctx, &ptypes.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not list accounts from remote server")
 	}
@@ -210,13 +210,13 @@ func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte,
 }
 
 // FetchAllValidatingPublicKeys fetches the list of all public keys, including disabled ones.
-func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return dr.FetchValidatingPublicKeys(ctx)
+func (km *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return km.FetchValidatingPublicKeys(ctx)
 }
 
 // Sign signs a message for a validator key via a gRPC request.
-func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	resp, err := k.client.Sign(ctx, req)
+func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	resp, err := km.client.Sign(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -227,4 +227,12 @@ func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bl
 		return nil, ErrSigningFailed
 	}
 	return bls.SignatureFromBytes(resp.Signature)
+}
+
+// SubscribeAccountChanges is currently NOT IMPLEMENTED for the remote keymanager.
+// INVOKING THIS FUNCTION HAS NO EFFECT!
+func (k *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+	return event.NewSubscription(func(i <-chan struct{}) error {
+		return nil
+	})
 }

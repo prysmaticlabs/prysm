@@ -9,6 +9,7 @@ import (
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -87,9 +88,13 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 
 // peerInspector will scrape all the relevant scoring data and add it to our
 // peer handler.
-// TODO(#6043): Add hooks to add in peer inspector to our global peer handler.
 func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
-	// no-op
+	// Iterate through all the connected peers and through any of their
+	// relevant topics.
+	for pid, snap := range peerMap {
+		s.peers.Scorers().GossipScorer().SetGossipData(pid, snap.Score,
+			snap.BehaviourPenalty, convertTopicScores(snap.Topics))
+	}
 }
 
 // Content addressable ID function.
@@ -132,4 +137,18 @@ func setPubSubParameters() {
 		pubsub.GossipSubHistoryLength = 12
 		pubsub.GossipSubHistoryLength = 5
 	}
+}
+
+// convert from libp2p's internal schema to a compatible prysm protobuf format.
+func convertTopicScores(topicMap map[string]*pubsub.TopicScoreSnapshot) map[string]*pbrpc.TopicScoreSnapshot {
+	newMap := make(map[string]*pbrpc.TopicScoreSnapshot, len(topicMap))
+	for t, s := range topicMap {
+		newMap[t] = &pbrpc.TopicScoreSnapshot{
+			TimeInMesh:               uint64(s.TimeInMesh.Milliseconds()),
+			FirstMessageDeliveries:   float32(s.FirstMessageDeliveries),
+			MeshMessageDeliveries:    float32(s.MeshMessageDeliveries),
+			InvalidMessageDeliveries: float32(s.InvalidMessageDeliveries),
+		}
+	}
+	return newMap
 }

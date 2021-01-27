@@ -100,19 +100,19 @@ func (bs *Server) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
-
-		numBlks := len(blks)
-		if numBlks == 0 {
+		if !hasBlocks {
 			return &ethpb.ListBlocksResponse{
 				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 				TotalSize:       0,
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
+
+		numBlks := len(blks)
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {
@@ -188,10 +188,10 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 
 	for {
 		select {
-		case event := <-blocksChannel:
+		case blockEvent := <-blocksChannel:
 			if req.VerifiedOnly {
-				if event.Type == statefeed.BlockProcessed {
-					data, ok := event.Data.(*statefeed.BlockProcessedData)
+				if blockEvent.Type == statefeed.BlockProcessed {
+					data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
 					if !ok || data == nil {
 						continue
 					}
@@ -200,8 +200,8 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 					}
 				}
 			} else {
-				if event.Type == blockfeed.ReceivedBlock {
-					data, ok := event.Data.(*blockfeed.ReceivedBlockData)
+				if blockEvent.Type == blockfeed.ReceivedBlock {
+					data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
 					if !ok {
 						// Got bad data over the stream.
 						continue
@@ -242,8 +242,8 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.BlockProcessed {
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.BlockProcessed {
 				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)

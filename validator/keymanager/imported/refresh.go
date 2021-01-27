@@ -23,9 +23,9 @@ import (
 // to load in new keys we observe into our keymanager. This uses the fsnotify
 // library to listen for file-system changes and debounces these events to
 // ensure we can handle thousands of events fired in a short time-span.
-func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
+func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 	debounceFileChangesInterval := featureconfig.Get().KeystoreImportDebounceInterval
-	accountsFilePath := filepath.Join(dr.wallet.AccountsDir(), AccountsPath, accountsKeystoreFileName)
+	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
 	if !fileutil.FileExists(accountsFilePath) {
 		return
 	}
@@ -66,14 +66,14 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.WithError(err).Errorf("Loaded in an empty file: %s", ev.Name)
 			return
 		}
-		accountsKeystore := &accountsKeystoreRepresentation{}
+		accountsKeystore := &AccountsKeystoreRepresentation{}
 		if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
 			log.WithError(
 				err,
 			).Errorf("Could not read valid, EIP-2335 keystore json file at path: %s", ev.Name)
 			return
 		}
-		if err := dr.reloadAccountsFromKeystore(accountsKeystore); err != nil {
+		if err := km.reloadAccountsFromKeystore(accountsKeystore); err != nil {
 			log.WithError(
 				err,
 			).Error("Could not replace the accounts store from keystore file")
@@ -95,9 +95,9 @@ func (dr *Keymanager) listenForAccountChanges(ctx context.Context) {
 
 // Replaces the accounts store struct in the imported keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
-func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepresentation) error {
+func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepresentation) error {
 	decryptor := keystorev4.New()
-	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, dr.wallet.Password())
+	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, km.wallet.Password())
 	if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore file")
 	}
@@ -105,15 +105,12 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepre
 	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
 		return err
 	}
-	if len(newAccountsStore.PublicKeys) == 0 || len(newAccountsStore.PrivateKeys) == 0 {
-		return errors.New("attempted to reload a keystore with 0 public/private keys")
-	}
 	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
 		return errors.New("number of public and private keys in keystore do not match")
 	}
-	pubKeys := make([][48]byte, len(dr.accountsStore.PublicKeys))
-	for i := 0; i < len(dr.accountsStore.PrivateKeys); i++ {
-		privKey, err := bls.SecretKeyFromBytes(dr.accountsStore.PrivateKeys[i])
+	pubKeys := make([][48]byte, len(km.accountsStore.PublicKeys))
+	for i := 0; i < len(km.accountsStore.PrivateKeys); i++ {
+		privKey, err := bls.SecretKeyFromBytes(km.accountsStore.PrivateKeys[i])
 		if err != nil {
 			return errors.Wrap(err, "could not initialize private key")
 		}
@@ -131,14 +128,14 @@ func (dr *Keymanager) reloadAccountsFromKeystore(keystore *accountsKeystoreRepre
 			lock.Unlock()
 			return fmt.Errorf("public key %s has wrong length", pubKey)
 		}
-		dr.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
+		km.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
 	}
 	lock.Unlock()
-	dr.accountsStore = newAccountsStore
-	if err := dr.initializeKeysCachesFromKeystore(); err != nil {
+	km.accountsStore = newAccountsStore
+	if err := km.initializeKeysCachesFromKeystore(); err != nil {
 		return err
 	}
 	log.Info("Reloaded validator keys into keymanager")
-	dr.accountsChangedFeed.Send(pubKeys)
+	km.accountsChangedFeed.Send(pubKeys)
 	return nil
 }

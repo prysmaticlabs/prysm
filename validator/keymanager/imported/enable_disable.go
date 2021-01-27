@@ -10,44 +10,44 @@ import (
 )
 
 // DisableAccounts disables public keys from the user's wallet.
-func (dr *Keymanager) DisableAccounts(ctx context.Context, pubKeys [][]byte) error {
+func (km *Keymanager) DisableAccounts(ctx context.Context, pubKeys [][]byte) error {
 	if pubKeys == nil || len(pubKeys) < 1 {
 		return errors.New("no public keys specified to disable")
 	}
 	lock.Lock()
 	defer lock.Unlock()
 	for _, pk := range pubKeys {
-		if _, ok := dr.disabledPublicKeys[bytesutil.ToBytes48(pk)]; !ok {
-			dr.disabledPublicKeys[bytesutil.ToBytes48(pk)] = true
+		if _, ok := km.disabledPublicKeys[bytesutil.ToBytes48(pk)]; !ok {
+			km.disabledPublicKeys[bytesutil.ToBytes48(pk)] = true
 		}
 	}
-	return dr.rewriteDisabledKeysToDisk(ctx)
+	return km.rewriteDisabledKeysToDisk(ctx)
 }
 
 // EnableAccounts enables public keys from a user's wallet if they are disabled.
-func (dr *Keymanager) EnableAccounts(ctx context.Context, pubKeys [][]byte) error {
+func (km *Keymanager) EnableAccounts(ctx context.Context, pubKeys [][]byte) error {
 	if pubKeys == nil || len(pubKeys) < 1 {
 		return errors.New("no public keys specified to enable")
 	}
 	lock.Lock()
 	defer lock.Unlock()
 	for _, pk := range pubKeys {
-		delete(dr.disabledPublicKeys, bytesutil.ToBytes48(pk))
+		delete(km.disabledPublicKeys, bytesutil.ToBytes48(pk))
 	}
-	return dr.rewriteDisabledKeysToDisk(ctx)
+	return km.rewriteDisabledKeysToDisk(ctx)
 }
 
-func (dr *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
-	encoded, err := dr.wallet.ReadFileAtPath(ctx, AccountsPath, accountsKeystoreFileName)
+func (km *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
+	encoded, err := km.wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 	if err != nil {
 		return errors.Wrap(err, "could not read keystore file for accounts")
 	}
-	keystore := &accountsKeystoreRepresentation{}
+	keystore := &AccountsKeystoreRepresentation{}
 	if err := json.Unmarshal(encoded, keystore); err != nil {
 		return err
 	}
 	disabledKeysStrings := make([]string, 0)
-	for pk := range dr.disabledPublicKeys {
+	for pk := range km.disabledPublicKeys {
 		disabledKeysStrings = append(disabledKeysStrings, fmt.Sprintf("%x", pk))
 	}
 	keystore.DisabledPublicKeys = disabledKeysStrings
@@ -55,7 +55,7 @@ func (dr *Keymanager) rewriteDisabledKeysToDisk(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encoded); err != nil {
+	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
 		return errors.Wrap(err, "could not write keystore file for accounts")
 	}
 	return nil

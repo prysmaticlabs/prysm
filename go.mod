@@ -17,18 +17,17 @@ require (
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20201020132831-68dc48984fd3
+	github.com/ferranbt/fastssz v0.0.0-20210118190430-6ca267833c4b
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3
@@ -59,6 +58,7 @@ require (
 	github.com/libp2p/go-libp2p-blankhost v0.2.0
 	github.com/libp2p/go-libp2p-core v0.7.0
 	github.com/libp2p/go-libp2p-noise v0.1.2
+	github.com/libp2p/go-libp2p-peerstore v0.2.6
 	github.com/libp2p/go-libp2p-pubsub v0.4.0
 	github.com/libp2p/go-libp2p-swarm v0.3.1
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
@@ -70,6 +70,7 @@ require (
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.1
 	github.com/minio/sha256-simd v0.1.1
+	github.com/mitchellh/mapstructure v1.4.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d
@@ -80,13 +81,12 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
-	github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/client_golang v1.9.0
+	github.com/prometheus/procfs v0.3.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/protolambda/zssz v0.1.5
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20210105190001-13193818c0df
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20200618145306-2ae0807bef65
-	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae
-	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20210115110118-c595a4e0c0a5
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20210126073541-0bc6a2fd086d
+	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.6.0
@@ -108,10 +108,10 @@ require (
 	golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11 // indirect
-	golang.org/x/sys v0.0.0-20201211002650-1f0c578a6b29 // indirect
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/tools v0.0.0-20201218024724-ae774e9781d2
+	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877
@@ -119,7 +119,8 @@ require (
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/errgo.v2 v2.1.0
+	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.18.3
 	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v0.18.3

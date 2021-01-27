@@ -24,8 +24,6 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-var log = logrus.WithField("prefix", "main")
-
 func startSlasher(cliCtx *cli.Context) error {
 	// verify if ToS accepted
 	if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
@@ -92,7 +90,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "hash slinging slasher"
 	app.Usage = `launches an Ethereum Serenity slasher server that interacts with a beacon chain.`
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		db.DatabaseCommands,
 	}

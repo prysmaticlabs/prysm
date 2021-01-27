@@ -29,7 +29,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	}
 	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
 	validatingPublicKeys, err := keymanager.FetchAllValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
@@ -131,7 +131,7 @@ func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	default:
-		return fmt.Errorf(msgKeymanagerNotSupported, cfg.Wallet.KeymanagerKind())
+		return fmt.Errorf(errKeymanagerNotSupported, cfg.Wallet.KeymanagerKind())
 	}
 	return nil
 }

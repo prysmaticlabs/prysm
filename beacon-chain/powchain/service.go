@@ -40,8 +40,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "powchain")
-
 var (
 	validDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_valid_deposits_received",
@@ -168,9 +166,9 @@ type Web3ServiceConfig struct {
 	Eth1HeaderReqLimit uint64
 }
 
-// NewService sets up a new instance with an ethclient when
+// New sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
+func New(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -564,7 +562,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	if !s.chainStartData.Chainstarted {
 		// do not add to pending cache
 		// if no genesis state exists.
-		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex() + 1))
+		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex()))
 		return nil
 	}
 	genesisState, err := s.beaconDB.GenesisState(ctx)
@@ -590,7 +588,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()
 	}
-	validDepositsCount.Add(float64(currIndex + 1))
+	validDepositsCount.Add(float64(currIndex))
 	// Only add pending deposits if the container slice length
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
@@ -618,10 +616,13 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
 func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
+	if startBlock > endBlock {
+		return nil, fmt.Errorf("start block height %d cannot be > end block height %d", startBlock, endBlock)
+	}
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
-	errors := make([]error, 0, requestRange)
+	errs := make([]error, 0, requestRange)
 	if requestRange == 0 {
 		return headers, nil
 	}
@@ -635,13 +636,13 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes
 			Error:  err,
 		})
 		headers = append(headers, header)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
 		return nil, ioErr
 	}
-	for _, e := range errors {
+	for _, e := range errs {
 		if e != nil {
 			return nil, e
 		}

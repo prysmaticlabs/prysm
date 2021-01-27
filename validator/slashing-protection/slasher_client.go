@@ -13,7 +13,6 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethsl "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -46,9 +45,9 @@ type Config struct {
 	GrpcHeadersFlag            string
 }
 
-// NewService creates a new validator service for the service
+// New creates a new validator service for the service
 // registry.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                ctx,

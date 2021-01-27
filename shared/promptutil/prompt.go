@@ -55,7 +55,7 @@ func DefaultPrompt(promptText, defaultValue string) (string, error) {
 	if defaultValue != "" {
 		fmt.Printf("%s %s:\n", promptText, fmt.Sprintf("(%s: %s)", au.BrightGreen("default"), defaultValue))
 	} else {
-		fmt.Printf("%s\n", promptText)
+		fmt.Printf("%s:\n", promptText)
 	}
 	scanner := bufio.NewScanner(os.Stdin)
 	if ok := scanner.Scan(); ok {

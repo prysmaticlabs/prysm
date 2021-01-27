@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -249,13 +250,17 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
 	for {
 		select {
 		case b := <-bChannel:
-			if slot <= b.Block.Slot {
-				return
+			if featureconfig.Get().AttestTimely {
+				if slot <= b.Block.Slot {
+					return
+				}
 			}
 		case <-ctx.Done():
 			traceutil.AnnotateError(span, ctx.Err())
 			return
-
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return
 		case <-t.C:
 			return
 		}
