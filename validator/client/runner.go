@@ -19,7 +19,7 @@ import (
 
 // time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
-var errConnectionIssue = errors.New("connection issue, beacon node might be offline...")
+var errConnectionIssue = errors.New("could not connect")
 
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
