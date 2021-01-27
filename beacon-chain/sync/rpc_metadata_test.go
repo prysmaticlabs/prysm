@@ -50,7 +50,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 		expectSuccess(t, stream)
 		out := new(pb.MetaData)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		assert.DeepEqual(t, p1.LocalMetadata, out, "Metadata unequal")
+		assert.Equal(t, true, sszutil.DeepEqual(p1.LocalMetadata, out), "Metadata unequal")
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)

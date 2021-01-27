@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -74,7 +76,7 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 
 			res, err := sd.DetectDoublePropose(ctx, tt.incomingBlk)
 			require.NoError(t, err)
-			assert.DeepEqual(t, tt.slashing, res)
+			assert.Equal(t, true, sszutil.DeepEqual(tt.slashing, res))
 		})
 	}
 }

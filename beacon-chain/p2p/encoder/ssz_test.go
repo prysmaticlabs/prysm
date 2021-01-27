@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -43,7 +44,7 @@ func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
 	require.NoError(t, err)
 	decoded := &pb.Fork{}
 	require.NoError(t, e.DecodeWithMaxLength(buf, decoded))
-	if !proto.Equal(decoded, msg) {
+	if !sszutil.DeepEqual(decoded, msg) {
 		t.Logf("decoded=%+v\n", decoded)
 		t.Error("Decoded message is not the same as original")
 	}
@@ -60,7 +61,7 @@ func testRoundTripWithGossip(t *testing.T, e *encoder.SszNetworkEncoder) {
 	require.NoError(t, err)
 	decoded := &pb.Fork{}
 	require.NoError(t, e.DecodeGossip(buf.Bytes(), decoded))
-	if !proto.Equal(decoded, msg) {
+	if !sszutil.DeepEqual(decoded, msg) {
 		t.Logf("decoded=%+v\n", decoded)
 		t.Error("Decoded message is not the same as original")
 	}
