@@ -13,25 +13,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// noAuthPaths keeps track of the paths which do not require
-// authentication from our API.
+// authPaths  keeps track of the paths which require authentication.
 var (
-	noAuthPaths = map[string]bool{
-		"/ethereum.validator.accounts.v2.Auth/Signup":                      true,
-		"/ethereum.validator.accounts.v2.Auth/Login":                       true,
-		"/ethereum.validator.accounts.v2.Auth/Logout":                      true,
-		"/ethereum.validator.accounts.v2.Auth/HasUsedWeb":                  true,
-		"/ethereum.validator.accounts.v2.Wallet/HasWallet":                 true,
-		"/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus":           true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorParticipation": true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorPerformance":   true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorBalances":      true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidators":             true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue":         true,
-		"/ethereum.validator.accounts.v2.Beacon/GetPeers":                  true,
-		"/ethereum.validator.accounts.v2.Beacon/StreamValidatorLogs":       true,
-	}
-	authLock sync.RWMutex
+	authPaths = map[string]bool{}
+	authLock  sync.RWMutex
 )
 
 // JWTInterceptor is a gRPC unary interceptor to authorize incoming requests
@@ -45,7 +30,7 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 	) (interface{}, error) {
 		// Skip authorize when the path doesn't require auth.
 		authLock.RLock()
-		shouldAuthenticate := !noAuthPaths[info.FullMethod]
+		shouldAuthenticate := authPaths[info.FullMethod]
 		authLock.RUnlock()
 		if shouldAuthenticate {
 			if err := s.authorize(ctx); err != nil {
