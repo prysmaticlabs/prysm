@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -34,7 +35,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
-	lock := mputil.NewMultilock(string(roleAttester), string(pubKey[:]))
+	var b strings.Builder
+	b.WriteByte(byte(roleAttester))
+	b.Write(pubKey[:])
+	lock := mputil.NewMultilock(b.String())
 	lock.Lock()
 	defer lock.Unlock()
 
