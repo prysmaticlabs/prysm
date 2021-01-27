@@ -12,8 +12,8 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
-// Chunker defines a struct which implements a chunk for a min/max span for a validator
-// used for surround vote detection in slasher. The interface defines methods used to check
+// Chunker defines a struct which represents a slice containing a chunk for K different validator's
+// min spans used for surround vote detection in slasher. The interface defines methods used to check
 // if an attestation is slashable for a validator index based on the contents of
 // the chunk as well as the ability to update the data in the chunk with incoming information.
 // For detailed information on what a chunk is and how it works, refer to our design document:
@@ -62,16 +62,26 @@ type Chunker interface {
 //                                     {  }    {  }    {  }
 //   chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
 //
-// MinSpanChunksSlice represents this data structure above.
+//                                     val0    val1    val2
+//                                     {  }    {  }    {  }
+//   chunk_1_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//
+//                            ...
+//
+//                                     val0    val1    val2
+//                                     {  }    {  }    {  }
+//   chunk_N_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//
+// MinSpanChunksSlice represents the data structure above for a single chunk index.
 type MinSpanChunksSlice struct {
 	params *Parameters
 	data   []uint16
 }
 
-// EmptyMinChunk initializes a min span chunk of length C*K for
+// EmptyMinSpanChunksSlice initializes a min span chunk of length C*K for
 // C = chunkSize and K = validatorChunkSize filled with neutral elements.
 // For min spans, the neutral element is `undefined`, represented by MaxUint16.
-func EmptyMinSpanChunk(config *Parameters) *MinSpanChunksSlice {
+func EmptyMinSpanChunksSlice(config *Parameters) *MinSpanChunksSlice {
 	m := &MinSpanChunksSlice{
 		params: config,
 	}
@@ -83,10 +93,9 @@ func EmptyMinSpanChunk(config *Parameters) *MinSpanChunksSlice {
 	return m
 }
 
-// EmptyMinChunkFrom initializes a min span chunk from a slice of uint16 values.
-// Returns an error if the slice is not of length C*K for C = chunkSize and
-// K = validatorChunkSize.
-func MinChunkSpanFrom(config *Parameters, chunk []uint16) (*MinSpanChunksSlice, error) {
+// MinChunkSpansSliceFrom initializes a min span chunks slice rom a slice of uint16 values.
+// Returns an error if the slice is not of length C*K for C = chunkSize and K = validatorChunkSize.
+func MinChunkSpansSliceFrom(config *Parameters, chunk []uint16) (*MinSpanChunksSlice, error) {
 	requiredLen := config.chunkSize * config.validatorChunkSize
 	if uint64(len(chunk)) != requiredLen {
 		return nil, fmt.Errorf("chunk has wrong length, %d, expected %d", len(chunk), requiredLen)
@@ -97,20 +106,20 @@ func MinChunkSpanFrom(config *Parameters, chunk []uint16) (*MinSpanChunksSlice, 
 	}, nil
 }
 
-// NeutralElement for a min span chunk is undefined, in this case
+// NeutralElement for a min span chunks slice is undefined, in this case
 // using MaxUint16 as a sane value given it is impossible we reach it.
 func (m *MinSpanChunksSlice) NeutralElement() uint16 {
 	return math.MaxUint16
 }
 
-// Chunk returns the underlying slice of uint16's for a validator min span.
+// Chunk returns the underlying slice of uint16's for the min chunks slice.
 func (m *MinSpanChunksSlice) Chunk() []uint16 {
 	return m.data
 }
 
 // CheckSlashable takes in a validator index and an incoming attestation
 // and checks if the validator is slashable depending on the data
-// within the chunk. Recall that for an incoming attestation, B, and an
+// within the min span chunks slice. Recall that for an incoming attestation, B, and an
 // existing attestation, A:
 //
 //  B surrounds A if and only if B.target > min_spans[B.source]
@@ -159,42 +168,58 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 // That is, it is the minimum distance between the specified epoch and all attestation
 // target epochs a validator has created where att.source.epoch > e.
 //
+// Recall that a MinSpanChunksSlice struct represents a single slice for a chunk index
+// from the collection below:
+//
+//                                     val0    val1    val2
+//                                     {  }    {  }    {  }
+//   chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//
+//                                     val0    val1    val2
+//                                     {  }    {  }    {  }
+//   chunk_1_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//
+//                            ...
+//
+//                                     val0    val1    val2
+//                                     {  }    {  }    {  }
+//   chunk_N_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//
 // Let's take a look at how this update will look for a real set of min span chunk:
-// For the purposes of a simple example, let's set H = 12, meaning a min span
-// will hold 12 epochs worth of attesting history. Then we set C = 4 meaning we will
-// chunk the min span into arrays each of length 4.
+// For the purposes of a simple example, let's set H = 2, meaning a min span
+// will hold 2 epochs worth of attesting history. Then we set C = 2 meaning we will
+// chunk the min span into arrays each of length 2.
 //
-//  validator_0_min_span = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+// So assume we get an epoch 4 and validator 0, then, we need to update every epoch in the span from
+// 4 down to 2. First, we find out which chunk epoch 4 falls into, which is calculated as:
+// chunk_idx = (epoch % H) / C = (4 % 2) / 2 = 0
 //
-// After chunking into chunks of length C = 4:
 //
-//  validator_0_min_span_chunks = [[2, 2, 2, 2], [2, 2, 2, 2], [2, 2, 2, 2]]
+//                                     val0    val1    val2
+//                                     {  }    {  }    {  }
+//   chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//                                     |
+//                                     |-> epoch 4 for validator 0
 //
-// So assume we get an epoch 18, then, we need to update every epoch in the span from
-// 18 down to 6. First, we find out which chunk epoch 18 falls into, which is calculated as:
-// chunk_idx = (epoch % H) / C = (18 % 12) / 4 = (6 / 4) = 1.
-//
-//              epoch 18, chunk index 1
-//                        |
-//  [[2, 2, 2, 2], [2, 2, 2, 2], [2, 2, 2, 2]]
-//
-// Next up, we proceed with the update process, starting epoch 18
-// al the way down to epoch 6. We will need to go down the array once
+// Next up, we proceed with the update process for validator index 0, starting epoch 4
+// al the way down to epoch 2. We will need to go down the array once
 // and then wrap around at the end back down to epoch 6.
 //
-//      update every epoch from 18 down to 6
-//                        |
-//  <----------------------
-//                        <-----------------<-
-//                        |
-//                      epoch 6
-//                        |
-//  [[2, 2, 2, 2], [2, 2, 2, 2], [2, 2, 2, 2]]
+// update every epoch from 4 down to 2 for validator 0
+//
+//             epoch 4
+//               |
+//             <-|
+//          epoch2 epoch3
+//              |   |
+//             <----<
+//             [[2, 2], [2, 2], [2, 2]]
 //
 // Once we finish updating a chunk, we need to move on to the next chunk. This function
 // returns a boolean named keepGoing which allows the caller to determine if we should
-// continue and update the min chunk. We stop whenever we reach the min epoch we need
-// to update, in our example, we stop at 6.
+// continue and update another chunk index. We stop whenever we reach the min epoch we need
+// to update, in our example, we stop at 2, which is still part of chunk 0, so no need
+// to jump to another min span chunks slice to perform updates.
 func (m *MinSpanChunksSlice) Update(
 	chunkIdx uint64,
 	validatorIdx types.ValidatorIndex,
@@ -209,7 +234,7 @@ func (m *MinSpanChunksSlice) Update(
 		minEpoch = currentEpoch.Sub(m.params.historyLength - 1)
 	}
 	epochInChunk := startEpoch
-	// We go down the chunk, updating every value starting at start_epoch down to min_epoch.
+	// We go down the chunk for the validator, updating every value starting at start_epoch down to min_epoch.
 	// As long as the epoch, e, in the same chunk index and e >= min_epoch, we proceed with
 	// a for loop.
 	for m.params.chunkIndex(epochInChunk) == chunkIdx && epochInChunk >= minEpoch {

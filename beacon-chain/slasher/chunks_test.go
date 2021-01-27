@@ -15,8 +15,8 @@ import (
 
 var _ = Chunker(&MinSpanChunksSlice{})
 
-func TestMinSpanChunk_Chunk(t *testing.T) {
-	chunk := EmptyMinSpanChunk(&Parameters{
+func TestMinSpanChunksSlice_Chunk(t *testing.T) {
+	chunk := EmptyMinSpanChunksSlice(&Parameters{
 		chunkSize:          2,
 		validatorChunkSize: 2,
 	})
@@ -24,21 +24,21 @@ func TestMinSpanChunk_Chunk(t *testing.T) {
 	require.Equal(t, wanted, chunk.Chunk())
 }
 
-func TestMinSpanChunk_NeutralElement(t *testing.T) {
-	chunk := EmptyMinSpanChunk(&Parameters{})
+func TestMinSpanChunksSlice_NeutralElement(t *testing.T) {
+	chunk := EmptyMinSpanChunksSlice(&Parameters{})
 	require.Equal(t, math.MaxUint16, chunk.NeutralElement())
 }
 
-func TestMinSpanChunk_MinChunkSpanFrom(t *testing.T) {
+func TestMinSpanChunksSlice_MinChunkSpanFrom(t *testing.T) {
 	params := &Parameters{
 		chunkSize:          3,
 		validatorChunkSize: 2,
 	}
-	_, err := MinChunkSpanFrom(params, []uint16{})
+	_, err := MinChunkSpansSliceFrom(params, []uint16{})
 	require.ErrorContains(t, "chunk has wrong length", err)
 
 	data := []uint16{2, 2, 2, 2, 2, 2}
-	chunk, err := MinChunkSpanFrom(&Parameters{
+	chunk, err := MinChunkSpansSliceFrom(&Parameters{
 		chunkSize:          3,
 		validatorChunkSize: 2,
 	}, data)
@@ -46,7 +46,7 @@ func TestMinSpanChunk_MinChunkSpanFrom(t *testing.T) {
 	require.DeepEqual(t, data, chunk.Chunk())
 }
 
-func TestMinSpanChunk_CheckSlashable(t *testing.T) {
+func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := dbtest.SetupDB(t)
 	params := &Parameters{
@@ -74,7 +74,7 @@ func TestMinSpanChunk_CheckSlashable(t *testing.T) {
 	//   {     }  {     }
 	//  [2, 2, 2, 2, 2, 2]
 	data := []uint16{2, 2, 2, 2, 2, 2}
-	chunk, err = MinChunkSpanFrom(params, data)
+	chunk, err = MinChunkSpansSliceFrom(params, data)
 	require.NoError(t, err)
 
 	// An attestation with source 1 and target 2 should not be slashable
@@ -89,9 +89,9 @@ func TestMinSpanChunk_CheckSlashable(t *testing.T) {
 	require.Equal(t, false, slashable)
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
-	// Next up we initialize an empty chunk and mark an attestation
+	// Next up we initialize an empty chunks slice and mark an attestation
 	// with (source 1, target 2) as attested.
-	chunk = EmptyMinSpanChunk(params)
+	chunk = EmptyMinSpanChunksSlice(params)
 	source = types.Epoch(1)
 	target = types.Epoch(2)
 	att = createAttestation(source, target)
@@ -124,7 +124,7 @@ func TestMinSpanChunk_CheckSlashable(t *testing.T) {
 }
 
 func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
-	// We initialize a slice for 2 validators and with chunk size 3,
+	// We initialize a chunks slice for 2 validators and with chunk size 3,
 	// which will look as follows:
 	//
 	//     val0     val1
