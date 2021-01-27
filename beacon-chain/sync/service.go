@@ -41,7 +41,6 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenAttSize = 10000
 const seenExitSize = 100
-const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
 
@@ -108,14 +107,14 @@ type Service struct {
 	seenProposerSlashingLock  sync.RWMutex
 	seenProposerSlashingCache *lru.Cache
 	seenAttesterSlashingLock  sync.RWMutex
-	seenAttesterSlashingCache *lru.Cache
+	seenAttesterSlashingCache map[uint64]bool
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
 	stateGen                  *stategen.State
 }
 
-// NewService initializes new regular sync service.
-func NewService(ctx context.Context, cfg *Config) *Service {
+// New initializes new regular sync service.
+func New(ctx context.Context, cfg *Config) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
 
 	rLimiter := newRateLimiter(cfg.P2P)
@@ -216,10 +215,6 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
-	attesterSlashingCache, err := lru.New(seenAttesterSlashingSize)
-	if err != nil {
-		return err
-	}
 	proposerSlashingCache, err := lru.New(seenProposerSlashingSize)
 	if err != nil {
 		return err
@@ -231,7 +226,7 @@ func (s *Service) initCaches() error {
 	s.seenBlockCache = blkCache
 	s.seenAttestationCache = attCache
 	s.seenExitCache = exitCache
-	s.seenAttesterSlashingCache = attesterSlashingCache
+	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = proposerSlashingCache
 	s.badBlockCache = badBlockCache
 

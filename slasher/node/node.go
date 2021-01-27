@@ -169,7 +169,7 @@ func (n *SlasherNode) registerPrometheusService(cliCtx *cli.Context) error {
 			},
 		)
 	}
-	service := prometheus.NewService(
+	service := prometheus.New(
 		fmt.Sprintf("%s:%d", n.cliCtx.String(cmd.MonitoringHostFlag.Name), n.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		n.services,
 		additionalHandlers...,
@@ -226,7 +226,7 @@ func (n *SlasherNode) registerBeaconClientService() error {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 
-	bs, err := beaconclient.NewService(n.ctx, &beaconclient.Config{
+	bs, err := beaconclient.New(n.ctx, &beaconclient.Config{
 		BeaconCert:            beaconCert,
 		SlasherDB:             n.db,
 		BeaconProvider:        beaconProvider,
@@ -244,7 +244,7 @@ func (n *SlasherNode) registerDetectionService() error {
 	if err := n.services.FetchService(&bs); err != nil {
 		panic(err)
 	}
-	ds := detection.NewService(n.ctx, &detection.Config{
+	ds := detection.New(n.ctx, &detection.Config{
 		Notifier:              bs,
 		SlasherDB:             n.db,
 		BeaconClient:          bs,
@@ -269,7 +269,7 @@ func (n *SlasherNode) registerRPCService() error {
 	port := n.cliCtx.String(flags.RPCPort.Name)
 	cert := n.cliCtx.String(flags.CertFlag.Name)
 	key := n.cliCtx.String(flags.KeyFlag.Name)
-	rpcService := rpc.NewService(n.ctx, &rpc.Config{
+	rpcService := rpc.New(n.ctx, &rpc.Config{
 		Host:         host,
 		Port:         port,
 		CertFlag:     cert,
