@@ -7,14 +7,13 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-var _ = Chunker(&MinSpanChunk{})
+var _ = Chunker(&MinSpanChunksSlice{})
 
 func TestMinSpanChunk_Chunk(t *testing.T) {
 	chunk := EmptyMinSpanChunk(&Parameters{
@@ -61,7 +60,7 @@ func TestMinSpanChunk_CheckSlashable(t *testing.T) {
 	att := createAttestation(source, target)
 
 	// A faulty chunk should lead to error.
-	chunk := &MinSpanChunk{
+	chunk := &MinSpanChunksSlice{
 		params: params,
 		data:   []uint16{},
 	}

@@ -36,20 +36,34 @@ type Chunker interface {
 	) (bool, error)
 }
 
-// MinSpanChunk represents a validator min span where for a given epoch, e, and attestations
-// a validator index has produced, atts, such that min_spans[e] is defined as
-// min((att.target.epoch - e) for att in attestations) where att.source.epoch > e.
-// That is, it is the minimum distance between the specified epoch and all attestation
-// target epochs a validator has created where att.source.epoch > e.
+// MinSpanChunksSlice represents a slice containing a chunk for K different validator's min spans.
+// MinSpans and chunks are defined in our design document: https://hackmd.io/@Yl0VNGYRR6aeDrHHQNhuaA/prysm-slasher.
+//
+// For a given epoch, e, and attestations a validator index has produced, atts,
+// such that min_spans[e] is defined as min((att.target.epoch - e) for att in attestations)
+// where att.source.epoch > e. That is, it is the minimum distance between the
+// specified epoch and all attestation target epochs a validator has created
+// where att.source.epoch > e.
 //
 // Under ideal network conditions, where every target epoch immediately follows its source,
-// min spans for validators will look as follows:
+// min spans for a validator will look as follows:
 //
 //  min_spans = [2, 2, 2, ..., 2]
 //
-// For more details on how these values are computed, see:
-// https://hackmd.io/@Yl0VNGYRR6aeDrHHQNhuaA/prysm-slasher.
-type MinSpanChunk struct {
+// Next, we can chunk this list of min spans into chunks of length C. For C = 2, for example:
+//
+//                       chunk0  chunk1       chunkN
+//                        {  }   {   }         {  }
+//  chunked_min_spans = [[2, 2], [2, 2], ..., [2, 2]]
+//
+// Finally, we can store each chunk index for K validators into a single flat slice. For K = 3:
+//
+//                                     val0    val1    val2
+//                                     {  }    {  }    {  }
+//   chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//
+// MinSpanChunksSlice represents this data structure above.
+type MinSpanChunksSlice struct {
 	params *Parameters
 	data   []uint16
 }
@@ -57,8 +71,8 @@ type MinSpanChunk struct {
 // EmptyMinChunk initializes a min span chunk of length C*K for
 // C = chunkSize and K = validatorChunkSize filled with neutral elements.
 // For min spans, the neutral element is `undefined`, represented by MaxUint16.
-func EmptyMinSpanChunk(config *Parameters) *MinSpanChunk {
-	m := &MinSpanChunk{
+func EmptyMinSpanChunk(config *Parameters) *MinSpanChunksSlice {
+	m := &MinSpanChunksSlice{
 		params: config,
 	}
 	data := make([]uint16, config.chunkSize*config.validatorChunkSize)
@@ -72,12 +86,12 @@ func EmptyMinSpanChunk(config *Parameters) *MinSpanChunk {
 // EmptyMinChunkFrom initializes a min span chunk from a slice of uint16 values.
 // Returns an error if the slice is not of length C*K for C = chunkSize and
 // K = validatorChunkSize.
-func MinChunkSpanFrom(config *Parameters, chunk []uint16) (*MinSpanChunk, error) {
+func MinChunkSpanFrom(config *Parameters, chunk []uint16) (*MinSpanChunksSlice, error) {
 	requiredLen := config.chunkSize * config.validatorChunkSize
 	if uint64(len(chunk)) != requiredLen {
 		return nil, fmt.Errorf("chunk has wrong length, %d, expected %d", len(chunk), requiredLen)
 	}
-	return &MinSpanChunk{
+	return &MinSpanChunksSlice{
 		params: config,
 		data:   chunk,
 	}, nil
@@ -85,12 +99,12 @@ func MinChunkSpanFrom(config *Parameters, chunk []uint16) (*MinSpanChunk, error)
 
 // NeutralElement for a min span chunk is undefined, in this case
 // using MaxUint16 as a sane value given it is impossible we reach it.
-func (m *MinSpanChunk) NeutralElement() uint16 {
+func (m *MinSpanChunksSlice) NeutralElement() uint16 {
 	return math.MaxUint16
 }
 
 // Chunk returns the underlying slice of uint16's for a validator min span.
-func (m *MinSpanChunk) Chunk() []uint16 {
+func (m *MinSpanChunksSlice) Chunk() []uint16 {
 	return m.data
 }
 
@@ -105,7 +119,7 @@ func (m *MinSpanChunk) Chunk() []uint16 {
 // is surrounding a previous one. We also check if we indeed have an existing
 // attestation record in the database if the condition holds true in order
 // to be confident of a slashable offense.
-func (m *MinSpanChunk) CheckSlashable(
+func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
@@ -181,7 +195,7 @@ func (m *MinSpanChunk) CheckSlashable(
 // returns a boolean named keepGoing which allows the caller to determine if we should
 // continue and update the min chunk. We stop whenever we reach the min epoch we need
 // to update, in our example, we stop at 6.
-func (m *MinSpanChunk) Update(
+func (m *MinSpanChunksSlice) Update(
 	chunkIdx uint64,
 	validatorIdx types.ValidatorIndex,
 	startEpoch,
