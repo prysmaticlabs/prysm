@@ -14,7 +14,7 @@ func TestGetSpec(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 
-	config.NetworkName = "NetworkName"
+	config.ConfigName = "ConfigName"
 	config.MaxCommitteesPerSlot = 1
 	config.TargetCommitteeSize = 2
 	config.MaxValidatorsPerCommittee = 3
@@ -100,7 +100,7 @@ func TestGetSpec(t *testing.T) {
 	for k, v := range resp.Data {
 		switch k {
 		case "config_name":
-			assert.Equal(t, "NetworkName", v)
+			assert.Equal(t, "ConfigName", v)
 		case "max_committees_per_slot":
 			assert.Equal(t, "1", v)
 		case "target_committee_size":

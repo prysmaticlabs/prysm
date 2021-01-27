@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ptypes "github.com/gogo/protobuf/types"
@@ -57,24 +58,25 @@ func prepareConfigSpec() (map[string]string, error) {
 
 	for i := 0; i < t.NumField(); i++ {
 		tField := t.Field(i)
-		tag, ok := tField.Tag.Lookup("api")
-		if !ok {
+		_, isSpecField := tField.Tag.Lookup("spec")
+		if !isSpecField {
 			// Field should not be returned from API.
 			continue
 		}
 
+		tagValue := strings.ToLower(tField.Tag.Get("yaml"))
 		vField := v.Field(i)
 		switch vField.Kind() {
 		case reflect.Uint64:
-			data[tag] = strconv.FormatUint(vField.Uint(), 10)
+			data[tagValue] = strconv.FormatUint(vField.Uint(), 10)
 		case reflect.Slice:
-			data[tag] = hexutil.Encode(vField.Bytes())
+			data[tagValue] = hexutil.Encode(vField.Bytes())
 		case reflect.Array:
-			data[tag] = hexutil.Encode(reflect.ValueOf(&config).Elem().Field(i).Slice(0, vField.Len()).Bytes())
+			data[tagValue] = hexutil.Encode(reflect.ValueOf(&config).Elem().Field(i).Slice(0, vField.Len()).Bytes())
 		case reflect.String:
-			data[tag] = vField.String()
+			data[tagValue] = vField.String()
 		case reflect.Uint8:
-			data[tag] = hexutil.Encode([]byte{uint8(vField.Uint())})
+			data[tagValue] = hexutil.Encode([]byte{uint8(vField.Uint())})
 		default:
 			return nil, fmt.Errorf("unsupported config field type: %s", vField.Kind().String())
 		}
