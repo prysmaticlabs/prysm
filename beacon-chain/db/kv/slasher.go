@@ -85,9 +85,12 @@ func (s *Store) AttestationRecordForValidator(
 		if value == nil {
 			return nil
 		}
+		var sr [32]byte
+		copy(sr[:], value[16:])
 		record = &slashertypes.AttestationRecord{
-			Source: ssz.UnmarshallUint64(value[0:8]),
-			Target: ssz.UnmarshallUint64(value[8:]),
+			Source:      ssz.UnmarshallUint64(value[0:8]),
+			Target:      ssz.UnmarshallUint64(value[8:16]),
+			SigningRoot: sr,
 		}
 		return nil
 	})
@@ -98,6 +101,7 @@ func (s *Store) AttestationRecordForValidator(
 func (s *Store) SaveAttestationRecordForValidator(
 	ctx context.Context,
 	validatorIdx types.ValidatorIndex,
+	signingRoot [32]byte,
 	attestation *ethpb.IndexedAttestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordForValidator")
@@ -110,16 +114,17 @@ func (s *Store) SaveAttestationRecordForValidator(
 		}
 		encEpoch := ssz.MarshalUint64(make([]byte, 0), attestation.Data.Target.Epoch)
 		key := append(encIdx, encEpoch...)
-		value := make([]byte, 16)
+		value := make([]byte, 48)
 		copy(value[0:8], ssz.MarshalUint64(make([]byte, 0), attestation.Data.Source.Epoch))
-		copy(value[8:], ssz.MarshalUint64(make([]byte, 0), attestation.Data.Target.Epoch))
+		copy(value[8:16], ssz.MarshalUint64(make([]byte, 0), attestation.Data.Target.Epoch))
+		copy(value[16:], signingRoot[:])
 		return bkt.Put(key, value)
 	})
 }
 
 // LoadSlasherChunk given a chunk kind and a disk key, retrieves a chunk for a validator
 // min or max span used by slasher from our database.
-func (s *Store) LoadChunk(
+func (s *Store) LoadSlasherChunk(
 	ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
 ) ([]uint16, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LoadChunk")

@@ -103,6 +103,7 @@ type NoHeadAccessDatabase interface {
 	SaveAttestationRecordForValidator(
 		ctx context.Context,
 		validatorIdx types.ValidatorIndex,
+		signingRoot [32]byte,
 		attestation *eth.IndexedAttestation,
 	) error
 	SaveSlasherChunks(

@@ -83,7 +83,7 @@ require (
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/prysmaticlabs/eth2-types v0.0.0-20210126202605-943c664ec11d // indirect
+	github.com/prysmaticlabs/eth2-types v0.0.0-20210126202605-943c664ec11d
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210115110118-c595a4e0c0a5
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210121075346-fee7b721f342
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
