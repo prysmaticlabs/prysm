@@ -131,9 +131,24 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	var err error
 
 	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+	// Check whether the parent state has been advanced by 1 slot in trailing slot cache.
+	tsState, err := GetTrailingSlotState(ctx, signed.Block.ParentRoot)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process slot")
+		return nil, nil, err
+	}
+	// If the trailing slot state is not nil (i.e. cache hit).
+	// We replace trailing slot state with parent state.
+	if tsState != nil {
+		state = tsState
+	}
+
+	// Since trailing slot cache only advances state by 1 slot,
+	// we check if there's more slots that need to process.
+	if signed.Block.Slot > state.Slot() {
+		state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not process slots")
+		}
 	}
 
 	// Execute per block transition.
