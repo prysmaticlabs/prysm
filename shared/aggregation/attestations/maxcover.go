@@ -72,7 +72,7 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 		return atts, nil
 	}
 
-	if err := validateAttestations(atts); err != nil {
+	if err := attList(atts).validate(); err != nil {
 		if errors.Is(err, aggregation.ErrBitsDifferentLen) {
 			return atts, nil
 		}
@@ -145,7 +145,7 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 		candidates = candidates[:len(unaggregated)-len(processedKeys)]
 	}
 
-	return append(aggregated, filterContainedAttestations(unaggregated)...), nil
+	return append(aggregated, attList(unaggregated).filterContained()...), nil
 }
 
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
@@ -299,11 +299,6 @@ func (al attList) filterContained() attList {
 	return filtered
 }
 
-// filterContainedAttestations removes attestations that are contained within other attestations.
-func filterContainedAttestations(atts []*ethpb.Attestation) []*ethpb.Attestation {
-	return attList(atts).filterContained()
-}
-
 // validate checks attestation list for validity (equal bitlength, non-nil bitlist etc).
 func (al attList) validate() error {
 	if al == nil {
@@ -322,9 +317,4 @@ func (al attList) validate() error {
 		}
 	}
 	return nil
-}
-
-// validateAttestations checks attestation list for validity (equal bitlength, non-nil bitlist etc).
-func validateAttestations(atts []*ethpb.Attestation) error {
-	return attList(atts).validate()
 }
