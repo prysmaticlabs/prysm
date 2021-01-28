@@ -66,6 +66,7 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 // Aggregation occurs in many rounds, up until no more aggregation is possible (all attestations
 // are overlapping).
 // NB: this method will replace the MaxCoverAttestationAggregation() above (and will be renamed to it).
+// See https://hackmd.io/@farazdagi/in-place-attagg for design and rationale.
 func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	if len(atts) < 2 {
 		return atts, nil
