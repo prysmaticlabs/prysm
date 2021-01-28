@@ -58,6 +58,23 @@ func BitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfiel
 	return lists
 }
 
+// Bitlists64WithMultipleBitSet creates list of bitlists with random n bits set.
+func Bitlists64WithMultipleBitSet(t testing.TB, n, length, count uint64) []*bitfield.Bitlist64 {
+	seed := timeutils.Now().UnixNano()
+	t.Logf("Bitlists64WithMultipleBitSet random seed: %v", seed)
+	rand.Seed(seed)
+	lists := make([]*bitfield.Bitlist64, n)
+	for i := uint64(0); i < n; i++ {
+		b := bitfield.NewBitlist64(length)
+		keys := rand.Perm(int(length))
+		for _, key := range keys[:count] {
+			b.SetBitAt(uint64(key), true)
+		}
+		lists[i] = b
+	}
+	return lists
+}
+
 // MakeAttestationsFromBitlists creates list of bitlists from list of attestations.
 func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, len(bl))
