@@ -1,7 +1,9 @@
 package detection
 
 import (
+	"bytes"
 	"context"
+	"sort"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -707,16 +709,29 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 
 	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
 	require.NoError(t, err)
-	if !sszutil.DeepEqual(expectedResultsToAtts, resultsToAtts) {
-		t.Error("Expected map:")
-		for key, value := range resultsToAtts {
-			t.Errorf("Key %#x: %d atts", key, len(value))
-			t.Errorf("%+v", value)
-		}
-		t.Error("To equal:")
-		for key, value := range expectedResultsToAtts {
-			t.Errorf("Key %#x: %d atts", key, len(value))
-			t.Errorf("%+v", value)
+	var expected [][32]byte
+	for k := range expectedResultsToAtts {
+		expected = append(expected, k)
+	}
+	var received [][32]byte
+	for k := range resultsToAtts {
+		received = append(received, k)
+	}
+	sort.Slice(expected, func(i, j int) bool { return bytes.Compare(expected[i][:], expected[j][:]) > 0 })
+	sort.Slice(received, func(i, j int) bool { return bytes.Compare(received[i][:], received[j][:]) > 0 })
+	require.DeepEqual(t, expected, received)
+	for i := 0; i < len(expected); i++ {
+		if !sszutil.DeepEqual(expectedResultsToAtts[expected[i]], resultsToAtts[expected[i]]) {
+			t.Error("Expected map:")
+			for key, value := range resultsToAtts {
+				t.Errorf("Key %#x: %d atts", key, len(value))
+				t.Errorf("%+v", value)
+			}
+			t.Error("To equal:")
+			for key, value := range expectedResultsToAtts {
+				t.Errorf("Key %#x: %d atts", key, len(value))
+				t.Errorf("%+v", value)
+			}
 		}
 	}
 }
