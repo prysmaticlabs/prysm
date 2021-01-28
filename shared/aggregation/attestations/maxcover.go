@@ -82,7 +82,7 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 	// type, so incoming `atts` parameters can be used as candidates list directly.
 	candidates := make([]*bitfield.Bitlist64, len(atts))
 	for i := 0; i < len(atts); i++ {
-		candidates[i] = bitfield.NewBitlist64FromBytes(atts[i].AggregationBits)
+		candidates[i] = bitfield.NewBitlist64FromBytes(atts[i].AggregationBits.Bytes())
 	}
 	coveredBitsSoFar := bitfield.NewBitlist64(candidates[0].Len())
 
@@ -108,7 +108,7 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 		}
 
 		// Exit earlier, if possible cover does not allow aggregation (less than two items).
-		if coverage.Count() < 2 {
+		if selectedKeys.Count() < 2 {
 			break
 		}
 
@@ -138,9 +138,10 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 		}
 
 		// Remove processed attestations.
-		cntRearranged := rearrangeProcessedAttestations(atts, candidates, selectedKeys)
-		unaggregated = unaggregated[:len(unaggregated)-cntRearranged]
-		candidates = candidates[:len(unaggregated)-cntRearranged]
+		processedKeys := selectedKeys.BitIndices()
+		rearrangeProcessedAttestations(atts, candidates, processedKeys)
+		unaggregated = unaggregated[:len(unaggregated)-len(processedKeys)]
+		candidates = candidates[:len(unaggregated)-len(processedKeys)]
 	}
 
 	return append(aggregated, filterContainedAttestations(unaggregated)...), nil
@@ -209,17 +210,17 @@ func aggregateAttestations(
 // rearrangeProcessedAttestations pushes processed attestations to the end of the slice, returning
 // the number of items re-arranged (so that caller can cut the slice, and allow processed items to be
 // garbage collected).
-func rearrangeProcessedAttestations(
-	atts []*ethpb.Attestation, candidates []*bitfield.Bitlist64, selectedKeys *bitfield.Bitlist64,
-) (cnt int) {
+func rearrangeProcessedAttestations(atts []*ethpb.Attestation, candidates []*bitfield.Bitlist64, processedKeys []int) {
+	if atts == nil || candidates == nil || processedKeys == nil {
+		return
+	}
 	// Set all selected keys to nil.
-	for _, idx := range selectedKeys.BitIndices() {
+	for _, idx := range processedKeys {
 		atts[idx] = nil
 		candidates[idx] = nil
-		cnt++
 	}
 	// Re-arrange nil items, move them to end of slice.
-	for _, idx0 := range selectedKeys.BitIndices() {
+	for _, idx0 := range processedKeys {
 		idx1 := len(atts) - 1
 		// Make sure that nil items are swapped for non-nil items only.
 		for idx1 > idx0 && atts[idx1] == nil {
@@ -231,7 +232,6 @@ func rearrangeProcessedAttestations(
 		atts[idx0], atts[idx1] = atts[idx1], atts[idx0]
 		candidates[idx0], candidates[idx1] = candidates[idx1], candidates[idx0]
 	}
-	return
 }
 
 // merge combines two attestation lists into one.
