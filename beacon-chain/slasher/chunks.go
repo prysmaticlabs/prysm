@@ -6,7 +6,7 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -93,7 +93,7 @@ func EmptyMinSpanChunksSlice(config *Parameters) *MinSpanChunksSlice {
 	return m
 }
 
-// MinChunkSpansSliceFrom initializes a min span chunks slice rom a slice of uint16 values.
+// MinChunkSpansSliceFrom initializes a min span chunks slice from a slice of uint16 values.
 // Returns an error if the slice is not of length C*K for C = chunkSize and K = validatorChunkSize.
 func MinChunkSpansSliceFrom(config *Parameters, chunk []uint16) (*MinSpanChunksSlice, error) {
 	requiredLen := config.chunkSize * config.validatorChunkSize
