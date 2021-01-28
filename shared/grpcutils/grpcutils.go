@@ -2,6 +2,7 @@ package grpcutils
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -47,4 +48,20 @@ func LogGRPCStream(ctx context.Context, sd *grpc.StreamDesc, conn *grpc.ClientCo
 		WithField("method", method).
 		Debug("gRPC stream started.")
 	return strm, err
+}
+
+// AppendHeadersToOutgoingContext parses the provided GRPC headers
+// and attaches them to the provided context.
+func AppendHeaders(parent context.Context, headers string) context.Context {
+	for _, h := range strings.Split(headers, ",") {
+		if h != "" {
+			keyValue := strings.Split(h, "=")
+			if len(keyValue) < 2 {
+				logrus.Warnf("Incorrect gRPC header flag format. Skipping %v", keyValue[0])
+				continue
+			}
+			parent = metadata.AppendToOutgoingContext(parent, keyValue[0], strings.Join(keyValue[1:], "="))
+		}
+	}
+	return parent
 }
