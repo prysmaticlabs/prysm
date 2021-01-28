@@ -105,10 +105,10 @@ func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (sele
 	}
 
 	// Track usable candidates, and candidates selected for coverage as two bitlists.
-	// This allows to filter incoming candidate list without any extra re-allocations.
 	selectedCandidates := bitfield.NewBitlist64(uint64(len(candidates)))
 	usableCandidates := bitfield.NewBitlist64(uint64(len(candidates))).Not()
 
+	// Track bits covered so far as a bitlist.
 	coveredBits := bitfield.NewBitlist64(candidates[0].Len())
 	remainingBits := union(candidates)
 	if remainingBits == nil {
@@ -116,7 +116,7 @@ func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (sele
 	}
 
 	attempts := 0
-	ret := bitfield.NewBitlist64(candidates[0].Len())
+	tmpBitlist := bitfield.NewBitlist64(candidates[0].Len()) // Used as return param for NoAlloc*() methods.
 	indices := make([]int, usableCandidates.Count())
 	for selectedCandidates.Count() < uint64(k) && usableCandidates.Count() > 0 {
 		// Safe-guard, each iteration should come with at least one candidate selected.
@@ -163,8 +163,8 @@ func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (sele
 		if maxScore > 0 {
 			coveredBits.NoAllocOr(candidates[bestIdx], coveredBits)
 			selectedCandidates.SetBitAt(bestIdx, true)
-			candidates[bestIdx].NoAllocNot(ret)
-			remainingBits.NoAllocAnd(ret, remainingBits)
+			candidates[bestIdx].NoAllocNot(tmpBitlist)
+			remainingBits.NoAllocAnd(tmpBitlist, remainingBits)
 			usableCandidates.SetBitAt(bestIdx, false)
 		}
 	}
