@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type performExitCfg struct {
@@ -183,13 +184,22 @@ func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *eth
 	if dialOpts == nil {
 		return nil, nil, errors.New("failed to construct dial options")
 	}
+	for _, hdr := range strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ",") {
+		if hdr != "" {
+			ss := strings.Split(hdr, "=")
+			if len(ss) < 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", ss[0])
+				continue
+			}
+			cliCtx.Context = metadata.AppendToOutgoingContext(cliCtx.Context, ss[0], strings.Join(ss[1:], "="))
+		}
+	}
 	conn, err := grpc.DialContext(cliCtx.Context, cliCtx.String(flags.BeaconRPCProviderFlag.Name), dialOpts...)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", flags.BeaconRPCProviderFlag.Name)
 	}
 	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
 	nodeClient := ethpb.NewNodeClient(conn)
-
 	return &validatorClient, &nodeClient, nil
 }
 

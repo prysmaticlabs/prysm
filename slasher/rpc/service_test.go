@@ -12,7 +12,7 @@ import (
 
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewService(context.Background(), &Config{
+	rpcService := New(context.Background(), &Config{
 		Port:     "7348",
 		CertFlag: "alice.crt",
 		KeyFlag:  "alice.key",
@@ -33,7 +33,7 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	rpcService := NewService(context.Background(), &Config{
+	rpcService := New(context.Background(), &Config{
 		Port: "7777",
 	})
 

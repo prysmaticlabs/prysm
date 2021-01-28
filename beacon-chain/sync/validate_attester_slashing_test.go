@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -79,17 +78,15 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: s},
 		initialSync:               &mockSync.Sync{IsSyncing: false},
-		seenAttesterSlashingCache: c,
+		seenAttesterSlashingCache: make(map[uint64]bool),
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, slashing)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
@@ -105,6 +102,59 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	assert.NotNil(t, msg.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
+func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	r := &Service{
+		p2p:                       p,
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		seenAttesterSlashingCache: make(map[uint64]bool),
+	}
+
+	r.setAttesterSlashingIndicesSeen([]uint64{1, 2, 3, 4}, []uint64{3, 4, 5, 6})
+
+	// The below attestations should be filtered hence bad signature is ok.
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.AttesterSlashing{})]
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
+		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{3},
+		}),
+		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{3},
+		}),
+	})
+	require.NoError(t, err)
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	ignored := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	assert.Equal(t, true, ignored)
+
+	buf = new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
+		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{4, 3},
+		}),
+		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{3, 4},
+		}),
+	})
+	require.NoError(t, err)
+	msg = &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	ignored = r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	assert.Equal(t, true, ignored)
+}
+
 func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
@@ -114,17 +164,15 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: state},
 		initialSync:               &mockSync.Sync{IsSyncing: false},
-		seenAttesterSlashingCache: c,
+		seenAttesterSlashingCache: make(map[uint64]bool),
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, slashing)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
@@ -163,4 +211,57 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 	}
 	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Passed validation")
+}
+
+func TestSeenAttesterSlashingIndices(t *testing.T) {
+	tt := []struct {
+		saveIndices1  []uint64
+		saveIndices2  []uint64
+		checkIndices1 []uint64
+		checkIndices2 []uint64
+		seen          bool
+	}{
+		{
+			saveIndices1:  []uint64{0, 1, 2},
+			saveIndices2:  []uint64{0},
+			checkIndices1: []uint64{0, 1, 2},
+			checkIndices2: []uint64{0},
+			seen:          true,
+		},
+		{
+			saveIndices1:  []uint64{100, 99, 98},
+			saveIndices2:  []uint64{99, 98, 97},
+			checkIndices1: []uint64{99, 98},
+			checkIndices2: []uint64{99, 98},
+			seen:          true,
+		},
+		{
+			saveIndices1:  []uint64{100},
+			saveIndices2:  []uint64{100},
+			checkIndices1: []uint64{100, 101},
+			checkIndices2: []uint64{100, 101},
+			seen:          false,
+		},
+		{
+			saveIndices1:  []uint64{100, 99, 98},
+			saveIndices2:  []uint64{99, 98, 97},
+			checkIndices1: []uint64{99, 98, 97},
+			checkIndices2: []uint64{99, 98, 97},
+			seen:          false,
+		},
+		{
+			saveIndices1:  []uint64{100, 99, 98},
+			saveIndices2:  []uint64{99, 98, 97},
+			checkIndices1: []uint64{101, 100},
+			checkIndices2: []uint64{101},
+			seen:          false,
+		},
+	}
+	for _, tc := range tt {
+		r := &Service{
+			seenAttesterSlashingCache: map[uint64]bool{},
+		}
+		r.setAttesterSlashingIndicesSeen(tc.saveIndices1, tc.saveIndices2)
+		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(tc.checkIndices1, tc.checkIndices2))
+	}
 }

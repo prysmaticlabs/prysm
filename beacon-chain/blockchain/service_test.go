@@ -12,6 +12,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -84,14 +86,14 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		DepositContainers: []*protodb.DepositContainer{},
 	})
 	require.NoError(t, err)
-	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
+	web3Service, err = powchain.New(ctx, &powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: common.Address{},
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
 
-	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
+	opsService, err := attestations.New(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
 	depositCache, err := depositcache.New()
@@ -113,7 +115,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
-	chainService, err := NewService(ctx, cfg)
+	chainService, err := New(ctx, cfg)
 	require.NoError(t, err, "Unable to setup chain service")
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
@@ -453,6 +455,20 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	s.saveInitSyncBlock(r, b)
 	require.NoError(t, s.Stop())
 	require.Equal(t, true, s.beaconDB.HasBlock(ctx, r))
+}
+
+func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	service.processChainStartTime(context.Background(), time.Now())
+
+	stateEvent := <-stateChannel
+	require.Equal(t, int(stateEvent.Type), int(statefeed.Initialized))
+	_, ok := stateEvent.Data.(*statefeed.InitializedData)
+	require.Equal(t, true, ok)
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
