@@ -83,7 +83,8 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	km, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)
@@ -236,7 +237,8 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	keymanager, err := derived.NewKeymanager(
 		cliCtx.Context,
 		&derived.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)

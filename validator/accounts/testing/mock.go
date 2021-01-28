@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -71,6 +73,6 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([
 }
 
 // InitializeKeymanager --
-func (w *Wallet) InitializeKeymanager(_ context.Context) (keymanager.IKeymanager, error) {
+func (w *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerConfig) (keymanager.IKeymanager, error) {
 	return nil, nil
 }

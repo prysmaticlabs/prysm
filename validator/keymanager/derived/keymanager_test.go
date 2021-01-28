@@ -26,7 +26,8 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 		WalletPassword:   "secretPassw0rd$1999",
 	}
 	km, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
@@ -40,7 +41,8 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 		WalletPassword:   "secretPassw0rd$1999",
 	}
 	km, err = NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	// No mnemonic passphrase this time.
@@ -80,7 +82,8 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
@@ -119,7 +122,8 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
@@ -156,7 +160,8 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5

@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -23,7 +25,7 @@ func DisableAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
@@ -100,7 +102,7 @@ func EnableAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}

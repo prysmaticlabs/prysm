@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -63,7 +65,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	// Create 2 accounts
 	derivedKM, ok := km.(*derived.Keymanager)

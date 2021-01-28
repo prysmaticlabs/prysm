@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -253,20 +255,22 @@ func (w *Wallet) Password() string {
 
 // InitializeKeymanager reads a keymanager config from disk at the wallet path,
 // unmarshals it based on the wallet's keymanager kind, and returns its value.
-func (w *Wallet) InitializeKeymanager(ctx context.Context) (keymanager.IKeymanager, error) {
+func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymanagerConfig) (keymanager.IKeymanager, error) {
 	var km keymanager.IKeymanager
 	var err error
 	switch w.KeymanagerKind() {
 	case keymanager.Imported:
 		km, err = imported.NewKeymanager(ctx, &imported.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: cfg.ListenForChanges,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize imported keymanager")
 		}
 	case keymanager.Derived:
 		km, err = derived.NewKeymanager(ctx, &derived.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: cfg.ListenForChanges,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")

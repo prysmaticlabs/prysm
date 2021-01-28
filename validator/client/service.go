@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/dgraph-io/ristretto"
 	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -238,7 +240,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		cleanup := sub.Unsubscribe
 		defer cleanup()
 		w := <-initializedChan
-		keyManager, err := w.InitializeKeymanager(ctx)
+		keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			// log.Fatalf will prevent defer from being called
 			cleanup()

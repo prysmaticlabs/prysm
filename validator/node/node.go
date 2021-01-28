@@ -13,6 +13,8 @@ import (
 	"sync"
 	"syscall"
 
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
@@ -186,7 +188,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
@@ -280,7 +282,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -71,7 +73,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	derivedKM, ok := km.(*derived.Keymanager)
 	if !ok {

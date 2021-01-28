@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -83,7 +85,7 @@ func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km key
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
 
-	km, err = w.InitializeKeymanager(cliCtx.Context)
+	km, err = w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}

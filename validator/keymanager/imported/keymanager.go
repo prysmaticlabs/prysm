@@ -49,7 +49,8 @@ type Keymanager struct {
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
-	Wallet iface.Wallet
+	Wallet           iface.Wallet
+	ListenForChanges bool
 }
 
 // Defines a struct containing 1-to-1 corresponding
@@ -91,9 +92,11 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		return nil, errors.Wrap(err, "failed to initialize account store")
 	}
 
-	// We begin a goroutine to listen for file changes to our
-	// all-accounts.keystore.json file in the wallet directory.
-	go k.listenForAccountChanges(ctx)
+	if cfg.ListenForChanges {
+		// We begin a goroutine to listen for file changes to our
+		// all-accounts.keystore.json file in the wallet directory.
+		go k.listenForAccountChanges(ctx)
+	}
 	return k, nil
 }
 

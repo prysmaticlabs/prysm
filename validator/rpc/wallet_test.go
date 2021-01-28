@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/google/uuid"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -140,7 +142,7 @@ func TestServer_WalletConfig(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	s.wallet = w
 	s.keymanager = km
@@ -167,7 +169,7 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	ss := &Server{
 		wallet:     w,
@@ -191,7 +193,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager: km,
@@ -227,7 +229,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager:            km,
@@ -275,7 +277,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		ImportedPublicKeys: pubKeys,
 	}, res)
 
-	km, err = w.InitializeKeymanager(ctx)
+	km, err = w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	keys, err = km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)

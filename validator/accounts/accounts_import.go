@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -99,7 +101,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
 
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return err
 	}

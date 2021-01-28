@@ -6,6 +6,11 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
+// InitKeymanagerConfig defines configuration options for initializing a keymanager.
+type InitKeymanagerConfig struct {
+	ListenForChanges bool
+}
+
 // Wallet defines a struct which has capabilities and knowledge of how
 // to read and write important accounts-related files to the filesystem.
 // Useful for keymanagers to have persistent capabilities for accounts on-disk.
@@ -18,5 +23,5 @@ type Wallet interface {
 	// Write methods to persist important wallet and accounts-related files to disk.
 	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
 	// Method for initializing a new keymanager.
-	InitializeKeymanager(ctx context.Context) (keymanager.IKeymanager, error)
+	InitializeKeymanager(ctx context.Context, cfg InitKeymanagerConfig) (keymanager.IKeymanager, error)
 }

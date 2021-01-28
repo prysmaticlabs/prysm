@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -51,7 +53,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 			"remote wallets cannot backup accounts",
 		)
 	}
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}

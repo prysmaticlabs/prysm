@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -113,7 +115,7 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	for {
 		select {
 		case w := <-walletChan:
-			keyManager, err := w.InitializeKeymanager(ctx)
+			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 			if err != nil {
 				return errors.Wrap(err, "could not read keymanager")
 			}

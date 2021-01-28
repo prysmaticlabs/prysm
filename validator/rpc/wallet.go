@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -66,6 +68,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
+			ListenForChanges:    false,
 		})
 		if err != nil {
 			return nil, err
@@ -263,7 +266,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: true})
 	if err != nil {
 		return errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
 	}
