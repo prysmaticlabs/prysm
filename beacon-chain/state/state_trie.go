@@ -23,6 +23,9 @@ import (
 // HydrateBeaconState hydrates a beacon state object with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateBeaconState(a *pbp2p.BeaconState) *pbp2p.BeaconState {
+	if a == nil {
+		return nil
+	}
 	if a.GenesisValidatorsRoot == nil {
 		a.GenesisValidatorsRoot = []byte{}
 	}
