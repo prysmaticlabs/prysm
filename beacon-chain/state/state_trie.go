@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,9 +20,59 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// HydrateBeaconState hydrates a beacon state object with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconState(a *pbp2p.BeaconState) *pbp2p.BeaconState {
+	if a.GenesisValidatorsRoot == nil {
+		a.GenesisValidatorsRoot = []byte{}
+	}
+	if a.BlockRoots == nil {
+		a.BlockRoots = [][]byte{}
+	}
+	if a.StateRoots == nil {
+		a.StateRoots = [][]byte{}
+	}
+	if a.HistoricalRoots == nil {
+		a.HistoricalRoots = [][]byte{}
+	}
+	if a.RandaoMixes == nil {
+		a.RandaoMixes = [][]byte{}
+	}
+	if a.Eth1DataVotes == nil {
+		a.Eth1DataVotes = []*ethpb.Eth1Data{}
+	}
+	if a.Validators == nil {
+		a.Validators = []*ethpb.Validator{}
+	}
+	if a.Balances == nil {
+		a.Balances = []uint64{}
+	}
+	if a.Slashings == nil {
+		a.Slashings = []uint64{}
+	}
+	if a.PreviousEpochAttestations == nil {
+		a.PreviousEpochAttestations = []*pbp2p.PendingAttestation{}
+	}
+	if a.CurrentEpochAttestations == nil {
+		a.CurrentEpochAttestations = []*pbp2p.PendingAttestation{}
+	}
+	if a.JustificationBits == nil {
+		a.JustificationBits = []byte{}
+	}
+
+	//Fork                        *Fork
+	//LatestBlockHeader           *v1alpha1.BeaconBlockHeader
+	//Eth1Data                    *v1alpha1.Eth1Data
+	//Eth1DepositIndex            uint64
+	//PreviousJustifiedCheckpoint *v1alpha1.Checkpoint
+	//CurrentJustifiedCheckpoint  *v1alpha1.Checkpoint
+	//FinalizedCheckpoint         *v1alpha1.Checkpoint
+	return a
+}
+
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
+	return InitializeFromProtoUnsafe(HydrateBeaconState(proto.Clone(st).(*pbp2p.BeaconState)))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
