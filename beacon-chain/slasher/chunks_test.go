@@ -22,12 +22,12 @@ func TestMinSpanChunksSlice_Chunk(t *testing.T) {
 		validatorChunkSize: 2,
 	})
 	wanted := []uint16{math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
-	require.Equal(t, wanted, chunk.Chunk())
+	require.DeepEqual(t, wanted, chunk.Chunk())
 }
 
 func TestMinSpanChunksSlice_NeutralElement(t *testing.T) {
 	chunk := EmptyMinSpanChunksSlice(&Parameters{})
-	require.Equal(t, math.MaxUint16, chunk.NeutralElement())
+	require.Equal(t, uint16(math.MaxUint16), chunk.NeutralElement())
 }
 
 func TestMinSpanChunksSlice_MinChunkSpanFrom(t *testing.T) {
