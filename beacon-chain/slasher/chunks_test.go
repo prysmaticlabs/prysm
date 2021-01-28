@@ -138,12 +138,16 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	//                                       val0        val1        val2
 	//                                     {     }     {      }    {      }
 	//   chunk_1_for_validators_0_to_3 = [[nil, nil], [nil, nil], [nil, nil]]
-	//                                           |
-	//                                           |-> epoch 3 for validator 0
+	//                                      |    |
+	//                                      |    |-> epoch 3 for validator 0
+	//                                      |
+	//                                      |-> epoch 2 for validator 0
 	//
 	//                                       val0        val1        val2
 	//                                     {     }     {      }    {      }
 	//   chunk_0_for_validators_0_to_3 = [[nil, nil], [nil, nil], [nil, nil]]
+	//                                      |    |
+	//                                      |    |-> epoch 1 for validator 0
 	//                                      |
 	//                                      |-> epoch 0 for validator 0
 	//
