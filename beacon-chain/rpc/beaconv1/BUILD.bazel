@@ -33,6 +33,7 @@ go_library(
         "//proto/migration:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
