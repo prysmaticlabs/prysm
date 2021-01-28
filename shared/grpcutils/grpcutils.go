@@ -52,8 +52,8 @@ func LogGRPCStream(ctx context.Context, sd *grpc.StreamDesc, conn *grpc.ClientCo
 
 // AppendHeadersToOutgoingContext parses the provided GRPC headers
 // and attaches them to the provided context.
-func AppendHeaders(parent context.Context, headers string) context.Context {
-	for _, h := range strings.Split(headers, ",") {
+func AppendHeaders(parent context.Context, headers []string) context.Context {
+	for _, h := range headers {
 		if h != "" {
 			keyValue := strings.Split(h, "=")
 			if len(keyValue) < 2 {
