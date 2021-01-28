@@ -19,13 +19,13 @@ type nextSlotCache struct {
 var (
 	nsc nextSlotCache
 	// Metrics for the validator cache.
-	trailingSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "trailing_slot_cache_hit",
-		Help: "The total number of cache hits on the trailing slot state cache.",
+	nextSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "next_slot_cache_hit",
+		Help: "The total number of cache hits on the next slot state cache.",
 	})
-	trailingSlotCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "trailing_slot_cache_miss",
-		Help: "The total number of cache misses on the trailing slot state cache.",
+	nextSlotCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "next_slot_cache_miss",
+		Help: "The total number of cache misses on the next slot state cache.",
 	})
 )
 
@@ -36,10 +36,10 @@ func GetNextSlotState(ctx context.Context, root []byte) (*state.BeaconState, err
 	nsc.Lock()
 	defer nsc.Unlock()
 	if !bytes.Equal(root, nsc.root) {
-		trailingSlotCacheMiss.Inc()
+		nextSlotCacheMiss.Inc()
 		return nil, nil
 	}
-	trailingSlotCacheHit.Inc()
+	nextSlotCacheHit.Inc()
 	// Returning copied state.
 	return nsc.state.Copy(), nil
 }
