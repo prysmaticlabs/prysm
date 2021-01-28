@@ -101,6 +101,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	currentEpoch := target
 	_, err = chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
 	require.NoError(t, err)
+	fmt.Println(chunk.Chunk())
 
 	// Next up, we create a surrounding vote, but it should NOT be slashable
 	// because we have an existing attestation record in our database at the min target epoch.
@@ -170,9 +171,11 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 
 	// We should keep going! We still have to update the data for chunk index 0.
 	require.Equal(t, true, keepGoing)
-	fmt.Println(chunk.Chunk())
+	want := []uint16{1, 0, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
+	require.DeepEqual(t, want, chunk.Chunk())
 
 	// Now we update for chunk index 0.
+	chunk = EmptyMinSpanChunksSlice(params)
 	chunkIdx = uint64(0)
 	validatorIdx = types.ValidatorIndex(0)
 	startEpoch = types.Epoch(1)
@@ -180,7 +183,8 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	keepGoing, err = chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
-	fmt.Println(chunk.Chunk())
+	want = []uint16{3, 2, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
+	require.DeepEqual(t, want, chunk.Chunk())
 }
 
 func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
