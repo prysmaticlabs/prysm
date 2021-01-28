@@ -289,7 +289,7 @@ func setChunkDataAtEpoch(
 	config *Parameters,
 	chunk []uint16,
 	validatorIdx types.ValidatorIndex,
-	epochInChunk types.Epoch,
+	epochInChunk,
 	targetEpoch types.Epoch,
 ) error {
 	distance := epochDistance(targetEpoch, epochInChunk)
