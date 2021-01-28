@@ -100,7 +100,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(s.ctx, s.endpoint, opts...)

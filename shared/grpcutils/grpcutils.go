@@ -10,9 +10,16 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// LogGRPCRequests this method logs the gRPC backend as well as request duration when the log level is set to debug
+// LogRequests logs the gRPC backend as well as request duration when the log level is set to debug
 // or higher.
-func LogGRPCRequests(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+func LogRequests(
+	ctx context.Context,
+	method string, req,
+	reply interface{},
+	cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker,
+	opts ...grpc.CallOption,
+) error {
 	// Shortcut when debug logging is not enabled.
 	if logrus.GetLevel() < logrus.DebugLevel {
 		return invoker(ctx, method, req, reply, cc, opts...)
@@ -31,8 +38,15 @@ func LogGRPCRequests(ctx context.Context, method string, req, reply interface{},
 	return err
 }
 
-// LogGRPCStream to print the method at DEBUG level at the start of the stream.
-func LogGRPCStream(ctx context.Context, sd *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+// LogStream prints the method at DEBUG level at the start of the stream.
+func LogStream(
+	ctx context.Context,
+	sd *grpc.StreamDesc,
+	conn *grpc.ClientConn,
+	method string,
+	streamer grpc.Streamer,
+	opts ...grpc.CallOption,
+) (grpc.ClientStream, error) {
 	// Shortcut when debug logging is not enabled.
 	if logrus.GetLevel() < logrus.DebugLevel {
 		return streamer(ctx, sd, conn, method, opts...)
