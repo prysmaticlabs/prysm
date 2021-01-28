@@ -130,7 +130,6 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	defer span.End()
 	var err error
 
-	// Execute per slots transition.
 	// Check whether the parent state has been advanced by 1 slot in trailing slot cache.
 	tsState, err := GetTrailingSlotState(ctx, signed.Block.ParentRoot)
 	if err != nil {
