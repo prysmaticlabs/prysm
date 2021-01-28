@@ -73,6 +73,6 @@ func sortedEpochs(forkSchedule map[uint64][]byte) []uint64 {
 		sortedEpochs[i] = k
 		i++
 	}
-	sort.Slice(sortedEpochs, func(i, j int) bool { return sortedEpochs[i] < sortedEpochs[j] })
+	sort.Slice(sortedEpochs, func(a, b int) bool { return sortedEpochs[a] < sortedEpochs[b] })
 	return sortedEpochs
 }
