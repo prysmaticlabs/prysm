@@ -100,7 +100,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
-	if err := state.UpdateTrailingSlotState(ctx, blockRoot[:], postState); err != nil {
+	if err := state.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
 		return err
 	}
 

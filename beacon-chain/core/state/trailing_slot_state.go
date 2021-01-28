@@ -10,14 +10,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
-type trailingSlotCache struct {
+type nextSlotCache struct {
 	sync.RWMutex
 	root  []byte
 	state *state.BeaconState
 }
 
 var (
-	tsCache trailingSlotCache
+	nsc nextSlotCache
 	// Metrics for the validator cache.
 	trailingSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "trailing_slot_cache_hit",
@@ -29,45 +29,44 @@ var (
 	})
 )
 
-// GetTrailingSlotState returns the saved state if the input root matches the saved root in
-// `trailingSlotCache`. Otherwise it returns nil.
-// This is useful to call before processing slots. With a cache hit, it returns last processed state
-// after already advancing slot by 1.
-func GetTrailingSlotState(ctx context.Context, root []byte) (*state.BeaconState, error) {
-	tsCache.Lock()
-	defer tsCache.Unlock()
-	if !bytes.Equal(root, tsCache.root) {
+// GetNextSlotState returns the saved state if the input root matches the root in `nextSlotCache`. Returns nil otherwise.
+// This is useful to check before processing slots. With a cache hit, it will return last processed state with slot plus
+// one advancement.
+func GetNextSlotState(ctx context.Context, root []byte) (*state.BeaconState, error) {
+	nsc.Lock()
+	defer nsc.Unlock()
+	if !bytes.Equal(root, nsc.root) {
 		trailingSlotCacheMiss.Inc()
 		return nil, nil
 	}
 	trailingSlotCacheHit.Inc()
 	// Returning copied state.
-	return tsCache.state.Copy(), nil
+	return nsc.state.Copy(), nil
 }
 
-// UpdateTrailingSlotState updates the `trailingSlotCache`. It saves the input state after processing its slot by 1,
-// it also saves the input root for later look up.
+// UpdateNextSlotCache updates the `nextSlotCache`. It saves the input state after advancing the state slot by 1
+// by calling `ProcessSlots`, it also saves the input root for later look up.
 // This is useful to call after successfully processing a block.
-func UpdateTrailingSlotState(ctx context.Context, root []byte, state *state.BeaconState) error {
-	tsCache.RLock()
-	// Returning early if state is already in the cache.
-	if bytes.Equal(root, tsCache.root) {
-		defer tsCache.RUnlock()
+func UpdateNextSlotCache(ctx context.Context, root []byte, state *state.BeaconState) error {
+	nsc.RLock()
+	// Returning early if state exists in cache.
+	if bytes.Equal(root, nsc.root) {
+		defer nsc.RUnlock()
 		return nil
 	}
-	tsCache.RUnlock()
+	nsc.RUnlock()
 
-	// Advancing slot by one using a copied state.
+	// Advancing one slot by using a copied state.
 	copied := state.Copy()
 	copied, err := ProcessSlots(ctx, copied, copied.Slot()+1)
 	if err != nil {
 		return err
 	}
 
-	tsCache.Lock()
-	defer tsCache.Unlock()
+	nsc.Lock()
+	defer nsc.Unlock()
 
-	tsCache.root = root
-	tsCache.state = copied
+	nsc.root = root
+	nsc.state = copied
 	return nil
 }
