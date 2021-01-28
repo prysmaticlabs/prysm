@@ -32,6 +32,7 @@ go_library(
         "//shared/cmd:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
+        "//shared/grpcutils:go_default_library",
         "//shared/petnames:go_default_library",
         "//shared/promptutil:go_default_library",
         "//shared/tos:go_default_library",
@@ -54,7 +55,6 @@ go_library(
         "@com_github_urfave_cli_v2//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_google_grpc//metadata:go_default_library",
     ],
 )
 
