@@ -38,7 +38,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	lock := mputil.NewMultilock(string(pubKey[:]))
+	lock := mputil.NewMultilock(string(roleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")

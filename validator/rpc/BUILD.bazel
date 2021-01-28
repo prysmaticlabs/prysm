@@ -22,6 +22,7 @@ go_library(
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
+        "//shared/grpcutils:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/pagination:go_default_library",
         "//shared/petnames:go_default_library",

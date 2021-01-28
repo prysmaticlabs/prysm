@@ -3,10 +3,17 @@ package beaconv1
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -20,7 +27,14 @@ func (bs *Server) GetForkSchedule(ctx context.Context, req *emptypb.Empty) (*eth
 // - any value starting with 0x in the spec is returned as a hex string.
 // - all other values are returned as number.
 func (bs *Server) GetSpec(ctx context.Context, req *emptypb.Empty) (*ethpb.SpecResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconV1.GetSpec")
+	defer span.End()
+
+	data, err := prepareConfigSpec()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to prepare spec data: %v", err)
+	}
+	return &ethpb.SpecResponse{Data: data}, nil
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
@@ -34,4 +48,39 @@ func (bs *Server) GetDepositContract(ctx context.Context, req *emptypb.Empty) (*
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	}, nil
+}
+
+func prepareConfigSpec() (map[string]string, error) {
+	data := make(map[string]string)
+	config := *params.BeaconConfig()
+	t := reflect.TypeOf(config)
+	v := reflect.ValueOf(config)
+
+	for i := 0; i < t.NumField(); i++ {
+		tField := t.Field(i)
+		_, isSpecField := tField.Tag.Lookup("spec")
+		if !isSpecField {
+			// Field should not be returned from API.
+			continue
+		}
+
+		tagValue := strings.ToLower(tField.Tag.Get("yaml"))
+		vField := v.Field(i)
+		switch vField.Kind() {
+		case reflect.Uint64:
+			data[tagValue] = strconv.FormatUint(vField.Uint(), 10)
+		case reflect.Slice:
+			data[tagValue] = hexutil.Encode(vField.Bytes())
+		case reflect.Array:
+			data[tagValue] = hexutil.Encode(reflect.ValueOf(&config).Elem().Field(i).Slice(0, vField.Len()).Bytes())
+		case reflect.String:
+			data[tagValue] = vField.String()
+		case reflect.Uint8:
+			data[tagValue] = hexutil.Encode([]byte{uint8(vField.Uint())})
+		default:
+			return nil, fmt.Errorf("unsupported config field type: %s", vField.Kind().String())
+		}
+	}
+
+	return data, nil
 }

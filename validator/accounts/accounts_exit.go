@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -183,13 +184,16 @@ func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *eth
 	if dialOpts == nil {
 		return nil, nil, errors.New("failed to construct dial options")
 	}
+
+	grpcHeaders := strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ",")
+	cliCtx.Context = grpcutils.AppendHeaders(cliCtx.Context, grpcHeaders)
+
 	conn, err := grpc.DialContext(cliCtx.Context, cliCtx.String(flags.BeaconRPCProviderFlag.Name), dialOpts...)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", flags.BeaconRPCProviderFlag.Name)
 	}
 	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
 	nodeClient := ethpb.NewNodeClient(conn)
-
 	return &validatorClient, &nodeClient, nil
 }
 
