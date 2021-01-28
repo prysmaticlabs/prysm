@@ -6,9 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -26,41 +25,17 @@ func HydrateBeaconState(a *pbp2p.BeaconState) *pbp2p.BeaconState {
 	if a == nil {
 		return nil
 	}
-	if a.GenesisValidatorsRoot == nil {
-		a.GenesisValidatorsRoot = []byte{}
-	}
-	if a.BlockRoots == nil {
-		a.BlockRoots = [][]byte{}
-	}
-	if a.StateRoots == nil {
-		a.StateRoots = [][]byte{}
-	}
-	if a.HistoricalRoots == nil {
-		a.HistoricalRoots = [][]byte{}
-	}
-	if a.RandaoMixes == nil {
-		a.RandaoMixes = [][]byte{}
-	}
 	if a.Eth1DataVotes == nil {
 		a.Eth1DataVotes = []*ethpb.Eth1Data{}
 	}
 	if a.Validators == nil {
 		a.Validators = []*ethpb.Validator{}
 	}
-	if a.Balances == nil {
-		a.Balances = []uint64{}
-	}
-	if a.Slashings == nil {
-		a.Slashings = []uint64{}
-	}
 	if a.PreviousEpochAttestations == nil {
 		a.PreviousEpochAttestations = []*pbp2p.PendingAttestation{}
 	}
 	if a.CurrentEpochAttestations == nil {
 		a.CurrentEpochAttestations = []*pbp2p.PendingAttestation{}
-	}
-	if a.JustificationBits == nil {
-		a.JustificationBits = []byte{}
 	}
 
 	//Fork                        *Fork
