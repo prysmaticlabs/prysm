@@ -137,11 +137,11 @@ func run(ctx context.Context, v Validator) {
 			cancel()
 			return // Exit if context is canceled.
 		case blocksError := <-connectionErrorChannel:
-			if isConnectionError(blocksError) {
+			if blocksError != nil {
+				log.WithError(blocksError).Warn("block stream interrupted")
 				go v.ReceiveBlocks(ctx, connectionErrorChannel)
 				continue
 			}
-			log.WithError(blocksError).Fatal("block stream interrupted")
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
