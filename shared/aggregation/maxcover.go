@@ -145,10 +145,10 @@ func MaxCover(candidates []*bitfield.Bitlist64, k int, allowOverlaps bool) (sele
 
 			// Filter out overlapping candidates (if overlapping is not allowed).
 			wrongLen := coveredBits.Len() != candidates[idx].Len()
-			overlaps := func(idx uint64) bool {
-				return coveredBits.Overlaps(candidates[idx])
+			overlaps := func(idx int) bool {
+				return !allowOverlaps && coveredBits.Overlaps(candidates[idx])
 			}
-			if wrongLen || (!allowOverlaps && overlaps(uint64(idx))) {
+			if wrongLen || overlaps(idx) {
 				usableCandidates.SetBitAt(uint64(idx), false)
 				continue
 			}
