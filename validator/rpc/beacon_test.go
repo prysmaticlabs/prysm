@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/metadata"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestGetBeaconStatus_NotConnected(t *testing.T) {

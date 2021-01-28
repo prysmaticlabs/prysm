@@ -64,7 +64,7 @@ func LogStream(
 	return strm, err
 }
 
-// AppendHeadersToOutgoingContext parses the provided GRPC headers
+// AppendHeaders parses the provided GRPC headers
 // and attaches them to the provided context.
 func AppendHeaders(parent context.Context, headers []string) context.Context {
 	for _, h := range headers {
