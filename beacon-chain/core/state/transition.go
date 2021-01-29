@@ -130,24 +130,9 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	defer span.End()
 	var err error
 
-	// Check whether the parent state has been advanced by 1 slot in next slot cache.
-	nextSlotState, err := NextSlotState(ctx, signed.Block.ParentRoot)
+	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
 	if err != nil {
 		return nil, nil, err
-	}
-	// If the next slot state is not nil (i.e. cache hit).
-	// We replace next slot state with parent state.
-	if nextSlotState != nil {
-		state = nextSlotState
-	}
-
-	// Since next slot cache only advances state by 1 slot,
-	// we check if there's more slots that need to process.
-	if signed.Block.Slot > state.Slot() {
-		state, err = ProcessSlots(ctx, state, signed.Block.Slot)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not process slots")
-		}
 	}
 
 	// Execute per block transition.
@@ -197,9 +182,9 @@ func CalculateStateRoot(
 	state = state.Copy()
 
 	// Execute per slots transition.
-	state, err := ProcessSlots(ctx, state, signed.Block.Slot)
+	state, err := ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not process slot")
+		return [32]byte{}, errors.Wrap(err, "could not process slots")
 	}
 
 	// Execute per block transition.
@@ -265,6 +250,34 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 		return nil, err
 	}
 	return state, nil
+}
+
+// ProcessSlotsUsingNextSlotCache processes slots by using next slot cache for higher efficiency.
+func ProcessSlotsUsingNextSlotCache(
+	ctx context.Context,
+	parentState *stateTrie.BeaconState,
+	parentRoot []byte,
+	slot uint64) (*stateTrie.BeaconState, error) {
+	// Check whether the parent state has been advanced by 1 slot in next slot cache.
+	nextSlotState, err := NextSlotState(ctx, parentRoot)
+	if err != nil {
+		return nil, err
+	}
+	// If the next slot state is not nil (i.e. cache hit).
+	// We replace next slot state with parent state.
+	if nextSlotState != nil {
+		parentState = nextSlotState
+	}
+
+	// Since next slot cache only advances state by 1 slot,
+	// we check if there's more slots that need to process.
+	if slot > parentState.Slot() {
+		parentState, err = ProcessSlots(ctx, parentState, slot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process slots")
+		}
+	}
+	return parentState, nil
 }
 
 // ProcessSlots process through skip slots and apply epoch transition when it's needed
