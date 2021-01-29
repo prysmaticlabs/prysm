@@ -63,14 +63,24 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 	}
-
 	head, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
 	}
-	head, err = state.ProcessSlots(ctx, head, req.Slot)
+
+	nextSlotState, err := state.NextSlotState(ctx, parentRoot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+		return nil, err
+	}
+	if nextSlotState != nil {
+		head = nextSlotState
+	}
+
+	if req.Slot > head.Slot() {
+		head, err = state.ProcessSlots(ctx, head, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+		}
 	}
 
 	var eth1Data *ethpb.Eth1Data
