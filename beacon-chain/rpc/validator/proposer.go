@@ -70,7 +70,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	head, err = state.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get parent state %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not advance slots to calculate proposer index: %v", err)
 	}
 
 	var eth1Data *ethpb.Eth1Data

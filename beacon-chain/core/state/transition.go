@@ -132,7 +132,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 
 	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "could not process slots")
 	}
 
 	// Execute per block transition.
