@@ -50,8 +50,12 @@ var (
 	}
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
-		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
+		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, opt_max_cover.",
 		Value: "max_cover",
+	}
+	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
+		Name:  "attestation-aggregation-force-opt-maxcover",
+		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
 	}
 	disableBlst = &cli.BoolFlag{
 		Name:  "disable-blst",
@@ -120,6 +124,7 @@ var (
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
+	forceOptMaxCoverAggregationStategy,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -166,11 +171,12 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableSyncBacktracking,
 	disableBroadcastSlashingFlag,
 	enableNextSlotStateCache,
+	forceOptMaxCoverAggregationStategy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--attestation-aggregation-strategy=max_cover",
+	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
 }
