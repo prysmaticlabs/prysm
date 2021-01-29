@@ -97,10 +97,6 @@ func (s *Service) createListener(
 	ipAddr net.IP,
 	privKey *ecdsa.PrivateKey,
 ) (*discover.UDPv5, error) {
-	// Listen to all network interfaces
-	// for both ip protocols.
-	networkVersion := "udp"
-
 	// BindIP is used to specify the ip
 	// on which we will bind our listener on
 	// by default we will listen to all interfaces.
@@ -126,6 +122,9 @@ func (s *Service) createListener(
 		IP:   bindIP,
 		Port: int(s.cfg.UDPPort),
 	}
+	// Listen to all network interfaces
+	// for both ip protocols.
+	networkVersion := "udp"
 	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to UDP")
