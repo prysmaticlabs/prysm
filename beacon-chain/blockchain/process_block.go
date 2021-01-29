@@ -100,9 +100,13 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
-	if err := state.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
-		return err
-	}
+
+	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+	go func() {
+		if err := state.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
+			log.WithError(err).Error("could not update next slot state cache")
+		}
+	}()
 
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
