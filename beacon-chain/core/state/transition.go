@@ -131,14 +131,14 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	var err error
 
 	// Check whether the parent state has been advanced by 1 slot in next slot cache.
-	tsState, err := GetNextSlotState(ctx, signed.Block.ParentRoot)
+	nextSlotState, err := NextSlotState(ctx, signed.Block.ParentRoot)
 	if err != nil {
 		return nil, nil, err
 	}
 	// If the next slot state is not nil (i.e. cache hit).
 	// We replace next slot state with parent state.
-	if tsState != nil {
-		state = tsState
+	if nextSlotState != nil {
+		state = nextSlotState
 	}
 
 	// Since next slot cache only advances state by 1 slot,
