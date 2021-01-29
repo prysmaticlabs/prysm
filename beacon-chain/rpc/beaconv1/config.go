@@ -2,9 +2,9 @@ package beaconv1
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -18,8 +18,37 @@ import (
 )
 
 // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
-func (bs *Server) GetForkSchedule(ctx context.Context, req *ptypes.Empty) (*ethpb.ForkScheduleResponse, error) {
-	return nil, errors.New("unimplemented")
+func (bs *Server) GetForkSchedule(ctx context.Context, _ *ptypes.Empty) (*ethpb.ForkScheduleResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetForkSchedule")
+	defer span.End()
+
+	schedule := params.BeaconConfig().ForkVersionSchedule
+	if len(schedule) == 0 {
+		return &ethpb.ForkScheduleResponse{
+			Data: make([]*ethpb.Fork, 0),
+		}, nil
+	}
+
+	epochs := sortedEpochs(schedule)
+	forks := make([]*ethpb.Fork, len(schedule))
+	var previous, current []byte
+	for i, e := range epochs {
+		if i == 0 {
+			previous = params.BeaconConfig().GenesisForkVersion
+		} else {
+			previous = current
+		}
+		current = schedule[e]
+		forks[i] = &ethpb.Fork{
+			PreviousVersion: previous,
+			CurrentVersion:  current,
+			Epoch:           e,
+		}
+	}
+
+	return &ethpb.ForkScheduleResponse{
+		Data: forks,
+	}, nil
 }
 
 // GetSpec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
@@ -38,7 +67,7 @@ func (bs *Server) GetSpec(ctx context.Context, _ *ptypes.Empty) (*ethpb.SpecResp
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
-func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
+func (bs *Server) GetDepositContract(ctx context.Context, _ *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
 	defer span.End()
 
@@ -48,6 +77,17 @@ func (bs *Server) GetDepositContract(ctx context.Context, req *ptypes.Empty) (*e
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	}, nil
+}
+
+func sortedEpochs(forkSchedule map[uint64][]byte) []uint64 {
+	sortedEpochs := make([]uint64, len(forkSchedule))
+	i := 0
+	for k := range forkSchedule {
+		sortedEpochs[i] = k
+		i++
+	}
+	sort.Slice(sortedEpochs, func(a, b int) bool { return sortedEpochs[a] < sortedEpochs[b] })
+	return sortedEpochs
 }
 
 func prepareConfigSpec() (map[string]string, error) {
