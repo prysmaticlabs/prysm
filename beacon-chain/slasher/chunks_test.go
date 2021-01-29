@@ -14,7 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-var _ = Chunker(&MinSpanChunksSlice{})
+var (
+	_ = Chunker(&MinSpanChunksSlice{})
+	_ = Chunker(&MaxSpanChunksSlice{})
+)
 
 func TestMinSpanChunksSlice_Chunk(t *testing.T) {
 	chunk := EmptyMinSpanChunksSlice(&Parameters{
