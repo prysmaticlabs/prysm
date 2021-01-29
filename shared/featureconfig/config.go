@@ -61,10 +61,11 @@ type Flags struct {
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Cache toggles.
-	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
-	UseCheckPointInfoCache  bool // UseCheckPointInfoCache uses check point info cache to efficiently verify attestation signatures.
+	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
+	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
+	UseCheckPointInfoCache   bool // UseCheckPointInfoCache uses check point info cache to efficiently verify attestation signatures.
+	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
 
 	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
@@ -194,6 +195,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
+	}
+	if ctx.Bool(enableNextSlotStateCache.Name) {
+		log.Warn("Enabling next slot state cache")
+		cfg.EnableNextSlotStateCache = true
 	}
 	Init(cfg)
 }

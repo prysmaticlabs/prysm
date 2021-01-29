@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -130,9 +131,16 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	defer span.End()
 	var err error
 
-	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not process slots")
+	if featureconfig.Get().EnableNextSlotStateCache {
+		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not process slots")
+		}
+	} else {
+		state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not process slot")
+		}
 	}
 
 	// Execute per block transition.
@@ -182,9 +190,17 @@ func CalculateStateRoot(
 	state = state.Copy()
 
 	// Execute per slots transition.
-	state, err := ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not process slots")
+	var err error
+	if featureconfig.Get().EnableNextSlotStateCache {
+		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not process slots")
+		}
+	} else {
+		state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not process slot")
+		}
 	}
 
 	// Execute per block transition.
@@ -258,6 +274,9 @@ func ProcessSlotsUsingNextSlotCache(
 	parentState *stateTrie.BeaconState,
 	parentRoot []byte,
 	slot uint64) (*stateTrie.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlotsUsingNextSlotCache")
+	defer span.End()
+
 	// Check whether the parent state has been advanced by 1 slot in next slot cache.
 	nextSlotState, err := NextSlotState(ctx, parentRoot)
 	if err != nil {
