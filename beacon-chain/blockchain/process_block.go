@@ -104,7 +104,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
 	go func() {
 		if err := state.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
-			log.WithError(err).Error("could not update next slot state cache")
+			log.WithError(err).Warn("could not update next slot state cache")
 		}
 	}()
 
