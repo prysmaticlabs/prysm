@@ -4,10 +4,8 @@ package ethereum.validator.accounts.v2;
 import "proto/beacon/rpc/v1/health.proto";
 import "eth/v1alpha1/beacon_chain.proto";
 import "eth/v1alpha1/node.proto";
-import "eth/v1alpha1/validator.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
@@ -40,6 +38,12 @@ service Accounts {
             get: "/v2/validator/accounts"
         };
     }
+    rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/accounts/backup",
+            body: "*"
+        };
+    }
     rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/v2/validator/password/edit",
@@ -54,15 +58,9 @@ service Beacon {
             get: "/v2/validator/beacon/status"
         };
     }
-    rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/accounts/backup",
-            body: "*"
-        };
-    }
     rpc GetValidatorParticipation(
-    ethereum.eth.v1alpha1.GetValidatorParticipationRequest
-        ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
+        ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+    ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/participation"
         };
