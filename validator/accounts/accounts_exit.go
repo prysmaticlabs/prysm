@@ -232,13 +232,13 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	if len(rawExitedKeys) > 0 {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
-			// Prepare key for displaying in a URL info: remove '0x' prefix and add a newline character.
 			var baseUrl string
 			if params.BeaconConfig().ConfigName == "pyrmont" {
 				baseUrl = "https://pyrmont.beaconcha.in/validator/"
 			} else {
 				baseUrl = "https://beaconcha.in/validator/"
 			}
+			// Remove '0x' prefix
 			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:]
 		}
 
