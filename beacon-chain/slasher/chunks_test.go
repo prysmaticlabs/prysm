@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -301,6 +300,39 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	require.DeepEqual(t, want, chunk.Chunk())
 }
 
+func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
+	params := &Parameters{
+		chunkSize:          2,
+		validatorChunkSize: 3,
+		historyLength:      4,
+	}
+	chunk := EmptyMaxSpanChunksSlice(params)
+	target := types.Epoch(3)
+	chunkIdx := uint64(0)
+	validatorIdx := types.ValidatorIndex(0)
+	startEpoch := types.Epoch(0)
+	currentEpoch := target
+	keepGoing, err := chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
+	require.NoError(t, err)
+
+	// We should keep going! We still have to update the data for chunk index 1.
+	require.Equal(t, true, keepGoing)
+	want := []uint16{3, 2, 0, 0, 0, 0}
+	require.DeepEqual(t, want, chunk.Chunk())
+
+	// Now we update for chunk index 1.
+	chunk = EmptyMaxSpanChunksSlice(params)
+	chunkIdx = uint64(1)
+	validatorIdx = types.ValidatorIndex(0)
+	startEpoch = types.Epoch(2)
+	currentEpoch = target
+	keepGoing, err = chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
+	require.NoError(t, err)
+	require.Equal(t, false, keepGoing)
+	want = []uint16{1, 0, 0, 0, 0, 0}
+	require.DeepEqual(t, want, chunk.Chunk())
+}
+
 func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	// Let's set H = historyLength = 2, meaning a min span
 	// will hold 2 epochs worth of attesting history. Then we set C = 2 meaning we will
@@ -340,6 +372,25 @@ func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want := []uint16{1, 0, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
+	require.DeepEqual(t, want, chunk.Chunk())
+}
+
+func TestMaxSpanChunksSlice_Update_SingleChunk(t *testing.T) {
+	params := &Parameters{
+		chunkSize:          4,
+		validatorChunkSize: 2,
+		historyLength:      4,
+	}
+	chunk := EmptyMaxSpanChunksSlice(params)
+	target := types.Epoch(3)
+	chunkIdx := uint64(0)
+	validatorIdx := types.ValidatorIndex(0)
+	startEpoch := types.Epoch(0)
+	currentEpoch := target
+	keepGoing, err := chunk.Update(chunkIdx, validatorIdx, startEpoch, currentEpoch, target)
+	require.NoError(t, err)
+	require.Equal(t, false, keepGoing)
+	want := []uint16{3, 2, 1, 0, 0, 0, 0, 0}
 	require.DeepEqual(t, want, chunk.Chunk())
 }
 
