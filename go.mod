@@ -84,6 +84,7 @@ require (
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/procfs v0.3.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
+	github.com/prysmaticlabs/eth2-types v0.0.0-20210127031309-22cbe426eba6
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210127105958-025470485ece
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210128234011-6e8547dc2198
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
