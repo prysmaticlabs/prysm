@@ -232,7 +232,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 			return false, slashertypes.NotSlashable, err
 		}
 		if existingAttRecord != nil {
-			if sourceEpoch < types.Epoch(existingAttRecord.Source) {
+			if types.Epoch(existingAttRecord.Source) < sourceEpoch {
 				return true, slashertypes.SurroundedVote, nil
 			}
 		}
