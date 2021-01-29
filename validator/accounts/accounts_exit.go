@@ -66,32 +66,7 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-
-	if len(rawExitedKeys) > 0 {
-		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
-		for i, key := range rawExitedKeys {
-			// Prepare key for displaying in a URL info: remove '0x' prefix and add a newline character.
-			var baseUrl string
-			if params.BeaconConfig().ConfigName == "pyrmont" {
-				baseUrl = "https://pyrmont.beaconcha.in/validator/"
-			} else {
-				baseUrl = "https://beaconcha.in/validator/"
-			}
-			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:] + "\n"
-		}
-
-		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
-		for i, k := range urlFormattedPubKeys {
-			ifaceKeys[i] = k
-		}
-
-		info := fmt.Sprintf("Voluntary exit was successful for the accounts listed. "+
-			"URLs where you can track each validator's exit:\n"+strings.Repeat("%s", len(ifaceKeys)-1), ifaceKeys...)
-
-		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
-	} else {
-		log.Info("No successful voluntary exits")
-	}
+	displayExitInfo(rawExitedKeys, trimmedExitedKeys)
 
 	return nil
 }
@@ -251,4 +226,32 @@ func performExit(cliCtx *cli.Context, cfg performExitCfg) (rawExitedKeys [][]byt
 	}
 
 	return rawExitedKeys, formattedExitedKeys, nil
+}
+
+func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
+	if len(rawExitedKeys) > 0 {
+		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
+		for i, key := range rawExitedKeys {
+			// Prepare key for displaying in a URL info: remove '0x' prefix and add a newline character.
+			var baseUrl string
+			if params.BeaconConfig().ConfigName == "pyrmont" {
+				baseUrl = "https://pyrmont.beaconcha.in/validator/"
+			} else {
+				baseUrl = "https://beaconcha.in/validator/"
+			}
+			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:]
+		}
+
+		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
+		for i, k := range urlFormattedPubKeys {
+			ifaceKeys[i] = k
+		}
+
+		info := fmt.Sprintf("Voluntary exit was successful for the accounts listed. "+
+			"URLs where you can track each validator's exit:\n"+strings.Repeat("%s\n", len(ifaceKeys)), ifaceKeys...)
+
+		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
+	} else {
+		log.Info("No successful voluntary exits")
+	}
 }
