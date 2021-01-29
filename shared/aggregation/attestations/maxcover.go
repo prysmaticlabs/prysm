@@ -92,7 +92,7 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 	// The `aggregated` slice grows by combining individual attestations and appending to that slice.
 	// Both aggregated and non-aggregated slices operate on the very same underlying array.
 	aggregated := atts[:0]
-	unaggregated := atts[:]
+	unaggregated := atts
 
 	// Aggregation over n/2 rounds is enough to find all aggregatable items (exits earlier if there
 	// are many items that can be aggregated).
