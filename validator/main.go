@@ -36,11 +36,11 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 
-	validatorClient, err := node.NewValidatorClient(ctx)
+	validator, err := node.New(ctx)
 	if err != nil {
 		return err
 	}
-	validatorClient.Start()
+	validator.Start()
 	return nil
 }
 

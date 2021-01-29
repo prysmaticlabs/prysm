@@ -1,5 +1,5 @@
 // Package node is the main process which handles the lifecycle of
-// the runtime services in a validator client process, gracefully shutting
+// the runtime services in a validator process, gracefully shutting
 // everything down upon close.
 package node
 
@@ -41,9 +41,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// ValidatorClient defines an instance of an eth2 validator that manages
+// ValidatorNode defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
-type ValidatorClient struct {
+type ValidatorNode struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
 	cancel            context.CancelFunc
@@ -55,8 +55,8 @@ type ValidatorClient struct {
 	stop              chan struct{} // Channel to wait for termination notifications.
 }
 
-// NewValidatorClient creates a new, Prysm validator client.
-func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
+// New creates a new instance of the Prysm validator.
+func New(cliCtx *cli.Context) (*ValidatorNode, error) {
 	if err := tracing.Setup(
 		"validator", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
@@ -79,7 +79,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	registry := shared.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)
-	ValidatorClient := &ValidatorClient{
+	validator := &ValidatorNode{
 		cliCtx:            cliCtx,
 		ctx:               ctx,
 		cancel:            cancel,
@@ -97,13 +97,13 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	// If the --web flag is enabled to administer the validator
-	// client via a web portal, we start the validator client in a different way.
+	// via a web portal, we start the validator in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
-		log.Info("Enabling web portal to manage the validator client")
-		if err := ValidatorClient.initializeForWeb(cliCtx); err != nil {
+		log.Info("Enabling web portal to manage the validator")
+		if err := validator.initializeForWeb(cliCtx); err != nil {
 			return nil, err
 		}
-		return ValidatorClient, nil
+		return validator, nil
 	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
@@ -111,15 +111,15 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
+	if err := validator.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
 
-	return ValidatorClient, nil
+	return validator, nil
 }
 
-// Start every service in the validator client.
-func (c *ValidatorClient) Start() {
+// Start every service in the validator.
+func (c *ValidatorNode) Start() {
 	c.lock.Lock()
 
 	log.WithFields(logrus.Fields{
@@ -145,7 +145,7 @@ func (c *ValidatorClient) Start() {
 				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic.")
 			}
 		}
-		panic("Panic closing the validator client")
+		panic("Panic closing the validator")
 	}()
 
 	// Wait for stop channel to be closed.
@@ -153,7 +153,7 @@ func (c *ValidatorClient) Start() {
 }
 
 // Close handles graceful shutdown of the system.
-func (c *ValidatorClient) Close() {
+func (c *ValidatorNode) Close() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -163,7 +163,7 @@ func (c *ValidatorClient) Close() {
 	close(c.stop)
 }
 
-func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
+func (c *ValidatorNode) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
@@ -239,11 +239,11 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	}
 	if featureconfig.Get().SlasherProtection {
-		if err := c.registerSlasherClientService(); err != nil {
+		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
 	}
-	if err := c.registerClientService(keyManager); err != nil {
+	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
@@ -257,7 +257,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
+func (c *ValidatorNode) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
@@ -326,11 +326,11 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		}
 	}
 	if featureconfig.Get().SlasherProtection {
-		if err := c.registerSlasherClientService(); err != nil {
+		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
 	}
-	if err := c.registerClientService(keyManager); err != nil {
+	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
 	if err := c.registerRPCService(cliCtx, keyManager); err != nil {
@@ -348,7 +348,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
+func (c *ValidatorNode) registerPrometheusService(cliCtx *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
 		additionalHandlers = append(
@@ -368,7 +368,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(service)
 }
 
-func (c *ValidatorClient) registerClientService(
+func (c *ValidatorNode) registerValidatorService(
 	keyManager keymanager.IKeymanager,
 ) error {
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
@@ -417,11 +417,11 @@ func (c *ValidatorClient) registerClientService(
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "could not initialize client service")
+		return errors.Wrap(err, "could not initialize validator service")
 	}
 	return c.services.RegisterService(v)
 }
-func (c *ValidatorClient) registerSlasherClientService() error {
+func (c *ValidatorNode) registerSlasherService() error {
 	endpoint := c.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
 	if endpoint == "" {
 		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
@@ -440,12 +440,12 @@ func (c *ValidatorClient) registerSlasherClientService() error {
 		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not initialize client service")
+		return errors.Wrap(err, "could not initialize slasher service")
 	}
 	return c.services.RegisterService(sp)
 }
 
-func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
+func (c *ValidatorNode) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
 	var vs *client.ValidatorService
 	if err := c.services.FetchService(&vs); err != nil {
 		return err
@@ -490,7 +490,7 @@ func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	return c.services.RegisterService(server)
 }
 
-func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
+func (c *ValidatorNode) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
 	if gatewayHost != flags.DefaultGatewayHost {
 		log.WithField("web-host", gatewayHost).Warn(
