@@ -54,9 +54,15 @@ service Beacon {
             get: "/v2/validator/beacon/status"
         };
     }
+    rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/accounts/backup",
+            body: "*"
+        };
+    }
     rpc GetValidatorParticipation(
-        ethereum.eth.v1alpha1.GetValidatorParticipationRequest
-    ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
+    ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+        ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/participation"
         };
@@ -324,4 +330,16 @@ message BeaconStatusResponse {
     bytes deposit_contract_address = 5;
     // The head of the chain from the beacon node.
     ethereum.eth.v1alpha1.ChainHead chain_head = 6;
+}
+
+message BackupAccountsRequest {
+    // List of public keys to backup.
+    repeated bytes public_keys = 1;
+
+    string backup_password = 2;
+}
+
+message BackupAccountsResponse {
+    // Zip file containing backed up keystores.
+    bytes zip_file = 1;
 }
