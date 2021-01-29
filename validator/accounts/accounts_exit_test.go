@@ -97,11 +97,12 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(formattedExitedKeys))
-	expectedKey := "0x" + keystore.Pubkey[:12]
-	assert.Equal(t, expectedKey, formattedExitedKeys[0])
+	require.Equal(t, 1, len(rawExitedKeys))
+	assert.DeepEqual(t, rawPubKeys[0], rawExitedKeys[0])
+	require.Equal(t, 1, len(formattedExitedKeys))
+	assert.Equal(t, "0x"+keystore.Pubkey[:12], formattedExitedKeys[0])
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {

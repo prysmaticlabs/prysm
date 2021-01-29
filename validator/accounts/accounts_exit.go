@@ -6,12 +6,14 @@ import (
 	"io"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -39,12 +41,12 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 		return err
 	}
 
-	rawPubKeys, formattedPubKeys, err := interact(cliCtx, r, validatingPublicKeys)
+	rawPubKeys, trimmedPubKeys, err := interact(cliCtx, r, validatingPublicKeys)
 	if err != nil {
 		return err
 	}
 	// User decided to cancel the voluntary exit.
-	if rawPubKeys == nil && formattedPubKeys == nil {
+	if rawPubKeys == nil && trimmedPubKeys == nil {
 		return nil
 	}
 
@@ -52,22 +54,41 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	if err != nil {
 		return err
 	}
+
 	cfg := performExitCfg{
 		*validatorClient,
 		*nodeClient,
 		keymanager,
 		rawPubKeys,
-		formattedPubKeys,
+		trimmedPubKeys,
 	}
-
-	formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, trimmedExitedKeys, err := performExit(cliCtx, cfg)
 	if err != nil {
 		return err
 	}
 
-	if len(formattedExitedKeys) > 0 {
-		log.WithField("publicKeys", strings.Join(formattedExitedKeys, ", ")).
-			Info("Voluntary exit was successful for the accounts listed")
+	if len(rawExitedKeys) > 0 {
+		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
+		for i, key := range rawExitedKeys {
+			// Prepare key for displaying in a URL info: remove '0x' prefix and add a newline character.
+			var baseUrl string
+			if params.BeaconConfig().ConfigName == "pyrmont" {
+				baseUrl = "https://pyrmont.beaconcha.in/validator/"
+			} else {
+				baseUrl = "https://beaconcha.in/validator/"
+			}
+			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:] + "\n"
+		}
+
+		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
+		for i, k := range urlFormattedPubKeys {
+			ifaceKeys[i] = k
+		}
+
+		info := fmt.Sprintf("Voluntary exit was successful for the accounts listed. "+
+			"URLs where you can track each validator's exit:\n"+strings.Repeat("%s", len(ifaceKeys)-1), ifaceKeys...)
+
+		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
 	} else {
 		log.Info("No successful voluntary exits")
 	}
@@ -197,7 +218,7 @@ func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *eth
 	return &validatorClient, &nodeClient, nil
 }
 
-func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
+func performExit(cliCtx *cli.Context, cfg performExitCfg) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
 	for i, key := range cfg.rawPubKeys {
 		if err := client.ProposeExit(cliCtx.Context, cfg.validatorClient, cfg.nodeClient, cfg.keymanager.Sign, key); err != nil {
@@ -212,7 +233,9 @@ func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
 			}
 		}
 	}
-	var formattedExitedKeys []string
+
+	rawExitedKeys = make([][]byte, 0)
+	formattedExitedKeys = make([]string, 0)
 	for i, key := range cfg.rawPubKeys {
 		found := false
 		for _, notExited := range rawNotExitedKeys {
@@ -222,9 +245,10 @@ func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
 			}
 		}
 		if !found {
+			rawExitedKeys = append(rawExitedKeys, key)
 			formattedExitedKeys = append(formattedExitedKeys, cfg.formattedPubKeys[i])
 		}
 	}
 
-	return formattedExitedKeys, nil
+	return rawExitedKeys, formattedExitedKeys, nil
 }
