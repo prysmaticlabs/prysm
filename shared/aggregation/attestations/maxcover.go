@@ -83,7 +83,7 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 	// type, so incoming `atts` parameters can be used as candidates list directly.
 	candidates := make([]*bitfield.Bitlist64, len(atts))
 	for i := 0; i < len(atts); i++ {
-		candidates[i] = bitfield.NewBitlist64FromBytes(atts[i].AggregationBits.Bytes())
+		candidates[i] = bitfield.NewBitlist64FromBytes(atts[i].AggregationBits.BytesNoTrim())
 	}
 	coveredBitsSoFar := bitfield.NewBitlist64(candidates[0].Len())
 
@@ -101,8 +101,10 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 			break
 		}
 
-		// Find maximum non-overlapping coverage.
-		selectedKeys, coverage, err := aggregation.MaxCover(candidates, len(candidates), false /* allowOverlaps */)
+		// Find maximum non-overlapping coverage for subset of still non-processed candidates.
+		roundCandidates := candidates[len(aggregated) : len(aggregated)+len(unaggregated)]
+		selectedKeys, coverage, err := aggregation.MaxCover(
+			roundCandidates, len(roundCandidates), false /* allowOverlaps */)
 		if err != nil {
 			// Return aggregated attestations, and attestations that couldn't be aggregated.
 			return append(aggregated, unaggregated...), err
@@ -113,10 +115,13 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 			break
 		}
 
+		// Pad selected key indexes, as `roundCandidates` is a subset of `candidates`.
+		keys := padSelectedKeys(selectedKeys.BitIndices(), len(aggregated))
+
 		// Create aggregated attestation and update solution lists. Process aggregates only if they
 		// feature at least one unknown bit i.e. can increase the overall coverage.
 		if coveredBitsSoFar.XorCount(coverage) > 0 {
-			aggIdx, err := aggregateAttestations(atts, selectedKeys, coverage)
+			aggIdx, err := aggregateAttestations(atts, keys, coverage)
 			if err != nil {
 				return append(aggregated, unaggregated...), err
 			}
@@ -126,23 +131,22 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 			if idx0 < aggIdx {
 				atts[idx0], atts[aggIdx] = atts[aggIdx], atts[idx0]
 				candidates[idx0], candidates[aggIdx] = candidates[aggIdx], candidates[idx0]
-				aggregated = atts[:idx0+1] // Expand to the newly added aggregate.
 			}
 
-			// Shift the starting point of the slice right.
+			// Expand to the newly created aggregate.
+			aggregated = atts[:idx0+1]
+
+			// Shift the starting point of the slice to the right.
 			unaggregated = unaggregated[1:]
-			candidates = candidates[1:]
 
 			// Update covered bits map.
 			coveredBitsSoFar.NoAllocOr(coverage, coveredBitsSoFar)
-			selectedKeys.SetBitAt(uint64(aggIdx), false)
+			keys = keys[1:]
 		}
 
 		// Remove processed attestations.
-		processedKeys := selectedKeys.BitIndices()
-		rearrangeProcessedAttestations(atts, candidates, processedKeys)
-		unaggregated = unaggregated[:len(unaggregated)-len(processedKeys)]
-		candidates = candidates[:len(unaggregated)-len(processedKeys)]
+		rearrangeProcessedAttestations(atts, candidates, keys)
+		unaggregated = unaggregated[:len(unaggregated)-len(keys)]
 	}
 
 	return append(aggregated, attList(unaggregated).filterContained()...), nil
@@ -177,31 +181,41 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 	}, nil
 }
 
+// padSelectedKeys adds additional value to every key.
+func padSelectedKeys(keys []int, pad int) []int {
+	for i, key := range keys {
+		keys[i] = key + pad
+	}
+	return keys
+}
+
 // aggregateAttestations combines signatures of selected attestations into a single aggregate attestation, and
 // pushes that aggregated attestation into the position of the first of selected attestations.
-func aggregateAttestations(
-	atts []*ethpb.Attestation, selectedKeys, coverage *bitfield.Bitlist64,
-) (targetIdx int, err error) {
-	if selectedKeys.Count() < 2 {
+func aggregateAttestations(atts []*ethpb.Attestation, keys []int, coverage *bitfield.Bitlist64) (targetIdx int, err error) {
+	if len(keys) < 2 || atts == nil || len(atts) < 2 {
 		return targetIdx, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate")
+	}
+	if coverage == nil || coverage.Count() == 0 {
+		return targetIdx, errors.New("invalid or empty coverage")
 	}
 
 	var data *ethpb.AttestationData
-	signs := make([]bls.Signature, 0, selectedKeys.Count())
-	for _, idx := range selectedKeys.BitIndices() {
+	signs := make([]bls.Signature, 0, len(keys))
+	for i, idx := range keys {
 		sig, err := signatureFromBytes(atts[idx].Signature)
 		if err != nil {
 			return targetIdx, err
 		}
 		signs = append(signs, sig)
-		if data == nil {
+		if i == 0 {
 			data = stateTrie.CopyAttestationData(atts[idx].Data)
 			targetIdx = idx
 		}
 	}
 	// Put aggregated attestation at a position of the first selected attestation.
 	atts[targetIdx] = &ethpb.Attestation{
-		AggregationBits: coverage.Bytes(),
+		// Append size byte, which will be unnecessary on switch to Bitlist64.
+		AggregationBits: append(coverage.Bytes(), 0x1),
 		Data:            data,
 		Signature:       aggregateSignatures(signs).Marshal(),
 	}
