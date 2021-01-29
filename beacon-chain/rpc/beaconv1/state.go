@@ -6,10 +6,14 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"go.opencensus.io/trace"
 )
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
 func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetGenesis")
+	defer span.End()
+
 	return nil, errors.New("unimplemented")
 }
 
