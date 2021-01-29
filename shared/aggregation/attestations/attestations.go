@@ -42,6 +42,14 @@ var _ = logrus.WithField("prefix", "aggregation.attestations")
 var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 
 // Aggregate aggregates attestations. The minimal number of attestations is returned.
+// Aggregation occurs in-place i.e. contents of input array will be modified. Should you need to
+// preserve input attestations, close them before aggregating:
+//
+//   clonedAtts := make([]*ethpb.Attestation, len(atts))
+//   for i, a := range atts {
+//       clonedAtts[i] = stateTrie.CopyAttestation(a)
+//   }
+//   aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	strategy := AttestationAggregationStrategy(featureconfig.Get().AttestationAggregationStrategy)
 	switch strategy {
