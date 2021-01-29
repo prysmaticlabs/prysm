@@ -83,7 +83,7 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 	// type, so incoming `atts` parameters can be used as candidates list directly.
 	candidates := make([]*bitfield.Bitlist64, len(atts))
 	for i := 0; i < len(atts); i++ {
-		candidates[i] = bitfield.NewBitlist64FromBytes(atts[i].AggregationBits.BytesNoTrim())
+		candidates[i] = atts[i].AggregationBits.ToBitlist64()
 	}
 	coveredBitsSoFar := bitfield.NewBitlist64(candidates[0].Len())
 
@@ -215,7 +215,7 @@ func aggregateAttestations(atts []*ethpb.Attestation, keys []int, coverage *bitf
 	// Put aggregated attestation at a position of the first selected attestation.
 	atts[targetIdx] = &ethpb.Attestation{
 		// Append size byte, which will be unnecessary on switch to Bitlist64.
-		AggregationBits: append(coverage.Bytes(), 0x1),
+		AggregationBits: coverage.ToBitlist(),
 		Data:            data,
 		Signature:       aggregateSignatures(signs).Marshal(),
 	}
@@ -235,17 +235,18 @@ func rearrangeProcessedAttestations(atts []*ethpb.Attestation, candidates []*bit
 		candidates[idx] = nil
 	}
 	// Re-arrange nil items, move them to end of slice.
+	sort.Ints(processedKeys)
+	lastIdx := len(atts) - 1
 	for _, idx0 := range processedKeys {
-		idx1 := len(atts) - 1
 		// Make sure that nil items are swapped for non-nil items only.
-		for idx1 > idx0 && atts[idx1] == nil {
-			idx1--
+		for lastIdx > idx0 && atts[lastIdx] == nil {
+			lastIdx--
 		}
-		if idx0 == idx1 {
-			continue
+		if idx0 == lastIdx {
+			break
 		}
-		atts[idx0], atts[idx1] = atts[idx1], atts[idx0]
-		candidates[idx0], candidates[idx1] = candidates[idx1], candidates[idx0]
+		atts[idx0], atts[lastIdx] = atts[lastIdx], atts[idx0]
+		candidates[idx0], candidates[lastIdx] = candidates[lastIdx], candidates[idx0]
 	}
 }
 

@@ -271,6 +271,24 @@ func TestAggregateAttestations_rearrangeProcessedAttestations(t *testing.T) {
 				nil, nil, nil, nil, nil,
 			},
 		},
+		{
+			name: "many items, many selected, keys unsorted",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+				{AggregationBits: bitfield.Bitlist{0x05}},
+				{AggregationBits: bitfield.Bitlist{0x06}},
+			},
+			keys: []int{4, 1, 2, 5, 6},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				nil, nil, nil, nil, nil,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
