@@ -99,13 +99,13 @@ func (s *Service) createListener(
 ) (*discover.UDPv5, error) {
 	// Listen to all network interfaces
 	// for both ip protocols.
-	var networkVersion string
+	networkVersion := "udp"
+
 	// BindIP is used to specify the ip
 	// on which we will bind our listener on
 	// by default we will listen to all interfaces.
 	var bindIP net.IP
-	networkVersion = udpVersionFromIP(ipAddr)
-	switch networkVersion {
+	switch udpVersionFromIP(ipAddr) {
 	case "udp4":
 		bindIP = net.IPv4zero
 	case "udp6":
@@ -121,7 +121,6 @@ func (s *Service) createListener(
 			return nil, errors.New("invalid local ip provided")
 		}
 		bindIP = ipAddr
-		networkVersion = udpVersionFromIP(ipAddr)
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   bindIP,
