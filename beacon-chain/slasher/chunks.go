@@ -60,17 +60,17 @@ type Chunker interface {
 //
 //                                     val0    val1    val2
 //                                     {  }    {  }    {  }
-//   chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//   chunk_0_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 //                                     val0    val1    val2
 //                                     {  }    {  }    {  }
-//   chunk_1_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//   chunk_1_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 //                            ...
 //
 //                                     val0    val1    val2
 //                                     {  }    {  }    {  }
-//   chunk_N_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//   chunk_N_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 // MinSpanChunksSlice represents the data structure above for a single chunk index.
 type MinSpanChunksSlice struct {
@@ -257,17 +257,17 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 //
 //                                     val0    val1    val2
 //                                     {  }    {  }    {  }
-//   chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//   chunk_0_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 //                                     val0    val1    val2
 //                                     {  }    {  }    {  }
-//   chunk_1_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//   chunk_1_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 //                            ...
 //
 //                                     val0    val1    val2
 //                                     {  }    {  }    {  }
-//   chunk_N_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//   chunk_N_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 // Let's take a look at how this update will look for a real set of min span chunk:
 // For the purposes of a simple example, let's set H = 2, meaning a min span
@@ -286,18 +286,9 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 //                                     |-> epoch 4 for validator 0
 //
 // Next up, we proceed with the update process for validator index 0, starting epoch 4
-// al the way down to epoch 2. We will need to go down the array once
-// and then wrap around at the end back down to epoch 6.
-//
-// update every epoch from 4 down to 2 for validator 0
-//
-//             epoch 4
-//               |
-//             <-|
-//          epoch2 epoch3
-//              |   |
-//             <----<
-//             [[2, 2], [2, 2], [2, 2]]
+// all the way down to epoch 2. We will need to go down the array as far as we can get. If the
+// lowest epoch we need to update is < the lowest epoch of a chunk, we need to proceed to
+// a different chunk index.
 //
 // Once we finish updating a chunk, we need to move on to the next chunk. This function
 // returns a boolean named keepGoing which allows the caller to determine if we should
