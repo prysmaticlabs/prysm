@@ -1,15 +1,20 @@
 package rpc
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -57,5 +62,89 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 		Accounts:      accs[start:end],
 		TotalSize:     int32(len(keys)),
 		NextPageToken: nextPageToken,
+	}, nil
+}
+
+// BackupAccounts creates a zip file containing EIP-2335 keystores for the user's
+// specified public keys by encrypting them with the specified password.
+func (s *Server) BackupAccounts(
+	ctx context.Context, req *pb.BackupAccountsRequest,
+) (*pb.BackupAccountsResponse, error) {
+	if req.PublicKeys == nil || len(req.PublicKeys) < 1 {
+		return nil, status.Error(codes.InvalidArgument, "No public keys specified to backup")
+	}
+	if req.BackupPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Backup password cannot be empty")
+	}
+	if s.wallet == nil || s.keymanager == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
+		return nil, status.Error(codes.FailedPrecondition, "Only HD or imported wallets can backup accounts")
+	}
+	pubKeys := make([]bls.PublicKey, len(req.PublicKeys))
+	for i, key := range req.PublicKeys {
+		pubKey, err := bls.PublicKeyFromBytes(key)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "%#x Not a valid BLS public key: %v", key, err)
+		}
+		pubKeys[i] = pubKey
+	}
+
+	var err error
+	var keystoresToBackup []*keymanager.Keystore
+	switch s.wallet.KeymanagerKind() {
+	case keymanager.Imported:
+		km, ok := s.keymanager.(*imported.Keymanager)
+		if !ok {
+			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
+		}
+		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not backup accounts for imported keymanager: %v", err)
+		}
+	case keymanager.Derived:
+		km, ok := s.keymanager.(*derived.Keymanager)
+		if !ok {
+			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
+		}
+		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derived keymanager: %v", err)
+		}
+	}
+	if len(keystoresToBackup) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "No keystores to backup")
+	}
+
+	buf := new(bytes.Buffer)
+	writer := zip.NewWriter(buf)
+	for i, k := range keystoresToBackup {
+		encodedFile, err := json.MarshalIndent(k, "", "\t")
+		if err != nil {
+			if err := writer.Close(); err != nil {
+				log.WithError(err).Error("Could not close zip file after writing")
+			}
+			return nil, status.Errorf(codes.Internal, "could not marshal keystore to JSON file: %v", err)
+		}
+		f, err := writer.Create(fmt.Sprintf("keystore-%d.json", i))
+		if err != nil {
+			if err := writer.Close(); err != nil {
+				log.WithError(err).Error("Could not close zip file after writing")
+			}
+			return nil, status.Errorf(codes.Internal, "Could not write keystore file to zip: %v", err)
+		}
+		if _, err = f.Write(encodedFile); err != nil {
+			if err := writer.Close(); err != nil {
+				log.WithError(err).Error("Could not close zip file after writing")
+			}
+			return nil, status.Errorf(codes.Internal, "Could not write keystore file contents")
+		}
+	}
+	if err := writer.Close(); err != nil {
+		log.WithError(err).Error("Could not close zip file after writing")
+	}
+	return &pb.BackupAccountsResponse{
+		ZipFile: buf.Bytes(),
 	}, nil
 }
