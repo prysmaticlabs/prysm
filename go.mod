@@ -41,7 +41,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/herumi/bls-eth-go-binary v0.0.0-20201019012252-4b463a10c225
+	github.com/herumi/bls-eth-go-binary v0.0.0-20210130185500-57372fb27371
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-ipfs-addr v0.0.1
