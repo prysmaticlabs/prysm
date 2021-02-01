@@ -1,5 +1,5 @@
 // Package node is the main process which handles the lifecycle of
-// the runtime services in a validator process, gracefully shutting
+// the runtime services in a validator client process, gracefully shutting
 // everything down upon close.
 package node
 
@@ -41,9 +41,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// ValidatorNode defines an instance of an eth2 validator that manages
+// ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
-type ValidatorNode struct {
+type ValidatorClient struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
 	cancel            context.CancelFunc
@@ -55,10 +55,10 @@ type ValidatorNode struct {
 	stop              chan struct{} // Channel to wait for termination notifications.
 }
 
-// New creates a new instance of the Prysm validator.
-func New(cliCtx *cli.Context) (*ValidatorNode, error) {
+// NewValidatorClient creates a new instance of the Prysm validator client.
+func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
-		"validator", // service name
+		"validatorClient", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
 		cliCtx.String(cmd.TracingEndpointFlag.Name),
 		cliCtx.Float64(cmd.TraceSampleFractionFlag.Name),
@@ -79,7 +79,7 @@ func New(cliCtx *cli.Context) (*ValidatorNode, error) {
 
 	registry := shared.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)
-	validator := &ValidatorNode{
+	validatorClient := &ValidatorClient{
 		cliCtx:            cliCtx,
 		ctx:               ctx,
 		cancel:            cancel,
@@ -97,13 +97,13 @@ func New(cliCtx *cli.Context) (*ValidatorNode, error) {
 	}
 
 	// If the --web flag is enabled to administer the validator
-	// via a web portal, we start the validator in a different way.
+	// via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
-		log.Info("Enabling web portal to manage the validator")
-		if err := validator.initializeForWeb(cliCtx); err != nil {
+		log.Info("Enabling web portal to manage the validator client")
+		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
 			return nil, err
 		}
-		return validator, nil
+		return validatorClient, nil
 	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
@@ -111,15 +111,15 @@ func New(cliCtx *cli.Context) (*ValidatorNode, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	if err := validator.initializeFromCLI(cliCtx); err != nil {
+	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
 
-	return validator, nil
+	return validatorClient, nil
 }
 
 // Start every service in the validator.
-func (c *ValidatorNode) Start() {
+func (c *ValidatorClient) Start() {
 	c.lock.Lock()
 
 	log.WithFields(logrus.Fields{
@@ -145,7 +145,7 @@ func (c *ValidatorNode) Start() {
 				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic.")
 			}
 		}
-		panic("Panic closing the validator")
+		panic("Panic closing the validator client")
 	}()
 
 	// Wait for stop channel to be closed.
@@ -153,7 +153,7 @@ func (c *ValidatorNode) Start() {
 }
 
 // Close handles graceful shutdown of the system.
-func (c *ValidatorNode) Close() {
+func (c *ValidatorClient) Close() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -163,7 +163,7 @@ func (c *ValidatorNode) Close() {
 	close(c.stop)
 }
 
-func (c *ValidatorNode) initializeFromCLI(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
@@ -257,7 +257,7 @@ func (c *ValidatorNode) initializeFromCLI(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (c *ValidatorNode) initializeForWeb(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
@@ -348,7 +348,7 @@ func (c *ValidatorNode) initializeForWeb(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (c *ValidatorNode) registerPrometheusService(cliCtx *cli.Context) error {
+func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
 		additionalHandlers = append(
@@ -368,7 +368,7 @@ func (c *ValidatorNode) registerPrometheusService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(service)
 }
 
-func (c *ValidatorNode) registerValidatorService(
+func (c *ValidatorClient) registerValidatorService(
 	keyManager keymanager.IKeymanager,
 ) error {
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
@@ -421,7 +421,7 @@ func (c *ValidatorNode) registerValidatorService(
 	}
 	return c.services.RegisterService(v)
 }
-func (c *ValidatorNode) registerSlasherService() error {
+func (c *ValidatorClient) registerSlasherService() error {
 	endpoint := c.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
 	if endpoint == "" {
 		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
@@ -445,7 +445,7 @@ func (c *ValidatorNode) registerSlasherService() error {
 	return c.services.RegisterService(sp)
 }
 
-func (c *ValidatorNode) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
+func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
 	var vs *client.ValidatorService
 	if err := c.services.FetchService(&vs); err != nil {
 		return err
@@ -490,7 +490,7 @@ func (c *ValidatorNode) registerRPCService(cliCtx *cli.Context, km keymanager.IK
 	return c.services.RegisterService(server)
 }
 
-func (c *ValidatorNode) registerRPCGatewayService(cliCtx *cli.Context) error {
+func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
 	if gatewayHost != flags.DefaultGatewayHost {
 		log.WithField("web-host", gatewayHost).Warn(
