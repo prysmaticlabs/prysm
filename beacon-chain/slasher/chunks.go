@@ -6,7 +6,7 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -26,7 +26,7 @@ type Chunker interface {
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
 		attestation *ethpb.IndexedAttestation,
-	) (bool, slashertypes.SlashingKind, error)
+	) (slashertypes.SlashingKind, error)
 	Update(
 		chunkIdx uint64,
 		validatorIdx types.ValidatorIndex,
@@ -178,27 +178,27 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
 	attestation *ethpb.IndexedAttestation,
-) (bool, slashertypes.SlashingKind, error) {
+) (slashertypes.SlashingKind, error) {
 	sourceEpoch := types.Epoch(attestation.Data.Source.Epoch)
 	targetEpoch := types.Epoch(attestation.Data.Target.Epoch)
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
-		return false, slashertypes.NotSlashable, errors.Wrapf(
+		return slashertypes.NotSlashable, errors.Wrapf(
 			err, "could not get min target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch > minTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, minTarget)
 		if err != nil {
-			return false, slashertypes.NotSlashable, err
+			return slashertypes.NotSlashable, err
 		}
 		if existingAttRecord != nil {
 			if sourceEpoch < types.Epoch(existingAttRecord.Source) {
-				return true, slashertypes.SurroundingVote, nil
+				return slashertypes.SurroundingVote, nil
 			}
 		}
 	}
-	return false, slashertypes.NotSlashable, nil
+	return slashertypes.NotSlashable, nil
 }
 
 // CheckSlashable takes in a validator index and an incoming attestation
@@ -217,27 +217,27 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
 	attestation *ethpb.IndexedAttestation,
-) (bool, slashertypes.SlashingKind, error) {
+) (slashertypes.SlashingKind, error) {
 	sourceEpoch := types.Epoch(attestation.Data.Source.Epoch)
 	targetEpoch := types.Epoch(attestation.Data.Target.Epoch)
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
-		return false, slashertypes.NotSlashable, errors.Wrapf(
+		return slashertypes.NotSlashable, errors.Wrapf(
 			err, "could not get max target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch < maxTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, maxTarget)
 		if err != nil {
-			return false, slashertypes.NotSlashable, err
+			return slashertypes.NotSlashable, err
 		}
 		if existingAttRecord != nil {
 			if types.Epoch(existingAttRecord.Source) < sourceEpoch {
-				return true, slashertypes.SurroundedVote, nil
+				return slashertypes.SurroundedVote, nil
 			}
 		}
 	}
-	return false, slashertypes.NotSlashable, nil
+	return slashertypes.NotSlashable, nil
 }
 
 // Update a min span chunk for a validator index starting at the current epoch, e_c, then updating
