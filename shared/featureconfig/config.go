@@ -40,10 +40,7 @@ type Flags struct {
 	WriteSSZStateTransitions           bool // WriteSSZStateTransitions to tmp directory.
 	SkipBLSVerify                      bool // Skips BLS verification across the runtime.
 	EnableBlst                         bool // Enables new BLS library from supranational.
-	PruneEpochBoundaryStates           bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression          bool // EnableSnappyDBCompression in the database.
 	SlasherProtection                  bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	EnableNoise                        bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	EnableEth1DataMajorityVote         bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnablePruningDepositProofs         bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
@@ -56,15 +53,12 @@ type Flags struct {
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
 	// Slasher toggles.
-	EnableHistoricalDetection bool // EnableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
-	UseCheckPointInfoCache   bool // UseCheckPointInfoCache uses check point info cache to efficiently verify attestation signatures.
 	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
 
 	// Bug fixes related flags.
