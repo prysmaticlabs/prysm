@@ -20,7 +20,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20210118190430-6ca267833c4b
+	github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
@@ -84,6 +84,7 @@ require (
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/procfs v0.3.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
+	github.com/prysmaticlabs/eth2-types v0.0.0-20210127031309-22cbe426eba6
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210127105958-025470485ece
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210129193852-0db57134419f
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c

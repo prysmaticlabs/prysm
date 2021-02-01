@@ -728,8 +728,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:Xun9jB2EhB8JZbVhjpW7/o6pLEwXb89tHkN8Q08kEZM=",
-        version = "v0.0.0-20210118190430-6ca267833c4b",
+        sum = "h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=",
+        version = "v0.0.0-20210120143747-11b9eff30ea9",
     )
 
     go_repository(
@@ -2569,6 +2569,12 @@ def prysm_deps():
         version = "v0.10.0",
     )
 
+    go_repository(
+        name = "com_github_prysmaticlabs_eth2_types",
+        importpath = "github.com/prysmaticlabs/eth2-types",
+        sum = "h1:n/ZI+/bZfkMoGoV2Rult3YvS5LT4dvpAFOuISq+I+GY=",
+        version = "v0.0.0-20210127031309-22cbe426eba6",
+    )
     go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
