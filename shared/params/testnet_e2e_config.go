@@ -35,7 +35,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Prysm constants.
-	e2eConfig.ConfigName = "End-to-end"
+	e2eConfig.ConfigName = ConfigNames[EndToEnd]
 
 	return e2eConfig
 }
