@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -98,7 +98,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 		params: params,
 		data:   []uint16{},
 	}
-	_, _, err := chunk.CheckSlashable(ctx, nil, validatorIdx, att)
+	_, err := chunk.CheckSlashable(ctx, nil, validatorIdx, att)
 	require.ErrorContains(t, "could not get min target for validator", err)
 
 	// We initialize a proper slice with 2 chunks with chunk size 3, 2 validators, and
@@ -113,14 +113,12 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// An attestation with source 1 and target 2 should not be slashable
 	// based on our min chunk for either validator.
-	slashable, kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
+	kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
 	require.NoError(t, err)
-	require.Equal(t, false, slashable)
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
-	slashable, kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
+	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
-	require.Equal(t, false, slashable)
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
@@ -141,9 +139,8 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	target = types.Epoch(3)
 	surroundingVote := createAttestation(source, target)
 
-	slashable, kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
+	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
-	require.Equal(t, false, slashable)
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
 	// Next up, we save the old attestation record, then check if the
@@ -151,9 +148,8 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, att)
 	require.NoError(t, err)
 
-	slashable, kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
+	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
-	require.Equal(t, true, slashable)
 	require.Equal(t, slashertypes.SurroundingVote, kind)
 }
 
@@ -175,7 +171,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 		params: params,
 		data:   []uint16{},
 	}
-	_, _, err := chunk.CheckSlashable(ctx, nil, validatorIdx, att)
+	_, err := chunk.CheckSlashable(ctx, nil, validatorIdx, att)
 	require.ErrorContains(t, "could not get max target for validator", err)
 
 	// We initialize a proper slice with 2 chunks with chunk size 4, 2 validators, and
@@ -190,14 +186,12 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// An attestation with source 1 and target 2 should not be slashable
 	// based on our max chunk for either validator.
-	slashable, kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
+	kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
 	require.NoError(t, err)
-	require.Equal(t, false, slashable)
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
-	slashable, kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
+	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
-	require.Equal(t, false, slashable)
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
@@ -218,9 +212,8 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	target = types.Epoch(2)
 	surroundedVote := createAttestation(source, target)
 
-	slashable, kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
+	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
-	require.Equal(t, false, slashable)
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
 	// Next up, we save the old attestation record, then check if the
@@ -228,9 +221,8 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, att)
 	require.NoError(t, err)
 
-	slashable, kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
+	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
-	require.Equal(t, true, slashable)
 	require.Equal(t, slashertypes.SurroundedVote, kind)
 }
 
