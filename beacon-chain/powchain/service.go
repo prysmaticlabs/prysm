@@ -133,7 +133,6 @@ type Service struct {
 	processingLock          sync.RWMutex
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
 	currHttpEndpoint        string
 	httpEndpoints           []string
@@ -195,7 +194,6 @@ func New(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	s := &Service{
 		ctx:              ctx,
 		cancel:           cancel,
-		headerChan:       make(chan *gethTypes.Header),
 		httpEndpoints:    endpoints,
 		currHttpEndpoint: currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
@@ -278,9 +276,6 @@ func (s *Service) Start() {
 func (s *Service) Stop() error {
 	if s.cancel != nil {
 		defer s.cancel()
-	}
-	if s.headerChan != nil {
-		defer close(s.headerChan)
 	}
 	s.closeClients()
 	return nil
