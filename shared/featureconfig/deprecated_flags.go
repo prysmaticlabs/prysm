@@ -12,8 +12,13 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableSyncBacktracking = &cli.StringFlag{
+	deprecatedEnableSyncBacktracking = &cli.StringFlag{
 		Name:   "enable-sync-backtracking",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableSyncBacktracking = &cli.StringFlag{
+		Name:   "disable-sync-backtracking",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -21,5 +26,6 @@ var (
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
+	deprecatedEnableSyncBacktracking,
 	deprecatedDisableSyncBacktracking,
 }
