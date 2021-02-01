@@ -44,7 +44,6 @@ type Flags struct {
 	EnableEth1DataMajorityVote         bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnablePruningDepositProofs         bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
-	EnableSyncBacktracking             bool // EnableSyncBacktracking enables backtracking algorithm when searching for alternative forks during initial sync.
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
@@ -176,11 +175,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disablePruningDepositProofs.Name) {
 		log.Warn("Disabling pruning deposit proofs")
 		cfg.EnablePruningDepositProofs = false
-	}
-	cfg.EnableSyncBacktracking = true
-	if ctx.Bool(disableSyncBacktracking.Name) {
-		log.Warn("Disabling init-sync backtracking algorithm")
-		cfg.EnableSyncBacktracking = false
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		log.Warn("Using a larger gossip history for the node")
