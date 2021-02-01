@@ -78,10 +78,6 @@ var (
 		Usage: "Disables pruning deposit proofs when they are no longer needed." +
 			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
-	disableSyncBacktracking = &cli.BoolFlag{
-		Name:  "disable-sync-backtracking",
-		Usage: "Disable alternative fork exploration backtracking algorithm",
-	}
 	enableLargerGossipHistory = &cli.BoolFlag{
 		Name:  "enable-larger-gossip-history",
 		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
@@ -163,7 +159,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
-	disableSyncBacktracking,
 	disableBroadcastSlashingFlag,
 	enableNextSlotStateCache,
 }...)
