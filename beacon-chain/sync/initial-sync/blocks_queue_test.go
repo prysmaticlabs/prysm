@@ -17,7 +17,6 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -1024,11 +1023,6 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 }
 
 func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		EnableSyncBacktracking: true,
-	})
-	defer resetCfg()
-
 	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
