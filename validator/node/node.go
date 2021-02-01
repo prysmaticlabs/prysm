@@ -58,7 +58,7 @@ type ValidatorClient struct {
 // NewValidatorClient creates a new instance of the Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
-		"validatorClient", // service name
+		"validator", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
 		cliCtx.String(cmd.TracingEndpointFlag.Name),
 		cliCtx.Float64(cmd.TraceSampleFractionFlag.Name),
@@ -97,7 +97,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	// If the --web flag is enabled to administer the validator
-	// via a web portal, we start the validator client in a different way.
+	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
 		log.Info("Enabling web portal to manage the validator client")
 		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
@@ -118,7 +118,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	return validatorClient, nil
 }
 
-// Start every service in the validator.
+// Start every service in the validator client.
 func (c *ValidatorClient) Start() {
 	c.lock.Lock()
 

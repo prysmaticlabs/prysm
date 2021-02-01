@@ -48,7 +48,7 @@ func TestNode_Builds(t *testing.T) {
 	require.NoError(t, err)
 
 	valClient, err := NewValidatorClient(context)
-	require.NoError(t, err, "Failed to create validator client")
+	require.NoError(t, err, "Failed to create ValidatorClient")
 	err = valClient.db.Close()
 	require.NoError(t, err)
 }
