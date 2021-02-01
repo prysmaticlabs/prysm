@@ -215,7 +215,7 @@ func startNode(ctx *cli.Context) error {
 		gethlog.Root().SetHandler(glogger)
 	}
 
-	beacon, err := node.NewBeaconNode(ctx)
+	beacon, err := node.New(ctx)
 	if err != nil {
 		return err
 	}
