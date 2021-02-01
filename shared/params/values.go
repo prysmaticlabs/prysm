@@ -9,8 +9,8 @@ const (
 
 // ConfigNames provides network configuration names.
 var ConfigNames = map[configName]string{
-	Mainnet:  "Mainnet",
-	EndToEnd: "End-to-end",
+	Mainnet:  "mainnet",
+	EndToEnd: "end-to-end",
 	Pyrmont:  "pyrmont",
 	Toledo:   "toledo",
 }
