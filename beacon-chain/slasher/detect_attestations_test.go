@@ -4,9 +4,10 @@ import (
 	"context"
 	"reflect"
 	"testing"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_groupByValidatorChunkIndex(t *testing.T) {
@@ -48,6 +49,31 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 		},
 		{
 			name: "Groups single attestation belonging to multiple validator chunk",
+			params: &Parameters{
+				validatorChunkSize: 2,
+			},
+			atts: []*ethpb.IndexedAttestation{
+				{
+					AttestingIndices: []uint64{0, 2, 4},
+				},
+			},
+			want: map[uint64][]*ethpb.IndexedAttestation{
+				0: {
+					{
+						AttestingIndices: []uint64{0, 2, 4},
+					},
+				},
+				1: {
+					{
+						AttestingIndices: []uint64{0, 2, 4},
+					},
+				},
+				2: {
+					{
+						AttestingIndices: []uint64{0, 2, 4},
+					},
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -63,37 +89,34 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 }
 
 func TestService_processQueuedAttestations(t *testing.T) {
-	type fields struct {
-		params           *Parameters
-		serviceCfg       *ServiceConfig
-		indexedAttsChan  chan *ethpb.IndexedAttestation
-		attestationQueue []*ethpb.IndexedAttestation
-		ctx              context.Context
-		cancel           context.CancelFunc
-		genesisTime      time.Time
+	hook := logTest.NewGlobal()
+	s := &Service{
+		params: DefaultParams(),
+		attestationQueue: []*ethpb.IndexedAttestation{
+			{
+				AttestingIndices: []uint64{0, 1},
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 0,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 1,
+					},
+				},
+			},
+		},
 	}
-	type args struct {
-		ctx         context.Context
-		epochTicker <-chan uint64
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{
-				params:           tt.fields.params,
-				serviceCfg:       tt.fields.serviceCfg,
-				indexedAttsChan:  tt.fields.indexedAttsChan,
-				attestationQueue: tt.fields.attestationQueue,
-				ctx:              tt.fields.ctx,
-				cancel:           tt.fields.cancel,
-				genesisTime:      tt.fields.genesisTime,
-			}
-		})
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	tickerChan := make(chan uint64)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedAttestations(ctx, tickerChan)
+		exitChan <- struct{}{}
+	}()
+
+	// Send a value over the ticker.
+	tickerChan <- 0
+	cancel()
+	<-exitChan
+	assert.LogsContain(t, hook, "Epoch 0 reached, processing 1 queued")
 }
