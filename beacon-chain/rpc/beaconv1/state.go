@@ -31,7 +31,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 	return &ethpb.GenesisResponse{
 		GenesisTime: &ptypes.Timestamp{
 			Seconds: genesisTime.Unix(),
-			Nanos:   int32(genesisTime.UnixNano()),
+			Nanos:   0,
 		},
 		GenesisValidatorsRoot: validatorRoot[:],
 		GenesisForkVersion:    forkVersion,
