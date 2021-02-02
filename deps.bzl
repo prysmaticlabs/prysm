@@ -2579,8 +2579,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:omXTHDyMBMOCpwsppvIWZ8z6eRZouMU+4ndPhUHgBLc=",
-        version = "v0.0.0-20210129193852-0db57134419f",
+        sum = "h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=",
+        version = "v0.0.0-20210202205921-7fcea7c45dc8",
     )
 
     go_repository(
@@ -3010,6 +3010,12 @@ def prysm_deps():
         version = "v1.1.3",
     )
 
+    go_repository(
+        name = "com_github_wealdtech_go_eth2_wallet_types_v2",
+        importpath = "github.com/wealdtech/go-eth2-wallet-types/v2",
+        sum = "h1:264/meVYWt1wFw6Mtn+xwkZkXjID42gNra4rycoiDXI=",
+        version = "v2.8.2",
+    )
     go_repository(
         name = "com_github_wercker_journalhook",
         importpath = "github.com/wercker/journalhook",
@@ -3669,10 +3675,4 @@ def prysm_deps():
         importpath = "gotest.tools",
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
-    )
-    go_repository(
-        name = "com_github_wealdtech_go_eth2_wallet_types_v2",
-        importpath = "github.com/wealdtech/go-eth2-wallet-types/v2",
-        sum = "h1:264/meVYWt1wFw6Mtn+xwkZkXjID42gNra4rycoiDXI=",
-        version = "v2.8.2",
     )
