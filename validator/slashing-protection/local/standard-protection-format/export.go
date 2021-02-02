@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/progressutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
@@ -40,6 +41,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
 
 	// Extract the signed proposals by public key.
+	progress := progressutil.InitializeProgressBar(
+		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
+	)
 	for _, pubKey := range proposedPublicKeys {
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
@@ -54,9 +58,15 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 			SignedBlocks:       signedBlocks,
 			SignedAttestations: nil,
 		}
+		if err := progress.Add(1); err != nil {
+			return nil, err
+		}
 	}
 
 	// Extract the signed attestations by public key.
+	progress = progressutil.InitializeProgressBar(
+		len(proposedPublicKeys), "Extracting signed attestations by validator public key",
+	)
 	for _, pubKey := range attestedPublicKeys {
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
@@ -74,6 +84,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 				SignedBlocks:       nil,
 				SignedAttestations: signedAttestations,
 			}
+		}
+		if err := progress.Add(1); err != nil {
+			return nil, err
 		}
 	}
 
@@ -129,39 +142,23 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 	// in our database, we return nil. This way, a user will be able to export their
 	// slashing protection history even if one of their keys does not have a history
 	// of signed blocks.
-	lowestSignedSlot, exists, err := validatorDB.LowestSignedProposal(ctx, pubKey)
+	proposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, pubKey)
 	if err != nil {
 		return nil, err
-	}
-	if !exists {
-		return nil, nil
-	}
-	highestSignedSlot, exists, err := validatorDB.HighestSignedProposal(ctx, pubKey)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, nil
 	}
 	signedBlocks := make([]*format.SignedBlock, 0)
-	for i := lowestSignedSlot; i <= highestSignedSlot; i++ {
+	for _, proposal := range proposalHistory {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		signingRoot, exists, err := validatorDB.ProposalHistoryForSlot(ctx, pubKey, i)
+		signingRootHex, err := rootToHexString(proposal.SigningRoot)
 		if err != nil {
 			return nil, err
 		}
-		if exists {
-			signingRootHex, err := rootToHexString(signingRoot[:])
-			if err != nil {
-				return nil, err
-			}
-			signedBlocks = append(signedBlocks, &format.SignedBlock{
-				Slot:        fmt.Sprintf("%d", i),
-				SigningRoot: signingRootHex,
-			})
-		}
+		signedBlocks = append(signedBlocks, &format.SignedBlock{
+			Slot:        fmt.Sprintf("%d", proposal.Slot),
+			SigningRoot: signingRootHex,
+		})
 	}
 	return signedBlocks, nil
 }
