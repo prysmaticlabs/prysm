@@ -10,73 +10,49 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
-	pubkeys := [][48]byte{{30}, {25}, {20}}
-	db := setupDB(t, pubkeys)
-
-	for _, pub := range pubkeys {
-		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pub, 0)
-		require.NoError(t, err)
-		expected := bytesutil.PadTo([]byte{}, 32)
-		require.DeepEqual(t, expected, signingRoot[:], "Expected proposal history slot signing root to be empty")
-	}
-}
-
-func TestNewProposalHistoryForSlot_ReturnsNilIfNoHistory(t *testing.T) {
+func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
 	valPubkey := [48]byte{1, 2, 3}
 	db := setupDB(t, [][48]byte{})
 
-	_, proposalExists, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
+	proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), valPubkey)
 	require.NoError(t, err)
-	assert.Equal(t, false, proposalExists)
+	assert.DeepEqual(t, make([]*Proposal, 0), proposalHistory)
 }
 
-func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
+func TestSaveProposalHistoryForPubKey_OK(t *testing.T) {
 	pubkey := [48]byte{3}
 	db := setupDB(t, [][48]byte{pubkey})
 
 	slot := uint64(2)
 
-	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, []byte{1})
+	root := [32]byte{1}
+	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, root[:])
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, slot)
+	proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubkey)
 	require.NoError(t, err, "Failed to get proposal history")
 
-	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot[:], "Expected DB to keep object the same")
-}
-
-func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
-	pubkey := [48]byte{3}
-	db := setupDB(t, [][48]byte{pubkey})
-
-	slot := uint64(2)
-	emptySlot := uint64(120)
-	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, []byte{1})
-	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, emptySlot)
-	require.NoError(t, err, "Failed to get proposal history")
-
-	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), signingRoot[:], "Expected DB to keep object the same")
+	require.NotNil(t, proposalHistory)
+	want := []*Proposal{
+		{
+			Slot:        slot,
+			SigningRoot: root[:],
+		},
+	}
+	require.DeepEqual(t, want[0], proposalHistory[0])
 }
 
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 	pubkey := [48]byte{0}
 	tests := []struct {
-		slot        uint64
 		signingRoot []byte
 	}{
 		{
-			slot:        uint64(1),
 			signingRoot: bytesutil.PadTo([]byte{1}, 32),
 		},
 		{
-			slot:        uint64(2),
 			signingRoot: bytesutil.PadTo([]byte{2}, 32),
 		},
 		{
-			slot:        uint64(1),
 			signingRoot: bytesutil.PadTo([]byte{3}, 32),
 		},
 	}
@@ -85,11 +61,11 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 		db := setupDB(t, [][48]byte{pubkey})
 		err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, 0, tt.signingRoot)
 		require.NoError(t, err, "Saving proposal history failed")
-		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, 0)
+		proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubkey)
 		require.NoError(t, err, "Failed to get proposal history")
 
-		require.NotNil(t, signingRoot)
-		require.DeepEqual(t, tt.signingRoot, signingRoot[:], "Expected DB to keep object the same")
+		require.NotNil(t, proposalHistory)
+		require.DeepEqual(t, tt.signingRoot, proposalHistory[0].SigningRoot, "Expected DB to keep object the same")
 		require.NoError(t, db.Close(), "Failed to close database")
 	}
 }
@@ -143,15 +119,22 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 			require.NoError(t, err, "Saving proposal history failed")
 		}
 
+		signingRootsBySlot := make(map[uint64][]byte)
+		proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubKey)
+		require.NoError(t, err)
+
+		for _, hist := range proposalHistory {
+			signingRootsBySlot[hist.Slot] = hist.SigningRoot
+		}
+
 		for _, slot := range tt.removedSlots {
-			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
-			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), sr[:], "Unexpected difference in bytes for epoch %d", slot)
+			_, ok := signingRootsBySlot[slot]
+			require.Equal(t, false, ok)
 		}
 		for _, slot := range tt.storedSlots {
-			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
-			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, signedRoot, sr[:], "Unexpected difference in bytes for epoch %d", slot)
+			root, ok := signingRootsBySlot[slot]
+			require.Equal(t, true, ok)
+			require.DeepEqual(t, signedRoot, root, "Unexpected difference in bytes for epoch %d", slot)
 		}
 		require.NoError(t, db.Close(), "Failed to close database")
 	}
