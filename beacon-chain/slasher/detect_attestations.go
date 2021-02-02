@@ -5,23 +5,19 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-func (s *Service) processQueuedAttestations(ctx context.Context) {
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
-	defer ticker.Done()
+// Process queued attestations every time an epoch ticker fires. We retrieve
+// these attestations from a queue, then group them all by validator chunk index.
+// This grouping will allow us to perform detection on batches of attestations
+// per validator chunk index which can be done concurrently.
+func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-chan uint64) {
 	for {
 		select {
-		case currentEpoch := <-ticker.C():
+		case currentEpoch := <-epochTicker:
 			atts := s.attestationQueue
 			s.attestationQueue = make([]*ethpb.IndexedAttestation, 0)
-			// TODO(Raul): Perform validation of attestations before
-			// performing batch detection, such as checking for slot time requirements
-			// and the prerequisite that source must be less than epoch.
-			log.Infof("Epoch %d reached, processing %d queued atts", currentEpoch, len(atts))
+			log.Infof("Epoch %d reached, processing %d queued atts for slashing detection", currentEpoch, len(atts))
 			groupedAtts := s.groupByValidatorChunkIndex(atts)
 			for validatorChunkIdx, attsBatch := range groupedAtts {
 				s.detectAttestationBatch(attsBatch, validatorChunkIdx, types.Epoch(currentEpoch))
@@ -32,12 +28,19 @@ func (s *Service) processQueuedAttestations(ctx context.Context) {
 	}
 }
 
+// Given a list of attestations all corresponding to a validator chunk index as well
+// as the current epoch in time, we perform slashing detection over the batch.
+// TODO(Raul): Implement.
 func (s *Service) detectAttestationBatch(
 	atts []*ethpb.IndexedAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
 ) {
 
 }
 
+// Group a list of attestations into batches by validator chunk index.
+// This way, we can detect on the batch of attestations for each validator chunk index
+// concurrently, and also allowing us to effectively use a single 2D chunk
+// for slashing detection through this logical grouping.
 func (s *Service) groupByValidatorChunkIndex(
 	attestations []*ethpb.IndexedAttestation,
 ) map[uint64][]*ethpb.IndexedAttestation {
