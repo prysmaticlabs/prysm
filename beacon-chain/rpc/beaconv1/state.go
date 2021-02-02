@@ -30,12 +30,14 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 	forkVersion := params.BeaconConfig().GenesisForkVersion
 
 	return &ethpb.GenesisResponse{
-		GenesisTime: &timestamppb.Timestamp{
-			Seconds: genesisTime.Unix(),
-			Nanos:   0,
+		Data: &ethpb.Genesis{
+			GenesisTime: &timestamppb.Timestamp{
+				Seconds: genesisTime.Unix(),
+				Nanos:   0,
+			},
+			GenesisValidatorsRoot: validatorRoot[:],
+			GenesisForkVersion:    forkVersion,
 		},
-		GenesisValidatorsRoot: validatorRoot[:],
-		GenesisForkVersion:    forkVersion,
 	}, nil
 }
 

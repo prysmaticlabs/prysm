@@ -1037,11 +1037,11 @@ github.com/prometheus/tsdb v0.10.0 h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38i
 github.com/prometheus/tsdb v0.10.0/go.mod h1:oi49uRhEe9dPUTlS3JRZOwJuVi6tmh10QSgwXEyGCt4=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951 h1:Jncuyb/nIJgXbEe0iGz3MN5JmijPVGzwk3G5FR01phI=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210128193050-6099ed957f29 h1:8JextKmdTvGNssBlrhAxXCvweq+5RrpRmr7v8YH8DfM=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210128193050-6099ed957f29/go.mod h1:Ivz0q9+9GImUsieVZQSu79HIwRXQBOtlyX3ukdnzZB0=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210202231023-6cb5bb6227ad h1:+syLAIfbQK+hodu0cOr99uxDvKNRIPs1P2+ODJKc7ek=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210202231023-6cb5bb6227ad/go.mod h1:Ivz0q9+9GImUsieVZQSu79HIwRXQBOtlyX3ukdnzZB0=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210108222456-8e92c3709aa0/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
-github.com/prysmaticlabs/go-bitfield v0.0.0-20210129193852-0db57134419f h1:omXTHDyMBMOCpwsppvIWZ8z6eRZouMU+4ndPhUHgBLc=
-github.com/prysmaticlabs/go-bitfield v0.0.0-20210129193852-0db57134419f/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8 h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c/go.mod h1:ZRws458tYHS/Zs936OQ6oCrL+Ict5O4Xpwve1UQ6C9M=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
