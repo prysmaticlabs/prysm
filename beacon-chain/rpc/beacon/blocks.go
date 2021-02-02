@@ -63,9 +63,14 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, err
 			}
+			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
 				Block:     b,
 				BlockRoot: root[:],
+				Canonical: canonical,
 			}
 		}
 
@@ -90,11 +95,16 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
+		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+		}
 
 		return &ethpb.ListBlocksResponse{
 			BlockContainers: []*ethpb.BeaconBlockContainer{{
 				Block:     blk,
-				BlockRoot: root[:]},
+				BlockRoot: root[:],
+				Canonical: canonical},
 			},
 			TotalSize: 1,
 		}, nil
@@ -126,9 +136,14 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, err
 			}
+			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
 				Block:     b,
 				BlockRoot: root[:],
+				Canonical: canonical,
 			}
 		}
 
@@ -153,6 +168,7 @@ func (bs *Server) ListBlocks(
 			{
 				Block:     genBlk,
 				BlockRoot: root[:],
+				Canonical: true,
 			},
 		}
 

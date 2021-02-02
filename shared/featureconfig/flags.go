@@ -78,10 +78,6 @@ var (
 		Usage: "Disables pruning deposit proofs when they are no longer needed." +
 			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
-	disableSyncBacktracking = &cli.BoolFlag{
-		Name:  "disable-sync-backtracking",
-		Usage: "Disable alternative fork exploration backtracking algorithm",
-	}
 	enableLargerGossipHistory = &cli.BoolFlag{
 		Name:  "enable-larger-gossip-history",
 		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
@@ -110,11 +106,16 @@ var (
 		Name:  "attest-timely",
 		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
 	}
+	enableNextSlotStateCache = &cli.BoolFlag{
+		Name:  "enable-next-slot-state-cache",
+		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
+	enableNextSlotStateCache,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -158,8 +159,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
-	disableSyncBacktracking,
 	disableBroadcastSlashingFlag,
+	enableNextSlotStateCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
