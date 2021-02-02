@@ -41,6 +41,33 @@ func (s *Store) ProposedPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return proposedPublicKeys, err
 }
 
+// ProposalHistoryForSlot accepts a validator public key and returns the corresponding signing root as well
+// as a boolean that tells us if we have a proposal history stored at the slot. It is possible we have proposed
+// a slot but stored a nil signing root, so the boolean helps give full information.
+func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot uint64) ([32]byte, bool, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
+	defer span.End()
+
+	var err error
+	var proposalExists bool
+	signingRoot := [32]byte{}
+	err = s.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicProposalsBucket)
+		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
+		if err != nil {
+			return fmt.Errorf("could not create bucket for public key %#x", publicKey[:])
+		}
+		signingRootBytes := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
+		if signingRootBytes == nil {
+			return nil
+		}
+		proposalExists = true
+		copy(signingRoot[:], signingRootBytes)
+		return nil
+	})
+	return signingRoot, proposalExists, err
+}
+
 // ProposalHistoryForPubKey returns the entire proposal history for a given public key.
 func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [48]byte) ([]*Proposal, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForPubKey")

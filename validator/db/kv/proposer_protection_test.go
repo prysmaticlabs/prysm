@@ -10,6 +10,42 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
+func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
+	pubkeys := [][48]byte{{30}, {25}, {20}}
+	db := setupDB(t, pubkeys)
+
+	for _, pub := range pubkeys {
+		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pub, 0)
+		require.NoError(t, err)
+		expected := bytesutil.PadTo([]byte{}, 32)
+		require.DeepEqual(t, expected, signingRoot[:], "Expected proposal history slot signing root to be empty")
+	}
+}
+
+func TestNewProposalHistoryForSlot_ReturnsNilIfNoHistory(t *testing.T) {
+	valPubkey := [48]byte{1, 2, 3}
+	db := setupDB(t, [][48]byte{})
+
+	_, proposalExists, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
+	require.NoError(t, err)
+	assert.Equal(t, false, proposalExists)
+}
+
+func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
+	pubkey := [48]byte{3}
+	db := setupDB(t, [][48]byte{pubkey})
+
+	slot := uint64(2)
+
+	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, []byte{1})
+	require.NoError(t, err, "Saving proposal history failed: %v")
+	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, slot)
+	require.NoError(t, err, "Failed to get proposal history")
+
+	require.NotNil(t, signingRoot)
+	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot[:], "Expected DB to keep object the same")
+}
+
 func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
 	valPubkey := [48]byte{1, 2, 3}
 	db := setupDB(t, [][48]byte{})
