@@ -1,4 +1,4 @@
-package helpers
+package slotutil
 
 import (
 	"time"

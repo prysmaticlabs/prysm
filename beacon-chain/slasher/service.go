@@ -21,30 +21,33 @@ type ServiceConfig struct {
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect eth2 slashable offenses.
 type Service struct {
-	params          *Parameters
-	serviceCfg      *ServiceConfig
-	indexedAttsChan chan *ethpb.IndexedAttestation
-	ctx             context.Context
-	cancel          context.CancelFunc
-	genesisTime     time.Time
+	params           *Parameters
+	serviceCfg       *ServiceConfig
+	indexedAttsChan  chan *ethpb.IndexedAttestation
+	attestationQueue []*ethpb.IndexedAttestation
+	ctx              context.Context
+	cancel           context.CancelFunc
+	genesisTime      time.Time
 }
 
 // New instantiates a new slasher from configuration values.
 func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		params:          DefaultParams(),
-		serviceCfg:      srvCfg,
-		indexedAttsChan: make(chan *ethpb.IndexedAttestation, 1),
-		ctx:             ctx,
-		cancel:          cancel,
-		genesisTime:     time.Now(),
+		params:           DefaultParams(),
+		serviceCfg:       srvCfg,
+		indexedAttsChan:  make(chan *ethpb.IndexedAttestation, 1),
+		attestationQueue: make([]*ethpb.IndexedAttestation, 0),
+		ctx:              ctx,
+		cancel:           cancel,
+		genesisTime:      time.Now(),
 	}, nil
 }
 
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
+	go s.processQueuedAttestations(s.ctx)
 	s.receiveAttestations(s.ctx)
 }
 
