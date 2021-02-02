@@ -1255,8 +1255,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:S7pKW74AvYc89WawL6IxGSnJRxF4TkE1GITYqKFyYy4=",
-        version = "v0.0.0-20201019012252-4b463a10c225",
+        sum = "h1:LEw2KkKciJEr3eKDLzdZ/rjzSR6Y+BS6xKxdA78Bq6s=",
+        version = "v0.0.0-20210130185500-57372fb27371",
     )
 
     go_repository(
@@ -2579,8 +2579,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:zHsHj3qQc11cDBb4TdBKHamEAXT8P3yQVqlgMF/USjU=",
-        version = "v0.0.0-20210126073541-0bc6a2fd086d",
+        sum = "h1:omXTHDyMBMOCpwsppvIWZ8z6eRZouMU+4ndPhUHgBLc=",
+        version = "v0.0.0-20210129193852-0db57134419f",
     )
 
     go_repository(

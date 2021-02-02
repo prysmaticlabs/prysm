@@ -98,6 +98,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 			{
 				Block:     blk,
 				BlockRoot: root[:],
+				Canonical: true,
 			},
 		},
 		NextPageToken: "0",
@@ -132,14 +133,11 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 
 	count := uint64(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
-	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
-		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = b
-		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
@@ -154,6 +152,9 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
+	chain := &chainMock.ChainService{
+		CanonicalRoots: map[[32]byte]bool{},
+	}
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -164,13 +165,21 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		b.Block.Slot = i
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
+		chain.CanonicalRoots[root] = true
 		blks[i] = b
-		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
+		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:], Canonical: true}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
+	orphanedBlk := testutil.NewBeaconBlock()
+	orphanedBlk.Block.Slot = 300
+	orphanedBlkRoot, err := orphanedBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, orphanedBlk))
+
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB:         db,
+		CanonicalFetcher: chain,
 	}
 
 	root6, err := blks[6].Block.HashTreeRoot()
@@ -188,7 +197,8 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
 						Slot: 5}}),
-					BlockRoot: blkContainers[5].BlockRoot}},
+					BlockRoot: blkContainers[5].BlockRoot,
+					Canonical: blkContainers[5].Canonical}},
 				NextPageToken: "",
 				TotalSize:     1}},
 		{req: &ethpb.ListBlocksRequest{
@@ -199,14 +209,16 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
 						Slot: 6}}),
-					BlockRoot: blkContainers[6].BlockRoot}},
+					BlockRoot: blkContainers[6].BlockRoot,
+					Canonical: blkContainers[6].Canonical}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
 						Slot: 6}}),
-					BlockRoot: blkContainers[6].BlockRoot}},
+					BlockRoot: blkContainers[6].BlockRoot,
+					Canonical: blkContainers[6].Canonical}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
@@ -240,6 +252,18 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: blkContainers[96:100],
 				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 300},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+					Block: &ethpb.BeaconBlock{
+						Slot: 300}}),
+					BlockRoot: orphanedBlkRoot[:],
+					Canonical: false}},
+				NextPageToken: "",
+				TotalSize:     1}},
 	}
 
 	for i, test := range tests {

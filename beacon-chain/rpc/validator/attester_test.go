@@ -208,7 +208,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot, err = helpers.StartSlot(helpers.SlotToEpoch(1500))
 	require.NoError(t, err)
-	justifiedBlock.Block.Slot = justifiedBlock.Block.Slot - 2 // Imagine two skip block
+	justifiedBlock.Block.Slot -= 2 // Imagine two skip block
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
 	justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()

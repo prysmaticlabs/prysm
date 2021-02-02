@@ -890,3 +890,12 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	_, err = state.ProcessSlots(context.Background(), parentState, slot-1)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
 }
+
+func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
+	ctx := context.Background()
+	s, _ := testutil.DeterministicGenesisState(t, 1)
+	r := []byte{'a'}
+	s, err := state.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
+	require.NoError(t, err)
+	require.Equal(t, uint64(5), s.Slot())
+}
