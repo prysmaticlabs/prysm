@@ -7,8 +7,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
+
 	"github.com/d4l3k/messagediff"
 	"github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/proto"
 )
 
 // AssertionTestingTB exposes enough testing.TB methods for assertions.
@@ -39,7 +42,7 @@ func NotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...i
 
 // DeepEqual compares values using DeepEqual.
 func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if !reflect.DeepEqual(expected, actual) {
+	if !isDeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		diff, _ := messagediff.PrettyDiff(expected, actual)
@@ -49,7 +52,26 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 
 // DeepNotEqual compares values using DeepEqual.
 func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if reflect.DeepEqual(expected, actual) {
+	if isDeepEqual(expected, actual) {
+		errMsg := parseMsg("Values are equal", msg...)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
+	}
+}
+
+// DeepSSZEqual compares values using sszutil.DeepEqual. This check ignores unexported fields.
+func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
+	if !sszutil.DeepEqual(expected, actual) {
+		errMsg := parseMsg("Values are not equal", msg...)
+		_, file, line, _ := runtime.Caller(2)
+		diff, _ := messagediff.PrettyDiff(expected, actual)
+		loggerFn("%s:%d %s, want: %#v, got: %#v, diff: %s", filepath.Base(file), line, errMsg, expected, actual, diff)
+	}
+}
+
+// DeepNotSSZEqual compares values using sszutil.DeepEqual. This check ignores unexported fields.
+func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
+	if sszutil.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
@@ -142,6 +164,15 @@ func parseMsg(defaultMsg string, msg ...interface{}) string {
 		return fmt.Sprintf(msgFormat, msg[1:]...)
 	}
 	return defaultMsg
+}
+
+// isDeepEqual uses proto.Equal if messages are type proto.Message, otherwise uses reflect.DeepEqual.
+func isDeepEqual(expected, actual interface{}) bool {
+	_, isProto := expected.(proto.Message)
+	if isProto {
+		return proto.Equal(expected.(proto.Message), actual.(proto.Message))
+	}
+	return reflect.DeepEqual(expected, actual)
 }
 
 // TBMock exposes enough testing.TB methods for assertions.

@@ -180,7 +180,7 @@ func BeaconFuzzBlock(b []byte) {
 		return
 	}
 
-	if err := s.FuzzBeaconBlockSubscriber(ctx, msg.Message); err != nil {
+	if err := s.FuzzBeaconBlockSubscriber(ctx, msg.Message.ProtoMessage()); err != nil {
 		_ = err
 	}
 

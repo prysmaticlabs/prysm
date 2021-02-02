@@ -297,6 +297,144 @@ func TestAssert_DeepNotEqual(t *testing.T) {
 	}
 }
 
+func TestAssert_DeepSSZEqual(t *testing.T) {
+	type args struct {
+		tb       *assertions.TBMock
+		expected interface{}
+		actual   interface{}
+		msgs     []interface{}
+	}
+	tests := []struct {
+		name        string
+		args        args
+		expectedErr string
+	}{
+		{
+			name: "equal values",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{42},
+			},
+		},
+		{
+			name: "non-equal values",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{41},
+			},
+			expectedErr: "Values are not equal, want: struct { i int }{i:42}, got: struct { i int }{i:41}",
+		},
+		{
+			name: "custom error message",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{41},
+				msgs:     []interface{}{"Custom values are not equal"},
+			},
+			expectedErr: "Custom values are not equal, want: struct { i int }{i:42}, got: struct { i int }{i:41}",
+		},
+		{
+			name: "custom error message with params",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{41},
+				msgs:     []interface{}{"Custom values are not equal (for slot %d)", 12},
+			},
+			expectedErr: "Custom values are not equal (for slot 12), want: struct { i int }{i:42}, got: struct { i int }{i:41}",
+		},
+	}
+	for _, tt := range tests {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.DeepSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.DeepSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
+		})
+	}
+}
+
+func TestAssert_DeepNotSSZEqual(t *testing.T) {
+	type args struct {
+		tb       *assertions.TBMock
+		expected interface{}
+		actual   interface{}
+		msgs     []interface{}
+	}
+	tests := []struct {
+		name        string
+		args        args
+		expectedErr string
+	}{
+		{
+			name: "equal values",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{42},
+			},
+			expectedErr: "Values are equal, want: struct { i int }{i:42}, got: struct { i int }{i:42}",
+		},
+		{
+			name: "non-equal values",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{41},
+			},
+		},
+		{
+			name: "custom error message",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{42},
+				msgs:     []interface{}{"Custom values are equal"},
+			},
+			expectedErr: "Custom values are equal, want: struct { i int }{i:42}, got: struct { i int }{i:42}",
+		},
+		{
+			name: "custom error message with params",
+			args: args{
+				tb:       &assertions.TBMock{},
+				expected: struct{ i int }{42},
+				actual:   struct{ i int }{42},
+				msgs:     []interface{}{"Custom values are equal (for slot %d)", 12},
+			},
+			expectedErr: "Custom values are equal (for slot 12), want: struct { i int }{i:42}, got: struct { i int }{i:42}",
+		},
+	}
+	for _, tt := range tests {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.DeepNotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.DeepNotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			verify()
+		})
+	}
+}
+
 func TestAssert_NoError(t *testing.T) {
 	type args struct {
 		tb   *assertions.TBMock
