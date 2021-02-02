@@ -25,7 +25,7 @@ func ToledoConfig() *BeaconChainConfig {
 	cfg.MinGenesisTime = 1605009600
 	cfg.GenesisDelay = 86400
 	cfg.GenesisForkVersion = []byte{0x00, 0x70, 0x1E, 0xD0}
-	cfg.ConfigName = "toledo"
+	cfg.ConfigName = ConfigNames[Toledo]
 	cfg.SecondsPerETH1Block = 14
 	cfg.DepositChainID = 5
 	cfg.DepositNetworkID = 5

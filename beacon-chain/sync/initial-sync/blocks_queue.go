@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -418,7 +417,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
-		if featureconfig.Get().EnableSyncBacktracking && q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
+		if q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
 			q.staleEpochs[helpers.SlotToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
 			if q.staleEpochs[helpers.SlotToEpoch(startSlot)] >= maxResetAttempts {

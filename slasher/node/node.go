@@ -49,9 +49,9 @@ type SlasherNode struct {
 	db                    db.Database
 }
 
-// NewSlasherNode creates a new node instance, sets up configuration options,
+// New creates a new node instance, sets up configuration options,
 // and registers every required service.
-func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
+func New(cliCtx *cli.Context) (*SlasherNode, error) {
 	if err := tracing.Setup(
 		"slasher", // Service name.
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
