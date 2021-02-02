@@ -30,7 +30,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 
 // Given a list of attestations all corresponding to a validator chunk index as well
 // as the current epoch in time, we perform slashing detection over the batch.
-// TODO(Raul): Implement.
+// TODO(#8331): Implement.
 func (s *Service) detectAttestationBatch(
 	atts []*ethpb.IndexedAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
 ) {

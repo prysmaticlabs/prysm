@@ -16,7 +16,7 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 	for {
 		select {
 		case att := <-s.indexedAttsChan:
-			// TODO(Raul): Defer attestations from the future for later processing.
+			// TODO(#8331): Defer attestations from the future for later processing.
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
