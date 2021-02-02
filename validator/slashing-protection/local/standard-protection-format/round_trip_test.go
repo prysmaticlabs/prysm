@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -168,12 +167,18 @@ func TestImportInterchangeData_OK(t *testing.T) {
 		}
 
 		proposals := proposalHistory[i].Proposals
+		receivedProposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
+		require.NoError(t, err)
+		rootsBySlot := make(map[uint64][]byte)
+		for _, proposal := range receivedProposalHistory {
+			rootsBySlot[proposal.Slot] = proposal.SigningRoot
+		}
 		for _, proposal := range proposals {
-			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
-			require.NoError(t, err)
+			receivedRoot, ok := rootsBySlot[proposal.Slot]
+			require.DeepEqual(t, true, ok)
 			require.DeepEqual(
 				t,
-				receivedProposalSigningRoot[:],
+				receivedRoot,
 				proposal.SigningRoot,
 				"Imported proposals are different then the generated ones",
 			)
@@ -309,16 +314,13 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 			len(receivedAttestingHistory),
 			"Imported attestation protection history is different than the empty default",
 		)
-		proposals := proposalHistory[i].Proposals
-		for _, proposal := range proposals {
-			receivedProposalSigningRoot, _, err := validatorDB.ProposalHistoryForSlot(ctx, publicKeys[i], proposal.Slot)
-			require.NoError(t, err)
-			require.DeepEqual(
-				t,
-				params.BeaconConfig().ZeroHash,
-				receivedProposalSigningRoot,
-				"Imported proposal signing root is different than the empty default",
-			)
-		}
+		receivedHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
+		require.NoError(t, err)
+		require.DeepEqual(
+			t,
+			make([]*kv.Proposal, 0),
+			receivedHistory,
+			"Imported proposal signing root is different than the empty default",
+		)
 	}
 }
