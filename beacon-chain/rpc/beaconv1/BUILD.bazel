@@ -51,6 +51,7 @@ go_test(
         "blocks_test.go",
         "config_test.go",
         "server_test.go",
+        "state_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
