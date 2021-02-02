@@ -11,22 +11,20 @@ import (
 
 func (s *Service) processQueuedAttestations(ctx context.Context) {
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	ticker := slotutil.GetEpochTicker(s.genesisTime, secondsPerEpoch)
+	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
 	defer ticker.Done()
 	for {
 		select {
 		case currentEpoch := <-ticker.C():
-			atts := s.attQueue.dequeue()
+			atts := s.attestationQueue
+			s.attestationQueue = make([]*ethpb.IndexedAttestation, 0)
+			// TODO(Raul): Perform validation of attestations before
+			// performing batch detection, such as checking for slot time requirements
+			// and the prerequisite that source must be less than epoch.
 			log.Infof("Epoch %d reached, processing %d queued atts", currentEpoch, len(atts))
-			if !validateAttestations(atts) {
-				// TODO: Defer is ready at a future time.
-				continue
-			}
-			// Group by validator index and process batches.
-			// TODO: Perform concurrently with wait groups...?
 			groupedAtts := s.groupByValidatorChunkIndex(atts)
-			for validatorChunkIdx, attBatch := range groupedAtts {
-				s.detectAttestationBatch(validatorChunkIdx, attBatch, currentEpoch)
+			for validatorChunkIdx, attsBatch := range groupedAtts {
+				s.detectAttestationBatch(attsBatch, validatorChunkIdx, types.Epoch(currentEpoch))
 			}
 		case <-ctx.Done():
 			return
@@ -35,7 +33,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context) {
 }
 
 func (s *Service) detectAttestationBatch(
-	validatorChunkIdx uint64, atts []*ethpb.IndexedAttestation, currentEpoch types.Epoch,
+	atts []*ethpb.IndexedAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
 ) {
 
 }
@@ -45,14 +43,14 @@ func (s *Service) groupByValidatorChunkIndex(
 ) map[uint64][]*ethpb.IndexedAttestation {
 	groupedAttestations := make(map[uint64][]*ethpb.IndexedAttestation)
 	for _, att := range attestations {
-		subqueueIndices := make(map[uint64]bool)
+		validatorChunkIndices := make(map[uint64]bool)
 		for _, validatorIdx := range att.AttestingIndices {
-			chunkIdx := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
-			subqueueIndices[chunkIdx] = true
+			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
+			validatorChunkIndices[validatorChunkIndex] = true
 		}
-		for subqueueIdx := range subqueueIndices {
-			groupedAttestations[subqueueIdx] = append(
-				groupedAttestations[subqueueIdx],
+		for validatorChunkIndex := range validatorChunkIndices {
+			groupedAttestations[validatorChunkIndex] = append(
+				groupedAttestations[validatorChunkIndex],
 				att,
 			)
 		}
