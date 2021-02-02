@@ -41,7 +41,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/herumi/bls-eth-go-binary v0.0.0-20201019012252-4b463a10c225
+	github.com/herumi/bls-eth-go-binary v0.0.0-20210130185500-57372fb27371
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-ipfs-addr v0.0.1
@@ -85,7 +85,7 @@ require (
 	github.com/prometheus/procfs v0.3.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210127105958-025470485ece
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20210128234011-6e8547dc2198
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20210129193852-0db57134419f
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4

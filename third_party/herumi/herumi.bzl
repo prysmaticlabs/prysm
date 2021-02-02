@@ -11,31 +11,31 @@ def bls_dependencies():
     _maybe(
         http_archive,
         name = "herumi_bls_eth_go_binary",
-        strip_prefix = "bls-eth-go-binary-4b463a10c225efa46f6d7525ef44822e4b5b7b05",
+        strip_prefix = "bls-eth-go-binary-57372fb273715552ba3f0f2e9c2806e9db940200",
         urls = [
-            "https://github.com/herumi/bls-eth-go-binary/archive/4b463a10c225efa46f6d7525ef44822e4b5b7b05.tar.gz",
+            "https://github.com/herumi/bls-eth-go-binary/archive/57372fb273715552ba3f0f2e9c2806e9db940200.tar.gz",
         ],
-        sha256 = "23de2840e53818f650bc656bbd9e9a128806f686bcfec56918605868f05b5ac3",
+        sha256 = "52dcc1776e6a219af980f5c6f70f8d95d46720f8398bd9978b605074ea4a48f1",
         build_file = "@prysm//third_party/herumi:bls_eth_go_binary.BUILD",
     )
     _maybe(
         http_archive,
         name = "herumi_mcl",
-        strip_prefix = "mcl-bd5a3686924d4ef38f994bb400f87a684ee65fe8",
+        strip_prefix = "mcl-c1bcf317a15868ee4a2192c8ad50e387253e1e64",
         urls = [
-            "https://github.com/herumi/mcl/archive/bd5a3686924d4ef38f994bb400f87a684ee65fe8.tar.gz",
+            "https://github.com/herumi/mcl/archive/c1bcf317a15868ee4a2192c8ad50e387253e1e64.tar.gz",
         ],
-        sha256 = "db90a9c671f4bb59183e51ae2ae3bfe0d5c99b64877c0fca2e7b047fd88b2a41",
+        sha256 = "05886c21fe6fe869a3b426fd9b56561dfc49df114b858a95c276ef5b99f54388",
         build_file = "@prysm//third_party/herumi:mcl.BUILD",
     )
     _maybe(
         http_archive,
         name = "herumi_bls",
-        strip_prefix = "bls-f53dadd5a51900f94b7aecff0063feada2f4bb30",
+        strip_prefix = "bls-4ae022a6bb71dc518d81f22141d71d2a1f767ab3",
         urls = [
-            "https://github.com/herumi/bls/archive/f53dadd5a51900f94b7aecff0063feada2f4bb30.tar.gz",
+            "https://github.com/herumi/bls/archive/4ae022a6bb71dc518d81f22141d71d2a1f767ab3.tar.gz",
         ],
-        sha256 = "201e779894ee22cfa9fbe07ccbf9fe4ba7ba2c6fb868c280bf765908c437c8d3",
+        sha256 = "9f07c0ce33502e3bd2a3018814ed509093a0865ce16fa16cefff7ba11fb4537e",
         build_file = "@prysm//third_party/herumi:bls.BUILD",
     )
 
