@@ -31,6 +31,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "chunks_test.go",
+        "detect_attestations_test.go",
         "params_test.go",
         "receive_test.go",
         "service_test.go",
