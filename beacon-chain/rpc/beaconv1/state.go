@@ -6,6 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"go.opencensus.io/trace"
 )
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
@@ -15,6 +16,9 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 
 // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
 func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateRootResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetStateRoot")
+	defer span.End()
+
 	return nil, errors.New("unimplemented")
 }
 
