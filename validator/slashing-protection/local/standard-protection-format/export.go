@@ -129,39 +129,23 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 	// in our database, we return nil. This way, a user will be able to export their
 	// slashing protection history even if one of their keys does not have a history
 	// of signed blocks.
-	lowestSignedSlot, exists, err := validatorDB.LowestSignedProposal(ctx, pubKey)
+	proposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, pubKey)
 	if err != nil {
 		return nil, err
-	}
-	if !exists {
-		return nil, nil
-	}
-	highestSignedSlot, exists, err := validatorDB.HighestSignedProposal(ctx, pubKey)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, nil
 	}
 	signedBlocks := make([]*format.SignedBlock, 0)
-	for i := lowestSignedSlot; i <= highestSignedSlot; i++ {
+	for _, proposal := range proposalHistory {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		signingRoot, exists, err := validatorDB.ProposalHistoryForSlot(ctx, pubKey, i)
+		signingRootHex, err := rootToHexString(proposal.SigningRoot)
 		if err != nil {
 			return nil, err
 		}
-		if exists {
-			signingRootHex, err := rootToHexString(signingRoot[:])
-			if err != nil {
-				return nil, err
-			}
-			signedBlocks = append(signedBlocks, &format.SignedBlock{
-				Slot:        fmt.Sprintf("%d", i),
-				SigningRoot: signingRootHex,
-			})
-		}
+		signedBlocks = append(signedBlocks, &format.SignedBlock{
+			Slot:        fmt.Sprintf("%d", proposal.Slot),
+			SigningRoot: signingRootHex,
+		})
 	}
 	return signedBlocks, nil
 }
