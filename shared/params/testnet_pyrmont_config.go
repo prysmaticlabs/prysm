@@ -24,7 +24,7 @@ func PyrmontConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
 	cfg.MinGenesisTime = 1605700800
 	cfg.GenesisDelay = 432000
-	cfg.ConfigName = "pyrmont"
+	cfg.ConfigName = ConfigNames[Pyrmont]
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x20, 0x09}
 	cfg.SecondsPerETH1Block = 14
 	cfg.DepositChainID = 5
