@@ -10,6 +10,10 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 		select {
 		case att := <-s.indexedAttsChan:
 			log.Infof("Got attestation with indices %v", att.AttestingIndices)
+			groupedAtts := s.groupByValidatorChunkIndex(atts)
+			for subqueueIdx, atts := range groupedAtts {
+				s.detectAttestationBatch(subqueueIdx, atts, currentEpoch)
+			}
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return

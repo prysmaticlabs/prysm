@@ -3,6 +3,7 @@ package slasher
 
 import (
 	"context"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -25,6 +26,7 @@ type Service struct {
 	indexedAttsChan chan *ethpb.IndexedAttestation
 	ctx             context.Context
 	cancel          context.CancelFunc
+	genesisTime     time.Time
 }
 
 // New instantiates a new slasher from configuration values.
@@ -36,6 +38,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		indexedAttsChan: make(chan *ethpb.IndexedAttestation, 1),
 		ctx:             ctx,
 		cancel:          cancel,
+		genesisTime:     time.Now(),
 	}, nil
 }
 
