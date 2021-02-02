@@ -259,7 +259,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &types.Empty{})
+	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 3, len(resp.Data))
 	fork := resp.Data[0]
@@ -278,7 +278,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 
 func TestForkSchedule_NoForks(t *testing.T) {
 	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &types.Empty{})
+	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(resp.Data))
 }

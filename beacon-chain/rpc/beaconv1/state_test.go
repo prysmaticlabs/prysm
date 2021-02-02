@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetGenesis(t *testing.T) {
@@ -29,7 +29,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		resp, err := s.GetGenesis(context.Background(), &ptypes.Empty{})
+		resp, err := s.GetGenesis(context.Background(), &emptypb.Empty{})
 		require.NoError(t, err)
 		assert.Equal(t, genesis.Unix(), resp.GenesisTime.Seconds)
 		assert.Equal(t, int32(0), resp.GenesisTime.Nanos)
@@ -46,7 +46,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(context.Background(), &ptypes.Empty{})
+		_, err := s.GetGenesis(context.Background(), &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 
@@ -59,7 +59,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(context.Background(), &ptypes.Empty{})
+		_, err := s.GetGenesis(context.Background(), &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 }
