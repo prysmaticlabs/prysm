@@ -8,6 +8,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 // ServiceConfig for the slasher service in the beacon node.
@@ -47,7 +49,10 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
-	go s.processQueuedAttestations(s.ctx)
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
+	defer ticker.Done()
+	go s.processQueuedAttestations(s.ctx, ticker.C())
 	s.receiveAttestations(s.ctx)
 }
 
