@@ -52,6 +52,8 @@ var (
 // we have stored in the database for the given validator public key.
 func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte) ([]*AttestationRecord, error) {
 	records := make([]*AttestationRecord, 0)
+	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKey")
+	defer span.End()
 	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])
@@ -90,6 +92,8 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte
 func (s *Store) CheckSlashableAttestation(
 	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.CheckSlashableAttestation")
+	defer span.End()
 	var slashKind SlashingKind
 	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
@@ -170,6 +174,8 @@ func (s *Store) CheckSlashableAttestation(
 func (s *Store) SaveAttestationsForPubKey(
 	ctx context.Context, pubKey [48]byte, signingRoots [][32]byte, atts []*ethpb.IndexedAttestation,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationsForPubKey")
+	defer span.End()
 	if len(signingRoots) != len(atts) {
 		return fmt.Errorf(
 			"number of signing roots %d does not match number of attestations %d",
@@ -194,6 +200,8 @@ func (s *Store) SaveAttestationsForPubKey(
 func (s *Store) SaveAttestationForPubKey(
 	ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationForPubKey")
+	defer span.End()
 	s.batchedAttestationsChan <- &AttestationRecord{
 		PubKey:      pubKey,
 		Source:      att.Data.Source.Epoch,
