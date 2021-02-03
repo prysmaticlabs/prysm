@@ -1,7 +1,14 @@
 package slasher
 
-import "context"
+import (
+	"context"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+)
+
+// Receive indexed attestations from some source event feed,
+// validating their integrity before appending them to an attestation queue
+// for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context) {
 	sub := s.serviceCfg.IndexedAttsFeed.Subscribe(s.indexedAttsChan)
 	defer close(s.indexedAttsChan)
@@ -9,7 +16,18 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 	for {
 		select {
 		case att := <-s.indexedAttsChan:
-			log.Infof("Got attestation with indices %v", att.AttestingIndices)
+			// TODO(#8331): Defer attestations from the future for later processing.
+			if !validateAttestationIntegrity(att) {
+				continue
+			}
+			compactAtt := &compactAttestation{
+				attestingIndices: att.AttestingIndices,
+				source:           att.Data.Source.Epoch,
+				target:           att.Data.Target.Epoch,
+			}
+			s.queueLock.Lock()
+			s.attestationQueue = append(s.attestationQueue, compactAtt)
+			s.queueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -17,4 +35,14 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			return
 		}
 	}
+}
+
+// Validates the attestation data integrity, ensuring we have no nil values for
+// source, epoch, and that the source epoch of the attestation must be less than
+// the target epoch, which is a precondition for performing slashing detection.
+func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
+	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
+		return false
+	}
+	return att.Data.Source.Epoch < att.Data.Target.Epoch
 }
