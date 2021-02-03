@@ -18,7 +18,7 @@ import (
 )
 
 // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
-func (bs *Server) GetForkSchedule(ctx context.Context, req *emptypb.Empty) (*ethpb.ForkScheduleResponse, error) {
+func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkScheduleResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetForkSchedule")
 	defer span.End()
 
@@ -55,7 +55,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, req *emptypb.Empty) (*eth
 // Values are returned with following format:
 // - any value starting with 0x in the spec is returned as a hex string.
 // - all other values are returned as number.
-func (bs *Server) GetSpec(ctx context.Context, req *emptypb.Empty) (*ethpb.SpecResponse, error) {
+func (bs *Server) GetSpec(ctx context.Context, _ *emptypb.Empty) (*ethpb.SpecResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconV1.GetSpec")
 	defer span.End()
 

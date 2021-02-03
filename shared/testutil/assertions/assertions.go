@@ -7,9 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
-
 	"github.com/d4l3k/messagediff"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
