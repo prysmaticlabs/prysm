@@ -7,21 +7,21 @@ func NoIndexProvided() {
 	}
 }
 
-func StartIndexProvided_NoDiagnostic() {
+func StartindexprovidedNodiagnostic() {
 	x := []byte{'f', 'o', 'o'}
 	y := x[1:]
 	if len(y) == 3 {
 	}
 }
 
-func EndIndexProvided_NoDiagnostic() {
+func EndindexprovidedNodiagnostic() {
 	x := []byte{'f', 'o', 'o'}
 	y := x[:2]
 	if len(y) == 3 {
 	}
 }
 
-func BothIndicesProvided_NoDiagnostic() {
+func BothindicesprovidedNodiagnostic() {
 	x := []byte{'f', 'o', 'o'}
 	y := x[1:2]
 	if len(y) == 3 {
