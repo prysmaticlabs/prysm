@@ -313,16 +313,16 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 			name: "equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{42},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{42},
 			},
 		},
 		{
 			name: "non-equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{41},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{41},
 			},
 			expectedErr: "Values are not equal, want: struct { i int }{i:42}, got: struct { i int }{i:41}",
 		},
@@ -330,8 +330,8 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 			name: "custom error message",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{41},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{41},
 				msgs:     []interface{}{"Custom values are not equal"},
 			},
 			expectedErr: "Custom values are not equal, want: struct { i int }{i:42}, got: struct { i int }{i:41}",
@@ -340,8 +340,8 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 			name: "custom error message with params",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{41},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{41},
 				msgs:     []interface{}{"Custom values are not equal (for slot %d)", 12},
 			},
 			expectedErr: "Custom values are not equal (for slot 12), want: struct { i int }{i:42}, got: struct { i int }{i:41}",
