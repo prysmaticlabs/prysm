@@ -28,7 +28,7 @@ const (
 	// NewWalletPasswordPromptText for wallet creation.
 	NewWalletPasswordPromptText = "New wallet password"
 	// WalletPasswordPromptText for wallet unlocking.
-	WalletPasswordPromptText = "Wallet password"
+	PasswordPromptText = "Wallet password"
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"
 	// DefaultWalletPasswordFile used to store a wallet password with appropriate permissions
@@ -179,7 +179,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	walletPassword, err := inputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
-		WalletPasswordPromptText,
+		PasswordPromptText,
 		false, /* Do not confirm password */
 		ValidateExistingPass,
 	)

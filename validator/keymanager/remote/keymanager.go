@@ -231,7 +231,7 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 
 // SubscribeAccountChanges is currently NOT IMPLEMENTED for the remote keymanager.
 // INVOKING THIS FUNCTION HAS NO EFFECT!
-func (k *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})

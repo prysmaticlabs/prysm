@@ -27,7 +27,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		return nil, err
 	}
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
-	interchangeJSON.Metadata.InterchangeFormatVersion = format.INTERCHANGE_FORMAT_VERSION
+	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 
 	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
