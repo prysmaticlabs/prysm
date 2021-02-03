@@ -50,9 +50,9 @@ var (
 
 // AttestationHistoryForPubKey retrieves a list of attestation records for data
 // we have stored in the database for the given validator public key.
-func (store *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte) ([]*AttestationRecord, error) {
+func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte) ([]*AttestationRecord, error) {
 	records := make([]*AttestationRecord, 0)
-	err := store.view(func(tx *bolt.Tx) error {
+	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])
 		if pkBucket == nil {
@@ -367,11 +367,11 @@ func (s *Store) AttestedPublicKeys(ctx context.Context) ([][48]byte, error) {
 
 // SigningRootAtTargetEpoch checks for an existing signing root at a specified
 // target epoch for a given validator public key.
-func (store *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, target uint64) ([32]byte, error) {
+func (s *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, target uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.SigningRootAtTargetEpoch")
 	defer span.End()
 	var signingRoot [32]byte
-	err := store.view(func(tx *bolt.Tx) error {
+	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])
 		if pkBucket == nil {
