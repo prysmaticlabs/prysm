@@ -2,6 +2,8 @@ package slashingprotection
 
 import (
 	"encoding/json"
+	"path/filepath"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -10,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	export "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	"github.com/urfave/cli/v2"
-	"path/filepath"
 )
 
 const (
