@@ -6,7 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
-// Receive indexed attestations from some source event feed,
+// Receive indexed attestations from some Source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context) {
@@ -20,10 +20,10 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			compactAtt := &compactAttestation{
-				attestingIndices: att.AttestingIndices,
-				source:           att.Data.Source.Epoch,
-				target:           att.Data.Target.Epoch,
+			compactAtt := &CompactAttestation{
+				AttestingIndices: att.AttestingIndices,
+				Source:           att.Data.Source.Epoch,
+				Target:           att.Data.Target.Epoch,
 			}
 			s.queueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, compactAtt)
@@ -38,8 +38,8 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 }
 
 // Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
+// Source, epoch, and that the Source epoch of the attestation must be less than
+// the Target epoch, which is a precondition for performing slashing detection.
 func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
 		return false

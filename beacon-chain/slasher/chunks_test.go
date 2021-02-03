@@ -99,7 +99,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 		data:   []uint16{},
 	}
 	_, err := chunk.CheckSlashable(ctx, nil, validatorIdx, att)
-	require.ErrorContains(t, "could not get min target for validator", err)
+	require.ErrorContains(t, "could not get min Target for validator", err)
 
 	// We initialize a proper slice with 2 chunks with chunk size 3, 2 validators, and
 	// a history length of 3 representing a perfect attesting history.
@@ -111,7 +111,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	chunk, err = MinChunkSpansSliceFrom(params, data)
 	require.NoError(t, err)
 
-	// An attestation with source 1 and target 2 should not be slashable
+	// An attestation with Source 1 and Target 2 should not be slashable
 	// based on our min chunk for either validator.
 	kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
 	require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
-	// with (source 1, target 2) as attested.
+	// with (Source 1, Target 2) as attested.
 	chunk = EmptyMinSpanChunksSlice(params)
 	source = types.Epoch(1)
 	target = types.Epoch(2)
@@ -134,7 +134,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	require.NoError(t, err)
 
 	// Next up, we create a surrounding vote, but it should NOT be slashable
-	// because we DO NOT have an existing attestation record in our database at the min target epoch.
+	// because we DO NOT have an existing attestation record in our database at the min Target epoch.
 	source = types.Epoch(0)
 	target = types.Epoch(3)
 	surroundingVote := createAttestation(source, target)
@@ -148,10 +148,10 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	indexedAtt := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
-				Epoch: att.source,
+				Epoch: att.Source,
 			},
 			Target: &ethpb.Checkpoint{
-				Epoch: att.target,
+				Epoch: att.Target,
 			},
 		},
 	}
@@ -182,7 +182,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 		data:   []uint16{},
 	}
 	_, err := chunk.CheckSlashable(ctx, nil, validatorIdx, att)
-	require.ErrorContains(t, "could not get max target for validator", err)
+	require.ErrorContains(t, "could not get max Target for validator", err)
 
 	// We initialize a proper slice with 2 chunks with chunk size 4, 2 validators, and
 	// a history length of 4 representing a perfect attesting history.
@@ -194,7 +194,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	chunk, err = MaxChunkSpansSliceFrom(params, data)
 	require.NoError(t, err)
 
-	// An attestation with source 1 and target 2 should not be slashable
+	// An attestation with Source 1 and Target 2 should not be slashable
 	// based on our max chunk for either validator.
 	kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
 	require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	require.Equal(t, slashertypes.NotSlashable, kind)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
-	// with (source 0, target 3) as attested.
+	// with (Source 0, Target 3) as attested.
 	chunk = EmptyMaxSpanChunksSlice(params)
 	source = types.Epoch(0)
 	target = types.Epoch(3)
@@ -217,7 +217,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	require.NoError(t, err)
 
 	// Next up, we create a surrounded vote, but it should NOT be slashable
-	// because we DO NOT have an existing attestation record in our database at the max target epoch.
+	// because we DO NOT have an existing attestation record in our database at the max Target epoch.
 	source = types.Epoch(1)
 	target = types.Epoch(2)
 	surroundedVote := createAttestation(source, target)
@@ -231,10 +231,10 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	indexedAtt := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
-				Epoch: att.source,
+				Epoch: att.Source,
 			},
 			Target: &ethpb.Checkpoint{
-				Epoch: att.target,
+				Epoch: att.Target,
 			},
 		},
 	}
@@ -252,7 +252,7 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	// chunk the min span into arrays each of length 2 and K = 3 meaning we store each chunk index
 	// for 3 validators at a time.
 	//
-	// So assume we get a target 3 for source 0 and validator 0, then, we need to update every epoch in the span from
+	// So assume we get a Target 3 for Source 0 and validator 0, then, we need to update every epoch in the span from
 	// 3 to 0 inclusive. First, we find out which chunk epoch 3 falls into, which is calculated as:
 	// chunk_idx = (epoch % H) / C = (3 % 4) / 2 = 1
 	//
@@ -351,7 +351,7 @@ func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	// chunk the min span into arrays each of length 2 and K = 3 meaning we store each chunk index
 	// for 3 validators at a time.
 	//
-	// So assume we get a target 1 for source 0 and validator 0, then, we need to update every epoch in the span from
+	// So assume we get a Target 1 for Source 0 and validator 0, then, we need to update every epoch in the span from
 	// 1 to 0 inclusive. First, we find out which chunk epoch 4 falls into, which is calculated as:
 	// chunk_idx = (epoch % H) / C = (1 % 2) / 2 = 0
 	//
@@ -430,20 +430,20 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	_, err := chunkDataAtEpoch(params, []uint16{}, validatorIdx, epochInChunk)
 	require.ErrorContains(t, "chunk has wrong length", err)
 
-	// We update the value for epoch 1 using target epoch 6.
+	// We update the value for epoch 1 using Target epoch 6.
 	targetEpoch := types.Epoch(6)
 	err = setChunkDataAtEpoch(params, chunk, validatorIdx, epochInChunk, targetEpoch)
 	require.NoError(t, err)
 
-	// We expect the retrieved value at epoch 1 is the target epoch 6.
+	// We expect the retrieved value at epoch 1 is the Target epoch 6.
 	received, err := chunkDataAtEpoch(params, chunk, validatorIdx, epochInChunk)
 	require.NoError(t, err)
 	assert.Equal(t, targetEpoch, received)
 }
 
-func createAttestation(source, target types.Epoch) *compactAttestation {
-	return &compactAttestation{
-		source: uint64(source),
-		target: uint64(target),
+func createAttestation(source, target types.Epoch) *CompactAttestation {
+	return &CompactAttestation{
+		Source: uint64(source),
+		Target: uint64(target),
 	}
 }

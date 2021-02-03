@@ -25,7 +25,7 @@ type Chunker interface {
 		ctx context.Context,
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
-		attestation *compactAttestation,
+		attestation *CompactAttestation,
 	) (slashertypes.SlashingKind, error)
 	Update(
 		chunkIdx uint64,
@@ -40,12 +40,12 @@ type Chunker interface {
 // MinSpans and chunks are defined in our design document: https://hackmd.io/@Yl0VNGYRR6aeDrHHQNhuaA/prysm-slasher.
 //
 // For a given epoch, e, and attestations a validator index has produced, atts,
-// such that min_spans[e] is defined as min((att.target.epoch - e) for att in attestations)
-// where att.source.epoch > e. That is, it is the minimum distance between the
-// specified epoch and all attestation target epochs a validator has created
-// where att.source.epoch > e.
+// such that min_spans[e] is defined as min((att.Target.epoch - e) for att in attestations)
+// where att.Source.epoch > e. That is, it is the minimum distance between the
+// specified epoch and all attestation Target epochs a validator has created
+// where att.Source.epoch > e.
 //
-// Under ideal network conditions, where every target epoch immediately follows its source,
+// Under ideal network conditions, where every Target epoch immediately follows its Source,
 // min spans for a validator will look as follows:
 //
 //  min_spans = [2, 2, 2, ..., 2]
@@ -167,7 +167,7 @@ func (m *MaxSpanChunksSlice) Chunk() []uint16 {
 // within the min span chunks slice. Recall that for an incoming attestation, B, and an
 // existing attestation, A:
 //
-//  B surrounds A if and only if B.target > min_spans[B.source]
+//  B surrounds A if and only if B.Target > min_spans[B.Source]
 //
 // That is, this condition is sufficient to check if an incoming attestation
 // is surrounding a previous one. We also check if we indeed have an existing
@@ -177,14 +177,14 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *compactAttestation,
+	attestation *CompactAttestation,
 ) (slashertypes.SlashingKind, error) {
-	sourceEpoch := types.Epoch(attestation.source)
-	targetEpoch := types.Epoch(attestation.target)
+	sourceEpoch := types.Epoch(attestation.Source)
+	targetEpoch := types.Epoch(attestation.Target)
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return slashertypes.NotSlashable, errors.Wrapf(
-			err, "could not get min target for validator %d at epoch %d", validatorIdx, sourceEpoch,
+			err, "could not get min Target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch > minTarget {
@@ -206,7 +206,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 // within the max span chunks slice. Recall that for an incoming attestation, B, and an
 // existing attestation, A:
 //
-//  B surrounds A if and only if B.target < max_spans[B.source]
+//  B surrounds A if and only if B.Target < max_spans[B.Source]
 //
 // That is, this condition is sufficient to check if an incoming attestation
 // is surrounded by a previous one. We also check if we indeed have an existing
@@ -216,14 +216,14 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *compactAttestation,
+	attestation *CompactAttestation,
 ) (slashertypes.SlashingKind, error) {
-	sourceEpoch := types.Epoch(attestation.source)
-	targetEpoch := types.Epoch(attestation.target)
+	sourceEpoch := types.Epoch(attestation.Source)
+	targetEpoch := types.Epoch(attestation.Target)
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return slashertypes.NotSlashable, errors.Wrapf(
-			err, "could not get max target for validator %d at epoch %d", validatorIdx, sourceEpoch,
+			err, "could not get max Target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch < maxTarget {
@@ -248,9 +248,9 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // is 20 and the historyLength is 12, then we will update every value for the validator's min span
 // from epoch 20 down to epoch 8 (since 20 - 12 = 8).
 //
-// Recall that for an epoch, e, min((att.target - e) for att in attestations where att.source > e)
+// Recall that for an epoch, e, min((att.Target - e) for att in attestations where att.Source > e)
 // That is, it is the minimum distance between the specified epoch and all attestation
-// target epochs a validator has created where att.source.epoch > e.
+// Target epochs a validator has created where att.Source.epoch > e.
 //
 // Recall that a MinSpanChunksSlice struct represents a single slice for a chunk index
 // from the collection below:
@@ -380,7 +380,7 @@ func (m *MaxSpanChunksSlice) Update(
 	return
 }
 
-// Given a validator index and epoch, retrieves the target epoch at its specific
+// Given a validator index and epoch, retrieves the Target epoch at its specific
 // index for the validator index + epoch pair in a min/max span chunk.
 func chunkDataAtEpoch(
 	params *Parameters, chunk []uint16, validatorIdx types.ValidatorIndex, epoch types.Epoch,
@@ -399,8 +399,8 @@ func chunkDataAtEpoch(
 
 // Updates the value at a specific index in a chunk for a validator index + epoch
 // pair to a specified distance. Recall that for min spans, each element in a chunk
-// is the minimum distance between the a given epoch, e, and all attestation target epochs
-// a validator has created where att.source.epoch > e.
+// is the minimum distance between the a given epoch, e, and all attestation Target epochs
+// a validator has created where att.Source.epoch > e.
 func setChunkDataAtEpoch(
 	config *Parameters,
 	chunk []uint16,
