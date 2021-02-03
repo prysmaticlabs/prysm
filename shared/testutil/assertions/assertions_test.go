@@ -324,7 +324,7 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 				expected: struct{ I int }{42},
 				actual:   struct{ I int }{41},
 			},
-			expectedErr: "Values are not equal, want: struct { i int }{i:42}, got: struct { i int }{i:41}",
+			expectedErr: "Values are not equal, want: struct { I int }{I:42}, got: struct { I int }{I:41}",
 		},
 		{
 			name: "custom error message",
@@ -334,7 +334,7 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 				actual:   struct{ I int }{41},
 				msgs:     []interface{}{"Custom values are not equal"},
 			},
-			expectedErr: "Custom values are not equal, want: struct { i int }{i:42}, got: struct { i int }{i:41}",
+			expectedErr: "Custom values are not equal, want: struct { I int }{I:42}, got: struct { I int }{I:41}",
 		},
 		{
 			name: "custom error message with params",
@@ -344,13 +344,13 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 				actual:   struct{ I int }{41},
 				msgs:     []interface{}{"Custom values are not equal (for slot %d)", 12},
 			},
-			expectedErr: "Custom values are not equal (for slot 12), want: struct { i int }{i:42}, got: struct { i int }{i:41}",
+			expectedErr: "Custom values are not equal (for slot 12), want: struct { I int }{I:42}, got: struct { I int }{I:41}",
 		},
 	}
 	for _, tt := range tests {
 		verify := func() {
 			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
-				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+				t.Errorf("Unexpected error: %s %v", tt.name, tt.args.tb.ErrorfMsg)
 			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
 				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
@@ -382,38 +382,38 @@ func TestAssert_DeepNotSSZEqual(t *testing.T) {
 			name: "equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{42},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{42},
 			},
-			expectedErr: "Values are equal, want: struct { i int }{i:42}, got: struct { i int }{i:42}",
+			expectedErr: "Values are equal, want: struct { I int }{I:42}, got: struct { I int }{I:42}",
 		},
 		{
 			name: "non-equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{41},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{41},
 			},
 		},
 		{
 			name: "custom error message",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{42},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{42},
 				msgs:     []interface{}{"Custom values are equal"},
 			},
-			expectedErr: "Custom values are equal, want: struct { i int }{i:42}, got: struct { i int }{i:42}",
+			expectedErr: "Custom values are equal, want: struct { I int }{I:42}, got: struct { I int }{I:42}",
 		},
 		{
 			name: "custom error message with params",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ i int }{42},
-				actual:   struct{ i int }{42},
+				expected: struct{ I int }{42},
+				actual:   struct{ I int }{42},
 				msgs:     []interface{}{"Custom values are equal (for slot %d)", 12},
 			},
-			expectedErr: "Custom values are equal (for slot 12), want: struct { i int }{i:42}, got: struct { i int }{i:42}",
+			expectedErr: "Custom values are equal (for slot 12), want: struct { I int }{I:42}, got: struct { I int }{I:42}",
 		},
 	}
 	for _, tt := range tests {
