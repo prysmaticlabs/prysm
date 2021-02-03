@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"sync"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -16,9 +15,6 @@ type nextSlotCache struct {
 	root  []byte
 	state *state.BeaconState
 }
-
-// A custom slot deadline for processing state slots.
-const slotDeadline = 5 * time.Second
 
 var (
 	nsc nextSlotCache
@@ -52,10 +48,6 @@ func NextSlotState(ctx context.Context, root []byte) (*state.BeaconState, error)
 // by calling `ProcessSlots`, it also saves the input root for later look up.
 // This is useful to call after successfully processing a block.
 func UpdateNextSlotCache(ctx context.Context, root []byte, state *state.BeaconState) error {
-	// Use a custom deadline here, since this method runs asynchronously.
-	ctx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-	defer cancel()
-
 	// Advancing one slot by using a copied state.
 	copied := state.Copy()
 	copied, err := ProcessSlots(ctx, copied, copied.Slot()+1)
