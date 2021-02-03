@@ -76,9 +76,9 @@ type BeaconNode struct {
 	stateGen        *stategen.State
 }
 
-// NewBeaconNode creates a new node instance, sets up configuration options, and registers
+// New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
+func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),

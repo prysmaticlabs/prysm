@@ -213,7 +213,7 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		v = v / (2 * 100 * m)
+		v /= 2 * 100 * m
 		wsp += v
 	}
 	return wsp, nil
