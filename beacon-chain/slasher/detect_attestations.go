@@ -4,6 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/sirupsen/logrus"
 )
 
 // Process queued attestations every time an epoch ticker fires. We retrieve
@@ -18,7 +19,10 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 			atts := s.attestationQueue
 			s.attestationQueue = make([]*compactAttestation, 0)
 			s.queueLock.Unlock()
-			log.Infof("Epoch %d reached, processing %d queued atts for slashing detection", currentEpoch, len(atts))
+			log.WithFields(logrus.Fields{
+				"currentEpoch": currentEpoch,
+				"numAtts":      len(atts),
+			}).Info("Epoch reached, processing queued atts for slashing detection")
 			groupedAtts := s.groupByValidatorChunkIndex(atts)
 			for validatorChunkIdx, attsBatch := range groupedAtts {
 				s.detectAttestationBatch(attsBatch, validatorChunkIdx, types.Epoch(currentEpoch))

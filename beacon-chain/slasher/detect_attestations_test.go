@@ -5,9 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_groupByValidatorChunkIndex(t *testing.T) {
@@ -112,5 +111,5 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	tickerChan <- 0
 	cancel()
 	<-exitChan
-	assert.LogsContain(t, hook, "Epoch 0 reached, processing 1 queued")
+	assert.LogsContain(t, hook, "Epoch reached, processing queued")
 }
