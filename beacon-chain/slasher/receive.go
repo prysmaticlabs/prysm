@@ -25,7 +25,9 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 				source:           att.Data.Source.Epoch,
 				target:           att.Data.Target.Epoch,
 			}
+			s.queueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, compactAtt)
+			s.queueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return

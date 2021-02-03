@@ -14,8 +14,10 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 	for {
 		select {
 		case currentEpoch := <-epochTicker:
+			s.queueLock.Lock()
 			atts := s.attestationQueue
 			s.attestationQueue = make([]*compactAttestation, 0)
+			s.queueLock.Unlock()
 			log.Infof("Epoch %d reached, processing %d queued atts for slashing detection", currentEpoch, len(atts))
 			groupedAtts := s.groupByValidatorChunkIndex(atts)
 			for validatorChunkIdx, attsBatch := range groupedAtts {
