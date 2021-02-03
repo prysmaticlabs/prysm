@@ -75,7 +75,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	if stateIdString == "finalized" {
 		var blockRoot [32]byte
 		copy(blockRoot[:], bs.ChainInfoFetcher.FinalizedCheckpt().Root)
-		state, err := bs.StateGen.StateByRoot(ctx, blockRoot)
+		state, err := bs.StateGenService.StateByRoot(ctx, blockRoot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to obtain state: %v", err)
 		}
@@ -92,7 +92,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	if stateIdString == "justified" {
 		var blockRoot [32]byte
 		copy(blockRoot[:], bs.ChainInfoFetcher.CurrentJustifiedCheckpt().Root)
-		state, err := bs.StateGen.StateByRoot(ctx, blockRoot)
+		state, err := bs.StateGenService.StateByRoot(ctx, blockRoot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to obtain state: %v", err)
 		}
@@ -141,7 +141,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	if slot < 0 || slot > currentSlot {
 		return nil, status.Errorf(codes.Internal, "Slot has to be between 0 and %d", currentSlot)
 	}
-	state, err := bs.StateGen.StateBySlot(ctx, slot)
+	state, err := bs.StateGenService.StateBySlot(ctx, slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to obtain state: %v", err)
 	}
