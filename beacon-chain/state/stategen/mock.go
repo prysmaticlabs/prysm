@@ -113,3 +113,8 @@ func (m *MockService) DisableSaveHotStateToDB(ctx context.Context) error {
 func (m *MockService) AddStateForRoot(state *state.BeaconState, blockRoot [32]byte) {
 	m.StatesByRoot[blockRoot] = state
 }
+
+// AddStateForSlot --
+func (m *MockService) AddStateForSlot(state *state.BeaconState, slot uint64) {
+	m.StatesBySlot[slot] = state
+}
