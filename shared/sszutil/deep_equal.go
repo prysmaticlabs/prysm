@@ -109,13 +109,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 		return deepValueEqual(v1.Elem(), v2.Elem(), visited, depth+1)
 	case reflect.Struct:
 		for i, n := 0, v1.NumField(); i < n; i++ {
-			v1Field := v1.Field(i)
-			v2Field := v2.Field(i)
-			if !v1Field.CanInterface() || !v2Field.CanInterface() {
-				// Continue for unexported fields, since they cannot be read anyways.
-				continue
-			}
-			if !deepValueEqual(v1Field, v2Field, visited, depth+1) {
+			if !deepValueEqual(v1.Field(i), v2.Field(i), visited, depth+1) {
 				return false
 			}
 		}
