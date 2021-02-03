@@ -35,6 +35,7 @@ func TestEpochTicker(t *testing.T) {
 	// Test when the ticker starts immediately after genesis time.
 	sinceDuration = 1 * time.Second
 	untilDuration = 7 * time.Second
+
 	// Make this a buffered channel to prevent a deadlock since
 	// the other goroutine calls a function in this goroutine.
 	tick = make(chan time.Time, 2)
@@ -42,23 +43,16 @@ func TestEpochTicker(t *testing.T) {
 
 	// Tick once.
 	tick <- time.Now()
-	slot := <-ticker.C()
-	if slot != 0 {
-		t.Fatalf("Expected %d, got %d", 0, slot)
+	epoch := <-ticker.C()
+	if epoch != 1 {
+		t.Fatalf("Expected %d, got %d", 1, epoch)
 	}
 
 	// Tick twice.
 	tick <- time.Now()
-	slot = <-ticker.C()
-	if slot != 1 {
-		t.Fatalf("Expected %d, got %d", 1, slot)
-	}
-
-	// Tick thrice.
-	tick <- time.Now()
-	slot = <-ticker.C()
-	if slot != 2 {
-		t.Fatalf("Expected %d, got %d", 2, slot)
+	epoch = <-ticker.C()
+	if epoch != 2 {
+		t.Fatalf("Expected %d, got %d", 2, epoch)
 	}
 }
 
@@ -97,15 +91,15 @@ func TestEpochTickerGenesis(t *testing.T) {
 
 	// Tick once.
 	tick <- time.Now()
-	slot := <-ticker.C()
-	if slot != 0 {
-		t.Fatalf("Expected %d, got %d", 0, slot)
+	epoch := <-ticker.C()
+	if epoch != 0 {
+		t.Fatalf("Expected %d, got %d", 0, epoch)
 	}
 
 	// Tick twice.
 	tick <- time.Now()
-	slot = <-ticker.C()
-	if slot != 1 {
-		t.Fatalf("Expected %d, got %d", 1, slot)
+	epoch = <-ticker.C()
+	if epoch != 1 {
+		t.Fatalf("Expected %d, got %d", 1, epoch)
 	}
 }
