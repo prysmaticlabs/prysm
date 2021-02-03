@@ -109,9 +109,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	if featureconfig.Get().EnableNextSlotStateCache {
 		go func() {
 			// Use a custom deadline here, since this method runs asynchronously.
-			ctx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 			defer cancel()
-			if err := state.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
+			if err := state.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
 				log.WithError(err).Debug("could not update next slot state cache")
 			}
 		}()
