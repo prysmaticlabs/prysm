@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
@@ -302,65 +304,58 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 		tb       *assertions.TBMock
 		expected interface{}
 		actual   interface{}
-		msgs     []interface{}
 	}
 	tests := []struct {
-		name        string
-		args        args
-		expectedErr string
+		name           string
+		args           args
+		expectedResult bool
 	}{
 		{
 			name: "equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{42},
+				expected: struct{ I uint64 }{42},
+				actual:   struct{ I uint64 }{42},
 			},
+			expectedResult: true,
+		},
+		{
+			name: "equal structs",
+			args: args{
+				tb: &assertions.TBMock{},
+				expected: &ethpb.Checkpoint{
+					Epoch: 5,
+					Root:  []byte("hi there"),
+				},
+				actual: &ethpb.Checkpoint{
+					Epoch: 5,
+					Root:  []byte("hi there"),
+				},
+			},
+			expectedResult: true,
 		},
 		{
 			name: "non-equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{41},
+				expected: struct{ I uint64 }{42},
+				actual:   struct{ I uint64 }{41},
 			},
-			expectedErr: "Values are not equal, want: struct { I int }{I:42}, got: struct { I int }{I:41}",
-		},
-		{
-			name: "custom error message",
-			args: args{
-				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{41},
-				msgs:     []interface{}{"Custom values are not equal"},
-			},
-			expectedErr: "Custom values are not equal, want: struct { I int }{I:42}, got: struct { I int }{I:41}",
-		},
-		{
-			name: "custom error message with params",
-			args: args{
-				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{41},
-				msgs:     []interface{}{"Custom values are not equal (for slot %d)", 12},
-			},
-			expectedErr: "Custom values are not equal (for slot 12), want: struct { I int }{I:42}, got: struct { I int }{I:41}",
+			expectedResult: false,
 		},
 	}
 	for _, tt := range tests {
 		verify := func() {
-			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+			if tt.expectedResult && tt.args.tb.ErrorfMsg != "" {
 				t.Errorf("Unexpected error: %s %v", tt.name, tt.args.tb.ErrorfMsg)
-			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
-				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
 			}
 		}
 		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
-			assert.DeepSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			assert.DeepSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual)
 			verify()
 		})
 		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
-			require.DeepSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			require.DeepSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual)
 			verify()
 		})
 	}
@@ -371,65 +366,58 @@ func TestAssert_DeepNotSSZEqual(t *testing.T) {
 		tb       *assertions.TBMock
 		expected interface{}
 		actual   interface{}
-		msgs     []interface{}
 	}
 	tests := []struct {
-		name        string
-		args        args
-		expectedErr string
+		name           string
+		args           args
+		expectedResult bool
 	}{
 		{
 			name: "equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{42},
+				expected: struct{ I uint64 }{42},
+				actual:   struct{ I uint64 }{42},
 			},
-			expectedErr: "Values are equal, want: struct { I int }{I:42}, got: struct { I int }{I:42}",
+			expectedResult: true,
 		},
 		{
 			name: "non-equal values",
 			args: args{
 				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{41},
+				expected: struct{ I uint64 }{42},
+				actual:   struct{ I uint64 }{41},
 			},
+			expectedResult: false,
 		},
 		{
-			name: "custom error message",
+			name: "not equal structs",
 			args: args{
-				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{42},
-				msgs:     []interface{}{"Custom values are equal"},
+				tb: &assertions.TBMock{},
+				expected: &ethpb.Checkpoint{
+					Epoch: 5,
+					Root:  []byte("hello there"),
+				},
+				actual: &ethpb.Checkpoint{
+					Epoch: 3,
+					Root:  []byte("hi there"),
+				},
 			},
-			expectedErr: "Custom values are equal, want: struct { I int }{I:42}, got: struct { I int }{I:42}",
-		},
-		{
-			name: "custom error message with params",
-			args: args{
-				tb:       &assertions.TBMock{},
-				expected: struct{ I int }{42},
-				actual:   struct{ I int }{42},
-				msgs:     []interface{}{"Custom values are equal (for slot %d)", 12},
-			},
-			expectedErr: "Custom values are equal (for slot 12), want: struct { I int }{I:42}, got: struct { I int }{I:42}",
+			expectedResult: true,
 		},
 	}
 	for _, tt := range tests {
 		verify := func() {
-			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
-				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
-			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
-				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			if !tt.expectedResult && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %s %v", tt.name, tt.args.tb.ErrorfMsg)
 			}
 		}
 		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
-			assert.DeepNotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			assert.DeepNotSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual)
 			verify()
 		})
 		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
-			require.DeepNotEqual(tt.args.tb, tt.args.expected, tt.args.actual, tt.args.msgs...)
+			require.DeepNotSSZEqual(tt.args.tb, tt.args.expected, tt.args.actual)
 			verify()
 		})
 	}
