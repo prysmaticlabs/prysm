@@ -4,7 +4,6 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // Process queued attestations every time an epoch ticker fires. We retrieve
@@ -16,7 +15,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 		select {
 		case currentEpoch := <-epochTicker:
 			atts := s.attestationQueue
-			s.attestationQueue = make([]*ethpb.IndexedAttestation, 0)
+			s.attestationQueue = make([]*compactAttestation, 0)
 			log.Infof("Epoch %d reached, processing %d queued atts for slashing detection", currentEpoch, len(atts))
 			groupedAtts := s.groupByValidatorChunkIndex(atts)
 			for validatorChunkIdx, attsBatch := range groupedAtts {
@@ -32,7 +31,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 // as the current epoch in time, we perform slashing detection over the batch.
 // TODO(#8331): Implement.
 func (s *Service) detectAttestationBatch(
-	atts []*ethpb.IndexedAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
+	atts []*compactAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
 ) {
 
 }
@@ -42,12 +41,12 @@ func (s *Service) detectAttestationBatch(
 // concurrently, and also allowing us to effectively use a single 2D chunk
 // for slashing detection through this logical grouping.
 func (s *Service) groupByValidatorChunkIndex(
-	attestations []*ethpb.IndexedAttestation,
-) map[uint64][]*ethpb.IndexedAttestation {
-	groupedAttestations := make(map[uint64][]*ethpb.IndexedAttestation)
+	attestations []*compactAttestation,
+) map[uint64][]*compactAttestation {
+	groupedAttestations := make(map[uint64][]*compactAttestation)
 	for _, att := range attestations {
 		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.AttestingIndices {
+		for _, validatorIdx := range att.attestingIndices {
 			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
 			validatorChunkIndices[validatorChunkIndex] = true
 		}

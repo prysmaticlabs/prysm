@@ -3,6 +3,7 @@ package slasher
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -11,6 +12,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
+
+// A compact attestation containing only the required information
+// for attester slashing detection.
+type compactAttestation struct {
+	attestingIndices []uint64
+	source           uint64
+	target           uint64
+}
 
 // ServiceConfig for the slasher service in the beacon node.
 // This struct allows us to specify required dependencies and
@@ -26,7 +35,8 @@ type Service struct {
 	params           *Parameters
 	serviceCfg       *ServiceConfig
 	indexedAttsChan  chan *ethpb.IndexedAttestation
-	attestationQueue []*ethpb.IndexedAttestation
+	queueLock        sync.Mutex
+	attestationQueue []*compactAttestation
 	ctx              context.Context
 	cancel           context.CancelFunc
 	genesisTime      time.Time
@@ -39,7 +49,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		params:           DefaultParams(),
 		serviceCfg:       srvCfg,
 		indexedAttsChan:  make(chan *ethpb.IndexedAttestation, 1),
-		attestationQueue: make([]*ethpb.IndexedAttestation, 0),
+		attestationQueue: make([]*compactAttestation, 0),
 		ctx:              ctx,
 		cancel:           cancel,
 		genesisTime:      time.Now(),

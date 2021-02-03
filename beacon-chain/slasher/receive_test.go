@@ -50,7 +50,19 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	s.indexedAttsChan <- att2
 	cancel()
 	<-exitChan
-	require.DeepEqual(t, s.attestationQueue, []*ethpb.IndexedAttestation{att1, att2})
+	wanted := []*compactAttestation{
+		{
+			attestingIndices: att1.AttestingIndices,
+			source:           att1.Data.Source.Epoch,
+			target:           att1.Data.Target.Epoch,
+		},
+		{
+			attestingIndices: att2.AttestingIndices,
+			source:           att2.Data.Source.Epoch,
+			target:           att2.Data.Target.Epoch,
+		},
+	}
+	require.DeepEqual(t, wanted, s.attestationQueue)
 }
 
 func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
@@ -90,7 +102,14 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	<-exitChan
 	// Expect only a single, valid attestation was added to the queue.
 	require.Equal(t, 1, len(s.attestationQueue))
-	require.DeepEqual(t, s.attestationQueue[0], validAtt)
+	wanted := []*compactAttestation{
+		{
+			attestingIndices: validAtt.AttestingIndices,
+			source:           validAtt.Data.Source.Epoch,
+			target:           validAtt.Data.Target.Epoch,
+		},
+	}
+	require.DeepEqual(t, wanted, s.attestationQueue)
 }
 
 func Test_validateAttestationIntegrity(t *testing.T) {

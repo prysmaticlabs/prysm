@@ -145,7 +145,17 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
-	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, att)
+	indexedAtt := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: att.source,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: att.target,
+			},
+		},
+	}
+	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, indexedAtt)
 	require.NoError(t, err)
 
 	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
@@ -218,7 +228,17 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
-	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, att)
+	indexedAtt := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: att.source,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: att.target,
+			},
+		},
+	}
+	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, indexedAtt)
 	require.NoError(t, err)
 
 	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
@@ -421,15 +441,9 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	assert.Equal(t, targetEpoch, received)
 }
 
-func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
-	return &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: uint64(source),
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: uint64(target),
-			},
-		},
+func createAttestation(source, target types.Epoch) *compactAttestation {
+	return &compactAttestation{
+		source: uint64(source),
+		target: uint64(target),
 	}
 }

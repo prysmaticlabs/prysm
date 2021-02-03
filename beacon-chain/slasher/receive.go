@@ -20,7 +20,12 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			s.attestationQueue = append(s.attestationQueue, att)
+			compactAtt := &compactAttestation{
+				attestingIndices: att.AttestingIndices,
+				source:           att.Data.Source.Epoch,
+				target:           att.Data.Target.Epoch,
+			}
+			s.attestationQueue = append(s.attestationQueue, compactAtt)
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
