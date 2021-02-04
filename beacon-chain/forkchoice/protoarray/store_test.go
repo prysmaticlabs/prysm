@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -19,7 +20,7 @@ func TestStore_PruneThreshold(t *testing.T) {
 }
 
 func TestStore_JustifiedEpoch(t *testing.T) {
-	j := uint64(100)
+	j := types.Epoch(100)
 	s := &Store{
 		justifiedEpoch: j,
 	}
@@ -29,7 +30,7 @@ func TestStore_JustifiedEpoch(t *testing.T) {
 }
 
 func TestStore_FinalizedEpoch(t *testing.T) {
-	f := uint64(50)
+	f := types.Epoch(50)
 	s := &Store{
 		finalizedEpoch: f,
 	}
@@ -419,8 +420,8 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 func TestStore_LeadsToViableHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
-		justifiedEpoch uint64
-		finalizedEpoch uint64
+		justifiedEpoch types.Epoch
+		finalizedEpoch types.Epoch
 		want           bool
 	}{
 		{&Node{}, 0, 0, true},
@@ -445,8 +446,8 @@ func TestStore_LeadsToViableHead(t *testing.T) {
 func TestStore_ViableForHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
-		justifiedEpoch uint64
-		finalizedEpoch uint64
+		justifiedEpoch types.Epoch
+		finalizedEpoch types.Epoch
 		want           bool
 	}{
 		{&Node{}, 0, 0, true},
