@@ -60,11 +60,9 @@ func (s *Service) detectAttestationBatch(
 	attBatch []*CompactAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
 ) {
 	// We categorize attestations by chunk index.
-	attestationsByChunkIndex := make(map[uint64][]*CompactAttestation)
-	for _, att := range attBatch {
-		chunkIdx := s.params.chunkIndex(types.Epoch(att.Source))
-		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
-	}
+	attestationsByChunk := s.groupByChunkIndex(attBatch)
+
+	updatedChunks := s.updateChunksForCurrentEpoch()
 
 	slashings := s.updateMaxChunks()
 	moreSlashings := s.updateMinChunks()
@@ -88,6 +86,17 @@ func (s *Service) updateMaxChunks() []byte {
 }
 func (s *Service) updateMinChunks() []byte {
 	return nil
+}
+
+func (s *Service) updateChunksForCurrentEpoch() int {}
+
+func (s *Service) groupByChunkIndex(attestations []*CompactAttestation) map[uint64][]*CompactAttestation {
+	attestationsByChunkIndex := make(map[uint64][]*CompactAttestation)
+	for _, att := range attestations {
+		chunkIdx := s.params.chunkIndex(types.Epoch(att.Source))
+		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
+	}
+	return attestationsByChunkIndex
 }
 
 // Group a list of attestations into batches by validator chunk index.
