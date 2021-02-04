@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -64,9 +63,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		expectSuccess(t, stream)
 		out := &pb.Status{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		if !bytes.Equal(out.FinalizedRoot, root[:]) {
-			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
-		}
+		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 		assert.NoError(t, stream.Close())
 	})
 
@@ -130,9 +127,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 		expectSuccess(t, stream)
 		out := &pb.Status{}
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
-		if !bytes.Equal(out.FinalizedRoot, root[:]) {
-			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
-		}
+		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)

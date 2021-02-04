@@ -44,7 +44,7 @@ func (s *Service) RefreshENR() {
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+	currentBitV, err := bitvector(s.dv5Listener.Self().Record())
 	if err != nil {
 		log.Errorf("Could not retrieve bitfield: %v", err)
 		return
@@ -97,19 +97,17 @@ func (s *Service) createListener(
 	ipAddr net.IP,
 	privKey *ecdsa.PrivateKey,
 ) (*discover.UDPv5, error) {
-	// Listen to all network interfaces
-	// for both ip protocols.
-	var networkVersion string
 	// BindIP is used to specify the ip
 	// on which we will bind our listener on
 	// by default we will listen to all interfaces.
 	var bindIP net.IP
-	if ipAddr.To4() != nil {
-		networkVersion = "udp4"
+	switch udpVersionFromIP(ipAddr) {
+	case "udp4":
 		bindIP = net.IPv4zero
-	} else {
-		networkVersion = "udp6"
+	case "udp6":
 		bindIP = net.IPv6zero
+	default:
+		return nil, errors.New("invalid ip provided")
 	}
 
 	// If local ip is specified then use that instead.
@@ -124,6 +122,9 @@ func (s *Service) createListener(
 		IP:   bindIP,
 		Port: int(s.cfg.UDPPort),
 	}
+	// Listen to all network interfaces
+	// for both ip protocols.
+	networkVersion := "udp"
 	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to UDP")
@@ -420,4 +421,11 @@ func multiAddrFromString(address string) (ma.Multiaddr, error) {
 		return nil, err
 	}
 	return addr.Multiaddr(), nil
+}
+
+func udpVersionFromIP(ipAddr net.IP) string {
+	if ipAddr.To4() != nil {
+		return "udp4"
+	}
+	return "udp6"
 }

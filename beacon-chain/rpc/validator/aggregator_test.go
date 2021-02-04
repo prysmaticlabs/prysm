@@ -230,7 +230,10 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.Se
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	if err != nil {
+		return nil, err
+	}
 
 	sigs := make([]bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
@@ -266,7 +269,10 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	if err != nil {
+		return nil, err
+	}
 	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 	if err != nil {
 		return nil, err
@@ -430,7 +436,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 
 func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
 	c := &mock.ChainService{Genesis: time.Now()}
-	aggregatorServer := &Server{GenesisTimeFetcher: c}
+	aggregatorServer := &Server{TimeFetcher: c}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Signature: []byte{'a'},

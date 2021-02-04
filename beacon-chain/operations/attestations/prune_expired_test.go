@@ -19,7 +19,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	s, err := NewService(ctx, &Config{
+	s, err := New(ctx, &Config{
 		Pool:          NewPool(),
 		pruneInterval: 250 * time.Millisecond,
 	})
@@ -81,36 +81,12 @@ func TestPruneExpired_Ticker(t *testing.T) {
 }
 
 func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	ad1 := &ethpb.AttestationData{
-		Slot:            0,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
-	ad2 := &ethpb.AttestationData{
-		Slot:            0,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad2 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
 	att1 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101}}
 	att2 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1111}}
@@ -138,7 +114,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 }
 
 func TestPruneExpired_Expired(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	s, err := New(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	// Rewind back one epoch worth of time.

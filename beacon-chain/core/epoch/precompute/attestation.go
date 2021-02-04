@@ -22,11 +22,10 @@ func ProcessAttestations(
 ) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
-
+	// TODO: Reform this based on the new scheme
 	//v := &Validator{}
 	//var err error
-
-	// TODO: Reform this based on the new scheme
+	//
 	//for _, a := range append(state.PreviousEpochAttestations(), state.CurrentEpochAttestations()...) {
 	//	if a.InclusionDelay == 0 {
 	//		return nil, nil, errors.New("attestation with inclusion delay of 0")
@@ -46,7 +45,10 @@ func ProcessAttestations(
 	//	if err != nil {
 	//		return nil, nil, err
 	//	}
-	//	indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
+	//	indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
+	//	if err != nil {
+	//		return nil, nil, err
+	//	}
 	//	vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
 	//}
 

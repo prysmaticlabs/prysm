@@ -8,12 +8,12 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
@@ -23,7 +23,7 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		AttestationAggregationStrategy: string(MaxCoverAggregation),
+		AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 	})
 	defer resetCfg()
 	m.Run()
@@ -54,7 +54,7 @@ func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	for _, tt := range tests {
 		got, err := AggregatePair(tt.a1, tt.a2)
 		require.NoError(t, err)
-		require.Equal(t, true, ssz.DeepEqual(got, tt.want))
+		require.Equal(t, true, sszutil.DeepEqual(got, tt.want))
 	}
 }
 
@@ -236,6 +236,13 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		t.Run(fmt.Sprintf("%s/%s", tt.name, MaxCoverAggregation), func(t *testing.T) {
 			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 				AttestationAggregationStrategy: string(MaxCoverAggregation),
+			})
+			defer resetCfg()
+			runner()
+		})
+		t.Run(fmt.Sprintf("%s/%s", tt.name, OptMaxCoverAggregation), func(t *testing.T) {
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 			})
 			defer resetCfg()
 			runner()

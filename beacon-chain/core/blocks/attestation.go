@@ -108,10 +108,9 @@ func ProcessAttestationNoVerifySignature(
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
-	if att == nil || att.Data == nil || att.Data.Target == nil {
-		return nil, errors.New("nil attestation data target")
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return nil, err
 	}
-
 	currEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	var prevEpoch uint64
 	if currEpoch == 0 {
@@ -128,8 +127,8 @@ func ProcessAttestationNoVerifySignature(
 			currEpoch,
 		)
 	}
-	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
-		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
+	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
+		return nil, err
 	}
 
 	s := att.Data.Slot
@@ -199,7 +198,10 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	if err != nil {
+		return nil, err
+	}
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return nil, err
 	}
@@ -264,14 +266,17 @@ func VerifyAttestationsSignatures(ctx context.Context, beaconState *stateTrie.Be
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestationSignature(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
-	if att == nil || att.Data == nil || att.AggregationBits.Count() == 0 {
-		return fmt.Errorf("nil or missing attestation data: %v", att)
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return err
 	}
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
-	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	if err != nil {
+		return err
+	}
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 

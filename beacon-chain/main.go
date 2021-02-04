@@ -117,7 +117,7 @@ func main() {
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		db.DatabaseCommands,
 	}
@@ -215,7 +215,7 @@ func startNode(ctx *cli.Context) error {
 		gethlog.Root().SetHandler(glogger)
 	}
 
-	beacon, err := node.NewBeaconNode(ctx)
+	beacon, err := node.New(ctx)
 	if err != nil {
 		return err
 	}

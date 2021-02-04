@@ -63,9 +63,14 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, err
 			}
+			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
 				Block:     b,
 				BlockRoot: root[:],
+				Canonical: canonical,
 			}
 		}
 
@@ -90,29 +95,34 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
+		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+		}
 
 		return &ethpb.ListBlocksResponse{
 			BlockContainers: []*ethpb.BeaconBlockContainer{{
 				Block:     blk,
-				BlockRoot: root[:]},
+				BlockRoot: root[:],
+				Canonical: canonical},
 			},
 			TotalSize: 1,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
-
-		numBlks := len(blks)
-		if numBlks == 0 {
+		if !hasBlocks {
 			return &ethpb.ListBlocksResponse{
 				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 				TotalSize:       0,
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
+
+		numBlks := len(blks)
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {
@@ -126,9 +136,14 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, err
 			}
+			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
 				Block:     b,
 				BlockRoot: root[:],
+				Canonical: canonical,
 			}
 		}
 
@@ -153,6 +168,7 @@ func (bs *Server) ListBlocks(
 			{
 				Block:     genBlk,
 				BlockRoot: root[:],
+				Canonical: true,
 			},
 		}
 

@@ -99,9 +99,9 @@ type Config struct {
 	WspEpoch          uint64
 }
 
-// NewService instantiates a new block service instance that will
+// New instantiates a new block service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                  ctx,
@@ -263,7 +263,7 @@ func (s *Service) Start() {
 		}()
 	}
 
-	go s.processAttestation(attestationProcessorSubscribed)
+	go s.processAttestationsRoutine(attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1

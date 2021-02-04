@@ -27,7 +27,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
@@ -70,7 +70,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 				},
 				BeaconBlockRoot: emptyRoot[:],
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x01},
 			InclusionDelay:  1,
 		}
 	}
@@ -91,7 +91,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 
 	// Add some variances to target and head balances.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5593
-	bp.PrevEpochTargetAttested = bp.PrevEpochTargetAttested / 2
+	bp.PrevEpochTargetAttested /= 2
 	bp.PrevEpochHeadAttested = bp.PrevEpochHeadAttested * 2 / 3
 	rewards, penalties, err := AttestationsDelta(beaconState, bp, vp)
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 				},
 				BeaconBlockRoot: emptyRoot[:],
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}
@@ -217,7 +217,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
 			},
-			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
 		}
 	}

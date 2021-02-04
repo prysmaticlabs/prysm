@@ -39,13 +39,10 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
 	genData := func(slot, committeeIndex uint64) *ethpb.AttestationData {
-		return &ethpb.AttestationData{
-			Slot:            slot,
-			CommitteeIndex:  committeeIndex,
-			Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
-		}
+		return testutil.HydrateAttestationData(&ethpb.AttestationData{
+			Slot:           slot,
+			CommitteeIndex: committeeIndex,
+		})
 	}
 	genSign := func() []byte {
 		priv, err := bls.RandKey()
@@ -101,29 +98,27 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		wantErrString string
 	}{
 		{
-			name: "nil attestation",
-			att:  nil,
+			name:          "nil attestation",
+			att:           nil,
+			wantErrString: "attestation can't be nil",
 		},
 		{
-			name: "nil attestation data",
-			att:  &ethpb.Attestation{},
+			name:          "nil attestation data",
+			att:           &ethpb.Attestation{},
+			wantErrString: "attestation's data can't be nil",
 		},
 		{
 			name: "not aggregated",
-			att: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				}, AggregationBits: bitfield.Bitlist{0b10100}},
+			att: testutil.HydrateAttestation(&ethpb.Attestation{
+				Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b10100}}),
 			wantErrString: "attestation is not aggregated",
 		},
 		{
 			name: "invalid hash",
 			att: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
+				Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
 					BeaconBlockRoot: []byte{0b0},
-				},
+				}),
 				AggregationBits: bitfield.Bitlist{0b10111},
 			},
 			wantErrString: "could not tree hash attestation: " + fssz.ErrBytesLength.Error(),
@@ -149,12 +144,9 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			count: 1,
 		},
 	}
-	r, err := hashFn(&ethpb.AttestationData{
-		Slot:            100,
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		BeaconBlockRoot: make([]byte, 32),
-	})
+	r, err := hashFn(testutil.HydrateAttestationData(&ethpb.AttestationData{
+		Slot: 100,
+	}))
 	require.NoError(t, err)
 
 	for _, tt := range tests {
@@ -232,7 +224,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 	t.Run("nil attestation", func(t *testing.T) {
 		cache := NewAttCaches()
-		assert.NoError(t, cache.DeleteAggregatedAttestation(nil))
+		assert.ErrorContains(t, "attestation can't be nil", cache.DeleteAggregatedAttestation(nil))
 		att := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}, Data: &ethpb.AttestationData{Slot: 2}})
 		assert.NoError(t, cache.DeleteAggregatedAttestation(att))
 	})
@@ -249,7 +241,9 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		att := &ethpb.Attestation{
 			AggregationBits: bitfield.Bitlist{0b1111},
 			Data: &ethpb.AttestationData{
-				Slot: 2,
+				Slot:   2,
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
 			},
 		}
 		err := cache.DeleteAggregatedAttestation(att)
@@ -306,18 +300,21 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		existing []*ethpb.Attestation
 		input    *ethpb.Attestation
 		want     bool
+		error    bool
 	}{
 		{
 			name:  "nil attestation",
 			input: nil,
 			want:  false,
+			error: true,
 		},
 		{
 			name: "nil attestation data",
-			input: testutil.HydrateAttestation(&ethpb.Attestation{
+			input: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1111},
-			}),
-			want: false,
+			},
+			want:  false,
+			error: true,
 		},
 		{
 			name: "empty cache aggregated",
@@ -480,17 +477,22 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 				tt.input.Signature = make([]byte, 96)
 			}
 
-			result, err := cache.HasAggregatedAttestation(tt.input)
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, result)
+			if tt.error == true {
+				_, err := cache.HasAggregatedAttestation(tt.input)
+				require.ErrorContains(t, "can't be nil", err)
+			} else {
+				result, err := cache.HasAggregatedAttestation(tt.input)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, result)
 
-			// Same test for block attestations
-			cache = NewAttCaches()
-			assert.NoError(t, cache.SaveBlockAttestations(tt.existing))
+				// Same test for block attestations
+				cache = NewAttCaches()
+				assert.NoError(t, cache.SaveBlockAttestations(tt.existing))
 
-			result, err = cache.HasAggregatedAttestation(tt.input)
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, result)
+				result, err = cache.HasAggregatedAttestation(tt.input)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
 		})
 	}
 }

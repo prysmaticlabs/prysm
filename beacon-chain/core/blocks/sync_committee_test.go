@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,7 +28,8 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
-		sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), pbr, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		b := types.SSZBytes(pbr)
+		sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -76,22 +78,4 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 		}
 	}
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, increased)
-}
-
-func TestProcessSyncCommittee_BadSignature(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	require.NoError(t, beaconState.SetSlot(1))
-	syncBits := bitfield.NewBitvector1024()
-	for i := range syncBits {
-		syncBits[i] = 0xff
-	}
-
-	block := testutil.NewBeaconBlock()
-	block.Block.Body.SyncCommitteeBits = syncBits
-	priv, err := bls.RandKey()
-	require.NoError(t, err)
-	block.Block.Body.SyncCommitteeSignature = priv.Sign(params.BeaconConfig().ZeroHash[:]).Marshal()
-
-	_, err = blocks.ProcessSyncCommittee(beaconState, block.Block.Body)
-	require.ErrorContains(t, "could not verify sync committee signature", err)
 }

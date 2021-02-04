@@ -9,8 +9,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -33,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -62,7 +61,7 @@ type Service struct {
 	canonicalFetcher        blockchain.CanonicalFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
-	genesisTimeFetcher      blockchain.TimeFetcher
+	timeFetcher             blockchain.TimeFetcher
 	genesisFetcher          blockchain.GenesisFetcher
 	attestationReceiver     blockchain.AttestationReceiver
 	blockReceiver           blockchain.BlockReceiver
@@ -88,6 +87,7 @@ type Service struct {
 	p2p                     p2p.Broadcaster
 	peersFetcher            p2p.PeersProvider
 	peerManager             p2p.PeerManager
+	metadataProvider        p2p.MetadataProvider
 	depositFetcher          depositcache.DepositFetcher
 	pendingDepositFetcher   depositcache.PendingDepositsFetcher
 	stateNotifier           statefeed.Notifier
@@ -128,6 +128,7 @@ type Config struct {
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
 	PeerManager             p2p.PeerManager
+	MetadataProvider        p2p.MetadataProvider
 	DepositFetcher          depositcache.DepositFetcher
 	PendingDepositFetcher   depositcache.PendingDepositsFetcher
 	StateNotifier           statefeed.Notifier
@@ -137,9 +138,9 @@ type Config struct {
 	MaxMsgSize              int
 }
 
-// NewService instantiates a new RPC service instance that will
+// New instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func New(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                     ctx,
@@ -150,13 +151,14 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
 		canonicalFetcher:        cfg.CanonicalFetcher,
-		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
+		timeFetcher:             cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		attestationReceiver:     cfg.AttestationReceiver,
 		blockReceiver:           cfg.BlockReceiver,
 		p2p:                     cfg.Broadcaster,
 		peersFetcher:            cfg.PeersFetcher,
 		peerManager:             cfg.PeerManager,
+		metadataProvider:        cfg.MetadataProvider,
 		powChainService:         cfg.POWChainService,
 		chainStartFetcher:       cfg.ChainStartFetcher,
 		mockEth1Votes:           cfg.MockEth1Votes,
@@ -237,7 +239,7 @@ func (s *Service) Start() {
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
 		FinalizationFetcher:    s.finalizationFetcher,
-		GenesisTimeFetcher:     s.genesisTimeFetcher,
+		TimeFetcher:            s.timeFetcher,
 		CanonicalStateChan:     s.canonicalStateChan,
 		BlockFetcher:           s.powChainService,
 		DepositFetcher:         s.depositFetcher,
@@ -261,7 +263,7 @@ func (s *Service) Start() {
 		BeaconDB:             s.beaconDB,
 		Server:               s.grpcServer,
 		SyncChecker:          s.syncService,
-		GenesisTimeFetcher:   s.genesisTimeFetcher,
+		GenesisTimeFetcher:   s.timeFetcher,
 		PeersFetcher:         s.peersFetcher,
 		PeerManager:          s.peerManager,
 		GenesisFetcher:       s.genesisFetcher,
@@ -272,12 +274,14 @@ func (s *Service) Start() {
 		BeaconDB:           s.beaconDB,
 		Server:             s.grpcServer,
 		SyncChecker:        s.syncService,
-		GenesisTimeFetcher: s.genesisTimeFetcher,
+		GenesisTimeFetcher: s.timeFetcher,
 		PeersFetcher:       s.peersFetcher,
 		PeerManager:        s.peerManager,
 		GenesisFetcher:     s.genesisFetcher,
+		MetadataProvider:   s.metadataProvider,
 		HeadFetcher:        s.headFetcher,
 	}
+
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.beaconDB,
@@ -290,7 +294,7 @@ func (s *Service) Start() {
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,
 		CanonicalStateChan:          s.canonicalStateChan,
-		GenesisTimeFetcher:          s.genesisTimeFetcher,
+		GenesisTimeFetcher:          s.timeFetcher,
 		StateNotifier:               s.stateNotifier,
 		BlockNotifier:               s.blockNotifier,
 		AttestationNotifier:         s.operationNotifier,
@@ -310,7 +314,7 @@ func (s *Service) Start() {
 		DepositFetcher:      s.depositFetcher,
 		BlockFetcher:        s.powChainService,
 		CanonicalStateChan:  s.canonicalStateChan,
-		GenesisTimeFetcher:  s.genesisTimeFetcher,
+		GenesisTimeFetcher:  s.timeFetcher,
 		StateNotifier:       s.stateNotifier,
 		BlockNotifier:       s.blockNotifier,
 		AttestationNotifier: s.operationNotifier,
@@ -326,7 +330,7 @@ func (s *Service) Start() {
 	if s.enableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debug.Server{
-			GenesisTimeFetcher: s.genesisTimeFetcher,
+			GenesisTimeFetcher: s.timeFetcher,
 			BeaconDB:           s.beaconDB,
 			StateGen:           s.stateGen,
 			HeadFetcher:        s.headFetcher,

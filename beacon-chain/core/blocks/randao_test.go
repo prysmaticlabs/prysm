@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"testing"
@@ -64,13 +63,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	require.NoError(t, err, "Unexpected error processing block randao")
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	mix := newState.RandaoMixes()[currentEpoch%params.BeaconConfig().EpochsPerHistoricalVector]
-
-	if bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
-		t.Errorf(
-			"Expected empty signature to be overwritten by randao reveal, received %v",
-			params.BeaconConfig().EmptySignature,
-		)
-	}
+	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "Expected empty signature to be overwritten by randao reveal")
 }
 
 func TestRandaoSignatureSet_OK(t *testing.T) {

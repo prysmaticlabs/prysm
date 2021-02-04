@@ -3,18 +3,20 @@ package kv
 import (
 	"context"
 
-	bolt "go.etcd.io/bbolt"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 // PruneAttestationsOlderThanCurrentWeakSubjectivity loops through every
 // public key in the public keys bucket and prunes all attestation data
 // that has target epochs older than the highest weak subjectivity period
 // in our database. This routine is meant to run on startup.
-func (store *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Context) error {
-	return store.update(func(tx *bolt.Tx) error {
+func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.PruneAttestationsOlderThanCurrentWeakSubjectivity")
+	defer span.End()
+	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
 			pkBucket := bucket.Bucket(pubKey)
