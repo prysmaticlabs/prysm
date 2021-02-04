@@ -16,6 +16,11 @@ const (
 
 	// MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
 	MaxCoverAggregation AttestationAggregationStrategy = "max_cover"
+
+	// OptMaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
+	// This new variant is optimized and relies on Bitlist64 (once fully tested, `max_cover`
+	// strategy will be replaced with this one).
+	OptMaxCoverAggregation AttestationAggregationStrategy = "opt_max_cover"
 )
 
 // AttestationAggregationStrategy defines attestation aggregation strategy.
@@ -37,6 +42,14 @@ var _ = logrus.WithField("prefix", "aggregation.attestations")
 var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 
 // Aggregate aggregates attestations. The minimal number of attestations is returned.
+// Aggregation occurs in-place i.e. contents of input array will be modified. Should you need to
+// preserve input attestations, clone them before aggregating:
+//
+//   clonedAtts := make([]*ethpb.Attestation, len(atts))
+//   for i, a := range atts {
+//       clonedAtts[i] = stateTrie.CopyAttestation(a)
+//   }
+//   aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	strategy := AttestationAggregationStrategy(featureconfig.Get().AttestationAggregationStrategy)
 	switch strategy {
@@ -44,6 +57,8 @@ func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 		return NaiveAttestationAggregation(atts)
 	case MaxCoverAggregation:
 		return MaxCoverAttestationAggregation(atts)
+	case OptMaxCoverAggregation:
+		return optMaxCoverAttestationAggregation(atts)
 	default:
 		return nil, errors.Wrapf(aggregation.ErrInvalidStrategy, "%q", strategy)
 	}

@@ -139,11 +139,11 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *format.EIPSlashingProtectionFormat) error {
 	// We need to ensure the version in the metadata field matches the one we support.
 	version := interchangeJSON.Metadata.InterchangeFormatVersion
-	if version != format.INTERCHANGE_FORMAT_VERSION {
+	if version != format.InterchangeFormatVersion {
 		return fmt.Errorf(
 			"slashing protection JSON version '%s' is not supported, wanted '%s'",
 			version,
-			format.INTERCHANGE_FORMAT_VERSION,
+			format.InterchangeFormatVersion,
 		)
 	}
 
