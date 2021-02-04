@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestGenesisBeaconState_OK(t *testing.T) {
-	genesisEpochNumber := uint64(0)
+	genesisEpoch := types.Epoch(0)
 
 	assert.DeepEqual(t, []byte{0, 0, 0, 0}, params.BeaconConfig().GenesisForkVersion, "GenesisSlot( should be {0,0,0,0} for these tests to pass")
 	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
@@ -42,7 +43,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if !proto.Equal(newState.Fork(), &pb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,
-		Epoch:           genesisEpochNumber,
+		Epoch:           genesisEpoch,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}
@@ -51,10 +52,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.Equal(t, depositsForChainStart, len(newState.Validators()), "Validators was not correctly initialized")
 	v, err := newState.ValidatorAtIndex(0)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), v.ActivationEpoch, "Validators was not correctly initialized")
+	assert.Equal(t, types.Epoch(0), v.ActivationEpoch, "Validators was not correctly initialized")
 	v, err = newState.ValidatorAtIndex(0)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), v.ActivationEligibilityEpoch, "Validators was not correctly initialized")
+	assert.Equal(t, types.Epoch(0), v.ActivationEligibilityEpoch, "Validators was not correctly initialized")
 	assert.Equal(t, depositsForChainStart, len(newState.Balances()), "Balances was not correctly initialized")
 
 	// Randomness and committees fields checks.
@@ -64,9 +65,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.DeepEqual(t, eth1Data.BlockHash, mix, "RandaoMixes was not correctly initialized")
 
 	// Finality fields checks.
-	assert.Equal(t, genesisEpochNumber, newState.PreviousJustifiedCheckpoint().Epoch, "PreviousJustifiedCheckpoint.Epoch was not correctly initialized")
-	assert.Equal(t, genesisEpochNumber, newState.CurrentJustifiedCheckpoint().Epoch, "JustifiedEpoch was not correctly initialized")
-	assert.Equal(t, genesisEpochNumber, newState.FinalizedCheckpointEpoch(), "FinalizedSlot was not correctly initialized")
+	assert.Equal(t, genesisEpoch, newState.PreviousJustifiedCheckpoint().Epoch, "PreviousJustifiedCheckpoint.Epoch was not correctly initialized")
+	assert.Equal(t, genesisEpoch, newState.CurrentJustifiedCheckpoint().Epoch, "JustifiedEpoch was not correctly initialized")
+	assert.Equal(t, genesisEpoch, newState.FinalizedCheckpointEpoch(), "FinalizedSlot was not correctly initialized")
 	assert.Equal(t, uint8(0x00), newState.JustificationBits()[0], "JustificationBits was not correctly initialized")
 
 	// Recent state checks.

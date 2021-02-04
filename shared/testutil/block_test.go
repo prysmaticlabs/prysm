@@ -167,7 +167,7 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 
 	val, err := beaconState.ValidatorAtIndexReadOnly(exitedIndex)
 	require.NoError(t, err)
-	if val.ExitEpoch() == uint64(params.BeaconConfig().FarFutureEpoch) {
+	if val.ExitEpoch() == params.BeaconConfig().FarFutureEpoch {
 		t.Fatal("expected exiting validator index to be marked as exiting")
 	}
 }
