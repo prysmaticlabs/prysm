@@ -214,6 +214,12 @@ var (
 			"a voluntary exit",
 		Value: "",
 	}
+	// SkipVoluntaryExitConfirmationFlag allows users to skip a mandatory confiration prompt
+	// when performing validator voluntary exits.
+	SkipVoluntaryExitConfirmationFlag = &cli.BoolFlag{
+		Name:  "skip-voluntary-exit-confirmation",
+		Usage: "Skip the voluntary exit confirmation prompt",
+	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
 		Name:  "backup-password-file",
