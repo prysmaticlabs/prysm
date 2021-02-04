@@ -51,7 +51,7 @@ func TestDeepEqualStructs_Unexported(t *testing.T) {
 		ignoreMe string
 	}
 	store1 := Store{uint64(1234), nil, "hi there"}
-	store2 := Store{uint64(1234), []byte{}, "oh hey"}
+	store2 := Store{uint64(1234), []byte{}, "hi there"}
 	store3 := Store{uint64(4321), []byte{}, "wow"}
 	assert.Equal(t, true, sszutil.DeepEqual(store1, store2))
 	assert.Equal(t, false, sszutil.DeepEqual(store1, store3))
