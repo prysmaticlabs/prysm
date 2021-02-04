@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -288,7 +289,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	assert.Equal(t, newS.Slashings()[ce], newS.Slashings()[ne], "Unexpected slashed balance")
 
 	// Verify randao is correctly updated in the right position.
-	mix, err := newS.RandaoMixAtIndex(ne)
+	mix, err := newS.RandaoMixAtIndex(uint64(ne))
 	assert.NoError(t, err)
 	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
 
@@ -396,11 +397,11 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 }
 
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
-	e := uint64(5)
+	e := types.Epoch(5)
 	exitEpoch := helpers.ActivationExitEpoch(e)
 	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	base := &pb.BeaconState{
-		Slot: e * params.BeaconConfig().SlotsPerEpoch,
+		Slot: uint64(e) * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{
 				ExitEpoch:         exitEpoch,
