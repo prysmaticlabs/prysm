@@ -8,6 +8,7 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -467,10 +468,10 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 		name               string
 		syncMode           syncMode
 		peers              []*peerData
-		ourFinalizedEpoch  uint64
+		ourFinalizedEpoch  types.Epoch
 		ourHeadSlot        uint64
-		expectedHeadEpoch  uint64
-		targetEpoch        uint64
+		expectedHeadEpoch  types.Epoch
+		targetEpoch        types.Epoch
 		targetEpochSupport int
 	}{
 		{
@@ -565,7 +566,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 			assert.Equal(t, tt.targetEpochSupport, len(peers), "Unexpected number of peers supporting target epoch")
 
 			// Best finalized and non-finalized slots.
-			finalizedSlot := tt.targetEpoch * params.BeaconConfig().SlotsPerEpoch
+			finalizedSlot := uint64(tt.targetEpoch) * params.BeaconConfig().SlotsPerEpoch
 			if tt.syncMode == modeStopOnFinalizedEpoch {
 				assert.Equal(t, finalizedSlot, fetcher.bestFinalizedSlot(), "Unexpected finalized slot")
 			} else {
