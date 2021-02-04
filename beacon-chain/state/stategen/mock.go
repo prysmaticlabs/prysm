@@ -68,7 +68,7 @@ func (m *MockService) HasStateInCache(ctx context.Context, blockRoot [32]byte) (
 
 // StateByRoot --
 func (m *MockService) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
-	panic("implement me")
+	return m.StatesByRoot[blockRoot], nil
 }
 
 // StateByRootInitialSync --
@@ -78,7 +78,7 @@ func (m *MockService) StateByRootInitialSync(ctx context.Context, blockRoot [32]
 
 // StateBySlot --
 func (m *MockService) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
-	panic("implement me")
+	return m.StatesBySlot[slot], nil
 }
 
 // RecoverStateSummary --
