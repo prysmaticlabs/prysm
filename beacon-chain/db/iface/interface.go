@@ -10,7 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -100,11 +102,10 @@ type NoHeadAccessDatabase interface {
 	SaveLatestEpochAttestedForValidators(
 		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 	) error
-	SaveAttestationRecordForValidator(
+	SaveAttestationRecordsForValidators(
 		ctx context.Context,
-		validatorIdx types.ValidatorIndex,
-		signingRoot [32]byte,
-		attestation *eth.IndexedAttestation,
+		validatorIndices []types.ValidatorIndex,
+		attestations []*slasher.CompactAttestation,
 	) error
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,

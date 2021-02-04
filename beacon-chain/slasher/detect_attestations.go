@@ -17,7 +17,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 		case currentEpoch := <-epochTicker:
 			s.queueLock.Lock()
 			atts := s.attestationQueue
-			s.attestationQueue = make([]*compactAttestation, 0)
+			s.attestationQueue = make([]*CompactAttestation, 0)
 			s.queueLock.Unlock()
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
@@ -37,7 +37,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 // as the current epoch in time, we perform slashing detection over the batch.
 // TODO(#8331): Implement.
 func (s *Service) detectAttestationBatch(
-	atts []*compactAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
+	atts []*CompactAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
 ) {
 
 }
@@ -47,12 +47,12 @@ func (s *Service) detectAttestationBatch(
 // concurrently, and also allowing us to effectively use a single 2D chunk
 // for slashing detection through this logical grouping.
 func (s *Service) groupByValidatorChunkIndex(
-	attestations []*compactAttestation,
-) map[uint64][]*compactAttestation {
-	groupedAttestations := make(map[uint64][]*compactAttestation)
+	attestations []*CompactAttestation,
+) map[uint64][]*CompactAttestation {
+	groupedAttestations := make(map[uint64][]*CompactAttestation)
 	for _, att := range attestations {
 		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.attestingIndices {
+		for _, validatorIdx := range att.AttestingIndices {
 			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
 			validatorChunkIndices[validatorChunkIndex] = true
 		}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
@@ -25,7 +24,7 @@ type Chunker interface {
 		ctx context.Context,
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
-		attestation *compactAttestation,
+		attestation *CompactAttestation,
 	) (slashertypes.SlashingKind, error)
 	Update(
 		chunkIdx uint64,
@@ -177,10 +176,10 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *compactAttestation,
+	attestation *CompactAttestation,
 ) (slashertypes.SlashingKind, error) {
-	sourceEpoch := types.Epoch(attestation.source)
-	targetEpoch := types.Epoch(attestation.target)
+	sourceEpoch := types.Epoch(attestation.Source)
+	targetEpoch := types.Epoch(attestation.Target)
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return slashertypes.NotSlashable, errors.Wrapf(
@@ -216,10 +215,10 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *compactAttestation,
+	attestation *CompactAttestation,
 ) (slashertypes.SlashingKind, error) {
-	sourceEpoch := types.Epoch(attestation.source)
-	targetEpoch := types.Epoch(attestation.target)
+	sourceEpoch := types.Epoch(attestation.Source)
+	targetEpoch := types.Epoch(attestation.Target)
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return slashertypes.NotSlashable, errors.Wrapf(
