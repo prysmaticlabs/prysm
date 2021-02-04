@@ -42,6 +42,9 @@ var blockedBuckets = [][]byte{
 	lowestSignedTargetBucket,
 	lowestSignedProposalsBucket,
 	highestSignedProposalsBucket,
+	pubKeysBucket,
+	attestationSigningRootsBucket,
+	attestationSourceEpochsBucket,
 }
 
 // Store defines an implementation of the Prysm Database interface
