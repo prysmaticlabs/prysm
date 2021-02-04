@@ -6,21 +6,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// time to wait before trying to reconnect with beacon node.
+var backOffPeriod = 10 * time.Second
+var errConnectionIssue = errors.New("could not connect")
 
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context) error
+	WaitForActivation(ctx context.Context, accountsChangedChan chan struct{}) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
@@ -36,7 +42,8 @@ type Validator interface {
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
-	ReceiveBlocks(ctx context.Context)
+	GetKeymanager() keymanager.IKeymanager
+	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -62,33 +69,79 @@ func run(ctx context.Context, v Validator) {
 			log.Fatalf("Slasher is not ready: %v", err)
 		}
 	}
-	if err := v.WaitForChainStart(ctx); err != nil {
-		log.Fatalf("Could not determine if beacon chain started: %v", err)
-	}
-	if err := v.WaitForSync(ctx); err != nil {
-		log.Fatalf("Could not determine if beacon node synced: %v", err)
-	}
-	if err := v.WaitForActivation(ctx); err != nil {
-		log.Fatalf("Could not wait for validator activation: %v", err)
-	}
-	go v.ReceiveBlocks(ctx)
+	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
 
-	headSlot, err := v.CanonicalHeadSlot(ctx)
-	if err != nil {
-		log.Fatalf("Could not get current canonical head slot: %v", err)
+	var headSlot uint64
+	firstTime := true
+	accountsChangedChan := make(chan struct{}, 1)
+	for {
+		if !firstTime {
+			if ctx.Err() != nil {
+				log.Info("Context canceled, stopping validator")
+				return // Exit if context is canceled.
+			}
+			<-ticker.C
+		} else {
+			firstTime = false
+		}
+		err := v.WaitForChainStart(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon chain started: %v", err)
+		}
+		err = v.WaitForSync(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon node synced: %v", err)
+		}
+		err = v.WaitForActivation(ctx, accountsChangedChan)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for validator activation: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not wait for validator activation: %v", err)
+		}
+		headSlot, err = v.CanonicalHeadSlot(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not get current canonical head slot: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not get current canonical head slot: %v", err)
+		}
+		break
 	}
+
+	go handleAccountsChanged(ctx, v, accountsChangedChan)
+	connectionErrorChannel := make(chan error, 1)
+	go v.ReceiveBlocks(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
-
 	for {
+		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
 			span.End()
+			cancel()
 			return // Exit if context is canceled.
+		case blocksError := <-connectionErrorChannel:
+			if blocksError != nil {
+				log.WithError(blocksError).Warn("block stream interrupted")
+				go v.ReceiveBlocks(ctx, connectionErrorChannel)
+				continue
+			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
@@ -102,7 +155,7 @@ func run(ctx context.Context, v Validator) {
 			}
 
 			deadline := v.SlotDeadline(slot)
-			slotCtx, cancel := context.WithDeadline(ctx, deadline)
+			slotCtx, cancel = context.WithDeadline(ctx, deadline)
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 
@@ -166,6 +219,10 @@ func run(ctx context.Context, v Validator) {
 	}
 }
 
+func isConnectionError(err error) bool {
+	return err != nil && errors.Is(err, errConnectionIssue)
+}
+
 func handleAssignmentError(err error, slot uint64) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
@@ -173,5 +230,26 @@ func handleAssignmentError(err error, slot uint64) {
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
+	}
+}
+
+func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan struct{}) {
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	var sub = v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
+
+	for {
+		select {
+		case <-validatingPubKeysChan:
+			accountsChangedChan <- struct{}{}
+		case err := <-sub.Err():
+			log.WithError(err).Error("accounts changed subscription failed")
+			return
+		case <-ctx.Done():
+			return
+		}
 	}
 }

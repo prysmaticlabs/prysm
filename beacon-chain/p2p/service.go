@@ -82,9 +82,9 @@ type Service struct {
 	genesisValidatorsRoot []byte
 }
 
-// NewService initializes a new p2p service compatible with shared.Service interface. No
+// New initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
@@ -234,8 +234,8 @@ func (s *Service) Start() {
 	})
 	runutil.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
-			"inbound":     len(s.peers.Inbound()),
-			"outbound":    len(s.peers.Outbound()),
+			"inbound":     len(s.peers.InboundConnected()),
+			"outbound":    len(s.peers.OutboundConnected()),
 			"activePeers": len(s.peers.Active()),
 		}).Info("Peer summary")
 	})

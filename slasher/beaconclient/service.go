@@ -72,8 +72,8 @@ type Config struct {
 	NodeClient            ethpb.NodeClient
 }
 
-// NewService instantiation.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+// New instantiation.
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
@@ -104,36 +104,36 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 // BlockFeed returns a feed other services in slasher can subscribe to
 // blocks received via the beacon node through gRPC.
-func (bs *Service) BlockFeed() *event.Feed {
-	return bs.blockFeed
+func (s *Service) BlockFeed() *event.Feed {
+	return s.blockFeed
 }
 
 // AttestationFeed returns a feed other services in slasher can subscribe to
 // attestations received via the beacon node through gRPC.
-func (bs *Service) AttestationFeed() *event.Feed {
-	return bs.attestationFeed
+func (s *Service) AttestationFeed() *event.Feed {
+	return s.attestationFeed
 }
 
 // ClientReadyFeed returns a feed other services in slasher can subscribe to
 // to indicate when the gRPC connection is ready.
-func (bs *Service) ClientReadyFeed() *event.Feed {
-	return bs.clientFeed
+func (s *Service) ClientReadyFeed() *event.Feed {
+	return s.clientFeed
 }
 
 // Stop the beacon client service by closing the gRPC connection.
-func (bs *Service) Stop() error {
-	bs.cancel()
+func (s *Service) Stop() error {
+	s.cancel()
 	log.Info("Stopping service")
-	if bs.conn != nil {
-		return bs.conn.Close()
+	if s.conn != nil {
+		return s.conn.Close()
 	}
 	return nil
 }
 
 // Status returns an error if there exists a gRPC connection error
 // in the service.
-func (bs *Service) Status() error {
-	if bs.conn == nil {
+func (s *Service) Status() error {
+	if s.conn == nil {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
@@ -143,10 +143,10 @@ func (bs *Service) Status() error {
 // a gRPC client connection with a beacon node, listening for
 // streamed blocks/attestations, and submitting slashing operations
 // after they are detected by other services in the slasher.
-func (bs *Service) Start() {
+func (s *Service) Start() {
 	var dialOpt grpc.DialOption
-	if bs.cert != "" {
-		creds, err := credentials.NewClientTLSFromFile(bs.cert, "")
+	if s.cert != "" {
+		creds, err := credentials.NewClientTLSFromFile(s.cert, "")
 		if err != nil {
 			log.Errorf("Could not get valid credentials: %v", err)
 		}
@@ -164,36 +164,36 @@ func (bs *Service) Start() {
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
-			grpcutils.LogGRPCStream,
+			grpcutils.LogStream,
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 	}
-	conn, err := grpc.DialContext(bs.ctx, bs.provider, beaconOpts...)
+	conn, err := grpc.DialContext(s.ctx, s.provider, beaconOpts...)
 	if err != nil {
-		log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
+		log.Fatalf("Could not dial endpoint: %s, %v", s.provider, err)
 	}
-	bs.beaconDialOptions = beaconOpts
+	s.beaconDialOptions = beaconOpts
 	log.Info("Successfully started gRPC connection")
-	bs.conn = conn
-	bs.beaconClient = ethpb.NewBeaconChainClient(bs.conn)
-	bs.nodeClient = ethpb.NewNodeClient(bs.conn)
+	s.conn = conn
+	s.beaconClient = ethpb.NewBeaconChainClient(s.conn)
+	s.nodeClient = ethpb.NewNodeClient(s.conn)
 
 	// We poll for the sync status of the beacon node until it is fully synced.
-	bs.querySyncStatus(bs.ctx)
+	s.querySyncStatus(s.ctx)
 
 	// We notify other services in slasher that the beacon client is ready
 	// and the connection is active.
-	bs.clientFeed.Send(true)
+	s.clientFeed.Send(true)
 
 	// We register subscribers for any detected proposer/attester slashings
 	// in the slasher services that we can submit to the beacon node
 	// as they are found.
-	go bs.subscribeDetectedProposerSlashings(bs.ctx, bs.proposerSlashingsChan)
-	go bs.subscribeDetectedAttesterSlashings(bs.ctx, bs.attesterSlashingsChan)
+	go s.subscribeDetectedProposerSlashings(s.ctx, s.proposerSlashingsChan)
+	go s.subscribeDetectedAttesterSlashings(s.ctx, s.attesterSlashingsChan)
 
 }

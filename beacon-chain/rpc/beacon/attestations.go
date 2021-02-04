@@ -173,7 +173,10 @@ func (bs *Server) ListIndexedAttestations(
 					err,
 				)
 			}
-			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+			idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+			if err != nil {
+				return nil, err
+			}
 			indexedAtts = append(indexedAtts, idxAtt)
 		}
 	}
@@ -311,7 +314,10 @@ func (bs *Server) StreamIndexedAttestations(
 					continue
 				}
 				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
-				idxAtt := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
+				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
+				if err != nil {
+					continue
+				}
 				if err := stream.Send(idxAtt); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
@@ -328,7 +334,7 @@ func (bs *Server) StreamIndexedAttestations(
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 	twoThirdsASlot := 2 * slotutil.DivideSlotBy(3) /* 2/3 slot duration */
-	ticker := slotutil.GetSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-ticker.C():

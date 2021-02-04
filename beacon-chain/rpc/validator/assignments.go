@@ -61,7 +61,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	defer stateSub.Unsubscribe()
 
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	epochTicker := slotutil.GetSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
+	epochTicker := slotutil.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
@@ -155,13 +155,15 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		}
 		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if ok {
+			status := assignmentStatus(s, idx)
+
 			assignment.ValidatorIndex = idx
-			assignment.Status = assignmentStatus(s, idx)
+			assignment.Status = status
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
 
 			// The next epoch has no lookup for proposer indexes.
 			nextAssignment.ValidatorIndex = idx
-			nextAssignment.Status = assignmentStatus(s, idx)
+			nextAssignment.Status = status
 
 			ca, ok := committeeAssignments[idx]
 			if ok {

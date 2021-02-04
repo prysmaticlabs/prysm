@@ -59,11 +59,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	if att.Data == nil {
-		return pubsub.ValidationReject
-	}
-	// Attestation aggregation bits must exist.
-	if att.AggregationBits == nil {
+	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return pubsub.ValidationReject
 	}
 
@@ -72,7 +68,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	if helpers.SlotToEpoch(att.Data.Slot) != att.Data.Target.Epoch {
+	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
 		return pubsub.ValidationReject
 	}
 

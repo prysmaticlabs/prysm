@@ -23,3 +23,18 @@ func TestHydrateAttestationData(t *testing.T) {
 	require.DeepEqual(t, d.Target.Root, make([]byte, 32))
 	require.DeepEqual(t, d.Source.Root, make([]byte, 32))
 }
+
+func TestHydrateIndexedAttestation(t *testing.T) {
+	a := &ethpb.IndexedAttestation{}
+	a = HydrateIndexedAttestation(a)
+	_, err := a.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = a.Data.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestGenerateAttestations_EpochBoundary(t *testing.T) {
+	gs, pk := DeterministicGenesisState(t, 32)
+	_, err := GenerateAttestations(gs, pk, 1, params.BeaconConfig().SlotsPerEpoch, false)
+	require.NoError(t, err)
+}

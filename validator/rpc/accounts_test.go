@@ -1,7 +1,12 @@
 package rpc
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"testing"
 
@@ -83,5 +88,76 @@ func TestServer_ListAccounts(t *testing.T) {
 		res, err := s.ListAccounts(context.Background(), test.req)
 		require.NoError(t, err)
 		assert.DeepEqual(t, res, test.res)
+	}
+}
+
+func TestServer_BackupAccounts(t *testing.T) {
+	ctx := context.Background()
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	// We attempt to create the wallet.
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx)
+	require.NoError(t, err)
+	s := &Server{
+		keymanager:        km,
+		walletInitialized: true,
+		wallet:            w,
+	}
+	numAccounts := 50
+	dr, ok := km.(*derived.Keymanager)
+	require.Equal(t, true, ok)
+	err = dr.RecoverAccountsFromMnemonic(ctx, testMnemonic, "", numAccounts)
+	require.NoError(t, err)
+	resp, err := s.ListAccounts(ctx, &pb.ListAccountsRequest{
+		PageSize: int32(numAccounts),
+	})
+	require.NoError(t, err)
+	require.Equal(t, len(resp.Accounts), numAccounts)
+
+	pubKeys := make([][]byte, numAccounts)
+	for i, aa := range resp.Accounts {
+		pubKeys[i] = aa.ValidatingPublicKey
+	}
+	// We now attempt to backup all public keys from the wallet.
+	res, err := s.BackupAccounts(context.Background(), &pb.BackupAccountsRequest{
+		PublicKeys:     pubKeys,
+		BackupPassword: s.wallet.Password(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res.ZipFile)
+
+	// Open a zip archive for reading.
+	buf := bytes.NewReader(res.ZipFile)
+	r, err := zip.NewReader(buf, int64(len(res.ZipFile)))
+	require.NoError(t, err)
+	require.Equal(t, len(pubKeys), len(r.File))
+
+	// Iterate through the files in the archive, checking they
+	// match the keystores we wanted to backup.
+	for i, f := range r.File {
+		keystoreFile, err := f.Open()
+		require.NoError(t, err)
+		encoded, err := ioutil.ReadAll(keystoreFile)
+		if err != nil {
+			require.NoError(t, keystoreFile.Close())
+			t.Fatal(err)
+		}
+		keystore := &keymanager.Keystore{}
+		if err := json.Unmarshal(encoded, &keystore); err != nil {
+			require.NoError(t, keystoreFile.Close())
+			t.Fatal(err)
+		}
+		assert.Equal(t, keystore.Pubkey, fmt.Sprintf("%x", pubKeys[i]))
+		require.NoError(t, keystoreFile.Close())
 	}
 }

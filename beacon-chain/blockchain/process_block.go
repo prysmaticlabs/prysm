@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
+
+// A custom slot deadline for processing state slots in our cache.
+const slotDeadline = 5 * time.Second
 
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
@@ -99,6 +103,20 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
+	}
+
+	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+	if featureconfig.Get().EnableNextSlotStateCache {
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := state.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Debug("could not update next slot state cache")
+			}
+		}()
 	}
 
 	// Update justified check point.
@@ -382,7 +400,10 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 		if err != nil {
 			return err
 		}
-		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		if err != nil {
+			return err
+		}
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
 	return nil

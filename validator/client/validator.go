@@ -31,7 +31,7 @@ import (
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -68,6 +68,7 @@ type validator struct {
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
+	slashableKeysLock                  sync.RWMutex
 	walletInitializedFeed              *event.Feed
 	blockFeed                          *event.Feed
 	genesisTime                        uint64
@@ -83,11 +84,12 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          slashingprotection.Protector
+	protector                          iface.Protector
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
 	graffitiStruct                     *graffiti.Graffiti
+	eipImportBlacklistedPublicKeys     map[[48]byte]bool
 }
 
 // Done cleans up the validator.
@@ -119,6 +121,9 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 			return nil
 		case <-ctx.Done():
 			return errors.New("context canceled")
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return nil
 		}
 	}
 }
@@ -133,7 +138,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// First, check if the beacon chain has started.
 	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
+		return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error())
 	}
 
 	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
@@ -143,7 +148,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
-			return errors.Wrap(err, "could not receive ChainStart from stream")
+			return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not receive ChainStart from stream").Error())
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
@@ -167,11 +172,13 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 				)
 			}
 		}
+	} else {
+		return errConnectionIssue
 	}
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
 }
@@ -183,7 +190,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "could not get sync status")
+		return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
 	if !s.Syncing {
 		return nil
@@ -195,7 +202,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
-				return errors.Wrap(err, "could not get sync status")
+				return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
 			if !s.Syncing {
 				return nil
@@ -241,10 +248,11 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 // ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveBlocks(ctx context.Context) {
+func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
 	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve blocks stream")
+		log.WithError(err).Error("Failed to retrieve blocks stream, " + errConnectionIssue.Error())
+		connectionErrorChannel <- errors.Wrap(errConnectionIssue, err.Error())
 		return
 	}
 
@@ -255,7 +263,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context) {
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive blocks from beacon node")
+			log.WithError(err).Error("Could not receive blocks from beacon node, " + errConnectionIssue.Error())
+			connectionErrorChannel <- errors.Wrap(errConnectionIssue, err.Error())
 			return
 		}
 		if res == nil || res.Block == nil {
@@ -326,7 +335,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	defer span.End()
 	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(errConnectionIssue, err.Error())
 	}
 	return head.HeadSlot, nil
 }
@@ -364,9 +373,25 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	if err != nil {
 		return err
 	}
+
+	// Filter out the slashable public keys from the duties request.
+	filteredKeys := make([][48]byte, 0, len(validatingKeys))
+	v.slashableKeysLock.RLock()
+	for _, pubKey := range validatingKeys {
+		if ok := v.eipImportBlacklistedPublicKeys[pubKey]; !ok {
+			filteredKeys = append(filteredKeys, pubKey)
+		} else {
+			log.WithField(
+				"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
+			).Warn("Not including slashable public key from slashing protection import " +
+				"in request to update validator duties")
+		}
+	}
+	v.slashableKeysLock.RUnlock()
+
 	req := &ethpb.DutiesRequest{
 		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
+		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
 	}
 
 	// If duties is nil it means we have had no prior duties and just started up.
@@ -489,6 +514,11 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]Va
 		rolesAt[pubKey] = roles
 	}
 	return rolesAt, nil
+}
+
+// GetKeymanager returns the underlying validator's keymanager.
+func (v *validator) GetKeymanager() keymanager.IKeymanager {
+	return v.keyManager
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -31,7 +32,20 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	lock := mputil.NewMultilock(string(pubKey[:]))
+
+	v.waitOneThirdOrValidBlock(ctx, slot)
+
+	var b strings.Builder
+	if err := b.WriteByte(byte(roleAttester)); err != nil {
+		log.WithError(err).Error("Could not write role byte for lock key")
+		return
+	}
+	_, err := b.Write(pubKey[:])
+	if err != nil {
+		log.WithError(err).Error("Could not write pubkey bytes for lock key")
+		return
+	}
+	lock := mputil.NewMultilock(b.String())
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -49,8 +63,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.Debug("Empty committee for validator duty, not attesting")
 		return
 	}
-
-	v.waitOneThirdOrValidBlock(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -258,7 +270,9 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
 		case <-ctx.Done():
 			traceutil.AnnotateError(span, ctx.Err())
 			return
-
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return
 		case <-t.C:
 			return
 		}

@@ -85,7 +85,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	if err := DeleteAccount(cliCtx.Context, &AccountsConfig{
+	if err := DeleteAccount(cliCtx.Context, &Config{
 		Wallet:           w,
 		Keymanager:       keymanager,
 		DeletePublicKeys: rawPublicKeys,
@@ -100,7 +100,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 }
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
+func DeleteAccount(ctx context.Context, cfg *Config) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
@@ -131,7 +131,7 @@ func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	default:
-		return fmt.Errorf(msgKeymanagerNotSupported, cfg.Wallet.KeymanagerKind())
+		return fmt.Errorf(errKeymanagerNotSupported, cfg.Wallet.KeymanagerKind())
 	}
 	return nil
 }

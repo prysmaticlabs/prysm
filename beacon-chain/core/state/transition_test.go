@@ -1,7 +1,6 @@
 package state_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -101,9 +100,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	mix, err := beaconState.RandaoMixAtIndex(1)
 	require.NoError(t, err)
-	if bytes.Equal(mix, oldMix) {
-		t.Errorf("Did not expect new and old randao mix to equal, %#x == %#x", mix, oldMix)
-	}
+	assert.DeepNotEqual(t, oldMix, mix, "Did not expect new and old randao mix to equal")
 }
 
 func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
@@ -359,15 +356,12 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	require.NoError(t, beaconState.SetValidators(validators))
 
 	mockRoot2 := [32]byte{'A'}
-	att1 := &ethpb.IndexedAttestation{
+	att1 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
 		},
 		AttestingIndices: []uint64{0, 1},
-		Signature:        make([]byte, 96),
-	}
+	})
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
@@ -378,15 +372,13 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	att1.Signature = aggregateSig.Marshal()
 
 	mockRoot3 := [32]byte{'B'}
-	att2 := &ethpb.IndexedAttestation{
+	att2 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 		},
 		AttestingIndices: []uint64{0, 1},
-		Signature:        make([]byte, 96),
-	}
+	})
 
 	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
@@ -420,7 +412,8 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	assert.NoError(t, err)
-	attestingIndices := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
+	require.NoError(t, err)
 	assert.NoError(t, err)
 	hashTreeRoot, err = helpers.ComputeSigningRoot(blockAtt.Data, domain)
 	assert.NoError(t, err)
@@ -595,22 +588,12 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	// Set up attester slashing object for block
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
-			Attestation_1: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				},
+			Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2, 3},
-			},
-			Attestation_2: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-				},
+			}),
+			Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2, 3},
-			},
+			}),
 		},
 	}
 
@@ -727,7 +710,8 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 
 		committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 		assert.NoError(t, err)
-		attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		require.NoError(t, err)
 		domain, err := helpers.Domain(s.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
 		require.NoError(t, err)
 		sigs := make([]bls.Signature, len(attestingIndices))
@@ -905,4 +889,13 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 
 	_, err = state.ProcessSlots(context.Background(), parentState, slot-1)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
+}
+
+func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
+	ctx := context.Background()
+	s, _ := testutil.DeterministicGenesisState(t, 1)
+	r := []byte{'a'}
+	s, err := state.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
+	require.NoError(t, err)
+	require.Equal(t, uint64(5), s.Slot())
 }
