@@ -96,7 +96,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &types.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 60, len(resp.Data))
+	assert.Equal(t, 61, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "config_name":
@@ -219,6 +219,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x30303036", v)
 		case "domain_aggregate_and_proof":
 			assert.Equal(t, "0x30303037", v)
+		case "domain_sync_committee":
+			assert.Equal(t, "0x07000000", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

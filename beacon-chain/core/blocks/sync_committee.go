@@ -6,6 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -67,7 +68,8 @@ func ProcessSyncCommittee(state *state.BeaconState, body *ethpb.BeaconBlockBody)
 	if err != nil {
 		return nil, err
 	}
-	r, err := helpers.ComputeSigningRoot(pbr, d)
+	sszBytes := types.SSZBytes(pbr)
+	r, err := helpers.ComputeSigningRoot(&sszBytes, d)
 	if err != nil {
 		return nil, err
 	}

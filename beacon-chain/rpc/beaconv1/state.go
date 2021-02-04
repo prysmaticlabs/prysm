@@ -27,14 +27,15 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
 	forkVersion := params.BeaconConfig().GenesisForkVersion
-
 	return &ethpb.GenesisResponse{
-		GenesisTime: &ptypes.Timestamp{
-			Seconds: genesisTime.Unix(),
-			Nanos:   0,
+		Data: &ethpb.GenesisResponse_Genesis{
+			GenesisTime: &ptypes.Timestamp{
+				Seconds: genesisTime.Unix(),
+				Nanos:   0,
+			},
+			GenesisValidatorsRoot: validatorRoot[:],
+			GenesisForkVersion:    forkVersion,
 		},
-		GenesisValidatorsRoot: validatorRoot[:],
-		GenesisForkVersion:    forkVersion,
 	}, nil
 }
 
