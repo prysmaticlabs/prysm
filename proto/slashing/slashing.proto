@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package ethereum.slashing;
 
+import "eth/ext/options.proto";
 import "eth/v1alpha1/beacon_block.proto";
-import "eth/v1alpha1/options.proto";
 
 // Slasher service API
 //
@@ -62,7 +62,7 @@ message AttesterSlashingResponse {
 // epoch of the bitlist, we can easily store which epochs a validator has proposed
 // a block for while pruning the older data.
 message ProposalHistory {
-    bytes epoch_bits = 1 [(ethereum.eth.v1alpha1.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes epoch_bits = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
     uint64 latest_epoch_written = 2;
 }
 
