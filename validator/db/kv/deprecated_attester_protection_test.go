@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -67,8 +68,8 @@ func TestSetTargetData(t *testing.T) {
 	type testStruct struct {
 		name        string
 		enc         deprecatedEncodedAttestingHistory
-		target      uint64
-		source      uint64
+		target      types.Epoch
+		source      types.Epoch
 		signingRoot []byte
 		expected    deprecatedEncodedAttestingHistory
 		error       string

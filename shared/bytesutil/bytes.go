@@ -333,3 +333,8 @@ func EpochToBytesLittleEndian(i types.Epoch) []byte {
 func EpochToBytesBigEndian(i types.Epoch) []byte {
 	return Uint64ToBytesBigEndian(uint64(i))
 }
+
+// BytesToEpochBigEndian conversion.
+func BytesToEpochBigEndian(b []byte) types.Epoch {
+	return types.Epoch(BytesToUint64BigEndian(b))
+}
