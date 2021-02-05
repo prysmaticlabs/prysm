@@ -466,7 +466,7 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	service.processChainStartTime(context.Background(), time.Now())
 
 	stateEvent := <-stateChannel
-	require.Equal(t, int(stateEvent.Type), int(statefeed.Initialized))
+	require.Equal(t, int(stateEvent.Type), statefeed.Initialized)
 	_, ok := stateEvent.Data.(*statefeed.InitializedData)
 	require.Equal(t, true, ok)
 }
