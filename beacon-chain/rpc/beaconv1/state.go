@@ -120,7 +120,6 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 		}
 		for _, root := range headState.StateRoots() {
 			if bytes.Equal(root, stateRoot[:]) {
-				log.Error(string(root))
 				return &ethpb.StateRootResponse{
 					Data: &ethpb.StateRootResponse_StateRoot{
 						StateRoot: stateRoot[:],
@@ -135,11 +134,12 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	slot, err := strconv.ParseUint(stateIdString, 10, 64)
 	if err != nil {
+		// ID format does not match any valid options.
 		return nil, status.Errorf(codes.Internal, "Invalid state ID: "+stateIdString)
 	}
 	currentSlot := bs.ChainInfoFetcher.HeadSlot()
-	if slot < 0 || slot > currentSlot {
-		return nil, status.Errorf(codes.Internal, "Slot has to be between 0 and %d", currentSlot)
+	if slot > currentSlot {
+		return nil, status.Errorf(codes.Internal, "Slot cannot be in the future")
 	}
 	state, err := bs.StateGenService.StateBySlot(ctx, slot)
 	if err != nil {
