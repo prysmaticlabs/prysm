@@ -81,7 +81,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 		sourceEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs)
 
 		storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
-		require.DeepEqual(t, numEpochs+1, bytesutil.BytesToUint64BigEndian(storedTargetEpoch))
+		require.DeepEqual(t, numEpochs+1, bytesutil.BytesToEpochBigEndian(storedTargetEpoch))
 
 		var expectedSigningRoot [32]byte
 		copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))

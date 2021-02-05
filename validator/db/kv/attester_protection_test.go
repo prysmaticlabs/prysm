@@ -207,10 +207,10 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	)
 	got, _, err := validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(100), got)
+	require.Equal(t, types.Epoch(100), got)
 	got, _, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(200), got)
+	require.Equal(t, types.Epoch(200), got)
 
 	// Can replace.
 	require.NoError(
@@ -223,10 +223,10 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	)
 	got, _, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(99), got)
+	require.Equal(t, types.Epoch(99), got)
 	got, _, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(199), got)
+	require.Equal(t, types.Epoch(199), got)
 
 	// Can not replace.
 	require.NoError(
@@ -239,10 +239,10 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	)
 	got, _, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(99), got)
+	require.Equal(t, types.Epoch(99), got)
 	got, _, err = validatorDB.LowestSignedSourceEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(199), got)
+	require.Equal(t, types.Epoch(199), got)
 }
 
 func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
@@ -266,10 +266,10 @@ func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	)
 	got, _, err := validatorDB.LowestSignedTargetEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(100), got)
+	require.Equal(t, types.Epoch(100), got)
 	got, _, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(200), got)
+	require.Equal(t, types.Epoch(200), got)
 
 	// Can replace.
 	require.NoError(
@@ -282,10 +282,10 @@ func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	)
 	got, _, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(99), got)
+	require.Equal(t, types.Epoch(99), got)
 	got, _, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(199), got)
+	require.Equal(t, types.Epoch(199), got)
 
 	// Can not replace.
 	require.NoError(
@@ -298,10 +298,10 @@ func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	)
 	got, _, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(99), got)
+	require.Equal(t, types.Epoch(99), got)
 	got, _, err = validatorDB.LowestSignedTargetEpoch(ctx, p1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(199), got)
+	require.Equal(t, types.Epoch(199), got)
 }
 
 func TestStore_SaveAttestationsForPubKey(t *testing.T) {

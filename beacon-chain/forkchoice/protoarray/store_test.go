@@ -160,8 +160,8 @@ func TestStore_Insert_UnknownParent(t *testing.T) {
 	assert.Equal(t, 1, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 1, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, NonExistentNode, s.nodes[0].parent, "Incorrect parent")
-	assert.Equal(t, uint64(1), s.nodes[0].justifiedEpoch, "Incorrect justification")
-	assert.Equal(t, uint64(1), s.nodes[0].finalizedEpoch, "Incorrect finalization")
+	assert.Equal(t, types.Epoch(1), s.nodes[0].justifiedEpoch, "Incorrect justification")
+	assert.Equal(t, types.Epoch(1), s.nodes[0].finalizedEpoch, "Incorrect finalization")
 	assert.Equal(t, [32]byte{'A'}, s.nodes[0].root, "Incorrect root")
 }
 
@@ -176,8 +176,8 @@ func TestStore_Insert_KnownParent(t *testing.T) {
 	assert.Equal(t, 2, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 2, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, uint64(0), s.nodes[1].parent, "Incorrect parent")
-	assert.Equal(t, uint64(1), s.nodes[1].justifiedEpoch, "Incorrect justification")
-	assert.Equal(t, uint64(1), s.nodes[1].finalizedEpoch, "Incorrect finalization")
+	assert.Equal(t, types.Epoch(1), s.nodes[1].justifiedEpoch, "Incorrect justification")
+	assert.Equal(t, types.Epoch(1), s.nodes[1].finalizedEpoch, "Incorrect finalization")
 	assert.Equal(t, [32]byte{'A'}, s.nodes[1].root, "Incorrect root")
 }
 
@@ -194,8 +194,8 @@ func TestStore_ApplyScoreChanges_UpdateEpochs(t *testing.T) {
 
 	// The justified and finalized epochs in Store should be updated to 1 and 1 given the following input.
 	require.NoError(t, s.applyWeightChanges(context.Background(), 1, 1, []int{}))
-	assert.Equal(t, uint64(1), s.justifiedEpoch, "Did not update justified epoch")
-	assert.Equal(t, uint64(1), s.finalizedEpoch, "Did not update finalized epoch")
+	assert.Equal(t, types.Epoch(1), s.justifiedEpoch, "Did not update justified epoch")
+	assert.Equal(t, types.Epoch(1), s.finalizedEpoch, "Did not update finalized epoch")
 }
 
 func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {

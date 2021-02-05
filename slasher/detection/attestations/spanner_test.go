@@ -945,5 +945,5 @@ func TestSpanDetector_UpdateMinSpansCheckCacheSize(t *testing.T) {
 		slasherDB: db,
 	}
 	require.NoError(t, sd.updateMinSpan(ctx, att))
-	require.Equal(t, epochLookback, db.CacheLength(ctx), "Unexpected cache length")
+	require.Equal(t, int(epochLookback), db.CacheLength(ctx), "Unexpected cache length")
 }

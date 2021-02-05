@@ -22,13 +22,13 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
 
 	assert.Equal(t, [32]byte{}, params.BeaconConfig().ZeroHash, "ZeroHash should be all 0s for these tests to pass")
-	assert.Equal(t, uint64(65536), params.BeaconConfig().EpochsPerHistoricalVector, "EpochsPerHistoricalVector should be 8192 for these tests to pass")
+	assert.Equal(t, types.Epoch(65536), params.BeaconConfig().EpochsPerHistoricalVector, "EpochsPerHistoricalVector should be 8192 for these tests to pass")
 
 	latestRandaoMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
 	assert.Equal(t, uint64(16777216), params.BeaconConfig().HistoricalRootsLimit, "HistoricalRootsLimit should be 16777216 for these tests to pass")
 
 	depositsForChainStart := 100
-	assert.Equal(t, uint64(8192), params.BeaconConfig().EpochsPerSlashingsVector, "EpochsPerSlashingsVector should be 8192 for these tests to pass")
+	assert.Equal(t, types.Epoch(8192), params.BeaconConfig().EpochsPerSlashingsVector, "EpochsPerSlashingsVector should be 8192 for these tests to pass")
 
 	genesisTime := uint64(99999)
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
@@ -59,7 +59,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.Equal(t, depositsForChainStart, len(newState.Balances()), "Balances was not correctly initialized")
 
 	// Randomness and committees fields checks.
-	assert.Equal(t, latestRandaoMixesLength, uint64(len(newState.RandaoMixes())), "Length of RandaoMixes was not correctly initialized")
+	assert.Equal(t, latestRandaoMixesLength, types.Epoch(len(newState.RandaoMixes())), "Length of RandaoMixes was not correctly initialized")
 	mix, err := newState.RandaoMixAtIndex(0)
 	require.NoError(t, err)
 	assert.DeepEqual(t, eth1Data.BlockHash, mix, "RandaoMixes was not correctly initialized")

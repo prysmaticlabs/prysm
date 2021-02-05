@@ -15,7 +15,7 @@ func TestNewAttestationHistoryArray(t *testing.T) {
 	ba := newDeprecatedAttestingHistory(0)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
 	ba = newDeprecatedAttestingHistory(params.BeaconConfig().WeakSubjectivityPeriod - 1)
-	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, uint64(len(ba)))
+	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, types.Epoch(len(ba)))
 	ba = newDeprecatedAttestingHistory(params.BeaconConfig().WeakSubjectivityPeriod)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
 	ba = newDeprecatedAttestingHistory(params.BeaconConfig().WeakSubjectivityPeriod + 1)
@@ -39,7 +39,7 @@ func TestGetLatestEpochWritten(t *testing.T) {
 	ha[0] = 28
 	lew, err := ha.getLatestEpochWritten(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(28), lew)
+	assert.Equal(t, types.Epoch(28), lew)
 }
 
 func TestSetLatestEpochWritten(t *testing.T) {

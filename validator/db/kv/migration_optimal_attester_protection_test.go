@@ -283,7 +283,7 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 						highestEpoch, err := attestingHistory.getLatestEpochWritten(ctx)
 						require.NoError(t, err)
 						// Verify the highest epoch written is 50 from the setup stage.
-						require.Equal(t, uint64(50), highestEpoch)
+						require.Equal(t, types.Epoch(50), highestEpoch)
 					}
 					return nil
 				})
