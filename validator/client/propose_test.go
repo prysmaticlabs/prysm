@@ -347,7 +347,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	farAhead := uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	farAhead := uint64(params.BeaconConfig().WeakSubjectivityPeriod+9) * params.BeaconConfig().SlotsPerEpoch
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(
