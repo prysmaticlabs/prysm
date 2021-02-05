@@ -24,13 +24,3 @@ func setupDB(t testing.TB) *Store {
 	})
 	return db
 }
-
-func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
-	cfg := &Config{SpanCacheSize: cacheSize}
-	db, err := NewKVStore(t.TempDir(), cfg)
-	require.NoError(t, err, "Failed to instantiate DB")
-	t.Cleanup(func() {
-		require.NoError(t, db.Close(), "Failed to close database")
-	})
-	return db
-}
