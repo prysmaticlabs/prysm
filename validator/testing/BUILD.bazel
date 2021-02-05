@@ -2,6 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = [
         "mock_protector.go",
         "mock_slasher.go",
