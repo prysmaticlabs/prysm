@@ -8,12 +8,13 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,56 +34,56 @@ var churnLimit = uint64(4)
 var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
-var depositsInBlockStart = uint64(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
+var depositsInBlockStart = types.Epoch(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
 
 // deposits included + finalization + MaxSeedLookahead for activation.
 var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead
-var depositEndEpoch = depositActivationStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
+var depositEndEpoch = depositActivationStartEpoch + types.Epoch(math.Ceil(float64(depositValCount)/float64(churnLimit)))
 
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
-var ProcessesDepositsInBlocks = types.Evaluator{
+var ProcessesDepositsInBlocks = e2etypes.Evaluator{
 	Name:       "processes_deposits_in_blocks_epoch_%d",
 	Policy:     policies.OnEpoch(depositsInBlockStart), // We expect all deposits to enter in one epoch.
 	Evaluation: processesDepositsInBlocks,
 }
 
 // VerifyBlockGraffiti ensures the block graffiti is one of the random list.
-var VerifyBlockGraffiti = types.Evaluator{
+var VerifyBlockGraffiti = e2etypes.Evaluator{
 	Name:       "verify_graffiti_in_blocks_epoch_%d",
 	Policy:     policies.AfterNthEpoch(0),
 	Evaluation: verifyGraffitiInBlocks,
 }
 
 // ActivatesDepositedValidators ensures the expected amount of validator deposits are activated into the state.
-var ActivatesDepositedValidators = types.Evaluator{
+var ActivatesDepositedValidators = e2etypes.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
 	Policy:     policies.BetweenEpochs(depositActivationStartEpoch, depositEndEpoch),
 	Evaluation: activatesDepositedValidators,
 }
 
 // DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
-var DepositedValidatorsAreActive = types.Evaluator{
+var DepositedValidatorsAreActive = e2etypes.Evaluator{
 	Name:       "deposited_validators_are_active_epoch_%d",
 	Policy:     policies.AfterNthEpoch(depositEndEpoch),
 	Evaluation: depositedValidatorsAreActive,
 }
 
 // ProposeVoluntaryExit sends a voluntary exit from randomly selected validator in the genesis set.
-var ProposeVoluntaryExit = types.Evaluator{
+var ProposeVoluntaryExit = e2etypes.Evaluator{
 	Name:       "propose_voluntary_exit_epoch_%d",
 	Policy:     policies.OnEpoch(7),
 	Evaluation: proposeVoluntaryExit,
 }
 
 // ValidatorHasExited checks the beacon state for the exited validator and ensures its marked as exited.
-var ValidatorHasExited = types.Evaluator{
+var ValidatorHasExited = e2etypes.Evaluator{
 	Name:       "voluntary_has_exited_%d",
 	Policy:     policies.OnEpoch(8),
 	Evaluation: validatorIsExited,
 }
 
 // ValidatorsVoteWithTheMajority verifies whether validator vote for eth1data using the majority algorithm.
-var ValidatorsVoteWithTheMajority = types.Evaluator{
+var ValidatorsVoteWithTheMajority = e2etypes.Evaluator{
 	Name:       "validators_vote_with_the_majority_%d",
 	Policy:     policies.AfterNthEpoch(0),
 	Evaluation: validatorsVoteWithTheMajority,
@@ -339,7 +340,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 	for _, blk := range blks.BlockContainers {
 		slot, vote := blk.Block.Block.Slot, blk.Block.Block.Body.Eth1Data.BlockHash
-		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch * params.E2ETestConfig().EpochsPerEth1VotingPeriod
+		slotsPerVotingPeriod := uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod.Mul(params.E2ETestConfig().SlotsPerEpoch))
 
 		// We treat epoch 1 differently from other epoch for two reasons:
 		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently
