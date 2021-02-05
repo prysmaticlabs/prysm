@@ -199,7 +199,8 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("Slot", func(t *testing.T) {
 		state := testutil.NewBeaconState()
-		state.SetSlot(100)
+		err := state.SetSlot(100)
+		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			State: state,
 		}
