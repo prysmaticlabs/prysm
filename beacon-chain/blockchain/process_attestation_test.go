@@ -238,7 +238,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
-	assert.Equal(t, returned.Slot(), checkpoint.Epoch.Mul(params.BeaconConfig().SlotsPerEpoch), "Incorrectly returned base state")
+	assert.Equal(t, uint64(checkpoint.Epoch.Mul(params.BeaconConfig().SlotsPerEpoch)), returned.Slot(), "Incorrectly returned base state")
 
 	cached, err := service.checkpointStateCache.StateByCheckpoint(checkpoint)
 	require.NoError(t, err)

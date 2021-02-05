@@ -935,6 +935,6 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		testState, err = service.stateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
 	}
-	require.Equal(t, uint64(3), service.CurrentJustifiedCheckpt().Epoch)
-	require.Equal(t, uint64(2), service.FinalizedCheckpt().Epoch)
+	require.Equal(t, types.Epoch(3), service.CurrentJustifiedCheckpt().Epoch)
+	require.Equal(t, types.Epoch(2), service.FinalizedCheckpt().Epoch)
 }
