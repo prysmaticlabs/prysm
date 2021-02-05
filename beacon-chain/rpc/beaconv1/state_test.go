@@ -9,14 +9,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	powMock "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+
+	ptypes "github.com/gogo/protobuf/types"
+	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -198,6 +199,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("Slot", func(t *testing.T) {
 		state := testutil.NewBeaconState()
+		state.SetSlot(100)
 		chainService := &chainMock.ChainService{
 			State: state,
 		}
