@@ -4,7 +4,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	types "github.com/prysmaticlabs/eth2-types"
+	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 var (
@@ -39,25 +40,25 @@ func NewEpochSpansCache(size int, onEvicted func(key interface{}, value interfac
 }
 
 // Get returns an ok bool and the cached value for the requested epoch key, if any.
-func (c *EpochSpansCache) Get(epoch uint64) (map[uint64]types.Span, bool) {
+func (c *EpochSpansCache) Get(epoch types.Epoch) (map[types.Epoch]slashertypes.Span, bool) {
 	item, exists := c.cache.Get(epoch)
 	if exists && item != nil {
 		epochSpansCacheHit.Inc()
-		return item.(map[uint64]types.Span), true
+		return item.(map[types.Epoch]slashertypes.Span), true
 	}
 
 	epochSpansCacheMiss.Inc()
-	return make(map[uint64]types.Span), false
+	return make(map[types.Epoch]slashertypes.Span), false
 }
 
 // Set the response in the cache.
-func (c *EpochSpansCache) Set(epoch uint64, epochSpans map[uint64]types.Span) {
+func (c *EpochSpansCache) Set(epoch types.Epoch, epochSpans map[types.Epoch]slashertypes.Span) {
 	_ = c.cache.Add(epoch, epochSpans)
 }
 
 // Delete removes an epoch from the cache and returns if it existed or not.
 // Performs the onEviction function before removal.
-func (c *EpochSpansCache) Delete(epoch uint64) bool {
+func (c *EpochSpansCache) Delete(epoch types.Epoch) bool {
 	return c.cache.Remove(epoch)
 }
 
@@ -71,7 +72,7 @@ func (c *EpochSpansCache) PruneOldest() uint64 {
 }
 
 // Has returns true if the key exists in the cache.
-func (c *EpochSpansCache) Has(epoch uint64) bool {
+func (c *EpochSpansCache) Has(epoch types.Epoch) bool {
 	return c.cache.Contains(epoch)
 }
 

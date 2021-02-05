@@ -2,7 +2,8 @@ package cache
 
 import (
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"github.com/prysmaticlabs/eth2-types"
+	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 // EpochFlatSpansCache is used to store the spans needed on a per-epoch basis for slashing detection.
@@ -23,25 +24,25 @@ func NewEpochFlatSpansCache(size int, onEvicted func(key interface{}, value inte
 }
 
 // Get returns an ok bool and the cached value for the requested epoch key, if any.
-func (c *EpochFlatSpansCache) Get(epoch uint64) (*types.EpochStore, bool) {
+func (c *EpochFlatSpansCache) Get(epoch types.Epoch) (*slashertypes.EpochStore, bool) {
 	item, exists := c.cache.Get(epoch)
 	if exists && item != nil {
 		epochSpansCacheHit.Inc()
-		return item.(*types.EpochStore), true
+		return item.(*slashertypes.EpochStore), true
 	}
 
 	epochSpansCacheMiss.Inc()
-	return &types.EpochStore{}, false
+	return &slashertypes.EpochStore{}, false
 }
 
 // Set the response in the cache.
-func (c *EpochFlatSpansCache) Set(epoch uint64, epochSpans *types.EpochStore) {
+func (c *EpochFlatSpansCache) Set(epoch types.Epoch, epochSpans *slashertypes.EpochStore) {
 	_ = c.cache.Add(epoch, epochSpans)
 }
 
 // Delete removes an epoch from the cache and returns if it existed or not.
 // Performs the onEviction function before removal.
-func (c *EpochFlatSpansCache) Delete(epoch uint64) bool {
+func (c *EpochFlatSpansCache) Delete(epoch types.Epoch) bool {
 	return c.cache.Remove(epoch)
 }
 
@@ -55,7 +56,7 @@ func (c *EpochFlatSpansCache) PruneOldest() uint64 {
 }
 
 // Has returns true if the key exists in the cache.
-func (c *EpochFlatSpansCache) Has(epoch uint64) bool {
+func (c *EpochFlatSpansCache) Has(epoch types.Epoch) bool {
 	return c.cache.Contains(epoch)
 }
 
