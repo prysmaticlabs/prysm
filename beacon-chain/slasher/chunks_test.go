@@ -144,7 +144,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
-	attRecord := &CompactAttestation{
+	attRecord := &slashertypes.CompactAttestation{
 		Source:      att.Source,
 		Target:      att.Target,
 		SigningRoot: [32]byte{1},
@@ -152,7 +152,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]types.ValidatorIndex{validatorIdx},
-		[]*CompactAttestation{attRecord},
+		[]*slashertypes.CompactAttestation{attRecord},
 	)
 	require.NoError(t, err)
 
@@ -226,7 +226,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
-	attRecord := &CompactAttestation{
+	attRecord := &slashertypes.CompactAttestation{
 		Source:      att.Source,
 		Target:      att.Target,
 		SigningRoot: [32]byte{1},
@@ -234,7 +234,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]types.ValidatorIndex{validatorIdx},
-		[]*CompactAttestation{attRecord},
+		[]*slashertypes.CompactAttestation{attRecord},
 	)
 	require.NoError(t, err)
 
@@ -438,8 +438,8 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	assert.Equal(t, targetEpoch, received)
 }
 
-func createAttestation(source, target types.Epoch) *CompactAttestation {
-	return &CompactAttestation{
+func createAttestation(source, target types.Epoch) *slashertypes.CompactAttestation {
+	return &slashertypes.CompactAttestation{
 		Source: uint64(source),
 		Target: uint64(target),
 	}

@@ -24,7 +24,7 @@ type Chunker interface {
 		ctx context.Context,
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
-		attestation *CompactAttestation,
+		attestation *slashertypes.CompactAttestation,
 	) (slashertypes.SlashingKind, error)
 	Update(
 		chunkIdx uint64,
@@ -176,7 +176,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *CompactAttestation,
+	attestation *slashertypes.CompactAttestation,
 ) (slashertypes.SlashingKind, error) {
 	sourceEpoch := types.Epoch(attestation.Source)
 	targetEpoch := types.Epoch(attestation.Target)
@@ -215,7 +215,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *CompactAttestation,
+	attestation *slashertypes.CompactAttestation,
 ) (slashertypes.SlashingKind, error) {
 	sourceEpoch := types.Epoch(attestation.Source)
 	targetEpoch := types.Epoch(attestation.Target)

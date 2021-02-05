@@ -10,9 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -65,7 +63,7 @@ type ReadOnlyDatabase interface {
 	) (types.Epoch, bool, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-	) (*slashertypes.AttestationRecord, error)
+	) (*slashertypes.CompactAttestation, error)
 	LoadSlasherChunk(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
 	) ([]uint16, bool, error)
@@ -105,7 +103,7 @@ type NoHeadAccessDatabase interface {
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
 		validatorIndices []types.ValidatorIndex,
-		attestations []*slasher.CompactAttestation,
+		attestations []*slashertypes.CompactAttestation,
 	) error
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,

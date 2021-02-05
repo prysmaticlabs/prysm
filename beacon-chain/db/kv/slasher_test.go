@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -22,14 +22,11 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	require.Equal(t, true, attRecord == nil)
 
 	sr := [32]byte{1}
-	err = beaconDB.SaveAttestationRecordForValidator(ctx, valIdx, sr, &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{
-				Epoch: target,
-			},
-			Source: &ethpb.Checkpoint{
-				Epoch: source,
-			},
+	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []types.ValidatorIndex{valIdx}, []*slashertypes.CompactAttestation{
+		{
+			Target:      target,
+			Source:      source,
+			SigningRoot: sr,
 		},
 	})
 	require.NoError(t, err)

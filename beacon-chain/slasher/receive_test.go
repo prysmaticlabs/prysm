@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -50,7 +51,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	s.indexedAttsChan <- att2
 	cancel()
 	<-exitChan
-	wanted := []*CompactAttestation{
+	wanted := []*slashertypes.CompactAttestation{
 		{
 			AttestingIndices: att1.AttestingIndices,
 			Source:           att1.Data.Source.Epoch,
@@ -102,7 +103,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	<-exitChan
 	// Expect only a single, valid attestation was added to the queue.
 	require.Equal(t, 1, len(s.attestationQueue))
-	wanted := []*CompactAttestation{
+	wanted := []*slashertypes.CompactAttestation{
 		{
 			AttestingIndices: validAtt.AttestingIndices,
 			Source:           validAtt.Data.Source.Epoch,

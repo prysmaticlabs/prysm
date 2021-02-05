@@ -20,7 +20,7 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			compactAtt := &CompactAttestation{
+			compactAtt := &slashertypes.CompactAttestation{
 				AttestingIndices: att.AttestingIndices,
 				Source:           att.Data.Source.Epoch,
 				Target:           att.Data.Target.Epoch,

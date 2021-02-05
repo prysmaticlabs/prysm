@@ -9,13 +9,13 @@ const (
 	MaxSpan
 )
 
-// AttestationRecord encapsulating all the necessary
-// information we need to store in the database for slasher
-// to properly perform slashing detection.
-type AttestationRecord struct {
-	Source      uint64
-	Target      uint64
-	SigningRoot [32]byte
+// CompactAttestation containing only the required information
+// for attester slashing detection.
+type CompactAttestation struct {
+	AttestingIndices []uint64
+	Source           uint64
+	Target           uint64
+	SigningRoot      [32]byte
 }
 
 // SlashingKind is an enum representing the type of slashable

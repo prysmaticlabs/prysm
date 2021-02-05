@@ -7,10 +7,10 @@ import (
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
 // LatestEpochAttestedForValidator given a validator index returns the latest
@@ -68,10 +68,10 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-) (*slashertypes.AttestationRecord, error) {
+) (*slashertypes.CompactAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
-	var record *slashertypes.AttestationRecord
+	var record *slashertypes.CompactAttestation
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		encIdx, err := validatorIdx.MarshalSSZ()
@@ -97,28 +97,35 @@ func (s *Store) AttestationRecordForValidator(
 	return record, err
 }
 
-// SaveAttestationRecordForValidator saves an attestation record for a validator index.
-func (s *Store) SaveAttestationRecordForValidator(
+// SaveAttestationRecordsForValidators saves an attestation records for the
+// specified validator indices.
+func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	validatorIdx types.ValidatorIndex,
-	signingRoot [32]byte,
-	attestation *ethpb.IndexedAttestation,
+	validatorIndices []types.ValidatorIndex,
+	attestations []*slashertypes.CompactAttestation,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordForValidator")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		encIdx, err := validatorIdx.MarshalSSZ()
-		if err != nil {
-			return err
+		for _, valIdx := range validatorIndices {
+			encIdx, err := valIdx.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			for _, att := range attestations {
+				encEpoch := ssz.MarshalUint64(make([]byte, 0), att.Target)
+				key := append(encIdx, encEpoch...)
+				value, err := encodeAttestationRecord(att)
+				if err != nil {
+					return err
+				}
+				if err := bkt.Put(key, value); err != nil {
+					return err
+				}
+			}
 		}
-		encEpoch := ssz.MarshalUint64(make([]byte, 0), attestation.Data.Target.Epoch)
-		key := append(encIdx, encEpoch...)
-		value, err := encodeIndexedAttestationRecord(attestation, signingRoot)
-		if err != nil {
-			return err
-		}
-		return bkt.Put(key, value)
+		return nil
 	})
 }
 
@@ -174,26 +181,26 @@ func (s *Store) SaveSlasherChunks(
 	})
 }
 
-// Encode an indexed attestation's required fields for slashing protection into bytes.
-func encodeIndexedAttestationRecord(att *ethpb.IndexedAttestation, signingRoot [32]byte) ([]byte, error) {
-	if att == nil || att.Data == nil || att.Data.Target == nil || att.Data.Source == nil {
+// Encode an attestation record's required fields for slashing protection into bytes.
+func encodeAttestationRecord(att *slashertypes.CompactAttestation) ([]byte, error) {
+	if att == nil {
 		return nil, errors.New("encoding nil attestation")
 	}
 	value := make([]byte, 48)
-	copy(value[0:8], ssz.MarshalUint64(make([]byte, 0), att.Data.Source.Epoch))
-	copy(value[8:16], ssz.MarshalUint64(make([]byte, 0), att.Data.Target.Epoch))
-	copy(value[16:], signingRoot[:])
+	copy(value[0:8], ssz.MarshalUint64(make([]byte, 0), att.Source))
+	copy(value[8:16], ssz.MarshalUint64(make([]byte, 0), att.Target))
+	copy(value[16:], att.SigningRoot[:])
 	return value, nil
 }
 
 // Decode attestation record from bytes.
-func decodeAttestationRecord(encoded []byte) (*slashertypes.AttestationRecord, error) {
+func decodeAttestationRecord(encoded []byte) (*slashertypes.CompactAttestation, error) {
 	if len(encoded) != 48 {
 		return nil, fmt.Errorf("wrong length for encoded attestation record, want 48, got %d", len(encoded))
 	}
 	var sr [32]byte
 	copy(sr[:], encoded[16:])
-	return &slashertypes.AttestationRecord{
+	return &slashertypes.CompactAttestation{
 		Source:      ssz.UnmarshallUint64(encoded[0:8]),
 		Target:      ssz.UnmarshallUint64(encoded[8:16]),
 		SigningRoot: sr,
