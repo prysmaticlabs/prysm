@@ -20,7 +20,7 @@ func MockSlashingProtectionJSON(
 ) (*format.EIPSlashingProtectionFormat, error) {
 	standardProtectionFormat := &format.EIPSlashingProtectionFormat{}
 	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{32}, 32))
-	standardProtectionFormat.Metadata.InterchangeFormatVersion = format.INTERCHANGE_FORMAT_VERSION
+	standardProtectionFormat.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 	for i := 0; i < len(publicKeys); i++ {
 		data := &format.ProtectionData{
 			Pubkey: fmt.Sprintf("%#x", publicKeys[i]),

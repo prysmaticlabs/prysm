@@ -6,6 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -146,6 +147,283 @@ func TestAggregateAttestations_MaxCover_AttList_validate(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestAggregateAttestations_rearrangeProcessedAttestations(t *testing.T) {
+	tests := []struct {
+		name     string
+		atts     []*ethpb.Attestation
+		keys     []int
+		wantAtts []*ethpb.Attestation
+	}{
+		{
+			name: "nil attestations",
+		},
+		{
+			name: "single attestation no processed keys",
+			atts: []*ethpb.Attestation{
+				{},
+			},
+			wantAtts: []*ethpb.Attestation{
+				{},
+			},
+		},
+		{
+			name: "single attestation processed",
+			atts: []*ethpb.Attestation{
+				{},
+			},
+			keys: []int{0},
+			wantAtts: []*ethpb.Attestation{
+				nil,
+			},
+		},
+		{
+			name: "multiple processed, last attestation marked",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+			},
+			keys: []int{1, 4}, // Only attestation at index 1, should be moved, att at 4 is already at the end.
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				nil, nil,
+			},
+		},
+		{
+			name: "all processed",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+			},
+			keys: []int{0, 1, 2, 3, 4},
+			wantAtts: []*ethpb.Attestation{
+				nil, nil, nil, nil, nil,
+			},
+		},
+		{
+			name: "operate on slice, single attestation marked",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+				// Assuming some attestations have been already marked as nil, during previous rounds:
+				nil, nil, nil,
+			},
+			keys: []int{2},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				nil, nil, nil, nil,
+			},
+		},
+		{
+			name: "operate on slice, non-last attestation marked",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+				{AggregationBits: bitfield.Bitlist{0x05}},
+				// Assuming some attestations have been already marked as nil, during previous rounds:
+				nil, nil, nil,
+			},
+			keys: []int{2, 3},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x05}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+				nil, nil, nil, nil, nil,
+			},
+		},
+		{
+			name: "operate on slice, last attestation marked",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+				// Assuming some attestations have been already marked as nil, during previous rounds:
+				nil, nil, nil,
+			},
+			keys: []int{2, 4},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				nil, nil, nil, nil, nil,
+			},
+		},
+		{
+			name: "many items, many selected, keys unsorted",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+				{AggregationBits: bitfield.Bitlist{0x02}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				{AggregationBits: bitfield.Bitlist{0x04}},
+				{AggregationBits: bitfield.Bitlist{0x05}},
+				{AggregationBits: bitfield.Bitlist{0x06}},
+			},
+			keys: []int{4, 1, 2, 5, 6},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x03}},
+				nil, nil, nil, nil, nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			candidates := make([]*bitfield.Bitlist64, len(tt.atts))
+			for i := 0; i < len(tt.atts); i++ {
+				if tt.atts[i] != nil {
+					candidates[i] = tt.atts[i].AggregationBits.ToBitlist64()
+				}
+			}
+			rearrangeProcessedAttestations(tt.atts, candidates, tt.keys)
+			assert.DeepEqual(t, tt.atts, tt.wantAtts)
+		})
+	}
+}
+
+func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
+	sign := bls.NewAggregateSignature().Marshal()
+	tests := []struct {
+		name          string
+		atts          []*ethpb.Attestation
+		wantAtts      []*ethpb.Attestation
+		keys          []int
+		coverage      *bitfield.Bitlist64
+		wantTargetIdx int
+		wantErr       string
+	}{
+		{
+			name:          "nil attestation",
+			wantTargetIdx: 0,
+			wantErr:       ErrInvalidAttestationCount.Error(),
+			keys:          []int{0, 1, 2},
+		},
+		{
+			name: "single attestation",
+			atts: []*ethpb.Attestation{
+				{},
+			},
+			wantTargetIdx: 0,
+			wantErr:       ErrInvalidAttestationCount.Error(),
+			keys:          []int{0, 1, 2},
+		},
+		{
+			name:          "no keys",
+			wantTargetIdx: 0,
+			wantErr:       ErrInvalidAttestationCount.Error(),
+		},
+		{
+			name: "two attestations, none selected",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+			},
+			wantTargetIdx: 0,
+			wantErr:       ErrInvalidAttestationCount.Error(),
+			keys:          []int{},
+		},
+		{
+			name: "two attestations, one selected",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x00}},
+				{AggregationBits: bitfield.Bitlist{0x01}},
+			},
+			wantTargetIdx: 0,
+			wantErr:       ErrInvalidAttestationCount.Error(),
+			keys:          []int{0},
+		},
+		{
+			name: "two attestations, both selected, empty coverage",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0b00000001, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0b00000110, 0b1}, Signature: sign},
+			},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0b00000111, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0b00000110, 0b1}, Signature: sign},
+			},
+			wantTargetIdx: 0,
+			wantErr:       "invalid or empty coverage",
+			keys:          []int{0, 1},
+		},
+		{
+			name: "two attestations, both selected",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000001, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000010, 0b1}, Signature: sign},
+			},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000010, 0b1}, Signature: sign},
+			},
+			wantTargetIdx: 0,
+			keys:          []int{0, 1},
+			coverage:      bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011}),
+		},
+		{
+			name: "many attestations, several selected",
+			atts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000001, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000010, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000100, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00001000, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010000, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00100000, 0b1}, Signature: sign},
+			},
+			wantAtts: []*ethpb.Attestation{
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000001, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010110, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000100, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00001000, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010000, 0b1}, Signature: sign},
+				{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00100000, 0b1}, Signature: sign},
+			},
+			wantTargetIdx: 1,
+			keys:          []int{1, 2, 4},
+			coverage:      bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010110}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotTargetIdx, err := aggregateAttestations(tt.atts, tt.keys, tt.coverage)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, tt.wantErr, err)
+				return
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.wantTargetIdx, gotTargetIdx)
+			extractBitlists := func(atts []*ethpb.Attestation) []bitfield.Bitlist {
+				bl := make([]bitfield.Bitlist, len(atts))
+				for i, att := range atts {
+					bl[i] = att.AggregationBits
+				}
+				return bl
+			}
+			assert.DeepEqual(t, extractBitlists(tt.atts), extractBitlists(tt.wantAtts))
 		})
 	}
 }
