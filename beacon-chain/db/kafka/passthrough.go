@@ -278,7 +278,7 @@ func (e Exporter) LatestEpochAttestedForValidator(
 // AttestationRecordForValidator -- passthrough
 func (e Exporter) AttestationRecordForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-) (*slashertypes.AttestationRecord, error) {
+) (*slashertypes.CompactAttestation, error) {
 	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch)
 }
 
@@ -297,13 +297,12 @@ func (e Exporter) SaveLatestEpochAttestedForValidators(
 }
 
 // SaveAttestationRecordForValidator -- passthrough
-func (e Exporter) SaveAttestationRecordForValidator(
+func (e Exporter) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	validatorIdx types.ValidatorIndex,
-	signingRoot [32]byte,
-	attestation *eth.IndexedAttestation,
+	validatorIndices []types.ValidatorIndex,
+	attestations []*slashertypes.CompactAttestation,
 ) error {
-	return e.db.SaveAttestationRecordForValidator(ctx, validatorIdx, signingRoot, attestation)
+	return e.db.SaveAttestationRecordsForValidators(ctx, validatorIndices, attestations)
 }
 
 // SaveSlasherChunks -- passthrough
