@@ -1060,7 +1060,7 @@ func (b *BeaconState) NextSyncCommittee() *pbp2p.SyncCommittee {
 }
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) CurrentEpochParticipation() []*pbp2p.ParticipationBits {
+func (b *BeaconState) CurrentEpochParticipation() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
@@ -1075,7 +1075,7 @@ func (b *BeaconState) CurrentEpochParticipation() []*pbp2p.ParticipationBits {
 }
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) PreviousEpochParticipation() []*pbp2p.ParticipationBits {
+func (b *BeaconState) PreviousEpochParticipation() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
@@ -1091,22 +1091,22 @@ func (b *BeaconState) PreviousEpochParticipation() []*pbp2p.ParticipationBits {
 
 // currentEpochParticipation corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochParticipation() []*pbp2p.ParticipationBits {
+func (b *BeaconState) currentEpochParticipation() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
 
-	return b.safeCopyParticipationBits(b.state.CurrentEpochParticipation)
+	return b.safeCopy2DByteSlice(b.state.CurrentEpochParticipation)
 }
 
 // previousEpochParticipation corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochParticipation() []*pbp2p.ParticipationBits {
+func (b *BeaconState) previousEpochParticipation() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
 
-	return b.safeCopyParticipationBits(b.state.PreviousEpochParticipation)
+	return b.safeCopy2DByteSlice(b.state.PreviousEpochParticipation)
 }
 
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
@@ -1154,18 +1154,4 @@ func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpo
 	}
 
 	return CopyCheckpoint(input)
-}
-
-func (b *BeaconState) safeCopyParticipationBits(input []*pbp2p.ParticipationBits) []*pbp2p.ParticipationBits {
-	if input == nil {
-		return nil
-	}
-
-	dst := make([]*pbp2p.ParticipationBits, len(input))
-	for i, r := range input {
-		newB := bitfield.NewBitvector8()
-		copy(newB, r.Bits)
-		dst[i] = &pbp2p.ParticipationBits{Bits: newB}
-	}
-	return dst
 }

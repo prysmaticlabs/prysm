@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/apache/arrow/go/arrow/bitutil"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -453,7 +454,7 @@ func UnslashedParticipatingIndices(state *stateTrie.BeaconState, flag uint64, ep
 			helpers.CurrentEpoch(state),
 		)
 	}
-	var participationBits []*pb.ParticipationBits
+	var participationBits [][]byte
 	if epoch == helpers.CurrentEpoch(state) {
 		participationBits = state.CurrentEpochParticipation()
 	} else {
@@ -466,7 +467,7 @@ func UnslashedParticipatingIndices(state *stateTrie.BeaconState, flag uint64, ep
 
 	participationIndices := make([]uint64, 0, len(participationBits))
 	for _, index := range indices {
-		if participationBits[index].Bits.BitAt(flag) {
+		if bitutil.BitIsSet(participationBits[index], int(flag)) {
 			v, err := state.ValidatorAtIndexReadOnly(index)
 			if err != nil {
 				return nil, err

@@ -517,7 +517,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 
 // SetPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetPreviousParticipationBits(val []*pbp2p.ParticipationBits) error {
+func (b *BeaconState) SetPreviousParticipationBits(val [][]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -535,7 +535,7 @@ func (b *BeaconState) SetPreviousParticipationBits(val []*pbp2p.ParticipationBit
 
 // SetCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetCurrentParticipationBits(val []*pbp2p.ParticipationBits) error {
+func (b *BeaconState) SetCurrentParticipationBits(val [][]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -575,7 +575,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 
 // AppendCurrentParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendCurrentParticipationBits(val *pbp2p.ParticipationBits) error {
+func (b *BeaconState) AppendCurrentParticipationBits(val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -585,7 +585,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val *pbp2p.ParticipationBit
 	participation := b.state.CurrentEpochParticipation
 	if b.sharedFieldReferences[currentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		participation = make([]*pbp2p.ParticipationBits, len(b.state.CurrentEpochParticipation))
+		participation = make([][]byte, len(b.state.CurrentEpochParticipation))
 		copy(participation, b.state.CurrentEpochParticipation)
 		b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[currentEpochParticipationBits] = &reference{refs: 1}
@@ -599,7 +599,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val *pbp2p.ParticipationBit
 
 // AppendPreviousParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendPreviousParticipationBits(val *pbp2p.ParticipationBits) error {
+func (b *BeaconState) AppendPreviousParticipationBits(val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -608,7 +608,7 @@ func (b *BeaconState) AppendPreviousParticipationBits(val *pbp2p.ParticipationBi
 
 	bits := b.state.PreviousEpochParticipation
 	if b.sharedFieldReferences[previousEpochParticipationBits].Refs() > 1 {
-		bits = make([]*pbp2p.ParticipationBits, len(b.state.PreviousEpochParticipation))
+		bits = make([][]byte, len(b.state.PreviousEpochParticipation))
 		copy(bits, b.state.PreviousEpochParticipation)
 		b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[previousEpochParticipationBits] = &reference{refs: 1}

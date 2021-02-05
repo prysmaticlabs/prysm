@@ -246,8 +246,8 @@ func EmptyGenesisState() (*stateTrie.BeaconState, error) {
 
 		JustificationBits:          []byte{0},
 		HistoricalRoots:            [][]byte{},
-		CurrentEpochParticipation:  []*pb.ParticipationBits{},
-		PreviousEpochParticipation: []*pb.ParticipationBits{},
+		CurrentEpochParticipation:  [][]byte{},
+		PreviousEpochParticipation: [][]byte{},
 
 		// Eth1 data.
 		Eth1Data:         &ethpb.Eth1Data{},

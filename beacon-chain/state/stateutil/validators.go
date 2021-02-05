@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -64,40 +63,20 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 
 // ParticipationBitsRoot computes the HashTreeRoot merkleization of
 // participation roots.
-func ParticipationBitsRoot(bits []*pb.ParticipationBits) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
-	bitsMarshaling := make([][]byte, 0)
-	for i := 0; i < len(bits); i++ {
-		bitsBuf := make([]byte, 8)
-		b := bits[i].Bits.Bytes()[0]
-		binary.LittleEndian.PutUint64(bitsBuf, uint64(b))
-		bitsMarshaling = append(bitsMarshaling, bitsBuf)
-	}
-	bitsChunks, err := htrutils.Pack(bitsMarshaling)
+func ParticipationBitsRoot(bits [][]byte) ([32]byte, error) {
+	bitsRoot, err := htrutils.BitwiseMerkleize(hashutil.CustomSHA256Hasher(), bits, uint64(len(bits)), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not pack participation bits into chunks")
+		return [32]byte{}, errors.Wrap(err, "could not compute participation bits merkleization")
 	}
-	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
-	elemSize := uint64(8)
-	participationBitsLimit := (maxBalCap*elemSize + 31) / 32
-	if participationBitsLimit == 0 {
-		if len(bits) == 0 {
-			participationBitsLimit = 1
-		} else {
-			participationBitsLimit = uint64(len(bits))
-		}
+	lenBuf := new(bytes.Buffer)
+	if err := binary.Write(lenBuf, binary.LittleEndian, uint64(len(bits))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal participation bits length")
 	}
-	bitsRoot, err := htrutils.BitwiseMerkleize(hasher, bitsChunks, uint64(len(bitsChunks)), participationBitsLimit)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute bits merkleization")
-	}
-	bitsRootsBuf := new(bytes.Buffer)
-	if err := binary.Write(bitsRootsBuf, binary.LittleEndian, uint64(len(bits))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal bits length")
-	}
-	bitsRootsBufRoot := make([]byte, 32)
-	copy(bitsRootsBufRoot, bitsRootsBuf.Bytes())
-	return htrutils.MixInLength(bitsRoot, bitsRootsBufRoot), nil
+	// We need to mix in the length of the slice.
+	participationBitsRoot := make([]byte, 32)
+	copy(participationBitsRoot, lenBuf.Bytes())
+	mixedLen := htrutils.MixInLength(bitsRoot, participationBitsRoot)
+	return mixedLen, nil
 }
 
 // ValidatorRoot describes a method from which the hash tree root

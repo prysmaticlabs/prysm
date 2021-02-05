@@ -5,6 +5,7 @@ go 1.15
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/allegro/bigcache v1.2.1 // indirect
+	github.com/apache/arrow/go/arrow v0.0.0-20191024131854-af6fa24be0db
 	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
