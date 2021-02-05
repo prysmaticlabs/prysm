@@ -214,11 +214,11 @@ var (
 			"a voluntary exit",
 		Value: "",
 	}
-	// SkipVoluntaryExitConfirmationFlag allows users to skip a mandatory confiration prompt
-	// when performing validator voluntary exits.
-	SkipVoluntaryExitConfirmationFlag = &cli.BoolFlag{
-		Name:  "skip-voluntary-exit-confirmation",
-		Usage: "Skip the voluntary exit confirmation prompt",
+	// ExitAllFlag allows stakers to select all validating keys for exit. This will still require the staker
+	// to confirm a prompt for this action given it is a dangerous one.
+	ExitAllFlag = &cli.BoolFlag{
+		Name:  "exit-all",
+		Usage: "Exit all validators. This will still require the staker to confirm a prompt for the action",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
