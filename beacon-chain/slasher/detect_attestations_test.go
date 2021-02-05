@@ -104,7 +104,8 @@ func TestService_groupByChunkIndex(t *testing.T) {
 		{
 			name: "Groups multiple attestations belonging to single chunk",
 			params: &Parameters{
-				chunkSize: 2,
+				chunkSize:     2,
+				historyLength: 3,
 			},
 			atts: []*slashertypes.CompactAttestation{
 				{
@@ -128,7 +129,8 @@ func TestService_groupByChunkIndex(t *testing.T) {
 		{
 			name: "Groups multiple attestations belonging to multiple chunks",
 			params: &Parameters{
-				chunkSize: 2,
+				chunkSize:     2,
+				historyLength: 3,
 			},
 			atts: []*slashertypes.CompactAttestation{
 				{
