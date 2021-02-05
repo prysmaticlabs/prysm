@@ -635,7 +635,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), finalizedCheckpt))
 
-		totalSec := params.BeaconConfig().SlotsPerEpoch * uint64(expectedFinalizedEpoch + 2) * params.BeaconConfig().SecondsPerSlot
+		totalSec := params.BeaconConfig().SlotsPerEpoch * uint64(expectedFinalizedEpoch+2) * params.BeaconConfig().SecondsPerSlot
 		genTime := time.Now().Unix() - int64(totalSec)
 		r := &Service{
 			p2p: p1,
