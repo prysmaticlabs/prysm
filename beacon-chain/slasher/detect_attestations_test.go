@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -13,35 +14,35 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 	tests := []struct {
 		name   string
 		params *Parameters
-		atts   []*compactAttestation
-		want   map[uint64][]*compactAttestation
+		atts   []*slashertypes.CompactAttestation
+		want   map[uint64][]*slashertypes.CompactAttestation
 	}{
 		{
 			name:   "No attestations returns empty map",
 			params: DefaultParams(),
-			atts:   make([]*compactAttestation, 0),
-			want:   make(map[uint64][]*compactAttestation),
+			atts:   make([]*slashertypes.CompactAttestation, 0),
+			want:   make(map[uint64][]*slashertypes.CompactAttestation),
 		},
 		{
 			name: "Groups multiple attestations belonging to single validator chunk",
 			params: &Parameters{
 				validatorChunkSize: 2,
 			},
-			atts: []*compactAttestation{
+			atts: []*slashertypes.CompactAttestation{
 				{
-					attestingIndices: []uint64{0, 1},
+					AttestingIndices: []uint64{0, 1},
 				},
 				{
-					attestingIndices: []uint64{0, 1},
+					AttestingIndices: []uint64{0, 1},
 				},
 			},
-			want: map[uint64][]*compactAttestation{
+			want: map[uint64][]*slashertypes.CompactAttestation{
 				0: {
 					{
-						attestingIndices: []uint64{0, 1},
+						AttestingIndices: []uint64{0, 1},
 					},
 					{
-						attestingIndices: []uint64{0, 1},
+						AttestingIndices: []uint64{0, 1},
 					},
 				},
 			},
@@ -51,25 +52,25 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 			params: &Parameters{
 				validatorChunkSize: 2,
 			},
-			atts: []*compactAttestation{
+			atts: []*slashertypes.CompactAttestation{
 				{
-					attestingIndices: []uint64{0, 2, 4},
+					AttestingIndices: []uint64{0, 2, 4},
 				},
 			},
-			want: map[uint64][]*compactAttestation{
+			want: map[uint64][]*slashertypes.CompactAttestation{
 				0: {
 					{
-						attestingIndices: []uint64{0, 2, 4},
+						AttestingIndices: []uint64{0, 2, 4},
 					},
 				},
 				1: {
 					{
-						attestingIndices: []uint64{0, 2, 4},
+						AttestingIndices: []uint64{0, 2, 4},
 					},
 				},
 				2: {
 					{
-						attestingIndices: []uint64{0, 2, 4},
+						AttestingIndices: []uint64{0, 2, 4},
 					},
 				},
 			},
@@ -87,15 +88,99 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 	}
 }
 
+func TestService_groupByChunkIndex(t *testing.T) {
+	tests := []struct {
+		name   string
+		params *Parameters
+		atts   []*slashertypes.CompactAttestation
+		want   map[uint64][]*slashertypes.CompactAttestation
+	}{
+		{
+			name:   "No attestations returns empty map",
+			params: DefaultParams(),
+			atts:   make([]*slashertypes.CompactAttestation, 0),
+			want:   make(map[uint64][]*slashertypes.CompactAttestation),
+		},
+		{
+			name: "Groups multiple attestations belonging to single chunk",
+			params: &Parameters{
+				chunkSize:     2,
+				historyLength: 3,
+			},
+			atts: []*slashertypes.CompactAttestation{
+				{
+					Source: 0,
+				},
+				{
+					Source: 1,
+				},
+			},
+			want: map[uint64][]*slashertypes.CompactAttestation{
+				0: {
+					{
+						Source: 0,
+					},
+					{
+						Source: 1,
+					},
+				},
+			},
+		},
+		{
+			name: "Groups multiple attestations belonging to multiple chunks",
+			params: &Parameters{
+				chunkSize:     2,
+				historyLength: 3,
+			},
+			atts: []*slashertypes.CompactAttestation{
+				{
+					Source: 0,
+				},
+				{
+					Source: 1,
+				},
+				{
+					Source: 2,
+				},
+			},
+			want: map[uint64][]*slashertypes.CompactAttestation{
+				0: {
+					{
+						Source: 0,
+					},
+					{
+						Source: 1,
+					},
+				},
+				1: {
+					{
+						Source: 2,
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{
+				params: tt.params,
+			}
+			if got := s.groupByChunkIndex(tt.atts); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("groupByChunkIndex() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestService_processQueuedAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
 		params: DefaultParams(),
-		attestationQueue: []*compactAttestation{
+		attestationQueue: []*slashertypes.CompactAttestation{
 			{
-				attestingIndices: []uint64{0, 1},
-				source:           0,
-				target:           1,
+				AttestingIndices: []uint64{0, 1},
+				Source:           0,
+				Target:           1,
 			},
 		},
 	}

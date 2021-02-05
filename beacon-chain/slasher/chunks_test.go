@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -145,17 +144,16 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
-	indexedAtt := &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: att.source,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: att.target,
-			},
-		},
+	attRecord := &slashertypes.CompactAttestation{
+		Source:      att.Source,
+		Target:      att.Target,
+		SigningRoot: [32]byte{1},
 	}
-	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, indexedAtt)
+	err = beaconDB.SaveAttestationRecordsForValidators(
+		ctx,
+		[]types.ValidatorIndex{validatorIdx},
+		[]*slashertypes.CompactAttestation{attRecord},
+	)
 	require.NoError(t, err)
 
 	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
@@ -228,17 +226,16 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
-	indexedAtt := &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: att.source,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: att.target,
-			},
-		},
+	attRecord := &slashertypes.CompactAttestation{
+		Source:      att.Source,
+		Target:      att.Target,
+		SigningRoot: [32]byte{1},
 	}
-	err = beaconDB.SaveAttestationRecordForValidator(ctx, validatorIdx, [32]byte{1}, indexedAtt)
+	err = beaconDB.SaveAttestationRecordsForValidators(
+		ctx,
+		[]types.ValidatorIndex{validatorIdx},
+		[]*slashertypes.CompactAttestation{attRecord},
+	)
 	require.NoError(t, err)
 
 	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
@@ -441,9 +438,9 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	assert.Equal(t, targetEpoch, received)
 }
 
-func createAttestation(source, target types.Epoch) *compactAttestation {
-	return &compactAttestation{
-		source: uint64(source),
-		target: uint64(target),
+func createAttestation(source, target types.Epoch) *slashertypes.CompactAttestation {
+	return &slashertypes.CompactAttestation{
+		Source: uint64(source),
+		Target: uint64(target),
 	}
 }

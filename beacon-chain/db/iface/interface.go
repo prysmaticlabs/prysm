@@ -63,7 +63,7 @@ type ReadOnlyDatabase interface {
 	) (types.Epoch, bool, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-	) (*slashertypes.AttestationRecord, error)
+	) (*slashertypes.CompactAttestation, error)
 	LoadSlasherChunk(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
 	) ([]uint16, bool, error)
@@ -100,11 +100,10 @@ type NoHeadAccessDatabase interface {
 	SaveLatestEpochAttestedForValidators(
 		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 	) error
-	SaveAttestationRecordForValidator(
+	SaveAttestationRecordsForValidators(
 		ctx context.Context,
-		validatorIdx types.ValidatorIndex,
-		signingRoot [32]byte,
-		attestation *eth.IndexedAttestation,
+		validatorIndices []types.ValidatorIndex,
+		attestations []*slashertypes.CompactAttestation,
 	) error
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,

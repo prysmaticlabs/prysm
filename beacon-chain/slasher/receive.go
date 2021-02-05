@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
 // Receive indexed attestations from some source event feed,
@@ -20,10 +21,10 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			compactAtt := &compactAttestation{
-				attestingIndices: att.AttestingIndices,
-				source:           att.Data.Source.Epoch,
-				target:           att.Data.Target.Epoch,
+			compactAtt := &slashertypes.CompactAttestation{
+				AttestingIndices: att.AttestingIndices,
+				Source:           att.Data.Source.Epoch,
+				Target:           att.Data.Target.Epoch,
 			}
 			s.queueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, compactAtt)

@@ -8,18 +8,11 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
-
-// A compact attestation containing only the required information
-// for attester slashing detection.
-type compactAttestation struct {
-	attestingIndices []uint64
-	source           uint64
-	target           uint64
-}
 
 // ServiceConfig for the slasher service in the beacon node.
 // This struct allows us to specify required dependencies and
@@ -36,7 +29,7 @@ type Service struct {
 	serviceCfg       *ServiceConfig
 	indexedAttsChan  chan *ethpb.IndexedAttestation
 	queueLock        sync.Mutex
-	attestationQueue []*compactAttestation
+	attestationQueue []*slashertypes.CompactAttestation
 	ctx              context.Context
 	cancel           context.CancelFunc
 	genesisTime      time.Time
@@ -49,7 +42,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		params:           DefaultParams(),
 		serviceCfg:       srvCfg,
 		indexedAttsChan:  make(chan *ethpb.IndexedAttestation, 1),
-		attestationQueue: make([]*compactAttestation, 0),
+		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
 		ctx:              ctx,
 		cancel:           cancel,
 		genesisTime:      time.Now(),

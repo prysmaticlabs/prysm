@@ -4,6 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 		case currentEpoch := <-epochTicker:
 			s.queueLock.Lock()
 			atts := s.attestationQueue
-			s.attestationQueue = make([]*compactAttestation, 0)
+			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
 			s.queueLock.Unlock()
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
@@ -37,7 +38,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 // as the current epoch in time, we perform slashing detection over the batch.
 // TODO(#8331): Implement.
 func (s *Service) detectAttestationBatch(
-	atts []*compactAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
+	atts []*slashertypes.CompactAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
 ) {
 
 }
@@ -47,12 +48,12 @@ func (s *Service) detectAttestationBatch(
 // concurrently, and also allowing us to effectively use a single 2D chunk
 // for slashing detection through this logical grouping.
 func (s *Service) groupByValidatorChunkIndex(
-	attestations []*compactAttestation,
-) map[uint64][]*compactAttestation {
-	groupedAttestations := make(map[uint64][]*compactAttestation)
+	attestations []*slashertypes.CompactAttestation,
+) map[uint64][]*slashertypes.CompactAttestation {
+	groupedAttestations := make(map[uint64][]*slashertypes.CompactAttestation)
 	for _, att := range attestations {
 		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.attestingIndices {
+		for _, validatorIdx := range att.AttestingIndices {
 			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
 			validatorChunkIndices[validatorChunkIndex] = true
 		}
@@ -64,4 +65,14 @@ func (s *Service) groupByValidatorChunkIndex(
 		}
 	}
 	return groupedAttestations
+}
+
+// Group attestations by the chunk index their source epoch corresponds to.
+func (s *Service) groupByChunkIndex(attestations []*slashertypes.CompactAttestation) map[uint64][]*slashertypes.CompactAttestation {
+	attestationsByChunkIndex := make(map[uint64][]*slashertypes.CompactAttestation)
+	for _, att := range attestations {
+		chunkIdx := s.params.chunkIndex(types.Epoch(att.Source))
+		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
+	}
+	return attestationsByChunkIndex
 }
