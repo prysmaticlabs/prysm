@@ -13,6 +13,7 @@ import (
 )
 
 var st, _ = stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{
+	Slot:                       params.BeaconConfig().SlotsPerHistoricalRoot,
 	BlockRoots:                 filledRootSlice2D(params.BeaconConfig().SlotsPerHistoricalRoot),
 	StateRoots:                 filledRootSlice2D(params.BeaconConfig().SlotsPerHistoricalRoot),
 	Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
