@@ -173,6 +173,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SyncCommitteeSize:            1024,
 	SyncCommitteeAggregateSize:   16,
 
+	// Validator participation rewards values.
+	TimelyHeadFlag:        1,
+	TimelySourceFlag:      2,
+	TimelyTargetFlag:      4,
+	TimelyHeadNumerator:   12,
+	TimelySourceNumerator: 12,
+	TimelyTargetNumerator: 32,
+
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},
 	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork

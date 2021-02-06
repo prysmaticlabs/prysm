@@ -517,7 +517,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 
 // SetPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetPreviousParticipationBits(val [][]byte) error {
+func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -535,7 +535,7 @@ func (b *BeaconState) SetPreviousParticipationBits(val [][]byte) error {
 
 // SetCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetCurrentParticipationBits(val [][]byte) error {
+func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -585,13 +585,13 @@ func (b *BeaconState) AppendCurrentParticipationBits(val []byte) error {
 	participation := b.state.CurrentEpochParticipation
 	if b.sharedFieldReferences[currentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		participation = make([][]byte, len(b.state.CurrentEpochParticipation))
+		participation = make([]byte, len(b.state.CurrentEpochParticipation))
 		copy(participation, b.state.CurrentEpochParticipation)
 		b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[currentEpochParticipationBits] = &reference{refs: 1}
 	}
 
-	b.state.CurrentEpochParticipation = append(participation, val)
+	b.state.CurrentEpochParticipation = append(participation, val...)
 	b.markFieldAsDirty(currentEpochParticipationBits)
 	b.addDirtyIndices(currentEpochParticipationBits, []uint64{uint64(len(b.state.CurrentEpochParticipation) - 1)})
 	return nil
@@ -608,13 +608,13 @@ func (b *BeaconState) AppendPreviousParticipationBits(val []byte) error {
 
 	bits := b.state.PreviousEpochParticipation
 	if b.sharedFieldReferences[previousEpochParticipationBits].Refs() > 1 {
-		bits = make([][]byte, len(b.state.PreviousEpochParticipation))
+		bits = make([]byte, len(b.state.PreviousEpochParticipation))
 		copy(bits, b.state.PreviousEpochParticipation)
 		b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[previousEpochParticipationBits] = &reference{refs: 1}
 	}
 
-	b.state.PreviousEpochParticipation = append(bits, val)
+	b.state.PreviousEpochParticipation = append(bits, val...)
 	b.markFieldAsDirty(previousEpochParticipationBits)
 	b.addDirtyIndices(previousEpochParticipationBits, []uint64{uint64(len(b.state.PreviousEpochParticipation) - 1)})
 

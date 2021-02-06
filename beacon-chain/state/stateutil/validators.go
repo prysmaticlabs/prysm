@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -63,20 +64,13 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 
 // ParticipationBitsRoot computes the HashTreeRoot merkleization of
 // participation roots.
-func ParticipationBitsRoot(bits [][]byte) ([32]byte, error) {
-	bitsRoot, err := htrutils.BitwiseMerkleize(hashutil.CustomSHA256Hasher(), bits, uint64(len(bits)), params.BeaconConfig().ValidatorRegistryLimit)
+func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
+	bitsSSZ := types.SSZBytes(bits)
+	bitsSSZHTR, err := bitsSSZ.HashTreeRoot()
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute participation bits merkleization")
+		return [32]byte{}, err
 	}
-	lenBuf := new(bytes.Buffer)
-	if err := binary.Write(lenBuf, binary.LittleEndian, uint64(len(bits))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal participation bits length")
-	}
-	// We need to mix in the length of the slice.
-	participationBitsRoot := make([]byte, 32)
-	copy(participationBitsRoot, lenBuf.Bytes())
-	mixedLen := htrutils.MixInLength(bitsRoot, participationBitsRoot)
-	return mixedLen, nil
+	return bitsSSZHTR, nil
 }
 
 // ValidatorRoot describes a method from which the hash tree root

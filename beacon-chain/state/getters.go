@@ -1060,7 +1060,7 @@ func (b *BeaconState) NextSyncCommittee() *pbp2p.SyncCommittee {
 }
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) CurrentEpochParticipation() [][]byte {
+func (b *BeaconState) CurrentEpochParticipation() []byte {
 	if !b.HasInnerState() {
 		return nil
 	}
@@ -1075,7 +1075,7 @@ func (b *BeaconState) CurrentEpochParticipation() [][]byte {
 }
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) PreviousEpochParticipation() [][]byte {
+func (b *BeaconState) PreviousEpochParticipation() []byte {
 	if !b.HasInnerState() {
 		return nil
 	}
@@ -1091,22 +1091,24 @@ func (b *BeaconState) PreviousEpochParticipation() [][]byte {
 
 // currentEpochParticipation corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochParticipation() [][]byte {
+func (b *BeaconState) currentEpochParticipation() []byte {
 	if !b.HasInnerState() {
 		return nil
 	}
-
-	return b.safeCopy2DByteSlice(b.state.CurrentEpochParticipation)
+	tmp := make([]byte, len(b.state.CurrentEpochParticipation))
+	copy(tmp, b.state.CurrentEpochParticipation)
+	return tmp
 }
 
 // previousEpochParticipation corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochParticipation() [][]byte {
+func (b *BeaconState) previousEpochParticipation() []byte {
 	if !b.HasInnerState() {
 		return nil
 	}
-
-	return b.safeCopy2DByteSlice(b.state.PreviousEpochParticipation)
+	tmp := make([]byte, len(b.state.PreviousEpochParticipation))
+	copy(tmp, b.state.PreviousEpochParticipation)
+	return tmp
 }
 
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {

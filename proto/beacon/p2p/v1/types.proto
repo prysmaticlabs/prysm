@@ -35,8 +35,8 @@ message BeaconState {
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];
 
   // Participation [7001-8000]
-  repeated bytes previous_epoch_participation = 7001 [(gogoproto.moretags) = "ssz-size:\"?,8\" ssz-max:\"1099511627776\""];
-  repeated bytes current_epoch_participation = 7002 [(gogoproto.moretags) = "ssz-size:\"?,8\" ssz-max:\"1099511627776\""];
+  bytes previous_epoch_participation = 7001 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];;
+  bytes current_epoch_participation = 7002 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];;
 
   // Finality [8001-9000]
   // Spec type [4]Bitvector which means this would be a fixed size of 4 bits.

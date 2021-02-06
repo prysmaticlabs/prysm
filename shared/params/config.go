@@ -127,6 +127,17 @@ type BeaconChainConfig struct {
 	SyncCommitteeSize            uint64 `yaml:"SYNC_COMMITTEE_SIZE"`                   // SyncCommitteeSize defines the size of a sync committee.
 	SyncCommitteeAggregateSize   uint64 `yaml:"SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE"` // SyncCommitteeAggregateSize defines the size of sync committee aggregate.
 
+	// Validator reward flag values.
+	TimelyHeadFlag   uint8 `yaml:"TIMELY_HEAD_FLAG"`   // TimelyHeadFlag reflects whether validator voted for head for `ValidatorFlag`.
+	TimelySourceFlag uint8 `yaml:"TIMELY_SOURCE_FLAG"` // TimelySourceFlag reflects whether validator voted for source for `ValidatorFlag`.
+	TimelyTargetFlag uint8 `yaml:"TIMELY_TARGET_FLAG"` // TimelyTargetFlag reflects whether validator voted for target for `ValidatorFlag`.
+
+	// Validator reward flag calculations.
+	TimelyHeadNumerator   uint64 `yaml:"TIMELY_HEAD_NUMERATOR"`   // TimelyHeadNumerator defines the timely head numerator.
+	TimelySourceNumerator uint64 `yaml:"TIMELY_SOURCE_NUMERATOR"` // TimelySourceNumerator defines the timely source numerator.
+	TimelyTargetNumerator uint64 `yaml:"TIMELY_TARGET_NUMERATOR"` // TimelyTargetNumerator defines the timely target numerator.
+	RewardDenominator     uint64 `yaml:"REWARD_DENOMINATOR"`      // RewardDenominator defines the reward numerator.
+
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
 }

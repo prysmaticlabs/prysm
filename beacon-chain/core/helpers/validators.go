@@ -361,3 +361,13 @@ func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finali
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }
+
+// HasValidatorFlag returns true if the flag at position has set.
+func HasValidatorFlag(flag uint8, flagPosition uint8) bool {
+	return flag&flagPosition == flagPosition
+}
+
+// AddValidatorFlag adds new validator flag to existing one.
+func AddValidatorFlag(oldFlag uint8, newFlag uint8) uint8 {
+	return oldFlag | newFlag
+}
