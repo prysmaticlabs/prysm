@@ -1,7 +1,6 @@
 package blocks
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -112,13 +111,8 @@ func ProcessAttestationNoVerifySignature(
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return nil, err
 	}
-	currEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	var prevEpoch uint64
-	if currEpoch == 0 {
-		prevEpoch = 0
-	} else {
-		prevEpoch = currEpoch - 1
-	}
+	currEpoch := helpers.CurrentEpoch(beaconState)
+	prevEpoch := helpers.PrevEpoch(beaconState)
 	data := att.Data
 	if data.Target.Epoch != prevEpoch && data.Target.Epoch != currEpoch {
 		return nil, fmt.Errorf(
@@ -175,32 +169,20 @@ func ProcessAttestationNoVerifySignature(
 		ProposerIndex:   proposerIndex,
 	}
 
-	var ffgSourceEpoch uint64
-	var ffgSourceRoot []byte
-	var ffgTargetEpoch uint64
 	if data.Target.Epoch == currEpoch {
-		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint().Epoch
-		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint().Root
-		ffgTargetEpoch = currEpoch
+		if !attestationutil.CheckPointIsEqual(data.Source, beaconState.CurrentJustifiedCheckpoint()) {
+			return nil, errors.New("source check point not equal to current justified checkpoint")
+		}
 		if err := beaconState.AppendCurrentEpochAttestations(pendingAtt); err != nil {
 			return nil, err
 		}
 	} else {
-		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint().Epoch
-		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint().Root
-		ffgTargetEpoch = prevEpoch
+		if !attestationutil.CheckPointIsEqual(data.Source, beaconState.PreviousJustifiedCheckpoint()) {
+			return nil, errors.New("source check point not equal to previous justified checkpoint")
+		}
 		if err := beaconState.AppendPreviousEpochAttestations(pendingAtt); err != nil {
 			return nil, err
 		}
-	}
-	if data.Source.Epoch != ffgSourceEpoch {
-		return nil, fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.Source.Epoch)
-	}
-	if !bytes.Equal(data.Source.Root, ffgSourceRoot) {
-		return nil, fmt.Errorf("expected source root %#x, received %#x", ffgSourceRoot, data.Source.Root)
-	}
-	if data.Target.Epoch != ffgTargetEpoch {
-		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
 	}
 
 	// Verify attesting indices are correct.
