@@ -11,6 +11,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -401,6 +402,29 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		}
 	}
 
+	return nil
+}
+
+func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.insertFinalizedDeposits")
+	defer span.End()
+
+	// Update deposit cache.
+	finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch finalized state")
+	}
+	// We update the cache up to the last deposit index in the finalized block's state.
+	// We can be confident that these deposits will be included in some block
+	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
+	eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+	s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+	if featureconfig.Get().EnablePruningDepositProofs {
+		// Deposit proofs are only used during state transition and can be safely removed to save space.
+		if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+			return errors.Wrap(err, "could not prune deposit proofs")
+		}
+	}
 	return nil
 }
 
