@@ -136,6 +136,9 @@ func ProcessDeposits(
 //        # Add validator and balance entries
 //        state.validators.append(get_validator_from_deposit(state, deposit))
 //        state.balances.append(amount)
+//        # [Added in hf-1] Initialize empty participation flags for new validator
+//        state.previous_epoch_participation.append(ValidatorFlag(0))
+//        state.current_epoch_participation.append(ValidatorFlag(0))
 //    else:
 //        # Increase balance by deposit amount
 //        index = ValidatorIndex(validator_pubkeys.index(pubkey))
@@ -182,6 +185,12 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 			return nil, err
 		}
 		if err := beaconState.AppendBalance(amount); err != nil {
+			return nil, err
+		}
+		if err := beaconState.AppendPreviousParticipationBits(0); err != nil {
+			return nil, err
+		}
+		if err := beaconState.AppendCurrentParticipationBits(0); err != nil {
 			return nil, err
 		}
 	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {

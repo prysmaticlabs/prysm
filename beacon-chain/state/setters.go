@@ -575,7 +575,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 
 // AppendCurrentParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendCurrentParticipationBits(val []byte) error {
+func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -591,7 +591,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val []byte) error {
 		b.sharedFieldReferences[currentEpochParticipationBits] = &reference{refs: 1}
 	}
 
-	b.state.CurrentEpochParticipation = append(participation, val...)
+	b.state.CurrentEpochParticipation = append(participation, val)
 	b.markFieldAsDirty(currentEpochParticipationBits)
 	b.addDirtyIndices(currentEpochParticipationBits, []uint64{uint64(len(b.state.CurrentEpochParticipation) - 1)})
 	return nil
@@ -599,7 +599,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val []byte) error {
 
 // AppendPreviousParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendPreviousParticipationBits(val []byte) error {
+func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -614,7 +614,7 @@ func (b *BeaconState) AppendPreviousParticipationBits(val []byte) error {
 		b.sharedFieldReferences[previousEpochParticipationBits] = &reference{refs: 1}
 	}
 
-	b.state.PreviousEpochParticipation = append(bits, val...)
+	b.state.PreviousEpochParticipation = append(bits, val)
 	b.markFieldAsDirty(previousEpochParticipationBits)
 	b.addDirtyIndices(previousEpochParticipationBits, []uint64{uint64(len(b.state.PreviousEpochParticipation) - 1)})
 
