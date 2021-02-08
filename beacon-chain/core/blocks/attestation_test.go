@@ -134,7 +134,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 
-	err := beaconState.SetSlot(beaconState.Slot() + 2*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay)
+	err := beaconState.SetSlot(beaconState.Slot() + 2*params.BeaconConfig().SlotsPerEpoch)
 	require.NoError(t, err)
 	pfc := beaconState.PreviousJustifiedCheckpoint()
 	pfc.Root = []byte("hello-world")
@@ -145,7 +145,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
-	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.CurrentEpoch(beaconState)
+	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
