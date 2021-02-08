@@ -103,22 +103,11 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	want := fmt.Sprintf(
-		"expected source epoch %d, received %d",
-		helpers.CurrentEpoch(beaconState),
-		attestations[0].Data.Source.Epoch,
-	)
+	want := fmt.Sprintf("source check point not equal to current justified checkpoint")
 	_, err := blocks.ProcessAttestations(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
-
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-
-	want = fmt.Sprintf(
-		"expected source root %#x, received %#x",
-		beaconState.CurrentJustifiedCheckpoint().Root,
-		attestations[0].Data.Source.Root,
-	)
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 }
@@ -152,23 +141,12 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
 	require.NoError(t, beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{}))
 
-	want := fmt.Sprintf(
-		"expected source epoch %d, received %d",
-		helpers.PrevEpoch(beaconState),
-		attestations[0].Data.Source.Epoch,
-	)
+	want := fmt.Sprintf("source check point not equal to current justified checkpoint")
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
-
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-
-	want = fmt.Sprintf(
-		"expected source root %#x, received %#x",
-		beaconState.CurrentJustifiedCheckpoint().Root,
-		attestations[0].Data.Source.Root,
-	)
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 }
