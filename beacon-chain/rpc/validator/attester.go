@@ -15,6 +15,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -93,9 +94,16 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	}
 
 	if helpers.CurrentEpoch(headState) < helpers.SlotToEpoch(req.Slot) {
-		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		if featureconfig.Get().EnableNextSlotStateCache {
+			headState, err = state.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+			}
+		} else {
+			headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+			}
 		}
 	}
 
