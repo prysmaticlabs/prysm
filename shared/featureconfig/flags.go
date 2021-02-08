@@ -116,7 +116,7 @@ var (
 	}
 	updateHeadTimely = &cli.BoolFlag{
 		Name:  "update-head-timely",
-		Usage: "Improves update head time but updating head right after state transition",
+		Usage: "Improves update head time by updating head right after state transition",
 	}
 )
 
