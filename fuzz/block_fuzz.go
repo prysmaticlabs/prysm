@@ -10,6 +10,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -63,7 +65,8 @@ func setupDB() {
 	}
 
 	ctx := context.Background()
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
 	if err := db1.SaveBlock(ctx, b); err != nil {
 		panic(err)
