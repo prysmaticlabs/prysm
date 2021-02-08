@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"

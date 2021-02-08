@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/rpc/gateway",
     visibility = ["//validator:__subpackages__"],
     deps = [
-        "//proto/validator/accounts/v2:ethereum_validator_account_gateway_proto",
+        "//proto/validator/accounts/v2:go_default_library",
         "//validator/web:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway//runtime:go_default_library",
         "@com_github_rs_cors//:go_default_library",
