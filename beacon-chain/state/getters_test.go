@@ -98,6 +98,8 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c2))
 	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c1))
 	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c2))
+	state.state = nil
+	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c1))
 }
 
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
@@ -109,4 +111,6 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c2))
 	require.Equal(t, true, state.MatchPreviousJustifiedCheckpoint(c1))
 	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c2))
+	state.state = nil
+	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c1))
 }
