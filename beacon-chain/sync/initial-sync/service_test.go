@@ -48,7 +48,8 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "future genesis",
 			chainService: func() *mock.ChainService {
 				// Set to future time (genesis time hasn't arrived yet).
-				st := testutil.NewBeaconState()
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
 
 				return &mock.ChainService{
 					State: st,
@@ -76,7 +77,8 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "zeroth epoch",
 			chainService: func() *mock.ChainService {
 				// Set to nearby slot.
-				st := testutil.NewBeaconState()
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
 				return &mock.ChainService{
 					State: st,
 					FinalizedCheckPoint: &eth.Checkpoint{
@@ -104,7 +106,8 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "already synced",
 			chainService: func() *mock.ChainService {
 				// Set to some future slot, and then make sure that current head matches it.
-				st := testutil.NewBeaconState()
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
 				futureSlot := uint64(27354)
 				require.NoError(t, st.SetSlot(futureSlot))
 				return &mock.ChainService{
@@ -388,7 +391,8 @@ func TestService_Resync(t *testing.T) {
 		{
 			name: "resync ok",
 			chainService: func() *mock.ChainService {
-				st := testutil.NewBeaconState()
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
 				futureSlot := uint64(160)
 				require.NoError(t, st.SetGenesisTime(uint64(makeGenesisTime(futureSlot).Unix())))
 				return &mock.ChainService{
