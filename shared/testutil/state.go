@@ -44,7 +44,7 @@ func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconSt
 		return nil, err
 	}
 
-	return st, nil
+	return st.Copy(), nil
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round
