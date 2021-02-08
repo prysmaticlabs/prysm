@@ -170,14 +170,14 @@ func ProcessAttestationNoVerifySignature(
 	}
 
 	if data.Target.Epoch == currEpoch {
-		if !attestationutil.CheckPointIsEqual(data.Source, beaconState.CurrentJustifiedCheckpoint()) {
+		if !beaconState.MatchCurrentJustifiedCheckpoint(data.Source) {
 			return nil, errors.New("source check point not equal to current justified checkpoint")
 		}
 		if err := beaconState.AppendCurrentEpochAttestations(pendingAtt); err != nil {
 			return nil, err
 		}
 	} else {
-		if !attestationutil.CheckPointIsEqual(data.Source, beaconState.PreviousJustifiedCheckpoint()) {
+		if !beaconState.MatchPreviousJustifiedCheckpoint(data.Source) {
 			return nil, errors.New("source check point not equal to previous justified checkpoint")
 		}
 		if err := beaconState.AppendPreviousEpochAttestations(pendingAtt); err != nil {
