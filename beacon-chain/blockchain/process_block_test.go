@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -871,11 +870,11 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 
 	require.NoError(t, service.updateJustifiedInitSync(ctx, newCp))
 
-	assert.Equal(t, true, sszutil.DeepEqual(currentCp, service.prevJustifiedCheckpt), "Incorrect previous justified checkpoint")
-	assert.Equal(t, true, sszutil.DeepEqual(newCp, service.CurrentJustifiedCheckpt()), "Incorrect current justified checkpoint in cache")
+	assert.DeepSSZEqual(t, currentCp, service.prevJustifiedCheckpt, "Incorrect previous justified checkpoint")
+	assert.DeepSSZEqual(t, newCp, service.CurrentJustifiedCheckpt(), "Incorrect current justified checkpoint in cache")
 	cp, err := service.beaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, true, sszutil.DeepEqual(newCp, cp), "Incorrect current justified checkpoint in db")
+	assert.DeepSSZEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
 }
 
 func TestHandleEpochBoundary_BadMetrics(t *testing.T) {

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
