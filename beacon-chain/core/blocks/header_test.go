@@ -34,7 +34,8 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
@@ -106,7 +107,8 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
@@ -150,7 +152,8 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
 	bh := state.LatestBlockHeader()
@@ -188,7 +191,8 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
 	bh := state.LatestBlockHeader()
@@ -229,7 +233,8 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
@@ -286,7 +291,8 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
