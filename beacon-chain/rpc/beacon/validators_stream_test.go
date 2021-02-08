@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -67,11 +69,14 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 		},
 	}
 
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
 		headFetcher: &mock.ChainService{
-			State: testutil.NewBeaconState(),
+			State: s,
 		},
 	}
 	for _, test := range tests {
@@ -114,11 +119,13 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 		},
 	}
 
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
 		headFetcher: &mock.ChainService{
-			State: testutil.NewBeaconState(),
+			State: s,
 		},
 	}
 	for _, test := range tests {
@@ -160,11 +167,14 @@ func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 		},
 	}
 
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
 		headFetcher: &mock.ChainService{
-			State: testutil.NewBeaconState(),
+			State: s,
 		},
 	}
 	for _, test := range tests {

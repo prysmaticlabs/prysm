@@ -17,7 +17,8 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 
 	received := db.ArchivedPointRoot(ctx, i1)
 	require.NotEqual(t, r1, received, "Should not have been saved")
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(i1))
 	require.NoError(t, db.SaveState(ctx, st, r1))
 	received = db.ArchivedPointRoot(ctx, i1)
@@ -31,7 +32,8 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), i, "Did not get correct index")
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	assert.NoError(t, db.SaveState(ctx, st, [32]byte{'A'}))
 	assert.Equal(t, [32]byte{'A'}, db.LastArchivedRoot(ctx), "Did not get wanted root")
 

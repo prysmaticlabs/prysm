@@ -5,6 +5,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -233,7 +235,8 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 }
 
 func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
-	st0 := testutil.NewBeaconState()
+	st0, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	st1 := st0.Copy()
 	originalCount := st1.NumValidators()
 
