@@ -122,7 +122,7 @@ func executeStateTransitionStateGen(
 		return nil, errUnknownBlock
 	}
 
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionStateGen")
+	ctx, span := trace.StartSpan(ctx, "stategen.ExecuteStateTransitionStateGen")
 	defer span.End()
 	var err error
 
@@ -148,7 +148,7 @@ func executeStateTransitionStateGen(
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 // WARNING: This method should not be used for future slot.
 func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlotsStateGen")
+	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
 	defer span.End()
 	if state == nil {
 		return nil, errUnknownState
