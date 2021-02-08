@@ -17,7 +17,8 @@ func TestServer_GetBeaconState(t *testing.T) {
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	slot := uint64(100)
 	require.NoError(t, st.SetSlot(slot))
 	b := testutil.NewBeaconBlock()
