@@ -604,6 +604,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		assert.Equal(t, stateSkipped, updatedState)
 	})
 
+	const pidDataParsed = "abc"
 	t.Run("send from the first machine", func(t *testing.T) {
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,
@@ -617,7 +618,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(256)
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[256].state = stateDataParsed
-		queue.smm.machines[256].pid = "abc"
+		queue.smm.machines[256].pid = pidDataParsed
 		queue.smm.machines[256].blocks = []*eth.SignedBeaconBlock{
 			testutil.NewBeaconBlock(),
 		}
@@ -647,7 +648,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[256].state = stateDataParsed
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
-		queue.smm.machines[320].pid = "abc"
+		queue.smm.machines[320].pid = pidDataParsed
 		queue.smm.machines[320].blocks = []*eth.SignedBeaconBlock{
 			testutil.NewBeaconBlock(),
 		}
@@ -674,7 +675,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
-		queue.smm.machines[320].pid = "abc"
+		queue.smm.machines[320].pid = pidDataParsed
 		queue.smm.machines[320].blocks = []*eth.SignedBeaconBlock{
 			testutil.NewBeaconBlock(),
 		}
