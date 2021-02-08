@@ -4,12 +4,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestInfostream_EpochToTimestamp(t *testing.T) {
