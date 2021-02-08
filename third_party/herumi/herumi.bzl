@@ -11,21 +11,21 @@ def bls_dependencies():
     _maybe(
         http_archive,
         name = "herumi_bls_eth_go_binary",
-        strip_prefix = "bls-eth-go-binary-57372fb273715552ba3f0f2e9c2806e9db940200",
+        strip_prefix = "bls-eth-go-binary-8e0eb5237d01d8e53b57d45f6d12b0e86c299c7d",
         urls = [
-            "https://github.com/herumi/bls-eth-go-binary/archive/57372fb273715552ba3f0f2e9c2806e9db940200.tar.gz",
+            "https://github.com/herumi/bls-eth-go-binary/archive/8e0eb5237d01d8e53b57d45f6d12b0e86c299c7d.tar.gz",
         ],
-        sha256 = "52dcc1776e6a219af980f5c6f70f8d95d46720f8398bd9978b605074ea4a48f1",
+        sha256 = "3a5cbcd1dbf8fb68ce77d3404bb87bcd3928f91c55905cc650ebbcd8d9c6500e",
         build_file = "@prysm//third_party/herumi:bls_eth_go_binary.BUILD",
     )
     _maybe(
         http_archive,
         name = "herumi_mcl",
-        strip_prefix = "mcl-c1bcf317a15868ee4a2192c8ad50e387253e1e64",
+        strip_prefix = "mcl-c08437c973004cf64895da197eb7076d44354aff",
         urls = [
-            "https://github.com/herumi/mcl/archive/c1bcf317a15868ee4a2192c8ad50e387253e1e64.tar.gz",
+            "https://github.com/herumi/mcl/archive/c08437c973004cf64895da197eb7076d44354aff.tar.gz",
         ],
-        sha256 = "05886c21fe6fe869a3b426fd9b56561dfc49df114b858a95c276ef5b99f54388",
+        sha256 = "4118dfdcf86d98cdc78349cf9e51a0b58f4ecfea4b974a3d2df9ea11dd2cb6ad",
         build_file = "@prysm//third_party/herumi:mcl.BUILD",
     )
     _maybe(
