@@ -154,8 +154,9 @@ func TestGetIdentity(t *testing.T) {
 func TestSyncStatus(t *testing.T) {
 	currentSlot := new(uint64)
 	*currentSlot = 110
-	state := testutil.NewBeaconState()
-	err := state.SetSlot(100)
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	err = state.SetSlot(100)
 	require.NoError(t, err)
 	chainService := &mock.ChainService{Slot: currentSlot, State: state}
 

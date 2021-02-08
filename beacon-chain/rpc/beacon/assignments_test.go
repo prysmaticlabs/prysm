@@ -45,7 +45,8 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
@@ -101,7 +102,8 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
@@ -175,7 +177,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
@@ -243,7 +246,8 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	blk := testutil.NewBeaconBlock().Block
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
@@ -311,7 +315,8 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	blk := testutil.NewBeaconBlock().Block
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
