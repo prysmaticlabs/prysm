@@ -126,6 +126,12 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		}
 	}
 
+	if featureconfig.Get().UpdateHeadTimely {
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+			log.WithError(err).Warn("Could not update head")
+		}
+	}
+
 	// Update finalized check point.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
