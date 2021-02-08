@@ -22,6 +22,9 @@ import (
 // A custom slot deadline for processing state slots in our cache.
 const slotDeadline = 5 * time.Second
 
+// A custom deadline for deposit trie insertion.
+const depositDeadline = 20 * time.Second
+
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 
@@ -146,7 +149,12 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return errors.Wrap(err, "could not save new justified")
 		}
 		go func() {
-			if err := s.insertFinalizedDeposits(ctx, fRoot); err != nil {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
+			defer cancel()
+			if err := s.insertFinalizedDeposits(depCtx, fRoot); err != nil {
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
