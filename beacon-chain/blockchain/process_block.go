@@ -141,9 +141,14 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	// Update finalized check point.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return err
+		}
+		s.clearInitSyncBlocks()
 		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return err
 		}
+
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.forkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
