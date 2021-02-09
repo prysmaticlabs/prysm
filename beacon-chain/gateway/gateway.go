@@ -164,7 +164,6 @@ func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientC
 // "addr" must be a valid TCP address with a port number.
 func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
 	security := grpc.WithInsecure()
-	log.WithField("remoteCert", g.remoteCert).Info("Dialing")
 	if len(g.remoteCert) > 0 {
 		creds, err := credentials.NewClientTLSFromFile(g.remoteCert, "")
 		if err != nil {
