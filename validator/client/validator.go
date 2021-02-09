@@ -19,6 +19,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -390,7 +391,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	v.slashableKeysLock.RUnlock()
 
 	req := &ethpb.DutiesRequest{
-		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
+		Epoch:      types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch),
 		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
 	}
 
@@ -590,7 +591,7 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {
+func (v *validator) domainData(ctx context.Context, epoch types.Epoch, domain []byte) (*ethpb.DomainResponse, error) {
 	v.domainDataLock.Lock()
 	defer v.domainDataLock.Unlock()
 
@@ -599,7 +600,7 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 		Domain: domain,
 	}
 
-	key := strings.Join([]string{strconv.FormatUint(req.Epoch, 10), hex.EncodeToString(req.Domain)}, ",")
+	key := strings.Join([]string{strconv.FormatUint(uint64(req.Epoch), 10), hex.EncodeToString(req.Domain)}, ",")
 
 	if val, ok := v.domainDataCache.Get(key); ok {
 		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
@@ -677,7 +678,7 @@ func validatorSubscribeKey(slot, committeeID uint64) [64]byte {
 
 // This tracks all validators' voting status.
 type voteStats struct {
-	startEpoch            uint64
+	startEpoch            types.Epoch
 	includedAttestedCount uint64
 	totalAttestedCount    uint64
 	totalDistance         uint64

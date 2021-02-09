@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -15,7 +16,7 @@ import (
 )
 
 // This defines how many epochs since finality the run time will begin to save hot state on to the DB.
-var epochsSinceFinalitySaveHotStateDB = 100
+var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
@@ -197,12 +198,12 @@ func (s *Service) handlePostBlockOperations(b *ethpb.BeaconBlock) error {
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := helpers.SlotToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
-	var sinceFinality uint64
+	var sinceFinality types.Epoch
 	if currentEpoch > s.finalizedCheckpt.Epoch {
 		sinceFinality = currentEpoch - s.finalizedCheckpt.Epoch
 	}
 
-	if sinceFinality >= uint64(epochsSinceFinalitySaveHotStateDB) {
+	if sinceFinality >= epochsSinceFinalitySaveHotStateDB {
 		s.stateGen.EnableSaveHotStateToDB(ctx)
 		return nil
 	}

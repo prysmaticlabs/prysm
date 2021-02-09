@@ -22,6 +22,7 @@ go_library(
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
     ],
 )
@@ -43,5 +44,6 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )
