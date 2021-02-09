@@ -96,9 +96,13 @@ func (s *Service) updateMinSpans(
 	if err != nil {
 		return slashertypes.NotSlashable, nil
 	}
-	updatedChunks := s.updateChunksWithCurrentEpoch()
+	updatedChunks, err := s.updateChunksWithCurrentEpoch()
+	if err != nil {
+		return slashertypes.NotSlashable, nil
+	}
 
 	// Apply the attestations to the related min chunks.
+	// TODO: Apply...
 
 	// Write the updated chunks to disk.
 	return slashertypes.NotSlashable, nil
@@ -110,42 +114,48 @@ func (s *Service) updateChunksWithCurrentEpoch(
 	validatorIdx types.ValidatorIndex,
 	epoch,
 	currentEpoch types.Epoch,
-) (updatedChunks map[uint64]Chunker) {
+) (updatedChunks map[uint64]Chunker, err error) {
+	updatedChunks = make(map[uint64]Chunker)
 	updatedChunks = make(map[uint64]Chunker)
 	for epoch <= currentEpoch {
 		chunkIdx := s.params.chunkIndex(epoch)
 		currentChunk := s.chunkForUpdate(updatedChunks, validatorChunkIdx, chunkIdx, slashertypes.MinSpan)
 		for s.params.chunkIndex(epoch) == chunkIdx && epoch <= currentEpoch {
-			if err := setChunkDataAtEpoch(
+			if err = setChunkDataAtEpoch(
 				s.params,
 				currentChunk.Chunk(),
 				validatorIdx,
 				epoch,
 				types.Epoch(currentChunk.NeutralElement())+epoch,
 			); err != nil {
-				panic(err)
+				return
 			}
 			epoch++
 		}
 		updatedChunks[chunkIdx] = currentChunk
 	}
+	return
 }
 
 func (s *Service) chunkForUpdate(
-	updatedChunks map[uint64]Chunker,
+	chunksByChunkIndex map[uint64]Chunker,
 	validatorChunkIndex,
 	chunkIndex uint64,
 	kind slashertypes.ChunkKind,
 ) Chunker {
-	if chunk, ok := updatedChunks[chunkIndex]; ok {
+	// Check if the chunk index we are looking up already
+	// exists in the map of chunks.
+	if chunk, ok := chunksByChunkIndex[chunkIndex]; ok {
 		return chunk
 	}
-	// Load from DB, if it does not exist, then create an empty chunk.
+	// Otherwise, we load the chunk from the database.
 	key := s.params.flatSliceID(validatorChunkIndex, chunkIndex)
 	data, exists, err := s.serviceCfg.Database.LoadSlasherChunk(context.Background(), kind, key)
 	if err != nil {
 		panic(err)
 	}
+	// If the chunk exists in the database, we initialize it from the raw bytes data.
+	// If it does not exist, we initialize an empty chunk.
 	var existingChunk Chunker
 	switch kind {
 	case slashertypes.MinSpan:
@@ -161,7 +171,7 @@ func (s *Service) chunkForUpdate(
 			existingChunk = EmptyMaxSpanChunksSlice(s.params)
 		}
 	}
-	updatedChunks[chunkIndex] = existingChunk
+	chunksByChunkIndex[chunkIndex] = existingChunk
 	return existingChunk
 }
 
