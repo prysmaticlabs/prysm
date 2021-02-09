@@ -56,16 +56,22 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
 			groupedAtts := s.groupByValidatorChunkIndex(attestations)
-			for validatorChunkIdx, attBatch := range groupedAtts {
+			for validatorChunkIdx, batch := range groupedAtts {
 				validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
 				// Save the attestation records for the validator indices in our database.
 				if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-					ctx, validatorIndices, attBatch,
+					ctx, validatorIndices, batch,
 				); err != nil {
 					log.WithError(err).Error("Could not save attestation records to DB")
 					continue
 				}
-				s.detectSlashableAttestations(ctx, attBatch, validatorChunkIdx, types.Epoch(currentEpoch))
+				if err := s.detectSlashableAttestations(ctx, &chunkUpdateOptions{
+					validatorChunkIndex: validatorChunkIdx,
+					currentEpoch:        types.Epoch(currentEpoch),
+				}, batch); err != nil {
+					log.WithError(err).Error("Could not detect slashable attestations")
+					continue
+				}
 			}
 		case <-ctx.Done():
 			return

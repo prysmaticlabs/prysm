@@ -12,8 +12,13 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+func Test_applyCurrentEpochToValidators(t *testing.T) {
+
+}
+
 func TestService_loadChunk_MinSpan(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
+	ctx := context.Background()
 
 	// Check if the chunk at chunk index already exists in-memory.
 	kind := slashertypes.MinSpan
@@ -42,14 +47,22 @@ func TestService_loadChunk_MinSpan(t *testing.T) {
 			Database: beaconDB,
 		},
 	}
-	received, err := s.loadChunk(updatedChunks, 0, chunkIdx, kind)
+	received, err := s.loadChunk(ctx, &chunkUpdateOptions{
+		validatorChunkIndex: 0,
+		chunkIndex:          chunkIdx,
+		kind:                kind,
+	}, updatedChunks)
 	require.NoError(t, err)
 	require.DeepEqual(t, existingChunk, received)
 
 	// If a chunk at a chunk index does not exist, ensure it
 	// is initialized as an empty chunk.
 	chunkIdx = uint64(2)
-	received, err = s.loadChunk(updatedChunks, 0, chunkIdx, kind)
+	received, err = s.loadChunk(ctx, &chunkUpdateOptions{
+		validatorChunkIndex: 0,
+		chunkIndex:          chunkIdx,
+		kind:                kind,
+	}, updatedChunks)
 	require.NoError(t, err)
 	require.DeepEqual(t, emptyChunk, received)
 
@@ -60,16 +73,22 @@ func TestService_loadChunk_MinSpan(t *testing.T) {
 		6: existingChunk,
 	}
 	err = s.saveUpdatedChunks(
-		context.Background(),
-		kind,
+		ctx,
+		&chunkUpdateOptions{
+			validatorChunkIndex: 0,
+			kind:                kind,
+		},
 		updatedChunks,
-		0,
 	)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
 	for chunkIdx = range updatedChunks {
 		input := make(map[uint64]Chunker)
-		received, err := s.loadChunk(input, 0, chunkIdx, kind)
+		received, err = s.loadChunk(ctx, &chunkUpdateOptions{
+			validatorChunkIndex: 0,
+			chunkIndex:          chunkIdx,
+			kind:                kind,
+		}, input)
 		require.NoError(t, err)
 		require.DeepEqual(t, existingChunk, received)
 	}
@@ -77,12 +96,13 @@ func TestService_loadChunk_MinSpan(t *testing.T) {
 
 func TestService_loadChunk_MaxSpan(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
+	ctx := context.Background()
 
 	// Check if the chunk at chunk index already exists in-memory.
-	params := DefaultParams()
 	kind := slashertypes.MaxSpan
-	emptyChunk := EmptyMaxSpanChunksSlice(params)
+	params := DefaultParams()
 	existingChunk := EmptyMaxSpanChunksSlice(params)
+	emptyChunk := EmptyMaxSpanChunksSlice(params)
 	validatorIdx := types.ValidatorIndex(0)
 	epochInChunk := types.Epoch(0)
 	targetEpoch := types.Epoch(2)
@@ -105,14 +125,22 @@ func TestService_loadChunk_MaxSpan(t *testing.T) {
 			Database: beaconDB,
 		},
 	}
-	received, err := s.loadChunk(updatedChunks, 0, chunkIdx, kind)
+	received, err := s.loadChunk(ctx, &chunkUpdateOptions{
+		validatorChunkIndex: 0,
+		chunkIndex:          chunkIdx,
+		kind:                kind,
+	}, updatedChunks)
 	require.NoError(t, err)
 	require.DeepEqual(t, existingChunk, received)
 
 	// If a chunk at a chunk index does not exist, ensure it
 	// is initialized as an empty chunk.
 	chunkIdx = uint64(2)
-	received, err = s.loadChunk(updatedChunks, 0, chunkIdx, kind)
+	received, err = s.loadChunk(ctx, &chunkUpdateOptions{
+		validatorChunkIndex: 0,
+		chunkIndex:          chunkIdx,
+		kind:                kind,
+	}, updatedChunks)
 	require.NoError(t, err)
 	require.DeepEqual(t, emptyChunk, received)
 
@@ -123,16 +151,22 @@ func TestService_loadChunk_MaxSpan(t *testing.T) {
 		6: existingChunk,
 	}
 	err = s.saveUpdatedChunks(
-		context.Background(),
-		kind,
+		ctx,
+		&chunkUpdateOptions{
+			validatorChunkIndex: 0,
+			kind:                kind,
+		},
 		updatedChunks,
-		0,
 	)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
 	for chunkIdx = range updatedChunks {
 		input := make(map[uint64]Chunker)
-		received, err := s.loadChunk(input, 0, chunkIdx, kind)
+		received, err = s.loadChunk(ctx, &chunkUpdateOptions{
+			validatorChunkIndex: 0,
+			chunkIndex:          chunkIdx,
+			kind:                kind,
+		}, input)
 		require.NoError(t, err)
 		require.DeepEqual(t, existingChunk, received)
 	}
