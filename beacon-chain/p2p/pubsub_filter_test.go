@@ -325,7 +325,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	notifier := &mock.MockStateNotifier{}
-	s, err := NewService(ctx, &Config{
+	s, err := New(ctx, &Config{
 		StateNotifier: notifier,
 	})
 	require.NoError(t, err)

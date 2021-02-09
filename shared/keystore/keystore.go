@@ -52,15 +52,6 @@ type Keystore struct {
 	scryptP     int
 }
 
-// New creates a new keystore from a directory.
-func New(directory string) Keystore {
-	return Keystore{
-		keysDirPath: directory,
-		scryptN:     StandardScryptN,
-		scryptP:     StandardScryptP,
-	}
-}
-
 // GetKey from file using the filename path and a decryption password.
 func (ks Keystore) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
@@ -237,7 +228,7 @@ func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes, keyI
 		return nil, nil, err
 	}
 
-	derivedKey, err := getKDFKey(keyProtected.Crypto, auth)
+	derivedKey, err := kdfKey(keyProtected.Crypto, auth)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -254,7 +245,7 @@ func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes, keyI
 	return plainText, keyID, nil
 }
 
-func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
+func kdfKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	authArray := []byte(auth)
 	salt, err := hex.DecodeString(cryptoJSON.KDFParams["salt"].(string))
 	if err != nil {

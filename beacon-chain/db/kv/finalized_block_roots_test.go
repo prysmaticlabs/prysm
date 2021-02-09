@@ -32,7 +32,8 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
@@ -96,7 +97,8 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 1,
 	}
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	// A state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint1))
@@ -146,7 +148,8 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))

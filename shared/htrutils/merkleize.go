@@ -29,8 +29,8 @@ const (
 	bit5
 )
 
-// GetDepth retrieves the appropriate depth for the provided trie size.
-func GetDepth(v uint64) (out uint8) {
+// Depth retrieves the appropriate depth for the provided trie size.
+func Depth(v uint64) (out uint8) {
 	// bitmagic: binary search through a uint32, offset down by 1 to not round powers of 2 up.
 	// Then adding 1 to it to not get the index of the first bit, but the length of the bits (depth of tree)
 	// Zero is a special case, it has a 0 depth.
@@ -81,8 +81,8 @@ func Merkleize(hasher Hasher, count, limit uint64, leaf func(i uint64) []byte) (
 		}
 		return
 	}
-	depth := GetDepth(count)
-	limitDepth := GetDepth(limit)
+	depth := Depth(count)
+	limitDepth := Depth(limit)
 	tmp := make([][32]byte, limitDepth+1)
 
 	j := uint8(0)
@@ -144,8 +144,8 @@ func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []by
 	if limit <= 1 {
 		return
 	}
-	depth := GetDepth(count)
-	limitDepth := GetDepth(limit)
+	depth := Depth(count)
+	limitDepth := Depth(limit)
 	branch = append(branch, trieutil.ZeroHashes[:limitDepth]...)
 
 	tmp := make([][32]byte, limitDepth+1)

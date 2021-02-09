@@ -16,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestExitAccountsCli_Ok(t *testing.T) {
@@ -96,11 +98,12 @@ func TestExitAccountsCli_Ok(t *testing.T) {
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(formattedExitedKeys))
-	expectedKey := "0x" + keystore.Pubkey[:12]
-	assert.Equal(t, expectedKey, formattedExitedKeys[0])
+	require.Equal(t, 1, len(rawExitedKeys))
+	assert.DeepEqual(t, rawPubKeys[0], rawExitedKeys[0])
+	require.Equal(t, 1, len(formattedExitedKeys))
+	assert.Equal(t, "0x"+keystore.Pubkey[:12], formattedExitedKeys[0])
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
@@ -122,4 +125,42 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = prepareWallet(cliCtx)
 	assert.ErrorContains(t, "wallet is empty", err)
+}
+
+func TestPrepareClients_AddsGRPCHeaders(t *testing.T) {
+	imported.ResetCaches()
+	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		keymanagerKind:      keymanager.Imported,
+		walletPasswordFile:  passwordFilePath,
+		accountPasswordFile: passwordFilePath,
+		grpcHeaders:         "Authorization=Basic some-token,Some-Other-Header=some-value",
+	})
+	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: password,
+		},
+	})
+	require.NoError(t, err)
+	_, _, err = prepareClients(cliCtx)
+	require.NoError(t, err)
+	md, _ := metadata.FromOutgoingContext(cliCtx.Context)
+	assert.Equal(t, "Basic some-token", md.Get("Authorization")[0])
+	assert.Equal(t, "some-value", md.Get("Some-Other-Header")[0])
+}
+
+func TestDisplayExitInfo(t *testing.T) {
+	logHook := test.NewGlobal()
+	key := []byte("0x123456")
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://beaconcha.in/validator/3078313233343536")
+}
+
+func TestDisplayExitInfo_NoKeys(t *testing.T) {
+	logHook := test.NewGlobal()
+	displayExitInfo([][]byte{}, []string{})
+	assert.LogsContain(t, logHook, "No successful voluntary exits")
 }

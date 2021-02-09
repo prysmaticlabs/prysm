@@ -19,6 +19,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -121,6 +122,9 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 			return nil
 		case <-ctx.Done():
 			return errors.New("context canceled")
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return nil
 		}
 	}
 }
@@ -135,7 +139,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// First, check if the beacon chain has started.
 	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "could not setup beacon chain ChainStart streaming client")
+		return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error())
 	}
 
 	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
@@ -145,7 +149,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
-			return errors.Wrap(err, "could not receive ChainStart from stream")
+			return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not receive ChainStart from stream").Error())
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
@@ -169,11 +173,13 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 				)
 			}
 		}
+	} else {
+		return errConnectionIssue
 	}
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
 }
@@ -185,7 +191,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "could not get sync status")
+		return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
 	if !s.Syncing {
 		return nil
@@ -197,7 +203,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
-				return errors.Wrap(err, "could not get sync status")
+				return errors.Wrap(errConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
 			if !s.Syncing {
 				return nil
@@ -243,10 +249,11 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 // ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveBlocks(ctx context.Context) {
+func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
 	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve blocks stream")
+		log.WithError(err).Error("Failed to retrieve blocks stream, " + errConnectionIssue.Error())
+		connectionErrorChannel <- errors.Wrap(errConnectionIssue, err.Error())
 		return
 	}
 
@@ -257,7 +264,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context) {
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive blocks from beacon node")
+			log.WithError(err).Error("Could not receive blocks from beacon node, " + errConnectionIssue.Error())
+			connectionErrorChannel <- errors.Wrap(errConnectionIssue, err.Error())
 			return
 		}
 		if res == nil || res.Block == nil {
@@ -328,7 +336,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	defer span.End()
 	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(errConnectionIssue, err.Error())
 	}
 	return head.HeadSlot, nil
 }
@@ -383,7 +391,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	v.slashableKeysLock.RUnlock()
 
 	req := &ethpb.DutiesRequest{
-		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
+		Epoch:      types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch),
 		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
 	}
 
@@ -583,7 +591,7 @@ func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {
+func (v *validator) domainData(ctx context.Context, epoch types.Epoch, domain []byte) (*ethpb.DomainResponse, error) {
 	v.domainDataLock.Lock()
 	defer v.domainDataLock.Unlock()
 
@@ -592,7 +600,7 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 		Domain: domain,
 	}
 
-	key := strings.Join([]string{strconv.FormatUint(req.Epoch, 10), hex.EncodeToString(req.Domain)}, ",")
+	key := strings.Join([]string{strconv.FormatUint(uint64(req.Epoch), 10), hex.EncodeToString(req.Domain)}, ",")
 
 	if val, ok := v.domainDataCache.Get(key); ok {
 		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
@@ -670,7 +678,7 @@ func validatorSubscribeKey(slot, committeeID uint64) [64]byte {
 
 // This tracks all validators' voting status.
 type voteStats struct {
-	startEpoch            uint64
+	startEpoch            types.Epoch
 	includedAttestedCount uint64
 	totalAttestedCount    uint64
 	totalDistance         uint64

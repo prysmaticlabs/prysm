@@ -35,7 +35,7 @@ func (id dummyIdentity) Verify(_ *enr.Record, _ []byte) error { return nil }
 func (id dummyIdentity) NodeAddr(_ *enr.Record) []byte        { return id[:] }
 
 func TestGetVersion(t *testing.T) {
-	semVer := version.GetSemanticVersion()
+	semVer := version.SemanticVersion()
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 	res, err := (&Server{}).GetVersion(context.Background(), &ptypes.Empty{})
@@ -154,8 +154,9 @@ func TestGetIdentity(t *testing.T) {
 func TestSyncStatus(t *testing.T) {
 	currentSlot := new(uint64)
 	*currentSlot = 110
-	state := testutil.NewBeaconState()
-	err := state.SetSlot(100)
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	err = state.SetSlot(100)
 	require.NoError(t, err)
 	chainService := &mock.ChainService{Slot: currentSlot, State: state}
 
@@ -396,10 +397,10 @@ func TestPeerCount(t *testing.T) {
 	s := Server{PeersFetcher: peerFetcher}
 	resp, err := s.PeerCount(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, uint64(1), uint64(resp.Data.Connecting), "Wrong number of connecting peers")
-	assert.Equal(t, uint64(2), uint64(resp.Data.Connected), "Wrong number of connected peers")
-	assert.Equal(t, uint64(3), uint64(resp.Data.Disconnecting), "Wrong number of disconnecting peers")
-	assert.Equal(t, uint64(4), uint64(resp.Data.Disconnected), "Wrong number of disconnected peers")
+	assert.Equal(t, uint64(1), resp.Data.Connecting, "Wrong number of connecting peers")
+	assert.Equal(t, uint64(2), resp.Data.Connected, "Wrong number of connected peers")
+	assert.Equal(t, uint64(3), resp.Data.Disconnecting, "Wrong number of disconnecting peers")
+	assert.Equal(t, uint64(4), resp.Data.Disconnected, "Wrong number of disconnected peers")
 }
 
 func BenchmarkListPeers(b *testing.B) {

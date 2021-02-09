@@ -73,7 +73,7 @@ func (s *Service) filterPeerForSubnet(index uint64) func(node *enode.Node) bool 
 		if !s.filterPeer(node) {
 			return false
 		}
-		subnets, err := retrieveAttSubnets(node.Record())
+		subnets, err := attSubnets(node.Record())
 		if err != nil {
 			return false
 		}
@@ -119,8 +119,8 @@ func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 
 // Reads the attestation subnets entry from a node's ENR and determines
 // the committee indices of the attestation subnets the node is subscribed to.
-func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
-	bitV, err := retrieveBitvector(record)
+func attSubnets(record *enr.Record) ([]uint64, error) {
+	bitV, err := bitvector(record)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 
 // Parses the attestation subnets ENR entry in a node and extracts its value
 // as a bitvector for further manipulation.
-func retrieveBitvector(record *enr.Record) (bitfield.Bitvector64, error) {
+func bitvector(record *enr.Record) (bitfield.Bitvector64, error) {
 	bitV := bitfield.NewBitvector64()
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	err := record.Load(entry)

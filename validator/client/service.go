@@ -14,6 +14,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -28,7 +29,6 @@ import (
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
 
 // SyncChecker is able to determine if a beacon node is currently
@@ -138,16 +138,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	for _, hdr := range v.grpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) < 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", ss[0])
-				continue
-			}
-			v.ctx = metadata.AppendToOutgoingContext(v.ctx, ss[0], strings.Join(ss[1:], "="))
-		}
-	}
+	v.ctx = grpcutils.AppendHeaders(v.ctx, v.grpcHeaders)
 
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
 	if err != nil {
@@ -199,7 +190,7 @@ func (v *ValidatorService) Start() {
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
-		voteStats:                      voteStats{startEpoch: ^uint64(0)},
+		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
 		blockFeed:                      new(event.Feed),
@@ -300,10 +291,10 @@ func ConstructDialOptions(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 		grpc.WithChainStreamInterceptor(
-			grpcutils.LogGRPCStream,
+			grpcutils.LogStream,
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
@@ -353,6 +344,9 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 				continue
 			}
 		case <-ctx.Done():
+			return
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
 			return
 		}
 	}

@@ -18,10 +18,12 @@ go_library(
     deps = [
         "//proto/beacon/rpc/v1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
+        "//shared/grpcutils:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/pagination:go_default_library",
         "//shared/petnames:go_default_library",

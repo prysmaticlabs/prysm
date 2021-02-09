@@ -213,9 +213,10 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
+		numOfRefs := uint64(f.Refs())
 		f.lock.RLock()
 		if len(f.fieldLayers) != 0 {
-			refMap[i.String()+"_trie"] = uint64(f.Refs())
+			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.lock.RUnlock()
 	}
@@ -227,7 +228,7 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 // pads the leaves to a length of 32.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, htrutils.GetDepth(uint64(len(leaves)))+1)
+	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}
@@ -296,7 +297,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
+			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod.Mul(params.BeaconConfig().SlotsPerEpoch)))
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -320,7 +321,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
+			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 			if err != nil {
 				return [32]byte{}, err
 			}

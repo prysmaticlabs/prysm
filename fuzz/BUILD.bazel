@@ -16,6 +16,7 @@ ssz_gen_marshal(
     srcs = ["inputs.go"],
     includes = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
     objs = [

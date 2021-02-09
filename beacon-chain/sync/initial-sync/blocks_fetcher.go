@@ -259,7 +259,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	if f.mode == modeStopOnFinalizedEpoch {
-		highestFinalizedSlot := (targetEpoch + 1) * params.BeaconConfig().SlotsPerEpoch
+		highestFinalizedSlot := uint64(targetEpoch+1) * params.BeaconConfig().SlotsPerEpoch
 		if start > highestFinalizedSlot {
 			response.err = fmt.Errorf("%v, slot: %d, highest finalized slot: %d",
 				errSlotIsTooHigh, start, highestFinalizedSlot)
@@ -304,7 +304,7 @@ func (f *blocksFetcher) requestBlocks(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	l := f.getPeerLock(pid)
+	l := f.peerLock(pid)
 	l.Lock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,
@@ -334,7 +334,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	l := f.getPeerLock(pid)
+	l := f.peerLock(pid)
 	l.Lock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,

@@ -17,7 +17,6 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -605,6 +604,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		assert.Equal(t, stateSkipped, updatedState)
 	})
 
+	const pidDataParsed = "abc"
 	t.Run("send from the first machine", func(t *testing.T) {
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,
@@ -618,7 +618,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(256)
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[256].state = stateDataParsed
-		queue.smm.machines[256].pid = "abc"
+		queue.smm.machines[256].pid = pidDataParsed
 		queue.smm.machines[256].blocks = []*eth.SignedBeaconBlock{
 			testutil.NewBeaconBlock(),
 		}
@@ -648,7 +648,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[256].state = stateDataParsed
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
-		queue.smm.machines[320].pid = "abc"
+		queue.smm.machines[320].pid = pidDataParsed
 		queue.smm.machines[320].blocks = []*eth.SignedBeaconBlock{
 			testutil.NewBeaconBlock(),
 		}
@@ -675,7 +675,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
-		queue.smm.machines[320].pid = "abc"
+		queue.smm.machines[320].pid = pidDataParsed
 		queue.smm.machines[320].blocks = []*eth.SignedBeaconBlock{
 			testutil.NewBeaconBlock(),
 		}
@@ -1024,11 +1024,6 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 }
 
 func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		EnableSyncBacktracking: true,
-	})
-	defer resetCfg()
-
 	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
@@ -1045,7 +1040,8 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],
@@ -1243,7 +1239,8 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],

@@ -68,9 +68,17 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
 	}
-	head, err = state.ProcessSlots(ctx, head, req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+
+	if featureconfig.Get().EnableNextSlotStateCache {
+		head, err = state.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance slots to calculate proposer index: %v", err)
+		}
+	} else {
+		head, err = state.ProcessSlots(ctx, head, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+		}
 	}
 
 	var eth1Data *ethpb.Eth1Data
@@ -363,13 +371,13 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	//   DepositCount = state.eth1_deposit_index,
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
-	slotInVotingPeriod := slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch)
+	slotInVotingPeriod := slot % (uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch)
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, helpers.SlotToEpoch(slot)+slotInVotingPeriod)
+	enc = fastssz.MarshalUint64(enc, uint64(helpers.SlotToEpoch(slot))+slotInVotingPeriod)
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{

@@ -72,8 +72,8 @@ type Config struct {
 	NodeClient            ethpb.NodeClient
 }
 
-// NewService instantiation.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+// New instantiation.
+func New(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
@@ -164,13 +164,13 @@ func (s *Service) Start() {
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
-			grpcutils.LogGRPCStream,
+			grpcutils.LogStream,
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(s.ctx, s.provider, beaconOpts...)

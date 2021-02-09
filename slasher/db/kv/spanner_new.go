@@ -6,9 +6,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -16,7 +17,7 @@ import (
 // Tracks the highest and lowest observed epochs from the validator span maps
 // used for attester slashing detection. This value is purely used
 // as a cache key and only needs to be maintained in memory.
-var highestObservedEpoch uint64
+var highestObservedEpoch types.Epoch
 var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
 
 var (
@@ -46,7 +47,7 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 		log.Tracef("Evicting flat span map for epoch: %d", key)
 		err := db.update(func(tx *bolt.Tx) error {
 			epoch, keyOK := key.(uint64)
-			epochStore, valueOK := value.(*types.EpochStore)
+			epochStore, valueOK := value.(*slashertypes.EpochStore)
 			if !keyOK || !valueOK {
 				return errors.New("could not cast key and value into needed types")
 			}
@@ -68,7 +69,7 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 // for slashing detection.
 // Returns span byte array, and error in case of db error.
 // returns empty byte array if no entry for this epoch exists in db.
-func (s *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*types.EpochStore, error) {
+func (s *Store) EpochSpans(_ context.Context, epoch types.Epoch, fromCache bool) (*slashertypes.EpochStore, error) {
 	// Get from the cache if it exists or is requested, if not, go to DB.
 	if fromCache && s.flatSpanCache.Has(epoch) || s.flatSpanCache.Has(epoch) {
 		spans, _ := s.flatSpanCache.Get(epoch)
@@ -81,24 +82,24 @@ func (s *Store) EpochSpans(_ context.Context, epoch uint64, fromCache bool) (*ty
 		if b == nil {
 			return nil
 		}
-		spans := b.Get(bytesutil.Bytes8(epoch))
+		spans := b.Get(bytesutil.Bytes8(uint64(epoch)))
 		copiedSpans = make([]byte, len(spans))
 		copy(copiedSpans, spans)
 		return nil
 	})
 	if err != nil {
-		return &types.EpochStore{}, err
+		return &slashertypes.EpochStore{}, err
 	}
 	if copiedSpans == nil {
 		copiedSpans = []byte{}
 	}
-	return types.NewEpochStore(copiedSpans)
+	return slashertypes.NewEpochStore(copiedSpans)
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
-func (s *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
-	if len(es.Bytes())%int(types.SpannerEncodedLength) != 0 {
-		return types.ErrWrongSize
+func (s *Store) SaveEpochSpans(ctx context.Context, epoch types.Epoch, es *slashertypes.EpochStore, toCache bool) error {
+	if len(es.Bytes())%int(slashertypes.SpannerEncodedLength) != 0 {
+		return slashertypes.ErrWrongSize
 	}
 	// Also prune indexed attestations older then weak subjectivity period.
 	if err := s.setObservedEpochs(ctx, epoch); err != nil {
@@ -117,7 +118,7 @@ func (s *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epoc
 		if err != nil {
 			return err
 		}
-		return b.Put(bytesutil.Bytes8(epoch), es.Bytes())
+		return b.Put(bytesutil.Bytes8(uint64(epoch)), es.Bytes())
 	})
 }
 
@@ -135,7 +136,7 @@ func (s *Store) EnableSpanCache(enable bool) {
 	s.spanCacheEnabled = enable
 }
 
-func (s *Store) setObservedEpochs(ctx context.Context, epoch uint64) error {
+func (s *Store) setObservedEpochs(ctx context.Context, epoch types.Epoch) error {
 	var err error
 	if epoch > highestObservedEpoch {
 		slasherHighestObservedEpoch.Set(float64(epoch))

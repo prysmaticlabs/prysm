@@ -6,10 +6,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	slashertypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -37,13 +38,13 @@ func unmarshalAttSlashings(encoded [][]byte) ([]*ethpb.AttesterSlashing, error) 
 
 // AttesterSlashings accepts a status and returns all slashings with this status.
 // returns empty []*ethpb.AttesterSlashing if no slashing has been found with this status.
-func (s *Store) AttesterSlashings(ctx context.Context, status types.SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
+func (s *Store) AttesterSlashings(ctx context.Context, status slashertypes.SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.AttesterSlashings")
 	defer span.End()
 	encoded := make([][]byte, 0)
 	err := s.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(slashingBucket).Cursor()
-		prefix := encodeType(types.SlashingType(types.Attestation))
+		prefix := encodeType(slashertypes.SlashingType(slashertypes.Attestation))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			if v[0] == byte(status) {
 				encoded = append(encoded, v[1:])
@@ -67,7 +68,7 @@ func (s *Store) DeleteAttesterSlashing(ctx context.Context, attesterSlashing *et
 	}
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(slashingBucket)
-		k := encodeTypeRoot(types.SlashingType(types.Attestation), root)
+		k := encodeTypeRoot(slashertypes.SlashingType(slashertypes.Attestation), root)
 		if err != nil {
 			return errors.Wrap(err, "failed to get key for for attester slashing.")
 		}
@@ -79,22 +80,22 @@ func (s *Store) DeleteAttesterSlashing(ctx context.Context, attesterSlashing *et
 }
 
 // HasAttesterSlashing returns true and slashing status if a slashing is found in the db.
-func (s *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) (bool, types.SlashingStatus, error) {
+func (s *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) (bool, slashertypes.SlashingStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.HasAttesterSlashing")
 	defer span.End()
-	var status types.SlashingStatus
+	var status slashertypes.SlashingStatus
 	var found bool
 	root, err := hashutil.HashProto(slashing)
 	if err != nil {
 		return found, status, errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
-	key := encodeTypeRoot(types.SlashingType(types.Attestation), root)
+	key := encodeTypeRoot(slashertypes.SlashingType(slashertypes.Attestation), root)
 	err = s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		enc := b.Get(key)
 		if enc != nil {
 			found = true
-			status = types.SlashingStatus(enc[0])
+			status = slashertypes.SlashingStatus(enc[0])
 		}
 		return nil
 	})
@@ -102,7 +103,7 @@ func (s *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.Atteste
 }
 
 // SaveAttesterSlashing accepts a slashing proof and its status and writes it to disk.
-func (s *Store) SaveAttesterSlashing(ctx context.Context, status types.SlashingStatus, slashing *ethpb.AttesterSlashing) error {
+func (s *Store) SaveAttesterSlashing(ctx context.Context, status slashertypes.SlashingStatus, slashing *ethpb.AttesterSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveAttesterSlashing")
 	defer span.End()
 	enc, err := proto.Marshal(slashing)
@@ -113,7 +114,7 @@ func (s *Store) SaveAttesterSlashing(ctx context.Context, status types.SlashingS
 	if err != nil {
 		return err
 	}
-	key := encodeTypeRoot(types.SlashingType(types.Attestation), root)
+	key := encodeTypeRoot(slashertypes.SlashingType(slashertypes.Attestation), root)
 	return s.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		e := b.Put(key, append([]byte{byte(status)}, enc...))
@@ -122,7 +123,7 @@ func (s *Store) SaveAttesterSlashing(ctx context.Context, status types.SlashingS
 }
 
 // SaveAttesterSlashings accepts a slice of slashing proof and its status and writes it to disk.
-func (s *Store) SaveAttesterSlashings(ctx context.Context, status types.SlashingStatus, slashings []*ethpb.AttesterSlashing) error {
+func (s *Store) SaveAttesterSlashings(ctx context.Context, status slashertypes.SlashingStatus, slashings []*ethpb.AttesterSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveAttesterSlashings")
 	defer span.End()
 	enc := make([][]byte, len(slashings))
@@ -137,7 +138,7 @@ func (s *Store) SaveAttesterSlashings(ctx context.Context, status types.Slashing
 		if err != nil {
 			return err
 		}
-		key[i] = encodeTypeRoot(types.SlashingType(types.Attestation), root)
+		key[i] = encodeTypeRoot(slashertypes.SlashingType(slashertypes.Attestation), root)
 	}
 
 	return s.update(func(tx *bolt.Tx) error {
@@ -153,10 +154,10 @@ func (s *Store) SaveAttesterSlashings(ctx context.Context, status types.Slashing
 }
 
 // GetLatestEpochDetected returns the latest detected epoch from db.
-func (s *Store) GetLatestEpochDetected(ctx context.Context) (uint64, error) {
+func (s *Store) GetLatestEpochDetected(ctx context.Context) (types.Epoch, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.GetLatestEpochDetected")
 	defer span.End()
-	var epoch uint64
+	var epoch types.Epoch
 	err := s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		enc := b.Get([]byte(latestEpochKey))
@@ -164,19 +165,19 @@ func (s *Store) GetLatestEpochDetected(ctx context.Context) (uint64, error) {
 			epoch = 0
 			return nil
 		}
-		epoch = bytesutil.FromBytes8(enc)
+		epoch = types.Epoch(bytesutil.FromBytes8(enc))
 		return nil
 	})
 	return epoch, err
 }
 
 // SetLatestEpochDetected sets the latest slashing detected epoch in db.
-func (s *Store) SetLatestEpochDetected(ctx context.Context, epoch uint64) error {
+func (s *Store) SetLatestEpochDetected(ctx context.Context, epoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SetLatestEpochDetected")
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(epoch))
+		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(uint64(epoch)))
 		return err
 	})
 }

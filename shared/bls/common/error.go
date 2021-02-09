@@ -11,6 +11,3 @@ var ErrSecretUnmarshal = errors.New("could not unmarshal bytes into secret key")
 
 // ErrInfinitePubKey describes an error due to an infinite public key.
 var ErrInfinitePubKey = errors.New("received an infinite public key")
-
-// ErrInfiniteSignature describes an error due to an infinite signature.
-var ErrInfiniteSignature = errors.New("received an infinite signature")

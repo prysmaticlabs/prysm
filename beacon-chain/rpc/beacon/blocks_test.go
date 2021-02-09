@@ -9,6 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -98,6 +99,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 			{
 				Block:     blk,
 				BlockRoot: root[:],
+				Canonical: true,
 			},
 		},
 		NextPageToken: "0",
@@ -132,14 +134,11 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 
 	count := uint64(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
-	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
-		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = b
-		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
@@ -154,6 +153,9 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
+	chain := &chainMock.ChainService{
+		CanonicalRoots: map[[32]byte]bool{},
+	}
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -164,13 +166,21 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		b.Block.Slot = i
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
+		chain.CanonicalRoots[root] = true
 		blks[i] = b
-		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
+		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:], Canonical: true}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
+	orphanedBlk := testutil.NewBeaconBlock()
+	orphanedBlk.Block.Slot = 300
+	orphanedBlkRoot, err := orphanedBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, orphanedBlk))
+
 	bs := &Server{
-		BeaconDB: db,
+		BeaconDB:         db,
+		CanonicalFetcher: chain,
 	}
 
 	root6, err := blks[6].Block.HashTreeRoot()
@@ -188,7 +198,8 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
 						Slot: 5}}),
-					BlockRoot: blkContainers[5].BlockRoot}},
+					BlockRoot: blkContainers[5].BlockRoot,
+					Canonical: blkContainers[5].Canonical}},
 				NextPageToken: "",
 				TotalSize:     1}},
 		{req: &ethpb.ListBlocksRequest{
@@ -199,14 +210,16 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
 						Slot: 6}}),
-					BlockRoot: blkContainers[6].BlockRoot}},
+					BlockRoot: blkContainers[6].BlockRoot,
+					Canonical: blkContainers[6].Canonical}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
 						Slot: 6}}),
-					BlockRoot: blkContainers[6].BlockRoot}},
+					BlockRoot: blkContainers[6].BlockRoot,
+					Canonical: blkContainers[6].Canonical}},
 				TotalSize: 1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
@@ -240,6 +253,18 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: blkContainers[96:100],
 				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
+		{req: &ethpb.ListBlocksRequest{
+			PageToken:   strconv.Itoa(0),
+			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 300},
+			PageSize:    3},
+			res: &ethpb.ListBlocksResponse{
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+					Block: &ethpb.BeaconBlock{
+						Slot: 300}}),
+					BlockRoot: orphanedBlkRoot[:],
+					Canonical: false}},
+				NextPageToken: "",
+				TotalSize:     1}},
 	}
 
 	for i, test := range tests {
@@ -298,7 +323,8 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
 	require.NoError(t, s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 3, Root: bytesutil.PadTo([]byte{'A'}, 32)}))
 	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}))
@@ -386,9 +412,9 @@ func TestServer_GetChainHead(t *testing.T) {
 
 	head, err := bs.GetChainHead(context.Background(), nil)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
-	assert.Equal(t, uint64(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")
-	assert.Equal(t, uint64(1), head.FinalizedEpoch, "Unexpected FinalizedEpoch")
+	assert.Equal(t, types.Epoch(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
+	assert.Equal(t, types.Epoch(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")
+	assert.Equal(t, types.Epoch(1), head.FinalizedEpoch, "Unexpected FinalizedEpoch")
 	assert.Equal(t, uint64(24), head.PreviousJustifiedSlot, "Unexpected PreviousJustifiedSlot")
 	assert.Equal(t, uint64(16), head.JustifiedSlot, "Unexpected JustifiedSlot")
 	assert.Equal(t, uint64(8), head.FinalizedSlot, "Unexpected FinalizedSlot")
@@ -652,7 +678,8 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	beaconState := testutil.NewBeaconState()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	b := testutil.NewBeaconBlock()
 	r, err := b.HashTreeRoot()
 	require.NoError(t, err)
@@ -670,9 +697,9 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 
 	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
-	e := uint64(256)
+	e := types.Epoch(256)
 	require.Equal(t, e, c.Epoch)
-	wsState, err := server.StateGen.StateBySlot(ctx, e*params.BeaconConfig().SlotsPerEpoch)
+	wsState, err := server.StateGen.StateBySlot(ctx, uint64(e)*params.BeaconConfig().SlotsPerEpoch)
 	require.NoError(t, err)
 	sRoot, err := wsState.HashTreeRoot(ctx)
 	require.NoError(t, err)

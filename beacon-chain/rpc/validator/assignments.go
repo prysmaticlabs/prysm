@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -42,7 +43,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	if genesisTime.IsZero() {
 		return status.Error(codes.Unavailable, "genesis time is not set")
 	}
-	var currentEpoch uint64
+	var currentEpoch types.Epoch
 	if genesisTime.Before(timeutils.Now()) {
 		currentEpoch = slotutil.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
 	}
@@ -61,12 +62,12 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	defer stateSub.Unsubscribe()
 
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	epochTicker := slotutil.GetSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
+	epochTicker := slotutil.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
-		case epoch := <-epochTicker.C():
-			req.Epoch = epoch
+		case slot := <-epochTicker.C():
+			req.Epoch = types.Epoch(slot)
 			res, err := vs.duties(stream.Context(), req)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)

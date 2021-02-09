@@ -3,6 +3,7 @@ package helpers
 import (
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -22,7 +23,7 @@ const DomainByteLength = 4
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
-func ComputeDomainAndSign(st *state.BeaconState, epoch uint64, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
+func ComputeDomainAndSign(st *state.BeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
 	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
@@ -64,7 +65,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 }
 
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
-func ComputeDomainVerifySigningRoot(st *state.BeaconState, index, epoch uint64, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
+func ComputeDomainVerifySigningRoot(st *state.BeaconState, index uint64, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
 	v, err := st.ValidatorAtIndex(index)
 	if err != nil {
 		return err
@@ -98,7 +99,7 @@ func VerifySigningRoot(obj fssz.HashRoot, pub, signature, domain []byte) error {
 
 // VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
 func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub, signature, domain []byte) error {
-	set, err := RetrieveBlockSignatureSet(blk, pub, signature, domain)
+	set, err := BlockSignatureSet(blk, pub, signature, domain)
 	if err != nil {
 		return err
 	}
@@ -117,9 +118,9 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub, signature, domain []byt
 	return nil
 }
 
-// RetrieveBlockSignatureSet retrieves the relevant signature, message and pubkey data from a block and collating it
+// BlockSignatureSet retrieves the relevant signature, message and pubkey data from a block and collating it
 // into a signature set object.
-func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub, signature, domain []byte) (*bls.SignatureSet, error) {
+func BlockSignatureSet(blk *ethpb.BeaconBlock, pub, signature, domain []byte) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
