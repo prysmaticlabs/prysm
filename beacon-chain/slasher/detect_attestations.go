@@ -76,10 +76,10 @@ func (s *Service) detectAttestationBatch(
 	if err != nil {
 		return err
 	}
-	//_, err = s.updateMaxSpans()
-	//if err != nil {
-	//	return err
-	//}
+	_, err = s.updateSpans(ctx, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
+	if err != nil {
+		return err
+	}
 
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIndex)
@@ -94,32 +94,46 @@ func (s *Service) updateSpans(
 ) (slashertypes.SlashingKind, error) {
 	// Update the required chunks with the current epoch.
 	validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
-	epochs, epochsExist, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	updatedChunks, err := s.applyCurrentEpochToValidators(ctx, kind, validatorIndices, validatorChunkIdx, currentEpoch)
 	if err != nil {
-		return slashertypes.NotSlashable, nil
-	}
-	updatedChunks := make(map[uint64]Chunker)
-	for i := 0; i < len(validatorIndices); i++ {
-		validatorIdx := validatorIndices[i]
-		epoch := epochs[i]
-		if !epochsExist[i] {
-			epoch = types.Epoch(0)
-		}
-		if err := s.updateChunksWithCurrentEpoch(
-			ctx, kind, updatedChunks, validatorChunkIdx, validatorIdx, epoch, currentEpoch,
-		); err != nil {
-			return slashertypes.NotSlashable, nil
-		}
+		return slashertypes.NotSlashable, err
 	}
 
 	// Apply the attestations to the related min chunks.
 	// TODO: Apply...
 
 	// Write the updated chunks to disk.
-	return slashertypes.NotSlashable, nil
+	return slashertypes.NotSlashable, s.saveUpdatedChunks(ctx, kind, updatedChunks, validatorChunkIdx)
 }
 
-func (s *Service) updateChunksWithCurrentEpoch(
+func (s *Service) applyCurrentEpochToValidators(
+	ctx context.Context,
+	kind slashertypes.ChunkKind,
+	validatorIndices []types.ValidatorIndex,
+	validatorChunkIdx uint64,
+	currentEpoch types.Epoch,
+) (updatedChunks map[uint64]Chunker, err error) {
+	epochs, epochsExist, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	if err != nil {
+		return
+	}
+	updatedChunks = make(map[uint64]Chunker)
+	for i := 0; i < len(validatorIndices); i++ {
+		validatorIdx := validatorIndices[i]
+		epoch := epochs[i]
+		if !epochsExist[i] {
+			epoch = types.Epoch(0)
+		}
+		if err := s.updateChunksWithCurrentEpochForValidator(
+			ctx, kind, updatedChunks, validatorChunkIdx, validatorIdx, epoch, currentEpoch,
+		); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (s *Service) updateChunksWithCurrentEpochForValidator(
 	ctx context.Context,
 	kind slashertypes.ChunkKind,
 	chunksByChunkIdx map[uint64]Chunker,
@@ -184,6 +198,21 @@ func (s *Service) chunkForUpdate(
 	}
 	chunksByChunkIndex[chunkIndex] = existingChunk
 	return existingChunk
+}
+
+func (s *Service) saveUpdatedChunks(
+	ctx context.Context,
+	kind slashertypes.ChunkKind,
+	updatedChunks map[uint64]Chunker,
+	validatorChunkIdx uint64,
+) error {
+	chunkKeys := make([]uint64, 0, len(updatedChunks))
+	chunks := make([][]uint16, 0, len(updatedChunks))
+	for chunkIdx, chunk := range updatedChunks {
+		chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIdx, chunkIdx))
+		chunks = append(chunks, chunk.Chunk())
+	}
+	return s.serviceCfg.Database.SaveSlasherChunks(ctx, kind, chunkKeys, chunks)
 }
 
 // Group a list of attestations into batches by validator chunk index.
