@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -13,7 +14,39 @@ import (
 )
 
 func Test_applyCurrentEpochToValidators(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	ctx := context.Background()
 
+	// Check if the chunk at chunk index already exists in-memory.
+	s := &Service{
+		params: &Parameters{
+			chunkSize:          2, // 2 epochs in a chunk.
+			validatorChunkSize: 2, // 2 validators in a chunk.
+			historyLength:      4,
+		},
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+	}
+	validators := []types.ValidatorIndex{
+		1, 2,
+	}
+	// Given the chunk size is 2 epochs per chunk, updating with current epoch == 3
+	// will mean that we are updating chunk index 0 and 1 worth of data.
+	updatedChunks, err := s.applyCurrentEpochToValidators(
+		ctx,
+		&chunkUpdateOptions{
+			currentEpoch: 3,
+		},
+		validators,
+	)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(updatedChunks))
+	chunk0, ok := updatedChunks[0]
+	require.Equal(t, true, ok)
+	chunk1, ok := updatedChunks[1]
+	require.Equal(t, true, ok)
+	fmt.Println(chunk0, chunk1)
 }
 
 func TestService_loadChunk_MinSpan(t *testing.T) {
