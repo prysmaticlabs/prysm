@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/mohae/deepcopy"
+	"github.com/prysmaticlabs/eth2-types"
 )
 
 // NetworkConfig defines the spec based network parameters.
@@ -11,7 +12,7 @@ type NetworkConfig struct {
 	GossipMaxSize                   uint64        `yaml:"GOSSIP_MAX_SIZE"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
 	MaxChunkSize                    uint64        `yaml:"MAX_CHUNK_SIZE"`                     // MaxChunkSize is the the maximum allowed size of uncompressed req/resp chunked responses.
 	AttestationSubnetCount          uint64        `yaml:"ATTESTATION_SUBNET_COUNT"`           // AttestationSubnetCount is the number of attestation subnets used in the gossipsub protocol.
-	AttestationPropagationSlotRange uint64        `yaml:"ATTESTATION_PROPAGATION_SLOT_RANGE"` // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
+	AttestationPropagationSlotRange types.Slot    `yaml:"ATTESTATION_PROPAGATION_SLOT_RANGE"` // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
 	MaxRequestBlocks                uint64        `yaml:"MAX_REQUEST_BLOCKS"`                 // MaxRequestBlocks is the maximum number of blocks in a single request.
 	TtfbTimeout                     time.Duration `yaml:"TTFB_TIMEOUT"`                       // TtfbTimeout is the maximum time to wait for first byte of request response (time-to-first-byte).
 	RespTimeout                     time.Duration `yaml:"RESP_TIMEOUT"`                       // RespTimeout is the maximum time for complete response transfer.
