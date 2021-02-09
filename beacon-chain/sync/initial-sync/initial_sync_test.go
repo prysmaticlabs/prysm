@@ -85,7 +85,8 @@ func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*
 	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 
 	return &mock.ChainService{
 		State: st,

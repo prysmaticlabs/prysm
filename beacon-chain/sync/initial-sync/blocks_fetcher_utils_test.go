@@ -159,7 +159,8 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],
@@ -308,7 +309,8 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],
@@ -417,7 +419,8 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],

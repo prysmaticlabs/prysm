@@ -663,7 +663,8 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 		}
 	}
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(5))
 	require.NoError(t, st.SetValidators(validators))
 
@@ -724,7 +725,8 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		}
 	}
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(35))
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetFork(&pb.Fork{
@@ -791,7 +793,8 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 		}
 	}
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(5))
 	require.NoError(t, st.SetValidators(validators))
 

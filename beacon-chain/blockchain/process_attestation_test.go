@@ -33,7 +33,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	service, err := New(ctx, cfg)
 	require.NoError(t, err)
 
-	_, err = blockTree1(beaconDB, []byte{'g'})
+	_, err = blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
 
 	BlkWithOutState := testutil.NewBeaconBlock()
@@ -48,7 +48,8 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
@@ -58,7 +59,8 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 
 	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s = testutil.NewBeaconState()
+	s, err = testutil.NewBeaconState()
+	require.NoError(t, err)
 	err = s.SetFork(&pb.Fork{
 		Epoch:           0,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -161,7 +163,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service, err := New(ctx, cfg)
 	require.NoError(t, err)
 
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)})
 	require.NoError(t, err)
 	val := &ethpb.Validator{

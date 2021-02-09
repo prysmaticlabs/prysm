@@ -21,7 +21,8 @@ func TestService_TreeHandler(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	headState := testutil.NewBeaconState()
+	headState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, headState.SetBalances([]uint64{params.BeaconConfig().GweiPerEth}))
 	cfg := &Config{
 		BeaconDB: beaconDB,

@@ -176,7 +176,8 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	// Pending active because activation epoch is still defaulted at far future slot.
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(5000))
 	err = state.SetValidators([]*ethpb.Validator{
 		{
@@ -445,7 +446,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, genesisRoot), "Could not save genesis state")
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(slot))
 	err = state.SetValidators([]*ethpb.Validator{{
 		PublicKey:             pubKey,
@@ -661,7 +663,8 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(currentSlot))
 	require.NoError(t, db.SaveState(ctx, state, genesisRoot), "Could not save state")
