@@ -253,7 +253,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
 	// The next block is only 1 epoch ahead so as to not induce a new seed.
-	blkSlot := params.BeaconConfig().SlotsPerEpoch * helpers.NextEpoch(copied)
+	blkSlot := params.BeaconConfig().SlotsPerEpoch * uint64(helpers.NextEpoch(copied))
 	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)

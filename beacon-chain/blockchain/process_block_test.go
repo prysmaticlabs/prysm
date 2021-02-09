@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -77,7 +78,7 @@ func TestStore_OnBlock(t *testing.T) {
 			blk: func() *ethpb.SignedBeaconBlock {
 				b := testutil.NewBeaconBlock()
 				b.Block.ParentRoot = randomParentRoot2
-				b.Block.Slot = params.BeaconConfig().FarFutureEpoch
+				b.Block.Slot = uint64(params.BeaconConfig().FarFutureEpoch)
 				return b
 			}(),
 			s:             st.Copy(),
@@ -336,7 +337,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	service.bestJustifiedCheckpt.Epoch = 2
 	require.NoError(t, service.updateJustified(context.Background(), s))
 
-	assert.Equal(t, uint64(2), service.bestJustifiedCheckpt.Epoch, "Incorrect justified epoch in service")
+	assert.Equal(t, types.Epoch(2), service.bestJustifiedCheckpt.Epoch, "Incorrect justified epoch in service")
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
@@ -944,6 +945,6 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		testState, err = service.stateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
 	}
-	require.Equal(t, uint64(3), service.CurrentJustifiedCheckpt().Epoch)
-	require.Equal(t, uint64(2), service.FinalizedCheckpt().Epoch)
+	require.Equal(t, types.Epoch(3), service.CurrentJustifiedCheckpt().Epoch)
+	require.Equal(t, types.Epoch(2), service.FinalizedCheckpt().Epoch)
 }

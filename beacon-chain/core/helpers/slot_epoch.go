@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,8 +25,10 @@ const MaxSlotBuffer = uint64(1 << 7)
 //    Return the epoch number of ``slot``.
 //    """
 //    return Epoch(slot // SLOTS_PER_EPOCH)
-func SlotToEpoch(slot uint64) uint64 {
-	return slot / params.BeaconConfig().SlotsPerEpoch
+func SlotToEpoch(slot uint64) types.Epoch {
+	// TODO(#8205): Once types.Slot PR is ready, replace with
+	// return types.Epoch(slot.DivSlot(params.BeaconConfig().SlotsPerEpoch))
+	return types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 }
 
 // CurrentEpoch returns the current epoch number calculated from
@@ -37,7 +40,7 @@ func SlotToEpoch(slot uint64) uint64 {
 //    Return the current epoch.
 //    """
 //    return compute_epoch_of_slot(state.slot)
-func CurrentEpoch(state *stateTrie.BeaconState) uint64 {
+func CurrentEpoch(state *stateTrie.BeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot())
 }
 
@@ -52,7 +55,7 @@ func CurrentEpoch(state *stateTrie.BeaconState) uint64 {
 //    """
 //    current_epoch = get_current_epoch(state)
 //    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
-func PrevEpoch(state *stateTrie.BeaconState) uint64 {
+func PrevEpoch(state *stateTrie.BeaconState) types.Epoch {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
 		return 0
@@ -62,7 +65,7 @@ func PrevEpoch(state *stateTrie.BeaconState) uint64 {
 
 // NextEpoch returns the next epoch number calculated from
 // the slot number stored in beacon state.
-func NextEpoch(state *stateTrie.BeaconState) uint64 {
+func NextEpoch(state *stateTrie.BeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot()) + 1
 }
 
@@ -75,8 +78,8 @@ func NextEpoch(state *stateTrie.BeaconState) uint64 {
 //    Return the start slot of ``epoch``.
 //    """
 //    return Slot(epoch * SLOTS_PER_EPOCH)
-func StartSlot(epoch uint64) (uint64, error) {
-	slot, err := mathutil.Mul64(epoch, params.BeaconConfig().SlotsPerEpoch)
+func StartSlot(epoch types.Epoch) (uint64, error) {
+	slot, err := mathutil.Mul64(uint64(epoch), params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		return slot, errors.Errorf("start slot calculation overflows: %v", err)
 	}
@@ -85,7 +88,7 @@ func StartSlot(epoch uint64) (uint64, error) {
 
 // EndSlot returns the last slot number of the
 // current epoch.
-func EndSlot(epoch uint64) (uint64, error) {
+func EndSlot(epoch types.Epoch) (uint64, error) {
 	if epoch == math.MaxUint64 {
 		return 0, errors.New("start slot calculation overflows")
 	}
@@ -199,7 +202,7 @@ func RoundUpToNearestEpoch(slot uint64) uint64 {
 //    else:
 //        weak_subjectivity_period += SAFETY_DECAY*val_count/(2*100*MIN_PER_EPOCH_CHURN_LIMIT)
 //    return weak_subjectivity_period
-func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
+func WeakSubjectivityCheckptEpoch(valCount uint64) (types.Epoch, error) {
 	wsp := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 
 	m := params.BeaconConfig().MinPerEpochChurnLimit
@@ -207,14 +210,14 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
 	d := params.BeaconConfig().SafetyDecay
 	if valCount >= m*q {
 		v := d * q / (2 * 100)
-		wsp += v
+		wsp += types.Epoch(v)
 	} else {
 		v, err := mathutil.Mul64(d, valCount)
 		if err != nil {
 			return 0, err
 		}
 		v /= 2 * 100 * m
-		wsp += v
+		wsp += types.Epoch(v)
 	}
 	return wsp, nil
 }
@@ -224,7 +227,7 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
 func VotingPeriodStartTime(genesis, slot uint64) uint64 {
 	startTime := genesis
 	startTime +=
-		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
+		(slot - (slot % (uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch))) *
 			params.BeaconConfig().SecondsPerSlot
 	return startTime
 }

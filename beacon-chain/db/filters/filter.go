@@ -14,6 +14,8 @@
 //   }
 package filters
 
+import "github.com/prysmaticlabs/eth2-types"
+
 // FilterType defines an enum which is used as the keys in a map that tracks
 // set attribute filters for data as part of the `FilterQuery` struct type.
 type FilterType uint8
@@ -89,13 +91,13 @@ func (q *QueryFilter) SetTargetRoot(val []byte) *QueryFilter {
 }
 
 // SetSourceEpoch enables filtering by the source epoch data attribute of an object.
-func (q *QueryFilter) SetSourceEpoch(val uint64) *QueryFilter {
+func (q *QueryFilter) SetSourceEpoch(val types.Epoch) *QueryFilter {
 	q.queries[SourceEpoch] = val
 	return q
 }
 
 // SetTargetEpoch enables filtering by the target epoch data attribute of an object.
-func (q *QueryFilter) SetTargetEpoch(val uint64) *QueryFilter {
+func (q *QueryFilter) SetTargetEpoch(val types.Epoch) *QueryFilter {
 	q.queries[TargetEpoch] = val
 	return q
 }
@@ -113,13 +115,13 @@ func (q *QueryFilter) SetEndSlot(val uint64) *QueryFilter {
 }
 
 // SetStartEpoch enables filtering by the StartEpoch attribute of an object (inclusive).
-func (q *QueryFilter) SetStartEpoch(val uint64) *QueryFilter {
+func (q *QueryFilter) SetStartEpoch(val types.Epoch) *QueryFilter {
 	q.queries[StartEpoch] = val
 	return q
 }
 
 // SetEndEpoch enables filtering by the EndEpoch attribute of an object (inclusive).
-func (q *QueryFilter) SetEndEpoch(val uint64) *QueryFilter {
+func (q *QueryFilter) SetEndEpoch(val types.Epoch) *QueryFilter {
 	q.queries[EndEpoch] = val
 	return q
 }

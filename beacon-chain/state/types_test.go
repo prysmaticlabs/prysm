@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
@@ -225,7 +224,5 @@ func TestForkManualCopy_OK(t *testing.T) {
 	require.NoError(t, a.SetFork(wantedFork))
 
 	newState := a.CloneInnerState()
-	if !sszutil.DeepEqual(newState.Fork, wantedFork) {
-		t.Errorf("Wanted %v but got %v", wantedFork, newState.Fork)
-	}
+	require.DeepEqual(t, newState.Fork, wantedFork)
 }
