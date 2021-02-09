@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -32,7 +33,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	service, err := New(ctx, cfg)
 	require.NoError(t, err)
 
-	_, err = blockTree1(beaconDB, []byte{'g'})
+	_, err = blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
 
 	BlkWithOutState := testutil.NewBeaconBlock()
@@ -47,7 +48,8 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
@@ -57,7 +59,8 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 
 	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s = testutil.NewBeaconState()
+	s, err = testutil.NewBeaconState()
+	require.NoError(t, err)
 	err = s.SetFork(&pb.Fork{
 		Epoch:           0,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -160,7 +163,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service, err := New(ctx, cfg)
 	require.NoError(t, err)
 
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)})
 	require.NoError(t, err)
 	val := &ethpb.Validator{
@@ -231,19 +235,19 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	service, err := New(ctx, cfg)
 	require.NoError(t, err)
 
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
-	assert.Equal(t, returned.Slot(), checkpoint.Epoch*params.BeaconConfig().SlotsPerEpoch, "Incorrectly returned base state")
+	assert.Equal(t, uint64(checkpoint.Epoch.Mul(params.BeaconConfig().SlotsPerEpoch)), returned.Slot(), "Incorrectly returned base state")
 
 	cached, err := service.checkpointStateCache.StateByCheckpoint(checkpoint)
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), cached.Slot(), "State should have been cached")
 
-	epoch = uint64(2)
+	epoch = 2
 	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), 32)}
 	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)

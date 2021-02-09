@@ -1,8 +1,9 @@
 package kv
 
 import (
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 )
 
 const (
@@ -36,12 +37,12 @@ func encodeSlotValidatorIDSig(slot, validatorID uint64, sig []byte) []byte {
 	return append(append(bytesutil.Bytes8(slot), bytesutil.Bytes8(validatorID)...), sig...)
 }
 
-func encodeEpochSig(targetEpoch uint64, sig []byte) []byte {
-	return append(bytesutil.Bytes8(targetEpoch), sig...)
+func encodeEpochSig(targetEpoch types.Epoch, sig []byte) []byte {
+	return append(bytesutil.Bytes8(uint64(targetEpoch)), sig...)
 }
-func encodeType(st types.SlashingType) []byte {
+func encodeType(st dbtypes.SlashingType) []byte {
 	return []byte{byte(st)}
 }
-func encodeTypeRoot(st types.SlashingType, root [32]byte) []byte {
+func encodeTypeRoot(st dbtypes.SlashingType, root [32]byte) []byte {
 	return append([]byte{byte(st)}, root[:]...)
 }

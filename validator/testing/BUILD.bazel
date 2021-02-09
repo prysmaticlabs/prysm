@@ -2,6 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = [
         "mock_protector.go",
         "mock_slasher.go",
@@ -18,6 +19,7 @@ go_library(
         "//validator/db/kv:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format/format:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],

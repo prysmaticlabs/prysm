@@ -3,6 +3,8 @@ package sszutil
 import (
 	"reflect"
 	"unsafe"
+
+	"github.com/prysmaticlabs/eth2-types"
 )
 
 // During deepValueEqual, must keep track of checks that are
@@ -109,18 +111,18 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 		return deepValueEqual(v1.Elem(), v2.Elem(), visited, depth+1)
 	case reflect.Struct:
 		for i, n := 0, v1.NumField(); i < n; i++ {
-			v1Field := v1.Field(i)
-			v2Field := v2.Field(i)
-			if !v1Field.CanInterface() || !v2Field.CanInterface() {
-				// Continue for unexported fields, since they cannot be read anyways.
-				continue
-			}
-			if !deepValueEqual(v1Field, v2Field, visited, depth+1) {
+			if !deepValueEqual(v1.Field(i), v2.Field(i), visited, depth+1) {
 				return false
 			}
 		}
 		return true
 	case reflect.Uint64:
+		switch v1.Type().Name() {
+		case "Epoch":
+			return v1.Interface().(types.Epoch) == v2.Interface().(types.Epoch)
+		case "Slot":
+			return v1.Interface().(types.Slot) == v2.Interface().(types.Slot)
+		}
 		return v1.Interface().(uint64) == v2.Interface().(uint64)
 	case reflect.Uint32:
 		return v1.Interface().(uint32) == v2.Interface().(uint32)

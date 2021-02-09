@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -22,16 +23,16 @@ import (
 //    Check if ``validator`` is active.
 //    """
 //    return validator.activation_epoch <= epoch < validator.exit_epoch
-func IsActiveValidator(validator *ethpb.Validator, epoch uint64) bool {
+func IsActiveValidator(validator *ethpb.Validator, epoch types.Epoch) bool {
 	return checkValidatorActiveStatus(validator.ActivationEpoch, validator.ExitEpoch, epoch)
 }
 
 // IsActiveValidatorUsingTrie checks if a read only validator is active.
-func IsActiveValidatorUsingTrie(validator stateTrie.ReadOnlyValidator, epoch uint64) bool {
+func IsActiveValidatorUsingTrie(validator stateTrie.ReadOnlyValidator, epoch types.Epoch) bool {
 	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
 }
 
-func checkValidatorActiveStatus(activationEpoch, exitEpoch, epoch uint64) bool {
+func checkValidatorActiveStatus(activationEpoch, exitEpoch, epoch types.Epoch) bool {
 	return activationEpoch <= epoch && epoch < exitEpoch
 }
 
@@ -44,16 +45,16 @@ func checkValidatorActiveStatus(activationEpoch, exitEpoch, epoch uint64) bool {
 //  Check if ``validator`` is slashable.
 //  """
 //  return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
-func IsSlashableValidator(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func IsSlashableValidator(activationEpoch, withdrawableEpoch types.Epoch, slashed bool, epoch types.Epoch) bool {
 	return checkValidatorSlashable(activationEpoch, withdrawableEpoch, slashed, epoch)
 }
 
 // IsSlashableValidatorUsingTrie checks if a read only validator is slashable.
-func IsSlashableValidatorUsingTrie(val stateTrie.ReadOnlyValidator, epoch uint64) bool {
+func IsSlashableValidatorUsingTrie(val stateTrie.ReadOnlyValidator, epoch types.Epoch) bool {
 	return checkValidatorSlashable(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), epoch)
 }
 
-func checkValidatorSlashable(activationEpoch, withdrawableEpoch uint64, slashed bool, epoch uint64) bool {
+func checkValidatorSlashable(activationEpoch, withdrawableEpoch types.Epoch, slashed bool, epoch types.Epoch) bool {
 	active := activationEpoch <= epoch
 	beforeWithdrawable := epoch < withdrawableEpoch
 	return beforeWithdrawable && active && !slashed
@@ -72,7 +73,7 @@ func checkValidatorSlashable(activationEpoch, withdrawableEpoch uint64, slashed 
 //    Return the sequence of active validator indices at ``epoch``.
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, error) {
+func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch types.Epoch) ([]uint64, error) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
@@ -103,7 +104,7 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
-func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
+func ActiveValidatorCount(state *stateTrie.BeaconState, epoch types.Epoch) (uint64, error) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get seed")
@@ -142,7 +143,7 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 //    Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
 //    """
 //    return Epoch(epoch + 1 + MAX_SEED_LOOKAHEAD)
-func ActivationExitEpoch(epoch uint64) uint64 {
+func ActivationExitEpoch(epoch types.Epoch) types.Epoch {
 	return epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 }
 
@@ -283,7 +284,7 @@ func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64,
 //    epoch = get_current_epoch(state) if epoch is None else epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version, state.genesis_validators_root)
-func Domain(fork *pb.Fork, epoch uint64, domainType [bls.DomainByteLength]byte, genesisRoot []byte) ([]byte, error) {
+func Domain(fork *pb.Fork, epoch types.Epoch, domainType [bls.DomainByteLength]byte, genesisRoot []byte) ([]byte, error) {
 	if fork == nil {
 		return []byte{}, errors.New("nil fork or domain type")
 	}
@@ -324,7 +325,7 @@ func IsEligibleForActivationQueueUsingTrie(validator stateTrie.ReadOnlyValidator
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
-func isEligibileForActivationQueue(activationEligibilityEpoch, effectiveBalance uint64) bool {
+func isEligibileForActivationQueue(activationEligibilityEpoch types.Epoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
@@ -357,7 +358,7 @@ func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator st
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*
-func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch uint64) bool {
+func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch types.Epoch) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }

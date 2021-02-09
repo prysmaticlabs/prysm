@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -41,8 +42,8 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				pubKey := [48]byte{1}
 				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
-				numEpochs := uint64(50)
-				for i := uint64(1); i <= numEpochs; i++ {
+				numEpochs := types.Epoch(50)
+				for i := types.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
 					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
@@ -100,8 +101,8 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				pubKey := [48]byte{1}
 				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
-				numEpochs := uint64(50)
-				for i := uint64(1); i <= numEpochs; i++ {
+				numEpochs := types.Epoch(50)
+				for i := types.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
 					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
@@ -282,7 +283,7 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 						highestEpoch, err := attestingHistory.getLatestEpochWritten(ctx)
 						require.NoError(t, err)
 						// Verify the highest epoch written is 50 from the setup stage.
-						require.Equal(t, uint64(50), highestEpoch)
+						require.Equal(t, types.Epoch(50), highestEpoch)
 					}
 					return nil
 				})

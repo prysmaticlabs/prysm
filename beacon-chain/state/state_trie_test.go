@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestInitializeFromProto(t *testing.T) {
@@ -233,7 +234,8 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 }
 
 func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
-	st0 := testutil.NewBeaconState()
+	st0, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	st1 := st0.Copy()
 	originalCount := st1.NumValidators()
 

@@ -31,10 +31,10 @@ func TestGetGenesis(t *testing.T) {
 		}
 		resp, err := s.GetGenesis(context.Background(), &ptypes.Empty{})
 		require.NoError(t, err)
-		assert.Equal(t, genesis.Unix(), resp.GenesisTime.Seconds)
-		assert.Equal(t, int32(0), resp.GenesisTime.Nanos)
-		assert.DeepEqual(t, validatorsRoot[:], resp.GenesisValidatorsRoot)
-		assert.DeepEqual(t, []byte("genesis"), resp.GenesisForkVersion)
+		assert.Equal(t, genesis.Unix(), resp.Data.GenesisTime.Seconds)
+		assert.Equal(t, int32(0), resp.Data.GenesisTime.Nanos)
+		assert.DeepEqual(t, validatorsRoot[:], resp.Data.GenesisValidatorsRoot)
+		assert.DeepEqual(t, []byte("genesis"), resp.Data.GenesisForkVersion)
 	})
 
 	t.Run("No genesis time", func(t *testing.T) {

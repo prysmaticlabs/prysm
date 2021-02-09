@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -185,7 +186,7 @@ func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
 	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
 	currentEpoch := SlotToEpoch(currentSlot)
 
-	var prevEpoch uint64
+	var prevEpoch types.Epoch
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}

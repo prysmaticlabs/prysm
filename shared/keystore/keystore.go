@@ -52,15 +52,6 @@ type Keystore struct {
 	scryptP     int
 }
 
-// New creates a new keystore from a directory.
-func New(directory string) Keystore {
-	return Keystore{
-		keysDirPath: directory,
-		scryptN:     StandardScryptN,
-		scryptP:     StandardScryptP,
-	}
-}
-
 // GetKey from file using the filename path and a decryption password.
 func (ks Keystore) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents

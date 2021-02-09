@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -44,7 +45,7 @@ var cache = &testCache{}
 
 type peerData struct {
 	blocks         []uint64 // slots that peer has blocks
-	finalizedEpoch uint64
+	finalizedEpoch types.Epoch
 	headSlot       uint64
 	failureSlots   []uint64 // slots at which the peer will return an error
 	forkedPeer     bool
@@ -84,7 +85,8 @@ func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*
 	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 
 	return &mock.ChainService{
 		State: st,

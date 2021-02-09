@@ -4,15 +4,15 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -42,8 +42,8 @@ type HeadFetcher interface {
 	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (*state.BeaconState, error)
-	HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error)
-	HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error)
+	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]uint64, error)
+	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	ProtoArrayStore() *protoarray.Store
@@ -167,7 +167,7 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
-func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
+func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]uint64, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -178,7 +178,7 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]ui
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.
-func (s *Service) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) {
+func (s *Service) HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 

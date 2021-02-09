@@ -5,6 +5,7 @@ import "eth/v1alpha1/attestation.proto";
 import "eth/v1alpha1/beacon_block.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 // RemoteSigner service API.
 //
@@ -56,7 +57,7 @@ message SignRequest {
         ethereum.eth.v1alpha1.AggregateAttestationAndProof aggregate_attestation_and_proof = 103;
         ethereum.eth.v1alpha1.VoluntaryExit exit = 104;
         uint64 slot = 105;
-        uint64 epoch = 106;
+        uint64 epoch = 106 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     }
 }
 

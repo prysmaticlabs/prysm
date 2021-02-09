@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
@@ -152,7 +153,7 @@ func (s *Service) detectHistoricalChainData(ctx context.Context) {
 		log.WithError(err).Error("Cannot retrieve chain head from beacon node")
 		return
 	}
-	var latestStoredEpoch uint64
+	var latestStoredEpoch types.Epoch
 	if latestStoredHead != nil {
 		latestStoredEpoch = latestStoredHead.HeadEpoch
 	}
@@ -162,7 +163,7 @@ func (s *Service) detectHistoricalChainData(ctx context.Context) {
 	// slasher DB up to the current beacon node's head epoch we retrieved via gRPC.
 	// If no data was persisted from previous sessions, we request data starting from
 	// the genesis epoch.
-	var storedEpoch uint64
+	var storedEpoch types.Epoch
 	for epoch := latestStoredEpoch; epoch < currentChainHead.HeadEpoch; epoch++ {
 		if ctx.Err() != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
