@@ -125,9 +125,24 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return err
 		}
 	}
+	var newFinalized bool
+	if featureconfig.Get().UpdateHeadTimely {
+		if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+				return errors.Wrap(err, "could not save new justified")
+			}
+			s.prevFinalizedCheckpt = s.finalizedCheckpt
+			s.finalizedCheckpt = postState.FinalizedCheckpoint()
+			newFinalized = true
+		}
+
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+			log.WithError(err).Warn("Could not update head")
+		}
+	}
 
 	// Update finalized check point.
-	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+	if (postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch) || (featureconfig.Get().UpdateHeadTimely && newFinalized) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
@@ -141,9 +156,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err := s.forkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
-
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
+		if !featureconfig.Get().UpdateHeadTimely {
+			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+				return errors.Wrap(err, "could not save new justified")
+			}
 		}
 
 		// Update deposit cache.
