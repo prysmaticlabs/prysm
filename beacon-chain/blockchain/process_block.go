@@ -125,6 +125,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return err
 		}
 	}
+	var newFinalized bool
 	if featureconfig.Get().UpdateHeadTimely {
 		if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
@@ -132,6 +133,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			}
 			s.prevFinalizedCheckpt = s.finalizedCheckpt
 			s.finalizedCheckpt = postState.FinalizedCheckpoint()
+			newFinalized = true
 		}
 
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
@@ -140,7 +142,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	}
 
 	// Update finalized check point.
-	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+	if (postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch) || (featureconfig.Get().UpdateHeadTimely && newFinalized) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
