@@ -7,6 +7,7 @@ go_library(
         "chunks.go",
         "detect_attestations.go",
         "doc.go",
+        "helpers.go",
         "log.go",
         "params.go",
         "receive.go",
@@ -32,6 +33,7 @@ go_test(
     srcs = [
         "chunks_test.go",
         "detect_attestations_test.go",
+        "helpers_test.go",
         "params_test.go",
         "receive_test.go",
         "service_test.go",
