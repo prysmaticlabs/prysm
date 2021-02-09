@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -30,8 +31,8 @@ func TestProposeExit_Notification(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	epoch := uint64(2048)
-	require.NoError(t, beaconState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch))
+	epoch := types.Epoch(2048)
+	require.NoError(t, beaconState.SetSlot(uint64(epoch)*params.BeaconConfig().SlotsPerEpoch))
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -100,8 +101,8 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	epoch := uint64(2048)
-	require.NoError(t, beaconState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch))
+	epoch := types.Epoch(2048)
+	require.NoError(t, beaconState.SetSlot(uint64(epoch)*params.BeaconConfig().SlotsPerEpoch))
 	block := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()

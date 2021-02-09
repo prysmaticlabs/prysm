@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -17,14 +18,14 @@ import (
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
-func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []bls.SecretKey) ([]byte, error) {
+func RandaoReveal(beaconState *stateTrie.BeaconState, epoch types.Epoch, privKeys []bls.SecretKey) ([]byte, error) {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return []byte{}, errors.Wrap(err, "could not get beacon proposer index")
 	}
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
+	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	sszEpoch := p2ptypes.SSZUint64(epoch)

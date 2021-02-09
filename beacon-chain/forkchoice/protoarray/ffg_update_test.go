@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -181,7 +182,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	assert.Equal(t, indexToHash(7), r, "Incorrect head with justified epoch at 0")
 }
 
-func setup(justifiedEpoch, finalizedEpoch uint64) *ForkChoice {
+func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	f := New(0, 0, params.BeaconConfig().ZeroHash)
 	f.store.nodesIndices[params.BeaconConfig().ZeroHash] = 0
 	f.store.nodes = append(f.store.nodes, &Node{
