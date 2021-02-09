@@ -64,9 +64,9 @@ type ReadOnlyDatabase interface {
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.CompactAttestation, error)
-	LoadSlasherChunk(
-		ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
-	) ([]uint16, bool, error)
+	LoadSlasherChunks(
+		ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
+	) ([][]uint16, []bool, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.

@@ -33,7 +33,7 @@ func Test_applyCurrentEpochToValidators(t *testing.T) {
 	}
 	// Given the chunk size is 2 epochs per chunk, updating with current epoch == 3
 	// will mean that we are updating chunk index 0 and 1 worth of data.
-	updatedChunks, err := s.applyCurrentEpochToValidators(
+	updatedChunks, err := s.determineChunksToUpdateForValidators(
 		ctx,
 		&chunkUpdateOptions{
 			currentEpoch: 3,
