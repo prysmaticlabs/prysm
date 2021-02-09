@@ -17,24 +17,24 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 		select {
 		case currentEpoch := <-epochTicker:
 			s.queueLock.Lock()
-			atts := s.attestationQueue
+			attestations := s.attestationQueue
 			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
 			s.queueLock.Unlock()
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
-				"numAtts":      len(atts),
+				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
-			groupedAtts := s.groupByValidatorChunkIndex(atts)
-			for validatorChunkIdx, attsBatch := range groupedAtts {
+			groupedAtts := s.groupByValidatorChunkIndex(attestations)
+			for validatorChunkIdx, attBatch := range groupedAtts {
 				validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
 				// Save the attestation records for the validator indices in our database.
 				if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-					ctx, validatorIndices, attsBatch,
+					ctx, validatorIndices, attBatch,
 				); err != nil {
 					log.WithError(err).Error("Could not save attestation records to DB")
 					continue
 				}
-				s.detectAttestationBatch(ctx, attsBatch, validatorChunkIdx, types.Epoch(currentEpoch))
+				s.detectAttestationBatch(ctx, attBatch, validatorChunkIdx, types.Epoch(currentEpoch))
 			}
 		case <-ctx.Done():
 			return
@@ -70,8 +70,9 @@ func (s *Service) detectAttestationBatch(
 ) error {
 	// Group attestations by chunk index.
 	attestationsByChunkIdx := s.groupByChunkIndex(attBatch)
+	_ = attestationsByChunkIdx
 
-	_, err := s.updateMinSpans()
+	_, err := s.updateSpans(ctx, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
 	if err != nil {
 		return err
 	}
@@ -85,20 +86,30 @@ func (s *Service) detectAttestationBatch(
 	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, currentEpoch)
 }
 
-func (s *Service) updateMinSpans(
+func (s *Service) updateSpans(
 	ctx context.Context,
+	kind slashertypes.ChunkKind,
 	validatorChunkIdx uint64,
 	currentEpoch types.Epoch,
 ) (slashertypes.SlashingKind, error) {
 	// Update the required chunks with the current epoch.
 	validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
-	epochs, epochsExit, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	epochs, epochsExist, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
 	if err != nil {
 		return slashertypes.NotSlashable, nil
 	}
-	updatedChunks, err := s.updateChunksWithCurrentEpoch()
-	if err != nil {
-		return slashertypes.NotSlashable, nil
+	updatedChunks := make(map[uint64]Chunker)
+	for i := 0; i < len(validatorIndices); i++ {
+		validatorIdx := validatorIndices[i]
+		epoch := epochs[i]
+		if !epochsExist[i] {
+			epoch = types.Epoch(0)
+		}
+		if err := s.updateChunksWithCurrentEpoch(
+			ctx, kind, updatedChunks, validatorChunkIdx, validatorIdx, epoch, currentEpoch,
+		); err != nil {
+			return slashertypes.NotSlashable, nil
+		}
 	}
 
 	// Apply the attestations to the related min chunks.
@@ -110,31 +121,31 @@ func (s *Service) updateMinSpans(
 
 func (s *Service) updateChunksWithCurrentEpoch(
 	ctx context.Context,
+	kind slashertypes.ChunkKind,
+	chunksByChunkIdx map[uint64]Chunker,
 	validatorChunkIdx uint64,
 	validatorIdx types.ValidatorIndex,
 	epoch,
 	currentEpoch types.Epoch,
-) (updatedChunks map[uint64]Chunker, err error) {
-	updatedChunks = make(map[uint64]Chunker)
-	updatedChunks = make(map[uint64]Chunker)
+) error {
 	for epoch <= currentEpoch {
 		chunkIdx := s.params.chunkIndex(epoch)
-		currentChunk := s.chunkForUpdate(updatedChunks, validatorChunkIdx, chunkIdx, slashertypes.MinSpan)
+		currentChunk := s.chunkForUpdate(chunksByChunkIdx, validatorChunkIdx, chunkIdx, kind)
 		for s.params.chunkIndex(epoch) == chunkIdx && epoch <= currentEpoch {
-			if err = setChunkDataAtEpoch(
+			if err := setChunkDataAtEpoch(
 				s.params,
 				currentChunk.Chunk(),
 				validatorIdx,
 				epoch,
 				types.Epoch(currentChunk.NeutralElement())+epoch,
 			); err != nil {
-				return
+				return err
 			}
 			epoch++
 		}
-		updatedChunks[chunkIdx] = currentChunk
+		chunksByChunkIdx[chunkIdx] = currentChunk
 	}
-	return
+	return nil
 }
 
 func (s *Service) chunkForUpdate(
