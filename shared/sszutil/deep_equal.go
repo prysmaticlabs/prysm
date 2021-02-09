@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"unsafe"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -116,7 +117,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int, une
 				// Continue for unexported fields, since they cannot be read anyways.
 				continue
 			}
-			if !deepValueEqual(v1.Field(i), v2.Field(i), visited, depth+1, unexportedOnly) {
+			if !deepValueEqual(v1Field, v2Field, visited, depth+1, unexportedOnly) {
 				return false
 			}
 		}
@@ -201,5 +202,7 @@ func DeepEqual(x, y interface{}) bool {
 		return false
 	}
 	_, isProto := x.(proto.Message)
-	return deepValueEqual(v1, v2, make(map[visit]bool), 0, isProto)
+	_, isProtoArray := x.([]proto.Message)
+	_, isProtoMap := x.(map[uint64]proto.Message)
+	return deepValueEqual(v1, v2, make(map[visit]bool), 0, isProto || isProtoArray || isProtoMap)
 }
