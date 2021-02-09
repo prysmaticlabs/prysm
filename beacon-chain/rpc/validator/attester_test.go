@@ -57,7 +57,8 @@ func TestProposeAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, state, root))
@@ -113,7 +114,8 @@ func TestGetAttestationData_OK(t *testing.T) {
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-	beaconState := testutil.NewBeaconState()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 2,
@@ -217,7 +219,8 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash justified block")
 	slot := uint64(10000)
 
-	beaconState := testutil.NewBeaconState()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: helpers.SlotToEpoch(1500),
@@ -368,7 +371,8 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
-	beaconState := testutil.NewBeaconState()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix()-int64(slot*params.BeaconConfig().SecondsPerSlot))))
 	err = beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
@@ -451,7 +455,8 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
-	beaconState := testutil.NewBeaconState()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 0,
@@ -580,7 +585,8 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		}
 	}
 
-	state := testutil.NewBeaconState()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 
 	attesterServer := &Server{
@@ -603,7 +609,7 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		isAggregator = append(isAggregator, boolVal)
 	}
 
-	_, err := attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
+	_, err = attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
 		Slots:        slots,
 		CommitteeIds: comIdxs,
 		IsAggregator: isAggregator,
