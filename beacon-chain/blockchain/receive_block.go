@@ -10,6 +10,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -44,8 +45,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	}
 
 	// Update and save head block after fork choice.
-	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-		log.WithError(err).Warn("Could not update head")
+	if !featureconfig.Get().UpdateHeadTimely {
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+			log.WithError(err).Warn("Could not update head")
+		}
 	}
 
 	// Send notification of the processed block to the state feed.
