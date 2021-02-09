@@ -61,20 +61,21 @@ func (s *Service) detectSlashableAttestations(
 //    including the current epoch, return the updated chunks by chunk index.
 // 2. Using the chunks from step (1):
 //      for every attestation by chunk index:
-//        for each validator in its attesting indices:
+//        for each validator in the attestation's attesting indices:
 //          - Check if the attestation is slashable, if so return a slashing object.
 // 3. Save the updated chunks to disk.
 func (s *Service) updateSpans(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
 ) (slashertypes.SlashingKind, error) {
-	// Update the required chunks with the current epoch.
+	// Determine the chunk indices we need to use for slashing detection.
 	validatorIndices := s.params.validatorIndicesInChunk(opts.validatorChunkIndex)
-	chunksIndices, err := s.determineChunksToUpdateForValidators(ctx, opts, validatorIndices)
+	chunkIndices, err := s.determineChunksToUpdateForValidators(ctx, opts, validatorIndices)
 	if err != nil {
 		return slashertypes.NotSlashable, err
 	}
-	chunks, err := s.loadChunks(ctx, chunkIndices)
+	// Load the required chunks from disk.
+	chunksByChunkIdx, err := s.loadChunks(ctx, opts, chunkIndices)
 	if err != nil {
 		return slashertypes.NotSlashable, err
 	}
@@ -83,22 +84,22 @@ func (s *Service) updateSpans(
 	// TODO(#8331): Apply...
 
 	// Write the updated chunks to disk.
-	return slashertypes.NotSlashable, s.saveUpdatedChunks(ctx, opts, chunks)
+	return slashertypes.NotSlashable, s.saveUpdatedChunks(ctx, opts, chunksByChunkIdx)
 }
 
 // For a list of validator indices, we retrieve their latest written epoch. Then, for each
-// (validator, latest epoch written) pair, we update chunks with neutral values from the
-// latest written epoch up to and including the current epoch.
+// (validator, latest epoch written) pair, we determine the chunks we need to update and
+// perform slashing detection with.
 func (s *Service) determineChunksToUpdateForValidators(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
 	validatorIndices []types.ValidatorIndex,
-) (updatedChunks map[uint64]Chunker, err error) {
+) (chunkIndices []uint64, err error) {
 	epochs, epochsExist, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
 	if err != nil {
 		return
 	}
-	updatedChunks = make(map[uint64]Chunker)
+	chunkIndicesToUpdate := make(map[uint64]bool)
 	for i := 0; i < len(validatorIndices); i++ {
 		lastEpochWritten := epochs[i]
 		if !epochsExist[i] {
@@ -108,22 +109,25 @@ func (s *Service) determineChunksToUpdateForValidators(
 		opts.latestEpochWritten = lastEpochWritten
 		for opts.latestEpochWritten <= opts.currentEpoch {
 			chunkIdx := s.params.chunkIndex(opts.latestEpochWritten)
-			updatedChunks[chunkIdx] = currentChunk
+			chunkIndicesToUpdate[chunkIdx] = true
 			opts.latestEpochWritten++
 		}
+	}
+	chunkIndices = make([]uint64, 0, len(chunkIndicesToUpdate))
+	for chunkIdx := range chunkIndicesToUpdate {
+		chunkIndices = append(chunkIndices, chunkIdx)
 	}
 	return
 }
 
-// Load chunk, when given a map of chunks by chunk index, checks if the chunk we want to retrieve
-// is already in this map and returns it. If not, we attempt to load it from the database.
+// Load chunks for a specified list of chunk indices. We attempt to load it from the database.
 // If the data exists, then we initialize a chunk of a specified kind. Otherwise, we create
 // an empty chunk, add it to our map, and then return it to the caller.
 func (s *Service) loadChunks(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
 	chunkIndices []uint64,
-) ([]Chunker, error) {
+) (map[uint64]Chunker, error) {
 	chunkKeys := make([]uint64, 0, len(chunkIndices))
 	for _, chunkIdx := range chunkIndices {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(opts.validatorChunkIndex, chunkIdx))
@@ -132,7 +136,7 @@ func (s *Service) loadChunks(
 	if err != nil {
 		return nil, err
 	}
-	chunks := make([]Chunker, len(rawChunks))
+	chunksByChunkIdx := make(map[uint64]Chunker, len(rawChunks))
 	for i := 0; i < len(rawChunks); i++ {
 		// If the chunk exists in the database, we initialize it from the raw bytes data.
 		// If it does not exist, we initialize an empty chunk.
@@ -154,20 +158,20 @@ func (s *Service) loadChunks(
 		if err != nil {
 			return nil, err
 		}
-		chunks[i] = chunk
+		chunksByChunkIdx[chunkIndices[i]] = chunk
 	}
-	return chunks, nil
+	return chunksByChunkIdx, nil
 }
 
 // Saves updated chunks to disk given the required database schema.
 func (s *Service) saveUpdatedChunks(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
-	updatedChunks map[uint64]Chunker,
+	updatedChunksByChunkIdx map[uint64]Chunker,
 ) error {
-	chunkKeys := make([]uint64, 0, len(updatedChunks))
-	chunks := make([][]uint16, 0, len(updatedChunks))
-	for chunkIdx, chunk := range updatedChunks {
+	chunkKeys := make([]uint64, 0, len(updatedChunksByChunkIdx))
+	chunks := make([][]uint16, 0, len(updatedChunksByChunkIdx))
+	for chunkIdx, chunk := range updatedChunksByChunkIdx {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(opts.validatorChunkIndex, chunkIdx))
 		chunks = append(chunks, chunk.Chunk())
 	}
