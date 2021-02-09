@@ -94,7 +94,7 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64
 	return uint64(validatorIndex.Mod(p.validatorChunkSize))
 }
 
-// Construct a key for our database schema given a validator index and epoch.
+// Construct a key for our database schema given a validator chunk index and chunk index.
 // This calculation gives us a uint that uniquely represents
 // a 2D chunk given a validator index and epoch value.
 // First, we compute the validator chunk index for the validator index,
