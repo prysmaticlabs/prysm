@@ -36,25 +36,27 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	assert.DeepEqual(t, sr, attRecord.SigningRoot)
 }
 
-func TestStore_LatestEpochAttestedForValidator(t *testing.T) {
+func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	indices := []types.ValidatorIndex{1, 2, 3}
 	epoch := types.Epoch(5)
 
-	for _, valIdx := range indices {
-		_, exists, err := beaconDB.LatestEpochAttestedForValidator(ctx, valIdx)
-		require.NoError(t, err)
+	_, epochsExist, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	require.NoError(t, err)
+	for _, exists := range epochsExist {
 		require.Equal(t, false, exists)
 	}
 
-	err := beaconDB.SaveLatestEpochAttestedForValidators(ctx, indices, epoch)
+	err = beaconDB.SaveLatestEpochAttestedForValidators(ctx, indices, epoch)
 	require.NoError(t, err)
 
-	for _, valIdx := range indices {
-		retrievedEpoch, exists, err := beaconDB.LatestEpochAttestedForValidator(ctx, valIdx)
-		require.NoError(t, err)
-		require.Equal(t, true, exists)
+	retrievedEpochs, epochsExist, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	require.NoError(t, err)
+	require.Equal(t, len(indices), len(retrievedEpochs))
+
+	for i, retrievedEpoch := range retrievedEpochs {
+		require.Equal(t, true, epochsExist[i])
 		require.Equal(t, epoch, retrievedEpoch)
 	}
 }
@@ -80,18 +82,25 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 	require.NoError(t, err)
 
 	// We expect no chunks to be stored for max spans.
-	for _, key := range chunkKeys {
-		_, exists, err := beaconDB.LoadSlasherChunk(ctx, slashertypes.MaxSpan, key)
-		require.NoError(t, err)
+	_, chunksExist, err := beaconDB.LoadSlasherChunks(
+		ctx, slashertypes.MaxSpan, chunkKeys,
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(chunks), len(chunksExist))
+	for _, exists := range chunksExist {
 		require.Equal(t, false, exists)
 	}
 
 	// We check we saved the right chunks.
-	for i, key := range chunkKeys {
-		chunk, exists, err := beaconDB.LoadSlasherChunk(ctx, slashertypes.MinSpan, key)
-		require.NoError(t, err)
+	retrievedChunks, chunksExist, err := beaconDB.LoadSlasherChunks(
+		ctx, slashertypes.MinSpan, chunkKeys,
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(chunks), len(retrievedChunks))
+	require.Equal(t, len(chunks), len(chunksExist))
+	for i, exists := range chunksExist {
 		require.Equal(t, true, exists)
-		require.DeepEqual(t, chunks[i], chunk)
+		require.DeepEqual(t, chunks[i], retrievedChunks[i])
 	}
 
 	// We save chunks for max spans.
@@ -99,10 +108,14 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 	require.NoError(t, err)
 
 	// We check we saved the right chunks.
-	for i, key := range chunkKeys {
-		chunk, exists, err := beaconDB.LoadSlasherChunk(ctx, slashertypes.MaxSpan, key)
-		require.NoError(t, err)
+	retrievedChunks, chunksExist, err = beaconDB.LoadSlasherChunks(
+		ctx, slashertypes.MaxSpan, chunkKeys,
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(chunks), len(retrievedChunks))
+	require.Equal(t, len(chunks), len(chunksExist))
+	for i, exists := range chunksExist {
 		require.Equal(t, true, exists)
-		require.DeepEqual(t, chunks[i], chunk)
+		require.DeepEqual(t, chunks[i], retrievedChunks[i])
 	}
 }

@@ -155,7 +155,7 @@ func (s *Store) LoadSlasherChunks(
 			if chunkBytes == nil {
 				chunks = append(chunks, []uint16{})
 				exists = append(exists, false)
-				return nil
+				continue
 			}
 			chunk := make([]uint16, 0)
 			for i := 0; i < len(chunkBytes); i += 2 {

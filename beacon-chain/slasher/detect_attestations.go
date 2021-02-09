@@ -26,7 +26,7 @@ type chunkUpdateOptions struct {
 // 1. Group the attestations by chunk index.
 // 2. Update the min and max spans for those grouped attestations, check if any slashings are
 //    found in the process
-// 4. Update the latest written epoch for all validators involved to the current epoch.
+// 3. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) detectSlashableAttestations(
@@ -57,8 +57,8 @@ func (s *Service) detectSlashableAttestations(
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
-// 1. Update the latest written epoch for all validator indices involved up and
-//    including the current epoch, return the updated chunks by chunk index.
+// 1. Determine the chunks we need to use for updating for the validator indices
+//    in a validator chunk index, then retrieve those chunks from the database.
 // 2. Using the chunks from step (1):
 //      for every attestation by chunk index:
 //        for each validator in the attestation's attesting indices:
