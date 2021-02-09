@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -41,9 +42,16 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
-		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
+		if featureconfig.Get().EnableNextSlotStateCache {
+			baseState, err = state.ProcessSlotsUsingNextSlotCache(ctx, baseState, c.Root, epochStartSlot)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
+			}
+		} else {
+			baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
+			}
 		}
 		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
