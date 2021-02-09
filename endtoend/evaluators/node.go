@@ -12,10 +12,11 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
 )
 
@@ -23,21 +24,21 @@ import (
 var connTimeDelay = 50 * time.Millisecond
 
 // PeersConnect checks all beacon nodes and returns whether they are connected to each other as peers.
-var PeersConnect = types.Evaluator{
+var PeersConnect = e2etypes.Evaluator{
 	Name:       "peers_connect_epoch_%d",
 	Policy:     policies.OnEpoch(0),
 	Evaluation: peersConnect,
 }
 
 // HealthzCheck pings healthz and errors if it doesn't have the expected OK status.
-var HealthzCheck = types.Evaluator{
+var HealthzCheck = e2etypes.Evaluator{
 	Name:       "healthz_check_epoch_%d",
 	Policy:     policies.AfterNthEpoch(0),
 	Evaluation: healthzCheck,
 }
 
 // FinishedSyncing returns whether the beacon node with the given rpc port has finished syncing.
-var FinishedSyncing = types.Evaluator{
+var FinishedSyncing = e2etypes.Evaluator{
 	Name:       "finished_syncing",
 	Policy:     policies.AllEpochs,
 	Evaluation: finishedSyncing,
@@ -45,7 +46,7 @@ var FinishedSyncing = types.Evaluator{
 
 // AllNodesHaveSameHead ensures all nodes have the same head epoch. Checks finality and justification as well.
 // Not checking head block root as it may change irregularly for the validator connected nodes.
-var AllNodesHaveSameHead = types.Evaluator{
+var AllNodesHaveSameHead = e2etypes.Evaluator{
 	Name:       "all_nodes_have_same_head",
 	Policy:     policies.AllEpochs,
 	Evaluation: allNodesHaveSameHead,
@@ -127,7 +128,7 @@ func finishedSyncing(conns ...*grpc.ClientConn) error {
 }
 
 func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
-	headEpochs := make([]uint64, len(conns))
+	headEpochs := make([]types.Epoch, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))

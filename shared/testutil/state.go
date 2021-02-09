@@ -14,7 +14,7 @@ func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconSt
 		BlockRoots:                 filledByteSlice2D(params.MainnetConfig().SlotsPerHistoricalRoot, 32),
 		StateRoots:                 filledByteSlice2D(params.MainnetConfig().SlotsPerHistoricalRoot, 32),
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
-		RandaoMixes:                filledByteSlice2D(params.MainnetConfig().EpochsPerHistoricalVector, 32),
+		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Eth1Data: &ethpb.Eth1Data{

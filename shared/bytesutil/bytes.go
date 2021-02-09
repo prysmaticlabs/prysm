@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"math/bits"
+
+	"github.com/prysmaticlabs/eth2-types"
 )
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
@@ -305,4 +307,19 @@ func BytesToUint64BigEndian(b []byte) uint64 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(b)
+}
+
+// EpochToBytesLittleEndian conversion.
+func EpochToBytesLittleEndian(i types.Epoch) []byte {
+	return Uint64ToBytesLittleEndian(uint64(i))
+}
+
+// EpochToBytesBigEndian conversion.
+func EpochToBytesBigEndian(i types.Epoch) []byte {
+	return Uint64ToBytesBigEndian(uint64(i))
+}
+
+// BytesToEpochBigEndian conversion.
+func BytesToEpochBigEndian(b []byte) types.Epoch {
+	return types.Epoch(BytesToUint64BigEndian(b))
 }

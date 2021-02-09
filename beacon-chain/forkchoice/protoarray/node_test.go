@@ -3,6 +3,7 @@ package protoarray
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -10,8 +11,8 @@ func TestNode_Getters(t *testing.T) {
 	slot := uint64(100)
 	root := [32]byte{'a'}
 	parent := uint64(10)
-	jEpoch := uint64(20)
-	fEpoch := uint64(30)
+	jEpoch := types.Epoch(20)
+	fEpoch := types.Epoch(30)
 	weight := uint64(10000)
 	bestChild := uint64(5)
 	bestDescendant := uint64(4)

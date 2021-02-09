@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -19,7 +20,7 @@ const defaultPruneThreshold = 256
 var lastHeadRoot [32]byte
 
 // New initializes a new fork choice store.
-func New(justifiedEpoch, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkChoice {
+func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *ForkChoice {
 	s := &Store{
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
@@ -38,7 +39,7 @@ func New(justifiedEpoch, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkCho
 
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
-func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch uint64) ([32]byte, error) {
+func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch types.Epoch, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch types.Epoch) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
 	f.votesLock.Lock()
@@ -67,7 +68,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedR
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
-func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch uint64) {
+func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
@@ -94,7 +95,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch uint64) error {
+func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 
@@ -206,12 +207,12 @@ func (s *Store) PruneThreshold() uint64 {
 }
 
 // JustifiedEpoch of fork choice store.
-func (s *Store) JustifiedEpoch() uint64 {
+func (s *Store) JustifiedEpoch() types.Epoch {
 	return s.justifiedEpoch
 }
 
 // FinalizedEpoch of fork choice store.
-func (s *Store) FinalizedEpoch() uint64 {
+func (s *Store) FinalizedEpoch() types.Epoch {
 	return s.finalizedEpoch
 }
 
@@ -315,7 +316,7 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 func (s *Store) insert(ctx context.Context,
 	slot uint64,
 	root, parent, graffiti [32]byte,
-	justifiedEpoch, finalizedEpoch uint64) error {
+	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
@@ -367,7 +368,7 @@ func (s *Store) insert(ctx context.Context,
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes delta to its parents delta. After scoring changes,
 // the best child is then updated along with best descendant.
-func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalizedEpoch uint64, delta []int) error {
+func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, delta []int) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 

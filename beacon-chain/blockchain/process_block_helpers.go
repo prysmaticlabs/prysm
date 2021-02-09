@@ -11,6 +11,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -230,9 +231,10 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-
-	s.prevFinalizedCheckpt = s.finalizedCheckpt
-	s.finalizedCheckpt = cp
+	if !featureconfig.Get().UpdateHeadTimely {
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = cp
+	}
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
