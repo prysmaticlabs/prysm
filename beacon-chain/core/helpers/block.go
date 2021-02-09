@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -45,7 +46,7 @@ func StateRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) 
 //    Return the block root at the start of a recent ``epoch``.
 //    """
 //    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
-func BlockRoot(state *stateTrie.BeaconState, epoch uint64) ([]byte, error) {
+func BlockRoot(state *stateTrie.BeaconState, epoch types.Epoch) ([]byte, error) {
 	s, err := StartSlot(epoch)
 	if err != nil {
 		return nil, err

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -75,7 +76,7 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	wsEpoch               uint64
+	wsEpoch               types.Epoch
 	wsRoot                []byte
 	wsVerified            bool
 }
@@ -96,7 +97,7 @@ type Config struct {
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
 	WspBlockRoot      []byte
-	WspEpoch          uint64
+	WspEpoch          types.Epoch
 }
 
 // New instantiates a new block service instance that will
@@ -458,7 +459,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
 		headEpoch := helpers.SlotToEpoch(headBlock.Block.Slot)
-		var epochsSinceFinality uint64
+		var epochsSinceFinality types.Epoch
 		if headEpoch > finalized.Epoch {
 			epochsSinceFinality = headEpoch - finalized.Epoch
 		}

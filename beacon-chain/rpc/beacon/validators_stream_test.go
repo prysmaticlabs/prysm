@@ -4,6 +4,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -16,7 +17,7 @@ func TestInfostream_EpochToTimestamp(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name      string
-		epoch     uint64
+		epoch     types.Epoch
 		timestamp uint64
 	}{
 		{

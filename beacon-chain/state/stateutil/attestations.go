@@ -67,7 +67,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 		// Source epoch and root.
 		if data.Source != nil {
 			sourceEpochBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(sourceEpochBuf, data.Source.Epoch)
+			binary.LittleEndian.PutUint64(sourceEpochBuf, uint64(data.Source.Epoch))
 			copy(enc[48:56], sourceEpochBuf)
 			copy(enc[56:88], data.Source.Root)
 		}
@@ -75,7 +75,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 		// Target.
 		if data.Target != nil {
 			targetEpochBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(targetEpochBuf, data.Target.Epoch)
+			binary.LittleEndian.PutUint64(targetEpochBuf, uint64(data.Target.Epoch))
 			copy(enc[88:96], targetEpochBuf)
 			copy(enc[96:128], data.Target.Root)
 		}
