@@ -397,7 +397,7 @@ func chunkDataAtEpoch(
 }
 
 // Updates the value at a specific index in a chunk for a validator index + epoch
-// pair to a specified distance. Recall that for min spans, each element in a chunk
+// pair given a target epoch. Recall that for min spans, each element in a chunk
 // is the minimum distance between the a given epoch, e, and all attestation target epochs
 // a validator has created where att.source.epoch > e.
 func setChunkDataAtEpoch(
@@ -408,6 +408,23 @@ func setChunkDataAtEpoch(
 	targetEpoch types.Epoch,
 ) error {
 	distance := epochDistance(targetEpoch, epochInChunk)
+	cellIdx := config.cellIndex(validatorIdx, epochInChunk)
+	if cellIdx >= uint64(len(chunk)) {
+		return fmt.Errorf("cell index %d out of bounds (len(chunk) = %d)", cellIdx, len(chunk))
+	}
+	chunk[cellIdx] = distance
+	return nil
+}
+
+// Updates the value at a specific index in a chunk for a validator index + epoch
+// pair to a specified, raw distance value.
+func setChunkRawDistance(
+	config *Parameters,
+	chunk []uint16,
+	validatorIdx types.ValidatorIndex,
+	epochInChunk types.Epoch,
+	distance uint16,
+) error {
 	cellIdx := config.cellIndex(validatorIdx, epochInChunk)
 	if cellIdx >= uint64(len(chunk)) {
 		return fmt.Errorf("cell index %d out of bounds (len(chunk) = %d)", cellIdx, len(chunk))

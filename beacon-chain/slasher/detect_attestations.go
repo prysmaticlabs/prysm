@@ -7,11 +7,16 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
+// A struct encapsulating input arguments to
+// functions used for attester slashing detection and
+// loading, saving, and updating min/max span chunks.
 type chunkUpdateOptions struct {
 	kind                slashertypes.ChunkKind
 	validatorChunkIndex uint64
-	currentEpoch        types.Epoch
 	chunkIndex          uint64
+	currentEpoch        types.Epoch
+	latestEpochWritten  types.Epoch
+	validatorIndex      types.ValidatorIndex
 }
 
 // Given a list of attestations all corresponding to a validator chunk index as well
@@ -21,51 +26,44 @@ type chunkUpdateOptions struct {
 // 1. Group the attestations by chunk index.
 // 2. Update the min and max spans for those grouped attestations, check if any slashings are
 //    found in the process
-// 3. Update the latest written epoch for all validator indices involved up and
-//    including the current epoch
-//
-// 2. For every validator in a validator chunk index, update all the chunks that need to be
-//    updated based on the current epoch, and return these updated chunks.
-// 3. Using the chunks from step (2), for every attestation by chunk index, for each
-//    validator in its attesting indices:
-//    - Check if the attestation is slashable, if so return a slashing object
-//    - Update all min chunks
-//    - Update all max chunks
 // 4. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) detectSlashableAttestations(
 	ctx context.Context,
-	attBatch []*slashertypes.CompactAttestation,
-	validatorChunkIndex uint64,
-	currentEpoch types.Epoch,
+	opts *chunkUpdateOptions,
+	attestations []*slashertypes.CompactAttestation,
 ) error {
-	// Group attestations by chunk index.
-	attestationsByChunkIdx := s.groupByChunkIndex(attBatch)
-	_ = attestationsByChunkIdx
-
 	_, err := s.updateSpans(ctx, &chunkUpdateOptions{
 		kind:                slashertypes.MinSpan,
-		validatorChunkIndex: validatorChunkIndex,
-		currentEpoch:        currentEpoch,
+		validatorChunkIndex: opts.validatorChunkIndex,
+		currentEpoch:        opts.currentEpoch,
 	})
 	if err != nil {
 		return err
 	}
 	_, err = s.updateSpans(ctx, &chunkUpdateOptions{
 		kind:                slashertypes.MaxSpan,
-		validatorChunkIndex: validatorChunkIndex,
-		currentEpoch:        currentEpoch,
+		validatorChunkIndex: opts.validatorChunkIndex,
+		currentEpoch:        opts.currentEpoch,
 	})
 	if err != nil {
 		return err
 	}
 
 	// Update the latest written epoch for all involved validator indices.
-	validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIndex)
-	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, currentEpoch)
+	validatorIndices := s.params.validatorIndicesInChunk(opts.validatorChunkIndex)
+	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, opts.currentEpoch)
 }
 
+// Updates spans and detects any slashable attester offenses along the way.
+// 1. Update the latest written epoch for all validator indices involved up and
+//    including the current epoch, return the updated chunks by chunk index.
+// 2. Using the chunks from step (1):
+//      for every attestation by chunk index:
+//        for each validator in its attesting indices:
+//          - Check if the attestation is slashable, if so return a slashing object.
+// 3. Save the updated chunks to disk.
 func (s *Service) updateSpans(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
@@ -77,13 +75,16 @@ func (s *Service) updateSpans(
 		return slashertypes.NotSlashable, err
 	}
 
-	// Apply the attestations to the related min chunks.
-	// TODO: Apply...
+	// Apply the attestations to the related chunks.
+	// TODO(#8331): Apply...
 
 	// Write the updated chunks to disk.
 	return slashertypes.NotSlashable, s.saveUpdatedChunks(ctx, opts, updatedChunks)
 }
 
+// For a list of validator indices, we retrieve their latest written epoch. Then, for each
+// (validator, latest epoch written) pair, we update chunks with neutral values from the
+// latest written epoch up to and including the current epoch.
 func (s *Service) applyCurrentEpochToValidators(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
@@ -95,13 +96,14 @@ func (s *Service) applyCurrentEpochToValidators(
 	}
 	updatedChunks = make(map[uint64]Chunker)
 	for i := 0; i < len(validatorIndices); i++ {
-		validatorIdx := validatorIndices[i]
 		lastEpochWritten := epochs[i]
 		if !epochsExist[i] {
 			lastEpochWritten = types.Epoch(0)
 		}
+		opts.validatorIndex = validatorIndices[i]
+		opts.latestEpochWritten = lastEpochWritten
 		if err = s.updateChunksWithCurrentEpochForValidator(
-			ctx, opts, updatedChunks, lastEpochWritten,
+			ctx, opts, updatedChunks,
 		); err != nil {
 			return
 		}
@@ -109,35 +111,42 @@ func (s *Service) applyCurrentEpochToValidators(
 	return
 }
 
+// Updates every chunk for a validator index from that validator's
+// latest written epoch up to and including the current epoch to
+// neutral element values. For min chunks, this value is MaxUint16
+// and for max chunks the neutral element is 0.
 func (s *Service) updateChunksWithCurrentEpochForValidator(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
 	chunksByChunkIdx map[uint64]Chunker,
-	lastEpochWritten types.Epoch,
 ) error {
-	for lastEpochWritten <= opts.currentEpoch {
-		chunkIdx := s.params.chunkIndex(lastEpochWritten)
-		currentChunk, err := s.loadChunk(chunksByChunkIdx, validatorChunkIdx, chunkIdx, kind)
+	for opts.latestEpochWritten <= opts.currentEpoch {
+		chunkIdx := s.params.chunkIndex(opts.latestEpochWritten)
+		currentChunk, err := s.loadChunk(ctx, opts, chunksByChunkIdx)
 		if err != nil {
 			return err
 		}
-		for s.params.chunkIndex(epoch) == chunkIdx && epoch <= currentEpoch {
-			if err := setChunkDataAtEpoch(
+		for s.params.chunkIndex(opts.latestEpochWritten) == chunkIdx && opts.latestEpochWritten <= opts.currentEpoch {
+			if err := setChunkRawDistance(
 				s.params,
 				currentChunk.Chunk(),
-				validatorIdx,
-				epoch,
-				types.Epoch(currentChunk.NeutralElement())+epoch,
+				opts.validatorIndex,
+				opts.latestEpochWritten,
+				currentChunk.NeutralElement(),
 			); err != nil {
 				return err
 			}
-			epoch++
+			opts.latestEpochWritten++
 		}
 		chunksByChunkIdx[chunkIdx] = currentChunk
 	}
 	return nil
 }
 
+// Load chunk, when given a map of chunks by chunk index, checks if the chunk we want to retrieve
+// is already in this map and returns it. If not, we attempt to load it from the database.
+// If the data exists, then we initialize a chunk of a specified kind. Otherwise, we create
+// an empty chunk, add it to our map, and then return it to the caller.
 func (s *Service) loadChunk(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
@@ -175,6 +184,7 @@ func (s *Service) loadChunk(
 	return existingChunk, nil
 }
 
+// Saves updated chunks to disk given the required database schema.
 func (s *Service) saveUpdatedChunks(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
