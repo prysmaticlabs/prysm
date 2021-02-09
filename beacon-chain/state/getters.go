@@ -1027,9 +1027,6 @@ func (b *BeaconState) MatchCurrentJustifiedCheckpoint(c *ethpb.Checkpoint) bool 
 		return false
 	}
 
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	if c.Epoch != b.state.CurrentJustifiedCheckpoint.Epoch {
 		return false
 	}
@@ -1045,9 +1042,6 @@ func (b *BeaconState) MatchPreviousJustifiedCheckpoint(c *ethpb.Checkpoint) bool
 	if b.state.PreviousJustifiedCheckpoint == nil {
 		return false
 	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
 
 	if c.Epoch != b.state.PreviousJustifiedCheckpoint.Epoch {
 		return false
