@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -174,7 +175,9 @@ func TestService_groupByChunkIndex(t *testing.T) {
 }
 
 func TestService_loadChunk(t *testing.T) {
-	// Chunk at chunk index already exists in-memory.
+	beaconDB := dbtest.SetupDB(t)
+
+	// Check if the chunk at chunk index already exists in-memory.
 	existingChunk := EmptyMinSpanChunksSlice(DefaultParams())
 	chunkIdx := uint64(1)
 	updatedChunks := map[uint64]Chunker{
@@ -182,10 +185,22 @@ func TestService_loadChunk(t *testing.T) {
 	}
 	s := &Service{
 		params: DefaultParams(),
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
 	}
 	received, err := s.loadChunk(updatedChunks, 0, chunkIdx, slashertypes.MinSpan)
 	require.NoError(t, err)
 	require.DeepEqual(t, existingChunk, received)
+
+	// If a chunk at a chunk index does not exist, ensure it
+	// is initialized as an empty chunk.
+	chunkIdx = uint64(2)
+	received, err = s.loadChunk(updatedChunks, 0, chunkIdx, slashertypes.MinSpan)
+	require.NoError(t, err)
+	require.DeepEqual(t, existingChunk, received)
+
+	// Save chunks to disk, the load them properly from disk.
 }
 
 func TestService_processQueuedAttestations(t *testing.T) {
