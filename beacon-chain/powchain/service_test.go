@@ -443,7 +443,8 @@ func TestInitDepositCache_OK(t *testing.T) {
 
 	blockRootA := [32]byte{'a'}
 
-	emptyState := testutil.NewBeaconState()
+	emptyState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
 	require.NoError(t, s.beaconDB.SaveState(context.Background(), emptyState, blockRootA))
 	s.chainStartData.Chainstarted = true

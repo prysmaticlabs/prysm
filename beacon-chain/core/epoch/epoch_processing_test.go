@@ -446,7 +446,8 @@ func buildState(t testing.TB, slot, validatorCount uint64) *state.BeaconState {
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	if err := s.SetSlot(slot); err != nil {
 		t.Error(err)
 	}
