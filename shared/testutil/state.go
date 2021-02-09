@@ -1,15 +1,11 @@
 package testutil
 
 import (
-	"fmt"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	log "github.com/sirupsen/logrus"
 )
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
@@ -49,19 +45,6 @@ func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconSt
 	}
 
 	return st.Copy(), nil
-}
-
-func filledRootSlice2D(length uint64) [][]byte {
-	slice2D := filledByteSlice2D(length, 32)
-	for i := uint64(0); i < uint64(len(slice2D)); i++ {
-		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(i)[2:])
-		b, err := hexutil.Decode("0x" + s)
-		if err != nil {
-			log.Debug("Failed to decode root " + s)
-		}
-		slice2D[i] = b
-	}
-	return slice2D
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round

@@ -9,15 +9,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	powMock "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
-	ptypes "github.com/gogo/protobuf/types"
-	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -94,7 +94,8 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Genesis", func(t *testing.T) {
-		state := testutil.NewBeaconState()
+		state, err := testutil.NewBeaconState()
+		require.NoError(t, err)
 		chainFetcher := &powMock.POWChain{
 			GenesisState: state,
 		}
@@ -113,7 +114,8 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Finalized", func(t *testing.T) {
-		state := testutil.NewBeaconState()
+		state, err := testutil.NewBeaconState()
+		require.NoError(t, err)
 		var blockRoot [32]byte
 		copy(blockRoot[:], "block_root")
 		chainService := &chainMock.ChainService{
@@ -139,7 +141,8 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Justified", func(t *testing.T) {
-		state := testutil.NewBeaconState()
+		state, err := testutil.NewBeaconState()
+		require.NoError(t, err)
 		var blockRoot [32]byte
 		copy(blockRoot[:], "block_root")
 		chainService := &chainMock.ChainService{
@@ -165,7 +168,26 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Hex root", func(t *testing.T) {
-		state := testutil.NewBeaconState()
+		// We fill state roots with hex representations of natural numbers starting with 1.
+		// Example: 16 becomes 0x00...0f
+		fillStateRoots := func(state *pb.BeaconState) {
+			rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+			roots := make([][]byte, rootsLen)
+			for i := uint64(0); i < rootsLen; i++ {
+				roots[i] = make([]byte, 32)
+			}
+			for j := 0; j < len(roots); j++ {
+				// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
+				s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
+				h, err := hexutil.Decode("0x" + s)
+				require.NoError(t, err, "Failed to decode root "+s)
+				roots[j] = h
+			}
+			state.StateRoots = roots
+		}
+
+		state, err := testutil.NewBeaconState(fillStateRoots)
+		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			State: state,
 		}
@@ -182,7 +204,8 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Hex root not found", func(t *testing.T) {
-		state := testutil.NewBeaconState()
+		state, err := testutil.NewBeaconState()
+		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			State: state,
 		}
@@ -198,8 +221,9 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Slot", func(t *testing.T) {
-		state := testutil.NewBeaconState()
-		err := state.SetSlot(100)
+		state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+			state.Slot = 100
+		})
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			State: state,
@@ -222,14 +246,15 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Slot too big", func(t *testing.T) {
-		state := testutil.NewBeaconState()
+		state, err := testutil.NewBeaconState()
+		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			State: state,
 		}
 		s := Server{
 			ChainInfoFetcher: chainService,
 		}
-		_, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
+		_, err = s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte(strconv.FormatUint(state.Slot()+1, 10)),
 		})
 		assert.ErrorContains(t, "Slot cannot be in the future", err)
