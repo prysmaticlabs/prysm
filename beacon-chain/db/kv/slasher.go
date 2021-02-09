@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	ssz "github.com/ferranbt/fastssz"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -14,27 +14,36 @@ import (
 
 // LatestEpochAttestedForValidator given a validator index returns the latest
 // epoch we have recorded the validator attested for.
-func (s *Store) LatestEpochAttestedForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex,
-) (types.Epoch, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidator")
+func (s *Store) LatestEpochAttestedForValidators(
+	ctx context.Context, validatorIndices []types.ValidatorIndex,
+) ([]types.Epoch, []bool, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidators")
 	defer span.End()
-	var epoch types.Epoch
-	var exists bool
+	epochs := make([]types.Epoch, 0)
+	epochsExist := make([]bool, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
-		enc, err := validatorIdx.MarshalSSZ()
-		if err != nil {
-			return err
+		for _, valIdx := range validatorIndices {
+			enc, err := valIdx.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			epochBytes := bkt.Get(enc)
+			if epochBytes == nil {
+				epochsExist = append(epochsExist, false)
+				epochs = append(epochs, 0)
+				continue
+			}
+			var epoch types.Epoch
+			if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
+				return err
+			}
+			epochsExist = append(epochsExist, true)
+			epochs = append(epochs, epoch)
 		}
-		epochBytes := bkt.Get(enc)
-		if epochBytes == nil {
-			return nil
-		}
-		exists = true
-		return epoch.UnmarshalSSZ(epochBytes)
+		return nil
 	})
-	return epoch, exists, err
+	return epochs, epochsExist, err
 }
 
 // SaveLatestEpochAttestedForValidators updates the latest epoch a slice

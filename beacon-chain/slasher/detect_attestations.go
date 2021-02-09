@@ -124,7 +124,7 @@ func (s *Service) applyCurrentEpochToValidators(
 		if !epochsExist[i] {
 			epoch = types.Epoch(0)
 		}
-		if err := s.updateChunksWithCurrentEpochForValidator(
+		if err = s.updateChunksWithCurrentEpochForValidator(
 			ctx, kind, updatedChunks, validatorChunkIdx, validatorIdx, epoch, currentEpoch,
 		); err != nil {
 			return
@@ -144,7 +144,10 @@ func (s *Service) updateChunksWithCurrentEpochForValidator(
 ) error {
 	for epoch <= currentEpoch {
 		chunkIdx := s.params.chunkIndex(epoch)
-		currentChunk := s.chunkForUpdate(chunksByChunkIdx, validatorChunkIdx, chunkIdx, kind)
+		currentChunk, err := s.loadChunk(chunksByChunkIdx, validatorChunkIdx, chunkIdx, kind)
+		if err != nil {
+			return err
+		}
 		for s.params.chunkIndex(epoch) == chunkIdx && epoch <= currentEpoch {
 			if err := setChunkDataAtEpoch(
 				s.params,
@@ -162,22 +165,22 @@ func (s *Service) updateChunksWithCurrentEpochForValidator(
 	return nil
 }
 
-func (s *Service) chunkForUpdate(
+func (s *Service) loadChunk(
 	chunksByChunkIndex map[uint64]Chunker,
 	validatorChunkIndex,
 	chunkIndex uint64,
 	kind slashertypes.ChunkKind,
-) Chunker {
+) (Chunker, error) {
 	// Check if the chunk index we are looking up already
 	// exists in the map of chunks.
 	if chunk, ok := chunksByChunkIndex[chunkIndex]; ok {
-		return chunk
+		return chunk, nil
 	}
 	// Otherwise, we load the chunk from the database.
 	key := s.params.flatSliceID(validatorChunkIndex, chunkIndex)
 	data, exists, err := s.serviceCfg.Database.LoadSlasherChunk(context.Background(), kind, key)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	// If the chunk exists in the database, we initialize it from the raw bytes data.
 	// If it does not exist, we initialize an empty chunk.
@@ -197,7 +200,7 @@ func (s *Service) chunkForUpdate(
 		}
 	}
 	chunksByChunkIndex[chunkIndex] = existingChunk
-	return existingChunk
+	return existingChunk, nil
 }
 
 func (s *Service) saveUpdatedChunks(

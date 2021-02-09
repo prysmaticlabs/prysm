@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -248,61 +248,61 @@ func TestConfig_chunkIndex(t *testing.T) {
 	}
 }
 
-func TestConfig_diskKey(t *testing.T) {
-	tests := []struct {
-		name           string
-		fields         *Parameters
-		validatorIndex types.ValidatorIndex
-		epoch          types.Epoch
-		want           uint64
-	}{
-		{
-			name: "Proper disk key for epoch 0, validator 0",
-			fields: &Parameters{
-				chunkSize:          3,
-				validatorChunkSize: 3,
-				historyLength:      6,
-			},
-			epoch:          0,
-			validatorIndex: 0,
-			want:           0,
-		},
-		{
-			name: "Proper disk key for epoch < historyLength, validator < validatorChunkSize",
-			fields: &Parameters{
-				chunkSize:          3,
-				validatorChunkSize: 3,
-				historyLength:      6,
-			},
-			epoch:          1,
-			validatorIndex: 1,
-			want:           0,
-		},
-		{
-			name: "Proper disk key for epoch > historyLength, validator > validatorChunkSize",
-			fields: &Parameters{
-				chunkSize:          3,
-				validatorChunkSize: 3,
-				historyLength:      6,
-			},
-			epoch:          10,
-			validatorIndex: 10,
-			want:           7,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Parameters{
-				chunkSize:          tt.fields.chunkSize,
-				validatorChunkSize: tt.fields.validatorChunkSize,
-				historyLength:      tt.fields.historyLength,
-			}
-			if got := c.flatSliceID(tt.validatorIndex, tt.epoch); got != tt.want {
-				t.Errorf("diskKey() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+//func TestConfig_diskKey(t *testing.T) {
+//	tests := []struct {
+//		name           string
+//		fields         *Parameters
+//		validatorIndex types.ValidatorIndex
+//		epoch          types.Epoch
+//		want           uint64
+//	}{
+//		{
+//			name: "Proper disk key for epoch 0, validator 0",
+//			fields: &Parameters{
+//				chunkSize:          3,
+//				validatorChunkSize: 3,
+//				historyLength:      6,
+//			},
+//			epoch:          0,
+//			validatorIndex: 0,
+//			want:           0,
+//		},
+//		{
+//			name: "Proper disk key for epoch < historyLength, validator < validatorChunkSize",
+//			fields: &Parameters{
+//				chunkSize:          3,
+//				validatorChunkSize: 3,
+//				historyLength:      6,
+//			},
+//			epoch:          1,
+//			validatorIndex: 1,
+//			want:           0,
+//		},
+//		{
+//			name: "Proper disk key for epoch > historyLength, validator > validatorChunkSize",
+//			fields: &Parameters{
+//				chunkSize:          3,
+//				validatorChunkSize: 3,
+//				historyLength:      6,
+//			},
+//			epoch:          10,
+//			validatorIndex: 10,
+//			want:           7,
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			c := &Parameters{
+//				chunkSize:          tt.fields.chunkSize,
+//				validatorChunkSize: tt.fields.validatorChunkSize,
+//				historyLength:      tt.fields.historyLength,
+//			}
+//			if got := c.flatSliceID(tt.validatorIndex, tt.epoch); got != tt.want {
+//				t.Errorf("diskKey() = %v, want %v", got, tt.want)
+//			}
+//		})
+//	}
+//}
 
 func TestConfig_validatorChunkIndex(t *testing.T) {
 	tests := []struct {
