@@ -3,8 +3,9 @@ package slasher
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/sirupsen/logrus"
 )
 
 // Receive indexed attestations from some source event feed,
@@ -38,12 +39,36 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 	}
 }
 
-// Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
-func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
-	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
-		return false
+// Process queued attestations every time an epoch ticker fires. We retrieve
+// these attestations from a queue, then group them all by validator chunk index.
+// This grouping will allow us to perform detection on batches of attestations
+// per validator chunk index which can be done concurrently.
+func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-chan uint64) {
+	for {
+		select {
+		case currentEpoch := <-epochTicker:
+			s.queueLock.Lock()
+			attestations := s.attestationQueue
+			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
+			s.queueLock.Unlock()
+			log.WithFields(logrus.Fields{
+				"currentEpoch": currentEpoch,
+				"numAtts":      len(attestations),
+			}).Info("Epoch reached, processing queued atts for slashing detection")
+			groupedAtts := s.groupByValidatorChunkIndex(attestations)
+			for validatorChunkIdx, attBatch := range groupedAtts {
+				validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
+				// Save the attestation records for the validator indices in our database.
+				if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
+					ctx, validatorIndices, attBatch,
+				); err != nil {
+					log.WithError(err).Error("Could not save attestation records to DB")
+					continue
+				}
+				s.detectSlashableAttestations(ctx, attBatch, validatorChunkIdx, types.Epoch(currentEpoch))
+			}
+		case <-ctx.Done():
+			return
+		}
 	}
-	return att.Data.Source.Epoch < att.Data.Target.Epoch
 }
