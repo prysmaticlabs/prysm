@@ -58,9 +58,9 @@ type ReadOnlyDatabase interface {
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 	// Slasher operations.
-	LatestEpochAttestedForValidator(
-		ctx context.Context, validatorIdx types.ValidatorIndex,
-	) (types.Epoch, bool, error)
+	LatestEpochAttestedForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIndex,
+	) ([]types.Epoch, []bool, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.CompactAttestation, error)

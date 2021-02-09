@@ -26,7 +26,15 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 			}).Info("Epoch reached, processing queued atts for slashing detection")
 			groupedAtts := s.groupByValidatorChunkIndex(atts)
 			for validatorChunkIdx, attsBatch := range groupedAtts {
-				s.detectAttestationBatch(attsBatch, validatorChunkIdx, types.Epoch(currentEpoch))
+				validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
+				// Save the attestation records for the validator indices in our database.
+				if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
+					ctx, validatorIndices, attsBatch,
+				); err != nil {
+					log.WithError(err).Error("Could not save attestation records to DB")
+					continue
+				}
+				s.detectAttestationBatch(ctx, attsBatch, validatorChunkIdx, types.Epoch(currentEpoch))
 			}
 		case <-ctx.Done():
 			return
@@ -36,11 +44,125 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 
 // Given a list of attestations all corresponding to a validator chunk index as well
 // as the current epoch in time, we perform slashing detection over the batch.
-// TODO(#8331): Implement.
+// The process is as follows given a batch of attestations:
+//
+// 1. Group the attestations by chunk index.
+// 2. Update the min and max spans for those grouped attestations, check if any slashings are
+//    found in the process
+// 3. Update the latest written epoch for all validator indices involved up and
+//    including the current epoch
+//
+// 2. For every validator in a validator chunk index, update all the chunks that need to be
+//    updated based on the current epoch, and return these updated chunks.
+// 3. Using the chunks from step (2), for every attestation by chunk index, for each
+//    validator in its attesting indices:
+//    - Check if the attestation is slashable, if so return a slashing object
+//    - Update all min chunks
+//    - Update all max chunks
+// 4. Update the latest written epoch for all validators involved to the current epoch.
+//
+// This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) detectAttestationBatch(
-	atts []*slashertypes.CompactAttestation, validatorChunkIndex uint64, currentEpoch types.Epoch,
-) {
+	ctx context.Context,
+	attBatch []*slashertypes.CompactAttestation,
+	validatorChunkIndex uint64,
+	currentEpoch types.Epoch,
+) error {
+	// Group attestations by chunk index.
+	attestationsByChunkIdx := s.groupByChunkIndex(attBatch)
 
+	_, err := s.updateMinSpans()
+	if err != nil {
+		return err
+	}
+	//_, err = s.updateMaxSpans()
+	//if err != nil {
+	//	return err
+	//}
+
+	// Update the latest written epoch for all involved validator indices.
+	validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIndex)
+	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, currentEpoch)
+}
+
+func (s *Service) updateMinSpans(
+	ctx context.Context,
+	validatorChunkIdx uint64,
+	currentEpoch types.Epoch,
+) (slashertypes.SlashingKind, error) {
+	// Update the required chunks with the current epoch.
+	validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
+	epochs, epochsExit, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	if err != nil {
+		return slashertypes.NotSlashable, nil
+	}
+	updatedChunks := s.updateChunksWithCurrentEpoch()
+
+	// Apply the attestations to the related min chunks.
+
+	// Write the updated chunks to disk.
+	return slashertypes.NotSlashable, nil
+}
+
+func (s *Service) updateChunksWithCurrentEpoch(
+	ctx context.Context,
+	validatorChunkIdx uint64,
+	validatorIdx types.ValidatorIndex,
+	epoch,
+	currentEpoch types.Epoch,
+) (updatedChunks map[uint64]Chunker) {
+	updatedChunks = make(map[uint64]Chunker)
+	for epoch <= currentEpoch {
+		chunkIdx := s.params.chunkIndex(epoch)
+		currentChunk := s.chunkForUpdate(updatedChunks, validatorChunkIdx, chunkIdx, slashertypes.MinSpan)
+		for s.params.chunkIndex(epoch) == chunkIdx && epoch <= currentEpoch {
+			if err := setChunkDataAtEpoch(
+				s.params,
+				currentChunk.Chunk(),
+				validatorIdx,
+				epoch,
+				types.Epoch(currentChunk.NeutralElement())+epoch,
+			); err != nil {
+				panic(err)
+			}
+			epoch++
+		}
+		updatedChunks[chunkIdx] = currentChunk
+	}
+}
+
+func (s *Service) chunkForUpdate(
+	updatedChunks map[uint64]Chunker,
+	validatorChunkIndex,
+	chunkIndex uint64,
+	kind slashertypes.ChunkKind,
+) Chunker {
+	if chunk, ok := updatedChunks[chunkIndex]; ok {
+		return chunk
+	}
+	// Load from DB, if it does not exist, then create an empty chunk.
+	key := s.params.flatSliceID(validatorChunkIndex, chunkIndex)
+	data, exists, err := s.serviceCfg.Database.LoadSlasherChunk(context.Background(), kind, key)
+	if err != nil {
+		panic(err)
+	}
+	var existingChunk Chunker
+	switch kind {
+	case slashertypes.MinSpan:
+		if exists {
+			existingChunk, err = MinChunkSpansSliceFrom(s.params, data)
+		} else {
+			existingChunk = EmptyMinSpanChunksSlice(s.params)
+		}
+	case slashertypes.MaxSpan:
+		if exists {
+			existingChunk, err = MaxChunkSpansSliceFrom(s.params, data)
+		} else {
+			existingChunk = EmptyMaxSpanChunksSlice(s.params)
+		}
+	}
+	updatedChunks[chunkIndex] = existingChunk
+	return existingChunk
 }
 
 // Group a list of attestations into batches by validator chunk index.
