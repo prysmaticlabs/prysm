@@ -204,7 +204,8 @@ func setupActiveValidators(t *testing.T, count int) *stateTrie.BeaconState {
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	if err := s.SetValidators(validators); err != nil {
 		t.Error(err)
 		return nil

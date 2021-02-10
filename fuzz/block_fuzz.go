@@ -63,7 +63,10 @@ func setupDB() {
 	}
 
 	ctx := context.Background()
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	if err != nil {
+		panic(err)
+	}
 	b := testutil.NewBeaconBlock()
 	if err := db1.SaveBlock(ctx, b); err != nil {
 		panic(err)

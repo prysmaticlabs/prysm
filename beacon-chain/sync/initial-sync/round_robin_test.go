@@ -283,7 +283,8 @@ func TestService_roundRobinSync(t *testing.T) {
 			err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 			require.NoError(t, err)
 
-			st := testutil.NewBeaconState()
+			st, err := testutil.NewBeaconState()
+			require.NoError(t, err)
 			mc := &mock.ChainService{
 				State: st,
 				Root:  genesisRoot[:],
@@ -324,7 +325,8 @@ func TestService_processBlock(t *testing.T) {
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	s := New(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
@@ -384,7 +386,8 @@ func TestService_processBlockBatch(t *testing.T) {
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	s := New(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
@@ -512,7 +515,8 @@ func TestService_blockProviderScoring(t *testing.T) {
 	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -577,7 +581,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,

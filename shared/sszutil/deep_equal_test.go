@@ -64,22 +64,22 @@ func TestDeepEqualProto(t *testing.T) {
 	fork1 = pb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
-		Epoch:           uint64(1234567890),
+		Epoch:           1234567890,
 	}
 	fork2 = pb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{125},
-		Epoch:           uint64(1234567890),
+		Epoch:           1234567890,
 	}
 	assert.Equal(t, true, sszutil.DeepEqual(fork1, fork1))
 	assert.Equal(t, false, sszutil.DeepEqual(fork1, fork2))
 
 	checkpoint1 := ethpb.Checkpoint{
-		Epoch: uint64(1234567890),
+		Epoch: 1234567890,
 		Root:  []byte{},
 	}
 	checkpoint2 := ethpb.Checkpoint{
-		Epoch: uint64(1234567890),
+		Epoch: 1234567890,
 		Root:  nil,
 	}
 	assert.Equal(t, true, sszutil.DeepEqual(checkpoint1, checkpoint2))
