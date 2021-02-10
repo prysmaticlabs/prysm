@@ -384,7 +384,12 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.NextEpoch(postState)); err != nil {
+		copied := postState.Copy()
+		copied, err := state.ProcessSlots(ctx, copied, copied.Slot()+1)
+		if err != nil {
+			return err
+		}
+		if err := helpers.UpdateProposerIndicesInCache(copied); err != nil {
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
@@ -402,7 +407,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.CurrentEpoch(postState)); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(postState); err != nil {
 			return err
 		}
 	}
