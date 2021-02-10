@@ -11,6 +11,7 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -560,10 +561,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	}
 	tests := []struct {
 		name                   string
-		expectedFinalizedEpoch uint64
+		expectedFinalizedEpoch types.Epoch
 		expectedFinalizedRoot  [32]byte
 		headSlot               uint64
-		remoteFinalizedEpoch   uint64
+		remoteFinalizedEpoch   types.Epoch
 		remoteFinalizedRoot    [32]byte
 		remoteHeadSlot         uint64
 		expectError            bool
@@ -634,7 +635,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), finalizedCheckpt))
 
-		totalSec := params.BeaconConfig().SlotsPerEpoch * (expectedFinalizedEpoch + 2) * params.BeaconConfig().SecondsPerSlot
+		totalSec := params.BeaconConfig().SlotsPerEpoch * uint64(expectedFinalizedEpoch+2) * params.BeaconConfig().SecondsPerSlot
 		genTime := time.Now().Unix() - int64(totalSec)
 		r := &Service{
 			p2p: p1,

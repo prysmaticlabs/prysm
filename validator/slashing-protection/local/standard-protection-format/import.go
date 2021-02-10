@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
@@ -266,8 +267,8 @@ func filterSlashablePubKeysFromAttestations(
 	// First we need to find attestations that are slashable with respect to other
 	// attestations within the same JSON import.
 	for pubKey, signedAtts := range signedAttsByPubKey {
-		signingRootsByTarget := make(map[uint64][32]byte)
-		targetEpochsBySource := make(map[uint64][]uint64)
+		signingRootsByTarget := make(map[types.Epoch][32]byte)
+		targetEpochsBySource := make(map[types.Epoch][]types.Epoch)
 	Loop:
 		for _, att := range signedAtts {
 			// Check for double votes.
@@ -338,11 +339,11 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlo
 func transformSignedAttestations(pubKey [48]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
 	historicalAtts := make([]*kv.AttestationRecord, 0)
 	for _, attestation := range atts {
-		target, err := Uint64FromString(attestation.TargetEpoch)
+		target, err := EpochFromString(attestation.TargetEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid epoch: %v", target, err)
 		}
-		source, err := Uint64FromString(attestation.SourceEpoch)
+		source, err := EpochFromString(attestation.SourceEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid epoch: %v", source, err)
 		}
@@ -364,7 +365,7 @@ func transformSignedAttestations(pubKey [48]byte, atts []*format.SignedAttestati
 	return historicalAtts, nil
 }
 
-func createAttestation(source, target uint64) *ethpb.IndexedAttestation {
+func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{

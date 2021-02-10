@@ -197,7 +197,7 @@ func (s *Service) mapResultsToAtts(ctx context.Context, results []*types.Detecti
 }
 
 func resultHash(result *types.DetectionResult) [32]byte {
-	resultBytes := append(bytesutil.Bytes8(result.SlashableEpoch), result.SigBytes[:]...)
+	resultBytes := append(bytesutil.Bytes8(uint64(result.SlashableEpoch)), result.SigBytes[:]...)
 	return hashutil.Hash(resultBytes)
 }
 

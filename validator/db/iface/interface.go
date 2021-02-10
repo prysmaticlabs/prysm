@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -40,9 +41,9 @@ type ValidatorDB interface {
 	// slashing protection imports.
 	EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error)
 	SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error
-	SigningRootAtTargetEpoch(ctx context.Context, publicKey [48]byte, target uint64) ([32]byte, error)
-	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
-	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
+	SigningRootAtTargetEpoch(ctx context.Context, publicKey [48]byte, target types.Epoch) ([32]byte, error)
+	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (types.Epoch, bool, error)
+	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (types.Epoch, bool, error)
 	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
 	CheckSlashableAttestation(
 		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,

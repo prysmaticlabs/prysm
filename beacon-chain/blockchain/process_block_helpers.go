@@ -231,9 +231,10 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-
-	s.prevFinalizedCheckpt = s.finalizedCheckpt
-	s.finalizedCheckpt = cp
+	if !featureconfig.Get().UpdateHeadTimely {
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = cp
+	}
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
