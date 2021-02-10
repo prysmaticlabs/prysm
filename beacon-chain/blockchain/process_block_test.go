@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -880,11 +880,11 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 
 	require.NoError(t, service.updateJustifiedInitSync(ctx, newCp))
 
-	assert.DeepEqual(t, currentCp, service.prevJustifiedCheckpt, "Incorrect previous justified checkpoint")
-	assert.DeepEqual(t, newCp, service.CurrentJustifiedCheckpt(), "Incorrect current justified checkpoint in cache")
+	assert.DeepSSZEqual(t, currentCp, service.prevJustifiedCheckpt, "Incorrect previous justified checkpoint")
+	assert.DeepSSZEqual(t, newCp, service.CurrentJustifiedCheckpt(), "Incorrect current justified checkpoint in cache")
 	cp, err := service.beaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
+	assert.DeepSSZEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
 }
 
 func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
