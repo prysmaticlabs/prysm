@@ -86,7 +86,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAttesterReward := br - proposerReward
-		r += maxAttesterReward / v.InclusionDistance
+		r += maxAttesterReward / uint64(v.InclusionDistance)
 
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,

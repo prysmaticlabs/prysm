@@ -19,7 +19,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 5500)
 	for _, vv := range beaconState.Validators() {
-		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
+		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch.Mul(1))
 	}
 	// This set of indices is very similar to the one from our sapphire testnet
 	// when close to 100 validators were incorrectly slashed. The set is from 0 -5500,

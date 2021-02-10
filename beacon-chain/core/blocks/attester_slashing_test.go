@@ -44,7 +44,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 		})}}
 
 	var registry []*ethpb.Validator
-	currentSlot := uint64(0)
+	currentSlot := types.Slot(0)
 
 	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
@@ -63,7 +63,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 
 func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T) {
 	var registry []*ethpb.Validator
-	currentSlot := uint64(0)
+	currentSlot := types.Slot(0)
 
 	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
@@ -99,7 +99,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	for _, vv := range beaconState.Validators() {
-		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
+		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch.Mul(1))
 	}
 
 	att1 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{

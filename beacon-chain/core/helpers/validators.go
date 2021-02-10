@@ -215,7 +215,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
 
-	seedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot())...)
+	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(state.Slot()))...)
 	seedWithSlotHash := hashutil.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(state, e)
