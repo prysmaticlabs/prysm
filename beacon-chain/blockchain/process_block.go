@@ -22,6 +22,9 @@ import (
 // A custom slot deadline for processing state slots in our cache.
 const slotDeadline = 5 * time.Second
 
+// A custom deadline for deposit trie insertion.
+const depositDeadline = 20 * time.Second
+
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 
@@ -161,23 +164,16 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 				return errors.Wrap(err, "could not save new justified")
 			}
 		}
-
-		// Update deposit cache.
-		finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not fetch finalized state")
-		}
-		// We update the cache up to the last deposit index in the finalized block's state.
-		// We can be confident that these deposits will be included in some block
-		// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
-		eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
-		s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
-		if featureconfig.Get().EnablePruningDepositProofs {
-			// Deposit proofs are only used during state transition and can be safely removed to save space.
-			if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
-				return errors.Wrap(err, "could not prune deposit proofs")
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
+			defer cancel()
+			if err := s.insertFinalizedDeposits(depCtx, fRoot); err != nil {
+				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
-		}
+		}()
 	}
 
 	defer reportAttestationInclusion(b)

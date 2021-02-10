@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials"
 )
 
 var _ shared.Service = (*Gateway)(nil)
@@ -27,6 +28,7 @@ type Gateway struct {
 	cancel                  context.CancelFunc
 	gatewayAddr             string
 	remoteAddr              string
+	remoteCert              string
 	server                  *http.Server
 	mux                     *http.ServeMux
 	allowedOrigins          []string
@@ -123,6 +125,7 @@ func (g *Gateway) Stop() error {
 func New(
 	ctx context.Context,
 	remoteAddress,
+	remoteCert,
 	gatewayAddress string,
 	mux *http.ServeMux,
 	allowedOrigins []string,
@@ -135,6 +138,7 @@ func New(
 
 	return &Gateway{
 		remoteAddr:              remoteAddress,
+		remoteCert:              remoteCert,
 		gatewayAddr:             gatewayAddress,
 		ctx:                     ctx,
 		mux:                     mux,
@@ -159,8 +163,16 @@ func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientC
 // dialTCP creates a client connection via TCP.
 // "addr" must be a valid TCP address with a port number.
 func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
+	security := grpc.WithInsecure()
+	if len(g.remoteCert) > 0 {
+		creds, err := credentials.NewClientTLSFromFile(g.remoteCert, "")
+		if err != nil {
+			return nil, err
+		}
+		security = grpc.WithTransportCredentials(creds)
+	}
 	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
+		security,
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
 	}
 
