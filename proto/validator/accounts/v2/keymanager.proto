@@ -56,7 +56,7 @@ message SignRequest {
         ethereum.eth.v1alpha1.AttestationData attestation_data = 102;
         ethereum.eth.v1alpha1.AggregateAttestationAndProof aggregate_attestation_and_proof = 103;
         ethereum.eth.v1alpha1.VoluntaryExit exit = 104;
-        uint64 slot = 105;
+        uint64 slot = 105 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
         uint64 epoch = 106 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     }
 }

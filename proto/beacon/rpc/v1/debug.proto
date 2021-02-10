@@ -60,17 +60,17 @@ service Debug {
 
 message InclusionSlotRequest {
     uint64 id = 1;
-    uint64 slot = 2;
+    uint64 slot = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 message InclusionSlotResponse {
-    uint64 slot = 2;
+    uint64 slot = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 message BeaconStateRequest {
     oneof query_filter {
         // The slot corresponding to a desired beacon state.
-        uint64 slot = 1;
+        uint64 slot = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;
@@ -111,7 +111,7 @@ message ProtoArrayForkChoiceResponse {
 
 message ProtoArrayNode {
     // Slot of the proto array node.
-    uint64 slot = 1;
+    uint64 slot = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
     // Root of the proto array node.
     bytes root = 2;
     // Parent of the proto array node.
