@@ -3,7 +3,6 @@ package slasher
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
@@ -36,14 +35,4 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			return
 		}
 	}
-}
-
-// Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
-func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
-	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
-		return false
-	}
-	return att.Data.Source.Epoch < att.Data.Target.Epoch
 }

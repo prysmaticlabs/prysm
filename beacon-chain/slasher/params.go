@@ -1,6 +1,6 @@
 package slasher
 
-import "github.com/prysmaticlabs/eth2-types"
+import types "github.com/prysmaticlabs/eth2-types"
 
 // Parameters for slashing detection.
 //
@@ -94,7 +94,7 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64
 	return uint64(validatorIndex.Mod(p.validatorChunkSize))
 }
 
-// Construct a key for our database schema given a validator index and epoch.
+// Construct a key for our database schema given a validator chunk index and chunk index.
 // This calculation gives us a uint that uniquely represents
 // a 2D chunk given a validator index and epoch value.
 // First, we compute the validator chunk index for the validator index,
@@ -113,21 +113,19 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64
 //
 //  validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
 //
-func (p *Parameters) flatSliceID(validatorIndex types.ValidatorIndex, epoch types.Epoch) uint64 {
-	validatorChunkIndex := p.validatorChunkIndex(validatorIndex)
-	chunkIndex := p.chunkIndex(epoch)
+func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) uint64 {
 	width := p.historyLength / p.chunkSize
 	return validatorChunkIndex*width + chunkIndex
 }
 
 // Given a validator chunk index, we determine all of the validator
 // indices that will belong in that chunk.
-func (p *Parameters) validatorIndicesInChunk(validatorChunkIdx uint64) []uint64 {
-	validatorIndices := make([]uint64, 0)
+func (p *Parameters) validatorIndicesInChunk(validatorChunkIdx uint64) []types.ValidatorIndex {
+	validatorIndices := make([]types.ValidatorIndex, 0)
 	low := validatorChunkIdx * p.validatorChunkSize
 	high := (validatorChunkIdx + 1) * p.validatorChunkSize
 	for i := low; i < high; i++ {
-		validatorIndices = append(validatorIndices, i)
+		validatorIndices = append(validatorIndices, types.ValidatorIndex(i))
 	}
 	return validatorIndices
 }

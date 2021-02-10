@@ -42,37 +42,3 @@ func (s *Service) detectAttestationBatch(
 ) {
 
 }
-
-// Group a list of attestations into batches by validator chunk index.
-// This way, we can detect on the batch of attestations for each validator chunk index
-// concurrently, and also allowing us to effectively use a single 2D chunk
-// for slashing detection through this logical grouping.
-func (s *Service) groupByValidatorChunkIndex(
-	attestations []*slashertypes.CompactAttestation,
-) map[uint64][]*slashertypes.CompactAttestation {
-	groupedAttestations := make(map[uint64][]*slashertypes.CompactAttestation)
-	for _, att := range attestations {
-		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.AttestingIndices {
-			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
-			validatorChunkIndices[validatorChunkIndex] = true
-		}
-		for validatorChunkIndex := range validatorChunkIndices {
-			groupedAttestations[validatorChunkIndex] = append(
-				groupedAttestations[validatorChunkIndex],
-				att,
-			)
-		}
-	}
-	return groupedAttestations
-}
-
-// Group attestations by the chunk index their source epoch corresponds to.
-func (s *Service) groupByChunkIndex(attestations []*slashertypes.CompactAttestation) map[uint64][]*slashertypes.CompactAttestation {
-	attestationsByChunkIndex := make(map[uint64][]*slashertypes.CompactAttestation)
-	for _, att := range attestations {
-		chunkIdx := s.params.chunkIndex(types.Epoch(att.Source))
-		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
-	}
-	return attestationsByChunkIndex
-}

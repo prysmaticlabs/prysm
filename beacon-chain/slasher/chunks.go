@@ -87,11 +87,11 @@ type MaxSpanChunksSlice struct {
 // EmptyMinSpanChunksSlice initializes a min span chunk of length C*K for
 // C = chunkSize and K = validatorChunkSize filled with neutral elements.
 // For min spans, the neutral element is `undefined`, represented by MaxUint16.
-func EmptyMinSpanChunksSlice(config *Parameters) *MinSpanChunksSlice {
+func EmptyMinSpanChunksSlice(params *Parameters) *MinSpanChunksSlice {
 	m := &MinSpanChunksSlice{
-		params: config,
+		params: params,
 	}
-	data := make([]uint16, config.chunkSize*config.validatorChunkSize)
+	data := make([]uint16, params.chunkSize*params.validatorChunkSize)
 	for i := 0; i < len(data); i++ {
 		data[i] = m.NeutralElement()
 	}
@@ -102,11 +102,11 @@ func EmptyMinSpanChunksSlice(config *Parameters) *MinSpanChunksSlice {
 // EmptyMaxSpanChunksSlice initializes a max span chunk of length C*K for
 // C = chunkSize and K = validatorChunkSize filled with neutral elements.
 // For max spans, the neutral element is 0.
-func EmptyMaxSpanChunksSlice(config *Parameters) *MaxSpanChunksSlice {
+func EmptyMaxSpanChunksSlice(params *Parameters) *MaxSpanChunksSlice {
 	m := &MaxSpanChunksSlice{
-		params: config,
+		params: params,
 	}
-	data := make([]uint16, config.chunkSize*config.validatorChunkSize)
+	data := make([]uint16, params.chunkSize*params.validatorChunkSize)
 	for i := 0; i < len(data); i++ {
 		data[i] = m.NeutralElement()
 	}
@@ -116,26 +116,26 @@ func EmptyMaxSpanChunksSlice(config *Parameters) *MaxSpanChunksSlice {
 
 // MinChunkSpansSliceFrom initializes a min span chunks slice from a slice of uint16 values.
 // Returns an error if the slice is not of length C*K for C = chunkSize and K = validatorChunkSize.
-func MinChunkSpansSliceFrom(config *Parameters, chunk []uint16) (*MinSpanChunksSlice, error) {
-	requiredLen := config.chunkSize * config.validatorChunkSize
+func MinChunkSpansSliceFrom(params *Parameters, chunk []uint16) (*MinSpanChunksSlice, error) {
+	requiredLen := params.chunkSize * params.validatorChunkSize
 	if uint64(len(chunk)) != requiredLen {
 		return nil, fmt.Errorf("chunk has wrong length, %d, expected %d", len(chunk), requiredLen)
 	}
 	return &MinSpanChunksSlice{
-		params: config,
+		params: params,
 		data:   chunk,
 	}, nil
 }
 
 // MaxChunkSpansSliceFrom initializes a max span chunks slice from a slice of uint16 values.
 // Returns an error if the slice is not of length C*K for C = chunkSize and K = validatorChunkSize.
-func MaxChunkSpansSliceFrom(config *Parameters, chunk []uint16) (*MaxSpanChunksSlice, error) {
-	requiredLen := config.chunkSize * config.validatorChunkSize
+func MaxChunkSpansSliceFrom(params *Parameters, chunk []uint16) (*MaxSpanChunksSlice, error) {
+	requiredLen := params.chunkSize * params.validatorChunkSize
 	if uint64(len(chunk)) != requiredLen {
 		return nil, fmt.Errorf("chunk has wrong length, %d, expected %d", len(chunk), requiredLen)
 	}
 	return &MaxSpanChunksSlice{
-		params: config,
+		params: params,
 		data:   chunk,
 	}, nil
 }
@@ -397,18 +397,30 @@ func chunkDataAtEpoch(
 }
 
 // Updates the value at a specific index in a chunk for a validator index + epoch
-// pair to a specified distance. Recall that for min spans, each element in a chunk
+// pair given a target epoch. Recall that for min spans, each element in a chunk
 // is the minimum distance between the a given epoch, e, and all attestation target epochs
 // a validator has created where att.source.epoch > e.
 func setChunkDataAtEpoch(
-	config *Parameters,
+	params *Parameters,
 	chunk []uint16,
 	validatorIdx types.ValidatorIndex,
 	epochInChunk,
 	targetEpoch types.Epoch,
 ) error {
 	distance := epochDistance(targetEpoch, epochInChunk)
-	cellIdx := config.cellIndex(validatorIdx, epochInChunk)
+	return setChunkRawDistance(params, chunk, validatorIdx, epochInChunk, distance)
+}
+
+// Updates the value at a specific index in a chunk for a validator index + epoch
+// pair to a specified, raw distance value.
+func setChunkRawDistance(
+	params *Parameters,
+	chunk []uint16,
+	validatorIdx types.ValidatorIndex,
+	epochInChunk types.Epoch,
+	distance uint16,
+) error {
+	cellIdx := params.cellIndex(validatorIdx, epochInChunk)
 	if cellIdx >= uint64(len(chunk)) {
 		return fmt.Errorf("cell index %d out of bounds (len(chunk) = %d)", cellIdx, len(chunk))
 	}

@@ -4,18 +4,18 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-func TestDefaultConfig(t *testing.T) {
+func TestDefaultParams(t *testing.T) {
 	def := DefaultParams()
 	assert.Equal(t, true, def.chunkSize > 0)
 	assert.Equal(t, true, def.validatorChunkSize > 0)
 	assert.Equal(t, true, def.historyLength > 0)
 }
 
-func TestConfig_cellIndex(t *testing.T) {
+func TestParams_cellIndex(t *testing.T) {
 	type args struct {
 		validatorIndex types.ValidatorIndex
 		epoch          types.Epoch
@@ -155,7 +155,7 @@ func TestConfig_cellIndex(t *testing.T) {
 	}
 }
 
-func TestConfig_chunkIndex(t *testing.T) {
+func TestParams_chunkIndex(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields *Parameters
@@ -248,24 +248,24 @@ func TestConfig_chunkIndex(t *testing.T) {
 	}
 }
 
-func TestConfig_diskKey(t *testing.T) {
+func TestParams_flatSliceID(t *testing.T) {
 	tests := []struct {
-		name           string
-		fields         *Parameters
-		validatorIndex types.ValidatorIndex
-		epoch          types.Epoch
-		want           uint64
+		name                string
+		fields              *Parameters
+		validatorChunkIndex uint64
+		chunkIndex          uint64
+		want                uint64
 	}{
 		{
-			name: "Proper disk key for epoch 0, validator 0",
+			name: "Proper disk key for 0, 0",
 			fields: &Parameters{
 				chunkSize:          3,
 				validatorChunkSize: 3,
 				historyLength:      6,
 			},
-			epoch:          0,
-			validatorIndex: 0,
-			want:           0,
+			chunkIndex:          0,
+			validatorChunkIndex: 0,
+			want:                0,
 		},
 		{
 			name: "Proper disk key for epoch < historyLength, validator < validatorChunkSize",
@@ -274,9 +274,9 @@ func TestConfig_diskKey(t *testing.T) {
 				validatorChunkSize: 3,
 				historyLength:      6,
 			},
-			epoch:          1,
-			validatorIndex: 1,
-			want:           0,
+			chunkIndex:          1,
+			validatorChunkIndex: 1,
+			want:                3,
 		},
 		{
 			name: "Proper disk key for epoch > historyLength, validator > validatorChunkSize",
@@ -285,9 +285,9 @@ func TestConfig_diskKey(t *testing.T) {
 				validatorChunkSize: 3,
 				historyLength:      6,
 			},
-			epoch:          10,
-			validatorIndex: 10,
-			want:           7,
+			chunkIndex:          10,
+			validatorChunkIndex: 10,
+			want:                30,
 		},
 	}
 	for _, tt := range tests {
@@ -297,14 +297,14 @@ func TestConfig_diskKey(t *testing.T) {
 				validatorChunkSize: tt.fields.validatorChunkSize,
 				historyLength:      tt.fields.historyLength,
 			}
-			if got := c.flatSliceID(tt.validatorIndex, tt.epoch); got != tt.want {
+			if got := c.flatSliceID(tt.validatorChunkIndex, tt.chunkIndex); got != tt.want {
 				t.Errorf("diskKey() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestConfig_validatorChunkIndex(t *testing.T) {
+func TestParams_validatorChunkIndex(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
@@ -348,7 +348,7 @@ func TestConfig_validatorChunkIndex(t *testing.T) {
 	}
 }
 
-func TestConfig_chunkOffset(t *testing.T) {
+func TestParams_chunkOffset(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields *Parameters
@@ -392,7 +392,7 @@ func TestConfig_chunkOffset(t *testing.T) {
 	}
 }
 
-func TestConfig_validatorOffset(t *testing.T) {
+func TestParams_validatorOffset(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
@@ -436,12 +436,12 @@ func TestConfig_validatorOffset(t *testing.T) {
 	}
 }
 
-func TestConfig_validatorIndicesInChunk(t *testing.T) {
+func TestParams_validatorIndicesInChunk(t *testing.T) {
 	tests := []struct {
 		name              string
 		fields            *Parameters
 		validatorChunkIdx uint64
-		want              []uint64
+		want              []types.ValidatorIndex
 	}{
 		{
 			name: "Returns proper indices",
@@ -449,7 +449,7 @@ func TestConfig_validatorIndicesInChunk(t *testing.T) {
 				validatorChunkSize: 3,
 			},
 			validatorChunkIdx: 2,
-			want:              []uint64{6, 7, 8},
+			want:              []types.ValidatorIndex{6, 7, 8},
 		},
 		{
 			name: "0 validator chunk size returs empty",
@@ -457,7 +457,7 @@ func TestConfig_validatorIndicesInChunk(t *testing.T) {
 				validatorChunkSize: 0,
 			},
 			validatorChunkIdx: 100,
-			want:              []uint64{},
+			want:              []types.ValidatorIndex{},
 		},
 	}
 	for _, tt := range tests {
