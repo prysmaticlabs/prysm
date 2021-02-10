@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"time"
@@ -1015,6 +1016,38 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 	}
 
 	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+}
+
+// MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
+// the current justified checkpoint in state.
+func (b *BeaconState) MatchCurrentJustifiedCheckpoint(c *ethpb.Checkpoint) bool {
+	if !b.HasInnerState() {
+		return false
+	}
+	if b.state.CurrentJustifiedCheckpoint == nil {
+		return false
+	}
+
+	if c.Epoch != b.state.CurrentJustifiedCheckpoint.Epoch {
+		return false
+	}
+	return bytes.Equal(c.Root, b.state.CurrentJustifiedCheckpoint.Root)
+}
+
+// MatchPreviousJustifiedCheckpoint returns true if the input justified checkpoint matches
+// the previous justified checkpoint in state.
+func (b *BeaconState) MatchPreviousJustifiedCheckpoint(c *ethpb.Checkpoint) bool {
+	if !b.HasInnerState() {
+		return false
+	}
+	if b.state.PreviousJustifiedCheckpoint == nil {
+		return false
+	}
+
+	if c.Epoch != b.state.PreviousJustifiedCheckpoint.Epoch {
+		return false
+	}
+	return bytes.Equal(c.Root, b.state.PreviousJustifiedCheckpoint.Root)
 }
 
 // FinalizedCheckpoint denoting an epoch and block root.
