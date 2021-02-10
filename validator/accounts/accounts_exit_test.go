@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -198,8 +199,13 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.Equal(t, 2, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys, rawExitedKeys)
 	require.Equal(t, 2, len(formattedExitedKeys))
-	assert.Equal(t, "0x"+keystore1.Pubkey[:12], formattedExitedKeys[0])
-	assert.Equal(t, "0x"+keystore2.Pubkey[:12], formattedExitedKeys[1])
+	wantedFormatted := []string{
+		"0x" + keystore1.Pubkey[:12],
+		"0x" + keystore2.Pubkey[:12],
+	}
+	sort.Strings(wantedFormatted)
+	sort.Strings(formattedExitedKeys)
+	require.DeepEqual(t, wantedFormatted, formattedExitedKeys)
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
