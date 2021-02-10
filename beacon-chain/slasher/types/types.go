@@ -1,5 +1,7 @@
 package types
 
+import types "github.com/prysmaticlabs/eth2-types"
+
 // ChunkKind to differentiate what kind of span we are working
 // with for slashing detection, either min or max span.
 type ChunkKind uint
@@ -16,6 +18,17 @@ type CompactAttestation struct {
 	Source           uint64
 	Target           uint64
 	SigningRoot      [32]byte
+}
+
+// Slashing represents a compact format with all the information
+// needed to understand a slashable offense in eth2.
+type Slashing struct {
+	Kind           SlashingKind
+	ValidatorIndex types.ValidatorIndex
+	SourceEpoch    types.Epoch
+	TargetEpoch    types.Epoch
+	SigningRoot    types.Epoch
+	Slot           uint64
 }
 
 // SlashingKind is an enum representing the type of slashable
