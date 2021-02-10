@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -17,7 +18,7 @@ import (
 
 func TestIsActiveValidator_OK(t *testing.T) {
 	tests := []struct {
-		a uint64
+		a types.Epoch
 		b bool
 	}{
 		{a: 0, b: false},
@@ -34,7 +35,7 @@ func TestIsActiveValidator_OK(t *testing.T) {
 
 func TestIsActiveValidatorUsingTrie_OK(t *testing.T) {
 	tests := []struct {
-		a uint64
+		a types.Epoch
 		b bool
 	}{
 		{a: 0, b: false},
@@ -57,7 +58,7 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 	tests := []struct {
 		name      string
 		validator *ethpb.Validator
-		epoch     uint64
+		epoch     types.Epoch
 		slashable bool
 	}{
 		{
@@ -139,7 +140,7 @@ func TestIsSlashableValidatorUsingTrie_OK(t *testing.T) {
 	tests := []struct {
 		name      string
 		validator *ethpb.Validator
-		epoch     uint64
+		epoch     types.Epoch
 		slashable bool
 	}{
 		{
@@ -350,7 +351,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 }
 
 func TestDelayedActivationExitEpoch_OK(t *testing.T) {
-	epoch := uint64(9999)
+	epoch := types.Epoch(9999)
 	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 	assert.Equal(t, wanted, ActivationExitEpoch(epoch))
 }
@@ -422,7 +423,7 @@ func TestDomain_OK(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		epoch      uint64
+		epoch      types.Epoch
 		domainType [4]byte
 		result     []byte
 	}{
@@ -445,7 +446,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	type args struct {
 		state *pb.BeaconState
-		epoch uint64
+		epoch types.Epoch
 	}
 	tests := []struct {
 		name      string

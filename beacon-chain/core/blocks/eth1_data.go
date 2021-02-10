@@ -71,6 +71,6 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 
 	// If 50+% majority converged on the same eth1data, then it has enough support to update the
 	// state.
-	support := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
-	return voteCount*2 > support, nil
+	support := params.BeaconConfig().EpochsPerEth1VotingPeriod.Mul(params.BeaconConfig().SlotsPerEpoch)
+	return voteCount*2 > uint64(support), nil
 }

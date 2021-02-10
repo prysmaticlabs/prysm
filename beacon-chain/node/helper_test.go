@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -12,7 +13,7 @@ func TestConvertWspInput(t *testing.T) {
 		name    string
 		input   string
 		bRoot   []byte
-		epoch   uint64
+		epoch   types.Epoch
 		wantErr bool
 		errStr  string
 	}{

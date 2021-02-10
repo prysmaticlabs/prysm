@@ -9,6 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -411,9 +412,9 @@ func TestServer_GetChainHead(t *testing.T) {
 
 	head, err := bs.GetChainHead(context.Background(), nil)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
-	assert.Equal(t, uint64(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")
-	assert.Equal(t, uint64(1), head.FinalizedEpoch, "Unexpected FinalizedEpoch")
+	assert.Equal(t, types.Epoch(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
+	assert.Equal(t, types.Epoch(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")
+	assert.Equal(t, types.Epoch(1), head.FinalizedEpoch, "Unexpected FinalizedEpoch")
 	assert.Equal(t, uint64(24), head.PreviousJustifiedSlot, "Unexpected PreviousJustifiedSlot")
 	assert.Equal(t, uint64(16), head.JustifiedSlot, "Unexpected JustifiedSlot")
 	assert.Equal(t, uint64(8), head.FinalizedSlot, "Unexpected FinalizedSlot")
@@ -696,9 +697,9 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 
 	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
-	e := uint64(256)
+	e := types.Epoch(256)
 	require.Equal(t, e, c.Epoch)
-	wsState, err := server.StateGen.StateBySlot(ctx, e*params.BeaconConfig().SlotsPerEpoch)
+	wsState, err := server.StateGen.StateBySlot(ctx, uint64(e)*params.BeaconConfig().SlotsPerEpoch)
 	require.NoError(t, err)
 	sRoot, err := wsState.HashTreeRoot(ctx)
 	require.NoError(t, err)
