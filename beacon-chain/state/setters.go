@@ -311,14 +311,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	b.lock.Lock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
-		v = make([]*ethpb.Validator, len(b.state.Validators))
-		for i := 0; i < len(v); i++ {
-			validator := b.state.Validators[i]
-			if validator == nil {
-				continue
-			}
-			v[i] = validator
-		}
+		v = b.validatorsReferences()
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
@@ -359,15 +352,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
-		v = make([]*ethpb.Validator, len(b.state.Validators))
-		for i := 0; i < len(v); i++ {
-			validator := b.state.Validators[i]
-			if validator == nil {
-				continue
-			}
-			v[i] = validator
-		}
-
+		v = b.validatorsReferences()
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
@@ -644,14 +629,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].Refs() > 1 {
-		vals = make([]*ethpb.Validator, len(b.state.Validators))
-		for i := 0; i < len(vals); i++ {
-			validator := b.state.Validators[i]
-			if validator == nil {
-				continue
-			}
-			vals[i] = validator
-		}
+		vals = b.validatorsReferences()
 		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
