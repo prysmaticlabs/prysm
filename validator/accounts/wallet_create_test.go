@@ -37,24 +37,24 @@ func init() {
 }
 
 type testWalletConfig struct {
-	walletDir               string
-	passwordsDir            string
-	backupDir               string
-	keysDir                 string
-	deletePublicKeys        string
-	enablePublicKeys        string
-	disablePublicKeys       string
-	voluntaryExitPublicKeys string
-	backupPublicKeys        string
-	backupPasswordFile      string
-	walletPasswordFile      string
-	accountPasswordFile     string
-	privateKeyFile          string
-	grpcHeaders             string
-	skipDepositConfirm      bool
-	numAccounts             int64
 	exitAll                 bool
+	skipDepositConfirm      bool
 	keymanagerKind          keymanager.Kind
+	numAccounts             int64
+	grpcHeaders             string
+	privateKeyFile          string
+	accountPasswordFile     string
+	walletPasswordFile      string
+	backupPasswordFile      string
+	backupPublicKeys        string
+	voluntaryExitPublicKeys string
+	disablePublicKeys       string
+	enablePublicKeys        string
+	deletePublicKeys        string
+	keysDir                 string
+	backupDir               string
+	passwordsDir            string
+	walletDir               string
 }
 
 func setupWalletCtx(
