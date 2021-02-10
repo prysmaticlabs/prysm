@@ -28,7 +28,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	chainService := setupBeaconChain(t, beaconDB)
 	chainService.genesisTime = time.Now()
 
-	e := types.Epoch(helpers.MaxSlotBuffer/params.BeaconConfig().SlotsPerEpoch + 1)
+	e := types.Epoch(helpers.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
 	_, err := chainService.AttestationPreState(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
