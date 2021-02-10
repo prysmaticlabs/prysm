@@ -1,11 +1,12 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -591,6 +592,29 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 	return res
 }
 
+// references of validators participating in consensus on the beacon chain.
+// This assumes that a lock is already held on BeaconState. This does not
+// copy fully and instead just copies the reference.
+func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Validators == nil {
+		return nil
+	}
+
+	res := make([]*ethpb.Validator, len(b.state.Validators))
+	for i := 0; i < len(res); i++ {
+		validator := b.state.Validators[i]
+		if validator == nil {
+			continue
+		}
+		// copy validator reference instead.
+		res[i] = validator
+	}
+	return res
+}
+
 // ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if !b.HasInnerState() {
@@ -1015,6 +1039,38 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 	}
 
 	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+}
+
+// MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
+// the current justified checkpoint in state.
+func (b *BeaconState) MatchCurrentJustifiedCheckpoint(c *ethpb.Checkpoint) bool {
+	if !b.HasInnerState() {
+		return false
+	}
+	if b.state.CurrentJustifiedCheckpoint == nil {
+		return false
+	}
+
+	if c.Epoch != b.state.CurrentJustifiedCheckpoint.Epoch {
+		return false
+	}
+	return bytes.Equal(c.Root, b.state.CurrentJustifiedCheckpoint.Root)
+}
+
+// MatchPreviousJustifiedCheckpoint returns true if the input justified checkpoint matches
+// the previous justified checkpoint in state.
+func (b *BeaconState) MatchPreviousJustifiedCheckpoint(c *ethpb.Checkpoint) bool {
+	if !b.HasInnerState() {
+		return false
+	}
+	if b.state.PreviousJustifiedCheckpoint == nil {
+		return false
+	}
+
+	if c.Epoch != b.state.PreviousJustifiedCheckpoint.Epoch {
+		return false
+	}
+	return bytes.Equal(c.Root, b.state.PreviousJustifiedCheckpoint.Root)
 }
 
 // FinalizedCheckpoint denoting an epoch and block root.
