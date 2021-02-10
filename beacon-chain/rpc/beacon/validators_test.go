@@ -11,6 +11,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -968,11 +969,11 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	numEpochs := 30
+	numEpochs := types.Epoch(30)
 	validators := make([]*ethpb.Validator, numEpochs)
-	for i := 0; i < numEpochs; i++ {
+	for i := types.Epoch(0); i < numEpochs; i++ {
 		validators[i] = &ethpb.Validator{
-			ActivationEpoch:       uint64(i),
+			ActivationEpoch:       i,
 			PublicKey:             make([]byte, 48),
 			WithdrawalCredentials: make([]byte, 32),
 		}
@@ -1089,11 +1090,11 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 }
 
 func TestServer_GetValidator(t *testing.T) {
-	count := 30
+	count := types.Epoch(30)
 	validators := make([]*ethpb.Validator, count)
-	for i := 0; i < count; i++ {
+	for i := types.Epoch(0); i < count; i++ {
 		validators[i] = &ethpb.Validator{
-			ActivationEpoch:       uint64(i),
+			ActivationEpoch:       i,
 			PublicKey:             pubKey(uint64(i)),
 			WithdrawalCredentials: make([]byte, 32),
 		}
@@ -1359,7 +1360,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 
 	// Now, we move the state.slot past the exit epoch of the validator, and now
 	// the validator should no longer exist in the queue.
-	require.NoError(t, headState.SetSlot((validators[1].ExitEpoch+1)*params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, headState.SetSlot(uint64(validators[1].ExitEpoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	res, err = bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.ExitPublicKeys))
@@ -1451,8 +1452,8 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(0))
-	epoch := uint64(50)
-	slots := epoch * params.BeaconConfig().SlotsPerEpoch
+	epoch := types.Epoch(50)
+	slots := uint64(epoch) * params.BeaconConfig().SlotsPerEpoch
 	bs := &Server{
 		BeaconDB: beaconDB,
 		HeadFetcher: &mock.ChainService{
@@ -1642,10 +1643,10 @@ func TestGetValidatorPerformance_Syncing(t *testing.T) {
 
 func TestGetValidatorPerformance_OK(t *testing.T) {
 	ctx := context.Background()
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, headState.SetSlot((epoch+1)*params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, headState.SetSlot(uint64(epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	atts := make([]*pb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
@@ -1693,7 +1694,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
-	farFuture := params.BeaconConfig().FarFutureEpoch
+	farFuture := uint64(params.BeaconConfig().FarFutureEpoch)
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
@@ -1718,12 +1719,12 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 
 func TestGetValidatorPerformance_Indices(t *testing.T) {
 	ctx := context.Background()
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	defaultBal := params.BeaconConfig().MaxEffectiveBalance
 	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, headState.SetSlot((epoch+1)*params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, headState.SetSlot(uint64(epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
 	publicKey1 := bytesutil.ToBytes48([]byte{1})
@@ -1764,7 +1765,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	require.NoError(t, err)
 	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
-	farFuture := params.BeaconConfig().FarFutureEpoch
+	farFuture := uint64(params.BeaconConfig().FarFutureEpoch)
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
@@ -1789,12 +1790,12 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 
 func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	ctx := context.Background()
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	defaultBal := params.BeaconConfig().MaxEffectiveBalance
 	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, headState.SetSlot((epoch+1)*params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, headState.SetSlot(uint64(epoch+1)*params.BeaconConfig().SlotsPerEpoch))
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
 	publicKey1 := bytesutil.ToBytes48([]byte{1})
@@ -1836,7 +1837,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	require.NoError(t, err)
 	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
-	farFuture := params.BeaconConfig().FarFutureEpoch
+	farFuture := uint64(params.BeaconConfig().FarFutureEpoch)
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
@@ -2040,10 +2041,24 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, err)
 	wanted := &ethpb.IndividualVotesRespond{
 		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
-			{ValidatorIndex: 0, PublicKey: beaconState.Validators()[0].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance, InclusionSlot: params.BeaconConfig().FarFutureEpoch, InclusionDistance: params.BeaconConfig().FarFutureEpoch},
-			{ValidatorIndex: 1, PublicKey: beaconState.Validators()[1].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance, InclusionSlot: params.BeaconConfig().FarFutureEpoch, InclusionDistance: params.BeaconConfig().FarFutureEpoch},
+			{
+				ValidatorIndex:                   0,
+				PublicKey:                        beaconState.Validators()[0].PublicKey,
+				IsActiveInCurrentEpoch:           true,
+				IsActiveInPreviousEpoch:          true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
+				InclusionSlot:                    uint64(params.BeaconConfig().FarFutureEpoch),
+				InclusionDistance:                uint64(params.BeaconConfig().FarFutureEpoch),
+			},
+			{
+				ValidatorIndex:                   1,
+				PublicKey:                        beaconState.Validators()[1].PublicKey,
+				IsActiveInCurrentEpoch:           true,
+				IsActiveInPreviousEpoch:          true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
+				InclusionSlot:                    uint64(params.BeaconConfig().FarFutureEpoch),
+				InclusionDistance:                uint64(params.BeaconConfig().FarFutureEpoch),
+			},
 		},
 	}
 	assert.DeepEqual(t, wanted, res, "Unexpected response")
@@ -2053,7 +2068,7 @@ func Test_validatorStatus(t *testing.T) {
 	tests := []struct {
 		name      string
 		validator *ethpb.Validator
-		epoch     uint64
+		epoch     types.Epoch
 		want      ethpb.ValidatorStatus
 	}{
 		{
@@ -2065,7 +2080,7 @@ func Test_validatorStatus(t *testing.T) {
 		{
 			name: "Deposited",
 			validator: &ethpb.Validator{
-				ActivationEligibilityEpoch: uint64(1),
+				ActivationEligibilityEpoch: 1,
 			},
 			epoch: 0,
 			want:  ethpb.ValidatorStatus_DEPOSITED,
@@ -2073,8 +2088,8 @@ func Test_validatorStatus(t *testing.T) {
 		{
 			name: "Pending",
 			validator: &ethpb.Validator{
-				ActivationEligibilityEpoch: uint64(0),
-				ActivationEpoch:            uint64(1),
+				ActivationEligibilityEpoch: 0,
+				ActivationEpoch:            1,
 			},
 			epoch: 0,
 			want:  ethpb.ValidatorStatus_PENDING,
@@ -2082,8 +2097,8 @@ func Test_validatorStatus(t *testing.T) {
 		{
 			name: "Active",
 			validator: &ethpb.Validator{
-				ActivationEligibilityEpoch: uint64(0),
-				ActivationEpoch:            uint64(0),
+				ActivationEligibilityEpoch: 0,
+				ActivationEpoch:            0,
 				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 			},
 			epoch: 0,
@@ -2092,9 +2107,9 @@ func Test_validatorStatus(t *testing.T) {
 		{
 			name: "Slashed",
 			validator: &ethpb.Validator{
-				ActivationEligibilityEpoch: uint64(0),
-				ActivationEpoch:            uint64(0),
-				ExitEpoch:                  uint64(5),
+				ActivationEligibilityEpoch: 0,
+				ActivationEpoch:            0,
+				ExitEpoch:                  5,
 				Slashed:                    true,
 			},
 			epoch: 4,
@@ -2103,9 +2118,9 @@ func Test_validatorStatus(t *testing.T) {
 		{
 			name: "Exiting",
 			validator: &ethpb.Validator{
-				ActivationEligibilityEpoch: uint64(0),
-				ActivationEpoch:            uint64(0),
-				ExitEpoch:                  uint64(5),
+				ActivationEligibilityEpoch: 0,
+				ActivationEpoch:            0,
+				ExitEpoch:                  5,
 				Slashed:                    false,
 			},
 			epoch: 4,
@@ -2114,9 +2129,9 @@ func Test_validatorStatus(t *testing.T) {
 		{
 			name: "Exiting",
 			validator: &ethpb.Validator{
-				ActivationEligibilityEpoch: uint64(0),
-				ActivationEpoch:            uint64(0),
-				ExitEpoch:                  uint64(3),
+				ActivationEligibilityEpoch: 0,
+				ActivationEpoch:            0,
+				ExitEpoch:                  3,
 				Slashed:                    false,
 			},
 			epoch: 4,

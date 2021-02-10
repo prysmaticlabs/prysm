@@ -5,6 +5,7 @@ package types
 import (
 	"errors"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -31,14 +32,14 @@ const (
 // finding the attestation for the slashing proof.
 type DetectionResult struct {
 	ValidatorIndex uint64
-	SlashableEpoch uint64
+	SlashableEpoch types.Epoch
 	Kind           DetectionKind
 	SigBytes       [2]byte
 }
 
 // Marshal the result into bytes, used for removing duplicates.
 func (r *DetectionResult) Marshal() []byte {
-	numBytes := bytesutil.ToBytes(r.SlashableEpoch, 8)
+	numBytes := bytesutil.ToBytes(uint64(r.SlashableEpoch), 8)
 	var resultBytes []byte
 	resultBytes = append(resultBytes, uint8(r.Kind))
 	resultBytes = append(resultBytes, r.SigBytes[:]...)
