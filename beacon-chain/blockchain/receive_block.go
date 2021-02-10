@@ -76,8 +76,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log block sync status.
-	logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt)
-
+	if err := logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt, uint64(s.genesisTime.Unix())); err != nil {
+		return err
+	}
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
 
