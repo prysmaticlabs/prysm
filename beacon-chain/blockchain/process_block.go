@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
+
+// A custom slot deadline for processing state slots in our cache.
+const slotDeadline = 5 * time.Second
+
+// A custom deadline for deposit trie insertion.
+const depositDeadline = 20 * time.Second
 
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
@@ -101,15 +108,44 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return err
 	}
 
+	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+	if featureconfig.Get().EnableNextSlotStateCache {
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := state.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Debug("could not update next slot state cache")
+			}
+		}()
+	}
+
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
 	}
+	var newFinalized bool
+	if featureconfig.Get().UpdateHeadTimely {
+		if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+				return errors.Wrap(err, "could not save new justified")
+			}
+			s.prevFinalizedCheckpt = s.finalizedCheckpt
+			s.finalizedCheckpt = postState.FinalizedCheckpoint()
+			newFinalized = true
+		}
+
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+			log.WithError(err).Warn("Could not update head")
+		}
+	}
 
 	// Update finalized check point.
-	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+	if (postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch) || (featureconfig.Get().UpdateHeadTimely && newFinalized) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
@@ -123,27 +159,21 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err := s.forkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
-
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
-
-		// Update deposit cache.
-		finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not fetch finalized state")
-		}
-		// We update the cache up to the last deposit index in the finalized block's state.
-		// We can be confident that these deposits will be included in some block
-		// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
-		eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
-		s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
-		if featureconfig.Get().EnablePruningDepositProofs {
-			// Deposit proofs are only used during state transition and can be safely removed to save space.
-			if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
-				return errors.Wrap(err, "could not prune deposit proofs")
+		if !featureconfig.Get().UpdateHeadTimely {
+			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+				return errors.Wrap(err, "could not save new justified")
 			}
 		}
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
+			defer cancel()
+			if err := s.insertFinalizedDeposits(depCtx, fRoot); err != nil {
+				log.WithError(err).Error("Could not insert finalized deposits.")
+			}
+		}()
 	}
 
 	defer reportAttestationInclusion(b)

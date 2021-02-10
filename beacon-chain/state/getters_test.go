@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -86,5 +87,5 @@ func TestReadOnlyValidator_NoPanic(t *testing.T) {
 
 func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
 	v := &ReadOnlyValidator{}
-	assert.Equal(t, uint64(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
+	assert.Equal(t, types.Epoch(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
 }

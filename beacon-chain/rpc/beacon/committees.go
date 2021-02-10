@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -65,7 +66,7 @@ func (bs *Server) ListBeaconCommittees(
 
 func (bs *Server) retrieveCommitteesForEpoch(
 	ctx context.Context,
-	epoch uint64,
+	epoch types.Epoch,
 ) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, []uint64, error) {
 	startSlot, err := helpers.StartSlot(epoch)
 	if err != nil {

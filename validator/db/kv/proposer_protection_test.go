@@ -46,37 +46,49 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot[:], "Expected DB to keep object the same")
 }
 
-func TestSaveProposalHistoryForSlot_Empty(t *testing.T) {
+func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
+	valPubkey := [48]byte{1, 2, 3}
+	db := setupDB(t, [][48]byte{})
+
+	proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), valPubkey)
+	require.NoError(t, err)
+	assert.DeepEqual(t, make([]*Proposal, 0), proposalHistory)
+}
+
+func TestSaveProposalHistoryForPubKey_OK(t *testing.T) {
 	pubkey := [48]byte{3}
 	db := setupDB(t, [][48]byte{pubkey})
 
 	slot := uint64(2)
-	emptySlot := uint64(120)
-	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, []byte{1})
+
+	root := [32]byte{1}
+	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, root[:])
 	require.NoError(t, err, "Saving proposal history failed: %v")
-	signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, emptySlot)
+	proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubkey)
 	require.NoError(t, err, "Failed to get proposal history")
 
-	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), signingRoot[:], "Expected DB to keep object the same")
+	require.NotNil(t, proposalHistory)
+	want := []*Proposal{
+		{
+			Slot:        slot,
+			SigningRoot: root[:],
+		},
+	}
+	require.DeepEqual(t, want[0], proposalHistory[0])
 }
 
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 	pubkey := [48]byte{0}
 	tests := []struct {
-		slot        uint64
 		signingRoot []byte
 	}{
 		{
-			slot:        uint64(1),
 			signingRoot: bytesutil.PadTo([]byte{1}, 32),
 		},
 		{
-			slot:        uint64(2),
 			signingRoot: bytesutil.PadTo([]byte{2}, 32),
 		},
 		{
-			slot:        uint64(1),
 			signingRoot: bytesutil.PadTo([]byte{3}, 32),
 		},
 	}
@@ -85,11 +97,11 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 		db := setupDB(t, [][48]byte{pubkey})
 		err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, 0, tt.signingRoot)
 		require.NoError(t, err, "Saving proposal history failed")
-		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pubkey, 0)
+		proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubkey)
 		require.NoError(t, err, "Failed to get proposal history")
 
-		require.NotNil(t, signingRoot)
-		require.DeepEqual(t, tt.signingRoot, signingRoot[:], "Expected DB to keep object the same")
+		require.NotNil(t, proposalHistory)
+		require.DeepEqual(t, tt.signingRoot, proposalHistory[0].SigningRoot, "Expected DB to keep object the same")
 		require.NoError(t, db.Close(), "Failed to close database")
 	}
 }
@@ -105,8 +117,8 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 	}{
 		{
 			// Go 2 epochs past pruning point.
-			slots:        []uint64{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, (wsPeriod+3)*slotsPerEpoch + 8},
-			storedSlots:  []uint64{slotsPerEpoch*5 + 6, (wsPeriod+3)*slotsPerEpoch + 8},
+			slots:        []uint64{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, uint64(wsPeriod+3)*slotsPerEpoch + 8},
+			storedSlots:  []uint64{slotsPerEpoch*5 + 6, uint64(wsPeriod+3)*slotsPerEpoch + 8},
 			removedSlots: []uint64{slotsPerEpoch / 2},
 		},
 		{
@@ -117,9 +129,9 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 				slotsPerEpoch * 3,
 				slotsPerEpoch * 4,
 				slotsPerEpoch * 5,
-				(wsPeriod+10)*slotsPerEpoch + 8,
+				uint64(wsPeriod+10)*slotsPerEpoch + 8,
 			},
-			storedSlots: []uint64{(wsPeriod+10)*slotsPerEpoch + 8},
+			storedSlots: []uint64{uint64(wsPeriod+10)*slotsPerEpoch + 8},
 			removedSlots: []uint64{
 				slotsPerEpoch + 4,
 				slotsPerEpoch * 2,
@@ -143,15 +155,22 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 			require.NoError(t, err, "Saving proposal history failed")
 		}
 
+		signingRootsBySlot := make(map[uint64][]byte)
+		proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubKey)
+		require.NoError(t, err)
+
+		for _, hist := range proposalHistory {
+			signingRootsBySlot[hist.Slot] = hist.SigningRoot
+		}
+
 		for _, slot := range tt.removedSlots {
-			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
-			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), sr[:], "Unexpected difference in bytes for epoch %d", slot)
+			_, ok := signingRootsBySlot[slot]
+			require.Equal(t, false, ok)
 		}
 		for _, slot := range tt.storedSlots {
-			sr, _, err := db.ProposalHistoryForSlot(context.Background(), pubKey, slot)
-			require.NoError(t, err, "Failed to get proposal history")
-			require.DeepEqual(t, signedRoot, sr[:], "Unexpected difference in bytes for epoch %d", slot)
+			root, ok := signingRootsBySlot[slot]
+			require.Equal(t, true, ok)
+			require.DeepEqual(t, signedRoot, root, "Unexpected difference in bytes for epoch %d", slot)
 		}
 		require.NoError(t, db.Close(), "Failed to close database")
 	}
@@ -186,17 +205,18 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	dummySigningRoot := [32]byte{}
 	validatorDB := setupDB(t, [][48]byte{pubkey})
 
-	slot, err := validatorDB.LowestSignedProposal(ctx, pubkey)
+	_, exists, err := validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), slot)
+	require.Equal(t, false, exists)
 
 	// We save our first proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 2 /* slot */, dummySigningRoot[:])
 	require.NoError(t, err)
 
 	// We expect the lowest signed slot is what we just saved.
-	slot, err = validatorDB.LowestSignedProposal(ctx, pubkey)
+	slot, exists, err := validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	assert.Equal(t, uint64(2), slot)
 
 	// We save a higher proposal history.
@@ -204,8 +224,9 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	require.NoError(t, err)
 
 	// We expect the lowest signed slot did not change.
-	slot, err = validatorDB.LowestSignedProposal(ctx, pubkey)
+	slot, exists, err = validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	assert.Equal(t, uint64(2), slot)
 
 	// We save a lower proposal history.
@@ -213,8 +234,9 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	require.NoError(t, err)
 
 	// We expect the lowest signed slot indeed changed.
-	slot, err = validatorDB.LowestSignedProposal(ctx, pubkey)
+	slot, exists, err = validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	assert.Equal(t, uint64(1), slot)
 }
 
@@ -224,17 +246,18 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	dummySigningRoot := [32]byte{}
 	validatorDB := setupDB(t, [][48]byte{pubkey})
 
-	slot, err := validatorDB.HighestSignedProposal(ctx, pubkey)
+	_, exists, err := validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), slot)
+	require.Equal(t, false, exists)
 
 	// We save our first proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 2 /* slot */, dummySigningRoot[:])
 	require.NoError(t, err)
 
 	// We expect the highest signed slot is what we just saved.
-	slot, err = validatorDB.HighestSignedProposal(ctx, pubkey)
+	slot, exists, err := validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	assert.Equal(t, uint64(2), slot)
 
 	// We save a lower proposal history.
@@ -242,8 +265,9 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	require.NoError(t, err)
 
 	// We expect the lowest signed slot did not change.
-	slot, err = validatorDB.HighestSignedProposal(ctx, pubkey)
+	slot, exists, err = validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	assert.Equal(t, uint64(2), slot)
 
 	// We save a higher proposal history.
@@ -251,7 +275,8 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	require.NoError(t, err)
 
 	// We expect the highest signed slot indeed changed.
-	slot, err = validatorDB.HighestSignedProposal(ctx, pubkey)
+	slot, exists, err = validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
+	require.Equal(t, true, exists)
 	assert.Equal(t, uint64(3), slot)
 }

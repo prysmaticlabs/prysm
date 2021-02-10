@@ -39,11 +39,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process attestation")
 	}
 
-	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-		log.Warnf("Resolving fork due to new attestation: %v", err)
-		return nil
-	}
-
 	return nil
 }
 
@@ -101,8 +96,8 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	return nil
 }
 
-// This processes attestations from the attestation pool to account for validator votes and fork choice.
-func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
+// This routine processes fork choice attestations from the pool to account for validator votes and fork choice.
+func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan struct{}) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -118,47 +113,54 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 		log.Warn("Genesis time received, now available to process attestations")
 	}
 
-	st := slotutil.GetSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	st := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
 		case <-st.C():
-			ctx := s.ctx
-			atts := s.attPool.ForkchoiceAttestations()
-			for _, a := range atts {
-				// Based on the spec, don't process the attestation until the subsequent slot.
-				// This delays consideration in the fork choice until their slot is in the past.
-				// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
-				nextSlot := a.Data.Slot + 1
-				if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-					continue
-				}
-
-				hasState := s.beaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				if !(hasState && hasBlock) {
-					continue
-				}
-
-				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
-					log.WithError(err).Error("Could not delete fork choice attestation in pool")
-				}
-
-				if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
-					continue
-				}
-
-				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
-					log.WithFields(logrus.Fields{
-						"slot":             a.Data.Slot,
-						"committeeIndex":   a.Data.CommitteeIndex,
-						"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
-						"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
-						"aggregationCount": a.AggregationBits.Count(),
-					}).WithError(err).Warn("Could not receive attestation in chain service")
-				}
+			s.processAttestations(s.ctx)
+			if err := s.updateHead(s.ctx, s.getJustifiedBalances()); err != nil {
+				log.Warnf("Resolving fork due to new attestation: %v", err)
 			}
+		}
+	}
+}
+
+// This processes fork choice attestations from the pool to account for validator votes and fork choice.
+func (s *Service) processAttestations(ctx context.Context) {
+	atts := s.attPool.ForkchoiceAttestations()
+	for _, a := range atts {
+		// Based on the spec, don't process the attestation until the subsequent slot.
+		// This delays consideration in the fork choice until their slot is in the past.
+		// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
+		nextSlot := a.Data.Slot + 1
+		if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+			continue
+		}
+
+		hasState := s.beaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+		hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+		if !(hasState && hasBlock) {
+			continue
+		}
+
+		if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
+			log.WithError(err).Error("Could not delete fork choice attestation in pool")
+		}
+
+		if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
+			continue
+		}
+
+		if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
+			log.WithFields(logrus.Fields{
+				"slot":             a.Data.Slot,
+				"committeeIndex":   a.Data.CommitteeIndex,
+				"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
+				"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
+				"aggregationCount": a.AggregationBits.Count(),
+			}).WithError(err).Warn("Could not process attestation for fork choice")
 		}
 	}
 }

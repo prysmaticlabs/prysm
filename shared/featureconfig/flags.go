@@ -50,8 +50,12 @@ var (
 	}
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
-		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
+		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, opt_max_cover.",
 		Value: "max_cover",
+	}
+	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
+		Name:  "attestation-aggregation-force-opt-maxcover",
+		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
 	}
 	disableBlst = &cli.BoolFlag{
 		Name:  "disable-blst",
@@ -77,10 +81,6 @@ var (
 		Name: "disable-pruning-deposit-proofs",
 		Usage: "Disables pruning deposit proofs when they are no longer needed." +
 			"This will probably significantly increase the amount of memory taken up by deposits.",
-	}
-	disableSyncBacktracking = &cli.BoolFlag{
-		Name:  "disable-sync-backtracking",
-		Usage: "Disable alternative fork exploration backtracking algorithm",
 	}
 	enableLargerGossipHistory = &cli.BoolFlag{
 		Name:  "enable-larger-gossip-history",
@@ -110,11 +110,22 @@ var (
 		Name:  "attest-timely",
 		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
 	}
+	enableNextSlotStateCache = &cli.BoolFlag{
+		Name:  "enable-next-slot-state-cache",
+		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
+	}
+	updateHeadTimely = &cli.BoolFlag{
+		Name:  "update-head-timely",
+		Usage: "Improves update head time by updating head right after state transition",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
+	enableNextSlotStateCache,
+	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -158,13 +169,15 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
-	disableSyncBacktracking,
 	disableBroadcastSlashingFlag,
+	enableNextSlotStateCache,
+	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--attestation-aggregation-strategy=max_cover",
+	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
 }

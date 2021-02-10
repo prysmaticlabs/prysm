@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -89,7 +90,7 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 
 func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	ClearCache()
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Slot: 0, // Epoch 0.
 	})
@@ -101,7 +102,7 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
-		var activationEpoch uint64
+		var activationEpoch types.Epoch
 		if i >= len(validators)/2 {
 			activationEpoch = 3
 		}
@@ -131,7 +132,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		// First 2 epochs only half validators are activated.
-		var activationEpoch uint64
+		var activationEpoch types.Epoch
 		if i >= len(validators)/2 {
 			activationEpoch = 3
 		}
@@ -208,7 +209,7 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		// First 2 epochs only half validators are activated.
-		var activationEpoch uint64
+		var activationEpoch types.Epoch
 		if i >= len(validators)/2 {
 			activationEpoch = 3
 		}
@@ -249,7 +250,7 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 	})
 	require.NoError(t, err)
 	ClearCache()
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	_, proposerIndexToSlots, err := CommitteeAssignments(state, epoch)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 
@@ -417,12 +418,12 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, UpdateCommitteeCache(state, CurrentEpoch(state)))
 
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	idx := uint64(1)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 
-	indices, err = committeeCache.Committee(epoch*params.BeaconConfig().SlotsPerEpoch, seed, idx)
+	indices, err = committeeCache.Committee(uint64(epoch.Mul(params.BeaconConfig().SlotsPerEpoch)), seed, idx)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
 }

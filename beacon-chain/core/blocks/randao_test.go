@@ -1,11 +1,11 @@
 package blocks_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,9 +21,9 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	require.NoError(t, err)
-	epoch := uint64(0)
+	epoch := types.Epoch(0)
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
+	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	root, err := (&pb.SigningData{ObjectRoot: buf, Domain: domain}).HashTreeRoot()
@@ -64,13 +64,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	require.NoError(t, err, "Unexpected error processing block randao")
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	mix := newState.RandaoMixes()[currentEpoch%params.BeaconConfig().EpochsPerHistoricalVector]
-
-	if bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
-		t.Errorf(
-			"Expected empty signature to be overwritten by randao reveal, received %v",
-			params.BeaconConfig().EmptySignature,
-		)
-	}
+	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "Expected empty signature to be overwritten by randao reveal")
 }
 
 func TestRandaoSignatureSet_OK(t *testing.T) {

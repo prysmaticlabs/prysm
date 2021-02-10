@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -28,11 +29,22 @@ func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
 	)
 }
 
-func uint64FromString(str string) (uint64, error) {
+// Uint64FromString converts a string into a uint64 representation.
+func Uint64FromString(str string) (uint64, error) {
 	return strconv.ParseUint(str, 10, 64)
 }
 
-func pubKeyFromHex(str string) ([48]byte, error) {
+// Uint64FromString converts a string into a uint64 representation.
+func EpochFromString(str string) (types.Epoch, error) {
+	e, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return types.Epoch(e), nil
+}
+
+// PubKeyFromHex takes in a hex string, verifies its length as 48 bytes, and converts that representation.
+func PubKeyFromHex(str string) ([48]byte, error) {
 	pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
 		return [48]byte{}, err
@@ -45,7 +57,8 @@ func pubKeyFromHex(str string) ([48]byte, error) {
 	return pk, nil
 }
 
-func rootFromHex(str string) ([32]byte, error) {
+// RootFromHex takes in a hex string, verifies its length as 32 bytes, and converts that representation.
+func RootFromHex(str string) ([32]byte, error) {
 	rootHexBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
 		return [32]byte{}, err

@@ -1,12 +1,12 @@
 package state_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -101,9 +101,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	mix, err := beaconState.RandaoMixAtIndex(1)
 	require.NoError(t, err)
-	if bytes.Equal(mix, oldMix) {
-		t.Errorf("Did not expect new and old randao mix to equal, %#x == %#x", mix, oldMix)
-	}
+	assert.DeepNotEqual(t, oldMix, mix, "Did not expect new and old randao mix to equal")
 }
 
 func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
@@ -324,7 +322,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 
 	proposerSlashIdx := uint64(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	err = beaconState.SetSlot((params.BeaconConfig().ShardCommitteePeriod * slotsPerEpoch) + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot(uint64(params.BeaconConfig().ShardCommitteePeriod.Mul(slotsPerEpoch)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
@@ -504,12 +502,12 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &pb.BeaconState{
-		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		Slot:                       uint64(epoch.Mul(params.BeaconConfig().SlotsPerEpoch)) + 1,
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -892,4 +890,13 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 
 	_, err = state.ProcessSlots(context.Background(), parentState, slot-1)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
+}
+
+func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
+	ctx := context.Background()
+	s, _ := testutil.DeterministicGenesisState(t, 1)
+	r := []byte{'a'}
+	s, err := state.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
+	require.NoError(t, err)
+	require.Equal(t, uint64(5), s.Slot())
 }

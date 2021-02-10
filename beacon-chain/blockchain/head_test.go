@@ -41,7 +41,8 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	headState := testutil.NewBeaconState()
+	headState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.beaconDB.SaveState(context.Background(), headState, newRoot))
@@ -51,9 +52,7 @@ func TestSaveHead_Different(t *testing.T) {
 
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
-	if !bytes.Equal(cachedRoot, newRoot[:]) {
-		t.Error("Head did not change")
-	}
+	assert.DeepEqual(t, cachedRoot, newRoot[:], "Head did not change")
 	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock(), "Head did not change")
 	assert.DeepEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 }
@@ -76,7 +75,8 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	headState := testutil.NewBeaconState()
+	headState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.beaconDB.SaveState(context.Background(), headState, newRoot))

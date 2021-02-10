@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestInitializeFromProto(t *testing.T) {
@@ -155,12 +156,8 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			if bytes.Equal(root[:], []byte{}) {
-				t.Error("Received empty hash tree root")
-			}
-			if !bytes.Equal(root[:], genericHTR[:]) {
-				t.Error("Expected hash tree root to match generic")
-			}
+			assert.DeepNotEqual(t, []byte{}, root[:], "Received empty hash tree root")
+			assert.DeepEqual(t, genericHTR[:], root[:], "Expected hash tree root to match generic")
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
 				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
@@ -226,12 +223,8 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			if bytes.Equal(root[:], []byte{}) {
-				t.Error("Received empty hash tree root")
-			}
-			if !bytes.Equal(root[:], genericHTR[:]) {
-				t.Error("Expected hash tree root to match generic")
-			}
+			assert.DeepNotEqual(t, []byte{}, root[:], "Received empty hash tree root")
+			assert.DeepEqual(t, genericHTR[:], root[:], "Expected hash tree root to match generic")
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
 				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
@@ -241,7 +234,8 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 }
 
 func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
-	st0 := testutil.NewBeaconState()
+	st0, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	st1 := st0.Copy()
 	originalCount := st1.NumValidators()
 

@@ -37,6 +37,17 @@ const (
 // would be approximately 2MB
 var BlockCacheSize = int64(1 << 21)
 
+// blockedBuckets represents the buckets that we want to restrict
+// from our metrics fetching for performance reasons. For a detailed
+// summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
+var blockedBuckets = [][]byte{
+	blocksBucket,
+	stateSummaryBucket,
+	blockParentRootIndicesBucket,
+	blockSlotIndicesBucket,
+	finalizedBlockRootsIndexBucket,
+}
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
@@ -174,5 +185,5 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
-	return prombolt.New("boltDB", db)
+	return prombolt.New("boltDB", db, blockedBuckets...)
 }

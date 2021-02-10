@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"bytes"
 	"context"
 	"math/big"
 	"testing"
@@ -310,14 +309,15 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
 
 	blockHash = make([]byte, 32)
 	copy(blockHash, "0x0")
-	beaconState := testutil.NewBeaconState()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, beaconState.SetEth1DepositIndex(2))
 	require.NoError(t, beaconState.SetEth1Data(&ethpb.Eth1Data{
 		DepositRoot:  make([]byte, 32),
@@ -501,7 +501,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		DepositRoot:  make([]byte, 32),
 		DepositCount: 7,
 	}
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -621,7 +621,8 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		},
 	}
 
-	beaconState := testutil.NewBeaconState()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, beaconState.SetEth1Data(&ethpb.Eth1Data{
 		BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 		DepositRoot:  make([]byte, 32),
@@ -1108,7 +1109,8 @@ func TestProposer_Eth1Data(t *testing.T) {
 		},
 	}
 
-	headState := testutil.NewBeaconState()
+	headState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}))
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -1201,7 +1203,8 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	ctx := context.Background()
-	headState := testutil.NewBeaconState()
+	headState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, headState.SetEth1DepositIndex(64))
 	ps := &Server{
 		HeadFetcher:   &mock.ChainService{State: headState},
@@ -1214,11 +1217,11 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 
 	eth1Data, err := ps.eth1Data(ctx, 100)
 	require.NoError(t, err)
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
 	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, currentEpoch+wantedSlot)
+	enc = fastssz.MarshalUint64(enc, uint64(currentEpoch)+wantedSlot)
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
@@ -1284,9 +1287,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count at earliest valid time - choose highest count", func(t *testing.T) {
@@ -1321,9 +1322,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("earliest")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count at latest valid time - choose highest count", func(t *testing.T) {
@@ -1358,9 +1357,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("latest")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count before range - choose highest count within range", func(t *testing.T) {
@@ -1396,9 +1393,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count after range - choose highest count within range", func(t *testing.T) {
@@ -1434,9 +1429,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count on unknown block - choose known block with highest count", func(t *testing.T) {
@@ -1472,9 +1465,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("first")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no blocks in range - choose current eth1data", func(t *testing.T) {
@@ -1504,9 +1495,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("current")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no votes in range - choose most recent block", func(t *testing.T) {
@@ -1542,9 +1531,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "second")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no votes - choose more recent block", func(t *testing.T) {
@@ -1574,9 +1561,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "latest")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no votes and more recent block has less deposits - choose current eth1data", func(t *testing.T) {
@@ -1607,9 +1592,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("current")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("same count - choose more recent block", func(t *testing.T) {
@@ -1644,9 +1627,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("second")
-		if !bytes.Equal(hash, expectedHash) {
-			t.Errorf("Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
-		}
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("highest count on block with less deposits - choose another block", func(t *testing.T) {
@@ -1682,7 +1663,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("second")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("only one block at earliest valid time - choose this block", func(t *testing.T) {
@@ -1712,7 +1693,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("earliest")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("vote on last block before range - choose next block", func(t *testing.T) {
@@ -1747,7 +1728,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 
 		expectedHash := make([]byte, 32)
 		copy(expectedHash, "first")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 
 	t.Run("no deposits - choose chain start eth1data", func(t *testing.T) {
@@ -1785,7 +1766,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		hash := majorityVoteEth1Data.BlockHash
 
 		expectedHash := []byte("eth1data")
-		assert.Equal(t, true, bytes.Equal(hash, expectedHash), "Chosen eth1data for block hash %v vs expected %v", hash, expectedHash)
+		assert.DeepEqual(t, expectedHash, hash)
 	})
 }
 
@@ -2105,7 +2086,7 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 
 func majorityVoteBoundaryTime(slot uint64) (uint64, uint64) {
 	slotStartTime := uint64(mockPOW.GenesisTime) +
-		(slot-(slot%(params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)))*
+		(slot-(slot%(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)*params.BeaconConfig().SlotsPerEpoch)))*
 			params.BeaconConfig().SecondsPerSlot
 	earliestValidTime := slotStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance

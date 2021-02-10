@@ -1,7 +1,6 @@
 package beaconv1
 
 import (
-	"bytes"
 	"context"
 	"reflect"
 	"testing"
@@ -488,10 +487,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-
-			if !bytes.Equal(blockRootResp.Data.Root, tt.want) {
-				t.Errorf("Expected hashes to equal, expected: %#x, received: %#x", tt.want, blockRootResp.Data.Root)
-			}
+			assert.DeepEqual(t, tt.want, blockRootResp.Data.Root)
 		})
 	}
 }

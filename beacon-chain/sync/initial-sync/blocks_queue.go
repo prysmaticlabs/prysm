@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -82,7 +82,7 @@ type blocksQueue struct {
 		noRequiredPeersErrRetries int
 	}
 	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
-	staleEpochs map[uint64]uint8             // counter to keep track of stale FSMs
+	staleEpochs map[types.Epoch]uint8        // counter to keep track of stale FSMs
 	quit        chan struct{}                // termination notifier
 }
 
@@ -125,7 +125,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
-		staleEpochs:         make(map[uint64]uint8),
+		staleEpochs:         make(map[types.Epoch]uint8),
 	}
 
 	// Configure state machines.
@@ -418,7 +418,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
-		if featureconfig.Get().EnableSyncBacktracking && q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
+		if q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
 			q.staleEpochs[helpers.SlotToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
 			if q.staleEpochs[helpers.SlotToEpoch(startSlot)] >= maxResetAttempts {

@@ -26,7 +26,7 @@ func TestLifecycle_OK(t *testing.T) {
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
-	rpcService := NewService(context.Background(), &Config{
+	rpcService := New(context.Background(), &Config{
 		Port:                "7348",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
@@ -53,7 +53,7 @@ func TestStatus_CredentialError(t *testing.T) {
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := &mock.ChainService{Genesis: time.Now()}
-	rpcService := NewService(context.Background(), &Config{
+	rpcService := New(context.Background(), &Config{
 		Port:                "7777",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,

@@ -33,13 +33,27 @@ var (
 	ProtectionDbFileName = "validator.db"
 )
 
+// blockedBuckets represents the buckets that we want to restrict
+// from our metrics fetching for performance reasons. For a detailed
+// summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
+var blockedBuckets = [][]byte{
+	deprecatedAttestationHistoryBucket,
+	lowestSignedSourceBucket,
+	lowestSignedTargetBucket,
+	lowestSignedProposalsBucket,
+	highestSignedProposalsBucket,
+	pubKeysBucket,
+	attestationSigningRootsBucket,
+	attestationSourceEpochsBucket,
+}
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
 	db                           *bolt.DB
 	databasePath                 string
-	batchedAttestations          []*attestationRecord
-	batchedAttestationsChan      chan *attestationRecord
+	batchedAttestations          []*AttestationRecord
+	batchedAttestationsChan      chan *AttestationRecord
 	batchAttestationsFlushedFeed *event.Feed
 }
 
@@ -104,8 +118,8 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                           boltDB,
 		databasePath:                 dirPath,
-		batchedAttestations:          make([]*attestationRecord, 0, attestationBatchCapacity),
-		batchedAttestationsChan:      make(chan *attestationRecord, attestationBatchCapacity),
+		batchedAttestations:          make([]*AttestationRecord, 0, attestationBatchCapacity),
+		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 
@@ -119,6 +133,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 			lowestSignedTargetBucket,
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
+			slashablePublicKeysBucket,
 			pubKeysBucket,
 			migrationsBucket,
 		)
@@ -170,5 +185,5 @@ func (s *Store) Size() (int64, error) {
 
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
-	return prombolt.New("boltDB", db)
+	return prombolt.New("boltDB", db, blockedBuckets...)
 }
