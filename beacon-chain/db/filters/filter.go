@@ -103,13 +103,13 @@ func (q *QueryFilter) SetTargetEpoch(val types.Epoch) *QueryFilter {
 }
 
 // SetStartSlot enables filtering by all the items that begin at a slot (inclusive).
-func (q *QueryFilter) SetStartSlot(val uint64) *QueryFilter {
+func (q *QueryFilter) SetStartSlot(val types.Slot) *QueryFilter {
 	q.queries[StartSlot] = val
 	return q
 }
 
 // SetEndSlot enables filtering by all the items that end at a slot (inclusive).
-func (q *QueryFilter) SetEndSlot(val uint64) *QueryFilter {
+func (q *QueryFilter) SetEndSlot(val types.Slot) *QueryFilter {
 	q.queries[EndSlot] = val
 	return q
 }
