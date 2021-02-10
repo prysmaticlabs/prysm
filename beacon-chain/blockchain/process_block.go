@@ -380,7 +380,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(copied); err != nil {
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
