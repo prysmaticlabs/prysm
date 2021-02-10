@@ -3,6 +3,8 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"strconv"
 	"testing"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -947,4 +950,52 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	}
 	require.Equal(t, types.Epoch(3), service.CurrentJustifiedCheckpt().Epoch)
 	require.Equal(t, types.Epoch(2), service.FinalizedCheckpt().Epoch)
+}
+
+func TestInsertFinalizedDeposits(t *testing.T) {
+	flags := featureconfig.Get()
+	flags.EnablePruningDepositProofs = true
+	reset := featureconfig.InitWithReset(flags)
+	defer reset()
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	cfg := &Config{
+		BeaconDB:        beaconDB,
+		StateGen:        stategen.New(beaconDB),
+		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
+		DepositCache:    depositCache,
+	}
+	service, err := New(ctx, cfg)
+	require.NoError(t, err)
+
+	gs, _ := testutil.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.beaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+	gs = gs.Copy()
+	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
+	assert.NoError(t, service.stateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
+	zeroSig := [96]byte{}
+	for i := uint64(0); i < 4*params.BeaconConfig().SlotsPerEpoch; i++ {
+		root := []byte(strconv.Itoa(int(i)))
+		depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
+			PublicKey:             bytesutil.FromBytes48([48]byte{}),
+			WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
+			Amount:                0,
+			Signature:             zeroSig[:],
+		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root))
+	}
+	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
+	fDeposits := depositCache.FinalizedDeposits(ctx)
+	assert.Equal(t, 9, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	deps := depositCache.AllDeposits(ctx, big.NewInt(109))
+	for _, d := range deps {
+		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
+	}
 }
