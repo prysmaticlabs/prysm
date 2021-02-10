@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -165,11 +165,7 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get validator index failed")
 	}
-<<<<<<< HEAD
 	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
-=======
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &pbtypes.Empty{})
->>>>>>> cbd01d4ff4a011220d274dd50ca55b9d560337dd
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}

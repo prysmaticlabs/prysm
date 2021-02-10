@@ -105,7 +105,6 @@ go_test(
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/timeutils:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",

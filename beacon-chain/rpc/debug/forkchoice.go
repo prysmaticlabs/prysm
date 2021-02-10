@@ -21,8 +21,8 @@ func (ds *Server) GetProtoArrayForkChoice(_ context.Context, _ *emptypb.Empty) (
 			Slot:           nodes[i].Slot(),
 			Root:           r[:],
 			Parent:         nodes[i].Parent(),
-			JustifiedEpoch: nodes[i].JustifiedEpoch(),
-			FinalizedEpoch: nodes[i].FinalizedEpoch(),
+			JustifiedEpoch: uint64(nodes[i].JustifiedEpoch()),
+			FinalizedEpoch: uint64(nodes[i].FinalizedEpoch()),
 			Weight:         nodes[i].Weight(),
 			BestChild:      nodes[i].BestChild(),
 			BestDescendant: nodes[i].BestDescendant(),
@@ -36,8 +36,8 @@ func (ds *Server) GetProtoArrayForkChoice(_ context.Context, _ *emptypb.Empty) (
 
 	return &pbrpc.ProtoArrayForkChoiceResponse{
 		PruneThreshold:  store.PruneThreshold(),
-		JustifiedEpoch:  store.JustifiedEpoch(),
-		FinalizedEpoch:  store.FinalizedEpoch(),
+		JustifiedEpoch:  uint64(store.JustifiedEpoch()),
+		FinalizedEpoch:  uint64(store.FinalizedEpoch()),
 		ProtoArrayNodes: returnedNodes,
 		Indices:         indices,
 	}, nil
