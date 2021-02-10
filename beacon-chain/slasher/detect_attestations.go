@@ -57,7 +57,12 @@ func (s *Service) detectSlashableAttestations(
 	}
 
 	totalSlashings := append(slashings, moreSlashings...)
-	log.Infof("Slashings found: %v", totalSlashings)
+	log.Info("Slashings found")
+	for _, slashing := range totalSlashings {
+		if slashing != nil {
+			log.Info(slashing)
+		}
+	}
 
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(opts.validatorChunkIndex)
