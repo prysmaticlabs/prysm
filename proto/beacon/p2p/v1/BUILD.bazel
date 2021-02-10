@@ -47,7 +47,7 @@ ssz_gen_marshal(
 
 go_library(
     name = "go_default_library",
-    srcs = [":generated.ssz.go"],
+    srcs = [":ssz_generated_files"],
     embed = [":v1_go_proto"],
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS,

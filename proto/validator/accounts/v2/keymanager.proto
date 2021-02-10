@@ -1,11 +1,12 @@
 syntax = "proto3";
 package ethereum.validator.accounts.v2;
 
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
 import "eth/ext/options.proto";
 import "eth/v1alpha1/attestation.proto";
 import "eth/v1alpha1/beacon_block.proto";
-import "google/api/annotations.proto";
-import "google/protobuf/empty.proto";
 
 // RemoteSigner service API.
 //
