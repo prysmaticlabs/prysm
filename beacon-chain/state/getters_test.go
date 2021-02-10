@@ -19,7 +19,7 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		require.NoError(t, headState.SetSlot(uint64(0)))
+		require.NoError(t, headState.SetSlot(0))
 		wg.Done()
 	}()
 	go func() {

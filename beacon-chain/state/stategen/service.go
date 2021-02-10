@@ -8,6 +8,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -15,13 +16,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var defaultHotStateDBInterval uint64 = 128 // slots
+var defaultHotStateDBInterval types.Slot = 128
 
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
-	slotsPerArchivedPoint   uint64
+	slotsPerArchivedPoint   types.Slot
 	hotStateCache           *hotStateCache
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
@@ -34,14 +35,14 @@ type State struct {
 type saveHotStateDbConfig struct {
 	enabled         bool
 	lock            sync.Mutex
-	duration        uint64
+	duration        types.Slot
 	savedStateRoots [][32]byte
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
 // cold and hot sections of the DB splits.
 type finalizedInfo struct {
-	slot  uint64
+	slot  types.Slot
 	root  [32]byte
 	state *state.BeaconState
 	lock  sync.RWMutex
@@ -97,7 +98,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 // SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.
 // This used for migration at the correct start slot and used for hot state play back to ensure
 // lower bound to start is always at the last finalized state.
-func (s *State) SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState) {
+func (s *State) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState *state.BeaconState) {
 	s.finalizedInfo.lock.Lock()
 	defer s.finalizedInfo.lock.Unlock()
 	s.finalizedInfo.root = fRoot

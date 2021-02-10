@@ -29,7 +29,7 @@ func PendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) 
 			return [32]byte{}, err
 		}
 		inclusionBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
+		binary.LittleEndian.PutUint64(inclusionBuf, uint64(att.InclusionDelay))
 		// Inclusion delay.
 		inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
 
@@ -54,7 +54,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	if data != nil {
 		// Slot.
 		slotBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(slotBuf, data.Slot)
+		binary.LittleEndian.PutUint64(slotBuf, uint64(data.Slot))
 		copy(enc[0:8], slotBuf)
 
 		// Committee index.
@@ -90,7 +90,7 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 	if data != nil {
 		// Slot.
 		slotBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(slotBuf, data.Slot)
+		binary.LittleEndian.PutUint64(slotBuf, uint64(data.Slot))
 		slotRoot := bytesutil.ToBytes32(slotBuf)
 		fieldRoots[0] = slotRoot[:]
 
@@ -131,7 +131,7 @@ func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pb
 		copy(enc[0:2048], att.AggregationBits)
 
 		inclusionBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
+		binary.LittleEndian.PutUint64(inclusionBuf, uint64(att.InclusionDelay))
 		copy(enc[2048:2056], inclusionBuf)
 
 		attDataBuf := marshalAttestationData(att.Data)
@@ -195,7 +195,7 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) (
 		hasher,
 		roots,
 		uint64(len(roots)),
-		params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch,
+		uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)),
 	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
