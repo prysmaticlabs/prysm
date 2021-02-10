@@ -7,6 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -142,6 +144,17 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			log.WithError(err).Warn("Could not update head")
 		}
+
+		// Send notification of the processed block to the state feed.
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{
+				Slot:        signed.Block.Slot,
+				BlockRoot:   blockRoot,
+				SignedBlock: signed,
+				Verified:    true,
+			},
+		})
 	}
 
 	// Update finalized check point.
