@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	ssz "github.com/ferranbt/fastssz"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -14,27 +14,36 @@ import (
 
 // LatestEpochAttestedForValidator given a validator index returns the latest
 // epoch we have recorded the validator attested for.
-func (s *Store) LatestEpochAttestedForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex,
-) (types.Epoch, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidator")
+func (s *Store) LatestEpochAttestedForValidators(
+	ctx context.Context, validatorIndices []types.ValidatorIndex,
+) ([]types.Epoch, []bool, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidators")
 	defer span.End()
-	var epoch types.Epoch
-	var exists bool
+	epochs := make([]types.Epoch, 0)
+	epochsExist := make([]bool, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
-		enc, err := validatorIdx.MarshalSSZ()
-		if err != nil {
-			return err
+		for _, valIdx := range validatorIndices {
+			enc, err := valIdx.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			epochBytes := bkt.Get(enc)
+			if epochBytes == nil {
+				epochsExist = append(epochsExist, false)
+				epochs = append(epochs, 0)
+				continue
+			}
+			var epoch types.Epoch
+			if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
+				return err
+			}
+			epochsExist = append(epochsExist, true)
+			epochs = append(epochs, epoch)
 		}
-		epochBytes := bkt.Get(enc)
-		if epochBytes == nil {
-			return nil
-		}
-		exists = true
-		return epoch.UnmarshalSSZ(epochBytes)
+		return nil
 	})
-	return epoch, exists, err
+	return epochs, epochsExist, err
 }
 
 // SaveLatestEpochAttestedForValidators updates the latest epoch a slice
@@ -128,32 +137,37 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	})
 }
 
-// LoadSlasherChunk given a chunk kind and a disk key, retrieves a chunk for a validator
+// LoadSlasherChunks given a chunk kind and a disk keys, retrieves chunks for a validator
 // min or max span used by slasher from our database.
-func (s *Store) LoadSlasherChunk(
-	ctx context.Context, kind slashertypes.ChunkKind, diskKey uint64,
-) ([]uint16, bool, error) {
+func (s *Store) LoadSlasherChunks(
+	ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
+) ([][]uint16, []bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
 	defer span.End()
-	var chunk []uint16
-	var exists bool
+	chunks := make([][]uint16, 0)
+	var exists []bool
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
-		keyBytes := ssz.MarshalUint64(make([]byte, 0), diskKey)
-		keyBytes = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), keyBytes...)
-		chunkBytes := bkt.Get(keyBytes)
-		if chunkBytes == nil {
-			return nil
+		for _, diskKey := range diskKeys {
+			keyBytes := ssz.MarshalUint64(make([]byte, 0), diskKey)
+			keyBytes = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), keyBytes...)
+			chunkBytes := bkt.Get(keyBytes)
+			if chunkBytes == nil {
+				chunks = append(chunks, []uint16{})
+				exists = append(exists, false)
+				continue
+			}
+			chunk := make([]uint16, 0)
+			for i := 0; i < len(chunkBytes); i += 2 {
+				distance := ssz.UnmarshallUint16(chunkBytes[i : i+2])
+				chunk = append(chunk, distance)
+			}
+			chunks = append(chunks, chunk)
+			exists = append(exists, true)
 		}
-		chunk = make([]uint16, 0)
-		for i := 0; i < len(chunkBytes); i += 2 {
-			distance := ssz.UnmarshallUint16(chunkBytes[i : i+2])
-			chunk = append(chunk, distance)
-		}
-		exists = true
 		return nil
 	})
-	return chunk, exists, err
+	return chunks, exists, err
 }
 
 // SaveSlasherChunk given a chunk kind, list of disk keys, and list of chunks,
