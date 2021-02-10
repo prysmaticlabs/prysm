@@ -341,7 +341,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 150, len(retrieved))
 	for _, b := range retrieved {
-		assert.Equal(t, uint64(0), (b.Block.Slot-100)%step, "Unexpect block slot %d", b.Block.Slot)
+		assert.Equal(t, types.Slot(0), (b.Block.Slot-100)%step, "Unexpect block slot %d", b.Block.Slot)
 	}
 }
 
