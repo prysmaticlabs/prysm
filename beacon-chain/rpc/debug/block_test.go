@@ -82,5 +82,5 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	require.Equal(t, b.Block.Slot, res.Slot)
 	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
 	require.NoError(t, err)
-	require.Equal(t, params.BeaconConfig().FarFutureEpoch, res.Slot)
+	require.Equal(t, uint64(params.BeaconConfig().FarFutureEpoch), res.Slot)
 }

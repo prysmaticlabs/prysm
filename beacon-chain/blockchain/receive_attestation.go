@@ -39,11 +39,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process attestation")
 	}
 
-	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-		log.Warnf("Resolving fork due to new attestation: %v", err)
-		return nil
-	}
-
 	return nil
 }
 
@@ -125,6 +120,9 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan struct
 			return
 		case <-st.C():
 			s.processAttestations(s.ctx)
+			if err := s.updateHead(s.ctx, s.getJustifiedBalances()); err != nil {
+				log.Warnf("Resolving fork due to new attestation: %v", err)
+			}
 		}
 	}
 }

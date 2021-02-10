@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -79,8 +80,8 @@ func (bs *Server) GetDepositContract(ctx context.Context, _ *emptypb.Empty) (*et
 	}, nil
 }
 
-func sortedEpochs(forkSchedule map[uint64][]byte) []uint64 {
-	sortedEpochs := make([]uint64, len(forkSchedule))
+func sortedEpochs(forkSchedule map[types.Epoch][]byte) []types.Epoch {
+	sortedEpochs := make([]types.Epoch, len(forkSchedule))
 	i := 0
 	for k := range forkSchedule {
 		sortedEpochs[i] = k

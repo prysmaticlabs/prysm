@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -267,7 +268,10 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 		require.NoError(t, db.SaveState(context.Background(), st, r))
 	}
 
-	require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{Root: bRoots[len(bRoots)-1][:], Epoch: slotsPerArchivedPoint / params.BeaconConfig().SlotsPerEpoch}))
+	require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{
+		Root:  bRoots[len(bRoots)-1][:],
+		Epoch: types.Epoch(slotsPerArchivedPoint / params.BeaconConfig().SlotsPerEpoch),
+	}))
 	require.NoError(t, db.CleanUpDirtyStates(context.Background(), slotsPerArchivedPoint))
 
 	for i, root := range bRoots {

@@ -323,11 +323,19 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 			name: "equal structs",
 			args: args{
 				tb: &assertions.TBMock{},
+<<<<<<< HEAD
 				expected: &ethpb.Checkpoint{
 					Epoch: 5,
 					Root:  []byte("hi there"),
 				},
 				actual: &ethpb.Checkpoint{
+=======
+				expected: &eth.Checkpoint{
+					Epoch: 5,
+					Root:  []byte("hi there"),
+				},
+				actual: &eth.Checkpoint{
+>>>>>>> cbd01d4ff4a011220d274dd50ca55b9d560337dd
 					Epoch: 5,
 					Root:  []byte("hi there"),
 				},
@@ -394,11 +402,19 @@ func TestAssert_DeepNotSSZEqual(t *testing.T) {
 			name: "not equal structs",
 			args: args{
 				tb: &assertions.TBMock{},
+<<<<<<< HEAD
 				expected: &ethpb.Checkpoint{
 					Epoch: 5,
 					Root:  []byte("hello there"),
 				},
 				actual: &ethpb.Checkpoint{
+=======
+				expected: &eth.Checkpoint{
+					Epoch: 5,
+					Root:  []byte("hello there"),
+				},
+				actual: &eth.Checkpoint{
+>>>>>>> cbd01d4ff4a011220d274dd50ca55b9d560337dd
 					Epoch: 3,
 					Root:  []byte("hi there"),
 				},

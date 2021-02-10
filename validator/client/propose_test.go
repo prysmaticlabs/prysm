@@ -249,7 +249,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	testBlock := testutil.NewBeaconBlock()
-	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	farFuture := uint64(params.BeaconConfig().WeakSubjectivityPeriod+9) * params.BeaconConfig().SlotsPerEpoch
 	testBlock.Block.Slot = farFuture
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -299,7 +299,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	farAhead := uint64(params.BeaconConfig().WeakSubjectivityPeriod+9) * params.BeaconConfig().SlotsPerEpoch
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(
@@ -320,7 +320,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
-	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
+	past := uint64(params.BeaconConfig().WeakSubjectivityPeriod-400) * params.BeaconConfig().SlotsPerEpoch
 	blk2 := testutil.NewBeaconBlock()
 	blk2.Block.Slot = past
 	m.validatorClient.EXPECT().GetBlock(
@@ -347,7 +347,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
+	farAhead := uint64(params.BeaconConfig().WeakSubjectivityPeriod+9) * params.BeaconConfig().SlotsPerEpoch
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(

@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -55,7 +56,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 // nonSkippedSlotWithPeersTarget traverse peers (supporting a given target epoch), in an attempt
 // to find non-skipped slot among returned blocks.
 func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
-	ctx context.Context, slot uint64, peers []peer.ID, targetEpoch uint64,
+	ctx context.Context, slot uint64, peers []peer.ID, targetEpoch types.Epoch,
 ) (uint64, error) {
 	// Exit early if no peers are ready.
 	if len(peers) == 0 {
@@ -288,19 +289,19 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block *et
 func (f *blocksFetcher) bestFinalizedSlot() uint64 {
 	finalizedEpoch, _ := f.p2p.Peers().BestFinalized(
 		params.BeaconConfig().MaxPeersToSync, f.chain.FinalizedCheckpt().Epoch)
-	return finalizedEpoch * params.BeaconConfig().SlotsPerEpoch
+	return uint64(finalizedEpoch) * params.BeaconConfig().SlotsPerEpoch
 }
 
 // bestNonFinalizedSlot returns the highest non-finalized slot of enough number of connected peers.
 func (f *blocksFetcher) bestNonFinalizedSlot() uint64 {
 	headEpoch := helpers.SlotToEpoch(f.chain.HeadSlot())
 	targetEpoch, _ := f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers*2, headEpoch)
-	return targetEpoch * params.BeaconConfig().SlotsPerEpoch
+	return uint64(targetEpoch) * params.BeaconConfig().SlotsPerEpoch
 }
 
 // calculateHeadAndTargetEpochs return node's current head epoch, along with the best known target
 // epoch. For the latter peers supporting that target epoch are returned as well.
-func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch uint64, peers []peer.ID) {
+func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch types.Epoch, peers []peer.ID) {
 	if f.mode == modeStopOnFinalizedEpoch {
 		headEpoch = f.chain.FinalizedCheckpt().Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)

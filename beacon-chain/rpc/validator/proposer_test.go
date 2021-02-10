@@ -309,7 +309,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -501,7 +501,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		DepositRoot:  make([]byte, 32),
 		DepositCount: 7,
 	}
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -1217,11 +1217,11 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 
 	eth1Data, err := ps.eth1Data(ctx, 100)
 	require.NoError(t, err)
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
 	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, currentEpoch+wantedSlot)
+	enc = fastssz.MarshalUint64(enc, uint64(currentEpoch)+wantedSlot)
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
@@ -2086,7 +2086,7 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 
 func majorityVoteBoundaryTime(slot uint64) (uint64, uint64) {
 	slotStartTime := uint64(mockPOW.GenesisTime) +
-		(slot-(slot%(params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)))*
+		(slot-(slot%(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)*params.BeaconConfig().SlotsPerEpoch)))*
 			params.BeaconConfig().SecondsPerSlot
 	earliestValidTime := slotStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance

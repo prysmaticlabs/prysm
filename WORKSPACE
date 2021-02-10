@@ -172,15 +172,15 @@ go_repository(
 go_repository(
     name = "com_github_iancoleman_strcase",
     importpath = "github.com/iancoleman/strcase",
-    sum = "h1:gnomlvw9tnV3ITTAxzKSgTF+8kFWcU/f+TgttpXGz1U=",
-    version = "v0.1.2",
+    sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
+    version = "v0.1.3",
 )
 
 go_repository(
     name = "com_github_prysmaticlabs_protoc_gen_go_cast",
     importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-    sum = "h1:fpA5b//IjXh78YzRTZ3CJ6O9LFgtqOzCxa5NSy5JFlM=",
-    version = "v0.0.0-20210114090733-ab96db35152c",
+    sum = "h1:pwI7b0PrWFeDFtqToRdj/p8hTcvjVHPsDc/n/msmg5M=",
+    version = "v0.0.0-20210210020219-d301fc202b82",
 )
 
 go_repository(

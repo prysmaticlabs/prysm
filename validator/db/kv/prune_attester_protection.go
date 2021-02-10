@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
@@ -41,7 +42,7 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	// Then, we obtain the corresponding target epoch for that source epoch.
 	highestSourceEpochBytes, _ := sourceEpochsBucket.Cursor().Last()
 	highestTargetEpochBytes := sourceEpochsBucket.Get(highestSourceEpochBytes)
-	highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
+	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
 	// No need to prune if the highest epoch we've written is still
 	// before the first weak subjectivity period.
@@ -50,7 +51,7 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	}
 
 	return sourceEpochsBucket.ForEach(func(k []byte, v []byte) error {
-		targetEpoch := bytesutil.BytesToUint64BigEndian(v)
+		targetEpoch := bytesutil.BytesToEpochBigEndian(v)
 
 		// For each source epoch we find, we check
 		// if its associated target epoch is less than the weak
@@ -72,7 +73,7 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 
 	// We obtain the highest target epoch from the signing roots bucket.
 	highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
-	highestTargetEpoch := bytesutil.BytesToUint64BigEndian(highestTargetEpochBytes)
+	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
 	// No need to prune if the highest epoch we've written is still
 	// before the first weak subjectivity period.
@@ -81,7 +82,7 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 	}
 
 	return signingRootsBucket.ForEach(func(k []byte, v []byte) error {
-		targetEpoch := bytesutil.BytesToUint64BigEndian(k)
+		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
 		// For each target epoch we find in the bucket, we check
 		// if it less than the weak subjectivity period of the
 		// highest written target epoch in the bucket and delete if so.
@@ -92,7 +93,7 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 	})
 }
 
-func olderThanCurrentWeakSubjectivityPeriod(epoch, highestEpoch uint64) bool {
+func olderThanCurrentWeakSubjectivityPeriod(epoch, highestEpoch types.Epoch) bool {
 	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Number of weak subjectivity periods that have passed.
 	currentWeakSubjectivityPeriod := highestEpoch / wssPeriod

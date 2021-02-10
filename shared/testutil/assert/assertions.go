@@ -25,12 +25,12 @@ func DeepNotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}
 	assertions.DeepNotEqual(tb.Errorf, expected, actual, msg...)
 }
 
-// DeepSSZEqual compares values using DeepSSZEqual.
+// DeepSSZEqual compares values using sszutil.DeepEqual.
 func DeepSSZEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	assertions.DeepSSZEqual(tb.Errorf, expected, actual, msg...)
 }
 
-// DeepNotSSZEqual compares values using DeepSSZEqual.
+// DeepNotSSZEqual compares values using sszutil.DeepEqual.
 func DeepNotSSZEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	assertions.DeepNotSSZEqual(tb.Errorf, expected, actual, msg...)
 }

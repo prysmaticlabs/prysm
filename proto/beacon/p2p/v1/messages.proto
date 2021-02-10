@@ -8,7 +8,7 @@ import "eth/ext/options.proto";
 message Status {
   bytes fork_digest = 1 [(ethereum.eth.ext.ssz_size) = "4"];
   bytes finalized_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 finalized_epoch = 3;
+  uint64 finalized_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
   bytes head_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
   uint64 head_slot = 5;
 }
@@ -22,7 +22,7 @@ message BeaconBlocksByRangeRequest {
 message ENRForkID {
   bytes current_fork_digest = 1 [(ethereum.eth.ext.ssz_size) = "4"];
   bytes next_fork_version = 2 [(ethereum.eth.ext.ssz_size) = "4"];
-  uint64 next_fork_epoch = 3;
+  uint64 next_fork_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 /*
  Spec Definition:
