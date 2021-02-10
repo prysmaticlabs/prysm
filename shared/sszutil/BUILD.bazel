@@ -6,7 +6,10 @@ go_library(
     srcs = ["deep_equal.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/sszutil",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_prysmaticlabs_eth2_types//:go_default_library"],
+    deps = [
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+    ],
 )
 
 go_test(
