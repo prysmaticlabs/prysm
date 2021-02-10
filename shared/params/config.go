@@ -3,17 +3,19 @@ package params
 
 import (
 	"time"
+
+	"github.com/prysmaticlabs/eth2-types"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Constants (non-configurable)
-	GenesisSlot              uint64 `yaml:"GENESIS_SLOT"`                // GenesisSlot represents the first canonical slot number of the beacon chain.
-	GenesisEpoch             uint64 `yaml:"GENESIS_EPOCH"`               // GenesisEpoch represents the first canonical epoch number of the beacon chain.
-	FarFutureEpoch           uint64 `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
-	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
-	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // DepositContractTreeDepth depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	JustificationBitsLength  uint64 `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines number of epochs to track when implementing k-finality in Casper FFG.
+	GenesisSlot              uint64      `yaml:"GENESIS_SLOT"`                // GenesisSlot represents the first canonical slot number of the beacon chain.
+	GenesisEpoch             types.Epoch `yaml:"GENESIS_EPOCH"`               // GenesisEpoch represents the first canonical epoch number of the beacon chain.
+	FarFutureEpoch           types.Epoch `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
+	BaseRewardsPerEpoch      uint64      `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
+	DepositContractTreeDepth uint64      `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // DepositContractTreeDepth depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
+	JustificationBitsLength  uint64      `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines number of epochs to track when implementing k-finality in Casper FFG.
 
 	// Misc constants.
 	ConfigName                     string `yaml:"CONFIG_NAME" spec:"true"`                        // ConfigName for allowing an easy human-readable way of knowing what chain is being used.
@@ -41,20 +43,20 @@ type BeaconChainConfig struct {
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
-	GenesisDelay                     uint64 `yaml:"GENESIS_DELAY" spec:"true"`                       // GenesisDelay is the minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
-	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY" spec:"true"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
-	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT" spec:"true"`                    // SecondsPerSlot is how many seconds are in a single slot.
-	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH" spec:"true"`                     // SlotsPerEpoch is the number of slots in an epoch.
-	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD" spec:"true"`                  // MinSeedLookahead is the duration of randao look ahead seed.
-	MaxSeedLookahead                 uint64 `yaml:"MAX_SEED_LOOKAHEAD" spec:"true"`                  // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
-	EpochsPerEth1VotingPeriod        uint64 `yaml:"EPOCHS_PER_ETH1_VOTING_PERIOD" spec:"true"`       // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node on per epoch basis.
-	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT" spec:"true"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
-	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY" spec:"true"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
-	ShardCommitteePeriod             uint64 `yaml:"SHARD_COMMITTEE_PERIOD" spec:"true"`              // ShardCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
-	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY" spec:"true"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
-	Eth1FollowDistance               uint64 `yaml:"ETH1_FOLLOW_DISTANCE" spec:"true"`                // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	SafeSlotsToUpdateJustified       uint64 `yaml:"SAFE_SLOTS_TO_UPDATE_JUSTIFIED" spec:"true"`      // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
-	SecondsPerETH1Block              uint64 `yaml:"SECONDS_PER_ETH1_BLOCK" spec:"true"`              // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
+	GenesisDelay                     uint64      `yaml:"GENESIS_DELAY" spec:"true"`                       // GenesisDelay is the minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
+	MinAttestationInclusionDelay     uint64      `yaml:"MIN_ATTESTATION_INCLUSION_DELAY" spec:"true"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
+	SecondsPerSlot                   uint64      `yaml:"SECONDS_PER_SLOT" spec:"true"`                    // SecondsPerSlot is how many seconds are in a single slot.
+	SlotsPerEpoch                    uint64      `yaml:"SLOTS_PER_EPOCH" spec:"true"`                     // SlotsPerEpoch is the number of slots in an epoch.
+	MinSeedLookahead                 types.Epoch `yaml:"MIN_SEED_LOOKAHEAD" spec:"true"`                  // MinSeedLookahead is the duration of randao look ahead seed.
+	MaxSeedLookahead                 types.Epoch `yaml:"MAX_SEED_LOOKAHEAD" spec:"true"`                  // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
+	EpochsPerEth1VotingPeriod        types.Epoch `yaml:"EPOCHS_PER_ETH1_VOTING_PERIOD" spec:"true"`       // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node on per epoch basis.
+	SlotsPerHistoricalRoot           uint64      `yaml:"SLOTS_PER_HISTORICAL_ROOT" spec:"true"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
+	MinValidatorWithdrawabilityDelay types.Epoch `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY" spec:"true"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
+	ShardCommitteePeriod             types.Epoch `yaml:"SHARD_COMMITTEE_PERIOD" spec:"true"`              // ShardCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
+	MinEpochsToInactivityPenalty     types.Epoch `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY" spec:"true"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
+	Eth1FollowDistance               uint64      `yaml:"ETH1_FOLLOW_DISTANCE" spec:"true"`                // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
+	SafeSlotsToUpdateJustified       uint64      `yaml:"SAFE_SLOTS_TO_UPDATE_JUSTIFIED" spec:"true"`      // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
+	SecondsPerETH1Block              uint64      `yaml:"SECONDS_PER_ETH1_BLOCK" spec:"true"`              // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
 
 	// Ethereum PoW parameters.
 	DepositChainID         uint64 `yaml:"DEPOSIT_CHAIN_ID" spec:"true"`         // DepositChainID of the eth1 network. This used for replay protection.
@@ -66,10 +68,10 @@ type BeaconChainConfig struct {
 	EpochsPerRandomSubnetSubscription uint64 `yaml:"EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION" spec:"true"` // EpochsPerRandomSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
 
 	// State list lengths
-	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR" spec:"true"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
-	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR" spec:"true"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
-	HistoricalRootsLimit      uint64 `yaml:"HISTORICAL_ROOTS_LIMIT" spec:"true"`       // HistoricalRootsLimit defines max historical roots that can be saved in state before roll over.
-	ValidatorRegistryLimit    uint64 `yaml:"VALIDATOR_REGISTRY_LIMIT" spec:"true"`     // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
+	EpochsPerHistoricalVector types.Epoch `yaml:"EPOCHS_PER_HISTORICAL_VECTOR" spec:"true"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
+	EpochsPerSlashingsVector  types.Epoch `yaml:"EPOCHS_PER_SLASHINGS_VECTOR" spec:"true"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
+	HistoricalRootsLimit      uint64      `yaml:"HISTORICAL_ROOTS_LIMIT" spec:"true"`       // HistoricalRootsLimit defines max historical roots that can be saved in state before roll over.
+	ValidatorRegistryLimit    uint64      `yaml:"VALIDATOR_REGISTRY_LIMIT" spec:"true"`     // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor               uint64 `yaml:"BASE_REWARD_FACTOR" spec:"true"`               // BaseRewardFactor is used to calculate validator per-slot interest rate.
@@ -112,14 +114,14 @@ type BeaconChainConfig struct {
 	BeaconStateFieldCount     int           // BeaconStateFieldCount defines how many fields are in beacon state.
 
 	// Slasher constants.
-	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
-	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
+	PruneSlasherStoragePeriod types.Epoch // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 
 	// Fork-related values.
-	GenesisForkVersion  []byte            `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
-	NextForkVersion     []byte            `yaml:"NEXT_FORK_VERSION"`                // NextForkVersion is used to track the upcoming fork version, if any.
-	NextForkEpoch       uint64            `yaml:"NEXT_FORK_EPOCH"`                  // NextForkEpoch is used to track the epoch of the next fork, if any.
-	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
+	GenesisForkVersion  []byte                 `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
+	NextForkVersion     []byte                 `yaml:"NEXT_FORK_VERSION"`                // NextForkVersion is used to track the upcoming fork version, if any.
+	NextForkEpoch       types.Epoch            `yaml:"NEXT_FORK_EPOCH"`                  // NextForkEpoch is used to track the epoch of the next fork, if any.
+	ForkVersionSchedule map[types.Epoch][]byte // Schedule of fork versions by epoch number.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.

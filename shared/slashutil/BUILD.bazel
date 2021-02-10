@@ -24,6 +24,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

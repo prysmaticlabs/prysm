@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/types"
+	pbtypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -93,7 +94,7 @@ func TestGetSpec(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	server := &Server{}
-	resp, err := server.GetSpec(context.Background(), &types.Empty{})
+	resp, err := server.GetSpec(context.Background(), &pbtypes.Empty{})
 	require.NoError(t, err)
 
 	assert.Equal(t, 60, len(resp.Data))
@@ -235,7 +236,7 @@ func TestGetDepositContract(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	s := Server{}
-	resp, err := s.GetDepositContract(context.Background(), &types.Empty{})
+	resp, err := s.GetDepositContract(context.Background(), &pbtypes.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, uint64(chainId), resp.Data.ChainId)
 	assert.Equal(t, address, resp.Data.Address)
@@ -243,15 +244,15 @@ func TestGetDepositContract(t *testing.T) {
 
 func TestForkSchedule_Ok(t *testing.T) {
 	genesisForkVersion := []byte("Genesis")
-	firstForkVersion, firstForkEpoch := []byte("First"), uint64(100)
-	secondForkVersion, secondForkEpoch := []byte("Second"), uint64(200)
-	thirdForkVersion, thirdForkEpoch := []byte("Third"), uint64(300)
+	firstForkVersion, firstForkEpoch := []byte("First"), types.Epoch(100)
+	secondForkVersion, secondForkEpoch := []byte("Second"), types.Epoch(200)
+	thirdForkVersion, thirdForkEpoch := []byte("Third"), types.Epoch(300)
 
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.GenesisForkVersion = genesisForkVersion
 	// Create fork schedule adding keys in non-sorted order.
-	schedule := make(map[uint64][]byte, 3)
+	schedule := make(map[types.Epoch][]byte, 3)
 	schedule[secondForkEpoch] = secondForkVersion
 	schedule[firstForkEpoch] = firstForkVersion
 	schedule[thirdForkEpoch] = thirdForkVersion
@@ -259,7 +260,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &types.Empty{})
+	resp, err := s.GetForkSchedule(context.Background(), &pbtypes.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 3, len(resp.Data))
 	fork := resp.Data[0]
@@ -278,7 +279,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 
 func TestForkSchedule_NoForks(t *testing.T) {
 	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &types.Empty{})
+	resp, err := s.GetForkSchedule(context.Background(), &pbtypes.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(resp.Data))
 }

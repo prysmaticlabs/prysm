@@ -5,6 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -120,7 +121,7 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot uint64, finalizedCheckpoin
 
 // reportEpochMetrics reports epoch related metrics.
 func reportEpochMetrics(ctx context.Context, postState, headState *stateTrie.BeaconState) error {
-	currentEpoch := postState.Slot() / params.BeaconConfig().SlotsPerEpoch
+	currentEpoch := types.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 
 	// Validator instances
 	pendingInstances := 0

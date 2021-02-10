@@ -47,6 +47,7 @@ type Flags struct {
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
+	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -190,6 +191,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableNextSlotStateCache.Name) {
 		log.Warn("Enabling next slot state cache")
 		cfg.EnableNextSlotStateCache = true
+	}
+	if ctx.Bool(updateHeadTimely.Name) {
+		log.Warn("Enabling update head timely feature")
+		cfg.UpdateHeadTimely = true
 	}
 	Init(cfg)
 }

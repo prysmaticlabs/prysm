@@ -114,6 +114,10 @@ var (
 		Name:  "enable-next-slot-state-cache",
 		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
+	updateHeadTimely = &cli.BoolFlag{
+		Name:  "update-head-timely",
+		Usage: "Improves update head time by updating head right after state transition",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -121,6 +125,7 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -167,6 +172,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

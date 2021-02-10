@@ -114,7 +114,7 @@ func randaoSigningData(beaconState *stateTrie.BeaconState) ([]byte, []byte, []by
 
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, currentEpoch)
+	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
 
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	if err != nil {
