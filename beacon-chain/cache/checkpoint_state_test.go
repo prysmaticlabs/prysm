@@ -61,7 +61,7 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := uint64(0); i < uint64(maxCheckpointStateSize+100); i++ {
-		require.NoError(t, st.SetSlot(i))
+		require.NoError(t, st.SetSlot(types.Slot(i)))
 		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: types.Epoch(i), Root: make([]byte, 32)}, st))
 	}
 

@@ -8,7 +8,7 @@ import (
 var (
 	// maxCacheSize is 4x of the epoch length for additional cache padding.
 	// Requests should be only accessing committees within defined epoch length.
-	maxCacheSize = 4 * params.BeaconConfig().SlotsPerEpoch
+	maxCacheSize = uint64(4 * params.BeaconConfig().SlotsPerEpoch)
 )
 
 // trim the FIFO queue to the maxSize.
