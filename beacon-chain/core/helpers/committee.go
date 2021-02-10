@@ -339,7 +339,7 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch types.Epoc
 	}
 
 	// Use state root from (current_epoch - 1 - lookahead))
-	wantedEpoch := PrevEpoch(state)
+	wantedEpoch := epoch - 1
 	if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
 		wantedEpoch -= params.BeaconConfig().MinSeedLookahead
 	}
