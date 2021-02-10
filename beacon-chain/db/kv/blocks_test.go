@@ -317,12 +317,12 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
 	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetStartEpoch(5).SetEndEpoch(6))
 	require.NoError(t, err)
-	want := params.BeaconConfig().SlotsPerEpoch * 2
-	assert.Equal(t, want, uint64(len(retrieved)))
+	want := params.BeaconConfig().SlotsPerEpoch.Mul(2)
+	assert.Equal(t, uint64(want), uint64(len(retrieved)))
 	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
 	require.NoError(t, err)
 	want = params.BeaconConfig().SlotsPerEpoch
-	assert.Equal(t, want, uint64(len(retrieved)))
+	assert.Equal(t, uint64(want), uint64(len(retrieved)))
 }
 
 func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
