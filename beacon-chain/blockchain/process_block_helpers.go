@@ -406,6 +406,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	return nil
 }
 
+// inserts finalized deposits into our finalized deposit trie.
 func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertFinalizedDeposits")
 	defer span.End()
