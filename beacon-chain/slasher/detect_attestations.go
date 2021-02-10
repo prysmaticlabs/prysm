@@ -13,7 +13,6 @@ import (
 type chunkUpdateOptions struct {
 	kind                slashertypes.ChunkKind
 	validatorChunkIndex uint64
-	chunkIndex          uint64
 	currentEpoch        types.Epoch
 	latestEpochWritten  types.Epoch
 	validatorIndex      types.ValidatorIndex
