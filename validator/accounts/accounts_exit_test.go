@@ -114,6 +114,10 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 
 	mockValidatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 0}, nil)
+
+	mockValidatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
@@ -123,14 +127,17 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 
 	mockNodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
+		Times(2).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	mockValidatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
+		Times(2).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
 	mockValidatorClient.EXPECT().
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
+		Times(2).
 		Return(&ethpb.ProposeExitResponse{}, nil)
 
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
@@ -139,7 +146,9 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
 
 	// Create keystore file in the keys directory we can then import from in our wallet.
-	keystore, _ := createKeystore(t, keysDir)
+	keystore1, _ := createKeystore(t, keysDir)
+	time.Sleep(time.Second)
+	keystore2, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
 	// We initialize a wallet with a imported keymanager.
@@ -186,10 +195,11 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	}
 	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(rawExitedKeys))
-	assert.DeepEqual(t, rawPubKeys[0], rawExitedKeys[0])
-	require.Equal(t, 1, len(formattedExitedKeys))
-	assert.Equal(t, "0x"+keystore.Pubkey[:12], formattedExitedKeys[0])
+	require.Equal(t, 2, len(rawExitedKeys))
+	assert.DeepEqual(t, rawPubKeys, rawExitedKeys)
+	require.Equal(t, 2, len(formattedExitedKeys))
+	assert.Equal(t, "0x"+keystore1.Pubkey[:12], formattedExitedKeys[0])
+	assert.Equal(t, "0x"+keystore2.Pubkey[:12], formattedExitedKeys[1])
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
