@@ -271,7 +271,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 				log.WithField("numRecords", numRecords).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
-				if !s.batchedAttestationsFlushInProgress {
+				if s.batchedAttestationsFlushInProgress.IsNotSet() {
 					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
 				}
 			}
@@ -280,7 +280,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 				log.WithField("numRecords", numRecords).Debug(
 					"Batched attestation records write interval reached, flushing to DB",
 				)
-				if !s.batchedAttestationsFlushInProgress {
+				if s.batchedAttestationsFlushInProgress.IsNotSet() {
 					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
 				}
 			}
@@ -295,16 +295,13 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
 func (s *Store) flushAttestationRecords(ctx context.Context, records []*AttestationRecord) {
-	if s.batchedAttestationsFlushInProgress {
+	if s.batchedAttestationsFlushInProgress.IsSet() {
 		log.Error("Attempted to flush attestation records when already in progress")
 		return
 	}
-	s.batchedAttestationsFlushInProgress = true
-	defer func() {
-		s.batchedAttestationsFlushInProgress = false
-	}()
+	s.batchedAttestationsFlushInProgress.Set()
+	defer s.batchedAttestationsFlushInProgress.UnSet()
 
-	start := time.Now()
 	start := time.Now()
 	err := s.saveAttestationRecords(ctx, records)
 	// If there was any error, retry the records since the TX would have been reverted.

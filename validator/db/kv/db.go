@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -55,7 +56,7 @@ type Store struct {
 	batchedAttestations                *PendingAttestationRecords
 	batchedAttestationsChan            chan *AttestationRecord
 	batchAttestationsFlushedFeed       *event.Feed
-	batchedAttestationsFlushInProgress bool
+	batchedAttestationsFlushInProgress abool.AtomicBool
 }
 
 // Close closes the underlying boltdb database.
