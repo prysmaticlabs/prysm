@@ -923,7 +923,7 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	})
 	connectionErrorChannel := make(chan error)
 	v.ReceiveBlocks(ctx, connectionErrorChannel)
-	require.Equal(t, uint64(0), v.highestValidSlot)
+	require.Equal(t, types.Slot(0), v.highestValidSlot)
 }
 
 func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
