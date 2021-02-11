@@ -30,6 +30,7 @@ type POWChain struct {
 	BlockNumberByTime map[uint64]*big.Int
 	Eth1Data          *ethpb.Eth1Data
 	GenesisEth1Block  *big.Int
+	GenesisState      *beaconstate.BeaconState
 }
 
 // GenesisTime represents a static past date - JAN 01 2000.
@@ -120,7 +121,7 @@ func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState --
 func (m *POWChain) PreGenesisState() *beaconstate.BeaconState {
-	return &beaconstate.BeaconState{}
+	return m.GenesisState
 }
 
 // ClearPreGenesisData --
