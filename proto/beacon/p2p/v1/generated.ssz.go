@@ -41,7 +41,7 @@ func (s *Status) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, s.HeadRoot...)
 
 	// Field (4) 'HeadSlot'
-	dst = ssz.MarshalUint64(dst, s.HeadSlot)
+	dst = ssz.MarshalUint64(dst, uint64(s.HeadSlot))
 
 	return
 }
@@ -76,7 +76,7 @@ func (s *Status) UnmarshalSSZ(buf []byte) error {
 	s.HeadRoot = append(s.HeadRoot, buf[44:76]...)
 
 	// Field (4) 'HeadSlot'
-	s.HeadSlot = ssz.UnmarshallUint64(buf[76:84])
+	s.HeadSlot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[76:84]))
 
 	return err
 }
@@ -121,7 +121,7 @@ func (s *Status) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(s.HeadRoot)
 
 	// Field (4) 'HeadSlot'
-	hh.PutUint64(s.HeadSlot)
+	hh.PutUint64(uint64(s.HeadSlot))
 
 	hh.Merkleize(indx)
 	return
@@ -137,7 +137,7 @@ func (b *BeaconBlocksByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err e
 	dst = buf
 
 	// Field (0) 'StartSlot'
-	dst = ssz.MarshalUint64(dst, b.StartSlot)
+	dst = ssz.MarshalUint64(dst, uint64(b.StartSlot))
 
 	// Field (1) 'Count'
 	dst = ssz.MarshalUint64(dst, b.Count)
@@ -157,7 +157,7 @@ func (b *BeaconBlocksByRangeRequest) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (0) 'StartSlot'
-	b.StartSlot = ssz.UnmarshallUint64(buf[0:8])
+	b.StartSlot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[0:8]))
 
 	// Field (1) 'Count'
 	b.Count = ssz.UnmarshallUint64(buf[8:16])
@@ -184,7 +184,7 @@ func (b *BeaconBlocksByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error
 	indx := hh.Index()
 
 	// Field (0) 'StartSlot'
-	hh.PutUint64(b.StartSlot)
+	hh.PutUint64(uint64(b.StartSlot))
 
 	// Field (1) 'Count'
 	hh.PutUint64(b.Count)
@@ -379,7 +379,7 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, b.GenesisValidatorsRoot...)
 
 	// Field (2) 'Slot'
-	dst = ssz.MarshalUint64(dst, b.Slot)
+	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -621,7 +621,7 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	b.GenesisValidatorsRoot = append(b.GenesisValidatorsRoot, buf[8:40]...)
 
 	// Field (2) 'Slot'
-	b.Slot = ssz.UnmarshallUint64(buf[40:48])
+	b.Slot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[40:48]))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -905,7 +905,7 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(b.GenesisValidatorsRoot)
 
 	// Field (2) 'Slot'
-	hh.PutUint64(b.Slot)
+	hh.PutUint64(uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
@@ -1226,7 +1226,7 @@ func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (2) 'InclusionDelay'
-	dst = ssz.MarshalUint64(dst, p.InclusionDelay)
+	dst = ssz.MarshalUint64(dst, uint64(p.InclusionDelay))
 
 	// Field (3) 'ProposerIndex'
 	dst = ssz.MarshalUint64(dst, p.ProposerIndex)
@@ -1266,7 +1266,7 @@ func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (2) 'InclusionDelay'
-	p.InclusionDelay = ssz.UnmarshallUint64(buf[132:140])
+	p.InclusionDelay = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[132:140]))
 
 	// Field (3) 'ProposerIndex'
 	p.ProposerIndex = ssz.UnmarshallUint64(buf[140:148])
@@ -1317,7 +1317,7 @@ func (p *PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (2) 'InclusionDelay'
-	hh.PutUint64(p.InclusionDelay)
+	hh.PutUint64(uint64(p.InclusionDelay))
 
 	// Field (3) 'ProposerIndex'
 	hh.PutUint64(p.ProposerIndex)
