@@ -46,7 +46,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		peers: peersGen(5),
 	}
 
-	mc, p2p, _ := initializeTestServices(t, []uint64{}, chainConfig.peers)
+	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -58,7 +58,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		},
 	)
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
-	seekSlots := map[uint64]uint64{
+	seekSlots := map[types.Slot]types.Slot{
 		0:     1,
 		10:    11,
 		31:    32,
@@ -83,8 +83,8 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	}
 
 	t.Run("test isolated non-skipped slot", func(t *testing.T) {
-		seekSlot := uint64(51264)
-		expectedSlot := uint64(55000)
+		seekSlot := types.Slot(51264)
+		expectedSlot := types.Slot(55000)
 		found := false
 		var i int
 		for i = 0; i < 100; i++ {
@@ -151,7 +151,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 
 	// Chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
 	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
-	finalizedSlot := uint64(63)
+	finalizedSlot := types.Slot(63)
 	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
@@ -194,7 +194,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	pidInd := 0
 	for i := uint64(1); i < uint64(len(chain1)); i += blockBatchLimit {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
-			StartSlot: i,
+			StartSlot: types.Slot(i),
 			Step:      1,
 			Count:     blockBatchLimit,
 		}
@@ -411,7 +411,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 	p2p := p2pt.NewTestP2P(t)
 
 	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
-	finalizedSlot := uint64(63)
+	finalizedSlot := types.Slot(63)
 	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
 
 	genesisBlock := knownBlocks[0]
@@ -472,7 +472,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 		syncMode           syncMode
 		peers              []*peerData
 		ourFinalizedEpoch  types.Epoch
-		ourHeadSlot        uint64
+		ourHeadSlot        types.Slot
 		expectedHeadEpoch  types.Epoch
 		targetEpoch        types.Epoch
 		targetEpochSupport int
@@ -546,7 +546,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc, p2p, _ := initializeTestServices(t, []uint64{}, tt.peers)
+			mc, p2p, _ := initializeTestServices(t, []types.Slot{}, tt.peers)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			fetcher := newBlocksFetcher(
@@ -569,7 +569,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 			assert.Equal(t, tt.targetEpochSupport, len(peers), "Unexpected number of peers supporting target epoch")
 
 			// Best finalized and non-finalized slots.
-			finalizedSlot := uint64(tt.targetEpoch) * params.BeaconConfig().SlotsPerEpoch
+			finalizedSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(tt.targetEpoch))
 			if tt.syncMode == modeStopOnFinalizedEpoch {
 				assert.Equal(t, finalizedSlot, fetcher.bestFinalizedSlot(), "Unexpected finalized slot")
 			} else {

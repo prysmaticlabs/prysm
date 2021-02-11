@@ -62,7 +62,7 @@ type syncMode uint8
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	highestExpectedSlot uint64
+	highestExpectedSlot types.Slot
 	p2p                 p2p.P2P
 	db                  db.ReadOnlyDatabase
 	mode                syncMode
@@ -76,7 +76,7 @@ type blocksQueue struct {
 	smm                 *stateMachineManager
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	highestExpectedSlot uint64
+	highestExpectedSlot types.Slot
 	mode                syncMode
 	exitConditions      struct {
 		noRequiredPeersErrRetries int
@@ -180,7 +180,7 @@ func (q *blocksQueue) loop() {
 		startSlot -= startBackSlots
 	}
 	blocksPerRequest := q.blocksFetcher.blocksPerSecond
-	for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+	for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 		q.smm.addStateMachine(i)
 	}
 
@@ -238,7 +238,7 @@ func (q *blocksQueue) loop() {
 					}
 				}
 				// Do garbage collection, and advance sliding window forward.
-				if q.chain.HeadSlot() >= fsm.start+blocksPerRequest-1 {
+				if q.chain.HeadSlot() >= fsm.start.Add(blocksPerRequest-1) {
 					highestStartSlot, err := q.smm.highestStartSlot()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
@@ -248,7 +248,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove state machine")
 					}
 					if len(q.smm.machines) < lookaheadSteps {
-						q.smm.addStateMachine(highestStartSlot + blocksPerRequest)
+						q.smm.addStateMachine(highestStartSlot.Add(blocksPerRequest))
 					}
 				}
 			}
