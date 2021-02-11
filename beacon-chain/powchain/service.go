@@ -34,6 +34,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -466,7 +467,7 @@ func (s *Service) waitForConnection() {
 			s.connectedETH1 = true
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": s.currHttpEndpoint,
+				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -514,7 +515,7 @@ func (s *Service) waitForConnection() {
 				s.connectedETH1 = true
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": s.currHttpEndpoint,
+					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
