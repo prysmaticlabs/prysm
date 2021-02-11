@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -270,6 +271,37 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	assertRefCount(t, b, currentEpochAttestations, 1)
 	assertRefCount(t, a, previousEpochAttestations, 1)
 	assertRefCount(t, b, previousEpochAttestations, 1)
+}
+
+func TestValidatorReferences_RemainsConsistent(t *testing.T) {
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{
+		Validators: []*ethpb.Validator{
+			{PublicKey: []byte{'A'}},
+			{PublicKey: []byte{'B'}},
+			{PublicKey: []byte{'C'}},
+			{PublicKey: []byte{'D'}},
+			{PublicKey: []byte{'E'}},
+		},
+	})
+	require.NoError(t, err)
+
+	// Create a second state.
+	b := a.Copy()
+
+	// Update First Validator.
+	assert.NoError(t, a.UpdateValidatorAtIndex(0, &ethpb.Validator{PublicKey: []byte{'Z'}}))
+
+	assert.DeepNotEqual(t, a.state.Validators[0], b.state.Validators[0], "validators are equal when they are supposed to be different")
+	// Modify all validators from copied state.
+	assert.NoError(t, b.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
+		return true, &ethpb.Validator{PublicKey: []byte{'V'}}, nil
+	}))
+
+	// Ensure reference is properly accounted for.
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val ReadOnlyValidator) error {
+		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
+		return nil
+	}))
 }
 
 // assertRefCount checks whether reference count for a given state

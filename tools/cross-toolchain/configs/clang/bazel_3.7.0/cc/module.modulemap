@@ -2113,7 +2113,6 @@ module "crosstool" [system] {
   textual header "/usr/include/iconv.h"
   textual header "/usr/include/ifaddrs.h"
   textual header "/usr/include/inttypes.h"
-  textual header "/usr/include/iproute2/bpf_elf.h"
   textual header "/usr/include/langinfo.h"
   textual header "/usr/include/lastlog.h"
   textual header "/usr/include/libgen.h"
