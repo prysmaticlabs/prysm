@@ -54,7 +54,7 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 			"validatorIndex": slashing.ValidatorIndex,
 			"targetEpoch":    slashing.TargetEpoch,
 			"signingRoot":    fmt.Sprintf("%#x", slashing.SigningRoot),
-		}).Info("Attester double vote")
+		}).Info("Attester double vote slashing")
 	case slashertypes.SurroundingVote:
 		log.WithFields(logrus.Fields{
 			"validatorIndex":  slashing.ValidatorIndex,
@@ -62,7 +62,7 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 			"prevTargetEpoch": slashing.PrevTargetEpoch,
 			"sourceEpoch":     slashing.SourceEpoch,
 			"targetEpoch":     slashing.TargetEpoch,
-		}).Info("Attester surrounding vote")
+		}).Info("Attester surrounding vote slashing")
 	case slashertypes.SurroundedVote:
 		log.WithFields(logrus.Fields{
 			"validatorIndex":  slashing.ValidatorIndex,
@@ -70,7 +70,7 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 			"prevTargetEpoch": slashing.PrevTargetEpoch,
 			"sourceEpoch":     slashing.SourceEpoch,
 			"targetEpoch":     slashing.TargetEpoch,
-		}).Info("Attester surrounded vote")
+		}).Info("Attester surrounded vote slashing")
 	default:
 		return
 	}

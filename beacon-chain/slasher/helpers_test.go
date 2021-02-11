@@ -6,6 +6,8 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_groupByValidatorChunkIndex(t *testing.T) {
@@ -258,6 +260,47 @@ func Test_validateAttestationIntegrity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := validateAttestationIntegrity(tt.att); got != tt.want {
 				t.Errorf("validateAttestationIntegrity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_logSlashingEvent(t *testing.T) {
+	tests := []struct {
+		name     string
+		slashing *slashertypes.Slashing
+		want     string
+		noLog    bool
+	}{
+		{
+			name:     "Surrounding vote",
+			slashing: &slashertypes.Slashing{Kind: slashertypes.SurroundingVote},
+			want:     "Attester surrounding vote",
+		},
+		{
+			name:     "Surrounded vote",
+			slashing: &slashertypes.Slashing{Kind: slashertypes.SurroundedVote},
+			want:     "Attester surrounded vote",
+		},
+		{
+			name:     "Double vote",
+			slashing: &slashertypes.Slashing{Kind: slashertypes.DoubleVote},
+			want:     "Attester double vote",
+		},
+		{
+			name:     "Not slashable",
+			slashing: &slashertypes.Slashing{Kind: slashertypes.NotSlashable},
+			noLog:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			logSlashingEvent(tt.slashing)
+			if tt.noLog {
+				require.LogsDoNotContain(t, hook, "slashing")
+			} else {
+				require.LogsContain(t, hook, tt.want)
 			}
 		})
 	}
