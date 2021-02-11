@@ -25,7 +25,7 @@ type Chunker interface {
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
 		attestation *slashertypes.CompactAttestation,
-	) (slashertypes.SlashingKind, error)
+	) (*slashertypes.Slashing, error)
 	Update(
 		opts *chunkUpdateOptions,
 		startEpoch,
@@ -177,27 +177,36 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.CompactAttestation,
-) (slashertypes.SlashingKind, error) {
+) (*slashertypes.Slashing, error) {
 	sourceEpoch := types.Epoch(attestation.Source)
 	targetEpoch := types.Epoch(attestation.Target)
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
-		return slashertypes.NotSlashable, errors.Wrapf(
+		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
 			err, "could not get min target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch > minTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, minTarget)
 		if err != nil {
-			return slashertypes.NotSlashable, err
+			return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
+				err, "could not get existing attestation record at target %d", minTarget,
+			)
 		}
 		if existingAttRecord != nil {
 			if sourceEpoch < types.Epoch(existingAttRecord.Source) {
-				return slashertypes.SurroundingVote, nil
+				return &slashertypes.Slashing{
+					Kind:            slashertypes.SurroundingVote,
+					ValidatorIndex:  validatorIdx,
+					PrevSourceEpoch: types.Epoch(existingAttRecord.Source),
+					PrevTargetEpoch: types.Epoch(existingAttRecord.Target),
+					SourceEpoch:     sourceEpoch,
+					TargetEpoch:     targetEpoch,
+				}, nil
 			}
 		}
 	}
-	return slashertypes.NotSlashable, nil
+	return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, nil
 }
 
 // CheckSlashable takes in a validator index and an incoming attestation
@@ -216,27 +225,36 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.CompactAttestation,
-) (slashertypes.SlashingKind, error) {
+) (*slashertypes.Slashing, error) {
 	sourceEpoch := types.Epoch(attestation.Source)
 	targetEpoch := types.Epoch(attestation.Target)
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
-		return slashertypes.NotSlashable, errors.Wrapf(
+		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
 			err, "could not get max target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch < maxTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, maxTarget)
 		if err != nil {
-			return slashertypes.NotSlashable, err
+			return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
+				err, "could not get existing attestation record at target %d", maxTarget,
+			)
 		}
 		if existingAttRecord != nil {
 			if types.Epoch(existingAttRecord.Source) < sourceEpoch {
-				return slashertypes.SurroundedVote, nil
+				return &slashertypes.Slashing{
+					Kind:            slashertypes.SurroundedVote,
+					ValidatorIndex:  validatorIdx,
+					PrevSourceEpoch: types.Epoch(existingAttRecord.Source),
+					PrevTargetEpoch: types.Epoch(existingAttRecord.Target),
+					SourceEpoch:     sourceEpoch,
+					TargetEpoch:     targetEpoch,
+				}, nil
 			}
 		}
 	}
-	return slashertypes.NotSlashable, nil
+	return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, nil
 }
 
 // Update a min span chunk for a validator index starting at the current epoch, e_c, then updating

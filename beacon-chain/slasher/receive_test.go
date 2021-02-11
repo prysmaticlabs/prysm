@@ -47,7 +47,8 @@ func Test_processQueuedAttestations_DetectsSurroundingVotes(t *testing.T) {
 	currentEpochChan <- currentEpoch
 	cancel()
 	<-exitChan
-	require.LogsContain(t, hook, "Slashings found")
+	require.LogsContain(t, hook, "Slashable offenses found")
+	require.LogsContain(t, hook, "Attester surrounding vote")
 }
 
 func TestSlasher_receiveAttestations_OK(t *testing.T) {

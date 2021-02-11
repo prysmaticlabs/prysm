@@ -57,11 +57,10 @@ func (s *Service) detectSlashableAttestations(
 	}
 
 	totalSlashings := append(slashings, moreSlashings...)
-	log.Info("Slashings found")
+	log.WithField("numSlashings", len(totalSlashings)).Info("Slashable offenses found")
 	for _, slashing := range totalSlashings {
-		if slashing != nil {
-			log.Info(slashing)
-		}
+		// TODO(#8331): Send over an event feed.
+		logSlashingEvent(slashing)
 	}
 
 	// Update the latest written epoch for all involved validator indices.
@@ -94,7 +93,8 @@ func (s *Service) updateSpans(
 		return nil, err
 	}
 
-	// Apply the attestations to the related chunks.
+	// Apply the attestations to the related chunks and find any
+	// slashings along the way.
 	slashings := make([]*slashertypes.Slashing, 0)
 	for _, attestationBatch := range attestationsByChunkIdx {
 		for _, att := range attestationBatch {
@@ -104,7 +104,6 @@ func (s *Service) updateSpans(
 				) {
 					continue
 				}
-				// TODO: Return slashing and handle.
 				slashing, err := s.applyAttestationForValidator(
 					ctx,
 					opts,
@@ -114,7 +113,9 @@ func (s *Service) updateSpans(
 				if err != nil {
 					return nil, err
 				}
-				slashings = append(slashings, slashing)
+				if slashing != nil {
+					slashings = append(slashings, slashing)
+				}
 			}
 		}
 	}
@@ -156,6 +157,10 @@ func (s *Service) determineChunksToUpdateForValidators(
 	return
 }
 
+// Checks if an incoming attestation is slashable based on the validator chunk it
+// corresponds to. If a slashable offense is found, we return it to the caller.
+// If not, then update every single chunk the attestation covers, starting from its
+// source epoch up to its target.
 func (s *Service) applyAttestationForValidator(
 	ctx context.Context,
 	opts *chunkUpdateOptions,
@@ -167,12 +172,11 @@ func (s *Service) applyAttestationForValidator(
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
 	chunk, ok := chunksByChunkIdx[chunkIdx]
 	if !ok {
-		// TODO: Handle.
 		return nil, nil
 	}
 
 	// Check slashable, if so, return the slashing.
-	slashKind, err := chunk.CheckSlashable(
+	slashing, err := chunk.CheckSlashable(
 		ctx,
 		s.serviceCfg.Database,
 		opts.validatorIndex,
@@ -181,29 +185,29 @@ func (s *Service) applyAttestationForValidator(
 	if err != nil {
 		return nil, err
 	}
-	if slashKind != slashertypes.NotSlashable {
-		// TODO: Handle slashing appropriately.
-		return &slashertypes.Slashing{
-			Kind: slashKind,
-		}, nil
+	if slashing != nil && slashing.Kind != slashertypes.NotSlashable {
+		return slashing, nil
 	}
 
 	// Get the first start epoch for max chunk.
-	// TODO: Check slashing status.
 	startEpoch, exists := chunk.ChunkStartEpoch(sourceEpoch, opts.currentEpoch)
 	if !exists {
 		return nil, nil
 	}
 
-	// Update the chunks accordingly.
+	// Given a single attestation could span across multiple chunks
+	// for a validator min or max span, we attempt to update the current chunk
+	// for the source epoch of the attestation. If the update function tells
+	// us we need to proceed to the next chunk, we continue by determining
+	// the start epoch of the next chunk. We exit once no longer need to
+	// keep updating chunks.
 	for {
 		chunkIdx = s.params.chunkIndex(startEpoch)
 		chunk, ok = chunksByChunkIdx[chunkIdx]
 		if !ok {
-			// TODO: Handle.
 			return nil, nil
 		}
-		keepGoing, _ := chunk.Update(
+		keepGoing, err := chunk.Update(
 			&chunkUpdateOptions{
 				chunkIndex:     chunkIdx,
 				currentEpoch:   opts.currentEpoch,
@@ -212,12 +216,14 @@ func (s *Service) applyAttestationForValidator(
 			startEpoch,
 			targetEpoch,
 		)
+		if err != nil {
+			return nil, err
+		}
 		chunksByChunkIdx[chunkIdx] = chunk
 		if !keepGoing {
 			break
 		}
-		// Get the next start epoch for max chunk.
-		// Move to first epoch of next chunk.
+		// Move to first epoch of next chunk if needed.
 		startEpoch = chunk.NextChunkStartEpoch(startEpoch)
 	}
 	return nil, nil

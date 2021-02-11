@@ -23,12 +23,14 @@ type CompactAttestation struct {
 // Slashing represents a compact format with all the information
 // needed to understand a slashable offense in eth2.
 type Slashing struct {
-	Kind           SlashingKind
-	ValidatorIndex types.ValidatorIndex
-	SourceEpoch    types.Epoch
-	TargetEpoch    types.Epoch
-	SigningRoot    types.Epoch
-	Slot           uint64
+	Kind            SlashingKind
+	ValidatorIndex  types.ValidatorIndex
+	PrevSourceEpoch types.Epoch
+	PrevTargetEpoch types.Epoch
+	SourceEpoch     types.Epoch
+	TargetEpoch     types.Epoch
+	SigningRoot     types.Epoch
+	Slot            uint64
 }
 
 // SlashingKind is an enum representing the type of slashable
