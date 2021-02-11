@@ -24,15 +24,15 @@ var defaultHotStateDBInterval types.Slot = 128
 // logic of maintaining both hot and cold states in DB.
 type StateManager interface {
 	Resume(ctx context.Context) (*state.BeaconState, error)
-	SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState)
+	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState *state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
-	ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*eth.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error)
-	LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error)
+	ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*eth.SignedBeaconBlock, targetSlot types.Slot) (*state.BeaconState, error)
+	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
-	StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error)
+	StateBySlot(ctx context.Context, slot types.Slot) (*state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	SaveState(ctx context.Context, root [32]byte, st *state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
