@@ -15,34 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestProtoClone_MaintainsData(t *testing.T) {
-	type test struct {
-		name  string
-		state *pbp2p.BeaconState
-		error string
-	}
-	initTests := []test{
-		{
-			name: "empty validators",
-			state: &pbp2p.BeaconState{
-				Slot:       5,
-				Validators: []*eth.Validator{},
-			},
-		},
-	}
-	for _, tt := range initTests {
-		t.Run(tt.name, func(t *testing.T) {
-			cloned, err := state.InitializeFromProto(tt.state)
-			assert.NoError(t, err)
-			t.Logf("Normal: %v", tt.state.Validators)
-			t.Logf("Cloned: %v", cloned.InnerStateUnsafe().Validators)
-			if tt.state.Validators != nil && cloned.InnerStateUnsafe().Validators == nil {
-				t.Fatal("cloned is nil when original is not")
-			}
-		})
-	}
-}
-
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisState(t, 64)
 

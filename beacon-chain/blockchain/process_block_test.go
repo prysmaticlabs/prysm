@@ -984,7 +984,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	zeroSig := [96]byte{}
 	for i := uint64(0); i < 4*params.BeaconConfig().SlotsPerEpoch; i++ {
 		root := []byte(strconv.Itoa(int(i)))
-		depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
+		depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.DepositData{
 			PublicKey:             bytesutil.FromBytes48([48]byte{}),
 			WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
 			Amount:                0,
