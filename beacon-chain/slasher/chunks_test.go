@@ -458,7 +458,7 @@ func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 			want:       math.MaxUint64,
 		},
 		{
-			name: "Start epoch of chunk 1 last epoch of chunk 0",
+			name: "Start epoch of chunk 1 returns last epoch of chunk 0",
 			params: &Parameters{
 				chunkSize: 3,
 			},
