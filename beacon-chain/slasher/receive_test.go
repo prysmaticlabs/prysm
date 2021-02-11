@@ -51,6 +51,83 @@ func Test_processQueuedAttestations_DetectsSurroundingVotes(t *testing.T) {
 	require.LogsContain(t, hook, "Attester surrounding vote")
 }
 
+func Test_processQueuedAttestations_DetectsSurroundedVote(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB := dbtest.SetupDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+		params:           DefaultParams(),
+		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
+	}
+	currentEpochChan := make(chan uint64, 0)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedAttestations(ctx, currentEpochChan)
+		exitChan <- struct{}{}
+	}()
+	s.attestationQueue = []*slashertypes.CompactAttestation{
+		{
+			AttestingIndices: []uint64{0, 1},
+			Source:           0,
+			Target:           3,
+			SigningRoot:      [32]byte{1},
+		},
+		{
+			AttestingIndices: []uint64{0, 1},
+			Source:           1,
+			Target:           2,
+			SigningRoot:      [32]byte{1},
+		},
+	}
+	currentEpoch := uint64(4)
+	currentEpochChan <- currentEpoch
+	cancel()
+	<-exitChan
+	require.LogsContain(t, hook, "Slashable offenses found")
+	require.LogsContain(t, hook, "Attester surrounded vote")
+}
+
+func Test_processQueuedAttestations_NotSlashable(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB := dbtest.SetupDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+		params:           DefaultParams(),
+		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
+	}
+	currentEpochChan := make(chan uint64, 0)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedAttestations(ctx, currentEpochChan)
+		exitChan <- struct{}{}
+	}()
+	s.attestationQueue = []*slashertypes.CompactAttestation{
+		{
+			AttestingIndices: []uint64{0, 1},
+			Source:           0,
+			Target:           1,
+			SigningRoot:      [32]byte{1},
+		},
+		{
+			AttestingIndices: []uint64{0, 1},
+			Source:           1,
+			Target:           2,
+			SigningRoot:      [32]byte{1},
+		},
+	}
+	currentEpoch := uint64(4)
+	currentEpochChan <- currentEpoch
+	cancel()
+	<-exitChan
+	require.LogsDoNotContain(t, hook, "Slashable offenses found")
+}
+
 func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{

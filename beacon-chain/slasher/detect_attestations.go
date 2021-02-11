@@ -57,7 +57,9 @@ func (s *Service) detectSlashableAttestations(
 	}
 
 	totalSlashings := append(slashings, moreSlashings...)
-	log.WithField("numSlashings", len(totalSlashings)).Info("Slashable offenses found")
+	if len(totalSlashings) > 0 {
+		log.WithField("numSlashings", len(totalSlashings)).Info("Slashable offenses found")
+	}
 	for _, slashing := range totalSlashings {
 		// TODO(#8331): Send over an event feed.
 		logSlashingEvent(slashing)
