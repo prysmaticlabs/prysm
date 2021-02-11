@@ -19,9 +19,9 @@ import (
 
 var defaultHotStateDBInterval uint64 = 128 // slots
 
-// Service represents a management object that handles the internal
+// StateManager represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
-type Service interface {
+type StateManager interface {
 	Resume(ctx context.Context) (*state.BeaconState, error)
 	SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
@@ -39,7 +39,7 @@ type Service interface {
 	DisableSaveHotStateToDB(ctx context.Context) error
 }
 
-// State is a concrete implementation of Service.
+// State is a concrete implementation of StateManager.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
 	slotsPerArchivedPoint   uint64
