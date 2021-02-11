@@ -319,7 +319,7 @@ func (s *Service) Start() {
 		BlockNotifier:       s.blockNotifier,
 		AttestationNotifier: s.operationNotifier,
 		Broadcaster:         s.p2p,
-		StateGen:            s.stateGen,
+		StateGenService:     s.stateGen,
 		SyncChecker:         s.syncService,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
