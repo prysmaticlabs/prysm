@@ -112,13 +112,13 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// An attestation with source 1 and target 2 should not be slashable
 	// based on our min chunk for either validator.
-	kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
+	slashing, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.NotSlashable, kind)
+	require.Equal(t, slashertypes.NotSlashable, slashing.Kind)
 
-	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
+	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.NotSlashable, kind)
+	require.Equal(t, slashertypes.NotSlashable, slashing.Kind)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
 	// with (source 1, target 2) as attested.
@@ -143,9 +143,9 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	target = types.Epoch(3)
 	surroundingVote := createAttestation(source, target)
 
-	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
+	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.NotSlashable, kind)
+	require.Equal(t, slashertypes.NotSlashable, slashing.Kind)
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
@@ -161,9 +161,9 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
+	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.SurroundingVote, kind)
+	require.Equal(t, slashertypes.SurroundingVote, slashing.Kind)
 }
 
 func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
@@ -199,13 +199,13 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// An attestation with source 1 and target 2 should not be slashable
 	// based on our max chunk for either validator.
-	kind, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
+	slashing, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.NotSlashable, kind)
+	require.Equal(t, slashertypes.NotSlashable, slashing.Kind)
 
-	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
+	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.NotSlashable, kind)
+	require.Equal(t, slashertypes.NotSlashable, slashing.Kind)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
 	// with (source 0, target 3) as attested.
@@ -230,9 +230,9 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	target = types.Epoch(2)
 	surroundedVote := createAttestation(source, target)
 
-	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
+	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.NotSlashable, kind)
+	require.Equal(t, slashertypes.NotSlashable, slashing.Kind)
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
@@ -248,9 +248,9 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	kind, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
+	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
-	require.Equal(t, slashertypes.SurroundedVote, kind)
+	require.Equal(t, slashertypes.SurroundedVote, slashing.Kind)
 }
 
 func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
@@ -440,6 +440,78 @@ func TestMaxSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	require.Equal(t, false, keepGoing)
 	want := []uint16{3, 2, 1, 0, 0, 0, 0, 0}
 	require.DeepEqual(t, want, chunk.Chunk())
+}
+
+func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
+	tests := []struct {
+		name       string
+		params     *Parameters
+		startEpoch types.Epoch
+		want       types.Epoch
+	}{
+		{
+			name: "Start epoch 0",
+			params: &Parameters{
+				chunkSize: 3,
+			},
+			startEpoch: 0,
+			want:       math.MaxUint64,
+		},
+		{
+			name: "Start epoch of chunk 1 last epoch of chunk 0",
+			params: &Parameters{
+				chunkSize: 3,
+			},
+			startEpoch: 3,
+			want:       2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MinSpanChunksSlice{
+				params: tt.params,
+			}
+			if got := m.NextChunkStartEpoch(tt.startEpoch); got != tt.want {
+				t.Errorf("NextChunkStartEpoch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
+	tests := []struct {
+		name       string
+		params     *Parameters
+		startEpoch types.Epoch
+		want       types.Epoch
+	}{
+		{
+			name: "Start epoch 0",
+			params: &Parameters{
+				chunkSize: 3,
+			},
+			startEpoch: 0,
+			want:       3,
+		},
+		{
+			name: "Start epoch of chunk 1 returns start epoch of chunk 2",
+			params: &Parameters{
+				chunkSize: 3,
+			},
+			startEpoch: 3,
+			want:       6,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MaxSpanChunksSlice{
+				params: tt.params,
+			}
+			if got := m.NextChunkStartEpoch(tt.startEpoch); got != tt.want {
+				t.Errorf("NextChunkStartEpoch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {

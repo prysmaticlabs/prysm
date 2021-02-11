@@ -432,17 +432,17 @@ func (m *MaxSpanChunksSlice) StartEpoch(
 }
 
 // NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For min
-// span chunks, this will be the start epoch of chunk index = (current chunk - 1). For example:
+// span chunks, this will be the last epoch of chunk index = (current chunk - 1). For example:
 //
 //                       chunk0     chunk1     chunk2
 //                         |          |          |
 //  max_spans_val_i = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
 //
 // If C = ChunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
-// epoch is the start epoch of chunk 0, which is epoch 0. This is computed as:
+// epoch is the last epoch of chunk 0, which is epoch 2. This is computed as:
 //
-//  (start_epoch / C) - 1 * C
-//  (3 / 3) - 1 * 3 = 0
+//  (start_epoch / C) * (C - 1)
+//  (3 / 3) * (3 - 1) = 1 * 2 = 2
 //
 func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
 	return types.Epoch(uint64(startEpoch)/m.params.chunkSize*m.params.chunkSize - 1)
