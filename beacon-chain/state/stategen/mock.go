@@ -116,6 +116,6 @@ func (m *MockStateManager) AddStateForRoot(state *state.BeaconState, blockRoot [
 }
 
 // AddStateForSlot --
-func (m *MockStateManager) AddStateForSlot(state *state.BeaconState, slot uint64) {
+func (m *MockStateManager) AddStateForSlot(state *state.BeaconState, slot types.Slot) {
 	m.StatesBySlot[slot] = state
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -76,7 +77,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 				// ID format does not match any valid options.
 				return nil, status.Errorf(codes.Internal, "Invalid state ID: "+stateIdString)
 			}
-			root, err = bs.stateRootBySlot(ctx, slot)
+			root, err = bs.stateRootBySlot(ctx, types.Slot(slot))
 		}
 	}
 
@@ -162,7 +163,7 @@ func (bs *Server) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, e
 		"State not found in the last %d states", len(headState.StateRoots()))
 }
 
-func (bs *Server) stateRootBySlot(ctx context.Context, slot uint64) ([]byte, error) {
+func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte, error) {
 	currentSlot := bs.ChainInfoFetcher.HeadSlot()
 	if slot > currentSlot {
 		return nil, status.Errorf(codes.Internal, "Slot cannot be in the future")
