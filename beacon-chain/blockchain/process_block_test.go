@@ -982,7 +982,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
 	assert.NoError(t, service.stateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
 	zeroSig := [96]byte{}
-	for i := uint64(0); i < 4*params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
 		root := []byte(strconv.Itoa(int(i)))
 		depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
 			PublicKey:             bytesutil.FromBytes48([48]byte{}),

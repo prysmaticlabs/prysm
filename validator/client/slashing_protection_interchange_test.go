@@ -115,7 +115,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 				// This loops through a list of block signings to attempt after importing the interchange data above.
 				for _, sb := range step.Blocks {
-					bSlot, err := interchangeformat.Uint64FromString(sb.Slot)
+					bSlot, err := interchangeformat.SlotFromString(sb.Slot)
 					require.NoError(t, err)
 					pk, err := interchangeformat.PubKeyFromHex(sb.Pubkey)
 					require.NoError(t, err)

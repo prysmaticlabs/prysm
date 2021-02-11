@@ -3,6 +3,7 @@ package client
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -13,7 +14,7 @@ func TestLogNextDutyCountDown_NoDuty(t *testing.T) {
 	v := &validator{
 		logDutyCountDown: true,
 		duties: &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
+			{AttesterSlot: 100, ProposerSlots: []types.Slot{105}},
 			{AttesterSlot: 110},
 			{AttesterSlot: 120},
 		}},
@@ -27,7 +28,7 @@ func TestLogNextDutyCountDown_HasDutyAttester(t *testing.T) {
 	v := &validator{
 		logDutyCountDown: true,
 		duties: &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
+			{AttesterSlot: 100, ProposerSlots: []types.Slot{105}},
 			{AttesterSlot: 110},
 			{AttesterSlot: 120},
 		}},
@@ -41,7 +42,7 @@ func TestLogNextDutyCountDown_HasDutyProposer(t *testing.T) {
 	v := &validator{
 		logDutyCountDown: true,
 		duties: &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
+			{AttesterSlot: 100, ProposerSlots: []types.Slot{105}},
 			{AttesterSlot: 110},
 			{AttesterSlot: 120},
 		}},
@@ -59,7 +60,7 @@ func TestLogNextDutyCountDown_HasMultipleDuties(t *testing.T) {
 			{AttesterSlot: 110},
 			{AttesterSlot: 105},
 			{AttesterSlot: 105},
-			{AttesterSlot: 100, ProposerSlots: []uint64{105}},
+			{AttesterSlot: 100, ProposerSlots: []types.Slot{105}},
 		}},
 	}
 	require.NoError(t, v.LogNextDutyTimeLeft(101))

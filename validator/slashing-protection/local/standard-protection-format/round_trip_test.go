@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -169,7 +170,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 		proposals := proposalHistory[i].Proposals
 		receivedProposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
 		require.NoError(t, err)
-		rootsBySlot := make(map[uint64][]byte)
+		rootsBySlot := make(map[types.Slot][]byte)
 		for _, proposal := range receivedProposalHistory {
 			rootsBySlot[proposal.Slot] = proposal.SigningRoot
 		}
