@@ -129,6 +129,9 @@ func (s *Store) CheckSlashableAttestation(
 	defer span.End()
 	var slashKind SlashingKind
 	err := s.view(func(tx *bolt.Tx) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])
 		if pkBucket == nil {
@@ -156,6 +159,10 @@ func (s *Store) CheckSlashableAttestation(
 		}
 		// Check for surround votes.
 		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochsBytes []byte) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
 			existingSourceEpoch := bytesutil.BytesToEpochBigEndian(sourceEpochBytes)
 
 			// There can be multiple target epochs attested per source epoch.
