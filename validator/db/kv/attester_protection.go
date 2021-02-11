@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,6 +25,37 @@ type AttestationRecord struct {
 	Source      types.Epoch
 	Target      types.Epoch
 	SigningRoot [32]byte
+}
+
+func NewPendingAttestationRecords() *PendingAttestationRecords {
+	return &PendingAttestationRecords{
+		records: make([]*AttestationRecord, 0, attestationBatchCapacity),
+	}
+}
+
+type PendingAttestationRecords struct {
+	records []*AttestationRecord
+	lock sync.RWMutex
+}
+
+func (p *PendingAttestationRecords) Append(ar *AttestationRecord) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.records = append(p.records, ar)
+}
+
+func (p *PendingAttestationRecords) Flush() []*AttestationRecord {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	recs := p.records
+	p.records = make([]*AttestationRecord, 0, attestationBatchCapacity)
+	return recs
+}
+
+func (p *PendingAttestationRecords) Len() int {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return len(p.records)
 }
 
 // A wrapper over an error received from a background routine
@@ -234,19 +266,23 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 	for {
 		select {
 		case v := <-s.batchedAttestationsChan:
-			s.batchedAttestations = append(s.batchedAttestations, v)
-			if len(s.batchedAttestations) == attestationBatchCapacity {
-				log.WithField("numRecords", attestationBatchCapacity).Debug(
+			s.batchedAttestations.Append(v)
+			if numRecords := s.batchedAttestations.Len(); numRecords >= attestationBatchCapacity {
+				log.WithField("numRecords", numRecords).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
-				s.flushAttestationRecords(ctx)
+				if !s.batchedAttestationsFlushInProgress {
+					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
+				}
 			}
 		case <-ticker.C:
-			if len(s.batchedAttestations) > 0 {
-				log.WithField("numRecords", len(s.batchedAttestations)).Debug(
+			if numRecords := s.batchedAttestations.Len(); numRecords > 0 {
+				log.WithField("numRecords", numRecords).Debug(
 					"Batched attestation records write interval reached, flushing to DB",
 				)
-				s.flushAttestationRecords(ctx)
+				if !s.batchedAttestationsFlushInProgress {
+					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
+				}
 			}
 		case <-ctx.Done():
 			return
@@ -258,13 +294,27 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // and resets the list of batched attestations for future writes.
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
-func (s *Store) flushAttestationRecords(ctx context.Context) {
+func (s *Store) flushAttestationRecords(ctx context.Context, records []*AttestationRecord) {
+	if s.batchedAttestationsFlushInProgress {
+		log.Error("Attempted to flush attestation records when already in progress")
+		return
+	}
+	s.batchedAttestationsFlushInProgress = true
+	defer func() {
+		s.batchedAttestationsFlushInProgress = false
+	}()
+
 	start := time.Now()
-	err := s.saveAttestationRecords(ctx, s.batchedAttestations)
-	// If there was no error, we reset the batched attestations slice.
+	err := s.saveAttestationRecords(ctx, records)
+	// If there was any error, retry the records since the TX would have been reverted.
 	if err == nil {
 		log.WithField("duration", time.Since(start)).Debug("Successfully flushed batched attestations to DB")
-		s.batchedAttestations = make([]*AttestationRecord, 0, attestationBatchCapacity)
+	} else {
+		// This should never happen.
+		log.WithError(err).Error("Failed to batch save attestation records, retrying in queue")
+		for _, ar := range records {
+			s.batchedAttestations.Append(ar)
+		}
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
 	// We use a struct wrapper around the error as the event feed

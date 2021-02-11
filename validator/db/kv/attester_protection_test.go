@@ -17,6 +17,32 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+
+func TestPendingAttestationRecords_Flush(t *testing.T) {
+	par := NewPendingAttestationRecords()
+
+	// Add 5 atts
+	num := 5
+	for i := 0; i < num; i++ {
+		par.Append(&AttestationRecord{
+			Target: types.Epoch(i),
+		})
+	}
+
+	res := par.Flush()
+	assert.Equal(t, len(res), num, "Wrong number of flushed attestations")
+	assert.Equal(t, len(par.records), 0, "Records were not cleared/flushed")
+}
+
+func TestPendingAttestationRecords_Len(t *testing.T) {
+	par := NewPendingAttestationRecords()
+	assert.Equal(t, par.Len(), 0)
+	par.Append(&AttestationRecord{})
+	assert.Equal(t, par.Len(), 1)
+	par.Flush()
+	assert.Equal(t, par.Len(), 0)
+}
+
 func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1
@@ -372,7 +398,7 @@ func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
 	require.LogsContain(t, hook, "Reached max capacity of batched attestation records")
 	require.LogsDoNotContain(t, hook, "Batched attestation records write interval reached")
 	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
-	require.Equal(t, 0, len(validatorDB.batchedAttestations))
+	require.Equal(t, 0, validatorDB.batchedAttestations.Len())
 
 	// We then verify all the data we wanted to save is indeed saved to disk.
 	err := validatorDB.view(func(tx *bolt.Tx) error {
@@ -429,7 +455,7 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 	require.LogsDoNotContain(t, hook, "Reached max capacity of batched attestation records")
 	require.LogsContain(t, hook, "Batched attestation records write interval reached")
 	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
-	require.Equal(t, 0, len(validatorDB.batchedAttestations))
+	require.Equal(t, 0, validatorDB.batchedAttestations.Len())
 
 	// We then verify all the data we wanted to save is indeed saved to disk.
 	err := validatorDB.view(func(tx *bolt.Tx) error {

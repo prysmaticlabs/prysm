@@ -50,11 +50,12 @@ var blockedBuckets = [][]byte{
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                           *bolt.DB
-	databasePath                 string
-	batchedAttestations          []*AttestationRecord
-	batchedAttestationsChan      chan *AttestationRecord
-	batchAttestationsFlushedFeed *event.Feed
+	db                                 *bolt.DB
+	databasePath                       string
+	batchedAttestations                *PendingAttestationRecords
+	batchedAttestationsChan            chan *AttestationRecord
+	batchAttestationsFlushedFeed       *event.Feed
+	batchedAttestationsFlushInProgress bool
 }
 
 // Close closes the underlying boltdb database.
@@ -118,7 +119,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                           boltDB,
 		databasePath:                 dirPath,
-		batchedAttestations:          make([]*AttestationRecord, 0, attestationBatchCapacity),
+		batchedAttestations:          NewPendingAttestationRecords(),
 		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
