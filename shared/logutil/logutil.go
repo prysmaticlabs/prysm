@@ -38,7 +38,6 @@ func MaskCredentialsLogging( currUrl string) string {
 	MaskedUrl := currUrl
 	u, err := url.Parse(currUrl)
 	if err != nil {
-		logrus.Info("Not a valid URL format to mask")
 		return currUrl // Not a URL, nothing to do
 	}
 	//Mask the userinfo and the URI (path?query or opaque?query ) and fragment, leave the scheme and host(host/port)  untouched
