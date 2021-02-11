@@ -80,7 +80,7 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			proposals = append(proposals, kv.Proposal{
-				Slot:        uint64(i),
+				Slot:        types.Slot(i),
 				SigningRoot: signingRoot[:],
 			})
 		}
