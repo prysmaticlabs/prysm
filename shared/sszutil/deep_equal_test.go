@@ -46,15 +46,17 @@ func TestDeepEqualStructs(t *testing.T) {
 
 func TestDeepEqualStructs_Unexported(t *testing.T) {
 	type Store struct {
-		V1       uint64
-		V2       []byte
-		ignoreMe string
+		V1           uint64
+		V2           []byte
+		dontIgnoreMe string
 	}
 	store1 := Store{uint64(1234), nil, "hi there"}
 	store2 := Store{uint64(1234), []byte{}, "hi there"}
 	store3 := Store{uint64(4321), []byte{}, "wow"}
+	store4 := Store{uint64(4321), []byte{}, "bow wow"}
 	assert.Equal(t, true, sszutil.DeepEqual(store1, store2))
 	assert.Equal(t, false, sszutil.DeepEqual(store1, store3))
+	assert.Equal(t, false, sszutil.DeepEqual(store3, store4))
 }
 
 func TestDeepEqualProto(t *testing.T) {
