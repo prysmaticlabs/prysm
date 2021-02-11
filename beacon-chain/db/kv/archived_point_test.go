@@ -31,7 +31,7 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 	i, err := db.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), i, "Did not get correct index")
+	assert.Equal(t, types.Slot(0), i, "Did not get correct index")
 
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
@@ -47,5 +47,5 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 
 	i, err = db.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(3), i, "Did not get correct index")
+	assert.Equal(t, types.Slot(3), i, "Did not get correct index")
 }

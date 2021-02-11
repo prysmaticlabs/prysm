@@ -218,7 +218,7 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	slot, exists, err := validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, uint64(2), slot)
+	assert.Equal(t, types.Slot(2), slot)
 
 	// We save a higher proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 3 /* slot */, dummySigningRoot[:])
@@ -228,7 +228,7 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, uint64(2), slot)
+	assert.Equal(t, types.Slot(2), slot)
 
 	// We save a lower proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 1 /* slot */, dummySigningRoot[:])
@@ -238,7 +238,7 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, uint64(1), slot)
+	assert.Equal(t, types.Slot(1), slot)
 }
 
 func TestStore_HighestSignedProposal(t *testing.T) {
@@ -259,7 +259,7 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	slot, exists, err := validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, uint64(2), slot)
+	assert.Equal(t, types.Slot(2), slot)
 
 	// We save a lower proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 1 /* slot */, dummySigningRoot[:])
@@ -269,7 +269,7 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, uint64(2), slot)
+	assert.Equal(t, types.Slot(2), slot)
 
 	// We save a higher proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 3 /* slot */, dummySigningRoot[:])
@@ -279,5 +279,5 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, uint64(3), slot)
+	assert.Equal(t, types.Slot(3), slot)
 }

@@ -326,7 +326,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), headSlot, "Mismatch slots")
+	assert.Equal(t, types.Slot(0), headSlot, "Mismatch slots")
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {

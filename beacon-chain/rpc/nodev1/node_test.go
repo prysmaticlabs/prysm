@@ -167,8 +167,8 @@ func TestSyncStatus(t *testing.T) {
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, uint64(100), resp.Data.HeadSlot)
-	assert.Equal(t, uint64(10), resp.Data.SyncDistance)
+	assert.Equal(t, types.Slot(100), resp.Data.HeadSlot)
+	assert.Equal(t, types.Slot(10), resp.Data.SyncDistance)
 }
 
 func TestGetPeer(t *testing.T) {

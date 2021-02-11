@@ -891,7 +891,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			assert.Equal(t, true, ok)
 		}
 		// Assert highest expected slot is extended.
-		assert.Equal(t, blocksPerRequest*lookaheadSteps, queue.highestExpectedSlot)
+		assert.Equal(t, types.Slot(blocksPerRequest*lookaheadSteps), queue.highestExpectedSlot)
 	})
 
 	t.Run("ready to update machines - unconstrained mode", func(t *testing.T) {
@@ -939,7 +939,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			assert.Equal(t, true, ok)
 		}
 		// Assert highest expected slot is extended.
-		assert.Equal(t, blocksPerRequest*(lookaheadSteps+1), queue.highestExpectedSlot)
+		assert.Equal(t, types.Slot(blocksPerRequest*(lookaheadSteps+1)), queue.highestExpectedSlot)
 	})
 }
 
@@ -1080,7 +1080,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
-	require.Equal(t, uint64(len(chain1)-1), mc.HeadSlot())
+	require.Equal(t, types.Slot(len(chain1)-1), mc.HeadSlot())
 	hook := logTest.NewGlobal()
 
 	t.Run("unfavourable fork and no alternative branches", func(t *testing.T) {

@@ -129,13 +129,13 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		fetcher.mode = modeStopOnFinalizedEpoch
 		slot, err := fetcher.nonSkippedSlotAfter(ctx, 160)
 		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
-		assert.Equal(t, uint64(0), slot)
+		assert.Equal(t, types.Slot(0), slot)
 
 		fetcher.mode = modeNonConstrained
 		require.NoError(t, mc.State.SetSlot(20*params.BeaconConfig().SlotsPerEpoch))
 		slot, err = fetcher.nonSkippedSlotAfter(ctx, 160)
 		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
-		assert.Equal(t, uint64(0), slot)
+		assert.Equal(t, types.Slot(0), slot)
 	})
 }
 
@@ -213,7 +213,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot))
 	}
-	assert.Equal(t, uint64(250), mc.HeadSlot())
+	assert.Equal(t, types.Slot(250), mc.HeadSlot())
 
 	// Assert no blocks on further requests, disallowing to progress.
 	req := &p2ppb.BeaconBlocksByRangeRequest{
@@ -252,7 +252,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
 		require.NoError(t, st.SetSlot(blk.Block.Slot))
 	}
-	forkSlot := 129
+	forkSlot := types.Slot(129)
 	chain2 := extendBlockSequence(t, chain1[:forkSlot], 165)
 	// Assert that forked blocks from chain2 are unknown.
 	assert.Equal(t, 294, len(chain2))
@@ -279,10 +279,10 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
 		require.NoError(t, st.SetSlot(blk.Block.Slot))
 	}
-	assert.Equal(t, uint64(forkSlot+len(fork.blocks)-1), mc.HeadSlot())
-	for i := forkSlot + len(fork.blocks); i < len(chain2); i++ {
+	assert.Equal(t, forkSlot.Add(uint64(len(fork.blocks)-1)), mc.HeadSlot())
+	for i := forkSlot.Add(uint64(len(fork.blocks))); i < types.Slot(len(chain2)); i++ {
 		blk := chain2[i]
-		require.Equal(t, blk.Block.Slot, uint64(i), "incorrect block selected for slot %d", i)
+		require.Equal(t, blk.Block.Slot, i, "incorrect block selected for slot %d", i)
 		// Only save is parent block exists.
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
@@ -370,7 +370,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	})
 
 	t.Run("first block is diverging - backtrack successfully", func(t *testing.T) {
-		forkedSlot := uint64(24)
+		forkedSlot := types.Slot(24)
 		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
 		defer func() {
@@ -393,7 +393,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	})
 
 	t.Run("mid block is diverging - no backtrack is necessary", func(t *testing.T) {
-		forkedSlot := uint64(60)
+		forkedSlot := types.Slot(60)
 		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
 		defer func() {
@@ -402,7 +402,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
 		require.NoError(t, err)
 		require.Equal(t, 64, len(fork.blocks))
-		assert.Equal(t, uint64(33), fork.blocks[0].Block.Slot)
+		assert.Equal(t, types.Slot(33), fork.blocks[0].Block.Slot)
 	})
 }
 

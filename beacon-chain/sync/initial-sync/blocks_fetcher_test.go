@@ -509,7 +509,7 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 	}
 	blocks, err := fetcher.requestBlocks(ctx, req, peerIDs[0])
 	assert.NoError(t, err)
-	assert.Equal(t, blockBatchLimit, uint64(len(blocks)), "Incorrect number of blocks returned")
+	assert.Equal(t, uint64(blockBatchLimit), uint64(len(blocks)), "Incorrect number of blocks returned")
 
 	// Test context cancellation.
 	ctx, cancel = context.WithCancel(context.Background())
