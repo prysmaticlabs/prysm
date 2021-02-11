@@ -189,8 +189,9 @@ func (s *Service) applyAttestationForValidator(
 		return slashing, nil
 	}
 
-	// Get the first start epoch for max chunk.
-	startEpoch, exists := chunk.ChunkStartEpoch(sourceEpoch, opts.currentEpoch)
+	// Get the first start epoch for the chunk. If it does not exist or
+	// is not possible based on the input arguments, do not continue with the update.
+	startEpoch, exists := chunk.StartEpoch(sourceEpoch, opts.currentEpoch)
 	if !exists {
 		return nil, nil
 	}
