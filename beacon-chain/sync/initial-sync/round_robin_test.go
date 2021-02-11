@@ -376,7 +376,7 @@ func TestService_processBlock(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(2), s.chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, types.Slot(2), s.chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -474,7 +474,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(19), s.chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, types.Slot(19), s.chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 

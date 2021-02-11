@@ -101,7 +101,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 
 	s1, err := service.beaconDB.State(ctx, r1)
 	require.NoError(t, err)
-	assert.Equal(t, s1.Slot(), uint64(1), "Did not save state")
+	assert.Equal(t, s1.Slot(), types.Slot(1), "Did not save state")
 	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, 1/service.slotsPerArchivedPoint)
 	assert.Equal(t, r1, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)

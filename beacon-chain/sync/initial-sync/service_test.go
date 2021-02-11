@@ -407,7 +407,7 @@ func TestService_Resync(t *testing.T) {
 			},
 			assert: func(s *Service) {
 				assert.LogsContain(t, hook, "Resync attempt complete")
-				assert.Equal(t, uint64(160), s.chain.HeadSlot())
+				assert.Equal(t, types.Slot(160), s.chain.HeadSlot())
 			},
 		},
 	}
@@ -428,7 +428,7 @@ func TestService_Resync(t *testing.T) {
 				StateNotifier: mc.StateNotifier(),
 			})
 			assert.NotNil(t, s)
-			assert.Equal(t, uint64(0), s.chain.HeadSlot())
+			assert.Equal(t, types.Slot(0), s.chain.HeadSlot())
 			err := s.Resync()
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
