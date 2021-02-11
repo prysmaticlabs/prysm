@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -65,7 +64,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	case "justified":
 		root, err = bs.justifiedStateRoot(ctx)
 	default:
-		ok, matchErr := regexp.Match("0x[0-9a-fA-F]{64}", []byte(hexutil.Encode(req.StateId)))
+		ok, matchErr := bytesutil.IsBytes32Hex(req.StateId)
 		if matchErr != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to parse ID: %v", err)
 		}
