@@ -49,18 +49,17 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			log.WithError(err).Warn("Could not update head")
 		}
+		// Send notification of the processed block to the state feed.
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{
+				Slot:        blockCopy.Block.Slot,
+				BlockRoot:   blockRoot,
+				SignedBlock: blockCopy,
+				Verified:    true,
+			},
+		})
 	}
-
-	// Send notification of the processed block to the state feed.
-	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockProcessed,
-		Data: &statefeed.BlockProcessedData{
-			Slot:        blockCopy.Block.Slot,
-			BlockRoot:   blockRoot,
-			SignedBlock: blockCopy,
-			Verified:    true,
-		},
-	})
 
 	// Handle post block operations such as attestations and exits.
 	if err := s.handlePostBlockOperations(blockCopy.Block); err != nil {
@@ -76,8 +75,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log block sync status.
-	logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt)
-
+	if err := logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt, uint64(s.genesisTime.Unix())); err != nil {
+		return err
+	}
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
 

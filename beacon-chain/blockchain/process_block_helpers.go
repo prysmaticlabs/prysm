@@ -406,6 +406,30 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	return nil
 }
 
+// inserts finalized deposits into our finalized deposit trie.
+func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.insertFinalizedDeposits")
+	defer span.End()
+
+	// Update deposit cache.
+	finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch finalized state")
+	}
+	// We update the cache up to the last deposit index in the finalized block's state.
+	// We can be confident that these deposits will be included in some block
+	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
+	eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+	s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+	if featureconfig.Get().EnablePruningDepositProofs {
+		// Deposit proofs are only used during state transition and can be safely removed to save space.
+		if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+			return errors.Wrap(err, "could not prune deposit proofs")
+		}
+	}
+	return nil
+}
+
 // The deletes input attestations from the attestation pool, so proposers don't include them in a block for the future.
 func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
