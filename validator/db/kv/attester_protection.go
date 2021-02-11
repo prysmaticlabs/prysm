@@ -305,6 +305,7 @@ func (s *Store) flushAttestationRecords(ctx context.Context, records []*Attestat
 	}()
 
 	start := time.Now()
+	start := time.Now()
 	err := s.saveAttestationRecords(ctx, records)
 	// If there was any error, retry the records since the TX would have been reverted.
 	if err == nil {
