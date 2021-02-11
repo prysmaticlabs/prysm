@@ -39,7 +39,6 @@ func MaskCredentialsLogging( currUrl string) string {
 	MaskedUrl := currUrl
 	u, err := url.Parse(currUrl)
 	if err != nil {
-		//log.Fatal(err)
 		logrus.Info("Not a valid URL format to mask")
 		return currUrl //return gracefully
 	}
