@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -28,18 +29,18 @@ type Validator interface {
 	WaitForSync(ctx context.Context) error
 	WaitForActivation(ctx context.Context, accountsChangedChan chan struct{}) error
 	SlasherReady(ctx context.Context) error
-	CanonicalHeadSlot(ctx context.Context) (uint64, error)
-	NextSlot() <-chan uint64
-	SlotDeadline(slot uint64) time.Time
-	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
-	UpdateDuties(ctx context.Context, slot uint64) error
-	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
-	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
-	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
-	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
+	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
+	NextSlot() <-chan types.Slot
+	SlotDeadline(slot types.Slot) time.Time
+	LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error
+	UpdateDuties(ctx context.Context, slot types.Slot) error
+	RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
+	SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte)
+	ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte)
+	SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte)
 	LogAttestationsSubmitted()
-	LogNextDutyTimeLeft(slot uint64) error
-	UpdateDomainDataCaches(ctx context.Context, slot uint64)
+	LogNextDutyTimeLeft(slot types.Slot) error
+	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	GetKeymanager() keymanager.IKeymanager
@@ -72,7 +73,7 @@ func run(ctx context.Context, v Validator) {
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
-	var headSlot uint64
+	var headSlot types.Slot
 	firstTime := true
 	accountsChangedChan := make(chan struct{}, 1)
 	for {
@@ -223,7 +224,7 @@ func isConnectionError(err error) bool {
 	return err != nil && errors.Is(err, errConnectionIssue)
 }
 
-func handleAssignmentError(err error, slot uint64) {
+func handleAssignmentError(err error, slot types.Slot) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,

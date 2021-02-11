@@ -3,6 +3,7 @@ package client
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -36,8 +37,8 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []uint64{^uint64(0), 10, 11}, // exact slot doesn't matter, only if it is == or != ^uint64(0)
-			InclusionDistances:   []uint64{0, 5, 2},
+			InclusionSlots:       []types.Slot{types.Slot(^uint64(0)), 10, 11}, // exact slot doesn't matter, only if it is == or != ^uint64(0)
+			InclusionDistances:   []types.Slot{0, 5, 2},
 			CorrectlyVotedHead:   []bool{false, true, false},
 			CorrectlyVotedSource: []bool{false, true, true},
 			CorrectlyVotedTarget: []bool{false, true, true},
@@ -48,8 +49,8 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []uint64{33, 34, 35},
-			InclusionDistances:   []uint64{1, 2, 3},
+			InclusionSlots:       []types.Slot{33, 34, 35},
+			InclusionDistances:   []types.Slot{1, 2, 3},
 			CorrectlyVotedHead:   []bool{true, true, true},
 			CorrectlyVotedSource: []bool{true, true, true},
 			CorrectlyVotedTarget: []bool{true, true, true},
@@ -60,8 +61,8 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []uint64{65, ^uint64(0), 67},
-			InclusionDistances:   []uint64{1, 0, 2},
+			InclusionSlots:       []types.Slot{65, types.Slot(^uint64(0)), 67},
+			InclusionDistances:   []types.Slot{1, 0, 2},
 			CorrectlyVotedHead:   []bool{true, false, true},
 			CorrectlyVotedSource: []bool{true, false, true},
 			CorrectlyVotedTarget: []bool{false, false, true},
@@ -78,7 +79,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		if i == len(responses)-1 { // Handle last log.
 			hook = logTest.NewGlobal()
 		}
-		v.UpdateLogAggregateStats(val, uint64(32*(i+1)))
+		v.UpdateLogAggregateStats(val, types.Slot(32*(i+1)))
 	}
 
 	require.LogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -73,8 +74,8 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := uint64(55)
-	ticker := make(chan uint64)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -85,7 +86,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 	run(ctx, v)
 
 	require.Equal(t, true, v.UpdateDutiesCalled, "Expected UpdateAssignments(%d) to be called", slot)
-	assert.Equal(t, slot, v.UpdateDutiesArg1, "UpdateAssignments was called with wrong argument")
+	assert.Equal(t, uint64(slot), v.UpdateDutiesArg1, "UpdateAssignments was called with wrong argument")
 }
 
 func TestUpdateDuties_HandlesError(t *testing.T) {
@@ -93,8 +94,8 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := uint64(55)
-	ticker := make(chan uint64)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -112,8 +113,8 @@ func TestRoleAt_NextSlot(t *testing.T) {
 	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := uint64(55)
-	ticker := make(chan uint64)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -124,15 +125,15 @@ func TestRoleAt_NextSlot(t *testing.T) {
 	run(ctx, v)
 
 	require.Equal(t, true, v.RoleAtCalled, "Expected RoleAt(%d) to be called", slot)
-	assert.Equal(t, slot, v.RoleAtArg1, "RoleAt called with the wrong arg")
+	assert.Equal(t, uint64(slot), v.RoleAtArg1, "RoleAt called with the wrong arg")
 }
 
 func TestAttests_NextSlot(t *testing.T) {
 	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := uint64(55)
-	ticker := make(chan uint64)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []ValidatorRole{roleAttester}
 	go func() {
@@ -144,15 +145,15 @@ func TestAttests_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
-	assert.Equal(t, slot, v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
 }
 
 func TestProposes_NextSlot(t *testing.T) {
 	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := uint64(55)
-	ticker := make(chan uint64)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []ValidatorRole{roleProposer}
 	go func() {
@@ -164,15 +165,15 @@ func TestProposes_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
-	assert.Equal(t, slot, v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
 
 func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := uint64(55)
-	ticker := make(chan uint64)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []ValidatorRole{roleAttester, roleProposer}
 	go func() {
@@ -184,9 +185,9 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
-	assert.Equal(t, slot, v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
-	assert.Equal(t, slot, v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
+	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
 
 func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
@@ -194,8 +195,8 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), allValidatorsAreExitedCtxKey, true))
 	hook := logTest.NewGlobal()
 
-	slot := uint64(55)
-	ticker := make(chan uint64)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot

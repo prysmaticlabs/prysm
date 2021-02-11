@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -36,7 +37,7 @@ type FakeValidator struct {
 	AttestToBlockHeadArg1             uint64
 	RoleAtArg1                        uint64
 	UpdateDutiesArg1                  uint64
-	NextSlotRet                       <-chan uint64
+	NextSlotRet                       <-chan types.Slot
 	PublicKey                         string
 	UpdateDutiesRet                   error
 	RolesAtRet                        []ValidatorRole
@@ -96,7 +97,7 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 }
 
 // CanonicalHeadSlot for mocking.
-func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
+func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error) {
 	fv.CanonicalHeadSlotCalled++
 	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
 		return 0, errConnectionIssue
@@ -105,21 +106,21 @@ func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
 }
 
 // SlotDeadline for mocking.
-func (fv *FakeValidator) SlotDeadline(_ uint64) time.Time {
+func (fv *FakeValidator) SlotDeadline(_ types.Slot) time.Time {
 	fv.SlotDeadlineCalled = true
 	return timeutils.Now()
 }
 
 // NextSlot for mocking.
-func (fv *FakeValidator) NextSlot() <-chan uint64 {
+func (fv *FakeValidator) NextSlot() <-chan types.Slot {
 	fv.NextSlotCalled = true
 	return fv.NextSlotRet
 }
 
 // UpdateDuties for mocking.
-func (fv *FakeValidator) UpdateDuties(_ context.Context, slot uint64) error {
+func (fv *FakeValidator) UpdateDuties(_ context.Context, slot types.Slot) error {
 	fv.UpdateDutiesCalled = true
-	fv.UpdateDutiesArg1 = slot
+	fv.UpdateDutiesArg1 = uint64(slot)
 	return fv.UpdateDutiesRet
 }
 
@@ -130,7 +131,7 @@ func (fv *FakeValidator) UpdateProtections(_ context.Context, _ uint64) error {
 }
 
 // LogValidatorGainsAndLosses for mocking.
-func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ uint64) error {
+func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ types.Slot) error {
 	fv.LogValidatorGainsAndLossesCalled = true
 	return nil
 }
@@ -141,39 +142,39 @@ func (fv *FakeValidator) ResetAttesterProtectionData() {
 }
 
 // RolesAt for mocking.
-func (fv *FakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
+func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]byte][]ValidatorRole, error) {
 	fv.RoleAtCalled = true
-	fv.RoleAtArg1 = slot
+	fv.RoleAtArg1 = uint64(slot)
 	vr := make(map[[48]byte][]ValidatorRole)
 	vr[[48]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }
 
 // SubmitAttestation for mocking.
-func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot uint64, _ [48]byte) {
+func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot types.Slot, _ [48]byte) {
 	fv.AttestToBlockHeadCalled = true
-	fv.AttestToBlockHeadArg1 = slot
+	fv.AttestToBlockHeadArg1 = uint64(slot)
 }
 
 // ProposeBlock for mocking.
-func (fv *FakeValidator) ProposeBlock(_ context.Context, slot uint64, _ [48]byte) {
+func (fv *FakeValidator) ProposeBlock(_ context.Context, slot types.Slot, _ [48]byte) {
 	fv.ProposeBlockCalled = true
-	fv.ProposeBlockArg1 = slot
+	fv.ProposeBlockArg1 = uint64(slot)
 }
 
 // SubmitAggregateAndProof for mocking.
-func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ uint64, _ [48]byte) {}
+func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [48]byte) {}
 
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
 // LogNextDutyCountDown for mocking.
-func (fv *FakeValidator) LogNextDutyTimeLeft(slot uint64) error {
+func (fv *FakeValidator) LogNextDutyTimeLeft(slot types.Slot) error {
 	return nil
 }
 
 // UpdateDomainDataCaches for mocking.
-func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}
+func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
 
 // BalancesByPubkeys for mocking.
 func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[48]byte]uint64 {
