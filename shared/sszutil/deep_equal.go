@@ -4,8 +4,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"google.golang.org/protobuf/proto"
+
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // During deepValueEqual, must keep track of checks that are
@@ -295,15 +296,27 @@ func DeepEqual(x, y interface{}) bool {
 	}
 	v1 := reflect.ValueOf(x)
 	v2 := reflect.ValueOf(y)
-	if v1.Type() != v2.Type() {
+	v1Type := v1.Type()
+	if v1Type != v2.Type() {
 		return false
 	}
-	_, isProto := x.(proto.Message)
-	_, isProtoArray := x.([]proto.Message)
-	_, isProtoMap := x.(map[uint64]proto.Message)
-	if isProto || isProtoArray || isProtoMap {
-		// Exclude unexported fields for protos.
+	if ImplementsProtoMessageReflect(v1) {
 		return deepValueEqualExportedOnly(v1, v2, make(map[visit]bool), 0)
 	}
 	return deepValueEqual(v1, v2, make(map[visit]bool), 0)
+}
+
+// ImplementsProtoMessageReflect checks if an input reflect.Value argument implements
+// a proto.Message interface. This supports slices of proto messages,
+// pointers to proto messages, structs, and maps.
+func ImplementsProtoMessageReflect(val reflect.Value) bool {
+	switch val.Kind() {
+	case reflect.Slice, reflect.Map:
+		return implementsProtoMessageReflect(reflect.Zero(val.Type().Elem()))
+	case reflect.Ptr, reflect.Struct:
+		modelType := reflect.TypeOf((*proto.Message)(nil)).Elem()
+		return val.Type().Implements(modelType)
+	default:
+		return false
+	}
 }

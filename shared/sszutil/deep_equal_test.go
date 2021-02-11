@@ -86,3 +86,91 @@ func TestDeepEqualProto(t *testing.T) {
 	}
 	assert.Equal(t, true, sszutil.DeepEqual(&checkpoint1, &checkpoint2))
 }
+
+func TestImplementsProtoMessage(t *testing.T) {
+	type C struct{}
+
+	tests := []struct {
+		name  string
+		input interface{}
+		want  bool
+	}{
+		{
+			name:  "Pointer to struct which implements proto.Message returns true",
+			input: &ethpb.Attestation{},
+			want:  true,
+		},
+		{
+			name:  "Pointer to struct which does not implement proto.Message returns false",
+			input: &C{},
+			want:  false,
+		},
+		{
+			name:  "Struct which implements proto.Message returns true",
+			input: ethpb.Attestation{},
+			want:  true,
+		},
+		{
+			name:  "Struct which does not implement proto.Message returns false",
+			input: C{},
+			want:  false,
+		},
+		{
+			name:  "Slice of slices of struct values which implement proto.Message returns true",
+			input: [][]ethpb.Attestation{{{}}},
+			want:  true,
+		},
+		{
+			name:  "Slice of struct values which implement proto.Message returns true",
+			input: []ethpb.Attestation{{}},
+			want:  true,
+		},
+		{
+			name:  "Empty slice of struct values which implement proto.Message returns true",
+			input: []ethpb.Attestation{},
+			want:  true,
+		},
+		{
+			name:  "Slice of struct values which do not implement proto.Message returns false",
+			input: []C{{}},
+			want:  false,
+		},
+		{
+			name:  "Empty slice of struct values which do not implement proto.Message returns false",
+			input: []C{},
+			want:  false,
+		},
+		{
+			name:  "Map of value with struct type implementing proto.Message returns true",
+			input: make(map[int]ethpb.Attestation),
+			want:  true,
+		},
+		{
+			name:  "Map of value with struct type not implementing proto.Message returns false",
+			input: make(map[int]C),
+			want:  false,
+		},
+		{
+			name:  "Map of value with pointer type implementing proto.Message returns true",
+			input: make(map[int]*ethpb.Attestation),
+			want:  true,
+		},
+		{
+			name:  "Map of value with slice of pointer type implementing proto.Message returns true",
+			input: make(map[int][]*ethpb.Attestation),
+			want:  true,
+		},
+		{
+			name:  "Map of value with slice of value type implementing proto.Message returns true",
+			input: make(map[int][]ethpb.Attestation),
+			want:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := sszutil.ImplementsProtoMessageReflect(tt.input); got != tt.want {
+				t.Errorf("ImplementsProtoMessage() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
