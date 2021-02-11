@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
@@ -259,10 +259,11 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
 func (s *Store) flushAttestationRecords(ctx context.Context) {
+	start := time.Now()
 	err := s.saveAttestationRecords(ctx, s.batchedAttestations)
 	// If there was no error, we reset the batched attestations slice.
 	if err == nil {
-		log.Debug("Successfully flushed batched attestations to DB")
+		log.WithField("duration", time.Since(start)).Debug("Successfully flushed batched attestations to DB")
 		s.batchedAttestations = make([]*AttestationRecord, 0, attestationBatchCapacity)
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
