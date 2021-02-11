@@ -31,7 +31,7 @@ type Chunker interface {
 		startEpoch,
 		newTargetEpoch types.Epoch,
 	) (keepGoing bool, err error)
-	ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, bool)
+	ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, error)
 	NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch
 }
 
@@ -393,7 +393,7 @@ func (m *MaxSpanChunksSlice) Update(
 	return
 }
 
-func (m *MinSpanChunksSlice) ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, bool) {
+func (m *MinSpanChunksSlice) ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, error) {
 	var difference uint64
 	if uint64(currentEpoch) > m.params.historyLength {
 		difference = uint64(currentEpoch) - m.params.historyLength
@@ -412,19 +412,45 @@ func (m *MinSpanChunksSlice) ChunkStartEpoch(sourceEpoch, currentEpoch types.Epo
 	}
 }
 
-func (m *MaxSpanChunksSlice) ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, bool) {
-	if sourceEpoch < currentEpoch {
-		return sourceEpoch + 1, true
+// ChunkStartEpoch given a source epoch and current epoch, determines the start epoch of
+// a max span chunk for use in chunk updates.
+func (m *MaxSpanChunksSlice) ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, error) {
+	if sourceEpoch >= currentEpoch {
+		return 0, fmt.Errorf("source epoch %d cannot be >= current epoch %d", sourceEpoch, currentEpoch)
 	}
-	return 0, false
+	return sourceEpoch + 1, nil
 }
 
-// Move to last epoch of previous chunk
+// NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For min
+// span chunks, this will be the start epoch of chunk index = (current chunk - 1). For example:
+//
+//                       chunk0     chunk1     chunk2
+//                         |          |          |
+//  max_spans_val_i = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+//
+// If C = ChunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
+// epoch is the start epoch of chunk 0, which is epoch 0. This is computed as:
+//
+//  (start_epoch / C) - 1 * C
+//  (3 / 3) - 1 * 3 = 0
+//
 func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
 	return types.Epoch(uint64(startEpoch)/m.params.chunkSize*m.params.chunkSize - 1)
 }
 
-// Move to first epoch of next chunk.
+// NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For max
+// span chunks, this will be the start epoch of chunk index = (current chunk + 1). For example:
+//
+//                       chunk0     chunk1     chunk2
+//                         |          |          |
+//  max_spans_val_i = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+//
+// If C = ChunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
+// epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
+//
+//  (start_epoch / C) + 1 * C
+//  (3 / 3) + 1 * 3 = 6
+//
 func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
 	return types.Epoch((uint64(startEpoch)/m.params.chunkSize + 1) * m.params.chunkSize)
 }
