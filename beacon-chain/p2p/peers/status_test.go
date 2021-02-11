@@ -721,7 +721,7 @@ func TestPrunePeers(t *testing.T) {
 
 func TestStatus_BestPeer(t *testing.T) {
 	type peerConfig struct {
-		headSlot       uint64
+		headSlot       types.Slot
 		finalizedEpoch types.Epoch
 	}
 	tests := []struct {
@@ -907,7 +907,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		},
 	})
 
-	peerSlots := []uint64{32, 32, 32, 32, 235, 233, 258, 268, 270}
+	peerSlots := []types.Slot{32, 32, 32, 32, 235, 233, 258, 268, 270}
 	for i, headSlot := range peerSlots {
 		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
 		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
