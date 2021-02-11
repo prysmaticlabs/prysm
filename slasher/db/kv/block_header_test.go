@@ -17,7 +17,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	slot := uint64(1)
+	slot := types.Slot(1)
 	validatorID := uint64(1)
 
 	require.Equal(t, false, db.HasBlockHeader(ctx, slot, validatorID))

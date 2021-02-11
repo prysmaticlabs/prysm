@@ -24,8 +24,8 @@ type ReadOnlyDatabase interface {
 	GetLatestEpochDetected(ctx context.Context) (types.Epoch, error)
 
 	// BlockHeader related methods.
-	BlockHeaders(ctx context.Context, slot uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
-	HasBlockHeader(ctx context.Context, slot uint64, validatorID uint64) bool
+	BlockHeaders(ctx context.Context, slot types.Slot, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
+	HasBlockHeader(ctx context.Context, slot types.Slot, validatorID uint64) bool
 
 	// IndexedAttestations related methods.
 	HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error)
