@@ -15,6 +15,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -152,7 +153,7 @@ func TestGetIdentity(t *testing.T) {
 }
 
 func TestSyncStatus(t *testing.T) {
-	currentSlot := new(uint64)
+	currentSlot := new(types.Slot)
 	*currentSlot = 110
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)

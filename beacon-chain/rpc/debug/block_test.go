@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -50,11 +51,11 @@ func TestServer_GetBlock(t *testing.T) {
 func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
+	offset := int64(2 * params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		BeaconDB: db,
-		StateGen: stategen.New(db),
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(
-			2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
+		BeaconDB:           db,
+		StateGen:           stategen.New(db),
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 
 	s, _ := testutil.DeterministicGenesisState(t, 2048)
@@ -82,5 +83,5 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	require.Equal(t, b.Block.Slot, res.Slot)
 	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
 	require.NoError(t, err)
-	require.Equal(t, uint64(params.BeaconConfig().FarFutureEpoch), res.Slot)
+	require.Equal(t, types.Slot(params.BeaconConfig().FarFutureEpoch), res.Slot)
 }
