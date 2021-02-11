@@ -99,54 +99,64 @@ func interact(
 	r io.Reader,
 	validatingPublicKeys [][48]byte,
 ) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
-	// Allow the user to interactively select the accounts to exit or optionally
-	// provide them via cli flags as a string of comma-separated, hex strings.
-	filteredPubKeys, err := filterPublicKeysFromUserInput(
-		cliCtx,
-		flags.VoluntaryExitPublicKeysFlag,
-		validatingPublicKeys,
-		prompt.SelectAccountsVoluntaryExitPromptText,
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
-	}
-	rawPubKeys = make([][]byte, len(filteredPubKeys))
-	formattedPubKeys = make([]string, len(filteredPubKeys))
-	for i, pk := range filteredPubKeys {
-		pubKeyBytes := pk.Marshal()
-		rawPubKeys[i] = pubKeyBytes
-		formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
-	}
-	allAccountStr := strings.Join(formattedPubKeys, ", ")
-	if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
-		if len(filteredPubKeys) == 1 {
-			promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
-			resp, err := promptutil.ValidatePrompt(
-				r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
-			)
-			if err != nil {
-				return nil, nil, err
-			}
-			if strings.EqualFold(resp, "n") {
-				return nil, nil, nil
-			}
-		} else {
-			promptText := "Are you sure you want to perform a voluntary exit on %d accounts? (%s) Y/N"
-			if len(filteredPubKeys) == len(validatingPublicKeys) {
-				promptText = fmt.Sprintf(
-					"Are you sure you want to perform a voluntary exit on all accounts? Y/N (%s)",
-					au.BrightGreen(allAccountStr))
+	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
+		// Allow the user to interactively select the accounts to exit or optionally
+		// provide them via cli flags as a string of comma-separated, hex strings.
+		filteredPubKeys, err := filterPublicKeysFromUserInput(
+			cliCtx,
+			flags.VoluntaryExitPublicKeysFlag,
+			validatingPublicKeys,
+			prompt.SelectAccountsVoluntaryExitPromptText,
+		)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
+		}
+		rawPubKeys = make([][]byte, len(filteredPubKeys))
+		formattedPubKeys = make([]string, len(filteredPubKeys))
+		for i, pk := range filteredPubKeys {
+			pubKeyBytes := pk.Marshal()
+			rawPubKeys[i] = pubKeyBytes
+			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
+		}
+		allAccountStr := strings.Join(formattedPubKeys, ", ")
+		if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
+			if len(filteredPubKeys) == 1 {
+				promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
+				resp, err := promptutil.ValidatePrompt(
+					r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+				)
+				if err != nil {
+					return nil, nil, err
+				}
+				if strings.EqualFold(resp, "n") {
+					return nil, nil, nil
+				}
 			} else {
-				promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
-			}
-			resp, err := promptutil.ValidatePrompt(r, promptText, promptutil.ValidateYesOrNo)
-			if err != nil {
-				return nil, nil, err
-			}
-			if strings.EqualFold(resp, "n") {
-				return nil, nil, nil
+				promptText := "Are you sure you want to perform a voluntary exit on %d accounts? (%s) Y/N"
+				if len(filteredPubKeys) == len(validatingPublicKeys) {
+					promptText = fmt.Sprintf(
+						"Are you sure you want to perform a voluntary exit on all accounts? Y/N (%s)",
+						au.BrightGreen(allAccountStr))
+				} else {
+					promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
+				}
+				resp, err := promptutil.ValidatePrompt(r, promptText, promptutil.ValidateYesOrNo)
+				if err != nil {
+					return nil, nil, err
+				}
+				if strings.EqualFold(resp, "n") {
+					return nil, nil, nil
+				}
 			}
 		}
+	} else {
+		rawPubKeys = make([][]byte, len(validatingPublicKeys))
+		formattedPubKeys = make([]string, len(validatingPublicKeys))
+		for i, pk := range validatingPublicKeys {
+			rawPubKeys[i] = pk[:]
+			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk[:]))
+		}
+		fmt.Printf("About to perform a voluntary exit of %d accounts\n", len(rawPubKeys))
 	}
 
 	promptHeader := au.Red("===============IMPORTANT===============")
