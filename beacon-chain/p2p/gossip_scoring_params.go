@@ -72,7 +72,7 @@ func topicScoreParams(topic string) *pubsub.TopicScoreParams {
 
 func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 	decayEpoch := time.Duration(5)
-	blocksPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	blocksPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     beaconBlockWeight,
 		TimeInMeshWeight:                0.0324,
@@ -95,7 +95,7 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 }
 
 func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
-	aggPerEpoch := aggregatorsPerSlot() * params.BeaconConfig().SlotsPerEpoch
+	aggPerEpoch := aggregatorsPerSlot() * uint64(params.BeaconConfig().SlotsPerEpoch)
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     aggregateWeight,
 		TimeInMeshWeight:                0.0324,
@@ -121,9 +121,9 @@ func defaultAggregateSubnetTopicParams() *pubsub.TopicScoreParams {
 	topicWeight := attestationTotalWeight / float64(params.BeaconNetworkConfig().AttestationSubnetCount)
 	subnetWeight := activeValidators() / params.BeaconNetworkConfig().AttestationSubnetCount
 	minimumWeight := subnetWeight / 50
-	numPerSlot := time.Duration(subnetWeight / params.BeaconConfig().SlotsPerEpoch)
+	numPerSlot := time.Duration(subnetWeight / uint64(params.BeaconConfig().SlotsPerEpoch))
 	comsPerSlot := committeeCountPerSlot()
-	exceedsThreshold := comsPerSlot >= 2*params.BeaconNetworkConfig().AttestationSubnetCount/params.BeaconConfig().SlotsPerEpoch
+	exceedsThreshold := comsPerSlot >= 2*params.BeaconNetworkConfig().AttestationSubnetCount/uint64(params.BeaconConfig().SlotsPerEpoch)
 	firstDecay := time.Duration(1)
 	meshDecay := time.Duration(4)
 	if exceedsThreshold {

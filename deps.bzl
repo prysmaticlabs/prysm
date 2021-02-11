@@ -2578,8 +2578,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:0JSOkWO7IEu7vZjKMLi9clV6YYo7NBIOYkZSOoKFa8Q=",
-        version = "v0.0.0-20210208095542-95e683d0aa9f",
+        sum = "h1:RhAO9jEKl6ffuhgTCwEKjszbVAuYFS2toCWsWMbONtg=",
+        version = "v0.0.0-20210211175241-9b1d8e3aaf0f",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
