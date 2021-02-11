@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -559,17 +560,21 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
-	client.EXPECT().GetDuties(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(resp, nil)
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(nil, nil)
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+
+	testutil.WaitTimeout(&wg, 3*time.Second)
+
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
 	assert.Equal(t, resp.Duties[0].CommitteeIndex, v.duties.Duties[0].CommitteeIndex, "Unexpected validator assignments")
@@ -611,17 +616,20 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
-	client.EXPECT().GetDuties(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(resp, nil)
-
+	var wg sync.WaitGroup
+	wg.Add(1)
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(nil, nil)
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+
+	testutil.WaitTimeout(&wg, 3*time.Second)
+
 	for range blacklistedPublicKeys {
 		assert.LogsContain(t, hook, "Not including slashable public key")
 	}

@@ -404,13 +404,27 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	v.duties = resp
-	v.logDuties(slot, v.duties.Duties)
-	subscribeSlots := make([]uint64, 0, len(validatingKeys))
-	subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
-	subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
+	v.logDuties(slot, v.duties.CurrentEpochDuties)
+
+	// Non-blocking call for beacon node to start subscriptions for aggregators.
+	go func() {
+		if err := v.subscribeToSubnets(context.Background(), resp); err != nil {
+			log.WithError(err).Error("Failed to subscribe to subnets")
+		}
+	}()
+
+	return nil
+}
+
+// subscribeToSubnets iterates through each validator duty, signs each slot, and asks beacon node
+// to eagerly subscribe to subnets so that the aggregator has attestations to aggregate.
+func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesResponse) error {
+	subscribeSlots := make([]uint64, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
+	subscribeCommitteeIDs := make([]uint64, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
+	subscribeIsAggregator := make([]bool, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	alreadySubscribed := make(map[[64]byte]bool)
 
-	for _, duty := range v.duties.Duties {
+	for _, duty := range res.CurrentEpochDuties {
 		pk := bytesutil.ToBytes48(duty.PublicKey)
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
@@ -435,14 +449,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		}
 	}
 
-	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
-	req.Epoch++
-	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	for _, duty := range dutiesNextEpoch.Duties {
+	for _, duty := range res.NextEpochDuties {
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
@@ -466,7 +473,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		}
 	}
 
-	_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
+	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
 		Slots:        subscribeSlots,
 		CommitteeIds: subscribeCommitteeIDs,
 		IsAggregator: subscribeIsAggregator,
