@@ -31,7 +31,7 @@ type Chunker interface {
 		startEpoch,
 		newTargetEpoch types.Epoch,
 	) (keepGoing bool, err error)
-	ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, error)
+	StartEpoch(sourceEpoch, currentEpoch types.Epoch) (epoch types.Epoch, exists bool)
 	NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch
 }
 
@@ -393,32 +393,42 @@ func (m *MaxSpanChunksSlice) Update(
 	return
 }
 
-func (m *MinSpanChunksSlice) ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, error) {
+// StartEpoch given a source epoch and current epoch, determines the start epoch of
+// a min span chunk for use in chunk updates. To compute this value, we look at the difference between
+// H = HistoryLength and the current epoch. Then, we check if the source epoch > difference. If so,
+// then the start epoch is source epoch - 1.
+func (m *MinSpanChunksSlice) StartEpoch(
+	sourceEpoch, currentEpoch types.Epoch,
+) (epoch types.Epoch, exists bool) {
 	var difference uint64
 	if uint64(currentEpoch) > m.params.historyLength {
 		difference = uint64(currentEpoch) - m.params.historyLength
 	}
-	if uint64(sourceEpoch) > difference {
-		if sourceEpoch == 0 {
-			panic("Cannot be 0")
-		}
-		var startEpoch types.Epoch
-		if sourceEpoch > 0 {
-			startEpoch = sourceEpoch.Sub(1)
-		}
-		return startEpoch, true
-	} else {
-		return 0, false
+	if uint64(sourceEpoch) <= difference {
+		return
 	}
+	if sourceEpoch == 0 {
+		return
+	}
+	epoch = sourceEpoch.Sub(1)
+	exists = true
+	return
 }
 
-// ChunkStartEpoch given a source epoch and current epoch, determines the start epoch of
-// a max span chunk for use in chunk updates.
-func (m *MaxSpanChunksSlice) ChunkStartEpoch(sourceEpoch, currentEpoch types.Epoch) (types.Epoch, error) {
+// StartEpoch given a source epoch and current epoch, determines the start epoch of
+// a max span chunk for use in chunk updates. The source epoch cannot be >= the current epoch.
+func (m *MaxSpanChunksSlice) StartEpoch(
+	sourceEpoch, currentEpoch types.Epoch,
+) (epoch types.Epoch, exists bool) {
 	if sourceEpoch >= currentEpoch {
-		return 0, fmt.Errorf("source epoch %d cannot be >= current epoch %d", sourceEpoch, currentEpoch)
+		return
 	}
-	return sourceEpoch + 1, nil
+	// Given max spans is a list of max targets for source epochs, the precondition is that
+	// every attestation's source epoch must be < than its target epoch. So the start epoch
+	// for updates is given as source epoch + 1.
+	epoch = sourceEpoch + 1
+	exists = true
+	return
 }
 
 // NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For min
