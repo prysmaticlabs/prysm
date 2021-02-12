@@ -90,7 +90,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, resp.Data.StateRoot, resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("head"), 32), resp.Data.StateRoot)
 	})
 
 	t.Run("Genesis", func(t *testing.T) {
