@@ -24,7 +24,7 @@ type logger interface {
 }
 
 func TestLogrusCollector(t *testing.T) {
-	service := prometheus.New(addr, nil)
+	service := prometheus.NewService(addr, nil)
 	hook := prometheus.NewLogrusCollector()
 	log.AddHook(hook)
 	go service.Start()
