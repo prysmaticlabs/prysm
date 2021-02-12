@@ -229,7 +229,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("100"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, resp.Data.StateRoot, bytesutil.PadTo([]byte("slot"), 32))
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("slot"), 32), resp.Data.StateRoot)
 	})
 
 	t.Run("Multiple slots", func(t *testing.T) {
