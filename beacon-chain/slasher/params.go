@@ -81,7 +81,7 @@ func (p *Parameters) firstEpoch(chunkIndex uint64) types.Epoch {
 //                     -> last epoch of chunk 1 equals 5
 //
 func (p *Parameters) lastEpoch(chunkIndex uint64) types.Epoch {
-	return types.Epoch(chunkIndex * p.chunkSize).Add(p.chunkSize - 1)
+	return p.firstEpoch(chunkIndex).Add(p.chunkSize - 1)
 }
 
 // Given a validator index, and epoch, we compute the exact index
