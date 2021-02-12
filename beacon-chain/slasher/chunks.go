@@ -452,7 +452,7 @@ func (m *MaxSpanChunksSlice) StartEpoch(
 //  (3 / 3) * (3 - 1) = 1 * 2 = 2
 //
 func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
-	return types.Epoch(uint64(startEpoch)/m.params.chunkSize*m.params.chunkSize - 1)
+	return types.Epoch((uint64(startEpoch)/m.params.chunkSize)*(m.params.chunkSize - 1))
 }
 
 // NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For max
