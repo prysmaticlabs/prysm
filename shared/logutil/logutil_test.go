@@ -15,7 +15,7 @@ var urltests = []struct {
 		"https://eth-goerli.alchemyapi.io/***"},
 	{"https://google.com/search?q=golang", "https://google.com/***"},
 	{"https://user@example.com/foo%2fbar", "https://***@example.com/***"},
-	{"http://john@example.com/#x/y%2Fz", "http://john@example.com/#***"},
+	{"http://john@example.com/#x/y%2Fz", "http://***@example.com/#***"},
 	{"https://me:pass@example.com/foo/bar?x=1&y=2", "https://***@example.com/***"},
 }
 
