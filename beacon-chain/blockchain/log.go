@@ -25,7 +25,11 @@ func logStateTransitionData(b *ethpb.BeaconBlock) {
 	}).Info("Finished applying state transition")
 }
 
-func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, startTime time.Time) error {
+func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
+	startTime, err := helpers.SlotToTime(genesisTime, block.Slot)
+	if err != nil {
+		return err
+	}
 	log.WithFields(logrus.Fields{
 		"slot":                   block.Slot,
 		"slotInEpoch":            block.Slot % params.BeaconConfig().SlotsPerEpoch,
@@ -33,7 +37,8 @@ func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized 
 		"epoch":                  helpers.SlotToEpoch(block.Slot),
 		"finalizedEpoch":         finalized.Epoch,
 		"finalizedRoot":          fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
-		"timeSinceBlockReceived": timeutils.Now().Sub(startTime),
+		"timeSinceSlotStart":     timeutils.Now().Sub(startTime),
+		"timeSinceBlockReceived": timeutils.Now().Sub(receivedTime),
 	}).Info("Synced new block")
 	return nil
 }

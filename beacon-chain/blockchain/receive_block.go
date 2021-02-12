@@ -36,7 +36,7 @@ type BlockReceiver interface {
 func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
-	startTime := timeutils.Now()
+	receivedTime := timeutils.Now()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
@@ -77,7 +77,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log block sync status.
-	if err := logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt, startTime); err != nil {
+	if err := logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		return err
 	}
 	// Log state transition data.
