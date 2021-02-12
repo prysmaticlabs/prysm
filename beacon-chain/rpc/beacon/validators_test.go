@@ -1697,7 +1697,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
-	farFuture := types.Slot(params.BeaconConfig().FarFutureEpoch)
+	farFuture := params.BeaconConfig().FarFutureSlot
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
@@ -1769,7 +1769,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	require.NoError(t, err)
 	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
-	farFuture := types.Slot(params.BeaconConfig().FarFutureEpoch)
+	farFuture := params.BeaconConfig().FarFutureSlot
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
@@ -1842,7 +1842,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	require.NoError(t, err)
 	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
-	farFuture := types.Slot(params.BeaconConfig().FarFutureEpoch)
+	farFuture := params.BeaconConfig().FarFutureSlot
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
@@ -2052,8 +2052,8 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				InclusionSlot:                    types.Slot(params.BeaconConfig().FarFutureEpoch),
-				InclusionDistance:                types.Slot(params.BeaconConfig().FarFutureEpoch),
+				InclusionSlot:                    params.BeaconConfig().FarFutureSlot,
+				InclusionDistance:                params.BeaconConfig().FarFutureSlot,
 			},
 			{
 				ValidatorIndex:                   1,
@@ -2061,8 +2061,8 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				InclusionSlot:                    types.Slot(params.BeaconConfig().FarFutureEpoch),
-				InclusionDistance:                types.Slot(params.BeaconConfig().FarFutureEpoch),
+				InclusionSlot:                    params.BeaconConfig().FarFutureSlot,
+				InclusionDistance:                params.BeaconConfig().FarFutureSlot,
 			},
 		},
 	}

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -83,5 +82,5 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	require.Equal(t, b.Block.Slot, res.Slot)
 	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(params.BeaconConfig().FarFutureEpoch), res.Slot)
+	require.Equal(t, params.BeaconConfig().FarFutureSlot, res.Slot)
 }

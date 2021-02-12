@@ -81,7 +81,7 @@ func TestStore_OnBlock(t *testing.T) {
 			blk: func() *ethpb.SignedBeaconBlock {
 				b := testutil.NewBeaconBlock()
 				b.Block.ParentRoot = randomParentRoot2
-				b.Block.Slot = types.Slot(params.BeaconConfig().FarFutureEpoch)
+				b.Block.Slot = params.BeaconConfig().FarFutureSlot
 				return b
 			}(),
 			s:             st.Copy(),
