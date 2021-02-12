@@ -51,11 +51,11 @@ func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, 
 	var err error
 	var proposalExists bool
 	signingRoot := [32]byte{}
-	err = s.update(func(tx *bolt.Tx) error {
+	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		valBucket, err := bucket.CreateBucketIfNotExists(publicKey[:])
-		if err != nil {
-			return fmt.Errorf("could not create bucket for public key %#x", publicKey[:])
+		valBucket := bucket.Bucket(publicKey[:])
+		if valBucket == nil {
+			return nil
 		}
 		signingRootBytes := valBucket.Get(bytesutil.Uint64ToBytesBigEndian(slot))
 		if signingRootBytes == nil {
