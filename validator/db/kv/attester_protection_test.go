@@ -17,7 +17,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-
 func TestPendingAttestationRecords_Flush(t *testing.T) {
 	par := NewPendingAttestationRecords()
 

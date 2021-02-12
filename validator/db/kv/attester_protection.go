@@ -35,7 +35,7 @@ func NewPendingAttestationRecords() *PendingAttestationRecords {
 
 type PendingAttestationRecords struct {
 	records []*AttestationRecord
-	lock sync.RWMutex
+	lock    sync.RWMutex
 }
 
 func (p *PendingAttestationRecords) Append(ar *AttestationRecord) {
