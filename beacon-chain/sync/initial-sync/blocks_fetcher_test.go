@@ -99,7 +99,7 @@ func TestBlocksFetcher_InitStartStop(t *testing.T) {
 }
 
 func TestBlocksFetcher_RoundRobin(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	slotsInBatch := types.Slot(flags.Get().BlockBatchLimit)
 	requestsGenerator := func(start, end, batchSize types.Slot) []*fetchRequestParams {
 		var requests []*fetchRequestParams
 		for i := start; i <= end; i += batchSize {
@@ -118,49 +118,49 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 	}{
 		{
 			name:               "Single peer with all blocks",
-			expectedBlockSlots: makeSequence(1, 3*blockBatchLimit),
+			expectedBlockSlots: makeSequence(1, 3*slotsInBatch),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 3*blockBatchLimit),
-					finalizedEpoch: helpers.SlotToEpoch(3 * blockBatchLimit),
-					headSlot:       3 * blockBatchLimit,
+					blocks:         makeSequence(1, 3*slotsInBatch),
+					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					headSlot:       3 * slotsInBatch,
 				},
 			},
-			requests: requestsGenerator(1, 3*blockBatchLimit, blockBatchLimit),
+			requests: requestsGenerator(1, 3*slotsInBatch, slotsInBatch),
 		},
 		{
 			name:               "Single peer with all blocks (many small requests)",
-			expectedBlockSlots: makeSequence(1, 3*blockBatchLimit),
+			expectedBlockSlots: makeSequence(1, 3*slotsInBatch),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 3*blockBatchLimit),
-					finalizedEpoch: helpers.SlotToEpoch(3 * blockBatchLimit),
-					headSlot:       3 * blockBatchLimit,
+					blocks:         makeSequence(1, 3*slotsInBatch),
+					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					headSlot:       3 * slotsInBatch,
 				},
 			},
-			requests: requestsGenerator(1, 3*blockBatchLimit, blockBatchLimit/4),
+			requests: requestsGenerator(1, 3*slotsInBatch, slotsInBatch/4),
 		},
 		{
 			name:               "Multiple peers with all blocks",
-			expectedBlockSlots: makeSequence(1, 3*blockBatchLimit),
+			expectedBlockSlots: makeSequence(1, 3*slotsInBatch),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 3*blockBatchLimit),
-					finalizedEpoch: helpers.SlotToEpoch(3 * blockBatchLimit),
-					headSlot:       3 * blockBatchLimit,
+					blocks:         makeSequence(1, 3*slotsInBatch),
+					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					headSlot:       3 * slotsInBatch,
 				},
 				{
-					blocks:         makeSequence(1, 3*blockBatchLimit),
-					finalizedEpoch: helpers.SlotToEpoch(3 * blockBatchLimit),
-					headSlot:       3 * blockBatchLimit,
+					blocks:         makeSequence(1, 3*slotsInBatch),
+					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					headSlot:       3 * slotsInBatch,
 				},
 				{
-					blocks:         makeSequence(1, 3*blockBatchLimit),
-					finalizedEpoch: helpers.SlotToEpoch(3 * blockBatchLimit),
-					headSlot:       3 * blockBatchLimit,
+					blocks:         makeSequence(1, 3*slotsInBatch),
+					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					headSlot:       3 * slotsInBatch,
 				},
 			},
-			requests: requestsGenerator(1, 3*blockBatchLimit, blockBatchLimit),
+			requests: requestsGenerator(1, 3*slotsInBatch, slotsInBatch),
 		},
 		{
 			name:               "Multiple peers with skipped slots",
@@ -195,15 +195,15 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			requests: []*fetchRequestParams{
 				{
 					start: 1,
-					count: uint64(blockBatchLimit),
+					count: uint64(slotsInBatch),
 				},
 				{
-					start: blockBatchLimit + 1,
-					count: uint64(blockBatchLimit),
+					start: slotsInBatch + 1,
+					count: uint64(slotsInBatch),
 				},
 				{
-					start: 2*blockBatchLimit + 1,
-					count: uint64(blockBatchLimit),
+					start: 2*slotsInBatch + 1,
+					count: uint64(slotsInBatch),
 				},
 				{
 					start: 500,
@@ -217,7 +217,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with failures",
-			expectedBlockSlots: makeSequence(1, 2*blockBatchLimit),
+			expectedBlockSlots: makeSequence(1, 2*slotsInBatch),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -244,11 +244,11 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			requests: []*fetchRequestParams{
 				{
 					start: 1,
-					count: uint64(blockBatchLimit),
+					count: uint64(slotsInBatch),
 				},
 				{
-					start: blockBatchLimit + 1,
-					count: uint64(blockBatchLimit),
+					start: slotsInBatch + 1,
+					count: uint64(slotsInBatch),
 				},
 			},
 		},
