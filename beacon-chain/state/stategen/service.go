@@ -8,8 +8,10 @@ import (
 	"errors"
 	"sync"
 
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -17,8 +19,27 @@ import (
 
 var defaultHotStateDBInterval uint64 = 128 // slots
 
-// State represents a management object that handles the internal
+// StateManager represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
+type StateManager interface {
+	Resume(ctx context.Context) (*state.BeaconState, error)
+	SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState)
+	MigrateToCold(ctx context.Context, fRoot [32]byte) error
+	ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*eth.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error)
+	LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error)
+	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
+	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
+	StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
+	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
+	StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error)
+	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
+	SaveState(ctx context.Context, root [32]byte, st *state.BeaconState) error
+	ForceCheckpoint(ctx context.Context, root []byte) error
+	EnableSaveHotStateToDB(_ context.Context)
+	DisableSaveHotStateToDB(ctx context.Context) error
+}
+
+// State is a concrete implementation of StateManager.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
 	slotsPerArchivedPoint   uint64
