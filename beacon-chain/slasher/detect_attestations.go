@@ -12,6 +12,7 @@ import (
 // loading, saving, and updating min/max span chunks.
 type chunkUpdateOptions struct {
 	kind                slashertypes.ChunkKind
+	chunkIndex          uint64
 	validatorChunkIndex uint64
 	currentEpoch        types.Epoch
 	latestEpochWritten  types.Epoch
