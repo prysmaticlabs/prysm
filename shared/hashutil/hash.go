@@ -59,7 +59,7 @@ func CustomSHA256Hasher() func([]byte) [32]byte {
 	} else {
 		hasher.Reset()
 	}
-	var hash [32]byte
+	var h [32]byte
 
 	return func(data []byte) [32]byte {
 		// The hash interface never returns an error, for that reason
@@ -68,10 +68,10 @@ func CustomSHA256Hasher() func([]byte) [32]byte {
 
 		// #nosec G104
 		hasher.Write(data)
-		hasher.Sum(hash[:0])
+		hasher.Sum(h[:0])
 		hasher.Reset()
 
-		return hash
+		return h
 	}
 }
 
