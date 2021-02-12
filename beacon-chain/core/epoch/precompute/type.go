@@ -1,8 +1,6 @@
 package precompute
 
-import (
-	"github.com/prysmaticlabs/eth2-types"
-)
+import types "github.com/prysmaticlabs/eth2-types"
 
 // Validator stores the pre computation of individual validator's attesting records these records
 // consist of attestation votes, block inclusion record. Pre computing and storing such record

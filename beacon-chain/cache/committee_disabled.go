@@ -3,9 +3,7 @@
 // This file is used in fuzzer builds to bypass global committee caches.
 package cache
 
-import (
-	"github.com/prysmaticlabs/eth2-types"
-)
+import types "github.com/prysmaticlabs/eth2-types"
 
 // FakeCommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type FakeCommitteeCache struct {

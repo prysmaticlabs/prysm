@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"k8s.io/client-go/tools/cache"
 )
