@@ -310,7 +310,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
-	period := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
+	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -502,7 +502,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		DepositRoot:  make([]byte, 32),
 		DepositCount: 7,
 	}
-	period := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
+	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -1218,8 +1218,8 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 
 	eth1Data, err := ps.eth1Data(ctx, 100)
 	require.NoError(t, err)
-	period := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
-	wantedSlot := 100 % period
+	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
+	wantedSlot := types.Slot(100).Mod(period)
 	currentEpoch := helpers.SlotToEpoch(100)
 	var enc []byte
 	enc = fastssz.MarshalUint64(enc, uint64(currentEpoch)+uint64(wantedSlot))

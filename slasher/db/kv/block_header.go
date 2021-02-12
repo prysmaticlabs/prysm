@@ -120,11 +120,11 @@ func (s *Store) PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpoc
 	if pruneTill <= 0 {
 		return nil
 	}
-	pruneTillSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(pruneTill))
+	pruneTillSlot := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(pruneTill)))
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		for k, _ := c.First(); k != nil && bytesutil.FromBytes8(k[:8]) <= uint64(pruneTillSlot); k, _ = c.Next() {
+		for k, _ := c.First(); k != nil && bytesutil.FromBytes8(k[:8]) <= pruneTillSlot; k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete the block header from historical bucket")
 			}

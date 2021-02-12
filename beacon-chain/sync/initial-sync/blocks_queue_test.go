@@ -27,7 +27,7 @@ import (
 )
 
 func TestBlocksQueue_InitStartStop(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -42,7 +42,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
 	})
@@ -52,7 +52,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 	})
@@ -62,7 +62,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
@@ -74,7 +74,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		assert.NoError(t, queue.start())
@@ -98,7 +98,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		assert.NoError(t, queue.stop())
@@ -111,7 +111,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		assert.NoError(t, queue.stop())
@@ -123,7 +123,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		cancel()
@@ -293,7 +293,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 }
 
 func TestBlocksQueue_onScheduleEvent(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -308,7 +308,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onScheduleEvent(ctx)
 		cancel()
@@ -323,7 +323,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateScheduled, stateDataParsed, stateSkipped, stateSent}
@@ -343,7 +343,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onScheduleEvent(ctx)
@@ -359,7 +359,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		// Cancel to make fetcher spit error when trying to schedule next FSM.
 		requestCtx, requestCtxCancel := context.WithCancel(context.Background())
@@ -376,7 +376,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onScheduleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
@@ -388,7 +388,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 }
 
 func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -403,7 +403,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		cancel()
@@ -418,7 +418,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateDataParsed, stateSkipped, stateSent}
@@ -438,7 +438,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onDataReceivedEvent(ctx)
@@ -453,7 +453,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onDataReceivedEvent(ctx)
@@ -471,7 +471,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		// Mark previous machine as skipped - to test effect of re-requesting.
@@ -496,7 +496,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		hook := logTest.NewGlobal()
@@ -517,7 +517,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onDataReceivedEvent(ctx)
@@ -542,7 +542,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 }
 
 func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -557,7 +557,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onReadyToSendEvent(ctx)
 		cancel()
@@ -572,7 +572,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateScheduled, stateSkipped, stateSent}
@@ -592,7 +592,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -613,7 +613,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		queue.smm.addStateMachine(256)
 		queue.smm.addStateMachine(320)
@@ -638,7 +638,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		queue.smm.addStateMachine(128)
 		queue.smm.machines[128].state = stateNew
@@ -669,7 +669,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		queue.smm.addStateMachine(256)
 		queue.smm.machines[256].state = stateSkipped
@@ -688,7 +688,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 }
 
 func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -703,7 +703,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onProcessSkippedEvent(ctx)
 		cancel()
@@ -718,7 +718,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSent}
@@ -738,7 +738,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(256)
@@ -757,7 +757,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(256)
@@ -776,7 +776,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(192)
@@ -795,7 +795,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(192)
@@ -829,7 +829,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		startSlot := queue.chain.HeadSlot()
@@ -856,7 +856,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		assert.Equal(t, blockBatchLimit, queue.highestExpectedSlot)
 
@@ -906,7 +906,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		queue.mode = modeNonConstrained
 		assert.Equal(t, blockBatchLimit, queue.highestExpectedSlot)
@@ -944,7 +944,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 }
 
 func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -959,7 +959,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		cancel()
@@ -974,7 +974,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped}
@@ -994,7 +994,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
@@ -1010,7 +1010,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: blockBatchLimit,
+			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{

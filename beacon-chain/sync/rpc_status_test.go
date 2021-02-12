@@ -173,8 +173,8 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		Epoch: 3,
 		Root:  finalizedRoot[:],
 	}
-	totalSec := params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot)
-	genTime := time.Now().Unix() - int64(totalSec)
+	totalSec := int64(params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot))
+	genTime := time.Now().Unix() - totalSec
 
 	r := &Service{
 		p2p: p1,
@@ -467,8 +467,8 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		Epoch: 3,
 		Root:  finalizedRoot[:],
 	}
-	totalSec := params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot)
-	genTime := time.Now().Unix() - int64(totalSec)
+	totalSec := int64(params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot))
+	genTime := time.Now().Unix() - totalSec
 	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{

@@ -391,12 +391,12 @@ func TestBlocksFetcher_scheduleRequest(t *testing.T) {
 	})
 }
 func TestBlocksFetcher_handleRequest(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	chainConfig := struct {
 		expectedBlockSlots []types.Slot
 		peers              []*peerData
 	}{
-		expectedBlockSlots: makeSequence(1, blockBatchLimit),
+		expectedBlockSlots: makeSequence(1, types.Slot(blockBatchLimit)),
 		peers: []*peerData{
 			{
 				blocks:         makeSequence(1, 320),
@@ -470,7 +470,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 }
 
 func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
-	blockBatchLimit := types.Slot(flags.Get().BlockBatchLimit)
+	blockBatchLimit := flags.Get().BlockBatchLimit
 	chainConfig := struct {
 		expectedBlockSlots []types.Slot
 		peers              []*peerData

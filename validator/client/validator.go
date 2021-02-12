@@ -348,8 +348,8 @@ func (v *validator) NextSlot() <-chan types.Slot {
 
 // SlotDeadline is the start time of the next slot.
 func (v *validator) SlotDeadline(slot types.Slot) time.Time {
-	secs := (slot + 1).Mul(params.BeaconConfig().SecondsPerSlot)
-	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
+	secs := time.Duration((slot + 1).Mul(params.BeaconConfig().SecondsPerSlot))
+	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(secs * time.Second)
 }
 
 // UpdateDuties checks the slot number to determine if the validator's
