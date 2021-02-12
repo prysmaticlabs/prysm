@@ -120,7 +120,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                           boltDB,
 		databasePath:                 dirPath,
-		batchedAttestations:          NewPendingAttestationRecords(),
+		batchedAttestations:          NewQueuedAttestationRecords(),
 		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}

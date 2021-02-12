@@ -18,28 +18,28 @@ import (
 )
 
 func TestPendingAttestationRecords_Flush(t *testing.T) {
-	par := NewPendingAttestationRecords()
+	queue := NewQueuedAttestationRecords()
 
 	// Add 5 atts
 	num := 5
 	for i := 0; i < num; i++ {
-		par.Append(&AttestationRecord{
+		queue.Append(&AttestationRecord{
 			Target: types.Epoch(i),
 		})
 	}
 
-	res := par.Flush()
+	res := queue.Flush()
 	assert.Equal(t, len(res), num, "Wrong number of flushed attestations")
-	assert.Equal(t, len(par.records), 0, "Records were not cleared/flushed")
+	assert.Equal(t, len(queue.records), 0, "Records were not cleared/flushed")
 }
 
 func TestPendingAttestationRecords_Len(t *testing.T) {
-	par := NewPendingAttestationRecords()
-	assert.Equal(t, par.Len(), 0)
-	par.Append(&AttestationRecord{})
-	assert.Equal(t, par.Len(), 1)
-	par.Flush()
-	assert.Equal(t, par.Len(), 0)
+	queue := NewQueuedAttestationRecords()
+	assert.Equal(t, queue.Len(), 0)
+	queue.Append(&AttestationRecord{})
+	assert.Equal(t, queue.Len(), 1)
+	queue.Flush()
+	assert.Equal(t, queue.Len(), 0)
 }
 
 func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {

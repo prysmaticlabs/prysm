@@ -27,9 +27,9 @@ type AttestationRecord struct {
 	SigningRoot [32]byte
 }
 
-// NewPendingAttestationRecords constructor allocates the underlying slice and
+// NewQueuedAttestationRecords constructor allocates the underlying slice and
 // required attributes for managing pending attestation records.
-func NewPendingAttestationRecords() *QueuedAttestationRecords {
+func NewQueuedAttestationRecords() *QueuedAttestationRecords {
 	return &QueuedAttestationRecords{
 		records: make([]*AttestationRecord, 0, attestationBatchCapacity),
 	}
@@ -311,6 +311,8 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // of the result of the save operation.
 func (s *Store) flushAttestationRecords(ctx context.Context, records []*AttestationRecord) {
 	if s.batchedAttestationsFlushInProgress.IsSet() {
+		// This should never happen. This method should not be called when a flush is already in
+		// progress. If you are seeing this log, check the atomic bool before calling this method.
 		log.Error("Attempted to flush attestation records when already in progress")
 		return
 	}
