@@ -366,6 +366,7 @@ func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 		validatorIndex: validatorIdx,
 	}
 	keepGoing, err = chunk.Update(opts, startEpoch, target)
+	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want = []uint16{1, 0, 0, 0, 0, 0}
 	require.DeepEqual(t, want, chunk.Chunk())
