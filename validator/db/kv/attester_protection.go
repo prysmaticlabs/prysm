@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,6 +25,45 @@ type AttestationRecord struct {
 	Source      types.Epoch
 	Target      types.Epoch
 	SigningRoot [32]byte
+}
+
+// NewQueuedAttestationRecords constructor allocates the underlying slice and
+// required attributes for managing pending attestation records.
+func NewQueuedAttestationRecords() *QueuedAttestationRecords {
+	return &QueuedAttestationRecords{
+		records: make([]*AttestationRecord, 0, attestationBatchCapacity),
+	}
+}
+
+// QueuedAttestationRecords is a thread-safe struct for managing a queue of
+// attestation records to save to validator database.
+type QueuedAttestationRecords struct {
+	records []*AttestationRecord
+	lock    sync.RWMutex
+}
+
+// Append a new attestation record to the queue.
+func (p *QueuedAttestationRecords) Append(ar *AttestationRecord) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.records = append(p.records, ar)
+}
+
+// Flush all records. This method returns the current pending records and resets
+// the pending records slice.
+func (p *QueuedAttestationRecords) Flush() []*AttestationRecord {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	recs := p.records
+	p.records = make([]*AttestationRecord, 0, attestationBatchCapacity)
+	return recs
+}
+
+// Len returns the current length of records.
+func (p *QueuedAttestationRecords) Len() int {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return len(p.records)
 }
 
 // A wrapper over an error received from a background routine
@@ -97,6 +137,9 @@ func (s *Store) CheckSlashableAttestation(
 	defer span.End()
 	var slashKind SlashingKind
 	err := s.view(func(tx *bolt.Tx) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket := bucket.Bucket(pubKey[:])
 		if pkBucket == nil {
@@ -124,6 +167,10 @@ func (s *Store) CheckSlashableAttestation(
 		}
 		// Check for surround votes.
 		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochsBytes []byte) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
 			existingSourceEpoch := bytesutil.BytesToEpochBigEndian(sourceEpochBytes)
 
 			// There can be multiple target epochs attested per source epoch.
@@ -234,19 +281,23 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 	for {
 		select {
 		case v := <-s.batchedAttestationsChan:
-			s.batchedAttestations = append(s.batchedAttestations, v)
-			if len(s.batchedAttestations) == attestationBatchCapacity {
-				log.WithField("numRecords", attestationBatchCapacity).Debug(
+			s.batchedAttestations.Append(v)
+			if numRecords := s.batchedAttestations.Len(); numRecords >= attestationBatchCapacity {
+				log.WithField("numRecords", numRecords).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
-				s.flushAttestationRecords(ctx)
+				if s.batchedAttestationsFlushInProgress.IsNotSet() {
+					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
+				}
 			}
 		case <-ticker.C:
-			if len(s.batchedAttestations) > 0 {
-				log.WithField("numRecords", len(s.batchedAttestations)).Debug(
+			if numRecords := s.batchedAttestations.Len(); numRecords > 0 {
+				log.WithField("numRecords", numRecords).Debug(
 					"Batched attestation records write interval reached, flushing to DB",
 				)
-				s.flushAttestationRecords(ctx)
+				if s.batchedAttestationsFlushInProgress.IsNotSet() {
+					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
+				}
 			}
 		case <-ctx.Done():
 			return
@@ -258,13 +309,27 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // and resets the list of batched attestations for future writes.
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
-func (s *Store) flushAttestationRecords(ctx context.Context) {
+func (s *Store) flushAttestationRecords(ctx context.Context, records []*AttestationRecord) {
+	if s.batchedAttestationsFlushInProgress.IsSet() {
+		// This should never happen. This method should not be called when a flush is already in
+		// progress. If you are seeing this log, check the atomic bool before calling this method.
+		log.Error("Attempted to flush attestation records when already in progress")
+		return
+	}
+	s.batchedAttestationsFlushInProgress.Set()
+	defer s.batchedAttestationsFlushInProgress.UnSet()
+
 	start := time.Now()
-	err := s.saveAttestationRecords(ctx, s.batchedAttestations)
-	// If there was no error, we reset the batched attestations slice.
+	err := s.saveAttestationRecords(ctx, records)
+	// If there was any error, retry the records since the TX would have been reverted.
 	if err == nil {
 		log.WithField("duration", time.Since(start)).Debug("Successfully flushed batched attestations to DB")
-		s.batchedAttestations = make([]*AttestationRecord, 0, attestationBatchCapacity)
+	} else {
+		// This should never happen.
+		log.WithError(err).Error("Failed to batch save attestation records, retrying in queue")
+		for _, ar := range records {
+			s.batchedAttestations.Append(ar)
+		}
 	}
 	// Forward the error, if any, to all subscribers via an event feed.
 	// We use a struct wrapper around the error as the event feed
