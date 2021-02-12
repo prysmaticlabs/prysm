@@ -155,7 +155,7 @@ func TestService_InitStartStop(t *testing.T) {
 			}
 			// Initialize feed
 			notifier := &mock.MockStateNotifier{}
-			s := New(ctx, &Config{
+			s := NewService(ctx, &Config{
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: notifier,
@@ -322,7 +322,7 @@ func TestService_markSynced(t *testing.T) {
 	mc := &mock.ChainService{}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s := New(ctx, &Config{
+	s := NewService(ctx, &Config{
 		Chain:         mc,
 		StateNotifier: mc.StateNotifier(),
 	})
@@ -420,7 +420,7 @@ func TestService_Resync(t *testing.T) {
 			if tt.chainService != nil {
 				mc = tt.chainService()
 			}
-			s := New(ctx, &Config{
+			s := NewService(ctx, &Config{
 				DB:            beaconDB,
 				P2P:           p,
 				Chain:         mc,
@@ -442,7 +442,7 @@ func TestService_Resync(t *testing.T) {
 }
 
 func TestService_Initialized(t *testing.T) {
-	s := New(context.Background(), &Config{})
+	s := NewService(context.Background(), &Config{})
 	s.chainStarted.Set()
 	assert.Equal(t, true, s.Initialized())
 	s.chainStarted.UnSet()
