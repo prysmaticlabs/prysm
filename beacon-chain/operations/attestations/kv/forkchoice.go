@@ -64,3 +64,10 @@ func (c *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
 
 	return nil
 }
+
+// ForkchoiceAttestationCount returns the number of fork choice attestations key in the pool.
+func (c *AttCaches) ForkchoiceAttestationCount() int {
+	c.forkchoiceAttLock.RLock()
+	defer c.forkchoiceAttLock.RUnlock()
+	return len(c.forkchoiceAtt)
+}
