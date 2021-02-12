@@ -119,6 +119,11 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan struct
 		case <-s.ctx.Done():
 			return
 		case <-st.C():
+			// Continue when there's no fork choice attestation, there's nothing to process and update head.
+			// This covers the condition when the node is still initial syncing to the head of the chain.
+			if s.attPool.ForkchoiceAttestationCount() == 0 {
+				continue
+			}
 			s.processAttestations(s.ctx)
 			if err := s.updateHead(s.ctx, s.getJustifiedBalances()); err != nil {
 				log.Warnf("Resolving fork due to new attestation: %v", err)
