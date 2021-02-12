@@ -1,9 +1,12 @@
 package slasher
 
 import (
+	"fmt"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/sirupsen/logrus"
 )
 
 // Group a list of attestations into batches by validator chunk index.
@@ -40,6 +43,37 @@ func (s *Service) groupByChunkIndex(
 		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
 	}
 	return attestationsByChunkIndex
+}
+
+// Logs a slahing event with its particular details of the slashing
+// itself as fields to our logger.
+func logSlashingEvent(slashing *slashertypes.Slashing) {
+	switch slashing.Kind {
+	case slashertypes.DoubleVote:
+		log.WithFields(logrus.Fields{
+			"validatorIndex": slashing.ValidatorIndex,
+			"targetEpoch":    slashing.TargetEpoch,
+			"signingRoot":    fmt.Sprintf("%#x", slashing.SigningRoot),
+		}).Info("Attester double vote slashing")
+	case slashertypes.SurroundingVote:
+		log.WithFields(logrus.Fields{
+			"validatorIndex":  slashing.ValidatorIndex,
+			"prevSourceEpoch": slashing.PrevSourceEpoch,
+			"prevTargetEpoch": slashing.PrevTargetEpoch,
+			"sourceEpoch":     slashing.SourceEpoch,
+			"targetEpoch":     slashing.TargetEpoch,
+		}).Info("Attester surrounding vote slashing")
+	case slashertypes.SurroundedVote:
+		log.WithFields(logrus.Fields{
+			"validatorIndex":  slashing.ValidatorIndex,
+			"prevSourceEpoch": slashing.PrevSourceEpoch,
+			"prevTargetEpoch": slashing.PrevTargetEpoch,
+			"sourceEpoch":     slashing.SourceEpoch,
+			"targetEpoch":     slashing.TargetEpoch,
+		}).Info("Attester surrounded vote slashing")
+	default:
+		return
+	}
 }
 
 // Validates the attestation data integrity, ensuring we have no nil values for

@@ -471,3 +471,67 @@ func TestParams_validatorIndicesInChunk(t *testing.T) {
 		})
 	}
 }
+
+func TestParameters_firstEpoch(t *testing.T) {
+	tests := []struct {
+		name       string
+		params     *Parameters
+		chunkIndex uint64
+		want       types.Epoch
+	}{
+		{
+			name:       "first epoch of chunk 0 is 0",
+			params:     DefaultParams(),
+			chunkIndex: 0,
+			want:       0,
+		},
+		{
+			name: "with chunk_size = 3, first epoch of chunk 1 is 3",
+			params: &Parameters{
+				chunkSize: 3,
+			},
+			chunkIndex: 1,
+			want:       3,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.params.firstEpoch(tt.chunkIndex); got != tt.want {
+				t.Errorf("firstEpoch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParameters_lastEpoch(t *testing.T) {
+	tests := []struct {
+		name       string
+		params     *Parameters
+		chunkIndex uint64
+		want       types.Epoch
+	}{
+		{
+			name: "with chunk_size = 3, last epoch of chunk 0 is 2",
+			params: &Parameters{
+				chunkSize: 3,
+			},
+			chunkIndex: 0,
+			want:       2,
+		},
+		{
+			name: "with chunk_size = 3, last epoch of chunk 1 is 5",
+			params: &Parameters{
+				chunkSize: 3,
+			},
+			chunkIndex: 1,
+			want:       5,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.params.lastEpoch(tt.chunkIndex); got != tt.want {
+				t.Errorf("lastEpoch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
