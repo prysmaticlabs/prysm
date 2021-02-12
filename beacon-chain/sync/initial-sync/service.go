@@ -56,9 +56,9 @@ type Service struct {
 	genesisChan   chan time.Time
 }
 
-// New configures the initial sync service responsible for bringing the node up to the
+// NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func New(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &Service{
 		ctx:           ctx,
