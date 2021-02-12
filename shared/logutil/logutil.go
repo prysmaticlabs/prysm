@@ -4,8 +4,8 @@ package logutil
 
 import (
 	"io"
-	"os"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -34,7 +34,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 //Masks the url credentials before logging for security purpose
 //[scheme:][//[userinfo@]host][/]path[?query][#fragment] -->  [scheme:][//[***]host][/***][#***]
 //if the format is not matched nothing is done, string is returned as is.
-func MaskCredentialsLogging( currUrl string) string {
+func MaskCredentialsLogging(currUrl string) string {
 	//error if the input is not a URL
 	MaskedUrl := currUrl
 	u, err := url.Parse(currUrl)
@@ -47,7 +47,7 @@ func MaskCredentialsLogging( currUrl string) string {
 	if u.User != nil {
 		MaskedUrl = strings.Replace(MaskedUrl, u.User.String(), "***", 1)
 	}
-	if len(u.RequestURI()) > 1 {  //Ignore the '/'
+	if len(u.RequestURI()) > 1 { //Ignore the '/'
 		MaskedUrl = strings.Replace(MaskedUrl, u.RequestURI(), "/***", 1)
 	}
 	if len(u.Fragment) > 0 {
