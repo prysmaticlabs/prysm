@@ -30,9 +30,9 @@ type Config struct {
 	pruneInterval time.Duration
 }
 
-// New instantiates a new attestation pool service instance that will
+// NewService instantiates a new attestation pool service instance that will
 // be registered into a running beacon node.
-func New(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	cache, err := lru.New(forkChoiceProcessedRootsSize)
 	if err != nil {
 		return nil, err

@@ -44,9 +44,9 @@ type Config struct {
 	GrpcHeadersFlag            string
 }
 
-// New creates a new validator service for the service
+// NewService creates a new validator service for the service
 // registry.
-func New(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                ctx,
