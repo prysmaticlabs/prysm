@@ -53,7 +53,7 @@ var blockedBuckets = [][]byte{
 type Store struct {
 	db                                 *bolt.DB
 	databasePath                       string
-	batchedAttestations                *PendingAttestationRecords
+	batchedAttestations                *QueuedAttestationRecords
 	batchedAttestationsChan            chan *AttestationRecord
 	batchAttestationsFlushedFeed       *event.Feed
 	batchedAttestationsFlushInProgress abool.AtomicBool

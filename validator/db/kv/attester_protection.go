@@ -29,21 +29,21 @@ type AttestationRecord struct {
 
 // NewPendingAttestationRecords constructor allocates the underlying slice and
 // required attributes for managing pending attestation records.
-func NewPendingAttestationRecords() *PendingAttestationRecords {
-	return &PendingAttestationRecords{
+func NewPendingAttestationRecords() *QueuedAttestationRecords {
+	return &QueuedAttestationRecords{
 		records: make([]*AttestationRecord, 0, attestationBatchCapacity),
 	}
 }
 
-// PendingAttestationRecords is a thread-safe struct for managing a queue of
+// QueuedAttestationRecords is a thread-safe struct for managing a queue of
 // attestation records to save to validator database.
-type PendingAttestationRecords struct {
+type QueuedAttestationRecords struct {
 	records []*AttestationRecord
 	lock    sync.RWMutex
 }
 
 // Append a new attestation record to the queue.
-func (p *PendingAttestationRecords) Append(ar *AttestationRecord) {
+func (p *QueuedAttestationRecords) Append(ar *AttestationRecord) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.records = append(p.records, ar)
@@ -51,7 +51,7 @@ func (p *PendingAttestationRecords) Append(ar *AttestationRecord) {
 
 // Flush all records. This method returns the current pending records and resets
 // the pending records slice.
-func (p *PendingAttestationRecords) Flush() []*AttestationRecord {
+func (p *QueuedAttestationRecords) Flush() []*AttestationRecord {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	recs := p.records
@@ -60,7 +60,7 @@ func (p *PendingAttestationRecords) Flush() []*AttestationRecord {
 }
 
 // Len returns the current length of records.
-func (p *PendingAttestationRecords) Len() int {
+func (p *QueuedAttestationRecords) Len() int {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	return len(p.records)
