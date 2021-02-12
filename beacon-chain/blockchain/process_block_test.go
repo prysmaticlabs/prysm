@@ -968,7 +968,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		DepositCache:    depositCache,
 	}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	gs, _ := testutil.DeterministicGenesisState(t, 32)
