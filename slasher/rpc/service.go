@@ -51,9 +51,9 @@ type Config struct {
 	BeaconClient *beaconclient.Service
 }
 
-// New instantiates a new RPC service instance that will
+// NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
-func New(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:          ctx,
