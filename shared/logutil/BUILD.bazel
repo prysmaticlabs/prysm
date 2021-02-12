@@ -20,7 +20,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["stream_test.go"],
+    srcs = [
+        "logutil_test.go",
+        "stream_test.go",
+    ],
     embed = [":go_default_library"],
     deps = ["//shared/testutil/require:go_default_library"],
 )
