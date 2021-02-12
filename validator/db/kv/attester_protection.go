@@ -27,23 +27,30 @@ type AttestationRecord struct {
 	SigningRoot [32]byte
 }
 
+// NewPendingAttestationRecords constructor allocates the underlying slice and
+// required attributes for managing pending attestation records.
 func NewPendingAttestationRecords() *PendingAttestationRecords {
 	return &PendingAttestationRecords{
 		records: make([]*AttestationRecord, 0, attestationBatchCapacity),
 	}
 }
 
+// PendingAttestationRecords is a thread-safe struct for managing a queue of
+// attestation records to save to validator database.
 type PendingAttestationRecords struct {
 	records []*AttestationRecord
 	lock    sync.RWMutex
 }
 
+// Append a new attestation record to the queue.
 func (p *PendingAttestationRecords) Append(ar *AttestationRecord) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.records = append(p.records, ar)
 }
 
+// Flush all records. This method returns the current pending records and resets
+// the pending records slice.
 func (p *PendingAttestationRecords) Flush() []*AttestationRecord {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -52,6 +59,7 @@ func (p *PendingAttestationRecords) Flush() []*AttestationRecord {
 	return recs
 }
 
+// Len returns the current length of records.
 func (p *PendingAttestationRecords) Len() int {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
