@@ -467,7 +467,7 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.E
 //
 //                       chunk0     chunk1     chunk2
 //                         |          |          |
-//  max_spans_val_i = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+//  max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
 // If C = ChunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
 // epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
