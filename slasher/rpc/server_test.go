@@ -64,9 +64,9 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	require.NoError(t, err)
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
-	bs, err := beaconclient.New(ctx, bcCfg)
+	bs, err := beaconclient.NewService(ctx, bcCfg)
 	require.NoError(t, err)
-	ds := detection.New(ctx, cfg)
+	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
 	bClient.EXPECT().ListValidators(
@@ -166,9 +166,9 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	savedAttestation.Signature = marshalledSig
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
-	bs, err := beaconclient.New(ctx, bcCfg)
+	bs, err := beaconclient.NewService(ctx, bcCfg)
 	require.NoError(t, err)
-	ds := detection.New(ctx, cfg)
+	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableAttestation(ctx, savedAttestation)
 	require.NoError(t, err, "Got error while trying to detect slashing")
@@ -222,9 +222,9 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
-	bs, err := beaconclient.New(ctx, bcCfg)
+	bs, err := beaconclient.NewService(ctx, bcCfg)
 	require.NoError(t, err)
-	ds := detection.New(ctx, cfg)
+	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 
 	wg := sync.WaitGroup{}
@@ -313,9 +313,9 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	marshalledSig := blockSig.Marshal()
 	savedBlock.Signature = marshalledSig
 	bcCfg := &beaconclient.Config{BeaconClient: bClient, NodeClient: nClient, SlasherDB: db}
-	bs, err := beaconclient.New(ctx, bcCfg)
+	bs, err := beaconclient.NewService(ctx, bcCfg)
 	require.NoError(t, err)
-	ds := detection.New(ctx, cfg)
+	ds := detection.NewService(ctx, cfg)
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableBlock(ctx, savedBlock)
 	require.NoError(t, err, "Got error while trying to detect slashing")

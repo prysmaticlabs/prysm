@@ -89,7 +89,7 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 	return &Status{
 		ctx:       ctx,
 		store:     store,
-		scorers:   scorers.New(ctx, store, config.ScorerParams),
+		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
 	}
 }

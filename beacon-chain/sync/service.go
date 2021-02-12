@@ -113,8 +113,8 @@ type Service struct {
 	stateGen                  *stategen.State
 }
 
-// New initializes new regular sync service.
-func New(ctx context.Context, cfg *Config) *Service {
+// NewService initializes new regular sync service.
+func NewService(ctx context.Context, cfg *Config) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
 
 	rLimiter := newRateLimiter(cfg.P2P)
