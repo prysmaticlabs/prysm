@@ -469,7 +469,7 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.E
 //  (3 / 3) + 1 * 3 = 6
 //
 func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
-	return types.Epoch((uint64(startEpoch)/m.params.chunkSize + 1) * m.params.chunkSize)
+	return types.Epoch(((uint64(startEpoch)/m.params.chunkSize) + 1) * m.params.chunkSize)
 }
 
 // Given a validator index and epoch, retrieves the target epoch at its specific
