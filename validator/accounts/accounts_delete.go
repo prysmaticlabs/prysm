@@ -27,11 +27,11 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
+	kManager, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
-	validatingPublicKeys, err := keymanager.FetchAllValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err := kManager.FetchAllValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	}
 	if err := DeleteAccount(cliCtx.Context, &Config{
 		Wallet:           w,
-		Keymanager:       keymanager,
+		Keymanager:       kManager,
 		DeletePublicKeys: rawPublicKeys,
 	}); err != nil {
 		return err
