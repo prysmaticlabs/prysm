@@ -280,3 +280,52 @@ func tmpDirWithContents(t *testing.T) (string, []string) {
 	sort.Strings(fnames)
 	return dir, fnames
 }
+
+func TestHasReadWritePermissions(t *testing.T) {
+	type args struct {
+		itemPath string
+		perms    os.FileMode
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		{
+			name: "0600 permissions returns true",
+			args: args{
+				itemPath: "somefile",
+				perms:    params.BeaconIoConfig().ReadWritePermissions,
+			},
+			want: true,
+		},
+		{
+			name: "other permissions returns false",
+			args: args{
+				itemPath: "somefile2",
+				perms:    params.BeaconIoConfig().ReadWriteExecutePermissions,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fullPath := filepath.Join(os.TempDir(), tt.args.itemPath)
+			require.NoError(t, ioutil.WriteFile(fullPath, []byte("foo"), tt.args.perms))
+			t.Cleanup(func() {
+				if err := os.RemoveAll(fullPath); err != nil {
+					t.Fatalf("Could not delete temp dir: %v", err)
+				}
+			})
+			got, err := fileutil.HasReadWritePermissions(fullPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("HasReadWritePermissions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("HasReadWritePermissions() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
