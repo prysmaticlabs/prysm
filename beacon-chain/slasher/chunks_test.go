@@ -579,18 +579,29 @@ func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch 0",
 			params: &Parameters{
-				chunkSize: 3,
+				chunkSize:     3,
+				historyLength: 4096,
 			},
 			startEpoch: 0,
-			want:       math.MaxUint64,
+			want:       2,
 		},
 		{
 			name: "Start epoch of chunk 1 returns last epoch of chunk 0",
 			params: &Parameters{
-				chunkSize: 3,
+				chunkSize:     3,
+				historyLength: 4096,
 			},
 			startEpoch: 3,
 			want:       2,
+		},
+		{
+			name: "Start epoch inside of chunk 2 returns last epoch of chunk 1",
+			params: &Parameters{
+				chunkSize:     3,
+				historyLength: 4096,
+			},
+			startEpoch: 8,
+			want:       5,
 		},
 	}
 	for _, tt := range tests {
@@ -615,7 +626,8 @@ func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch 0",
 			params: &Parameters{
-				chunkSize: 3,
+				chunkSize:     3,
+				historyLength: 4,
 			},
 			startEpoch: 0,
 			want:       3,
@@ -623,7 +635,8 @@ func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch of chunk 1 returns start epoch of chunk 2",
 			params: &Parameters{
-				chunkSize: 3,
+				chunkSize:     3,
+				historyLength: 4,
 			},
 			startEpoch: 3,
 			want:       6,

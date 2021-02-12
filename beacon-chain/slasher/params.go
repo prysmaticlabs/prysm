@@ -41,9 +41,10 @@ func DefaultParams() *Parameters {
 // if we are keeping 6 epochs worth of data, and we have chunks of size 2, then epoch
 // 4 will fall into chunk index (4 % 6) / 2 = 2.
 //
-//  span    = [2, 2, 2, 2, 2, 2]
-//  chunked = [[2, 2], [2, 2], [2, 2]]
+//  span    = [-, -, -, -, -, -]
+//  chunked = [[-, -], [-, -], [-, -]]
 //                              |-> epoch 4, chunk idx 2
+//
 func (p *Parameters) chunkIndex(epoch types.Epoch) uint64 {
 	return uint64(epoch.Mod(p.historyLength).Div(p.chunkSize))
 }
@@ -55,6 +56,34 @@ func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIndex) ui
 	return uint64(validatorIndex.Div(p.validatorChunkSize))
 }
 
+// Returns the epoch at the 0th index of a chunk at the specified chunk index.
+// For example, if we have chunks of length 3 and we ask to give us the
+// first epoch of chunk1, then:
+//
+//    chunk0      chunk1     chunk2
+//       |          |          |
+//  [[-, -, -], [-, -, -], [-, -, -], ...]
+//               |
+//               -> first epoch of chunk 1 equals 3
+//
+func (p *Parameters) firstEpoch(chunkIndex uint64) types.Epoch {
+	return types.Epoch(chunkIndex * p.chunkSize)
+}
+
+// Returns the epoch at the last index of a chunk at the specified chunk index.
+// For example, if we have chunks of length 3 and we ask to give us the
+// last epoch of chunk1, then:
+//
+//    chunk0      chunk1     chunk2
+//       |          |          |
+//  [[-, -, -], [-, -, -], [-, -, -], ...]
+//                     |
+//                     -> last epoch of chunk 1 equals 5
+//
+func (p *Parameters) lastEpoch(chunkIndex uint64) types.Epoch {
+	return p.firstEpoch(chunkIndex).Add(p.chunkSize - 1)
+}
+
 // Given a validator index, and epoch, we compute the exact index
 // into our flat slice on disk which stores K validators' chunks, each
 // chunk of size C. For example, if C = 3 and K = 3, the data we store
@@ -63,7 +92,7 @@ func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIndex) ui
 //     val0     val1     val2
 //      |        |        |
 //   {     }  {     }  {     }
-//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
+//  [-, -, -, -, -, -, -, -, -]
 //
 // Then, figuring out the exact cell index for epoch 1 for validator 2 is computed
 // with (validatorIndex % K)*C + (epoch % C), which gives us:
@@ -75,7 +104,7 @@ func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIndex) ui
 //     val0     val1     val2
 //      |        |        |
 //   {     }  {     }  {     }
-//  [2, 2, 2, 2, 2, 2, 2, 2, 2]
+//  [-, -, -, -, -, -, -, -, -]
 //                        |-> epoch 1 for val2
 //
 func (p *Parameters) cellIndex(validatorIndex types.ValidatorIndex, epoch types.Epoch) uint64 {
