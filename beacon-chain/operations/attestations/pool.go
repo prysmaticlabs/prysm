@@ -39,6 +39,7 @@ type Pool interface {
 	SaveForkchoiceAttestations(atts []*ethpb.Attestation) error
 	ForkchoiceAttestations() []*ethpb.Attestation
 	DeleteForkchoiceAttestation(att *ethpb.Attestation) error
+	ForkchoiceAttestationCount() int
 }
 
 // NewPool initializes a new attestation pool.
