@@ -442,6 +442,76 @@ func TestMaxSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	require.DeepEqual(t, want, chunk.Chunk())
 }
 
+func TestMinSpanChunksSlice_StartEpoch(t *testing.T) {
+	type fields struct {
+		params *Parameters
+		data   []uint16
+	}
+	type args struct {
+		sourceEpoch  types.Epoch
+		currentEpoch types.Epoch
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		wantEpoch  types.Epoch
+		wantExists bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MinSpanChunksSlice{
+				params: tt.fields.params,
+				data:   tt.fields.data,
+			}
+			gotEpoch, gotExists := m.StartEpoch(tt.args.sourceEpoch, tt.args.currentEpoch)
+			if gotEpoch != tt.wantEpoch {
+				t.Errorf("StartEpoch() gotEpoch = %v, want %v", gotEpoch, tt.wantEpoch)
+			}
+			if gotExists != tt.wantExists {
+				t.Errorf("StartEpoch() gotExists = %v, want %v", gotExists, tt.wantExists)
+			}
+		})
+	}
+}
+
+func TestMaxSpanChunksSlice_StartEpoch(t *testing.T) {
+	type fields struct {
+		params *Parameters
+		data   []uint16
+	}
+	type args struct {
+		sourceEpoch  types.Epoch
+		currentEpoch types.Epoch
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		wantEpoch  types.Epoch
+		wantExists bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MaxSpanChunksSlice{
+				params: tt.fields.params,
+				data:   tt.fields.data,
+			}
+			gotEpoch, gotExists := m.StartEpoch(tt.args.sourceEpoch, tt.args.currentEpoch)
+			if gotEpoch != tt.wantEpoch {
+				t.Errorf("StartEpoch() gotEpoch = %v, want %v", gotEpoch, tt.wantEpoch)
+			}
+			if gotExists != tt.wantExists {
+				t.Errorf("StartEpoch() gotExists = %v, want %v", gotExists, tt.wantExists)
+			}
+		})
+	}
+}
+
 func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 	tests := []struct {
 		name       string
