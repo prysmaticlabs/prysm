@@ -86,14 +86,14 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		DepositContainers: []*protodb.DepositContainer{},
 	})
 	require.NoError(t, err)
-	web3Service, err = powchain.New(ctx, &powchain.Web3ServiceConfig{
+	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
 		HTTPEndpoints:   []string{endpoint},
 		DepositContract: common.Address{},
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
 
-	opsService, err := attestations.New(ctx, &attestations.Config{Pool: attestations.NewPool()})
+	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
 	depositCache, err := depositcache.New()
@@ -115,7 +115,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
-	chainService, err := New(ctx, cfg)
+	chainService, err := NewService(ctx, cfg)
 	require.NoError(t, err, "Unable to setup chain service")
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
