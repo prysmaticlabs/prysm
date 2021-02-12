@@ -134,7 +134,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("finalized"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, resp.Data.StateRoot, bytesutil.PadTo([]byte("finalized"), 32))
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.StateRoot)
 	})
 
 	t.Run("Justified", func(t *testing.T) {
