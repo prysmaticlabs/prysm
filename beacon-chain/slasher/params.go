@@ -104,7 +104,7 @@ func (p *Parameters) lastEpoch(chunkIndex uint64) types.Epoch {
 //     val0     val1     val2
 //      |        |        |
 //   {     }  {     }  {     }
-//  [-, -, -, -, -, 2, 2, 2, 2]
+//  [-, -, -, -, -, -, -, -, -]
 //                        |-> epoch 1 for val2
 //
 func (p *Parameters) cellIndex(validatorIndex types.ValidatorIndex, epoch types.Epoch) uint64 {
