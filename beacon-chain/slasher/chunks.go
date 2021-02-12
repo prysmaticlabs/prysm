@@ -396,18 +396,25 @@ func (m *MaxSpanChunksSlice) Update(
 // StartEpoch given a source epoch and current epoch, determines the start epoch of
 // a min span chunk for use in chunk updates. To compute this value, we look at the difference between
 // H = HistoryLength and the current epoch. Then, we check if the source epoch > difference. If so,
-// then the start epoch is source epoch - 1.
+// then the start epoch is source epoch - 1. Otherwise, we return the caller a boolean signifying
+// the input argumets are invalid for the chunk and the start epoch does not exist.
 func (m *MinSpanChunksSlice) StartEpoch(
 	sourceEpoch, currentEpoch types.Epoch,
 ) (epoch types.Epoch, exists bool) {
+	// Given min span chunks are used for detecting surrounding votes, we have no need
+	// for a start epoch of the chunk if the source epoch is 0 in the input arguments.
+	// To further clarify, min span chunks are updated in reverse order [a, b, c, d] where
+	// if the start epoch is d, then we down the chunk updating everything from d, c, b, to
+	// a. If the source epoch is 0, this would correspond to a, which means there is nothing
+	// more to update.
+	if sourceEpoch == 0 {
+		return
+	}
 	var difference uint64
 	if uint64(currentEpoch) > m.params.historyLength {
 		difference = uint64(currentEpoch) - m.params.historyLength
 	}
 	if uint64(sourceEpoch) <= difference {
-		return
-	}
-	if sourceEpoch == 0 {
 		return
 	}
 	epoch = sourceEpoch.Sub(1)
@@ -426,7 +433,7 @@ func (m *MaxSpanChunksSlice) StartEpoch(
 	// Given max spans is a list of max targets for source epochs, the precondition is that
 	// every attestation's source epoch must be < than its target epoch. So the start epoch
 	// for updates is given as source epoch + 1.
-	epoch = sourceEpoch + 1
+	epoch = sourceEpoch.Add(1)
 	exists = true
 	return
 }

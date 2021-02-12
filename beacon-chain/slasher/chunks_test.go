@@ -366,6 +366,7 @@ func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 		validatorIndex: validatorIdx,
 	}
 	keepGoing, err = chunk.Update(opts, startEpoch, target)
+	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want = []uint16{1, 0, 0, 0, 0, 0}
 	require.DeepEqual(t, want, chunk.Chunk())
@@ -440,6 +441,132 @@ func TestMaxSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	require.Equal(t, false, keepGoing)
 	want := []uint16{3, 2, 1, 0, 0, 0, 0, 0}
 	require.DeepEqual(t, want, chunk.Chunk())
+}
+
+func TestMinSpanChunksSlice_StartEpoch(t *testing.T) {
+	type args struct {
+		sourceEpoch  types.Epoch
+		currentEpoch types.Epoch
+	}
+	tests := []struct {
+		name           string
+		params         *Parameters
+		args           args
+		wantEpoch      types.Epoch
+		shouldNotExist bool
+	}{
+		{
+			name:   "source_epoch == 0 returns false",
+			params: DefaultParams(),
+			args: args{
+				sourceEpoch: 0,
+			},
+			shouldNotExist: true,
+		},
+		{
+			name: "source_epoch == (current_epoch - HISTORY_LENGTH) returns false",
+			params: &Parameters{
+				historyLength: 3,
+			},
+			args: args{
+				sourceEpoch:  1,
+				currentEpoch: 4,
+			},
+			shouldNotExist: true,
+		},
+		{
+			name: "source_epoch < (current_epoch - HISTORY_LENGTH) returns false",
+			params: &Parameters{
+				historyLength: 3,
+			},
+			args: args{
+				sourceEpoch:  1,
+				currentEpoch: 5,
+			},
+			shouldNotExist: true,
+		},
+		{
+			name: "source_epoch > (current_epoch - HISTORY_LENGTH) returns true",
+			params: &Parameters{
+				historyLength: 3,
+			},
+			args: args{
+				sourceEpoch:  1,
+				currentEpoch: 3,
+			},
+			wantEpoch: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MinSpanChunksSlice{
+				params: tt.params,
+			}
+			gotEpoch, gotExists := m.StartEpoch(tt.args.sourceEpoch, tt.args.currentEpoch)
+			if tt.shouldNotExist && gotExists {
+				t.Errorf("StartEpoch() gotExists false")
+			}
+			if !tt.shouldNotExist && gotEpoch != tt.wantEpoch {
+				t.Errorf("StartEpoch() gotEpoch = %v, want %v", gotEpoch, tt.wantEpoch)
+			}
+		})
+	}
+}
+
+func TestMaxSpanChunksSlice_StartEpoch(t *testing.T) {
+	type args struct {
+		sourceEpoch  types.Epoch
+		currentEpoch types.Epoch
+	}
+	tests := []struct {
+		name           string
+		params         *Parameters
+		args           args
+		wantEpoch      types.Epoch
+		shouldNotExist bool
+	}{
+		{
+			name:   "source_epoch == current_epoch returns false",
+			params: DefaultParams(),
+			args: args{
+				sourceEpoch:  1,
+				currentEpoch: 1,
+			},
+			shouldNotExist: true,
+		},
+		{
+			name:   "source_epoch > current_epoch returns false",
+			params: DefaultParams(),
+			args: args{
+				sourceEpoch:  2,
+				currentEpoch: 1,
+			},
+			shouldNotExist: true,
+		},
+		{
+			name:   "source_epoch < current_epoch returns true",
+			params: DefaultParams(),
+			args: args{
+				sourceEpoch:  1,
+				currentEpoch: 2,
+			},
+			wantEpoch: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MaxSpanChunksSlice{
+				params: tt.params,
+			}
+			gotEpoch, gotExists := m.StartEpoch(tt.args.sourceEpoch, tt.args.currentEpoch)
+			if tt.shouldNotExist && gotExists {
+				t.Errorf("StartEpoch() gotExists false")
+			}
+			if !tt.shouldNotExist && gotEpoch != tt.wantEpoch {
+				t.Errorf("StartEpoch() gotEpoch = %v, want %v", gotEpoch, tt.wantEpoch)
+			}
+		})
+	}
 }
 
 func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
