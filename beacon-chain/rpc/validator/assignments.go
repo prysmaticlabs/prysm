@@ -156,15 +156,15 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		}
 		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if ok {
-			status := assignmentStatus(s, idx)
+			s := assignmentStatus(s, idx)
 
 			assignment.ValidatorIndex = idx
-			assignment.Status = status
+			assignment.Status = s
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
 
 			// The next epoch has no lookup for proposer indexes.
 			nextAssignment.ValidatorIndex = idx
-			nextAssignment.Status = status
+			nextAssignment.Status = s
 
 			ca, ok := committeeAssignments[idx]
 			if ok {
