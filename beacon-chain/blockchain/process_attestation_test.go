@@ -30,7 +30,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		StateGen:        stategen.New(beaconDB),
 	}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	_, err = blockTree1(t, beaconDB, []byte{'g'})
@@ -136,7 +136,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		StateGen:        stategen.New(beaconDB),
 	}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(timeutils.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
@@ -160,7 +160,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		BeaconDB: beaconDB,
 		StateGen: stategen.New(beaconDB),
 	}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	s, err := testutil.NewBeaconState()
@@ -232,7 +232,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 		BeaconDB: beaconDB,
 		StateGen: stategen.New(beaconDB),
 	}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	epoch := types.Epoch(1)
@@ -270,7 +270,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	nowTime := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
@@ -282,7 +282,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	nowTime := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
@@ -294,7 +294,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	nowTime := 2 * params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
@@ -307,7 +307,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	d := testutil.HydrateAttestationData(&ethpb.AttestationData{})
@@ -319,7 +319,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
@@ -337,7 +337,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
@@ -355,7 +355,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -382,7 +382,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -409,7 +409,7 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()

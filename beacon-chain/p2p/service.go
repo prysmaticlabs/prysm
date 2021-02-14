@@ -82,9 +82,9 @@ type Service struct {
 	genesisValidatorsRoot []byte
 }
 
-// New initializes a new p2p service compatible with shared.Service interface. No
+// NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
-func New(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
