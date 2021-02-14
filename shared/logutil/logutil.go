@@ -45,7 +45,7 @@ func MaskCredentialsLogging(currUrl string) string {
 	if u.User != nil {
 		MaskedUrl = strings.Replace(MaskedUrl, u.User.String(), "***", 1)
 	}
-	if len(u.RequestURI()) > 1 { //Ignore the '/'
+	if len(u.RequestURI()) > 1 { // Ignore the '/'
 		MaskedUrl = strings.Replace(MaskedUrl, u.RequestURI(), "/***", 1)
 	}
 	if len(u.Fragment) > 0 {
