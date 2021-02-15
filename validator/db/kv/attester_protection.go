@@ -174,7 +174,7 @@ func (s *Store) CheckSlashableAttestation(
 			existingSourceEpoch := bytesutil.BytesToEpochBigEndian(sourceEpochBytes)
 
 			// There can be multiple target epochs attested per source epoch.
-			attestedTargetEpochs := make([]types.Epoch, 0)
+			attestedTargetEpochs := make([]types.Epoch, 0, len(targetEpochsBytes)/8)
 			for i := 0; i < len(targetEpochsBytes); i += 8 {
 				targetEpoch := bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i : i+8])
 				attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
