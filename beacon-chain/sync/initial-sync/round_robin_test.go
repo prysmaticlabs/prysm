@@ -327,7 +327,7 @@ func TestService_processBlock(t *testing.T) {
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	s := New(context.Background(), &Config{
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -388,7 +388,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	s := New(context.Background(), &Config{
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{

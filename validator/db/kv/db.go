@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -50,11 +51,12 @@ var blockedBuckets = [][]byte{
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                           *bolt.DB
-	databasePath                 string
-	batchedAttestations          []*AttestationRecord
-	batchedAttestationsChan      chan *AttestationRecord
-	batchAttestationsFlushedFeed *event.Feed
+	db                                 *bolt.DB
+	databasePath                       string
+	batchedAttestations                *QueuedAttestationRecords
+	batchedAttestationsChan            chan *AttestationRecord
+	batchAttestationsFlushedFeed       *event.Feed
+	batchedAttestationsFlushInProgress abool.AtomicBool
 }
 
 // Close closes the underlying boltdb database.
@@ -118,7 +120,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                           boltDB,
 		databasePath:                 dirPath,
-		batchedAttestations:          make([]*AttestationRecord, 0, attestationBatchCapacity),
+		batchedAttestations:          NewQueuedAttestationRecords(),
 		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}

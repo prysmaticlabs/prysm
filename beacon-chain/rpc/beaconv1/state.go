@@ -102,47 +102,55 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 }
 
 func (bs *Server) headStateRoot(ctx context.Context) ([]byte, error) {
-	stateRoot, err := bs.ChainInfoFetcher.HeadRoot(ctx)
+	b, err := bs.ChainInfoFetcher.HeadBlock(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain root: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
 	}
-	return stateRoot, nil
+	if b == nil || b.Block == nil {
+		return nil, status.Error(codes.Internal, "Nil block")
+	}
+	return b.Block.StateRoot, nil
 }
 
 func (bs *Server) genesisStateRoot(ctx context.Context) ([]byte, error) {
-	stateRoot, err := bs.ChainStartFetcher.PreGenesisState().HashTreeRoot(ctx)
+	b, err := bs.BeaconDB.GenesisBlock(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain root: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get genesis block: %v", err)
 	}
-	return stateRoot[:], nil
+	if b == nil || b.Block == nil {
+		return nil, status.Error(codes.Internal, "Nil block")
+	}
+	return b.Block.StateRoot, nil
 }
 
 func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
-	var blockRoot [32]byte
-	copy(blockRoot[:], bs.ChainInfoFetcher.FinalizedCheckpt().Root)
-	state, err := bs.StateGenService.StateByRoot(ctx, blockRoot)
+	cp, err := bs.BeaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
 	}
-	stateRoot, err := state.HashTreeRoot(ctx)
+	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain root: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
 	}
-	return stateRoot[:], nil
+	if b == nil || b.Block == nil {
+		return nil, status.Error(codes.Internal, "Nil block")
+	}
+	return b.Block.StateRoot, nil
 }
 
 func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
-	var blockRoot [32]byte
-	copy(blockRoot[:], bs.ChainInfoFetcher.CurrentJustifiedCheckpt().Root)
-	state, err := bs.StateGenService.StateByRoot(ctx, blockRoot)
+	cp, err := bs.BeaconDB.JustifiedCheckpoint(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get justified checkpoint: %v", err)
 	}
-	stateRoot, err := state.HashTreeRoot(ctx)
+	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain root: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get justified block: %v", err)
 	}
-	return stateRoot[:], nil
+	if b == nil || b.Block == nil {
+		return nil, status.Error(codes.Internal, "Nil block")
+	}
+	return b.Block.StateRoot, nil
 }
 
 func (bs *Server) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, error) {
@@ -159,21 +167,26 @@ func (bs *Server) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, e
 	}
 	return nil, status.Errorf(
 		codes.NotFound,
-		"State not found in the last %d states", len(headState.StateRoots()))
+		"State not found in the last %d state roots in head state", len(headState.StateRoots()))
 }
 
 func (bs *Server) stateRootBySlot(ctx context.Context, slot uint64) ([]byte, error) {
-	currentSlot := bs.ChainInfoFetcher.HeadSlot()
+	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
 		return nil, status.Errorf(codes.Internal, "Slot cannot be in the future")
 	}
-	state, err := bs.StateGenService.StateBySlot(ctx, slot)
+	e, blks, err := bs.BeaconDB.BlocksBySlot(ctx, slot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blocks: %v", err)
 	}
-	stateRoot, err := state.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to obtain root: %v", err)
+	if !e {
+		return nil, status.Errorf(codes.NotFound, "No block exists")
 	}
-	return stateRoot[:], nil
+	if len(blks) != 1 {
+		return nil, status.Errorf(codes.Internal, "Multiple blocks exist in same slot")
+	}
+	if blks[0] == nil || blks[0].Block == nil {
+		return nil, status.Error(codes.Internal, "Nil block")
+	}
+	return blks[0].Block.StateRoot, nil
 }
