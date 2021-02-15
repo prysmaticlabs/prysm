@@ -27,9 +27,9 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 				Source:           att.Data.Source.Epoch,
 				Target:           att.Data.Target.Epoch,
 			}
-			s.queueLock.Lock()
+			s.attestationQueueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, compactAtt)
-			s.queueLock.Unlock()
+			s.attestationQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -47,17 +47,14 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 	for {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
-			// TODO(#8331): Defer blocks from the future for later processing.
-			//if !validateAttestationIntegrity(att) {
-			//	continue
-			//}
+			// TODO(#8331): Validate block and defer blocks from the future for later processing.
 			compactBlock := &slashertypes.CompactBeaconBlock{
 				ProposerIndex: blockHeader.ProposerIndex,
 				Slot:          blockHeader.Slot,
 			}
-			s.queueLock.Lock()
+			s.blockQueueLock.Lock()
 			s.beaconBlocksQueue = append(s.beaconBlocksQueue, compactBlock)
-			s.queueLock.Unlock()
+			s.blockQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -75,15 +72,17 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 	for {
 		select {
 		case currentEpoch := <-epochTicker:
-			s.queueLock.Lock()
+			s.attestationQueueLock.Lock()
 			attestations := s.attestationQueue
 			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
-			s.queueLock.Unlock()
+			s.attestationQueueLock.Unlock()
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
 			groupedAtts := s.groupByValidatorChunkIndex(attestations)
+
+			// TODO(#8331): Consider using goroutines and wait groups here.
 			for validatorChunkIdx, batch := range groupedAtts {
 				validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
 				// Save the attestation records for the validator indices in our database.
@@ -101,6 +100,26 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 					continue
 				}
 			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// Process queued blocks every time an epoch ticker fires. We retrieve
+// these blocks from a queue, then perform double proposal detection.
+func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan uint64) {
+	for {
+		select {
+		case currentEpoch := <-epochTicker:
+			s.blockQueueLock.Lock()
+			blocks := s.beaconBlocksQueue
+			s.beaconBlocksQueue = make([]*slashertypes.CompactBeaconBlock, 0)
+			s.attestationQueueLock.Unlock()
+			log.WithFields(logrus.Fields{
+				"currentEpoch": currentEpoch,
+				"numBlocks":    len(blocks),
+			}).Info("Epoch reached, processing queued blocks for slashing detection")
 		case <-ctx.Done():
 			return
 		}

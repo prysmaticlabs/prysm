@@ -26,16 +26,17 @@ type ServiceConfig struct {
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect eth2 slashable offenses.
 type Service struct {
-	params            *Parameters
-	serviceCfg        *ServiceConfig
-	indexedAttsChan   chan *ethpb.IndexedAttestation
-	beaconBlocksChan  chan *ethpb.BeaconBlockHeader
-	queueLock         sync.Mutex
-	attestationQueue  []*slashertypes.CompactAttestation
-	beaconBlocksQueue []*slashertypes.CompactBeaconBlock
-	ctx               context.Context
-	cancel            context.CancelFunc
-	genesisTime       time.Time
+	params               *Parameters
+	serviceCfg           *ServiceConfig
+	indexedAttsChan      chan *ethpb.IndexedAttestation
+	beaconBlocksChan     chan *ethpb.BeaconBlockHeader
+	attestationQueueLock sync.Mutex
+	blockQueueLock       sync.Mutex
+	attestationQueue     []*slashertypes.CompactAttestation
+	beaconBlocksQueue    []*slashertypes.CompactBeaconBlock
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	genesisTime          time.Time
 }
 
 // New instantiates a new slasher from configuration values.
@@ -61,6 +62,8 @@ func (s *Service) Start() {
 	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
 	defer ticker.Done()
 	go s.processQueuedAttestations(s.ctx, ticker.C())
+	go s.processQueuedBlocks(s.ctx, ticker.C())
+	go s.receiveBlocks(s.ctx)
 	s.receiveAttestations(s.ctx)
 }
 
