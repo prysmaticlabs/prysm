@@ -18,7 +18,7 @@ import (
 
 func TestNewRateLimiter(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
-	assert.Equal(t, len(rlimiter.limiterMap), 6, "correct number of topics not registered")
+	assert.Equal(t, len(rlimiter.limiterMap), 7, "correct number of topics not registered")
 }
 
 func TestNewRateLimiter_FreeCorrectly(t *testing.T) {
@@ -87,16 +87,16 @@ func TestRateLimiter_ExceedRawCapacity(t *testing.T) {
 	require.NoError(t, err, "could not create stream")
 
 	for i := 0; i < 2*defaultBurstLimit; i++ {
-		err = rlimiter.validateRawRpcStream(stream)
+		err = rlimiter.validateRawRpcRequest(stream)
 		rlimiter.addRawStream(stream)
 		require.NoError(t, err, "could not validate incoming request")
 	}
 	// Triggers rate limit error on burst.
-	assert.ErrorContains(t, p2ptypes.ErrRateLimited.Error(), rlimiter.validateRawRpcStream(stream))
+	assert.ErrorContains(t, p2ptypes.ErrRateLimited.Error(), rlimiter.validateRawRpcRequest(stream))
 
 	// Make Peer bad.
 	for i := 0; i < defaultBurstLimit; i++ {
-		assert.ErrorContains(t, p2ptypes.ErrRateLimited.Error(), rlimiter.validateRawRpcStream(stream))
+		assert.ErrorContains(t, p2ptypes.ErrRateLimited.Error(), rlimiter.validateRawRpcRequest(stream))
 	}
 	assert.Equal(t, true, p1.Peers().IsBad(p2.PeerID()), "peer is not marked as a bad peer")
 	require.NoError(t, stream.Close(), "could not close stream")

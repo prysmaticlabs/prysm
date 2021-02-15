@@ -95,7 +95,7 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 }
 
 // This is used to validate all incoming rpc streams from external peers.
-func (l *limiter) validateRawRpcStream(stream network.Stream) error {
+func (l *limiter) validateRawRpcRequest(stream network.Stream) error {
 	l.RLock()
 	defer l.RUnlock()
 
