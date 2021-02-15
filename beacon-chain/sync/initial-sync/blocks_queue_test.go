@@ -858,7 +858,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		assert.Equal(t, blockBatchLimit, queue.highestExpectedSlot)
+		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
@@ -909,7 +909,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
 		queue.mode = modeNonConstrained
-		assert.Equal(t, blockBatchLimit, queue.highestExpectedSlot)
+		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
