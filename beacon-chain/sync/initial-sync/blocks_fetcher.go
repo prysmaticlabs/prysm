@@ -263,7 +263,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 	if f.mode == modeStopOnFinalizedEpoch {
 		highestFinalizedSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(targetEpoch + 1))
 		if start > highestFinalizedSlot {
-			response.err = fmt.Errorf("%v, slot: %d, highest finalized slot: %d",
+			response.err = fmt.Errorf("%w, slot: %d, highest finalized slot: %d",
 				errSlotIsTooHigh, start, highestFinalizedSlot)
 			return response
 		}

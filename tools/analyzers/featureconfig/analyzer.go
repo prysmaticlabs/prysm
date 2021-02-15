@@ -23,7 +23,7 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	inspection, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	if !ok {
 		return nil, errors.New("analyzer is not type *inspector.Inspector")
 	}
@@ -36,7 +36,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.AssignStmt)(nil),
 	}
 
-	inspect.Preorder(nodeFilter, func(node ast.Node) {
+	inspection.Preorder(nodeFilter, func(node ast.Node) {
 		if ce, ok := node.(*ast.CallExpr); ok && isPkgDot(ce.Fun, "featureconfig", "Init") {
 			reportForbiddenUsage(pass, ce.Pos())
 			return
