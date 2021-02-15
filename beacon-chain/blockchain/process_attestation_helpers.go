@@ -102,8 +102,8 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if b == nil && s.hasInitSyncBlock(r) {
 		b = s.getInitSyncBlock(r)
 	}
-	if b == nil || b.Block == nil {
-		return fmt.Errorf("beacon block %#x does not exist", bytesutil.Trunc(data.BeaconBlockRoot))
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return err
 	}
 	if b.Block.Slot > data.Slot {
 		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strconv"
 	"strings"
 
@@ -107,8 +108,8 @@ func (bs *Server) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
 	}
-	if b == nil || b.Block == nil {
-		return nil, status.Error(codes.Internal, "Nil block")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
 	return b.Block.StateRoot, nil
 }
@@ -118,8 +119,8 @@ func (bs *Server) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get genesis block: %v", err)
 	}
-	if b == nil || b.Block == nil {
-		return nil, status.Error(codes.Internal, "Nil block")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
 	return b.Block.StateRoot, nil
 }
@@ -133,8 +134,8 @@ func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
 	}
-	if b == nil || b.Block == nil {
-		return nil, status.Error(codes.Internal, "Nil block")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
 	return b.Block.StateRoot, nil
 }
@@ -148,8 +149,8 @@ func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get justified block: %v", err)
 	}
-	if b == nil || b.Block == nil {
-		return nil, status.Error(codes.Internal, "Nil block")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
 	return b.Block.StateRoot, nil
 }
