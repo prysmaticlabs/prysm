@@ -38,11 +38,13 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	var b strings.Builder
 	if err := b.WriteByte(byte(roleAttester)); err != nil {
 		log.WithError(err).Error("Could not write role byte for lock key")
+		traceutil.AnnotateError(span, err)
 		return
 	}
 	_, err := b.Write(pubKey[:])
 	if err != nil {
 		log.WithError(err).Error("Could not write pubkey bytes for lock key")
+		traceutil.AnnotateError(span, err)
 		return
 	}
 	lock := mputil.NewMultilock(b.String())
@@ -57,6 +59,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 	if len(duty.Committee) == 0 {
@@ -74,6 +77,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -88,6 +92,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -97,6 +102,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -132,6 +138,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
 		).Debug("Attempted slashable attestation details")
+		traceutil.AnnotateError(span, err)
 		return
 	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
@@ -140,6 +147,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -148,6 +156,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
