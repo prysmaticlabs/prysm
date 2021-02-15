@@ -62,7 +62,14 @@ func SendBeaconBlocksByRangeRequest(
 		}
 		// Returned blocks, where they exist, MUST be sent in a consecutive order.
 		// Consecutive blocks MUST have values in `step` increments (slots may be skipped in between).
-		if !isFirstChunk && (prevSlot >= blk.Block.Slot || blk.Block.Slot.SubSlot(prevSlot).Mod(req.Step) != 0) {
+		isSlotOutOfOrder := false
+		if prevSlot >= blk.Block.Slot {
+			isSlotOutOfOrder = true
+		}
+		if prevSlot < blk.Block.Slot && req.Step != 0 && blk.Block.Slot.SubSlot(prevSlot).Mod(req.Step) != 0 {
+			isSlotOutOfOrder = true
+		}
+		if !isFirstChunk && isSlotOutOfOrder {
 			return nil, ErrInvalidFetchedData
 		}
 		prevSlot = blk.Block.Slot

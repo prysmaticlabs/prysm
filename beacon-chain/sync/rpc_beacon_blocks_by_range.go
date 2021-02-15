@@ -215,7 +215,6 @@ func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBl
 
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
-		isRequestedSlotStep := b.Block.Slot.SubSlot(startSlot).Mod(step) == 0
 		isCanonical, err := s.chain.IsCanonical(ctx, roots[i])
 		if err != nil {
 			return nil, err
@@ -223,6 +222,15 @@ func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBl
 		parentValid := *prevRoot != [32]byte{}
 		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block.ParentRoot)
 		isSingular := step == 1
+		slotDiff, err := b.Block.Slot.SafeSubSlot(startSlot)
+		if err != nil {
+			return nil, err
+		}
+		slotDiff, err = slotDiff.SafeMod(step)
+		if err != nil {
+			return nil, err
+		}
+		isRequestedSlotStep := slotDiff == 0
 		if isRequestedSlotStep && isCanonical {
 			// Exit early if our valid block is non linear.
 			if parentValid && isSingular && !isLinear {
