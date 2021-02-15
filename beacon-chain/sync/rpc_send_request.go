@@ -65,8 +65,7 @@ func SendBeaconBlocksByRangeRequest(
 		isSlotOutOfOrder := false
 		if prevSlot >= blk.Block.Slot {
 			isSlotOutOfOrder = true
-		}
-		if prevSlot < blk.Block.Slot && req.Step != 0 && blk.Block.Slot.SubSlot(prevSlot).Mod(req.Step) != 0 {
+		} else if req.Step != 0 && blk.Block.Slot.SubSlot(prevSlot).Mod(req.Step) != 0 {
 			isSlotOutOfOrder = true
 		}
 		if !isFirstChunk && isSlotOutOfOrder {

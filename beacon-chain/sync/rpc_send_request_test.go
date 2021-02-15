@@ -201,6 +201,88 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		assert.ErrorContains(t, expectedErr.Error(), err)
 		assert.Equal(t, 0, len(blocks))
 	})
+
+	t.Run("blocks out of order: step 1", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		p2 := p2ptest.NewTestP2P(t)
+		p1.Connect(p2)
+
+		// Switch known blocks, so that slots are out of order.
+		knownBlocks[30], knownBlocks[31] = knownBlocks[31], knownBlocks[30]
+		defer func() {
+			knownBlocks[31], knownBlocks[30] = knownBlocks[30], knownBlocks[31]
+		}()
+
+		p2.SetStreamHandler(pcl, func(stream network.Stream) {
+			defer func() {
+				assert.NoError(t, stream.Close())
+			}()
+
+			req := &pb.BeaconBlocksByRangeRequest{}
+			assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, req))
+
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+				if uint64(i) >= uint64(len(knownBlocks)) {
+					break
+				}
+				err = WriteChunk(stream, p2.Encoding(), knownBlocks[i])
+				if err != nil && err.Error() != mux.ErrReset.Error() {
+					require.NoError(t, err)
+				}
+			}
+		})
+
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot: 20,
+			Count:     128,
+			Step:      1,
+		}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, p1, p2.PeerID(), req, nil)
+		assert.ErrorContains(t, ErrInvalidFetchedData.Error(), err)
+		assert.Equal(t, 0, len(blocks))
+
+	})
+
+	t.Run("blocks out of order: step 10", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		p2 := p2ptest.NewTestP2P(t)
+		p1.Connect(p2)
+
+		// Switch known blocks, so that slots are out of order.
+		knownBlocks[30], knownBlocks[31] = knownBlocks[31], knownBlocks[30]
+		defer func() {
+			knownBlocks[31], knownBlocks[30] = knownBlocks[30], knownBlocks[31]
+		}()
+
+		p2.SetStreamHandler(pcl, func(stream network.Stream) {
+			defer func() {
+				assert.NoError(t, stream.Close())
+			}()
+
+			req := &pb.BeaconBlocksByRangeRequest{}
+			assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, req))
+
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+				if uint64(i) >= uint64(len(knownBlocks)) {
+					break
+				}
+				err = WriteChunk(stream, p2.Encoding(), knownBlocks[i])
+				if err != nil && err.Error() != mux.ErrReset.Error() {
+					require.NoError(t, err)
+				}
+			}
+		})
+
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot: 20,
+			Count:     128,
+			Step:      10,
+		}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, p1, p2.PeerID(), req, nil)
+		assert.ErrorContains(t, ErrInvalidFetchedData.Error(), err)
+		assert.Equal(t, 0, len(blocks))
+
+	})
 }
 
 func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
