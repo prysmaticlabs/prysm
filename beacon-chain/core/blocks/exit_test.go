@@ -17,73 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
-	exits := []*ethpb.SignedVoluntaryExit{
-		{
-			Exit: &ethpb.VoluntaryExit{
-				ValidatorIndex: 0,
-			},
-		},
-	}
-	registry := []*ethpb.Validator{
-		{
-			ExitEpoch: 0,
-		},
-	}
-	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Validators: registry,
-	})
-	require.NoError(t, err)
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			VoluntaryExits: exits,
-		},
-	}
-
-	want := "non-active validator cannot exit"
-	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
-	assert.ErrorContains(t, want, err)
-
-	// Check conformance of no verify method.
-	_, err = blocks.ProcessVoluntaryExitsNoVerifySignature(state, b.Block.Body)
-	assert.ErrorContains(t, want, err)
-}
-
-func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
-	exits := []*ethpb.SignedVoluntaryExit{
-		{
-			Exit: &ethpb.VoluntaryExit{
-				Epoch: 10,
-			},
-		},
-	}
-	registry := []*ethpb.Validator{
-		{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-	}
-	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Validators: registry,
-		Slot:       0,
-	})
-	require.NoError(t, err)
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			VoluntaryExits: exits,
-		},
-	}
-
-	want := "expected current epoch >= exit epoch"
-	_, err = blocks.ProcessVoluntaryExits(context.Background(), state, b)
-	assert.ErrorContains(t, want, err)
-
-	// Check conformance of no verify method.
-	_, err = blocks.ProcessVoluntaryExitsNoVerifySignature(state, b.Block.Body)
-	assert.ErrorContains(t, want, err)
-}
-
 func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 	exits := []*ethpb.SignedVoluntaryExit{
 		{
@@ -189,21 +122,11 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	stateCopy := state.Copy()
 	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, b)
 	require.NoError(t, err, "Could not process exits")
 	newRegistry := newState.Validators()
 	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(types.Epoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch)) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
 			helpers.ActivationExitEpoch(types.Epoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch)), newRegistry[0].ExitEpoch)
-	}
-
-	// Check conformance with NoVerify Exit Method.
-	newState, err = blocks.ProcessVoluntaryExitsNoVerifySignature(stateCopy, b.Block.Body)
-	require.NoError(t, err, "Could not process exits")
-	newRegistry = newState.Validators()
-	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(types.Epoch(stateCopy.Slot()/params.BeaconConfig().SlotsPerEpoch)) {
-		t.Errorf("Expected validator exit epoch to be %d, got %d",
-			helpers.ActivationExitEpoch(types.Epoch(stateCopy.Slot()/params.BeaconConfig().SlotsPerEpoch)), newRegistry[0].ExitEpoch)
 	}
 }
