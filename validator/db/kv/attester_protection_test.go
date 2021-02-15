@@ -213,7 +213,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 
 func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), &Config{})
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
@@ -272,7 +272,7 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 
 func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), &Config{})
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
@@ -500,7 +500,9 @@ func benchCheckSurroundVote(
 	shouldSurround bool,
 ) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), pubKeys)
+	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), &Config{
+		PubKeys: pubKeys,
+	})
 	require.NoError(b, err, "Failed to instantiate DB")
 	defer func() {
 		require.NoError(b, validatorDB.Close(), "Failed to close database")
