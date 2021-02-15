@@ -36,7 +36,7 @@ const exitPassphrase = "Exit my validator"
 
 // ExitAccountsCli performs a voluntary exit on one or more accounts.
 func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
-	validatingPublicKeys, keymanager, err := prepareWallet(cliCtx)
+	validatingPublicKeys, kManager, err := prepareWallet(cliCtx)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	cfg := performExitCfg{
 		*validatorClient,
 		*nodeClient,
-		keymanager,
+		kManager,
 		rawPubKeys,
 		trimmedPubKeys,
 	}

@@ -319,10 +319,10 @@ func TestService_sortedPendingSlots(t *testing.T) {
 	}
 
 	var lastSlot uint64 = math.MaxUint64
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot, &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot}}, [32]byte{1}))
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-3, &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 3}}, [32]byte{2}))
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-5, &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 5}}, [32]byte{3}))
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-2, &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 2}}, [32]byte{4}))
+	require.NoError(t, r.insertBlockToPendingQueue(lastSlot, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot}}), [32]byte{1}))
+	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-3, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 3}}), [32]byte{2}))
+	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-5, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 5}}), [32]byte{3}))
+	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-2, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 2}}), [32]byte{4}))
 
 	want := []uint64{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
 	assert.DeepEqual(t, want, r.sortedPendingSlots(), "Unexpected pending slots list")

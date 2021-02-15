@@ -354,8 +354,8 @@ func (s *Service) pendingBlocksInCache(slot uint64) []*ethpb.SignedBeaconBlock {
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
-	if b == nil || b.Block == nil {
-		return errors.New("nil block")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return err
 	}
 
 	blks := s.pendingBlocksInCache(b.Block.Slot)
