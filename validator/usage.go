@@ -65,6 +65,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ChainConfigFileFlag,
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
+			cmd.BoltMMapInitialSizeFlag,
 		},
 	},
 	{

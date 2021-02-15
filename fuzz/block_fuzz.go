@@ -51,7 +51,7 @@ func init() {
 
 	var err error
 
-	db1, err = db.NewDB(context.Background(), dbPath)
+	db1, err = db.NewDB(context.Background(), dbPath, &beaconkv.Config{})
 	if err != nil {
 		panic(err)
 	}

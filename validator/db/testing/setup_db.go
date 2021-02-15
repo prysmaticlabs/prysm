@@ -10,7 +10,9 @@ import (
 
 // SetupDB instantiates and returns a DB instance for the validator client.
 func SetupDB(t testing.TB, pubkeys [][48]byte) iface.ValidatorDB {
-	db, err := kv.NewKVStore(context.Background(), t.TempDir(), pubkeys)
+	db, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{
+		PubKeys: pubkeys,
+	})
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
