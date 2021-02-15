@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -458,8 +459,8 @@ func blockRootsBySlotRange(
 	if step, ok = slotStepEncoded.(uint64); !ok || step == 0 {
 		step = 1
 	}
-	startEpoch, startEpochOk := startEpochEncoded.(uint64)
-	endEpoch, endEpochOk := endEpochEncoded.(uint64)
+	startEpoch, startEpochOk := startEpochEncoded.(types.Epoch)
+	endEpoch, endEpochOk := endEpochEncoded.(types.Epoch)
 	var err error
 	if startEpochOk && endEpochOk {
 		startSlot, err = helpers.StartSlot(startEpoch)

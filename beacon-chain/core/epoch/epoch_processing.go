@@ -175,17 +175,17 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, totalBalance)
-	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, error) {
+	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
-				return false, err
+				return false, val, err
 			}
-			return true, nil
+			return true, val, nil
 		}
-		return false, nil
+		return false, val, nil
 	})
 	return state, err
 }
@@ -249,23 +249,24 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	bals := state.Balances()
 	// Update effective balances with hysteresis.
-	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+	validatorFunc := func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		if val == nil {
-			return false, fmt.Errorf("validator %d is nil in state", idx)
+			return false, nil, fmt.Errorf("validator %d is nil in state", idx)
 		}
 		if idx >= len(bals) {
-			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+			return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			val.EffectiveBalance = maxEffBalance
-			if val.EffectiveBalance > balance-balance%effBalanceInc {
-				val.EffectiveBalance = balance - balance%effBalanceInc
+			newVal := stateTrie.CopyValidator(val)
+			newVal.EffectiveBalance = maxEffBalance
+			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
+				newVal.EffectiveBalance = balance - balance%effBalanceInc
 			}
-			return true, nil
+			return true, newVal, nil
 		}
-		return false, nil
+		return false, val, nil
 	}
 
 	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
@@ -276,20 +277,20 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	slashedEpoch := nextEpoch % slashedExitLength
 	slashings := state.Slashings()
-	if uint64(len(slashings)) != slashedExitLength {
+	if uint64(len(slashings)) != uint64(slashedExitLength) {
 		return nil, fmt.Errorf(
 			"state slashing length %d different than EpochsPerHistoricalVector %d",
 			len(slashings),
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(slashedEpoch /* index */, 0 /* value */); err != nil {
+	if err := state.UpdateSlashingsAtIndex(uint64(slashedEpoch) /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	if uint64(state.RandaoMixesLength()) != randaoMixLength {
+	if uint64(state.RandaoMixesLength()) != uint64(randaoMixLength) {
 		return nil, fmt.Errorf(
 			"state randao length %d different than EpochsPerHistoricalVector %d",
 			state.RandaoMixesLength(),
@@ -300,13 +301,13 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(nextEpoch%randaoMixLength, mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), mix); err != nil {
 		return nil, err
 	}
 
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
-	if nextEpoch%epochsPerHistoricalRoot == 0 {
+	if nextEpoch.Mod(epochsPerHistoricalRoot) == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots(),
 			StateRoots: state.StateRoots(),

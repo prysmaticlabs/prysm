@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -286,7 +287,7 @@ func TestPeerChainState(t *testing.T) {
 	oldChainStartLastUpdated, err := p.ChainStateLastUpdated(id)
 	require.NoError(t, err)
 
-	finalizedEpoch := uint64(123)
+	finalizedEpoch := types.Epoch(123)
 	p.SetChainState(id, &pb.Status{FinalizedEpoch: finalizedEpoch})
 
 	resChainState, err := p.ChainState(id)
@@ -568,7 +569,7 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 		},
 	})
 
-	expectedTarget := uint64(2)
+	expectedTarget := types.Epoch(2)
 	maxPeers := 3
 	mockroot2 := [32]byte{}
 	mockroot3 := [32]byte{}
@@ -721,14 +722,14 @@ func TestPrunePeers(t *testing.T) {
 func TestStatus_BestPeer(t *testing.T) {
 	type peerConfig struct {
 		headSlot       uint64
-		finalizedEpoch uint64
+		finalizedEpoch types.Epoch
 	}
 	tests := []struct {
 		name              string
 		peers             []*peerConfig
 		limitPeers        int
-		ourFinalizedEpoch uint64
-		targetEpoch       uint64
+		ourFinalizedEpoch types.Epoch
+		targetEpoch       types.Epoch
 		// targetEpochSupport denotes how many peers support returned epoch.
 		targetEpochSupport int
 	}{
@@ -915,7 +916,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		})
 	}
 
-	expectedEpoch := uint64(8)
+	expectedEpoch := types.Epoch(8)
 	retEpoch, pids := p.BestNonFinalized(3, 5)
 	assert.Equal(t, expectedEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
 	assert.Equal(t, 3, len(pids), "Unexpected number of peers")
@@ -947,7 +948,7 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 4,
 	})
 
-	assert.Equal(t, uint64(5), p.HighestEpoch(), "Expected current epoch to be 5")
+	assert.Equal(t, types.Epoch(5), p.HighestEpoch(), "Expected current epoch to be 5")
 }
 
 func TestInbound(t *testing.T) {

@@ -9,6 +9,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//tools:__subpackages__",
     ],
+    deps = ["@com_github_prysmaticlabs_eth2_types//:go_default_library"],
 )
 
 go_test(

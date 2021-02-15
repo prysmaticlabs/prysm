@@ -5,6 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"math/bits"
+	"regexp"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
@@ -94,15 +98,6 @@ func ToBytes32(x []byte) [32]byte {
 	return y
 }
 
-// ToBytes96 is a convenience method for converting a byte slice to a fix
-// sized 96 byte array. This method will truncate the input if it is larger
-// than 96 bytes.
-func ToBytes96(x []byte) [96]byte {
-	var y [96]byte
-	copy(y[:], x)
-	return y
-}
-
 // ToBytes48 is a convenience method for converting a byte slice to a fix
 // sized 48 byte array. This method will truncate the input if it is larger
 // than 48 bytes.
@@ -140,12 +135,6 @@ func FromBool(x bool) byte {
 		return 1
 	}
 	return 0
-}
-
-// FromBytes32 is a convenience method for converting a fixed-size byte array
-// to a byte slice.
-func FromBytes32(x [32]byte) []byte {
-	return x[:]
 }
 
 // FromBytes48 is a convenience method for converting a fixed-size byte array
@@ -320,4 +309,27 @@ func BytesToUint64BigEndian(b []byte) uint64 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(b)
+}
+
+// EpochToBytesLittleEndian conversion.
+func EpochToBytesLittleEndian(i types.Epoch) []byte {
+	return Uint64ToBytesLittleEndian(uint64(i))
+}
+
+// EpochToBytesBigEndian conversion.
+func EpochToBytesBigEndian(i types.Epoch) []byte {
+	return Uint64ToBytesBigEndian(uint64(i))
+}
+
+// BytesToEpochBigEndian conversion.
+func BytesToEpochBigEndian(b []byte) types.Epoch {
+	return types.Epoch(BytesToUint64BigEndian(b))
+}
+
+// IsBytes32Hex checks whether the byte array is a 32-byte long hex number.
+func IsBytes32Hex(b []byte) (bool, error) {
+	if b == nil {
+		return false, nil
+	}
+	return regexp.Match("^0x[0-9a-fA-F]{64}$", []byte(hexutil.Encode(b)))
 }

@@ -34,7 +34,7 @@ func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 		currRoot := bytesutil.ToBytes32(fork.CurrentVersion)
 		fieldRoots[1] = currRoot[:]
 		forkEpochBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(forkEpochBuf, fork.Epoch)
+		binary.LittleEndian.PutUint64(forkEpochBuf, uint64(fork.Epoch))
 		epochRoot := bytesutil.ToBytes32(forkEpochBuf)
 		fieldRoots[2] = epochRoot[:]
 	}
@@ -48,7 +48,7 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 	fieldRoots := make([][]byte, 2)
 	if checkpoint != nil {
 		epochBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(epochBuf, checkpoint.Epoch)
+		binary.LittleEndian.PutUint64(epochBuf, uint64(checkpoint.Epoch))
 		epochRoot := bytesutil.ToBytes32(epochBuf)
 		fieldRoots[0] = epochRoot[:]
 		ckpRoot := bytesutil.ToBytes32(checkpoint.Root)

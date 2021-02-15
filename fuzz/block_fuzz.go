@@ -63,7 +63,10 @@ func setupDB() {
 	}
 
 	ctx := context.Background()
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	if err != nil {
+		panic(err)
+	}
 	b := testutil.NewBeaconBlock()
 	if err := db1.SaveBlock(ctx, b); err != nil {
 		panic(err)
@@ -117,12 +120,12 @@ func BeaconFuzzBlock(b []byte) {
 	ap := attestations.NewPool()
 	ep := voluntaryexits.NewPool()
 	sp := slashings.NewPool()
-	ops, err := attestations.New(context.Background(), &attestations.Config{Pool: ap})
+	ops, err := attestations.NewService(context.Background(), &attestations.Config{Pool: ap})
 	if err != nil {
 		panic(err)
 	}
 
-	chain, err := blockchain.New(context.Background(), &blockchain.Config{
+	chain, err := blockchain.NewService(context.Background(), &blockchain.Config{
 		ChainStartFetcher: nil,
 		BeaconDB:          db1,
 		DepositCache:      nil,

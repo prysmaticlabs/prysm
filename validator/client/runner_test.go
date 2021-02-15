@@ -13,8 +13,6 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var walletPassword = "OhWOWthisisatest42!$"
-
 func cancelledContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

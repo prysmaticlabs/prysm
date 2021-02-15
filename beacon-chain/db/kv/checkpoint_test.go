@@ -21,7 +21,8 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Epoch: 10,
 		Root:  root[:],
 	}
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
@@ -52,7 +53,8 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 
 	// a valid chain is required to save finalized checkpoint.
 	require.NoError(t, db.SaveBlock(ctx, blk))
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
