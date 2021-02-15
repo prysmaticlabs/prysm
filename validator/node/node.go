@@ -224,7 +224,10 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, nil)
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
+		PubKeys:         nil,
+		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
@@ -310,7 +313,10 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, make([][48]byte, 0))
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
+		PubKeys:         nil,
+		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
@@ -551,7 +557,7 @@ func clearDB(ctx context.Context, dataDir string, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(ctx, dataDir, nil)
+		valDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}

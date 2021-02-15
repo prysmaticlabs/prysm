@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -23,7 +24,7 @@ func main() {
 	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")
-	d, err := db.NewDB(context.Background(), *datadir)
+	d, err := db.NewDB(context.Background(), *datadir, &kv.Config{})
 	if err != nil {
 		panic(err)
 	}
