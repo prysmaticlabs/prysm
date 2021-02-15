@@ -331,15 +331,15 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch types.Epoch) error
 }
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
-func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch types.Epoch) error {
+func UpdateProposerIndicesInCache(state *stateTrie.BeaconState) error {
 	// The cache uses the state root at the (current epoch - 2)'s slot as key. (e.g. for epoch 2, the key is root at slot 31)
 	// Which is the reason why we skip genesis epoch.
-	if epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+	if CurrentEpoch(state) <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		return nil
 	}
 
 	// Use state root from (current_epoch - 1 - lookahead))
-	wantedEpoch := PrevEpoch(state)
+	wantedEpoch := CurrentEpoch(state) - 1
 	if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
 		wantedEpoch -= params.BeaconConfig().MinSeedLookahead
 	}
@@ -364,7 +364,7 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch types.Epoc
 		return nil
 	}
 
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(state, CurrentEpoch(state))
 	if err != nil {
 		return err
 	}

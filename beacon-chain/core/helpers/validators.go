@@ -204,7 +204,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 				}
 				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
 			}
-			if err := UpdateProposerIndicesInCache(state, e); err != nil {
+			if err := UpdateProposerIndicesInCache(state); err != nil {
 				return 0, errors.Wrap(err, "could not update committee cache")
 			}
 		}

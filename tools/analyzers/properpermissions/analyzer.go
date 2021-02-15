@@ -33,7 +33,7 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	inspection, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	if !ok {
 		return nil, errors.New("analyzer is not type *inspector.Inspector")
 	}
@@ -46,7 +46,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	aliases := make(map[string]string)
 
-	inspect.Preorder(nodeFilter, func(node ast.Node) {
+	inspection.Preorder(nodeFilter, func(node ast.Node) {
 		switch stmt := node.(type) {
 		case *ast.File:
 			// Reset aliases (per file).

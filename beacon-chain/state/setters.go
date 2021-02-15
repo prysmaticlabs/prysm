@@ -304,28 +304,27 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, error)) error {
+func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.validators()
-
+		v = b.validatorsReferences()
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.Unlock()
 	var changedVals []uint64
 	for i, val := range v {
-		changed, err := f(i, val)
+		changed, newVal, err := f(i, val)
 		if err != nil {
 			return err
 		}
 		if changed {
 			changedVals = append(changedVals, uint64(i))
+			v[i] = newVal
 		}
 	}
 
@@ -353,9 +352,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.validators()
-
+		v = b.validatorsReferences()
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
@@ -632,7 +629,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].Refs() > 1 {
-		vals = b.validators()
+		vals = b.validatorsReferences()
 		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}

@@ -95,6 +95,8 @@ var appFlags = []cli.Flag{
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
+	debug.BlockProfileRateFlag,
+	debug.MutexProfileFractionFlag,
 	cmd.AcceptTosFlag,
 }
 

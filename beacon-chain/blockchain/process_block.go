@@ -130,15 +130,15 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return err
 		}
 	}
-	var newFinalized bool
+
+	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
 	if featureconfig.Get().UpdateHeadTimely {
-		if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
+		if newFinalized {
 			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 				return errors.Wrap(err, "could not save new justified")
 			}
 			s.prevFinalizedCheckpt = s.finalizedCheckpt
 			s.finalizedCheckpt = postState.FinalizedCheckpoint()
-			newFinalized = true
 		}
 
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
@@ -158,16 +158,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	}
 
 	// Update finalized check point.
-	if (postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch) || (featureconfig.Get().UpdateHeadTimely && newFinalized) {
-		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return err
-		}
-		s.clearInitSyncBlocks()
-
+	if newFinalized {
 		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return err
 		}
-
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.forkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
@@ -384,7 +378,12 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.NextEpoch(postState)); err != nil {
+		copied := postState.Copy()
+		copied, err := state.ProcessSlots(ctx, copied, copied.Slot()+1)
+		if err != nil {
+			return err
+		}
+		if err := helpers.UpdateProposerIndicesInCache(copied); err != nil {
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
@@ -402,7 +401,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.CurrentEpoch(postState)); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(postState); err != nil {
 			return err
 		}
 	}

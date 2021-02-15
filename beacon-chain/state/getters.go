@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -588,6 +588,29 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 			continue
 		}
 		res[i] = CopyValidator(val)
+	}
+	return res
+}
+
+// references of validators participating in consensus on the beacon chain.
+// This assumes that a lock is already held on BeaconState. This does not
+// copy fully and instead just copies the reference.
+func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Validators == nil {
+		return nil
+	}
+
+	res := make([]*ethpb.Validator, len(b.state.Validators))
+	for i := 0; i < len(res); i++ {
+		validator := b.state.Validators[i]
+		if validator == nil {
+			continue
+		}
+		// copy validator reference instead.
+		res[i] = validator
 	}
 	return res
 }
