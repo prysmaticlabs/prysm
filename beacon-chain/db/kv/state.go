@@ -225,8 +225,8 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 		if err != nil {
 			return 0, err
 		}
-		if b.Block == nil {
-			return 0, errors.New("block can't be nil")
+		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+			return 0, err
 		}
 		return b.Block.Slot, nil
 	}
