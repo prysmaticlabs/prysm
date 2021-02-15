@@ -23,10 +23,11 @@ type chunkUpdateOptions struct {
 // as the current epoch in time, we perform slashing detection.
 // The process is as follows given a list of attestations:
 //
-// 1. Group the attestations by chunk index.
-// 2. Update the min and max spans for those grouped attestations, check if any slashings are
+// 1. Check for attester double votes using the list of attestations.
+// 2. Group the attestations by chunk index.
+// 3. Update the min and max spans for those grouped attestations, check if any slashings are
 //    found in the process
-// 3. Update the latest written epoch for all validators involved to the current epoch.
+// 4. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) detectSlashableAttestations(
@@ -34,12 +35,18 @@ func (s *Service) detectSlashableAttestations(
 	opts *chunkUpdateOptions,
 	attestations []*slashertypes.CompactAttestation,
 ) error {
+	slashings := make([]*slashertypes.Slashing, 0)
+	// Check for double votes.
+	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, attestations)
+	if err != nil {
+		return err
+	}
 
 	// Group attestations by chunk index.
 	groupedAtts := s.groupByChunkIndex(attestations)
 
 	// Update min and max spans and retrieve any detected slashable offenses.
-	slashings, err := s.updateSpans(ctx, &chunkUpdateOptions{
+	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateOptions{
 		kind:                slashertypes.MinSpan,
 		validatorChunkIndex: opts.validatorChunkIndex,
 		currentEpoch:        opts.currentEpoch,
@@ -47,7 +54,7 @@ func (s *Service) detectSlashableAttestations(
 	if err != nil {
 		return err
 	}
-	moreSlashings, err := s.updateSpans(ctx, &chunkUpdateOptions{
+	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateOptions{
 		kind:                slashertypes.MaxSpan,
 		validatorChunkIndex: opts.validatorChunkIndex,
 		currentEpoch:        opts.currentEpoch,
@@ -56,11 +63,14 @@ func (s *Service) detectSlashableAttestations(
 		return err
 	}
 
-	totalSlashings := append(slashings, moreSlashings...)
-	if len(totalSlashings) > 0 {
-		log.WithField("numSlashings", len(totalSlashings)).Info("Slashable offenses found")
+	// Consolidate all slashings into a slice.
+	slashings = append(slashings, doubleVoteSlashings...)
+	slashings = append(slashings, surroundingSlashings...)
+	slashings = append(slashings, surroundedSlashings...)
+	if len(slashings) > 0 {
+		log.WithField("numSlashings", len(slashings)).Info("Slashable offenses found")
 	}
-	for _, slashing := range totalSlashings {
+	for _, slashing := range slashings {
 		// TODO(#8331): Send over an event feed.
 		logSlashingEvent(slashing)
 	}
@@ -68,6 +78,39 @@ func (s *Service) detectSlashableAttestations(
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(opts.validatorChunkIndex)
 	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, opts.currentEpoch)
+}
+
+// Check for attester slashing double votes by looking at every single validator index
+// in each attestation's attesting indices and checking if there already exist records for such
+// attestation's target epoch. If so, we append a double vote slashing object to a list of slashings
+// we return to the caller.
+func (s *Service) checkDoubleVotes(
+	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+) ([]*slashertypes.Slashing, error) {
+	slashings := make([]*slashertypes.Slashing, 0)
+	for _, att := range attestations {
+		// Check if there exist records for the validators at a specified target epoch.
+		// If there are not, update the target epoch as attested for the validators
+		// in the attesting indices.
+		recordsExist, err := s.serviceCfg.Database.CheckAndUpdateAttestationRecordForValidators(
+			ctx, att,
+		)
+		if err != nil {
+			return nil, err
+		}
+		for i := 0; i < len(recordsExist); i++ {
+			if recordsExist[i] {
+				validatorIdx := types.ValidatorIndex(att.AttestingIndices[i])
+				slashings = append(slashings, &slashertypes.Slashing{
+					Kind:           slashertypes.DoubleVote,
+					ValidatorIndex: validatorIdx,
+					TargetEpoch:    types.Epoch(att.Target),
+					SigningRoot:    att.SigningRoot,
+				})
+			}
+		}
+	}
+	return slashings, nil
 }
 
 // Updates spans and detects any slashable attester offenses along the way.

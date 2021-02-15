@@ -72,6 +72,55 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 	})
 }
 
+// CheckAndUpdateAttestationRecordForValidators takes in a compact attestation. Using the attestation's
+// list of validator indices and a target epoch. Then, attempts to find attestation records
+// for each validator index at the specified target epoch.
+//
+// The return type is a list of booleans for each validator in the attestation's
+// attesting indices determining if such record exists already for each validator index. If the record
+// does not exist, we return false and update the database to mark the target epoch as attested for a
+// validator index.
+func (s *Store) CheckAndUpdateAttestationRecordForValidators(
+	ctx context.Context, attestation *slashertypes.CompactAttestation,
+) ([]bool, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAndUpdateAttestationRecordForValidators")
+	defer span.End()
+	var exists []bool
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationRecordsBucket)
+		encEpoch, err := types.Epoch(attestation.Target).MarshalSSZ()
+		if err != nil {
+			return err
+		}
+		encAttestation, err := encodeAttestationRecord(attestation)
+		if err != nil {
+			return err
+		}
+		for _, validatorIdx := range attestation.AttestingIndices {
+			encIdx, err := types.ValidatorIndex(validatorIdx).MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			key := append(encIdx, encEpoch...)
+			existingRecord := bkt.Get(key)
+			// If an attesting record exists for the validator, we append
+			// `true` to our list of response booleans.
+			if existingRecord != nil {
+				exists = append(exists, true)
+				continue
+			}
+			// Otherwise, we mark the epoch as attested for the validator
+			// and append `false` to our list of response booleans.
+			exists = append(exists, false)
+			if err := bkt.Put(key, encAttestation); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return exists, err
+}
+
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(

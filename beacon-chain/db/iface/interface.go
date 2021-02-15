@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -61,6 +61,9 @@ type ReadOnlyDatabase interface {
 	LatestEpochAttestedForValidators(
 		ctx context.Context, validatorIndices []types.ValidatorIndex,
 	) ([]types.Epoch, []bool, error)
+	CheckAndUpdateAttestationRecordForValidators(
+		ctx context.Context, attestation *slashertypes.CompactAttestation,
+	) ([]bool, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.CompactAttestation, error)

@@ -29,7 +29,7 @@ type Slashing struct {
 	PrevTargetEpoch types.Epoch
 	SourceEpoch     types.Epoch
 	TargetEpoch     types.Epoch
-	SigningRoot     types.Epoch
+	SigningRoot     [32]byte
 	Slot            uint64
 }
 
