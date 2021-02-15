@@ -41,7 +41,7 @@ func MaskCredentialsLogging(currUrl string) string {
 	if err != nil {
 		return currUrl // Not a URL, nothing to do
 	}
-	//Mask the userinfo and the URI (path?query or opaque?query ) and fragment, leave the scheme and host(host/port)  untouched
+	// Mask the userinfo and the URI (path?query or opaque?query ) and fragment, leave the scheme and host(host/port)  untouched
 	if u.User != nil {
 		MaskedUrl = strings.Replace(MaskedUrl, u.User.String(), "***", 1)
 	}
