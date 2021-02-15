@@ -3,6 +3,7 @@ package blockchain
 import (
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -24,19 +25,20 @@ func logStateTransitionData(b *ethpb.BeaconBlock) {
 	}).Info("Finished applying state transition")
 }
 
-func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, genesisTime uint64) error {
+func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
 	startTime, err := helpers.SlotToTime(genesisTime, block.Slot)
 	if err != nil {
 		return err
 	}
 	log.WithFields(logrus.Fields{
-		"slot":               block.Slot,
-		"slotInEpoch":        block.Slot % params.BeaconConfig().SlotsPerEpoch,
-		"block":              fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
-		"epoch":              helpers.SlotToEpoch(block.Slot),
-		"finalizedEpoch":     finalized.Epoch,
-		"finalizedRoot":      fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
-		"timeSinceSlotStart": timeutils.Now().Sub(startTime),
+		"slot":                      block.Slot,
+		"slotInEpoch":               block.Slot % params.BeaconConfig().SlotsPerEpoch,
+		"block":                     fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
+		"epoch":                     helpers.SlotToEpoch(block.Slot),
+		"finalizedEpoch":            finalized.Epoch,
+		"finalizedRoot":             fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
+		"sinceSlotStartTime":        timeutils.Now().Sub(startTime),
+		"chainServiceProcessedTime": timeutils.Now().Sub(receivedTime),
 	}).Info("Synced new block")
 	return nil
 }

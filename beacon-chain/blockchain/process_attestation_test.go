@@ -311,7 +311,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	d := testutil.HydrateAttestationData(&ethpb.AttestationData{})
-	assert.ErrorContains(t, "beacon block 0x000000000000 does not exist", service.verifyBeaconBlock(ctx, d))
+	assert.ErrorContains(t, "signed beacon block can't be nil", service.verifyBeaconBlock(ctx, d))
 }
 
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
