@@ -76,6 +76,14 @@ func (m *MockStateManager) StateByRootInitialSync(ctx context.Context, blockRoot
 	panic("implement me")
 }
 
+func (m *MockStateManager) StateByStateRoot(
+	ctx context.Context,
+	stateRoot [32]byte,
+	headState *state.BeaconState,
+) (*state.BeaconState, error) {
+	panic("implement me")
+}
+
 // StateBySlot --
 func (m *MockStateManager) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
 	return m.StatesBySlot[slot], nil

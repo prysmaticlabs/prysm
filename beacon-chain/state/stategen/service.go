@@ -32,6 +32,7 @@ type StateManager interface {
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error)
+	StateByStateRoot(ctx context.Context, stateRoot [32]byte, headState *state.BeaconState) (*state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	SaveState(ctx context.Context, root [32]byte, st *state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error

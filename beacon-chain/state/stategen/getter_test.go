@@ -2,8 +2,10 @@ package stategen
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -501,4 +503,99 @@ func TestState_HasStateInCache(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, tc.want, got)
 	}
+}
+
+func TestState_StateByStateRoot(t *testing.T) {
+	ctx := context.Background()
+	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+
+	// We fill state roots with hex representations of natural numbers starting with 1.
+	// Example: 16 becomes 0x00...0f
+	fillStateRoots := func(state *pb.BeaconState) {
+		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+		roots := make([][]byte, rootsLen)
+		for i := uint64(0); i < rootsLen; i++ {
+			roots[i] = make([]byte, 32)
+		}
+		for j := 0; j < len(roots); j++ {
+			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
+			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
+			h, err := hexutil.Decode("0x" + s)
+			require.NoError(t, err, "Failed to decode root "+s)
+			roots[j] = h
+		}
+		state.StateRoots = roots
+	}
+	headState, err := testutil.NewBeaconState(fillStateRoots)
+	require.NoError(t, err)
+
+	t.Run("Slot smaller than SLOTS_PER_HISTORICAL_ROOT", func(t *testing.T) {
+		beaconDB := testDB.SetupDB(t)
+		service := New(beaconDB)
+		slot := uint64(5)
+
+		err = headState.SetSlot(slot)
+		require.NoError(t, err)
+		genesisStateRoot, err := headState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+		assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
+		gRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		assert.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
+		assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+
+		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(slot)[2:])
+		h, err := hexutil.Decode("0x" + s)
+		require.NoError(t, err, "Failed to decode root "+s)
+		rootState, err := service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
+		require.NoError(t, err)
+		assert.Equal(t, slot, rootState.Slot())
+	})
+
+	t.Run("Slot bigger than SLOTS_PER_HISTORICAL_ROOT", func(t *testing.T) {
+		beaconDB := testDB.SetupDB(t)
+		service := New(beaconDB)
+		slot := rootsLen + 1
+
+		err = headState.SetSlot(slot)
+		require.NoError(t, err)
+		genesisStateRoot, err := headState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+		assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
+		gRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		assert.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
+		assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+
+		// We expect the root to be 0x00..01
+		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(1)[2:])
+		h, err := hexutil.Decode("0x" + s)
+		require.NoError(t, err, "Failed to decode root "+s)
+		rootState, err := service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
+		require.NoError(t, err)
+		assert.Equal(t, slot, rootState.Slot())
+	})
+
+	t.Run("State root not found", func(t *testing.T) {
+		beaconDB := testDB.SetupDB(t)
+		service := New(beaconDB)
+
+		require.NoError(t, err)
+		genesisStateRoot, err := headState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+		assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
+		gRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		assert.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
+		assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+
+		s := fmt.Sprintf("%064s", hexutil.Encode([]byte("foo"))[2:])
+		h, err := hexutil.Decode("0x" + s)
+		require.NoError(t, err, "Failed to decode root "+s)
+		_, err = service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
+		assert.ErrorContains(t, "could not find state in the last 8192 state roots in head state", err)
+	})
 }
