@@ -29,6 +29,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//fuzz:__pkg__",
+        "//tools:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
