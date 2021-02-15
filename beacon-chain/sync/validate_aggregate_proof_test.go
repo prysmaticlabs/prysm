@@ -152,7 +152,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
 	aggBits := bitfield.NewBitlist(3)
@@ -301,7 +302,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
 	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
@@ -390,7 +392,8 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
 	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
@@ -496,7 +499,8 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
 	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
@@ -585,7 +589,8 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
 	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)

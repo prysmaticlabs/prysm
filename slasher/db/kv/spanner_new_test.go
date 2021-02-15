@@ -5,18 +5,19 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
+	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 type spansTestStruct struct {
 	name           string
-	epoch          uint64
+	epoch          types.Epoch
 	spansHex       string
 	spansResultHex string
-	validator1Span types.Span
+	validator1Span slashertypes.Span
 	err            error
 }
 
@@ -29,15 +30,15 @@ func init() {
 			epoch:          1,
 			spansHex:       "00000000",
 			spansResultHex: "",
-			validator1Span: types.Span{},
-			err:            types.ErrWrongSize,
+			validator1Span: slashertypes.Span{},
+			err:            slashertypes.ErrWrongSize,
 		},
 		{
 			name:           "no validator 1 in spans",
 			epoch:          2,
 			spansHex:       "00000000000000",
 			spansResultHex: "00000000000000",
-			validator1Span: types.Span{},
+			validator1Span: slashertypes.Span{},
 			err:            nil,
 		},
 		{
@@ -45,7 +46,7 @@ func init() {
 			epoch:          3,
 			spansHex:       "0000000000000001000000000000",
 			spansResultHex: "0000000000000001000000000000",
-			validator1Span: types.Span{MinSpan: 1},
+			validator1Span: slashertypes.Span{MinSpan: 1},
 			err:            nil,
 		},
 	}
@@ -58,9 +59,9 @@ func TestValidatorSpans_NilDB(t *testing.T) {
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
-	es, err := db.EpochSpans(ctx, validatorIdx, false)
+	es, err := db.EpochSpans(ctx, types.Epoch(validatorIdx), false)
 	require.NoError(t, err, "Nil EpochSpansMap should not return error")
-	cleanStore, err := types.NewEpochStore([]byte{})
+	cleanStore, err := slashertypes.NewEpochStore([]byte{})
 	require.NoError(t, err)
 	require.DeepEqual(t, es, cleanStore, "EpochSpans should return empty byte array if no record exists in the db")
 }
@@ -74,7 +75,7 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			spans, err := hex.DecodeString(tt.spansHex)
 			require.NoError(t, err)
-			es, err := types.NewEpochStore(spans)
+			es, err := slashertypes.NewEpochStore(spans)
 			if tt.err != nil {
 				require.ErrorContains(t, tt.err.Error(), err)
 			} else {
@@ -85,7 +86,7 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 			require.NoError(t, err, "Failed to get validator spans")
 			spansResult, err := hex.DecodeString(tt.spansResultHex)
 			require.NoError(t, err)
-			esr, err := types.NewEpochStore(spansResult)
+			esr, err := slashertypes.NewEpochStore(spansResult)
 			require.NoError(t, err)
 			require.DeepEqual(t, sm, esr, "Get should return validator spans: %v", spansResult)
 
@@ -101,7 +102,7 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	spansToSave := map[uint64]types.Span{
+	spansToSave := map[uint64]slashertypes.Span{
 		0:     {MinSpan: 5, MaxSpan: 69, SigBytes: [2]byte{40, 219}, HasAttested: false},
 		10:    {MinSpan: 43, MaxSpan: 32, SigBytes: [2]byte{10, 13}, HasAttested: true},
 		1000:  {MinSpan: 40, MaxSpan: 36, SigBytes: [2]byte{61, 151}, HasAttested: false},
@@ -109,17 +110,17 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 		50000: {MinSpan: 40, MaxSpan: 64, SigBytes: [2]byte{190, 215}, HasAttested: true},
 		100:   {MinSpan: 49, MaxSpan: 96, SigBytes: [2]byte{11, 98}, HasAttested: true},
 	}
-	epochStore, err := types.EpochStoreFromMap(spansToSave)
+	epochStore, err := slashertypes.EpochStoreFromMap(spansToSave)
 	require.NoError(t, err)
 
-	epoch := uint64(9)
-	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseCache))
+	epoch := types.Epoch(9)
+	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbtypes.UseCache))
 
-	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.UseCache)
+	esFromCache, err := db.EpochSpans(ctx, epoch, dbtypes.UseCache)
 	require.NoError(t, err)
 	require.DeepEqual(t, epochStore.Bytes(), esFromCache.Bytes())
 
-	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.UseDB)
+	esFromDB, err := db.EpochSpans(ctx, epoch, dbtypes.UseDB)
 	require.NoError(t, err)
 	require.DeepEqual(t, esFromDB.Bytes(), esFromCache.Bytes())
 }
@@ -129,7 +130,7 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	spansToSave := map[uint64]types.Span{
+	spansToSave := map[uint64]slashertypes.Span{
 		0:      {MinSpan: 5, MaxSpan: 69, SigBytes: [2]byte{40, 219}, HasAttested: false},
 		10:     {MinSpan: 43, MaxSpan: 32, SigBytes: [2]byte{10, 13}, HasAttested: true},
 		1000:   {MinSpan: 40, MaxSpan: 36, SigBytes: [2]byte{61, 151}, HasAttested: false},
@@ -137,18 +138,18 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 		100000: {MinSpan: 20, MaxSpan: 64, SigBytes: [2]byte{170, 215}, HasAttested: false},
 		100:    {MinSpan: 49, MaxSpan: 96, SigBytes: [2]byte{11, 98}, HasAttested: true},
 	}
-	epochStore, err := types.EpochStoreFromMap(spansToSave)
+	epochStore, err := slashertypes.EpochStoreFromMap(spansToSave)
 	require.NoError(t, err)
 
-	epoch := uint64(9)
-	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseDB))
+	epoch := types.Epoch(9)
+	require.NoError(t, db.SaveEpochSpans(ctx, epoch, epochStore, dbtypes.UseDB))
 
 	// Expect cache to retrieve from DB if its not in cache.
-	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.UseCache)
+	esFromCache, err := db.EpochSpans(ctx, epoch, dbtypes.UseCache)
 	require.NoError(t, err)
 	require.DeepEqual(t, esFromCache.Bytes(), epochStore.Bytes())
 
-	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.UseDB)
+	esFromDB, err := db.EpochSpans(ctx, epoch, dbtypes.UseDB)
 	require.NoError(t, err)
 	require.DeepEqual(t, epochStore.Bytes(), esFromDB.Bytes())
 }

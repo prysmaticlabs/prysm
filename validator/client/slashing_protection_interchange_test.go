@@ -149,9 +149,9 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 				// This loops through a list of attestation signings to attempt after importing the interchange data above.
 				for _, sa := range step.Attestations {
-					target, err := interchangeformat.Uint64FromString(sa.TargetEpoch)
+					target, err := interchangeformat.EpochFromString(sa.TargetEpoch)
 					require.NoError(t, err)
-					source, err := interchangeformat.Uint64FromString(sa.SourceEpoch)
+					source, err := interchangeformat.EpochFromString(sa.SourceEpoch)
 					require.NoError(t, err)
 					pk, err := interchangeformat.PubKeyFromHex(sa.Pubkey)
 					require.NoError(t, err)

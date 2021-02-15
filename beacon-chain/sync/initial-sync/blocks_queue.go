@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -81,7 +82,7 @@ type blocksQueue struct {
 		noRequiredPeersErrRetries int
 	}
 	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
-	staleEpochs map[uint64]uint8             // counter to keep track of stale FSMs
+	staleEpochs map[types.Epoch]uint8        // counter to keep track of stale FSMs
 	quit        chan struct{}                // termination notifier
 }
 
@@ -124,7 +125,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
-		staleEpochs:         make(map[uint64]uint8),
+		staleEpochs:         make(map[types.Epoch]uint8),
 	}
 
 	// Configure state machines.

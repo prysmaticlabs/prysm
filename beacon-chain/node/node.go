@@ -389,7 +389,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		}
 	}
 
-	svc, err := p2p.New(b.ctx, &p2p.Config{
+	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeAddrs,
@@ -424,7 +424,7 @@ func (b *BeaconNode) fetchP2P() p2p.P2P {
 }
 
 func (b *BeaconNode) registerAttestationPool() error {
-	s, err := attestations.New(b.ctx, &attestations.Config{
+	s, err := attestations.NewService(b.ctx, &attestations.Config{
 		Pool: b.attestationPool,
 	})
 	if err != nil {
@@ -451,7 +451,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	}
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
-	blockchainService, err := blockchain.New(b.ctx, &blockchain.Config{
+	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,
 		ChainStartFetcher: web3Service,
@@ -502,7 +502,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		StateGen:           b.stateGen,
 		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
 	}
-	web3Service, err := powchain.New(b.ctx, cfg)
+	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
@@ -542,7 +542,7 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	rs := regularsync.New(b.ctx, &regularsync.Config{
+	rs := regularsync.NewService(b.ctx, &regularsync.Config{
 		DB:                  b.db,
 		P2P:                 b.fetchP2P(),
 		Chain:               chainService,
@@ -565,7 +565,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
-	is := initialsync.New(b.ctx, &initialsync.Config{
+	is := initialsync.NewService(b.ctx, &initialsync.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(),
@@ -617,7 +617,7 @@ func (b *BeaconNode) registerRPCService() error {
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	p2pService := b.fetchP2P()
-	rpcService := rpc.New(b.ctx, &rpc.Config{
+	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
 		Port:                    port,
 		BeaconMonitoringHost:    beaconMonitoringHost,
@@ -683,7 +683,7 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
-	service := prometheus.New(
+	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
@@ -704,10 +704,12 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	return b.services.RegisterService(
 		gateway.New(
 			b.ctx,
 			selfAddress,
+			selfCert,
 			gatewayAddress,
 			nil, /*optional mux*/
 			allowedOrigins,
@@ -723,7 +725,7 @@ func (b *BeaconNode) registerInteropServices() error {
 	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 
 	if genesisValidators > 0 || genesisStatePath != "" {
-		svc := interopcoldstart.New(b.ctx, &interopcoldstart.Config{
+		svc := interopcoldstart.NewService(b.ctx, &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,

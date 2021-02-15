@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,7 +19,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 5500)
 	for _, vv := range beaconState.Validators() {
-		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
+		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
 	}
 	// This set of indices is very similar to the one from our sapphire testnet
 	// when close to 100 validators were incorrectly slashed. The set is from 0 -5500,

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/prysmaticlabs/eth2-types"
 )
 
 // Given input string `block_root:epoch_number`, this verifies the input string is valid, and
 // returns the block root as bytes and epoch number as unsigned integers.
-func convertWspInput(wsp string) ([]byte, uint64, error) {
+func convertWspInput(wsp string) ([]byte, types.Epoch, error) {
 	if wsp == "" {
 		return nil, 0, nil
 	}
@@ -43,5 +45,5 @@ func convertWspInput(wsp string) ([]byte, uint64, error) {
 		return nil, 0, err
 	}
 
-	return bRoot, epoch, nil
+	return bRoot, types.Epoch(epoch), nil
 }

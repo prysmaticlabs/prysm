@@ -371,13 +371,13 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	//   DepositCount = state.eth1_deposit_index,
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
-	slotInVotingPeriod := slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch)
+	slotInVotingPeriod := slot % (uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch)
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, helpers.SlotToEpoch(slot)+slotInVotingPeriod)
+	enc = fastssz.MarshalUint64(enc, uint64(helpers.SlotToEpoch(slot))+slotInVotingPeriod)
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{

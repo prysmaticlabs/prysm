@@ -117,8 +117,8 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 	}{
 		{
 			// Go 2 epochs past pruning point.
-			slots:        []uint64{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, (wsPeriod+3)*slotsPerEpoch + 8},
-			storedSlots:  []uint64{slotsPerEpoch*5 + 6, (wsPeriod+3)*slotsPerEpoch + 8},
+			slots:        []uint64{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, uint64(wsPeriod+3)*slotsPerEpoch + 8},
+			storedSlots:  []uint64{slotsPerEpoch*5 + 6, uint64(wsPeriod+3)*slotsPerEpoch + 8},
 			removedSlots: []uint64{slotsPerEpoch / 2},
 		},
 		{
@@ -129,9 +129,9 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 				slotsPerEpoch * 3,
 				slotsPerEpoch * 4,
 				slotsPerEpoch * 5,
-				(wsPeriod+10)*slotsPerEpoch + 8,
+				uint64(wsPeriod+10)*slotsPerEpoch + 8,
 			},
-			storedSlots: []uint64{(wsPeriod+10)*slotsPerEpoch + 8},
+			storedSlots: []uint64{uint64(wsPeriod+10)*slotsPerEpoch + 8},
 			removedSlots: []uint64{
 				slotsPerEpoch + 4,
 				slotsPerEpoch * 2,

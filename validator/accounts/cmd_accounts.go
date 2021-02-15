@@ -142,6 +142,7 @@ var AccountCommands = &cli.Command{
 				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
+				flags.ExitAllFlag,
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,

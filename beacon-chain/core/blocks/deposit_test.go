@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -319,8 +320,8 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		val, err := newState.ValidatorAtIndex(uint64(i))
 		require.NoError(t, err)
 		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.EffectiveBalance, "unequal effective balance")
-		require.Equal(t, uint64(0), val.ActivationEpoch)
-		require.Equal(t, uint64(0), val.ActivationEligibilityEpoch)
+		require.Equal(t, types.Epoch(0), val.ActivationEpoch)
+		require.Equal(t, types.Epoch(0), val.ActivationEligibilityEpoch)
 	}
 	if newState.Eth1DepositIndex() != 100 {
 		t.Errorf(

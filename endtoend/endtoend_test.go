@@ -13,18 +13,18 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/endtoend/components"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-
 	"google.golang.org/grpc"
 )
 
@@ -32,7 +32,7 @@ func init() {
 	state.SkipSlotCache.Disable()
 }
 
-func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
+func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
@@ -101,7 +101,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.
-			if !evaluator.Policy(currentEpoch) {
+			if !evaluator.Policy(types.Epoch(currentEpoch)) {
 				continue
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
@@ -145,7 +145,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 
 	// Sleep a slot to make sure the synced state is made.
 	time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	syncEvaluators := []types.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
+	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 	for _, evaluator := range syncEvaluators {
 		t.Run(evaluator.Name, func(t *testing.T) {
 			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")

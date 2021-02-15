@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -106,7 +107,7 @@ func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool
 }
 
 // SameTarget returns true if attestation `a` attested to the same target block in state.
-func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
+func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e types.Epoch) (bool, error) {
 	r, err := helpers.BlockRoot(state, e)
 	if err != nil {
 		return false, err

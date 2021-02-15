@@ -84,6 +84,8 @@ var appHelpFlagGroups = []flagGroup{
 			debug.MemProfileRateFlag,
 			debug.CPUProfileFlag,
 			debug.TraceFlag,
+			debug.BlockProfileRateFlag,
+			debug.MutexProfileFractionFlag,
 		},
 	},
 	{

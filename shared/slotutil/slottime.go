@@ -3,6 +3,7 @@ package slotutil
 import (
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -26,8 +27,8 @@ func SlotsSinceGenesis(genesis time.Time) uint64 {
 
 // EpochsSinceGenesis returns the number of slots since
 // the provided genesis time.
-func EpochsSinceGenesis(genesis time.Time) uint64 {
-	return SlotsSinceGenesis(genesis) / params.BeaconConfig().SlotsPerEpoch
+func EpochsSinceGenesis(genesis time.Time) types.Epoch {
+	return types.Epoch(SlotsSinceGenesis(genesis) / params.BeaconConfig().SlotsPerEpoch)
 }
 
 // DivideSlotBy divides the SECONDS_PER_SLOT configuration

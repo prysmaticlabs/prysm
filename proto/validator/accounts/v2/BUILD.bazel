@@ -30,6 +30,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/rpc/v1:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_golang_protobuf//descriptor:go_default_library",
         "@com_github_golang_protobuf//ptypes/empty:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -48,6 +49,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/rpc/v1:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
     ],

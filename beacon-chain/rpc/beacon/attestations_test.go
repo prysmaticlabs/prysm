@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -150,9 +151,9 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 
 	someRoot := [32]byte{1, 2, 3}
 	sourceRoot := [32]byte{4, 5, 6}
-	sourceEpoch := uint64(5)
+	sourceEpoch := types.Epoch(5)
 	targetRoot := [32]byte{7, 8, 9}
-	targetEpoch := uint64(7)
+	targetEpoch := types.Epoch(7)
 
 	blocks := []*ethpb.SignedBeaconBlock{
 		testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
@@ -600,7 +601,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	blockRoot := bytesutil.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
-	epoch := uint64(50)
+	epoch := types.Epoch(50)
 	startSlot, err := helpers.StartSlot(epoch)
 	require.NoError(t, err)
 
@@ -660,7 +661,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	}
 	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
-		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot: uint64(epoch) * params.BeaconConfig().SlotsPerEpoch,
 	})
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))))
@@ -857,10 +858,10 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
 	require.NoError(t, err)
-	epoch := uint64(0)
+	epoch := types.Epoch(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	committees, err := computeCommittees(epoch*params.BeaconConfig().SlotsPerEpoch, activeIndices, attesterSeed)
+	committees, err := computeCommittees(uint64(epoch)*params.BeaconConfig().SlotsPerEpoch, activeIndices, attesterSeed)
 	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch

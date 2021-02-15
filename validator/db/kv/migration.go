@@ -10,8 +10,8 @@ type migration func(*bolt.Tx) error
 
 var (
 	migrationCompleted = []byte("done")
-	upMigrations       = []migration{}
-	downMigrations     = []migration{}
+	upMigrations       []migration
+	downMigrations     []migration
 )
 
 // RunUpMigrations defined in the upMigrations list.

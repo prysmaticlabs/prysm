@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -321,7 +322,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 
 	proposerSlashIdx := uint64(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	err = beaconState.SetSlot((params.BeaconConfig().ShardCommitteePeriod * slotsPerEpoch) + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot(uint64(params.BeaconConfig().ShardCommitteePeriod.Mul(slotsPerEpoch)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
@@ -501,12 +502,12 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &pb.BeaconState{
-		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		Slot:                       uint64(epoch.Mul(params.BeaconConfig().SlotsPerEpoch)) + 1,
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),

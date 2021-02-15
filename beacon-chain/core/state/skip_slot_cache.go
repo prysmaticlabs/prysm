@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -19,7 +20,11 @@ var SkipSlotCache = cache.NewSkipSlotCache()
 // state root is in the mix to defend against different forks with same skip slots
 // to hit the same cache. We don't want beacon states mixed up between different chains.
 func cacheKey(ctx context.Context, state *beaconstate.BeaconState) ([32]byte, error) {
-	r, err := state.HashTreeRoot(ctx)
+	bh := state.LatestBlockHeader()
+	if bh == nil {
+		return [32]byte{}, errors.New("block head in state can't be nil")
+	}
+	r, err := bh.HashTreeRoot()
 	if err != nil {
 		return [32]byte{}, err
 	}

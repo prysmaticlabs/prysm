@@ -107,7 +107,7 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 		hasher,
 		eth1Chunks,
 		uint64(len(eth1Chunks)),
-		params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch,
+		uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod.Mul(params.BeaconConfig().SlotsPerEpoch)),
 	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")

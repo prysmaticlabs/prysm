@@ -263,13 +263,12 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if fileutil.FileExists(defaultWalletPasswordFilePath) {
-		if err := cliCtx.Set(flags.WalletPasswordFileFlag.Name, defaultWalletPasswordFilePath); err != nil {
-			return errors.Wrap(err, "could not set default wallet password file path")
-		}
+
+	// Read the wallet password file from the cli context.
+	if err = setWalletPasswordFilePath(cliCtx); err != nil {
+		return errors.Wrap(err, "could not read wallet password file")
 	}
+
 	// Read the wallet from the specified path.
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, nil
@@ -365,7 +364,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 			},
 		)
 	}
-	service := prometheus.New(
+	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", c.cliCtx.String(cmd.MonitoringHostFlag.Name), c.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		c.services,
 		additionalHandlers...,
@@ -437,7 +436,7 @@ func (c *ValidatorClient) registerSlasherService() error {
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashingprotection.New(c.cliCtx.Context, &slashingprotection.Config{
+	sp, err := slashingprotection.NewService(c.cliCtx.Context, &slashingprotection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
@@ -517,6 +516,30 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		allowedOrigins,
 	)
 	return c.services.RegisterService(gatewaySrv)
+}
+
+func setWalletPasswordFilePath(cliCtx *cli.Context) error {
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
+	if fileutil.FileExists(defaultWalletPasswordFilePath) {
+		// Ensure file has proper permissions.
+		hasPerms, err := fileutil.HasReadWritePermissions(defaultWalletPasswordFilePath)
+		if err != nil {
+			return err
+		}
+		if !hasPerms {
+			return fmt.Errorf(
+				"wallet password file %s does not have proper 0600 permissions",
+				defaultWalletPasswordFilePath,
+			)
+		}
+
+		// Set the filepath into the cli context.
+		if err := cliCtx.Set(flags.WalletPasswordFileFlag.Name, defaultWalletPasswordFilePath); err != nil {
+			return errors.Wrap(err, "could not set default wallet password file path")
+		}
+	}
+	return nil
 }
 
 func clearDB(ctx context.Context, dataDir string, force bool) error {

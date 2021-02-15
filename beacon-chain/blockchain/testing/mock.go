@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -290,7 +291,7 @@ func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestati
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch uint64) ([]uint64, error) {
+func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch types.Epoch) ([]uint64, error) {
 	if s.State == nil {
 		return []uint64{}, nil
 	}
@@ -298,7 +299,7 @@ func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch uint64) ([
 }
 
 // HeadSeed mocks the same method in the chain service.
-func (s *ChainService) HeadSeed(_ context.Context, epoch uint64) ([32]byte, error) {
+func (s *ChainService) HeadSeed(_ context.Context, epoch types.Epoch) ([32]byte, error) {
 	return helpers.Seed(s.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 

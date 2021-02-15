@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -24,8 +25,8 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 	assert.Equal(t, 0, len(signedAttestations))
 
 	// We write a real attesting history to disk for the public key.
-	lowestSourceEpoch := uint64(0)
-	lowestTargetEpoch := uint64(4)
+	lowestSourceEpoch := types.Epoch(0)
+	lowestTargetEpoch := types.Epoch(4)
 
 	require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
 		lowestSourceEpoch,

@@ -1,12 +1,30 @@
 package helpers
 
 import (
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"math"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// VerifyNilBeaconBlock checks if any composite field of input signed beacon block is nil.
+// Access to these nil fields will result in run time panic,
+// it is recommended to run these checks as first line of defense.
+func VerifyNilBeaconBlock(b *ethpb.SignedBeaconBlock) error {
+	if b == nil {
+		return errors.New("signed beacon block can't be nil")
+	}
+	if b.Block == nil {
+		return errors.New("beacon block can't be nil")
+	}
+	if b.Block.Body == nil {
+		return errors.New("beacon block body can't be nil")
+	}
+	return nil
+}
 
 // BlockRootAtSlot returns the block root stored in the BeaconState for a recent slot.
 // It returns an error if the requested block root is not within the slot range.
@@ -45,7 +63,7 @@ func StateRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) 
 //    Return the block root at the start of a recent ``epoch``.
 //    """
 //    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
-func BlockRoot(state *stateTrie.BeaconState, epoch uint64) ([]byte, error) {
+func BlockRoot(state *stateTrie.BeaconState, epoch types.Epoch) ([]byte, error) {
 	s, err := StartSlot(epoch)
 	if err != nil {
 		return nil, err

@@ -3,6 +3,7 @@ package testing
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -56,7 +57,7 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
 	for v := 0; v < numValidators; v++ {
-		latestTarget := gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000)
+		latestTarget := types.Epoch(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000))
 		// If 0, we change the value to 1 as the we compute source by doing (target-1)
 		// to prevent any underflows in this setup helper.
 		if latestTarget == 0 {
@@ -64,17 +65,17 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 		}
 		historicalAtts := make([]*kv.AttestationRecord, 0)
 		proposals := make([]kv.Proposal, 0)
-		for i := 1; i < latestTarget; i++ {
+		for i := types.Epoch(1); i < latestTarget; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			historicalAtts = append(historicalAtts, &kv.AttestationRecord{
-				Source:      uint64(i - 1),
-				Target:      uint64(i),
+				Source:      i - 1,
+				Target:      i,
 				SigningRoot: signingRoot,
 			})
 		}
-		for i := 1; i <= latestTarget; i++ {
+		for i := types.Epoch(1); i <= latestTarget; i++ {
 			signingRoot := [32]byte{}
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
