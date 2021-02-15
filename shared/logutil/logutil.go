@@ -35,7 +35,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 // [scheme:][//[userinfo@]host][/]path[?query][#fragment] -->  [scheme:][//[***]host][/***][#***]
 //if the format is not matched nothing is done, string is returned as is.
 func MaskCredentialsLogging(currUrl string) string {
-	//error if the input is not a URL
+	// error if the input is not a URL
 	MaskedUrl := currUrl
 	u, err := url.Parse(currUrl)
 	if err != nil {
