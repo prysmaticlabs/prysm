@@ -18,34 +18,39 @@ import (
 // This struct allows us to specify required dependencies and
 // parameters for slasher to function as needed.
 type ServiceConfig struct {
-	IndexedAttsFeed *event.Feed
-	Database        db.Database
+	IndexedAttsFeed  *event.Feed
+	BeaconBlocksFeed *event.Feed
+	Database         db.Database
 }
 
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect eth2 slashable offenses.
 type Service struct {
-	params           *Parameters
-	serviceCfg       *ServiceConfig
-	indexedAttsChan  chan *ethpb.IndexedAttestation
-	queueLock        sync.Mutex
-	attestationQueue []*slashertypes.CompactAttestation
-	ctx              context.Context
-	cancel           context.CancelFunc
-	genesisTime      time.Time
+	params            *Parameters
+	serviceCfg        *ServiceConfig
+	indexedAttsChan   chan *ethpb.IndexedAttestation
+	beaconBlocksChan  chan *ethpb.BeaconBlockHeader
+	queueLock         sync.Mutex
+	attestationQueue  []*slashertypes.CompactAttestation
+	beaconBlocksQueue []*slashertypes.CompactBeaconBlock
+	ctx               context.Context
+	cancel            context.CancelFunc
+	genesisTime       time.Time
 }
 
 // New instantiates a new slasher from configuration values.
 func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		params:           DefaultParams(),
-		serviceCfg:       srvCfg,
-		indexedAttsChan:  make(chan *ethpb.IndexedAttestation, 1),
-		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
-		ctx:              ctx,
-		cancel:           cancel,
-		genesisTime:      time.Now(),
+		params:            DefaultParams(),
+		serviceCfg:        srvCfg,
+		indexedAttsChan:   make(chan *ethpb.IndexedAttestation, 1),
+		beaconBlocksChan:  make(chan *ethpb.BeaconBlockHeader, 1),
+		attestationQueue:  make([]*slashertypes.CompactAttestation, 0),
+		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
+		ctx:               ctx,
+		cancel:            cancel,
+		genesisTime:       time.Now(),
 	}, nil
 }
 

@@ -39,6 +39,34 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 	}
 }
 
+// Receive beacon blocks from some source event feed,
+func (s *Service) receiveBlocks(ctx context.Context) {
+	sub := s.serviceCfg.BeaconBlocksFeed.Subscribe(s.beaconBlocksChan)
+	defer close(s.beaconBlocksChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case blockHeader := <-s.beaconBlocksChan:
+			// TODO(#8331): Defer blocks from the future for later processing.
+			//if !validateAttestationIntegrity(att) {
+			//	continue
+			//}
+			compactBlock := &slashertypes.CompactBeaconBlock{
+				ProposerIndex: blockHeader.ProposerIndex,
+				Slot:          blockHeader.Slot,
+			}
+			s.queueLock.Lock()
+			s.beaconBlocksQueue = append(s.beaconBlocksQueue, compactBlock)
+			s.queueLock.Unlock()
+		case err := <-sub.Err():
+			log.WithError(err).Debug("Subscriber closed with error")
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 // Process queued attestations every time an epoch ticker fires. We retrieve
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations

@@ -20,6 +20,14 @@ type CompactAttestation struct {
 	SigningRoot      [32]byte
 }
 
+// CompactBeaconBlock containing only the required information
+// for proposer slashing detection.
+type CompactBeaconBlock struct {
+	ProposerIndex uint64
+	Slot          uint64
+	SigningRoot   [32]byte
+}
+
 // Slashing represents a compact format with all the information
 // needed to understand a slashable offense in eth2.
 type Slashing struct {
