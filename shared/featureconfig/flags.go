@@ -61,10 +61,6 @@ var (
 		Name:  "disable-blst",
 		Usage: "Disables the new BLS library, blst, from Supranational",
 	}
-	disableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:  "disable-eth1-data-majority-vote",
-		Usage: "Disables the Voting With The Majority algorithm when voting for eth1data.",
-	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
@@ -159,7 +155,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	PyrmontTestnet,
 	Mainnet,
 	disableBlst,
-	disableEth1DataMajorityVote,
 	enablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
