@@ -39,7 +39,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	require.NoError(t, err, "Could not execute GenesisBeaconState")
 
 	// Misc fields checks.
-	assert.Equal(t, uint64(0), newState.Slot(), "Slot was not correctly initialized")
+	assert.Equal(t, types.Slot(0), newState.Slot(), "Slot was not correctly initialized")
 	if !proto.Equal(newState.Fork(), &pb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,
@@ -105,7 +105,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
-	got, want := uint64(len(s.BlockRoots())), params.BeaconConfig().SlotsPerHistoricalRoot
+	got, want := uint64(len(s.BlockRoots())), uint64(params.BeaconConfig().SlotsPerHistoricalRoot)
 	assert.Equal(t, want, got, "Wrong number of recent block hashes")
 
 	got = uint64(cap(s.BlockRoots()))

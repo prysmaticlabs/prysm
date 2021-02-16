@@ -6,6 +6,7 @@ go_library(
     srcs = ["mock.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/slotutil/testing",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_prysmaticlabs_eth2_types//:go_default_library"],
 )
 
 go_test(

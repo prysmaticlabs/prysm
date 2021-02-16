@@ -3,7 +3,7 @@ package protoarray
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
@@ -29,7 +29,7 @@ type Store struct {
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
 // This is used as an array based stateful DAG for efficient fork choice look up.
 type Node struct {
-	slot           uint64      // slot of the block converted to the node.
+	slot           types.Slot  // slot of the block converted to the node.
 	root           [32]byte    // root of the block converted to the node.
 	parent         uint64      // parent index of this node.
 	justifiedEpoch types.Epoch // justifiedEpoch of this node.

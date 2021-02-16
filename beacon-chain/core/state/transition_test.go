@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -252,7 +252,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
@@ -322,7 +322,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 
 	proposerSlashIdx := uint64(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	err = beaconState.SetSlot(uint64(params.BeaconConfig().ShardCommitteePeriod.Mul(slotsPerEpoch)) + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot(slotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
@@ -396,7 +396,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	}
 
 	var blockRoots [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
@@ -507,7 +507,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &pb.BeaconState{
-		Slot:                       uint64(epoch.Mul(params.BeaconConfig().SlotsPerEpoch)) + 1,
+		Slot:                       params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)) + 1,
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -696,7 +696,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	s, privKeys := testutil.DeterministicGenesisState(t, validatorCount)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bitCount := validatorCount / params.BeaconConfig().SlotsPerEpoch
+	bitCount := validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	aggBits := bitfield.NewBitlist(bitCount)
 	for i := uint64(1); i < bitCount; i++ {
 		aggBits.SetBitAt(i, true)
@@ -765,7 +765,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 
 func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	tests := []struct {
-		slot            uint64
+		slot            types.Slot
 		canProcessEpoch bool
 	}{
 		{
@@ -875,7 +875,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 }
 
 func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
-	slot := uint64(2)
+	slot := types.Slot(2)
 	parentState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
@@ -884,7 +884,7 @@ func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 }
 
 func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
-	slot := uint64(2)
+	slot := types.Slot(2)
 	parentState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
@@ -898,5 +898,5 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	r := []byte{'a'}
 	s, err := state.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
 	require.NoError(t, err)
-	require.Equal(t, uint64(5), s.Slot())
+	require.Equal(t, types.Slot(5), s.Slot())
 }

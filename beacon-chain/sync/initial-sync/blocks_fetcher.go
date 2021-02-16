@@ -9,6 +9,7 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -92,17 +93,18 @@ type peerLock struct {
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
 type fetchRequestParams struct {
 	ctx   context.Context // if provided, it is used instead of global fetcher's context
-	start uint64          // starting slot
+	start types.Slot      // starting slot
 	count uint64          // how many slots to receive (fetcher may return fewer slots)
 }
 
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
-	pid          peer.ID
-	start, count uint64
-	blocks       []*eth.SignedBeaconBlock
-	err          error
+	pid    peer.ID
+	start  types.Slot
+	count  uint64
+	blocks []*eth.SignedBeaconBlock
+	err    error
 }
 
 // newBlocksFetcher creates ready to use fetcher.
@@ -216,7 +218,7 @@ func (f *blocksFetcher) loop() {
 }
 
 // scheduleRequest adds request to incoming queue.
-func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64) error {
+func (f *blocksFetcher) scheduleRequest(ctx context.Context, start types.Slot, count uint64) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -235,7 +237,7 @@ func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64
 }
 
 // handleRequest parses fetch request and forwards it to response builder.
-func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) *fetchRequestResponse {
+func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, count uint64) *fetchRequestResponse {
 	ctx, span := trace.StartSpan(ctx, "initialsync.handleRequest")
 	defer span.End()
 
@@ -259,7 +261,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	if f.mode == modeStopOnFinalizedEpoch {
-		highestFinalizedSlot := uint64(targetEpoch+1) * params.BeaconConfig().SlotsPerEpoch
+		highestFinalizedSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(targetEpoch + 1))
 		if start > highestFinalizedSlot {
 			response.err = fmt.Errorf("%w, slot: %d, highest finalized slot: %d",
 				errSlotIsTooHigh, start, highestFinalizedSlot)
@@ -274,7 +276,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 // fetchBlocksFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
-	start, count uint64,
+	start types.Slot, count uint64,
 	peers []peer.ID,
 ) ([]*eth.SignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")

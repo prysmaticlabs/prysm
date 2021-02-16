@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -47,12 +48,12 @@ func (e Exporter) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32
 }
 
 // BlocksBySlot -- passthrough.
-func (e Exporter) BlocksBySlot(ctx context.Context, slot uint64) (bool, []*eth.SignedBeaconBlock, error) {
+func (e Exporter) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []*eth.SignedBeaconBlock, error) {
 	return e.db.BlocksBySlot(ctx, slot)
 }
 
 // BlockRootsBySlot -- passthrough.
-func (e Exporter) BlockRootsBySlot(ctx context.Context, slot uint64) (bool, [][32]byte, error) {
+func (e Exporter) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, [][32]byte, error) {
 	return e.db.BlockRootsBySlot(ctx, slot)
 }
 
@@ -227,12 +228,12 @@ func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) 
 }
 
 // ArchivedPointRoot -- passthrough
-func (e Exporter) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
+func (e Exporter) ArchivedPointRoot(ctx context.Context, index types.Slot) [32]byte {
 	return e.db.ArchivedPointRoot(ctx, index)
 }
 
 // HasArchivedPoint -- passthrough
-func (e Exporter) HasArchivedPoint(ctx context.Context, index uint64) bool {
+func (e Exporter) HasArchivedPoint(ctx context.Context, index types.Slot) bool {
 	return e.db.HasArchivedPoint(ctx, index)
 }
 
@@ -242,17 +243,17 @@ func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
 }
 
 // HighestSlotBlocksBelow -- passthrough
-func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, error) {
+func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]*eth.SignedBeaconBlock, error) {
 	return e.db.HighestSlotBlocksBelow(ctx, slot)
 }
 
 // HighestSlotStatesBelow -- passthrough
-func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
+func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]*state.BeaconState, error) {
 	return e.db.HighestSlotStatesBelow(ctx, slot)
 }
 
 // LastArchivedSlot -- passthrough
-func (e Exporter) LastArchivedSlot(ctx context.Context) (uint64, error) {
+func (e Exporter) LastArchivedSlot(ctx context.Context) (types.Slot, error) {
 	return e.db.LastArchivedSlot(ctx)
 }
 
@@ -262,6 +263,6 @@ func (e Exporter) RunMigrations(ctx context.Context) error {
 }
 
 // CleanUpDirtyStates -- passthrough
-func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error {
+func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error {
 	return e.db.RunMigrations(ctx)
 }

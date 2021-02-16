@@ -12,6 +12,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	gcache "github.com/patrickmn/go-cache"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -253,7 +254,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
 	// The next block is only 1 epoch ahead so as to not induce a new seed.
-	blkSlot := params.BeaconConfig().SlotsPerEpoch * uint64(helpers.NextEpoch(copied))
+	blkSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(helpers.NextEpoch(copied)))
 	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
@@ -270,7 +271,8 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	c2, err := lru.New(10)
 	require.NoError(t, err)
 	stateGen := stategen.New(db)
-	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
+	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -332,7 +334,8 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	c2, err := lru.New(10)
 	require.NoError(t, err)
 	stateGen := stategen.New(db)
-	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
+	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -789,10 +792,10 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 
 	perSlot := params.BeaconConfig().SecondsPerSlot
 	// current slot time
-	slotsSinceGenesis := uint64(1000)
+	slotsSinceGenesis := types.Slot(1000)
 	// max uint, divided by slot time. But avoid losing precision too much.
 	overflowBase := (1 << 63) / (perSlot >> 1)
-	msg.Block.Slot = overflowBase + slotsSinceGenesis
+	msg.Block.Slot = slotsSinceGenesis.Add(overflowBase)
 
 	// valid block
 	msg.Block.ParentRoot = bRoot[:]
@@ -807,7 +810,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{
-		Genesis: time.Unix(genesisTime.Unix()-int64(slotsSinceGenesis*perSlot), 0),
+		Genesis: time.Unix(genesisTime.Unix()-int64(slotsSinceGenesis.Mul(perSlot)), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		},

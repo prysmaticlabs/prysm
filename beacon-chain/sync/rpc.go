@@ -78,7 +78,8 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		defer span.End()
 		span.AddAttributes(trace.StringAttribute("topic", topic))
 		span.AddAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()))
-		log := log.WithField("peer", stream.Conn().RemotePeer().Pretty())
+		log := log.WithField("peer", stream.Conn().RemotePeer().Pretty()).WithField("topic", string(stream.Protocol()))
+
 		// Check before hand that peer is valid.
 		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
@@ -86,6 +87,13 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			return
 		}
+		// Validate request according to peer limits.
+		if err := s.rateLimiter.validateRawRpcRequest(stream); err != nil {
+			log.Debugf("Could not validate rpc request from peer: %v", err)
+			return
+		}
+		s.rateLimiter.addRawStream(stream)
+
 		if err := stream.SetReadDeadline(timeutils.Now().Add(ttfbTimeout)); err != nil {
 			log.WithError(err).Debug("Could not set stream read deadline")
 			return

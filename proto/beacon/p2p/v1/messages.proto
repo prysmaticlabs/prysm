@@ -9,11 +9,11 @@ message Status {
   bytes finalized_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
   uint64 finalized_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
   bytes head_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  uint64 head_slot = 5;
+  uint64 head_slot = 5 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 message BeaconBlocksByRangeRequest {
-  uint64 start_slot = 1;
+  uint64 start_slot = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
   uint64 count = 2;
   uint64 step = 3;
 }
