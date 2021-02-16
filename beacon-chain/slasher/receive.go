@@ -115,7 +115,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ui
 			s.blockQueueLock.Lock()
 			blocks := s.beaconBlocksQueue
 			s.beaconBlocksQueue = make([]*slashertypes.CompactBeaconBlock, 0)
-			s.attestationQueueLock.Unlock()
+			s.blockQueueLock.Unlock()
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),

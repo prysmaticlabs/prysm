@@ -5,8 +5,12 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -111,4 +115,67 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 		},
 	}
 	require.DeepEqual(t, wanted, s.attestationQueue)
+}
+
+func TestSlasher_receiveBlocks_OK(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			BeaconBlocksFeed: new(event.Feed),
+		},
+		beaconBlocksChan: make(chan *ethpb.BeaconBlockHeader),
+	}
+	exitChan := make(chan struct{})
+	go func() {
+		s.receiveBlocks(ctx)
+		exitChan <- struct{}{}
+	}()
+	block1 := &ethpb.BeaconBlockHeader{
+		ProposerIndex: 1,
+	}
+	block2 := &ethpb.BeaconBlockHeader{
+		ProposerIndex: 2,
+	}
+	s.beaconBlocksChan <- block1
+	s.beaconBlocksChan <- block2
+	cancel()
+	<-exitChan
+	wanted := []*slashertypes.CompactBeaconBlock{
+		{
+			ProposerIndex: block1.ProposerIndex,
+		},
+		{
+			ProposerIndex: block2.ProposerIndex,
+		},
+	}
+	require.DeepEqual(t, wanted, s.beaconBlocksQueue)
+}
+
+func TestService_processQueuedBlocks(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB := dbtest.SetupDB(t)
+	s := &Service{
+		params: DefaultParams(),
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+		beaconBlocksQueue: []*slashertypes.CompactBeaconBlock{
+			{
+				ProposerIndex: 1,
+			},
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	tickerChan := make(chan uint64)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedBlocks(ctx, tickerChan)
+		exitChan <- struct{}{}
+	}()
+
+	// Send a value over the ticker.
+	tickerChan <- 0
+	cancel()
+	<-exitChan
+	assert.LogsContain(t, hook, "Epoch reached, processing queued")
 }
