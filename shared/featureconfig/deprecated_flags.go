@@ -22,10 +22,22 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisablePruningDepositProofs = &cli.BoolFlag{
+		Name:   "disable-pruning-deposit-proofs",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableEth1DataMajorityVote = &cli.BoolFlag{
+		Name:   "disable-eth1-data-majority-vote",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedEnableSyncBacktracking,
 	deprecatedDisableSyncBacktracking,
+	deprecatedDisablePruningDepositProofs,
+	deprecatedDisableEth1DataMajorityVote,
 }
