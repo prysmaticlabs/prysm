@@ -138,33 +138,34 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
-		log.Warn("Writing SSZ states and blocks after state transitions")
+		log.WithField(writeSSZStateTransitionsFlag.Name, writeSSZStateTransitionsFlag.Usage).Warn("Enabled feature flag")
 		cfg.WriteSSZStateTransitions = true
 	}
 
 	cfg.EnableSSZCache = true
 
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
-		log.Warn("Enabling experimental kafka streaming.")
+		log.WithField(kafkaBootstrapServersFlag.Name, kafkaBootstrapServersFlag.Usage).Warn("Enabled feature flag")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
 
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
+		log.WithField(disableGRPCConnectionLogging.Name, disableGRPCConnectionLogging.Usage).Warn("Enabled feature flag")
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
+		log.WithField(forceOptMaxCoverAggregationStategy.Name, forceOptMaxCoverAggregationStategy.Usage).Warn("Enabled feature flag")
 		cfg.AttestationAggregationStrategy = "opt_max_cover"
 	}
-	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
 
 	cfg.EnableEth1DataMajorityVote = true
 	if ctx.Bool(disableEth1DataMajorityVote.Name) {
-		log.Warn("Disabling eth1data majority vote")
+		log.WithField(disableEth1DataMajorityVote.Name, disableEth1DataMajorityVote.Usage).Warn("Enabled feature flag")
 		cfg.EnableEth1DataMajorityVote = false
 	}
 	if ctx.Bool(enablePeerScorer.Name) {
-		log.Warn("Enabling peer scoring in P2P")
+		log.WithField(enablePeerScorer.Name, enablePeerScorer.Usage).Warn("Enabled feature flag")
 		cfg.EnablePeerScorer = true
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
@@ -172,28 +173,28 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	}
 	cfg.EnableBlst = true
 	if ctx.Bool(disableBlst.Name) {
-		log.Warn("Disabling new BLS library blst")
+		log.WithField(disableBlst.Name, disableBlst.Usage).Warn("Enabled feature flag")
 		cfg.EnableBlst = false
 	}
 	cfg.EnablePruningDepositProofs = true
 	if ctx.Bool(disablePruningDepositProofs.Name) {
-		log.Warn("Disabling pruning deposit proofs")
+		log.WithField(disablePruningDepositProofs.Name, disablePruningDepositProofs.Usage).Warn("Enabled feature flag")
 		cfg.EnablePruningDepositProofs = false
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
-		log.Warn("Using a larger gossip history for the node")
+		log.WithField(enableLargerGossipHistory.Name, enableLargerGossipHistory.Usage).Warn("Enabled feature flag")
 		cfg.EnableLargerGossipHistory = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
-		log.Warn("Disabling slashing broadcasting to p2p network")
+		log.WithField(disableBroadcastSlashingFlag.Name, disableBroadcastSlashingFlag.Usage).Warn("Enabled feature flag")
 		cfg.DisableBroadcastSlashings = true
 	}
 	if ctx.Bool(enableNextSlotStateCache.Name) {
-		log.Warn("Enabling next slot state cache")
+		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn("Enabled feature flag")
 		cfg.EnableNextSlotStateCache = true
 	}
 	if ctx.Bool(updateHeadTimely.Name) {
-		log.Warn("Enabling update head timely feature")
+		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn("Enabled feature flag")
 		cfg.UpdateHeadTimely = true
 	}
 	Init(cfg)
