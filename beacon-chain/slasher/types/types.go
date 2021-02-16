@@ -15,8 +15,8 @@ const (
 // for attester slashing detection.
 type CompactAttestation struct {
 	AttestingIndices []uint64
-	Source           uint64
-	Target           uint64
+	Source           types.Epoch
+	Target           types.Epoch
 	SigningRoot      [32]byte
 }
 
