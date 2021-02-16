@@ -5,19 +5,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-
+	"github.com/prysmaticlabs/eth2-types"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestSlotToEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
-		epoch uint64
+		epoch types.Epoch
 	}{
 		{slot: 0, epoch: 0},
 		{slot: 50, epoch: 1},
@@ -33,7 +33,7 @@ func TestSlotToEpoch_OK(t *testing.T) {
 func TestCurrentEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
-		epoch uint64
+		epoch types.Epoch
 	}{
 		{slot: 0, epoch: 0},
 		{slot: 50, epoch: 1},
@@ -51,7 +51,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 func TestPrevEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
-		epoch uint64
+		epoch types.Epoch
 	}{
 		{slot: 0, epoch: 0},
 		{slot: 0 + params.BeaconConfig().SlotsPerEpoch + 1, epoch: 0},
@@ -67,13 +67,13 @@ func TestPrevEpoch_OK(t *testing.T) {
 func TestNextEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
-		epoch uint64
+		epoch types.Epoch
 	}{
-		{slot: 0, epoch: 0/params.BeaconConfig().SlotsPerEpoch + 1},
-		{slot: 50, epoch: 0/params.BeaconConfig().SlotsPerEpoch + 2},
-		{slot: 64, epoch: 64/params.BeaconConfig().SlotsPerEpoch + 1},
-		{slot: 128, epoch: 128/params.BeaconConfig().SlotsPerEpoch + 1},
-		{slot: 200, epoch: 200/params.BeaconConfig().SlotsPerEpoch + 1},
+		{slot: 0, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 50, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 2)},
+		{slot: 64, epoch: types.Epoch(64/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 128, epoch: types.Epoch(128/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
 		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
@@ -84,7 +84,7 @@ func TestNextEpoch_OK(t *testing.T) {
 
 func TestEpochStartSlot_OK(t *testing.T) {
 	tests := []struct {
-		epoch     uint64
+		epoch     types.Epoch
 		startSlot uint64
 		error     bool
 	}{
@@ -108,7 +108,7 @@ func TestEpochStartSlot_OK(t *testing.T) {
 
 func TestEpochEndSlot_OK(t *testing.T) {
 	tests := []struct {
-		epoch     uint64
+		epoch     types.Epoch
 		startSlot uint64
 		error     bool
 	}{
@@ -349,7 +349,7 @@ func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
 func TestWeakSubjectivityCheckptEpoch(t *testing.T) {
 	tests := []struct {
 		valCount uint64
-		want     uint64
+		want     types.Epoch
 	}{
 		// Verifying these numbers aligned with the reference table defined:
 		// https://github.com/ethereum/eth2.0-specs/blob/weak-subjectivity-guide/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period

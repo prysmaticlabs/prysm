@@ -68,6 +68,16 @@ var (
 		Usage: "Turn on memory profiling with the given rate",
 		Value: runtime.MemProfileRate,
 	}
+	// MutexProfileFractionFlag to specify the mutex profiling rate.
+	MutexProfileFractionFlag = &cli.IntFlag{
+		Name:  "mutexprofilefraction",
+		Usage: "Turn on mutex profiling with the given rate",
+	}
+	// BlockProfileRateFlag to specify the block profiling rate.
+	BlockProfileRateFlag = &cli.IntFlag{
+		Name:  "blockprofilerate",
+		Usage: "Turn on block profiling with the given rate",
+	}
 	// CPUProfileFlag to specify where to write the CPU profile.
 	CPUProfileFlag = &cli.StringFlag{
 		Name:  "cpuprofile",
@@ -312,6 +322,12 @@ func expandHome(p string) string {
 func Setup(ctx *cli.Context) error {
 	// profiling, tracing
 	runtime.MemProfileRate = ctx.Int(MemProfileRateFlag.Name)
+	if ctx.IsSet(BlockProfileRateFlag.Name) {
+		runtime.SetBlockProfileRate(ctx.Int(BlockProfileRateFlag.Name))
+	}
+	if ctx.IsSet(MutexProfileFractionFlag.Name) {
+		runtime.SetMutexProfileFraction(ctx.Int(MutexProfileFractionFlag.Name))
+	}
 	if traceFile := ctx.String(TraceFlag.Name); traceFile != "" {
 		if err := Handler.StartGoTrace(TraceFlag.Name); err != nil {
 			return err

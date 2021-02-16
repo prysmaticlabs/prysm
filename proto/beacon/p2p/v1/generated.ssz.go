@@ -3,6 +3,7 @@ package ethereum_beacon_p2p_v1
 
 import (
 	ssz "github.com/ferranbt/fastssz"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -30,7 +31,7 @@ func (s *Status) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, s.FinalizedRoot...)
 
 	// Field (2) 'FinalizedEpoch'
-	dst = ssz.MarshalUint64(dst, s.FinalizedEpoch)
+	dst = ssz.MarshalUint64(dst, uint64(s.FinalizedEpoch))
 
 	// Field (3) 'HeadRoot'
 	if len(s.HeadRoot) != 32 {
@@ -66,7 +67,7 @@ func (s *Status) UnmarshalSSZ(buf []byte) error {
 	s.FinalizedRoot = append(s.FinalizedRoot, buf[4:36]...)
 
 	// Field (2) 'FinalizedEpoch'
-	s.FinalizedEpoch = ssz.UnmarshallUint64(buf[36:44])
+	s.FinalizedEpoch = github_com_prysmaticlabs_eth2_types.Epoch(ssz.UnmarshallUint64(buf[36:44]))
 
 	// Field (3) 'HeadRoot'
 	if cap(s.HeadRoot) == 0 {
@@ -110,7 +111,7 @@ func (s *Status) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(s.FinalizedRoot)
 
 	// Field (2) 'FinalizedEpoch'
-	hh.PutUint64(s.FinalizedEpoch)
+	hh.PutUint64(uint64(s.FinalizedEpoch))
 
 	// Field (3) 'HeadRoot'
 	if len(s.HeadRoot) != 32 {
@@ -219,7 +220,7 @@ func (e *ENRForkID) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, e.NextForkVersion...)
 
 	// Field (2) 'NextForkEpoch'
-	dst = ssz.MarshalUint64(dst, e.NextForkEpoch)
+	dst = ssz.MarshalUint64(dst, uint64(e.NextForkEpoch))
 
 	return
 }
@@ -245,7 +246,7 @@ func (e *ENRForkID) UnmarshalSSZ(buf []byte) error {
 	e.NextForkVersion = append(e.NextForkVersion, buf[4:8]...)
 
 	// Field (2) 'NextForkEpoch'
-	e.NextForkEpoch = ssz.UnmarshallUint64(buf[8:16])
+	e.NextForkEpoch = github_com_prysmaticlabs_eth2_types.Epoch(ssz.UnmarshallUint64(buf[8:16]))
 
 	return err
 }
@@ -280,7 +281,7 @@ func (e *ENRForkID) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(e.NextForkVersion)
 
 	// Field (2) 'NextForkEpoch'
-	hh.PutUint64(e.NextForkEpoch)
+	hh.PutUint64(uint64(e.NextForkEpoch))
 
 	hh.Merkleize(indx)
 	return
@@ -1135,7 +1136,7 @@ func (f *Fork) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, f.CurrentVersion...)
 
 	// Field (2) 'Epoch'
-	dst = ssz.MarshalUint64(dst, f.Epoch)
+	dst = ssz.MarshalUint64(dst, uint64(f.Epoch))
 
 	return
 }
@@ -1161,7 +1162,7 @@ func (f *Fork) UnmarshalSSZ(buf []byte) error {
 	f.CurrentVersion = append(f.CurrentVersion, buf[4:8]...)
 
 	// Field (2) 'Epoch'
-	f.Epoch = ssz.UnmarshallUint64(buf[8:16])
+	f.Epoch = github_com_prysmaticlabs_eth2_types.Epoch(ssz.UnmarshallUint64(buf[8:16]))
 
 	return err
 }
@@ -1196,7 +1197,7 @@ func (f *Fork) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(f.CurrentVersion)
 
 	// Field (2) 'Epoch'
-	hh.PutUint64(f.Epoch)
+	hh.PutUint64(uint64(f.Epoch))
 
 	hh.Merkleize(indx)
 	return

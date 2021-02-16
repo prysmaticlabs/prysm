@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -112,7 +113,7 @@ func (s *Store) DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.Signed
 }
 
 // PruneBlockHistory leaves only records younger then history size.
-func (s *Store) PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpochAge uint64) error {
+func (s *Store) PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpochAge types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneBlockHistory")
 	defer span.End()
 	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -109,7 +110,7 @@ func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 		TimeFetcher: chain,
 	}
 	req := &ethpb.DutiesRequest{
-		Epoch: chain.CurrentSlot()/params.BeaconConfig().SlotsPerEpoch + 2,
+		Epoch: types.Epoch(chain.CurrentSlot()/params.BeaconConfig().SlotsPerEpoch + 2),
 	}
 	_, err := vs.duties(context.Background(), req)
 	require.ErrorContains(t, "can not be greater than next epoch", err)

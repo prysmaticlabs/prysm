@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -248,7 +249,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 		penalty := 3 * base
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
 		penalty += params.BeaconConfig().BaseRewardsPerEpoch*base - proposerReward
-		penalty += vp[i].CurrentEpochEffectiveBalance * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
+		penalty += vp[i].CurrentEpochEffectiveBalance * uint64(finalityDelay) / params.BeaconConfig().InactivityPenaltyQuotient
 		assert.Equal(t, penalty, penalties[i], "Unexpected slashed indices penalty balance")
 		assert.Equal(t, uint64(0), rewards[i], "Unexpected slashed indices reward balance")
 	}
@@ -353,8 +354,8 @@ func TestFinalityDelay(t *testing.T) {
 	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
-	prevEpoch := uint64(0)
-	finalizedEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
+	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
 		prevEpoch = helpers.PrevEpoch(beaconState)
@@ -383,8 +384,8 @@ func TestIsInInactivityLeak(t *testing.T) {
 	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
-	prevEpoch := uint64(0)
-	finalizedEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
+	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
 		prevEpoch = helpers.PrevEpoch(beaconState)

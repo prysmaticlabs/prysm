@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -31,6 +32,15 @@ func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
 // Uint64FromString converts a string into a uint64 representation.
 func Uint64FromString(str string) (uint64, error) {
 	return strconv.ParseUint(str, 10, 64)
+}
+
+// Uint64FromString converts a string into a uint64 representation.
+func EpochFromString(str string) (types.Epoch, error) {
+	e, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return types.Epoch(e), nil
 }
 
 // PubKeyFromHex takes in a hex string, verifies its length as 48 bytes, and converts that representation.

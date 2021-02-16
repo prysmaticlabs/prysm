@@ -10,6 +10,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -164,8 +165,8 @@ func (s *Service) processFetchedDataRegSync(
 
 // highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.
 // Note this can be lower than our finalized epoch if we have no peers or peers that are all behind us.
-func (s *Service) highestFinalizedEpoch() uint64 {
-	highest := uint64(0)
+func (s *Service) highestFinalizedEpoch() types.Epoch {
+	highest := types.Epoch(0)
 	for _, pid := range s.p2p.Peers().Connected() {
 		peerChainState, err := s.p2p.Peers().ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch > highest {

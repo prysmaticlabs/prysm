@@ -34,6 +34,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -165,9 +166,9 @@ type Web3ServiceConfig struct {
 	Eth1HeaderReqLimit uint64
 }
 
-// New sets up a new instance with an ethclient when
+// NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func New(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
+func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -466,7 +467,7 @@ func (s *Service) waitForConnection() {
 			s.connectedETH1 = true
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": s.currHttpEndpoint,
+				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -514,7 +515,7 @@ func (s *Service) waitForConnection() {
 				s.connectedETH1 = true
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": s.currHttpEndpoint,
+					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
