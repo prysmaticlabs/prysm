@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -215,6 +216,8 @@ func (s *Store) CheckSlashableAttestation(
 			return nil
 		})
 	})
+
+	traceutil.AnnotateError(span, err)
 	return slashKind, err
 }
 
