@@ -245,3 +245,78 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 	_, ok := st1.ValidatorIndexByPubkey(bytesutil.ToBytes48(val.PublicKey))
 	assert.Equal(t, false, ok, "Expected no validator index to be present in st1 for the newly inserted pubkey")
 }
+
+func TestBeaconState_ReleaseStateReference(t *testing.T) {
+	type test struct {
+		name        string
+		stateModify func(*state.BeaconState) (*state.BeaconState, error)
+		changed     bool
+	}
+	initTests := []test{
+		{
+			name: "unchanged state",
+			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+				return beaconState, nil
+			},
+			changed: false,
+		},
+		{
+			name: "different slot",
+			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+				if err := beaconState.SetSlot(5); err != nil {
+					return nil, err
+				}
+				return beaconState, nil
+			},
+			changed: true,
+		},
+		{
+			name: "different validator balance",
+			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+				val, err := beaconState.ValidatorAtIndex(5)
+				if err != nil {
+					return nil, err
+				}
+				val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance - params.BeaconConfig().EffectiveBalanceIncrement
+				if err := beaconState.UpdateValidatorAtIndex(5, val); err != nil {
+					return nil, err
+				}
+				return beaconState, nil
+			},
+			changed: true,
+		},
+	}
+
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			testState, _ := testutil.DeterministicGenesisState(t, 64)
+			origRoot, err := testState.HashTreeRoot(context.Background())
+			assert.NoError(t, err)
+			copiedState := testState.Copy()
+			// Zero out reference in original state.
+			testState.ReleaseStateReference()
+			copiedState, err = tt.stateModify(copiedState)
+			// Copied state should have no issues when being
+			// modified.
+			assert.NoError(t, err)
+			newRoot, err := copiedState.HashTreeRoot(context.Background())
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.changed, origRoot != newRoot)
+		})
+	}
+}
+
+func TestBeaconState_ReleaseReference_NoPanic(t *testing.T) {
+	st0, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	st0.ReleaseStateReference()
+
+	// Expect error from zeroed out state.
+	assert.ErrorContains(t, "nil validators in state", st0.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+		t.Errorf("Able to read validator with index %d from zeroed out state", idx)
+		return nil
+	}))
+	// Shouldn't panic if releasing state a second time.
+	st0.ReleaseStateReference()
+}

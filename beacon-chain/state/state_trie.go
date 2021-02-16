@@ -194,15 +194,27 @@ func (b *BeaconState) Copy() *BeaconState {
 // or potential errors/panics from the access of data from a non-existent
 // state.
 func (b *BeaconState) ReleaseStateReference() {
+	if !b.HasInnerState() {
+		return
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	for field, v := range b.sharedFieldReferences {
 		v.MinusRef()
 		if b.stateFieldLeaves[field].reference != nil {
 			b.stateFieldLeaves[field].MinusRef()
 		}
 	}
+	if b.valMapHandler != nil && b.valMapHandler.mapRef != nil {
+		b.valMapHandler.mapRef.MinusRef()
+		b.valMapHandler = nil
+	}
 	// Remove references to all large arrays.
 	b.sharedFieldReferences = make(map[fieldIndex]*reference, 0)
 	b.stateFieldLeaves = make(map[fieldIndex]*FieldTrie, 0)
+	b.merkleLayers = [][][]byte{}
+
 	// Large arrays, infrequently changed, constant size.
 	b.state.RandaoMixes = nil
 	b.state.StateRoots = nil
