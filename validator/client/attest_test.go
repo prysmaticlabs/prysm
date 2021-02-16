@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +18,8 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -204,7 +207,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -213,7 +216,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Failed attestation slashing protection")
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
@@ -256,7 +259,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -265,7 +268,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Failed attestation slashing protection")
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
@@ -300,7 +303,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
@@ -320,7 +323,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
-	require.LogsContain(t, hook, failedAttLocalProtectionErr)
+	require.LogsContain(t, hook, "Failed attestation slashing protection")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
@@ -479,4 +482,70 @@ func TestSignAttestation(t *testing.T) {
 	// proposer domain
 	require.DeepEqual(t, "02bbdb88056d6cbafd6e94575540"+
 		"e74b8cf2c0f2c1b79b8e17e7b21ed1694305", hex.EncodeToString(sr[:]))
+}
+
+func TestServer_WaitToSlotOneThird_CanWait(t *testing.T) {
+	currentTime := uint64(time.Now().Unix())
+	currentSlot := types.Slot(4)
+	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
+
+	v := &validator{
+		genesisTime: genesisTime,
+		blockFeed:   new(event.Feed),
+	}
+
+	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
+	oneThird := currentTime + timeToSleep
+	v.waitOneThirdOrValidBlock(context.Background(), currentSlot)
+
+	if oneThird != uint64(time.Now().Unix()) {
+		t.Errorf("Wanted %d time for slot one third but got %d", oneThird, currentTime)
+	}
+}
+
+func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
+	currentTime := uint64(time.Now().Unix())
+	currentSlot := types.Slot(4)
+	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
+
+	v := &validator{
+		genesisTime:      genesisTime,
+		blockFeed:        new(event.Feed),
+		highestValidSlot: currentSlot,
+	}
+
+	v.waitOneThirdOrValidBlock(context.Background(), currentSlot)
+
+	if currentTime != uint64(time.Now().Unix()) {
+		t.Errorf("Wanted %d time for slot one third but got %d", uint64(time.Now().Unix()), currentTime)
+	}
+}
+
+func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{AttestTimely: true})
+	defer resetCfg()
+
+	currentTime := uint64(time.Now().Unix())
+	currentSlot := types.Slot(4)
+	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
+
+	v := &validator{
+		genesisTime: genesisTime,
+		blockFeed:   new(event.Feed),
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		v.blockFeed.Send(&ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{Slot: currentSlot},
+		})
+		wg.Done()
+	}()
+
+	v.waitOneThirdOrValidBlock(context.Background(), currentSlot)
+
+	if currentTime != uint64(time.Now().Unix()) {
+		t.Errorf("Wanted %d time for slot one third but got %d", uint64(time.Now().Unix()), currentTime)
+	}
 }

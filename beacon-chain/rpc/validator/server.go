@@ -29,16 +29,9 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var log logrus.FieldLogger
-
-func init() {
-	log = logrus.WithField("prefix", "rpc/validator")
-}
 
 // Server defines a server implementation of the gRPC Validator service,
 // providing RPC endpoints for obtaining validator assignments per epoch, the slots
@@ -57,7 +50,6 @@ type Server struct {
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
-	GenesisTimeFetcher     blockchain.TimeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
 	BlockNotifier          blockfeed.Notifier
@@ -164,8 +156,9 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 	}
 	if head != nil {
 		res := &ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: head.GenesisTime(),
+			Started:               true,
+			GenesisTime:           head.GenesisTime(),
+			GenesisValidatorsRoot: head.GenesisValidatorRoot(),
 		}
 		return stream.Send(res)
 	}
@@ -176,29 +169,17 @@ func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeVali
 	for {
 		select {
 		case event := <-stateChannel:
-			if event.Type == statefeed.ChainStarted {
-				data, ok := event.Data.(*statefeed.ChainStartedData)
-				if !ok {
-					return errors.New("event data is not type *statefeed.ChainStartData")
-				}
-				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
-				log.Debug("Sending genesis time notification to connected validator clients")
-				res := &ethpb.ChainStartResponse{
-					Started:     true,
-					GenesisTime: uint64(data.StartTime.Unix()),
-				}
-				return stream.Send(res)
-			}
-			// Handle race condition in the event the blockchain
-			// service isn't initialized in time and the saved head state is nil.
 			if event.Type == statefeed.Initialized {
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
 					return errors.New("event data is not type *statefeed.InitializedData")
 				}
+				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
+				log.Debug("Sending genesis time notification to connected validator clients")
 				res := &ethpb.ChainStartResponse{
-					Started:     true,
-					GenesisTime: uint64(data.StartTime.Unix()),
+					Started:               true,
+					GenesisTime:           uint64(data.StartTime.Unix()),
+					GenesisValidatorsRoot: data.GenesisValidatorsRoot,
 				}
 				return stream.Send(res)
 			}

@@ -31,14 +31,15 @@ import (
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, st.Copy(), [32]byte{}))
 
 	pubKey := pubKey(1)
 
-	err := st.SetValidators([]*ethpb.Validator{{PublicKey: pubKey}})
+	err = st.SetValidators([]*ethpb.Validator{{PublicKey: pubKey}})
 	require.NoError(t, err)
 
 	Server := &Server{
@@ -54,7 +55,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 }
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -102,7 +103,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	// This test breaks if it doesnt use mainnet config
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -195,7 +196,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 }
 
 func TestWaitForActivation_MultipleStatuses(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	priv1, err := bls.RandKey()
 	require.NoError(t, err)
@@ -285,7 +286,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
@@ -313,15 +314,18 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
-	trie := testutil.NewBeaconState()
-	require.NoError(t, trie.SetSlot(3))
-	require.NoError(t, db.SaveState(ctx, trie, headBlockRoot))
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(3))
+	require.NoError(t, db.SaveState(ctx, st, headBlockRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	require.NoError(t, st.SetGenesisValidatorRoot(genesisValidatorsRoot[:]))
 
-	chainService := &mockChain.ChainService{State: trie}
+	chainService := &mockChain.ChainService{State: st, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
@@ -336,8 +340,9 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+			Started:               true,
+			GenesisTime:           uint64(time.Unix(0, 0).Unix()),
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
 		},
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
@@ -345,8 +350,8 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 }
 
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
-	genesisValidatorRoot := [32]byte{0x01, 0x02}
+	db := dbutil.SetupDB(t)
+	genesisValidatorRoot := params.BeaconConfig().ZeroHash
 
 	// Set head state to nil
 	chainService := &mockChain.ChainService{State: nil}
@@ -384,9 +389,10 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 }
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
-
+	db := dbutil.SetupDB(t)
 	hook := logTest.NewGlobal()
+
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
@@ -403,8 +409,9 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: uint64(time.Unix(0, 0).Unix()),
+			Started:               true,
+			GenesisTime:           uint64(time.Unix(0, 0).Unix()),
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
 		},
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
@@ -416,9 +423,10 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
 		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.ChainStarted,
-			Data: &statefeed.ChainStartedData{
-				StartTime: time.Unix(0, 0),
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Unix(0, 0),
+				GenesisValidatorsRoot: genesisValidatorsRoot[:],
 			},
 		})
 	}

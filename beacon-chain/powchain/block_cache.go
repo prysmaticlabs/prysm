@@ -9,6 +9,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
@@ -38,24 +39,9 @@ var (
 	})
 )
 
-// headerInfo specifies the block header information in the ETH 1.0 chain.
-type headerInfo struct {
-	Number *big.Int
-	Hash   common.Hash
-	Time   uint64
-}
-
-func headerToHeaderInfo(hdr *gethTypes.Header) *headerInfo {
-	return &headerInfo{
-		Hash:   hdr.Hash(),
-		Number: new(big.Int).Set(hdr.Number),
-		Time:   hdr.Time,
-	}
-}
-
 // hashKeyFn takes the hex string representation as the key for a headerInfo.
 func hashKeyFn(obj interface{}) (string, error) {
-	hInfo, ok := obj.(*headerInfo)
+	hInfo, ok := obj.(*types.HeaderInfo)
 	if !ok {
 		return "", ErrNotAHeaderInfo
 	}
@@ -66,7 +52,7 @@ func hashKeyFn(obj interface{}) (string, error) {
 // heightKeyFn takes the string representation of the block header number as the key
 // for a headerInfo.
 func heightKeyFn(obj interface{}) (string, error) {
-	hInfo, ok := obj.(*headerInfo)
+	hInfo, ok := obj.(*types.HeaderInfo)
 	if !ok {
 		return "", ErrNotAHeaderInfo
 	}
@@ -92,11 +78,11 @@ func newHeaderCache() *headerCache {
 
 // HeaderInfoByHash fetches headerInfo by its header hash. Returns true with a
 // reference to the header info, if exists. Otherwise returns false, nil.
-func (b *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *headerInfo, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (c *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *types.HeaderInfo, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	obj, exists, err := b.hashCache.GetByKey(hash.Hex())
+	obj, exists, err := c.hashCache.GetByKey(hash.Hex())
 	if err != nil {
 		return false, nil, err
 	}
@@ -108,21 +94,21 @@ func (b *headerCache) HeaderInfoByHash(hash common.Hash) (bool, *headerInfo, err
 		return false, nil, nil
 	}
 
-	hInfo, ok := obj.(*headerInfo)
+	hInfo, ok := obj.(*types.HeaderInfo)
 	if !ok {
 		return false, nil, ErrNotAHeaderInfo
 	}
 
-	return true, hInfo, nil
+	return true, hInfo.Copy(), nil
 }
 
 // HeaderInfoByHeight fetches headerInfo by its header number. Returns true with a
 // reference to the header info, if exists. Otherwise returns false, nil.
-func (b *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *headerInfo, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (c *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *types.HeaderInfo, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	obj, exists, err := b.heightCache.GetByKey(height.String())
+	obj, exists, err := c.heightCache.GetByKey(height.String())
 	if err != nil {
 		return false, nil, err
 	}
@@ -134,12 +120,12 @@ func (b *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *headerInfo, er
 		return false, nil, nil
 	}
 
-	hInfo, ok := obj.(*headerInfo)
+	hInfo, ok := obj.(*types.HeaderInfo)
 	if !ok {
 		return false, nil, ErrNotAHeaderInfo
 	}
 
-	return exists, hInfo, nil
+	return exists, hInfo.Copy(), nil
 }
 
 // AddHeader adds a headerInfo object to the cache. This method also trims the
@@ -147,23 +133,26 @@ func (b *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *headerInfo, er
 // size limit. This method should be called in sequential header number order if
 // the desired behavior is that the blocks with the highest header number should
 // be present in the cache.
-func (b *headerCache) AddHeader(hdr *gethTypes.Header) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+func (c *headerCache) AddHeader(hdr *gethTypes.Header) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	hInfo := headerToHeaderInfo(hdr)
-
-	if err := b.hashCache.AddIfNotPresent(hInfo); err != nil {
-		return err
-	}
-	if err := b.heightCache.AddIfNotPresent(hInfo); err != nil {
+	hInfo, err := types.HeaderToHeaderInfo(hdr)
+	if err != nil {
 		return err
 	}
 
-	trim(b.hashCache, maxCacheSize)
-	trim(b.heightCache, maxCacheSize)
+	if err := c.hashCache.AddIfNotPresent(hInfo); err != nil {
+		return err
+	}
+	if err := c.heightCache.AddIfNotPresent(hInfo); err != nil {
+		return err
+	}
 
-	headerCacheSize.Set(float64(len(b.hashCache.ListKeys())))
+	trim(c.hashCache, maxCacheSize)
+	trim(c.heightCache, maxCacheSize)
+
+	headerCacheSize.Set(float64(len(c.hashCache.ListKeys())))
 
 	return nil
 }

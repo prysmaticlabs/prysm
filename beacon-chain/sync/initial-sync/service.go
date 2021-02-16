@@ -138,6 +138,11 @@ func (s *Service) Syncing() bool {
 	return s.synced.IsNotSet()
 }
 
+// Initialized returns true if initial sync has been started.
+func (s *Service) Initialized() bool {
+	return s.chainStarted.IsSet()
+}
+
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
 func (s *Service) Resync() error {

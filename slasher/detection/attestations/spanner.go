@@ -9,13 +9,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
-	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
+	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
 )
 
@@ -28,12 +29,16 @@ var (
 		Name: "latest_max_span_distance_observed",
 		Help: "The latest distance between target - source observed for max spans",
 	})
+	sourceLargerThenTargetObserved = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "attestation_source_larger_then_target",
+		Help: "The number of attestation data source epoch that aren larger then target epoch.",
+	})
 )
 
 // We look back 128 epochs when updating min/max spans
 // for incoming attestations.
 // TODO(#5040): Remove lookback and handle min spans properly.
-const epochLookback = 128
+const epochLookback = types.Epoch(128)
 
 var _ iface.SpanDetector = (*SpanDetector)(nil)
 
@@ -59,30 +64,38 @@ func NewSpanDetector(db db.Database) *SpanDetector {
 func (s *SpanDetector) DetectSlashingsForAttestation(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
-) ([]*types.DetectionResult, error) {
+) ([]*slashertypes.DetectionResult, error) {
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.DetectSlashingsForAttestation")
 	defer traceSpan.End()
 	sourceEpoch := att.Data.Source.Epoch
 	targetEpoch := att.Data.Target.Epoch
-	if (targetEpoch - sourceEpoch) > params.BeaconConfig().WeakSubjectivityPeriod {
+	dis := targetEpoch - sourceEpoch
+
+	if sourceEpoch > targetEpoch { // Prevent underflow and handle source > target slashable cases.
+		dis = sourceEpoch - targetEpoch
+		sourceEpoch, targetEpoch = targetEpoch, sourceEpoch
+		sourceLargerThenTargetObserved.Inc()
+	}
+
+	if dis > params.BeaconConfig().WeakSubjectivityPeriod {
 		return nil, fmt.Errorf(
 			"attestation span was greater than weak subjectivity period %d, received: %d",
 			params.BeaconConfig().WeakSubjectivityPeriod,
-			targetEpoch-sourceEpoch,
+			dis,
 		)
 	}
 
-	spanMap, err := s.slasherDB.EpochSpans(ctx, sourceEpoch, dbTypes.UseCache)
+	spanMap, err := s.slasherDB.EpochSpans(ctx, sourceEpoch, dbtypes.UseCache)
 	if err != nil {
 		return nil, err
 	}
-	targetSpanMap, err := s.slasherDB.EpochSpans(ctx, targetEpoch, dbTypes.UseCache)
+	targetSpanMap, err := s.slasherDB.EpochSpans(ctx, targetEpoch, dbtypes.UseCache)
 	if err != nil {
 		return nil, err
 	}
 
-	var detections []*types.DetectionResult
-	distance := uint16(targetEpoch - sourceEpoch)
+	var detections []*slashertypes.DetectionResult
+	distance := uint16(dis)
 	for _, idx := range att.AttestingIndices {
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(ctx.Err(), "could not detect slashings")
@@ -93,8 +106,8 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		}
 		minSpan := span.MinSpan
 		if minSpan > 0 && minSpan < distance {
-			slashableEpoch := sourceEpoch + uint64(minSpan)
-			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.UseCache)
+			slashableEpoch := sourceEpoch + types.Epoch(minSpan)
+			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbtypes.UseCache)
 			if err != nil {
 				return nil, err
 			}
@@ -102,9 +115,9 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 			if err != nil {
 				return nil, err
 			}
-			detections = append(detections, &types.DetectionResult{
+			detections = append(detections, &slashertypes.DetectionResult{
 				ValidatorIndex: idx,
-				Kind:           types.SurroundVote,
+				Kind:           slashertypes.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       valSpan.SigBytes,
 			})
@@ -113,8 +126,8 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 
 		maxSpan := span.MaxSpan
 		if maxSpan > distance {
-			slashableEpoch := sourceEpoch + uint64(maxSpan)
-			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.UseCache)
+			slashableEpoch := sourceEpoch + types.Epoch(maxSpan)
+			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbtypes.UseCache)
 			if err != nil {
 				return nil, err
 			}
@@ -122,9 +135,9 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 			if err != nil {
 				return nil, err
 			}
-			detections = append(detections, &types.DetectionResult{
+			detections = append(detections, &slashertypes.DetectionResult{
 				ValidatorIndex: idx,
-				Kind:           types.SurroundVote,
+				Kind:           slashertypes.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       valSpan.SigBytes,
 			})
@@ -137,9 +150,9 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		}
 		// Check if the validator has attested for this epoch or not.
 		if targetSpan.HasAttested {
-			detections = append(detections, &types.DetectionResult{
+			detections = append(detections, &slashertypes.DetectionResult{
 				ValidatorIndex: idx,
-				Kind:           types.DoubleVote,
+				Kind:           slashertypes.DoubleVote,
 				SlashableEpoch: targetEpoch,
 				SigBytes:       targetSpan.SigBytes,
 			})
@@ -171,7 +184,12 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.saveSigBytes")
 	defer traceSpan.End()
 	target := att.Data.Target.Epoch
-	spanMap, err := s.slasherDB.EpochSpans(ctx, target, dbTypes.UseCache)
+	source := att.Data.Source.Epoch
+	// handle source > target well
+	if source > target {
+		target = source
+	}
+	spanMap, err := s.slasherDB.EpochSpans(ctx, target, dbtypes.UseCache)
 	if err != nil {
 		return err
 	}
@@ -196,7 +214,7 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 			sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 		}
 		// Save the signature bytes into the span for this epoch.
-		newSpan := types.Span{
+		newSpan := slashertypes.Span{
 			MinSpan:     span.MinSpan,
 			MaxSpan:     span.MaxSpan,
 			HasAttested: true,
@@ -207,7 +225,7 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 			return err
 		}
 	}
-	return s.slasherDB.SaveEpochSpans(ctx, target, spanMap, dbTypes.UseCache)
+	return s.slasherDB.SaveEpochSpans(ctx, target, spanMap, dbtypes.UseCache)
 }
 
 // Updates a min span for a validator index given a source and target epoch
@@ -220,6 +238,10 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	if source < 1 {
 		return nil
 	}
+	// handle source > target well
+	if source > target {
+		source, target = target, source
+	}
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
 	latestMinSpanDistanceObserved.Set(float64(att.Data.Target.Epoch - att.Data.Source.Epoch))
@@ -227,7 +249,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	// the for loop tries to update min span using cache for as long as there
 	// is a relevant cached epoch. when there is no such epoch in cache batch
 	// db read and write is used.
-	var spanMap *types.EpochStore
+	var spanMap *slashertypes.EpochStore
 	epoch := source - 1
 	lookbackEpoch := epoch - epochLookback
 	// prevent underflow
@@ -239,12 +261,12 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 		untilEpoch = 0
 	}
 	var err error
-	dbOrCache := dbTypes.UseCache
+	dbOrCache := dbtypes.UseCache
 	for ; epoch >= untilEpoch; epoch-- {
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update min spans")
 		}
-		spanMap, err = s.slasherDB.EpochSpans(ctx, epoch, dbTypes.UseCache)
+		spanMap, err = s.slasherDB.EpochSpans(ctx, epoch, dbtypes.UseCache)
 		if err != nil {
 			return err
 		}
@@ -256,7 +278,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 			}
 			newMinSpan := uint16(target - epoch)
 			if span.MinSpan == 0 || span.MinSpan > newMinSpan {
-				span = types.Span{
+				span = slashertypes.Span{
 					MinSpan:     newMinSpan,
 					MaxSpan:     span.MaxSpan,
 					SigBytes:    span.SigBytes,
@@ -269,8 +291,8 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if epoch <= lookbackEpoch && dbOrCache == dbTypes.UseCache {
-			dbOrCache = dbTypes.UseDB
+		if epoch <= lookbackEpoch && dbOrCache == dbtypes.UseCache {
+			dbOrCache = dbtypes.UseDB
 		}
 		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbOrCache); err != nil {
 			return err
@@ -292,6 +314,10 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 	defer traceSpan.End()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
+	// handle source > target well
+	if source > target {
+		source, target = target, source
+	}
 	latestMaxSpanDistanceObserved.Set(float64(target - source))
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
@@ -299,7 +325,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update max spans")
 		}
-		spanMap, err := s.slasherDB.EpochSpans(ctx, epoch, dbTypes.UseCache)
+		spanMap, err := s.slasherDB.EpochSpans(ctx, epoch, dbtypes.UseCache)
 		if err != nil {
 			return err
 		}
@@ -311,7 +337,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 			}
 			newMaxSpan := uint16(target - epoch)
 			if newMaxSpan > span.MaxSpan {
-				span = types.Span{
+				span = slashertypes.Span{
 					MinSpan:     span.MinSpan,
 					MaxSpan:     newMaxSpan,
 					SigBytes:    span.SigBytes,
@@ -324,7 +350,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbTypes.UseCache); err != nil {
+		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbtypes.UseCache); err != nil {
 			return err
 		}
 		if len(indices) == 0 {

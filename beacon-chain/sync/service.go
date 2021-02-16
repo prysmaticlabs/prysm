@@ -12,10 +12,10 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -40,11 +41,12 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenAttSize = 10000
 const seenExitSize = 100
-const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
 
 const syncMetricsInterval = 10 * time.Second
+
+var pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second // Seconds in one epoch.
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -58,7 +60,6 @@ type Config struct {
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
-	StateSummaryCache   *cache.StateSummaryCache
 	StateGen            *stategen.State
 }
 
@@ -85,7 +86,7 @@ type Service struct {
 	exitPool                  *voluntaryexits.Pool
 	slashingPool              *slashings.Pool
 	chain                     blockchainService
-	slotToPendingBlocks       map[uint64][]*ethpb.SignedBeaconBlock
+	slotToPendingBlocks       *gcache.Cache
 	seenPendingBlocks         map[[32]byte]bool
 	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	pendingAttsLock           sync.RWMutex
@@ -106,15 +107,16 @@ type Service struct {
 	seenProposerSlashingLock  sync.RWMutex
 	seenProposerSlashingCache *lru.Cache
 	seenAttesterSlashingLock  sync.RWMutex
-	seenAttesterSlashingCache *lru.Cache
+	seenAttesterSlashingCache map[uint64]bool
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
-	stateSummaryCache         *cache.StateSummaryCache
 	stateGen                  *stategen.State
 }
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, cfg *Config) *Service {
+	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
@@ -129,12 +131,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
 		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  make(map[uint64][]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
-		stateSummaryCache:    cfg.StateSummaryCache,
 		stateGen:             cfg.StateGen,
 		rateLimiter:          rLimiter,
 	}
@@ -190,12 +191,6 @@ func (s *Service) Stop() error {
 
 // Status of the currently running regular sync service.
 func (s *Service) Status() error {
-	if s.chainStarted.IsNotSet() {
-		return errors.New("chain not yet started")
-	}
-	if s.initialSync.Syncing() {
-		return errors.New("waiting for initial sync")
-	}
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
 	if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
@@ -220,10 +215,6 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
-	attesterSlashingCache, err := lru.New(seenAttesterSlashingSize)
-	if err != nil {
-		return err
-	}
 	proposerSlashingCache, err := lru.New(seenProposerSlashingSize)
 	if err != nil {
 		return err
@@ -235,7 +226,7 @@ func (s *Service) initCaches() error {
 	s.seenBlockCache = blkCache
 	s.seenAttestationCache = attCache
 	s.seenExitCache = exitCache
-	s.seenAttesterSlashingCache = attesterSlashingCache
+	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = proposerSlashingCache
 	s.badBlockCache = badBlockCache
 
@@ -284,7 +275,7 @@ func (s *Service) registerHandlers() {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():
-			log.WithError(err).Error("Subscription to state notifier failed")
+			log.WithError(err).Error("Could not subscribe to state notifier")
 			return
 		}
 	}
@@ -298,6 +289,7 @@ func (s *Service) markForChainStart() {
 // Checker defines a struct which can verify whether a node is currently
 // synchronizing a chain with the rest of peers in the network.
 type Checker interface {
+	Initialized() bool
 	Syncing() bool
 	Status() error
 	Resync() error

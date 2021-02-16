@@ -28,7 +28,7 @@ func TestService_ReceiveBlocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client.EXPECT().StreamBlocks(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&ethpb.StreamBlocksRequest{},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(

@@ -13,6 +13,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -39,6 +40,10 @@ func (m *mockRemoteKeymanager) FetchAllValidatingPublicKeys(_ context.Context) (
 
 func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
+}
+
+func (m *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+	return nil
 }
 
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
@@ -381,6 +386,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		publicKeys: pubKeys,
 		opts: &remote.KeymanagerOpts{
 			RemoteCertificate: &remote.CertificateConfig{
+				RequireTls:     true,
 				ClientCertPath: "/tmp/client.crt",
 				ClientKeyPath:  "/tmp/client.key",
 				CACertPath:     "/tmp/ca.crt",
@@ -407,6 +413,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 
 		Configuration options
 		Remote gRPC address: localhost:4000
+		Require TLS: true
 		Client cert path: /tmp/client.crt
 		Client key path: /tmp/client.key
 		CA cert path: /tmp/ca.crt
@@ -424,9 +431,9 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	*/
 
 	// Expected output format definition
-	const prologLength = 10
+	const prologLength = 11
 	const configOffset = 4
-	const configLength = 4
+	const configLength = 5
 	const accountLength = 4
 	const nameOffset = 1
 	const keyOffset = 2

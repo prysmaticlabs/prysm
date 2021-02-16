@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["prompt.go"],
+    srcs = [
+        "log.go",
+        "prompt.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/prompt",
     visibility = ["//validator:__subpackages__"],
     deps = [

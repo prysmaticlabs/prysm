@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -36,22 +37,24 @@ func init() {
 }
 
 type testWalletConfig struct {
-	walletDir               string
-	passwordsDir            string
-	backupDir               string
-	keysDir                 string
-	deletePublicKeys        string
-	enablePublicKeys        string
-	disablePublicKeys       string
-	voluntaryExitPublicKeys string
-	backupPublicKeys        string
-	backupPasswordFile      string
-	walletPasswordFile      string
-	accountPasswordFile     string
-	privateKeyFile          string
+	exitAll                 bool
 	skipDepositConfirm      bool
-	numAccounts             int64
 	keymanagerKind          keymanager.Kind
+	numAccounts             int64
+	grpcHeaders             string
+	privateKeyFile          string
+	accountPasswordFile     string
+	walletPasswordFile      string
+	backupPasswordFile      string
+	backupPublicKeys        string
+	voluntaryExitPublicKeys string
+	disablePublicKeys       string
+	enablePublicKeys        string
+	deletePublicKeys        string
+	keysDir                 string
+	backupDir               string
+	passwordsDir            string
+	walletDir               string
 }
 
 func setupWalletCtx(
@@ -75,6 +78,8 @@ func setupWalletCtx(
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
 	set.Bool(flags.SkipMnemonic25thWordCheckFlag.Name, true, "")
+	set.Bool(flags.ExitAllFlag.Name, cfg.exitAll, "")
+	set.String(flags.GrpcHeadersFlag.Name, cfg.grpcHeaders, "")
 
 	if cfg.privateKeyFile != "" {
 		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
@@ -95,6 +100,8 @@ func setupWalletCtx(
 	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
 	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
 	assert.NoError(tb, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirm)))
+	assert.NoError(tb, set.Set(flags.ExitAllFlag.Name, strconv.FormatBool(cfg.exitAll)))
+	assert.NoError(tb, set.Set(flags.GrpcHeadersFlag.Name, cfg.grpcHeaders))
 	return cli.NewContext(&app, set, nil)
 }
 
@@ -159,10 +166,12 @@ func TestCreateWallet_Imported(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to open the newly created wallet.
-	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	w, err := wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir: walletDir,
 	})
 	assert.NoError(t, err)
+	_, err = w.ReadFileAtPath(cliCtx.Context, imported.AccountsPath, imported.AccountsKeystoreFileName)
+	require.NoError(t, err)
 }
 
 func TestCreateWallet_Derived(t *testing.T) {
@@ -221,6 +230,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 	walletDir, _, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
+			RequireTls:     true,
 			ClientCertPath: "/tmp/client.crt",
 			ClientKeyPath:  "/tmp/client.key",
 			CACertPath:     "/tmp/ca.crt",

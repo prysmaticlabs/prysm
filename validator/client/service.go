@@ -14,6 +14,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -21,17 +22,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
-
-var log = logrus.WithField("prefix", "validator")
 
 // SyncChecker is able to determine if a beacon node is currently
 // going through chain synchronization.
@@ -51,6 +49,7 @@ type ValidatorService struct {
 	useWeb                bool
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
+	logDutyCountDown      bool
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
@@ -62,11 +61,12 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             Validator
-	protector             slashingprotection.Protector
+	protector             iface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
+	graffitiStruct        *graffiti.Graffiti
 }
 
 // Config for the validator service.
@@ -74,11 +74,12 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	LogDutyCountDown           bool
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingprotection.Protector
+	Protector                  iface.Protector
 	Endpoint                   string
 	Validator                  Validator
 	ValDB                      db.Database
@@ -87,6 +88,7 @@ type Config struct {
 	CertFlag                   string
 	DataDir                    string
 	GrpcHeadersFlag            string
+	GraffitiStruct             *graffiti.Graffiti
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -112,6 +114,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		useWeb:                cfg.UseWeb,
+		graffitiStruct:        cfg.GraffitiStruct,
+		logDutyCountDown:      cfg.LogDutyCountDown,
 	}, nil
 }
 
@@ -126,7 +130,6 @@ func (v *ValidatorService) Start() {
 	dialOpts := ConstructDialOptions(
 		v.maxCallRecvMsgSize,
 		v.withCert,
-		v.grpcHeaders,
 		v.grpcRetries,
 		v.grpcRetryDelay,
 		streamInterceptor,
@@ -134,6 +137,9 @@ func (v *ValidatorService) Start() {
 	if dialOpts == nil {
 		return
 	}
+
+	v.ctx = grpcutils.AppendHeaders(v.ctx, v.grpcHeaders)
+
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
@@ -159,6 +165,16 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
+	if err != nil {
+		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		return
+	}
+	slashablePublicKeys := make(map[[48]byte]bool)
+	for _, pubKey := range sPubKeys {
+		slashablePublicKeys[pubKey] = true
+	}
+
 	v.validator = &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -174,9 +190,13 @@ func (v *ValidatorService) Start() {
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		protector:                      v.protector,
-		voteStats:                      voteStats{startEpoch: ^uint64(0)},
+		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
+		blockFeed:                      new(event.Feed),
+		graffitiStruct:                 v.graffitiStruct,
+		eipImportBlacklistedPublicKeys: slashablePublicKeys,
+		logDutyCountDown:               v.logDutyCountDown,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
@@ -236,7 +256,6 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 func ConstructDialOptions(
 	maxCallRecvMsgSize int,
 	withCert string,
-	grpcHeaders []string,
 	grpcRetries uint,
 	grpcRetryDelay time.Duration,
 	extraOpts ...grpc.DialOption,
@@ -260,35 +279,22 @@ func ConstructDialOptions(
 		maxCallRecvMsgSize = 10 * 5 << 20 // Default 50Mb
 	}
 
-	md := make(metadata.MD)
-	for _, hdr := range grpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
-				continue
-			}
-			md.Set(ss[0], ss[1])
-		}
-	}
-
 	dialOpts := []grpc.DialOption{
 		transportSecurity,
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
 			grpc_retry.WithMax(grpcRetries),
 			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(grpcRetryDelay)),
-			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 		grpc.WithChainStreamInterceptor(
-			grpcutils.LogGRPCStream,
+			grpcutils.LogStream,
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
@@ -326,7 +332,10 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 	}
 	validatingPubKeysChan := make(chan [][48]byte, 1)
 	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
 	for {
 		select {
 		case keys := <-validatingPubKeysChan:
@@ -335,6 +344,9 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 				continue
 			}
 		case <-ctx.Done():
+			return
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
 			return
 		}
 	}

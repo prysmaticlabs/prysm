@@ -12,7 +12,7 @@ func TestGetDepth(t *testing.T) {
 	trieSize := uint64(896745231)
 	expected := uint8(30)
 
-	result := htrutils.GetDepth(trieSize)
+	result := htrutils.Depth(trieSize)
 	assert.Equal(t, expected, result)
 }
 

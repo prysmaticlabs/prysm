@@ -2,6 +2,7 @@ package testing
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -16,6 +17,6 @@ func TestClearDB(t *testing.T) {
 	require.NoError(t, err, "Failed to instantiate DB")
 	db.EnableSpanCache(false)
 	require.NoError(t, db.ClearDB())
-	_, err = os.Stat(db.DatabasePath())
+	_, err = os.Stat(filepath.Join(db.DatabasePath(), "slasher.db"))
 	require.Equal(t, true, os.IsNotExist(err), "Db wasnt cleared %v", err)
 }

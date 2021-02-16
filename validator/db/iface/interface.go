@@ -5,30 +5,56 @@ import (
 	"context"
 	"io"
 
-	"github.com/prysmaticlabs/go-bitfield"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
+
+// Ensure the kv store implements the interface.
+var _ = ValidatorDB(&kv.Store{})
 
 // ValidatorDB defines the necessary methods for a Prysm validator DB.
 type ValidatorDB interface {
 	io.Closer
+	backuputil.BackupExporter
 	DatabasePath() string
 	ClearDB() error
+	RunUpMigrations(ctx context.Context) error
+	RunDownMigrations(ctx context.Context) error
 	UpdatePublicKeysBuckets(publicKeys [][48]byte) error
+
+	// Genesis information related methods.
+	GenesisValidatorsRoot(ctx context.Context) ([]byte, error)
+	SaveGenesisValidatorsRoot(ctx context.Context, genValRoot []byte) error
+
 	// Proposer protection related methods.
-	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
-	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
-	//new data structure methods
-	ProposalHistoryForSlot(ctx context.Context, publicKey []byte, slot uint64) ([]byte, error)
-	SaveProposalHistoryForSlot(ctx context.Context, pubKey []byte, slot uint64, signingRoot []byte) error
+	HighestSignedProposal(ctx context.Context, publicKey [48]byte) (types.Slot, bool, error)
+	LowestSignedProposal(ctx context.Context, publicKey [48]byte) (types.Slot, bool, error)
+	ProposalHistoryForPubKey(ctx context.Context, publicKey [48]byte) ([]*kv.Proposal, error)
+	ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, slot types.Slot) ([32]byte, bool, error)
+	SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte, slot types.Slot, signingRoot []byte) error
+	ProposedPublicKeys(ctx context.Context) ([][48]byte, error)
 
 	// Attester protection related methods.
-	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
-	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
-
-	// New attestation store methods
-	AttestationHistoryForPubKeysV2(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]kv.EncHistoryData, error)
-	SaveAttestationHistoryForPubKeysV2(ctx context.Context, historyByPubKeys map[[48]byte]kv.EncHistoryData) error
-	SaveAttestationHistoryForPubKeyV2(ctx context.Context, pubKey [48]byte, history kv.EncHistoryData) error
+	// Methods to store and read blacklisted public keys from EIP-3076
+	// slashing protection imports.
+	EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error)
+	SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error
+	SigningRootAtTargetEpoch(ctx context.Context, publicKey [48]byte, target types.Epoch) ([32]byte, error)
+	LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte) (types.Epoch, bool, error)
+	LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte) (types.Epoch, bool, error)
+	AttestedPublicKeys(ctx context.Context) ([][48]byte, error)
+	CheckSlashableAttestation(
+		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
+	) (kv.SlashingKind, error)
+	SaveAttestationForPubKey(
+		ctx context.Context, pubKey [48]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
+	) error
+	SaveAttestationsForPubKey(
+		ctx context.Context, pubKey [48]byte, signingRoots [][32]byte, atts []*ethpb.IndexedAttestation,
+	) error
+	AttestationHistoryForPubKey(
+		ctx context.Context, pubKey [48]byte,
+	) ([]*kv.AttestationRecord, error)
 }

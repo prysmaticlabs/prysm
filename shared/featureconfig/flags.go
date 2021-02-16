@@ -1,6 +1,8 @@
 package featureconfig
 
 import (
+	"time"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -48,8 +50,12 @@ var (
 	}
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
-		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
+		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, opt_max_cover.",
 		Value: "max_cover",
+	}
+	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
+		Name:  "attestation-aggregation-force-opt-maxcover",
+		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
 	}
 	disableBlst = &cli.BoolFlag{
 		Name:  "disable-blst",
@@ -76,25 +82,64 @@ var (
 		Usage: "Disables pruning deposit proofs when they are no longer needed." +
 			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
-	enableSyncBacktracking = &cli.BoolFlag{
-		Name:  "enable-sync-backtracking",
-		Usage: "Enable experimental fork exploration backtracking algorithm",
+	enableLargerGossipHistory = &cli.BoolFlag{
+		Name:  "enable-larger-gossip-history",
+		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
+	}
+	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
+		Name: "write-wallet-password-on-web-onboarding",
+		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
+			"We recommend against this flag unless you are an advanced user.",
+	}
+	disableAttestingHistoryDBCache = &cli.BoolFlag{
+		Name: "disable-attesting-history-db-cache",
+		Usage: "(Danger): Disables the cache for attesting history in the validator DB, greatly increasing " +
+			"disk reads and writes as well as increasing time required for attestations to be produced",
+	}
+	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
+		Name: "dynamic-key-reload-debounce-interval",
+		Usage: "(Advanced): Specifies the time duration the validator waits to reload new keys if they have " +
+			"changed on disk. Default 1s, can be any type of duration such as 1.5s, 1000ms, 1m.",
+		Value: time.Second,
+	}
+	disableBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:  "disable-broadcast-slashings",
+		Usage: "Disables broadcasting slashings submitted to the beacon node.",
+	}
+	attestTimely = &cli.BoolFlag{
+		Name:  "attest-timely",
+		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
+	}
+	enableNextSlotStateCache = &cli.BoolFlag{
+		Name:  "enable-next-slot-state-cache",
+		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
+	}
+	updateHeadTimely = &cli.BoolFlag{
+		Name:  "update-head-timely",
+		Usage: "Improves update head time by updating head right after state transition",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableSyncBacktracking,
+	enableLargerGossipHistory,
+	enableNextSlotStateCache,
+	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
+	disableAttestingHistoryDBCache,
 	ToledoTestnet,
 	PyrmontTestnet,
 	Mainnet,
 	disableAccountsV2,
 	disableBlst,
+	dynamicKeyReloadDebounceInterval,
+	attestTimely,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -106,7 +151,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
-var E2EValidatorFlags = []string{}
+var E2EValidatorFlags = make([]string, 0)
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
@@ -121,14 +166,18 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBlst,
 	disableEth1DataMajorityVote,
 	enablePeerScorer,
+	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disablePruningDepositProofs,
-	enableSyncBacktracking,
+	disableBroadcastSlashingFlag,
+	enableNextSlotStateCache,
+	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--attestation-aggregation-strategy=max_cover",
+	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
 }

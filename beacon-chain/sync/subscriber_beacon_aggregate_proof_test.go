@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -24,14 +25,9 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					BeaconBlockRoot: make([]byte, 32),
-				},
+			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x07},
-			},
+			}),
 			AggregatorIndex: 100,
 		},
 		Signature: make([]byte, 96),
@@ -51,19 +47,10 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					Target: &ethpb.Checkpoint{
-						Root: make([]byte, 32),
-					},
-					Source: &ethpb.Checkpoint{
-						Root: make([]byte, 32),
-					},
-					BeaconBlockRoot: make([]byte, 32),
-				},
+			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x03},
 				Signature:       make([]byte, 96),
-			},
+			}),
 			AggregatorIndex: 100,
 		},
 	}

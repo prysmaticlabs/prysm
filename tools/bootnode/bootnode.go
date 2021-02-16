@@ -66,9 +66,6 @@ type handler struct {
 }
 
 func main() {
-	// Using Medalla as the default configuration.
-	params.UsePyrmontConfig()
-
 	flag.Parse()
 
 	if *logFileName != "" {
@@ -77,7 +74,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Starting bootnode. Version: %s\n", version.GetVersion())
+	fmt.Printf("Starting bootnode. Version: %s\n", version.Version())
 
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)

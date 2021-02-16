@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -60,9 +60,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]
 		s.pendingAttsLock.RUnlock()
-		// Has the pending attestation's missing block arrived and the node processed block yet?
-		hasStateSummary := s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
-		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || hasStateSummary) {
+		// has the pending attestation's missing block arrived and the node processed block yet?
+		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || s.db.HasStateSummary(ctx, bRoot)) {
 			for _, signedAtt := range attestations {
 				att := signedAtt.Message
 				// The pending attestations can arrive in both aggregated and unaggregated forms,
@@ -73,40 +72,57 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					aggValid := s.validateAggregatedAtt(ctx, signedAtt) == pubsub.ValidationAccept
 					if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
-							return err
+							log.WithError(err).Debug("Could not save aggregate attestation")
+							continue
 						}
 						s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
 
 						// Broadcasting the signed attestation again once a node is able to process it.
 						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
-							log.WithError(err).Debug("Failed to broadcast")
+							log.WithError(err).Debug("Could not broadcast")
 						}
 					}
 				} else {
-					// Save the pending unaggregated attestation to the pool if the BLS signature is
-					// valid.
-					if _, err := bls.SignatureFromBytes(att.Aggregate.Signature); err != nil {
+					// This is an important validation before retrieving attestation pre state to defend against
+					// attestation's target intentionally reference checkpoint that's long ago.
+					// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+					if err := s.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
+						log.WithError(err).Debug("Could not verify finalized consistency")
 						continue
 					}
-					if err := s.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
-						return err
-					}
-
-					// Verify signed aggregate has a valid signature.
-					if _, err := bls.SignatureFromBytes(signedAtt.Signature); err != nil {
+					if err := s.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
+						log.WithError(err).Debug("Could not verify FFG consistency")
 						continue
 					}
+					preState, err := s.chain.AttestationPreState(ctx, att.Aggregate)
+					if err != nil {
+						log.WithError(err).Debug("Could not retrieve attestation prestate")
+						continue
+					}
+					valid := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+					if valid == pubsub.ValidationAccept {
+						if err := s.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
+							log.WithError(err).Debug("Could not save unaggregated attestation")
+							continue
+						}
+						s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
 
-					// Broadcasting the signed attestation again once a node is able to process it.
-					if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
-						log.WithError(err).Debug("Failed to broadcast")
+						valCount, err := helpers.ActiveValidatorCount(preState, helpers.SlotToEpoch(att.Aggregate.Data.Slot))
+						if err != nil {
+							log.WithError(err).Debug("Could not retrieve active validator count")
+							continue
+						}
+						// Broadcasting the signed attestation again once a node is able to process it.
+						if err := s.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
+							log.WithError(err).Debug("Could not broadcast")
+						}
 					}
 				}
 			}
 			log.WithFields(logrus.Fields{
 				"blockRoot":        hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
 				"pendingAttsCount": len(attestations),
-			}).Info("Verified and saved pending attestations to pool")
+			}).Debug("Verified and saved pending attestations to pool")
 
 			// Delete the missing block root key from pending attestation queue so a node will not request for the block again.
 			s.pendingAttsLock.Lock()
@@ -154,7 +170,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 // If not valid, a node will remove it in the queue in place. The validity
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
-func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
+func (s *Service) validatePendingAtts(ctx context.Context, slot types.Slot) {
 	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
 

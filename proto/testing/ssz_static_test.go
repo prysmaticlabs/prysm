@@ -9,10 +9,8 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	webpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -53,7 +51,13 @@ func runSSZStaticTests(t *testing.T, config string) {
 						return beaconState.HashTreeRoot(context.Background())
 					}
 				} else {
-					htr = ssz.HashTreeRoot
+					htr = func(s interface{}) ([32]byte, error) {
+						sszObj, ok := s.(fssz.HashRoot)
+						if !ok {
+							return [32]byte{}, errors.New("could not get hash root, not compatible object")
+						}
+						return sszObj.HashTreeRoot()
+					}
 				}
 
 				root, err := htr(object)
@@ -105,10 +109,10 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
 		obj = &ethpb.Deposit{}
+	case "DepositMessage":
+		obj = &pb.DepositMessage{}
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
-	case "DepositMessage":
-		obj = &webpb.DepositMessage{}
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
 	case "Eth1Block":
@@ -147,7 +151,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	if o, ok := obj.(fssz.Unmarshaler); ok {
 		err = o.UnmarshalSSZ(serializedBytes)
 	} else {
-		err = ssz.Unmarshal(serializedBytes, obj)
+		err = errors.New("could not unmarshal object, not a fastssz compatible object")
 	}
 	return obj, err
 }

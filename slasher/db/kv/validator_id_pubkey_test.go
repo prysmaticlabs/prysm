@@ -40,7 +40,7 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 
 	pk, err := db.ValidatorPubKey(ctx, validatorID)
 	require.NoError(t, err, "Nil ValidatorPubKey should not return error")
-	require.DeepEqual(t, ([]uint8)(nil), pk)
+	require.DeepEqual(t, []uint8(nil), pk)
 }
 
 func TestSavePubKey(t *testing.T) {

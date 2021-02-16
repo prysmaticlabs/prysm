@@ -1,7 +1,6 @@
-# Prysmatic Labs Contract Page
+# Contracts
 
-This page serves as a main reference for Prysmatic Labs' smart contracts implementation for Ethereum Serenity.
+This page serves as a main reference for the smart contract tooling used internally in Prysm.
 
-## Table of Contents
+**THIS DOES NOT CONTAIN CONTRACTS TO BE USED IN PRODUCTION**.
 
--   [Validator Registration Contract](https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/README.md)

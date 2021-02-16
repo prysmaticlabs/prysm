@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -33,10 +34,10 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 		stateVotes         []*ethpb.Eth1Data
 		data               *ethpb.Eth1Data
 		hasSupport         bool
-		votingPeriodLength uint64
+		votingPeriodLength types.Epoch
 	}{
 		{
-			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
+			stateVotes: FakeDeposits(uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
@@ -44,7 +45,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			hasSupport:         true,
 			votingPeriodLength: 7,
 		}, {
-			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
+			stateVotes: FakeDeposits(uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
@@ -52,7 +53,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			hasSupport:         false,
 			votingPeriodLength: 8,
 		}, {
-			stateVotes: FakeDeposits(4 * params.BeaconConfig().SlotsPerEpoch),
+			stateVotes: FakeDeposits(uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  bytesutil.PadTo([]byte("root"), 32),
@@ -174,7 +175,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		},
 	}
 
-	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
 	for i := uint64(0); i < period; i++ {
 		beaconState, err = blocks.ProcessEth1DataInBlock(context.Background(), beaconState, b)
 		require.NoError(t, err)

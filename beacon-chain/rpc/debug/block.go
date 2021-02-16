@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -42,7 +43,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	ds.GenesisTimeFetcher.CurrentSlot()
 
 	// Attestation has one epoch to get included in the chain. This blocks users from requesting too soon.
-	epochBack := uint64(0)
+	epochBack := types.Slot(0)
 	if ds.GenesisTimeFetcher.CurrentSlot() > params.BeaconConfig().SlotsPerEpoch {
 		epochBack = ds.GenesisTimeFetcher.CurrentSlot() - params.BeaconConfig().SlotsPerEpoch
 	}
@@ -60,7 +61,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 		return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 	}
 
-	inclusionSlot := uint64(1<<64 - 1)
+	inclusionSlot := types.Slot(1<<64 - 1)
 	targetStates := make(map[[32]byte]*state.BeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block.Body.Attestations {
@@ -77,7 +78,10 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}
-			indices := attestationutil.AttestingIndices(a.AggregationBits, c)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, c)
+			if err != nil {
+				return nil, err
+			}
 			for _, i := range indices {
 				if req.Id == i && req.Slot == a.Data.Slot {
 					inclusionSlot = blk.Block.Slot

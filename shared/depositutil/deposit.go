@@ -3,13 +3,10 @@
 package depositutil
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -32,13 +29,13 @@ import (
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
-	di := &ethpb.Deposit_Data{
+	depositMessage := &p2ppb.DepositMessage{
 		PublicKey:             depositKey.PublicKey().Marshal(),
 		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
 	}
 
-	sr, err := ssz.SigningRoot(di)
+	sr, err := depositMessage.HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -55,7 +52,12 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	di.Signature = depositKey.Sign(root[:]).Marshal()
+	di := &ethpb.Deposit_Data{
+		PublicKey:             depositMessage.PublicKey,
+		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+		Amount:                depositMessage.Amount,
+		Signature:             depositKey.Sign(root[:]).Marshal(),
+	}
 
 	dr, err := di.HashTreeRoot()
 	if err != nil {
@@ -83,16 +85,20 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 		return nil
 	}
 	ddCopy := state.CopyDepositData(dd)
-	publicKey, err := bls.PublicKeyFromBytes(dd.PublicKey)
+	publicKey, err := bls.PublicKeyFromBytes(ddCopy.PublicKey)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
 	}
-	sig, err := bls.SignatureFromBytes(dd.Signature)
+	sig, err := bls.SignatureFromBytes(ddCopy.Signature)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	ddCopy.Signature = nil
-	root, err := ssz.SigningRoot(ddCopy)
+	di := &p2ppb.DepositMessage{
+		PublicKey:             ddCopy.PublicKey,
+		WithdrawalCredentials: ddCopy.WithdrawalCredentials,
+		Amount:                ddCopy.Amount,
+	}
+	root, err := di.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
@@ -108,32 +114,4 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
-}
-
-// GenerateDepositTransaction uses the provided validating key and withdrawal key to
-// create a transaction object for the deposit contract.
-func GenerateDepositTransaction(validatingKey, withdrawalKey bls.SecretKey) (*types.Transaction, *ethpb.Deposit_Data, error) {
-	depositData, depositRoot, err := DepositInput(
-		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit input")
-	}
-	testAcc, err := contract.Setup()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not load deposit contract")
-	}
-	testAcc.TxOpts.GasLimit = 1000000
-
-	tx, err := testAcc.Contract.Deposit(
-		testAcc.TxOpts,
-		depositData.PublicKey,
-		depositData.WithdrawalCredentials,
-		depositData.Signature,
-		depositRoot,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	return tx, depositData, nil
 }

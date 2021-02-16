@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["gateway.go"],
+    srcs = [
+        "gateway.go",
+        "log.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator/rpc/gateway",
     visibility = ["//validator:__subpackages__"],
     deps = [

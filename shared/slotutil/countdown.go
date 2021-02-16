@@ -16,7 +16,7 @@ var log = logrus.WithField("prefix", "slotutil")
 // logging the remaining minutes until the genesis chainstart event
 // along with important genesis state metadata such as number
 // of genesis validators.
-func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValidatorCount uint64) {
+func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValidatorCount uint64, genesisStateRoot [32]byte) {
 	ticker := time.NewTicker(params.BeaconConfig().GenesisCountdownInterval)
 	defer func() {
 		// Used in anonymous function to make sure that updated (per second) ticker is stopped.
@@ -25,6 +25,7 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 	logFields := logrus.Fields{
 		"genesisValidators": fmt.Sprintf("%d", genesisValidatorCount),
 		"genesisTime":       fmt.Sprintf("%v", genesisTime),
+		"genesisStateRoot":  fmt.Sprintf("%x", genesisStateRoot),
 	}
 	secondTimerActivated := false
 	for {

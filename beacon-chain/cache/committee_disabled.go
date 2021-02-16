@@ -3,6 +3,8 @@
 // This file is used in fuzzer builds to bypass global committee caches.
 package cache
 
+import types "github.com/prysmaticlabs/eth2-types"
+
 // FakeCommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type FakeCommitteeCache struct {
 }
@@ -14,7 +16,7 @@ func NewCommitteesCache() *FakeCommitteeCache {
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *FakeCommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]uint64, error) {
+func (c *FakeCommitteeCache) Committee(slot types.Slot, seed [32]byte, index uint64) ([]uint64, error) {
 	return nil, nil
 }
 

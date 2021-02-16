@@ -10,11 +10,11 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	"github.com/prysmaticlabs/go-ssz"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -32,7 +32,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,
@@ -79,7 +79,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
 		db:          d,
 		p2p:         p1,
@@ -108,7 +108,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !ssz.DeepEqual(metadata, p2.LocalMetadata) {
+	if !sszutil.DeepEqual(metadata, p2.LocalMetadata) {
 		t.Fatalf("Metadata unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 

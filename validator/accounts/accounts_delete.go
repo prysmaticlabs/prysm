@@ -27,11 +27,11 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	keymanager, err := w.InitializeKeymanager(cliCtx.Context)
+	kManager, err := w.InitializeKeymanager(cliCtx.Context)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
-	validatingPublicKeys, err := keymanager.FetchAllValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err := kManager.FetchAllValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		} else {
@@ -80,14 +80,14 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(resp) == "n" {
+			if strings.EqualFold(resp, "n") {
 				return nil
 			}
 		}
 	}
-	if err := DeleteAccount(cliCtx.Context, &AccountsConfig{
+	if err := DeleteAccount(cliCtx.Context, &Config{
 		Wallet:           w,
-		Keymanager:       keymanager,
+		Keymanager:       kManager,
 		DeletePublicKeys: rawPublicKeys,
 	}); err != nil {
 		return err
@@ -100,7 +100,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 }
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
+func DeleteAccount(ctx context.Context, cfg *Config) error {
 	switch cfg.Wallet.KeymanagerKind() {
 	case keymanager.Remote:
 		return errors.New("cannot delete accounts for a remote keymanager")
@@ -131,7 +131,7 @@ func DeleteAccount(ctx context.Context, cfg *AccountsConfig) error {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	default:
-		return fmt.Errorf("keymanager kind %s not supported", cfg.Wallet.KeymanagerKind())
+		return fmt.Errorf(errKeymanagerNotSupported, cfg.Wallet.KeymanagerKind())
 	}
 	return nil
 }

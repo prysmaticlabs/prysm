@@ -4,15 +4,20 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/gogo/protobuf/types"
+	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -29,11 +34,14 @@ const signExitErr = "could not sign voluntary exit proposal"
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
+	lock := mputil.NewMultilock(string(rune(roleProposer)), string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
@@ -42,7 +50,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	// Sign randao reveal, it's used to request block from beacon node
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
@@ -52,22 +60,25 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	g, err := v.getGraffiti(ctx, pubKey)
+	if err != nil {
+		// Graffiti is not a critical enough to fail block production and cause
+		// validator to miss block reward. When failed, validator should continue
+		// to produce the block.
+		log.WithError(err).Warn("Could not get graffiti")
+	}
+
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
-		Graffiti:     v.graffiti,
+		Graffiti:     g,
 	})
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		return
-	}
-
-	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
-		log.WithField("slot", b.Slot).WithError(err).Error("Failed block safety check")
 		return
 	}
 
@@ -85,8 +96,26 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, domain); err != nil {
-		log.WithField("slot", blk.Block.Slot).WithError(err).Error("Failed post block signing validations")
+	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, b, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, b, sig),
+		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
@@ -136,12 +165,12 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get validator index failed")
 	}
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &types.Empty{})
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &pbtypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
 	totalSecondsPassed := timeutils.Now().Unix() - genesisResponse.GenesisTime.Seconds
-	currentEpoch := uint64(totalSecondsPassed) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+	currentEpoch := types.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
 
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
 	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
@@ -163,7 +192,7 @@ func ProposeExit(
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch types.Epoch) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
@@ -173,7 +202,8 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	}
 
 	var randaoReveal bls.Signature
-	root, err := helpers.ComputeSigningRoot(epoch, domain.SignatureDomain)
+	sszUint := p2ptypes.SSZUint64(epoch)
+	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +220,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b *ethpb.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, domainDataErr)
@@ -252,4 +282,41 @@ func signVoluntaryExit(
 		return nil, errors.Wrap(err, signExitErr)
 	}
 	return sig.Marshal(), nil
+}
+
+// Gets the graffiti from cli or file for the validator public key.
+func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, error) {
+	// When specified, default graffiti from the command line takes the first priority.
+	if len(v.graffiti) != 0 {
+		return v.graffiti, nil
+	}
+
+	if v.graffitiStruct == nil {
+		return nil, errors.New("graffitiStruct can't be nil")
+	}
+
+	// When specified, individual validator specified graffiti takes the second priority.
+	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
+	if err != nil {
+		return []byte{}, err
+	}
+	g, ok := v.graffitiStruct.Specific[idx.Index]
+	if ok {
+		return []byte(g), nil
+	}
+
+	// When specified, a graffiti from the random list in the file take third priority.
+	if len(v.graffitiStruct.Random) != 0 {
+		r := rand.NewGenerator()
+		r.Seed(time.Now().Unix())
+		i := r.Uint64() % uint64(len(v.graffitiStruct.Random))
+		return []byte(v.graffitiStruct.Random[i]), nil
+	}
+
+	// Finally, default graffiti if specified in the file will be used.
+	if v.graffitiStruct.Default != "" {
+		return []byte(v.graffitiStruct.Default), nil
+	}
+
+	return []byte{}, nil
 }

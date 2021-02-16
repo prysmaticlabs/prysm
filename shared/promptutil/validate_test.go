@@ -18,17 +18,17 @@ func TestValidatePasswordInput(t *testing.T) {
 		{
 			name:      "no numbers nor special characters",
 			input:     "abcdefghijklmnopqrs",
-			wantedErr: passwordReqsError.Error(),
+			wantedErr: errPasswordWeak.Error(),
 		},
 		{
 			name:      "number and letters but no special characters",
 			input:     "abcdefghijklmnopqrs2020",
-			wantedErr: passwordReqsError.Error(),
+			wantedErr: errPasswordWeak.Error(),
 		},
 		{
 			name:      "numbers, letters, special characters, but too short",
 			input:     "abc2$",
-			wantedErr: passwordReqsError.Error(),
+			wantedErr: errPasswordWeak.Error(),
 		},
 		{
 			name:  "proper length and strong password",
@@ -54,7 +54,7 @@ func TestValidatePasswordInput(t *testing.T) {
 		{
 			name:      "only numbers and symbols should fail",
 			input:     "123493489223423_23923929",
-			wantedErr: passwordReqsError.Error(),
+			wantedErr: errPasswordWeak.Error(),
 		},
 	}
 	for _, tt := range tests {

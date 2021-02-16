@@ -10,6 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -20,8 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
@@ -39,11 +40,12 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 }
 
 func TestNodeServer_GetGenesis(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	addr := common.Address{1, 2, 3}
 	require.NoError(t, db.SaveDepositContractAddress(ctx, addr))
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{
 		BeaconDB:           db,
@@ -70,7 +72,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 }
 
 func TestNodeServer_GetVersion(t *testing.T) {
-	v := version.GetVersion()
+	v := version.Version()
 	ns := &Server{}
 	res, err := ns.GetVersion(context.Background(), &ptypes.Empty{})
 	require.NoError(t, err)

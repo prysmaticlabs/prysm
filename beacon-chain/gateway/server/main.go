@@ -29,8 +29,6 @@ func init() {
 	logrus.SetFormatter(joonix.NewFormatter())
 }
 
-var log = logrus.New()
-
 func main() {
 	flag.Parse()
 	if *debug {
@@ -41,6 +39,7 @@ func main() {
 	gw := gateway.New(
 		context.Background(),
 		*beaconRPC,
+		"", // remoteCert
 		fmt.Sprintf("%s:%d", *host, *port),
 		mux,
 		strings.Split(*allowedOrigins, ","),

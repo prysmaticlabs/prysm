@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -66,7 +67,7 @@ type Service struct {
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	finalizedCheckpt      *ethpb.Checkpoint
 	prevFinalizedCheckpt  *ethpb.Checkpoint
-	nextEpochBoundarySlot uint64
+	nextEpochBoundarySlot types.Slot
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
 	stateGen              *stategen.State
@@ -75,7 +76,7 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	wsEpoch               uint64
+	wsEpoch               types.Epoch
 	wsRoot                []byte
 	wsVerified            bool
 }
@@ -96,7 +97,7 @@ type Config struct {
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
 	WspBlockRoot      []byte
-	WspEpoch          uint64
+	WspEpoch          types.Epoch
 }
 
 // NewService instantiates a new block service instance that will
@@ -175,7 +176,11 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not retrieve genesis state: %v", err)
 		}
-		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()))
+		gRoot, err := gState.HashTreeRoot(s.ctx)
+		if err != nil {
+			log.Fatalf("Could not hash tree root genesis state: %v", err)
+		}
+		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()), gRoot)
 
 		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(s.ctx)
 		if err != nil {
@@ -202,12 +207,14 @@ func (s *Service) Start() {
 			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
 		}
 		h := s.headBlock().Block
-		log.WithFields(logrus.Fields{
-			"startSlot": ss,
-			"endSlot":   h.Slot,
-		}).Info("Loading blocks to fork choice store, this may take a while.")
-		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.finalizedCheckpt, s.justifiedCheckpt); err != nil {
-			log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
+		if h.Slot > ss {
+			log.WithFields(logrus.Fields{
+				"startSlot": ss,
+				"endSlot":   h.Slot,
+			}).Info("Loading blocks to fork choice store, this may take a while.")
+			if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.finalizedCheckpt, s.justifiedCheckpt); err != nil {
+				log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
+			}
 		}
 
 		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
@@ -257,7 +264,7 @@ func (s *Service) Start() {
 		}()
 	}
 
-	go s.processAttestation(attestationProcessorSubscribed)
+	go s.processAttestationsRoutine(attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
@@ -269,7 +276,11 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	// We start a counter to genesis, if needed.
-	go slotutil.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()))
+	gRoot, err := initializedState.HashTreeRoot(s.ctx)
+	if err != nil {
+		log.Fatalf("Could not hash tree root genesis state: %v", err)
+	}
+	go slotutil.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
 	// We send out a state initialized event to the rest of the services
 	// running in the beacon node.
@@ -313,7 +324,7 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
 		return nil, err
 	}
-	if err := helpers.UpdateProposerIndicesInCache(genesisState, 0 /* genesis epoch */); err != nil {
+	if err := helpers.UpdateProposerIndicesInCache(genesisState); err != nil {
 		return nil, err
 	}
 
@@ -339,6 +350,9 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
+	if s.genesisRoot == params.BeaconConfig().ZeroHash {
+		return errors.New("genesis state has not been created")
+	}
 	if runtime.NumGoroutine() > s.maxRoutines {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
@@ -445,7 +459,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
 		headEpoch := helpers.SlotToEpoch(headBlock.Block.Slot)
-		var epochsSinceFinality uint64
+		var epochsSinceFinality types.Epoch
 		if headEpoch > finalized.Epoch {
 			epochsSinceFinality = headEpoch - finalized.Epoch
 		}

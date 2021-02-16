@@ -33,3 +33,6 @@ dist
 # libfuzzer
 oom-*
 crash-*
+
+# deepsource cli
+bin

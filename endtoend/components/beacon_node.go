@@ -105,7 +105,7 @@ func StartBootnode(t *testing.T) string {
 		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
 	}
 
-	enr, err := getENRFromLogFile(stdOutFile.Name())
+	enr, err := enrFromLogFile(stdOutFile.Name())
 	if err != nil {
 		t.Fatalf("could not get enr for bootnode: %v", err)
 	}
@@ -113,7 +113,7 @@ func StartBootnode(t *testing.T) string {
 	return enr
 }
 
-func getENRFromLogFile(name string) (string, error) {
+func enrFromLogFile(name string) (string, error) {
 	byteContent, err := ioutil.ReadFile(name)
 	if err != nil {
 		return "", err

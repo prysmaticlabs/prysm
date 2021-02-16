@@ -10,11 +10,11 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,9 +44,32 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	defer state.SkipSlotCache.Enable()
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
+
+	// Step 1 - Sync to end of finalized epoch.
+	if err := s.syncToFinalizedEpoch(ctx, genesis); err != nil {
+		return err
+	}
+
+	// Already at head, no need for 2nd phase.
+	if s.chain.HeadSlot() == helpers.SlotsSince(genesis) {
+		return nil
+	}
+
+	// Step 2 - sync to head from majority of peers (from no less than MinimumSyncPeers*2 peers)
+	// having the same world view on non-finalized epoch.
+	return s.syncToNonFinalizedEpoch(ctx, genesis)
+}
+
+// syncToFinalizedEpoch sync from head to best known finalized epoch.
+func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) error {
 	highestFinalizedSlot, err := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	if err != nil {
 		return err
+	}
+	if s.chain.HeadSlot() >= highestFinalizedSlot {
+		// No need to sync, already synced to the finalized slot.
+		log.Debug("Already synced to finalized epoch")
+		return nil
 	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
@@ -59,7 +82,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		return err
 	}
 
-	// Step 1 - Sync to end of finalized epoch.
 	for data := range queue.fetchedData {
 		s.processFetchedData(ctx, genesis, s.chain.HeadSlot(), data)
 	}
@@ -72,14 +94,13 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		log.WithError(err).Debug("Error stopping queue")
 	}
 
-	// Already at head, no need for 2nd phase.
-	if s.chain.HeadSlot() == helpers.SlotsSince(genesis) {
-		return nil
-	}
+	return nil
+}
 
-	// Step 2 - sync to head from majority of peers (from no less than MinimumSyncPeers*2 peers) having the same
-	// world view on non-finalized epoch.
-	queue = newBlocksQueue(ctx, &blocksQueueConfig{
+// syncToNonFinalizedEpoch sync from head to best known non-finalized epoch supported by majority
+// of peers (no less than MinimumSyncPeers*2 peers).
+func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time) error {
+	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		db:                  s.db,
 		chain:               s.chain,
@@ -105,18 +126,18 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedData(
-	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
+	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.chain.ReceiveBlockBatch); err != nil {
-		log.WithField("err", err.Error()).Warn("Batch is not processed")
+		log.WithError(err).Warn("Batch is not processed")
 	}
 }
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedDataRegSync(
-	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
+	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.chain.ReceiveBlock
@@ -125,27 +146,27 @@ func (s *Service) processFetchedDataRegSync(
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
 			switch {
 			case errors.Is(err, errBlockAlreadyProcessed):
-				log.WithField("err", err.Error()).Debug("Block is not processed")
+				log.WithError(err).Debug("Block is not processed")
 				invalidBlocks++
 			case errors.Is(err, errParentDoesNotExist):
-				log.WithField("err", err.Error()).Debug("Block is not processed")
+				log.WithError(err).Debug("Block is not processed")
 				invalidBlocks++
 			default:
-				log.WithField("err", err.Error()).Warn("Block is not processed")
+				log.WithError(err).Warn("Block is not processed")
 			}
 			continue
 		}
 	}
 	// Add more visible logging if all blocks cannot be processed.
 	if len(data.blocks) == invalidBlocks {
-		log.WithField("err", "Range had no valid blocks to process").Warn("Range is not processed")
+		log.WithField("error", "Range had no valid blocks to process").Warn("Range is not processed")
 	}
 }
 
 // highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.
 // Note this can be lower than our finalized epoch if we have no peers or peers that are all behind us.
-func (s *Service) highestFinalizedEpoch() uint64 {
-	highest := uint64(0)
+func (s *Service) highestFinalizedEpoch() types.Epoch {
+	highest := types.Epoch(0)
 	for _, pid := range s.p2p.Peers().Connected() {
 		peerChainState, err := s.p2p.Peers().ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch > highest {
@@ -263,8 +284,8 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
-func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
-	if !featureconfig.Get().EnablePeerScorer || pid == "" {
+func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
+	if pid == "" {
 		return
 	}
 	headSlot := s.chain.HeadSlot()
@@ -273,7 +294,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
 	}
 	if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
 		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
-		scorer.IncrementProcessedBlocks(pid, diff)
+		scorer.IncrementProcessedBlocks(pid, uint64(diff))
 	}
 }
 

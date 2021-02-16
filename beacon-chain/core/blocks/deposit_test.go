@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -188,7 +189,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 }
 
 func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
-	//Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
+	// Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
 	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
@@ -277,9 +278,7 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 	testutil.ResetCache()
 	dep, _, err := testutil.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
-	defer func() {
-		testutil.ResetCache()
-	}()
+	defer testutil.ResetCache()
 	dep[0].Data.Signature = make([]byte, 96)
 	trie, _, err := testutil.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
@@ -321,8 +320,8 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		val, err := newState.ValidatorAtIndex(uint64(i))
 		require.NoError(t, err)
 		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.EffectiveBalance, "unequal effective balance")
-		require.Equal(t, uint64(0), val.ActivationEpoch)
-		require.Equal(t, uint64(0), val.ActivationEligibilityEpoch)
+		require.Equal(t, types.Epoch(0), val.ActivationEpoch)
+		require.Equal(t, types.Epoch(0), val.ActivationEligibilityEpoch)
 	}
 	if newState.Eth1DepositIndex() != 100 {
 		t.Errorf(

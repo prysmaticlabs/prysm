@@ -399,7 +399,7 @@ func (mr *MockBeaconChainClientMockRecorder) StreamAttestations(arg0, arg1 inter
 }
 
 // StreamBlocks mocks base method
-func (m *MockBeaconChainClient) StreamBlocks(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamBlocksClient, error) {
+func (m *MockBeaconChainClient) StreamBlocks(arg0 context.Context, arg1 *eth.StreamBlocksRequest, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamBlocksClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

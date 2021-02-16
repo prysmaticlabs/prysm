@@ -22,3 +22,8 @@ func (c *FakeProposerIndicesCache) AddProposerIndices(p *ProposerIndices) error 
 func (c *FakeProposerIndicesCache) ProposerIndices(r [32]byte) ([]uint64, error) {
 	return nil, nil
 }
+
+// HasProposerIndices returns the proposer indices of a block root seed.
+func (c *FakeProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
+	return false, nil
+}

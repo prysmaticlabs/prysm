@@ -8,6 +8,7 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -31,7 +32,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		return errors.New("wrong wallet password entered")
 	}
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
@@ -61,7 +62,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
 	default:
-		return fmt.Errorf("keymanager kind %s not yet supported", w.KeymanagerKind().String())
+		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind().String())
 	}
 	return nil
 }
@@ -87,10 +88,15 @@ func listImportedKeymanagerAccounts(
 	}
 	fmt.Println(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
-			"by running `validator accounts list --show-deposit-data"),
+			"by running `validator accounts list --show-deposit-data`"),
 	)
 
 	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	disabledPublicKeys := keymanager.DisabledPublicKeys()
+	existingDisabledPk := make(map[[48]byte]bool, len(disabledPublicKeys))
+	for _, dpk := range disabledPublicKeys {
+		existingDisabledPk[bytesutil.ToBytes48(dpk)] = true
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -103,10 +109,16 @@ func listImportedKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
+		if existingDisabledPk[pubKeys[i]] {
+			fmt.Printf("%s | %s (%s)\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightRed(accountNames[i]).Bold(), au.BrightRed("disabled").Bold())
+		} else {
+			fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
+		}
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if showPrivateKeys {
-			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+			if len(privateKeys) > i {
+				fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+			}
 		}
 		if !showDepositData {
 			continue

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	gcache "github.com/patrickmn/go-cache"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -86,12 +87,13 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:           context.Background(),
-		p2p:           p2p,
-		chain:         chainService,
-		stateNotifier: chainService.StateNotifier(),
-		initialSync:   &mockSync.Sync{IsSyncing: false},
-		chainStarted:  abool.New(),
+		ctx:                 context.Background(),
+		p2p:                 p2p,
+		chain:               chainService,
+		stateNotifier:       chainService.StateNotifier(),
+		initialSync:         &mockSync.Sync{IsSyncing: false},
+		chainStarted:        abool.New(),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 	}
 
 	go r.registerHandlers()

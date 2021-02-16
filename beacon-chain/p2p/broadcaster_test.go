@@ -162,24 +162,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		}),
 	}
 
-	msg := &eth.Attestation{
-		AggregationBits: bitfield.NewBitlist(7),
-		Data: &eth.AttestationData{
-			Slot:            0,
-			CommitteeIndex:  0,
-			BeaconBlockRoot: make([]byte, 32),
-			Source: &eth.Checkpoint{
-				Epoch: 0,
-				Root:  make([]byte, 32),
-			},
-			Target: &eth.Checkpoint{
-				Epoch: 0,
-				Root:  make([]byte, 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-
+	msg := testutil.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	subnet := uint64(5)
 
 	topic := AttestationSubnetTopicFormat
@@ -337,24 +320,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		}),
 	}
 
-	msg := &eth.Attestation{
-		AggregationBits: bitfield.NewBitlist(7),
-		Data: &eth.AttestationData{
-			Slot:            0,
-			CommitteeIndex:  0,
-			BeaconBlockRoot: make([]byte, 32),
-			Source: &eth.Checkpoint{
-				Epoch: 0,
-				Root:  make([]byte, 32),
-			},
-			Target: &eth.Checkpoint{
-				Epoch: 0,
-				Root:  make([]byte, 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-
+	msg := testutil.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	topic := AttestationSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.forkDigest()

@@ -7,10 +7,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -37,7 +39,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Debug("Failed to decode message")
+		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -45,10 +47,14 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if !ok {
 		return pubsub.ValidationReject
 	}
-	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
+	if m.Message == nil {
 		return pubsub.ValidationReject
 	}
-	if helpers.SlotToEpoch(m.Message.Aggregate.Data.Slot) != m.Message.Aggregate.Data.Target.Epoch {
+	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
+		return pubsub.ValidationReject
+	}
+
+	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
 		return pubsub.ValidationReject
 	}
 	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.chain.GenesisTime()); err != nil {
@@ -101,12 +107,15 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
 	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
 	if err := s.chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
-		fmt.Println(err)
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
-	attSlot := signed.Message.Aggregate.Data.Slot
+	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+	if err := s.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
 
 	bs, err := s.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
@@ -114,6 +123,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationIgnore
 	}
 
+	attSlot := signed.Message.Aggregate.Data.Slot
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
 	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(bs.Slot()) {
 		startSlot, err := helpers.StartSlot(helpers.SlotToEpoch(attSlot))
@@ -164,12 +174,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationReject
 	}
 
-	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-	if err := s.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-
 	return pubsub.ValidationAccept
 }
 
@@ -186,19 +190,19 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 }
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
-func (s *Service) hasSeenAggregatorIndexEpoch(epoch, aggregatorIndex uint64) bool {
+func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex uint64) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
 	_, seen := s.seenAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set aggregate's aggregator index target epoch as seen.
-func (s *Service) setAggregatorIndexEpochSeen(epoch, aggregatorIndex uint64) {
+func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex uint64) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
 	s.seenAttestationCache.Add(string(b), true)
 }
 
@@ -259,7 +263,8 @@ func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data
 	if err != nil {
 		return nil, err
 	}
-	root, err := helpers.ComputeSigningRoot(data.Slot, d)
+	sszUint := p2ptypes.SSZUint64(data.Slot)
+	root, err := helpers.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err
 	}

@@ -45,7 +45,7 @@ func TestLifecycle_OK(t *testing.T) {
 
 func TestStatus_CredentialError(t *testing.T) {
 	credentialErr := errors.New("credentialError")
-	s := &Service{credentialError: credentialErr}
+	s := &Service{credentialError: credentialErr, syncService: &mockSync.Sync{IsSyncing: false}}
 
 	assert.ErrorContains(t, s.credentialError.Error(), s.Status())
 }

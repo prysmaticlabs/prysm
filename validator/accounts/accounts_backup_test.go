@@ -27,7 +27,7 @@ var (
 
 func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
-	//Specify the password locally to this file for convenience.
+	// Specify the password locally to this file for convenience.
 	password := "Pa$sW0rD0__Fo0xPr"
 	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 

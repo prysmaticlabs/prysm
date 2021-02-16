@@ -50,6 +50,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.DataDirFlag,
 			cmd.ClearDB,
 			cmd.ForceClearDB,
+			cmd.EnableBackupWebhookFlag,
+			cmd.BackupWebhookOutputDir,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
@@ -63,6 +65,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ChainConfigFileFlag,
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
+			cmd.BoltMMapInitialSizeFlag,
 		},
 	},
 	{
@@ -74,6 +77,8 @@ var appHelpFlagGroups = []flagGroup{
 			debug.MemProfileRateFlag,
 			debug.CPUProfileFlag,
 			debug.TraceFlag,
+			debug.BlockProfileRateFlag,
+			debug.MutexProfileFractionFlag,
 		},
 	},
 	{
@@ -99,6 +104,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableAccountMetricsFlag,
 			flags.WalletDirFlag,
 			flags.WalletPasswordFileFlag,
+			flags.GraffitiFileFlag,
+			flags.EnableDutyCountDown,
 		},
 	},
 	{

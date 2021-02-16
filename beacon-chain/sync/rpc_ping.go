@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -21,9 +19,6 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 
 	m, ok := msg.(*types.SSZUint64)
 	if !ok {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
-		}
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
@@ -33,51 +28,39 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if errors.Is(err, errInvalidSequenceNum) {
+		if errors.Is(err, types.ErrInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, seqError, stream)
-		}
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidSequenceNum.Error(), stream)
 		}
 		return err
 	}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
-		}
 		return err
 	}
 	sq := types.SSZUint64(s.p2p.MetadataSeq())
 	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
-		}
 		return err
 	}
 
+	closeStream(stream, log)
+
 	if valid {
 		// If the sequence number was valid we're done.
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Debug("Failed to close stream")
-		}
 		return nil
 	}
 
 	// The sequence number was not valid.  Start our own ping back to the peer.
 	go func() {
-		defer func() {
-			if err := stream.Close(); err != nil {
-				log.WithError(err).Debug("Failed to close stream")
-			}
-		}()
 		// New context so the calling function doesn't cancel on us.
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
 		if err != nil {
-			if !strings.Contains(err.Error(), deadlineError) {
-				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
+			// We cannot compare errors directly as the stream muxer error
+			// type isn't compatible with the error we have, so a direct
+			// equality checks fails.
+			if !strings.Contains(err.Error(), types.ErrIODeadline.Error()) {
+				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Could not send metadata request")
 			}
 			return
 		}
@@ -98,11 +81,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 	currentTime := timeutils.Now()
-	defer func() {
-		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
 
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
@@ -122,7 +101,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if errors.Is(err, errInvalidSequenceNum) {
+		if errors.Is(err, types.ErrInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 		return err
@@ -151,7 +130,7 @@ func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, er
 	}
 	// Return error on invalid sequence number.
 	if md.SeqNumber > uint64(seq) {
-		return false, errInvalidSequenceNum
+		return false, types.ErrInvalidSequenceNum
 	}
 	return md.SeqNumber == uint64(seq), nil
 }

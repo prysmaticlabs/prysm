@@ -12,13 +12,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 const (
 	// ImportKeysDirPromptText for the import keys cli function.
 	ImportKeysDirPromptText = "Enter the directory or filepath where your keystores to import are located"
+	// DataDirDirPromptText for the validator database directory.
+	DataDirDirPromptText = "Enter the directory of the validator database you would like to use"
+	// SlashingProtectionJSONPromptText for the EIP-3076 slashing protection JSON prompt.
+	SlashingProtectionJSONPromptText = "Enter the the filepath of your EIP-3076 Slashing Protection JSON from your previously used validator client"
 	// WalletDirPromptText for the wallet.
 	WalletDirPromptText = "Enter a wallet directory"
 	// SelectAccountsDeletePromptText --
@@ -33,10 +36,7 @@ const (
 	SelectAccountsEnablePromptText = "Select the account(s) you would like to enable"
 )
 
-var (
-	au  = aurora.NewAurora(true)
-	log = logrus.WithField("prefix", "prompt")
-)
+var au = aurora.NewAurora(true)
 
 // InputDirectory from the cli.
 func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
@@ -69,6 +69,7 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 // InputRemoteKeymanagerConfig via the cli.
 func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
 	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
+	requireTls := !cliCtx.Bool(flags.DisableRemoteSignerTlsFlag.Name)
 	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
 	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
 	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
@@ -83,7 +84,7 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 			return nil, err
 		}
 	}
-	if crt == "" {
+	if requireTls && crt == "" {
 		crt, err = promptutil.ValidatePrompt(
 			os.Stdin,
 			"Path to TLS crt (such as /path/to/client.crt)",
@@ -92,7 +93,7 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 			return nil, err
 		}
 	}
-	if key == "" {
+	if requireTls && key == "" {
 		key, err = promptutil.ValidatePrompt(
 			os.Stdin,
 			"Path to TLS key (such as /path/to/client.key)",
@@ -101,7 +102,7 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 			return nil, err
 		}
 	}
-	if ca == "" {
+	if requireTls && ca == "" {
 		ca, err = promptutil.ValidatePrompt(
 			os.Stdin,
 			"Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
@@ -110,20 +111,30 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 			return nil, err
 		}
 	}
-	crtPath, err := fileutil.ExpandPath(strings.TrimRight(crt, "\r\n"))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+
+	crtPath, keyPath, caPath := "", "", ""
+	if crt != "" {
+		crtPath, err = fileutil.ExpandPath(strings.TrimRight(crt, "\r\n"))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+		}
 	}
-	keyPath, err := fileutil.ExpandPath(strings.TrimRight(key, "\r\n"))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	if key != "" {
+		keyPath, err = fileutil.ExpandPath(strings.TrimRight(key, "\r\n"))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+		}
 	}
-	caPath, err := fileutil.ExpandPath(strings.TrimRight(ca, "\r\n"))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+	if ca != "" {
+		caPath, err = fileutil.ExpandPath(strings.TrimRight(ca, "\r\n"))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
+		}
 	}
+
 	newCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
+			RequireTls:     requireTls,
 			ClientCertPath: crtPath,
 			ClientKeyPath:  keyPath,
 			CACertPath:     caPath,

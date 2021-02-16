@@ -9,15 +9,27 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -225,4 +237,105 @@ func TestHostIsResolved(t *testing.T) {
 
 	newIP := list.Self().IP()
 	assert.Equal(t, exampleIP, newIP.String(), "Did not resolve to expected IP")
+}
+
+func TestInboundPeerLimit(t *testing.T) {
+	fakePeer := testp2p.NewTestP2P(t)
+	s := &Service{
+		cfg:       &Config{MaxPeers: 30},
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			PeerLimit:    30,
+			ScorerParams: &scorers.Config{},
+		}),
+		host: fakePeer.BHost,
+	}
+
+	for i := 0; i < 30; i++ {
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	require.Equal(t, true, s.isPeerAtLimit(false), "not at limit for outbound peers")
+	require.Equal(t, false, s.isPeerAtLimit(true), "at limit for inbound peers")
+
+	for i := 0; i < highWatermarkBuffer; i++ {
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	require.Equal(t, true, s.isPeerAtLimit(true), "not at limit for inbound peers")
+}
+
+func TestUDPMultiAddress(t *testing.T) {
+	port := 6500
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	s := &Service{
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	listener, err := s.createListener(ipAddr, pkey)
+	require.NoError(t, err)
+	defer listener.Close()
+	s.dv5Listener = listener
+
+	multiAddresses, err := s.DiscoveryAddresses()
+	require.NoError(t, err)
+	require.Equal(t, true, len(multiAddresses) > 0)
+	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), fmt.Sprintf("%d", port)))
+	assert.Equal(t, true, strings.Contains(multiAddresses[0].String(), "udp"))
+}
+
+func TestMultipleDiscoveryAddresses(t *testing.T) {
+	db, err := enode.OpenDB(t.TempDir())
+	require.NoError(t, err)
+	_, key := createAddrAndPrivKey(t)
+	node := enode.NewLocalNode(db, key)
+	node.Set(enr.IPv4{127, 0, 0, 1})
+	node.Set(enr.IPv6{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68})
+	s := &Service{dv5Listener: mockListener{localNode: node}}
+
+	multiAddresses, err := s.DiscoveryAddresses()
+	require.NoError(t, err)
+	require.Equal(t, 2, len(multiAddresses))
+	ipv4Found, ipv6Found := false, false
+	for _, address := range multiAddresses {
+		s := address.String()
+		if strings.Contains(s, "ip4") {
+			ipv4Found = true
+		} else if strings.Contains(s, "ip6") {
+			ipv6Found = true
+		}
+	}
+	assert.Equal(t, true, ipv4Found, "IPv4 discovery address not found")
+	assert.Equal(t, true, ipv6Found, "IPv6 discovery address not found")
+}
+
+func TestCorrectUDPVersion(t *testing.T) {
+	assert.Equal(t, "udp4", udpVersionFromIP(net.IPv4zero), "incorrect network version")
+	assert.Equal(t, "udp6", udpVersionFromIP(net.IPv6zero), "incorrect network version")
+	assert.Equal(t, "udp4", udpVersionFromIP(net.IP{200, 20, 12, 255}), "incorrect network version")
+	assert.Equal(t, "udp6", udpVersionFromIP(net.IP{22, 23, 24, 251, 17, 18, 0, 0, 0, 0, 12, 14, 212, 213, 16, 22}), "incorrect network version")
+	// v4 in v6
+	assert.Equal(t, "udp4", udpVersionFromIP(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 212, 213, 16, 22}), "incorrect network version")
+}
+
+// addPeer is a helper to add a peer with a given connection state)
+func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
+	// Set up some peers with different states
+	mhBytes := []byte{0x11, 0x04}
+	idBytes := make([]byte, 4)
+	_, err := rand.Read(idBytes)
+	require.NoError(t, err)
+	mhBytes = append(mhBytes, idBytes...)
+	id, err := peer.IDFromBytes(mhBytes)
+	require.NoError(t, err)
+	p.Add(new(enr.Record), id, nil, network.DirInbound)
+	p.SetConnectionState(id, state)
+	p.SetMetadata(id, &pb.MetaData{
+		SeqNumber: 0,
+		Attnets:   bitfield.NewBitvector64(),
+	})
+	return id
 }

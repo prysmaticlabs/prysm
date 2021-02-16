@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -51,8 +50,6 @@ type Config struct {
 	SlasherDB    db.Database
 	BeaconClient *beaconclient.Service
 }
-
-var log = logrus.WithField("prefix", "rpc")
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.

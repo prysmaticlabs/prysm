@@ -30,6 +30,17 @@ func BitlistsWithSingleBitSet(n, length uint64) []bitfield.Bitlist {
 	return lists
 }
 
+// Bitlists64WithSingleBitSet creates list of bitlists with a single bit set in each.
+func Bitlists64WithSingleBitSet(n, length uint64) []*bitfield.Bitlist64 {
+	lists := make([]*bitfield.Bitlist64, n)
+	for i := uint64(0); i < n; i++ {
+		b := bitfield.NewBitlist64(length)
+		b.SetBitAt(i%length, true)
+		lists[i] = b
+	}
+	return lists
+}
+
 // BitlistsWithMultipleBitSet creates list of bitlists with random n bits set.
 func BitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfield.Bitlist {
 	seed := timeutils.Now().UnixNano()
@@ -38,6 +49,23 @@ func BitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfiel
 	lists := make([]bitfield.Bitlist, n)
 	for i := uint64(0); i < n; i++ {
 		b := bitfield.NewBitlist(length)
+		keys := rand.Perm(int(length))
+		for _, key := range keys[:count] {
+			b.SetBitAt(uint64(key), true)
+		}
+		lists[i] = b
+	}
+	return lists
+}
+
+// Bitlists64WithMultipleBitSet creates list of bitlists with random n bits set.
+func Bitlists64WithMultipleBitSet(t testing.TB, n, length, count uint64) []*bitfield.Bitlist64 {
+	seed := timeutils.Now().UnixNano()
+	t.Logf("Bitlists64WithMultipleBitSet random seed: %v", seed)
+	rand.Seed(seed)
+	lists := make([]*bitfield.Bitlist64, n)
+	for i := uint64(0); i < n; i++ {
+		b := bitfield.NewBitlist64(length)
 		keys := rand.Perm(int(length))
 		for _, key := range keys[:count] {
 			b.SetBitAt(uint64(key), true)

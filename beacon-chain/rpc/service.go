@@ -4,6 +4,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -30,12 +31,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -48,12 +51,6 @@ import (
 
 const attestationBufferSize = 100
 
-var log logrus.FieldLogger
-
-func init() {
-	log = logrus.WithField("prefix", "rpc")
-}
-
 // Service defining an RPC server for a beacon node.
 type Service struct {
 	ctx                     context.Context
@@ -61,9 +58,10 @@ type Service struct {
 	beaconDB                db.HeadAccessDatabase
 	chainInfoFetcher        blockchain.ChainInfoFetcher
 	headFetcher             blockchain.HeadFetcher
+	canonicalFetcher        blockchain.CanonicalFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
-	genesisTimeFetcher      blockchain.TimeFetcher
+	timeFetcher             blockchain.TimeFetcher
 	genesisFetcher          blockchain.GenesisFetcher
 	attestationReceiver     blockchain.AttestationReceiver
 	blockReceiver           blockchain.BlockReceiver
@@ -77,6 +75,8 @@ type Service struct {
 	syncService             chainSync.Checker
 	host                    string
 	port                    string
+	beaconMonitoringHost    string
+	beaconMonitoringPort    int
 	listener                net.Listener
 	withCert                string
 	withKey                 string
@@ -87,6 +87,7 @@ type Service struct {
 	p2p                     p2p.Broadcaster
 	peersFetcher            p2p.PeersProvider
 	peerManager             p2p.PeerManager
+	metadataProvider        p2p.MetadataProvider
 	depositFetcher          depositcache.DepositFetcher
 	pendingDepositFetcher   depositcache.PendingDepositsFetcher
 	stateNotifier           statefeed.Notifier
@@ -104,9 +105,12 @@ type Config struct {
 	Port                    string
 	CertFlag                string
 	KeyFlag                 string
+	BeaconMonitoringHost    string
+	BeaconMonitoringPort    int
 	BeaconDB                db.HeadAccessDatabase
 	ChainInfoFetcher        blockchain.ChainInfoFetcher
 	HeadFetcher             blockchain.HeadFetcher
+	CanonicalFetcher        blockchain.CanonicalFetcher
 	ForkFetcher             blockchain.ForkFetcher
 	FinalizationFetcher     blockchain.FinalizationFetcher
 	AttestationReceiver     blockchain.AttestationReceiver
@@ -124,6 +128,7 @@ type Config struct {
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
 	PeerManager             p2p.PeerManager
+	MetadataProvider        p2p.MetadataProvider
 	DepositFetcher          depositcache.DepositFetcher
 	PendingDepositFetcher   depositcache.PendingDepositsFetcher
 	StateNotifier           statefeed.Notifier
@@ -145,13 +150,15 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		headFetcher:             cfg.HeadFetcher,
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
-		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
+		canonicalFetcher:        cfg.CanonicalFetcher,
+		timeFetcher:             cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		attestationReceiver:     cfg.AttestationReceiver,
 		blockReceiver:           cfg.BlockReceiver,
 		p2p:                     cfg.Broadcaster,
 		peersFetcher:            cfg.PeersFetcher,
 		peerManager:             cfg.PeerManager,
+		metadataProvider:        cfg.MetadataProvider,
 		powChainService:         cfg.POWChainService,
 		chainStartFetcher:       cfg.ChainStartFetcher,
 		mockEth1Votes:           cfg.MockEth1Votes,
@@ -161,6 +168,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		syncService:             cfg.SyncService,
 		host:                    cfg.Host,
 		port:                    cfg.Port,
+		beaconMonitoringHost:    cfg.BeaconMonitoringHost,
+		beaconMonitoringPort:    cfg.BeaconMonitoringPort,
 		withCert:                cfg.CertFlag,
 		withKey:                 cfg.KeyFlag,
 		depositFetcher:          cfg.DepositFetcher,
@@ -230,7 +239,7 @@ func (s *Service) Start() {
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
 		FinalizationFetcher:    s.finalizationFetcher,
-		GenesisTimeFetcher:     s.genesisTimeFetcher,
+		TimeFetcher:            s.timeFetcher,
 		CanonicalStateChan:     s.canonicalStateChan,
 		BlockFetcher:           s.powChainService,
 		DepositFetcher:         s.depositFetcher,
@@ -249,14 +258,30 @@ func (s *Service) Start() {
 		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
+		LogsStreamer:         logutil.NewStreamServer(),
+		StreamLogsBufferSize: 100, // Enough to handle bursts of beacon node logs for gRPC streaming.
+		BeaconDB:             s.beaconDB,
+		Server:               s.grpcServer,
+		SyncChecker:          s.syncService,
+		GenesisTimeFetcher:   s.timeFetcher,
+		PeersFetcher:         s.peersFetcher,
+		PeerManager:          s.peerManager,
+		GenesisFetcher:       s.genesisFetcher,
+		BeaconMonitoringHost: s.beaconMonitoringHost,
+		BeaconMonitoringPort: s.beaconMonitoringPort,
+	}
+	nodeServerV1 := &nodev1.Server{
 		BeaconDB:           s.beaconDB,
 		Server:             s.grpcServer,
 		SyncChecker:        s.syncService,
-		GenesisTimeFetcher: s.genesisTimeFetcher,
+		GenesisTimeFetcher: s.timeFetcher,
 		PeersFetcher:       s.peersFetcher,
 		PeerManager:        s.peerManager,
 		GenesisFetcher:     s.genesisFetcher,
+		MetadataProvider:   s.metadataProvider,
+		HeadFetcher:        s.headFetcher,
 	}
+
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.beaconDB,
@@ -264,11 +289,12 @@ func (s *Service) Start() {
 		SlashingsPool:               s.slashingsPool,
 		HeadFetcher:                 s.headFetcher,
 		FinalizationFetcher:         s.finalizationFetcher,
+		CanonicalFetcher:            s.canonicalFetcher,
 		ChainStartFetcher:           s.chainStartFetcher,
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,
 		CanonicalStateChan:          s.canonicalStateChan,
-		GenesisTimeFetcher:          s.genesisTimeFetcher,
+		GenesisTimeFetcher:          s.timeFetcher,
 		StateNotifier:               s.stateNotifier,
 		BlockNotifier:               s.blockNotifier,
 		AttestationNotifier:         s.operationNotifier,
@@ -288,21 +314,23 @@ func (s *Service) Start() {
 		DepositFetcher:      s.depositFetcher,
 		BlockFetcher:        s.powChainService,
 		CanonicalStateChan:  s.canonicalStateChan,
-		GenesisTimeFetcher:  s.genesisTimeFetcher,
+		GenesisTimeFetcher:  s.timeFetcher,
 		StateNotifier:       s.stateNotifier,
 		BlockNotifier:       s.blockNotifier,
 		AttestationNotifier: s.operationNotifier,
 		Broadcaster:         s.p2p,
-		StateGen:            s.stateGen,
+		StateGenService:     s.stateGen,
 		SyncChecker:         s.syncService,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
+	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	if s.enableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debug.Server{
-			GenesisTimeFetcher: s.genesisTimeFetcher,
+			GenesisTimeFetcher: s.timeFetcher,
 			BeaconDB:           s.beaconDB,
 			StateGen:           s.stateGen,
 			HeadFetcher:        s.headFetcher,
@@ -337,6 +365,9 @@ func (s *Service) Stop() error {
 
 // Status returns nil or credentialError
 func (s *Service) Status() error {
+	if s.syncService.Syncing() {
+		return errors.New("syncing")
+	}
 	if s.credentialError != nil {
 		return s.credentialError
 	}

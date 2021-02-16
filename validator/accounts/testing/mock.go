@@ -22,47 +22,47 @@ type Wallet struct {
 }
 
 // AccountNames --
-func (m *Wallet) AccountNames() ([]string, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+func (w *Wallet) AccountNames() ([]string, error) {
+	w.lock.RLock()
+	defer w.lock.RUnlock()
 	names := make([]string, 0)
-	for name := range m.AccountPasswords {
+	for name := range w.AccountPasswords {
 		names = append(names, name)
 	}
 	return names, nil
 }
 
 // AccountsDir --
-func (m *Wallet) AccountsDir() string {
-	return m.InnerAccountsDir
+func (w *Wallet) AccountsDir() string {
+	return w.InnerAccountsDir
 }
 
 // Exists --
-func (m *Wallet) Exists() (bool, error) {
-	return len(m.Directories) > 0, nil
+func (w *Wallet) Exists() (bool, error) {
+	return len(w.Directories) > 0, nil
 }
 
 // Password --
-func (m *Wallet) Password() string {
-	return m.WalletPassword
+func (w *Wallet) Password() string {
+	return w.WalletPassword
 }
 
 // WriteFileAtPath --
-func (m *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	if m.Files[pathName] == nil {
-		m.Files[pathName] = make(map[string][]byte)
+func (w *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	if w.Files[pathName] == nil {
+		w.Files[pathName] = make(map[string][]byte)
 	}
-	m.Files[pathName][fileName] = data
+	w.Files[pathName][fileName] = data
 	return nil
 }
 
 // ReadFileAtPath --
-func (m *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([]byte, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	for f, v := range m.Files[pathName] {
+func (w *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([]byte, error) {
+	w.lock.RLock()
+	defer w.lock.RUnlock()
+	for f, v := range w.Files[pathName] {
 		if strings.Contains(fileName, f) {
 			return v, nil
 		}
@@ -71,6 +71,6 @@ func (m *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([
 }
 
 // InitializeKeymanager --
-func (m *Wallet) InitializeKeymanager(_ context.Context) (keymanager.IKeymanager, error) {
+func (w *Wallet) InitializeKeymanager(_ context.Context) (keymanager.IKeymanager, error) {
 	return nil, nil
 }

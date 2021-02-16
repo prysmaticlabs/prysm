@@ -21,6 +21,7 @@ func TestAttestingIndices(t *testing.T) {
 		name string
 		args args
 		want []uint64
+		err  string
 	}{
 		{
 			name: "Full committee attested",
@@ -38,11 +39,24 @@ func TestAttestingIndices(t *testing.T) {
 			},
 			want: []uint64{0, 2},
 		},
+		{
+			name: "Invalid bit length",
+			args: args{
+				bf:        bitfield.Bitlist{0b11111},
+				committee: []uint64{0, 1, 2},
+			},
+			err: "bitfield length 4 is not equal to committee length 3",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
-			assert.DeepEqual(t, tt.want, got)
+			got, err := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
+			if tt.err == "" {
+				require.NoError(t, err)
+				assert.DeepEqual(t, tt.want, got)
+			} else {
+				require.ErrorContains(t, tt.err, err)
+			}
 		})
 	}
 }
@@ -53,6 +67,16 @@ func TestIsValidAttestationIndices(t *testing.T) {
 		att       *eth.IndexedAttestation
 		wantedErr string
 	}{
+		{
+			name: "Indices should not be nil",
+			att: &eth.IndexedAttestation{
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: make([]byte, 96),
+			},
+			wantedErr: "nil or missing indexed attestation data",
+		},
 		{
 			name: "Indices should be non-empty",
 			att: &eth.IndexedAttestation{
@@ -135,7 +159,8 @@ func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = attestationutil.AttestingIndices(bf, committee)
+		_, err := attestationutil.AttestingIndices(bf, committee)
+		require.NoError(b, err)
 	}
 }
 

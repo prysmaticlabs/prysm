@@ -9,7 +9,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -24,20 +23,21 @@ import (
 )
 
 func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
-	db, sc := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 
 	numValidators := 128
 	ctx := context.Background()
 	headState := setupActiveValidators(t, numValidators)
 
+	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(db),
 	}
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
@@ -55,7 +55,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 
 	wanted := &ethpb.BeaconCommittees{
 		Epoch:                0,
-		Committees:           committees,
+		Committees:           committees.SlotToUint64(),
 		ActiveValidatorCount: uint64(numValidators),
 	}
 	res, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
@@ -71,7 +71,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	params.UseMainnetConfig()
 	ctx := context.Background()
 
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 
 	numValidators := 128
@@ -91,14 +91,15 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 
+	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
 		State:   headState,
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db),
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 1)
@@ -120,7 +121,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 			},
 			res: &ethpb.BeaconCommittees{
 				Epoch:                1,
-				Committees:           wanted,
+				Committees:           wanted.SlotToUint64(),
 				ActiveValidatorCount: uint64(numValidators),
 			},
 		},
@@ -138,20 +139,21 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 
 func TestRetrieveCommitteesForRoot(t *testing.T) {
 
-	db, sc := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 
 	numValidators := 128
 	headState := setupActiveValidators(t, numValidators)
 
+	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(db),
 	}
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, b))
@@ -180,12 +182,12 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 
 	wantedRes := &ethpb.BeaconCommittees{
 		Epoch:                0,
-		Committees:           wanted,
+		Committees:           wanted.SlotToUint64(),
 		ActiveValidatorCount: uint64(numValidators),
 	}
 	receivedRes := &ethpb.BeaconCommittees{
 		Epoch:                0,
-		Committees:           committees,
+		Committees:           committees.SlotToUint64(),
 		ActiveValidatorCount: uint64(len(activeIndices)),
 	}
 	assert.DeepEqual(t, wantedRes, receivedRes)
@@ -205,7 +207,8 @@ func setupActiveValidators(t *testing.T, count int) *stateTrie.BeaconState {
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	if err := s.SetValidators(validators); err != nil {
 		t.Error(err)
 		return nil

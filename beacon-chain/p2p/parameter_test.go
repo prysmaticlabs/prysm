@@ -10,8 +10,8 @@ import (
 
 const (
 	// overlay parameters
-	gossipSubD   = 6  // topic stable mesh target count
-	gossipSubDlo = 5  // topic stable mesh low watermark
+	gossipSubD   = 8  // topic stable mesh target count
+	gossipSubDlo = 6  // topic stable mesh low watermark
 	gossipSubDhi = 12 // topic stable mesh high watermark
 
 	// gossip parameters

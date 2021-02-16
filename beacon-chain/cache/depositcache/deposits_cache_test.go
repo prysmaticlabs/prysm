@@ -611,8 +611,8 @@ func TestPruneProofs_Ok(t *testing.T) {
 
 	require.NoError(t, dc.PruneProofs(context.Background(), 1))
 
-	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[0].Deposit.Proof)
-	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[1].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[0].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[1].Deposit.Proof)
 	assert.NotNil(t, dc.deposits[2].Deposit.Proof)
 	assert.NotNil(t, dc.deposits[3].Deposit.Proof)
 }
@@ -654,7 +654,7 @@ func TestPruneProofs_SomeAlreadyPruned(t *testing.T) {
 
 	require.NoError(t, dc.PruneProofs(context.Background(), 2))
 
-	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[2].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[2].Deposit.Proof)
 }
 
 func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
@@ -694,10 +694,53 @@ func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
 
 	require.NoError(t, dc.PruneProofs(context.Background(), 99))
 
-	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[0].Deposit.Proof)
-	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[1].Deposit.Proof)
-	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[2].Deposit.Proof)
-	assert.DeepEqual(t, ([][]byte)(nil), dc.deposits[3].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[0].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[1].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[2].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[3].Deposit.Proof)
+}
+
+func TestPruneProofs_CorrectlyHandleLastIndex(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	deposits := []struct {
+		blkNum  uint64
+		deposit *ethpb.Deposit
+		index   int64
+	}{
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   0,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   1,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   2,
+		},
+		{
+			blkNum:  0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			index:   3,
+		},
+	}
+
+	for _, ins := range deposits {
+		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+	}
+
+	require.NoError(t, dc.PruneProofs(context.Background(), 4))
+
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[0].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[1].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[2].Deposit.Proof)
+	assert.DeepEqual(t, [][]byte(nil), dc.deposits[3].Deposit.Proof)
 }
 
 func makeDepositProof() [][]byte {

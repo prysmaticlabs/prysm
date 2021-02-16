@@ -6,16 +6,19 @@ import (
 
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 // IKeymanager defines a general keymanager interface for Prysm wallets.
 type IKeymanager interface {
-	// FetchValidatingKeys fetches the list of active public keys that should be used to validate with.
+	// FetchValidatingPublicKeys fetches the list of active public keys that should be used to validate with.
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
-	// FetchAllValidatingKeys fetches the list of all public keys, including disabled ones.
+	// FetchAllValidatingPublicKeys fetches the list of all public keys, including disabled ones.
 	FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
 	// Sign signs a message using a validator key.
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+	// SubscribeAccountChanges subscribes to changes made to the underlying keys.
+	SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription
 }
 
 // Keystore json file representation as a Go struct.

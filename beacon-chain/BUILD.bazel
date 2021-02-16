@@ -1,24 +1,27 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_test")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_alpine", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 
 go_library(
     name = "go_default_library",
     srcs = [
+        "log.go",
         "main.go",
         "usage.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/db:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/node:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/fileutil:go_default_library",
         "//shared/journald:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/maxprocs:go_default_library",
@@ -45,13 +48,19 @@ go_image(
     visibility = ["//visibility:private"],
 )
 
+container_image(
+    name = "image_with_creation_time",
+    base = "image",
+    stamp = True,
+)
+
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest": ":image",
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}": ":image",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:latest": ":image",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}": ":image",
+        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest": ":image_with_creation_time",
+        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}": ":image_with_creation_time",
+        "index.docker.io/prysmaticlabs/prysm-beacon-chain:latest": ":image_with_creation_time",
+        "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}": ":image_with_creation_time",
     },
     tags = ["manual"],
 )

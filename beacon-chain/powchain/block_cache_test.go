@@ -6,12 +6,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestHashKeyFn_OK(t *testing.T) {
-	hInfo := &headerInfo{
+	hInfo := &types.HeaderInfo{
 		Hash: common.HexToHash("0x0123456"),
 	}
 
@@ -26,7 +27,7 @@ func TestHashKeyFn_InvalidObj(t *testing.T) {
 }
 
 func TestHeightKeyFn_OK(t *testing.T) {
-	hInfo := &headerInfo{
+	hInfo := &types.HeaderInfo{
 		Number: big.NewInt(555),
 	}
 

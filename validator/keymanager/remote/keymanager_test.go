@@ -1,7 +1,9 @@
 package remote
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -85,12 +87,14 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			opts: &KeymanagerOpts{
 				RemoteCertificate: nil,
 			},
-			err: "certificates are required",
+			err: "certificate configuration is missing",
 		},
 		{
 			name: "NoClientCertificate",
 			opts: &KeymanagerOpts{
-				RemoteCertificate: &CertificateConfig{},
+				RemoteCertificate: &CertificateConfig{
+					RequireTls: true,
+				},
 			},
 			err: "client certificate is required",
 		},
@@ -98,6 +102,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			name: "NoClientKey",
 			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{
+					RequireTls:     true,
 					ClientCertPath: "/foo/client.crt",
 					ClientKeyPath:  "",
 				},
@@ -108,6 +113,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			name: "MissingClientKey",
 			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{
+					RequireTls:     true,
 					ClientCertPath: "/foo/client.crt",
 					ClientKeyPath:  "/foo/client.key",
 					CACertPath:     "",
@@ -120,7 +126,9 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			clientCert: `bad`,
 			clientKey:  validClientKey,
 			opts: &KeymanagerOpts{
-				RemoteCertificate: &CertificateConfig{},
+				RemoteCertificate: &CertificateConfig{
+					RequireTls: true,
+				},
 			},
 			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in certificate input",
 		},
@@ -129,7 +137,9 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			clientCert: validClientCert,
 			clientKey:  `bad`,
 			opts: &KeymanagerOpts{
-				RemoteCertificate: &CertificateConfig{},
+				RemoteCertificate: &CertificateConfig{
+					RequireTls: true,
+				},
 			},
 			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in key input",
 		},
@@ -139,6 +149,7 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			clientKey:  validClientKey,
 			opts: &KeymanagerOpts{
 				RemoteCertificate: &CertificateConfig{
+					RequireTls: true,
 					CACertPath: `bad`,
 				},
 			},
@@ -178,6 +189,16 @@ func TestNewRemoteKeymanager(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewRemoteKeymanager_TlsDisabled(t *testing.T) {
+	opts := &KeymanagerOpts{
+		RemoteCertificate: &CertificateConfig{
+			RequireTls: false,
+		},
+	}
+	_, err := NewKeymanager(context.Background(), &SetupConfig{Opts: opts, MaxMessageSize: 1})
+	assert.NoError(t, err)
 }
 
 func TestRemoteKeymanager_Sign(t *testing.T) {
@@ -286,4 +307,24 @@ func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		rawKeys[i] = keys[i][:]
 	}
 	assert.DeepEqual(t, pubKeys, rawKeys)
+}
+
+func TestUnmarshalOptionsFile_DefaultRequireTls(t *testing.T) {
+	optsWithoutTls := struct {
+		RemoteCertificate struct {
+			ClientCertPath string
+			ClientKeyPath  string
+			CACertPath     string
+		}
+	}{}
+	var buffer bytes.Buffer
+	b, err := json.Marshal(optsWithoutTls)
+	require.NoError(t, err)
+	_, err = buffer.Write(b)
+	require.NoError(t, err)
+	r := ioutil.NopCloser(&buffer)
+
+	opts, err := UnmarshalOptionsFile(r)
+	assert.NoError(t, err)
+	assert.Equal(t, true, opts.RemoteCertificate.RequireTls)
 }

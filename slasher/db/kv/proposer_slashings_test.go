@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -18,24 +19,16 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	ctx := context.Background()
 
 	ps := &ethpb.ProposerSlashing{
-		Header_1: &ethpb.SignedBeaconBlockHeader{
+		Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
 				ProposerIndex: 1,
-				ParentRoot:    make([]byte, 32),
-				StateRoot:     make([]byte, 32),
-				BodyRoot:      make([]byte, 32),
 			},
-			Signature: make([]byte, 96),
-		},
-		Header_2: &ethpb.SignedBeaconBlockHeader{
+		}),
+		Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
 				ProposerIndex: 1,
-				ParentRoot:    make([]byte, 32),
-				StateRoot:     make([]byte, 32),
-				BodyRoot:      make([]byte, 32),
 			},
-			Signature: make([]byte, 96),
-		},
+		}),
 	}
 	has, _, err := db.HasProposerSlashing(ctx, ps)
 	require.NoError(t, err)
@@ -59,70 +52,46 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
+				}),
+				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
+				}),
 			},
 		},
 		{
 			ss: types.Included,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
+				}),
+				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
+				}),
 			},
 		},
 		{
 			ss: types.Reverted,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
+				}),
+				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
+				}),
 			},
 		},
 	}
@@ -160,70 +129,46 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
+				}),
+				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
+				}),
 			},
 		},
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
+				}),
+				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
+				}),
 			},
 		},
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
+				}),
+				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
-						ParentRoot:    make([]byte, 32),
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      make([]byte, 32),
 					},
-					Signature: make([]byte, 96),
-				},
+				}),
 			},
 		},
 	}
@@ -244,7 +189,7 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 		has, st, err = db.HasProposerSlashing(ctx, tt.ps)
 		require.NoError(t, err, "Failed to get proposer slashing")
 		require.Equal(t, true, has, "Failed to find proposer slashing")
-		require.Equal(t, (types.SlashingStatus)(types.Included), st, "Failed to find proposer slashing with the correct status")
+		require.Equal(t, types.SlashingStatus(types.Included), st, "Failed to find proposer slashing with the correct status")
 	}
 }
 
@@ -255,64 +200,40 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 
 	ps := []*ethpb.ProposerSlashing{
 		{
-			Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
-				Signature: make([]byte, 96),
-			},
-			Header_2: &ethpb.SignedBeaconBlockHeader{
+			}),
+			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
-				Signature: make([]byte, 96),
-			},
+			}),
 		},
 		{
-			Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 2,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
-				Signature: make([]byte, 96),
-			},
-			Header_2: &ethpb.SignedBeaconBlockHeader{
+			}),
+			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 2,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
-				Signature: make([]byte, 96),
-			},
+			}),
 		},
 		{
-			Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
-				Signature: make([]byte, 96),
-			},
-			Header_2: &ethpb.SignedBeaconBlockHeader{
+			}),
+			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
-					ParentRoot:    make([]byte, 32),
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      make([]byte, 32),
 				},
-				Signature: make([]byte, 96),
-			},
+			}),
 		},
 	}
 	err := db.SaveProposerSlashings(ctx, types.Active, ps)

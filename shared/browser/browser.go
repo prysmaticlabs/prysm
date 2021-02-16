@@ -7,20 +7,10 @@ package browser
 import (
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 
 	"github.com/google/shlex"
 )
-
-// Command produces an exec.Cmd respecting runtime.GOOS and $BROWSER environment variable
-func Command(url string) (*exec.Cmd, error) {
-	launcher := os.Getenv("BROWSER")
-	if launcher != "" {
-		return FromLauncher(launcher, url)
-	}
-	return ForOS(runtime.GOOS, url), nil
-}
 
 // ForOS produces an exec.Cmd to open the web browser for different OS
 func ForOS(goos, url string) *exec.Cmd {

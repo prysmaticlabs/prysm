@@ -14,7 +14,7 @@ import (
 var AccountCommands = &cli.Command{
 	Name:     "accounts",
 	Category: "accounts",
-	Usage:    "defines commands for interacting with eth2 validator accounts (work in progress)",
+	Usage:    "defines commands for interacting with eth2 validator accounts",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "delete",
@@ -142,6 +142,7 @@ var AccountCommands = &cli.Command{
 				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
+				flags.ExitAllFlag,
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,

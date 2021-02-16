@@ -16,13 +16,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	run := func() int {
-		logrus.SetLevel(logrus.DebugLevel)
-		logrus.SetOutput(ioutil.Discard)
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
 
-		return m.Run()
-	}
-	os.Exit(run())
+	m.Run()
 }
 
 // Test that slasher node can close.
@@ -38,7 +35,7 @@ func TestNodeClose_OK(t *testing.T) {
 
 	context := cli.NewContext(&app, set, nil)
 
-	node, err := NewSlasherNode(context)
+	node, err := New(context)
 	require.NoError(t, err, "Failed to create slasher node")
 
 	node.Close()
@@ -59,7 +56,7 @@ func TestClearDB(t *testing.T) {
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
 
 	context := cli.NewContext(&app, set, nil)
-	slasherNode, err := NewSlasherNode(context)
+	slasherNode, err := New(context)
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, "Removing database")

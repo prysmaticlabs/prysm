@@ -16,13 +16,12 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
 var (
-	log = logrus.WithField("prefix", "remote-keymanager")
 	// ErrSigningFailed defines a failure from the remote server
 	// when performing a signing operation.
 	ErrSigningFailed = errors.New("signing failed in the remote server")
@@ -41,6 +40,7 @@ type KeymanagerOpts struct {
 // certificate authority certs, client certs, and client keys
 // for TLS gRPC connections.
 type CertificateConfig struct {
+	RequireTls     bool   `json:"require_tls"`
 	ClientCertPath string `json:"crt_path"`
 	ClientKeyPath  string `json:"key_path"`
 	CACertPath     string `json:"ca_crt_path"`
@@ -64,43 +64,54 @@ type Keymanager struct {
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	// Load the client certificates.
 	if cfg.Opts.RemoteCertificate == nil {
-		return nil, errors.New("certificates are required")
-	}
-	if cfg.Opts.RemoteCertificate.ClientCertPath == "" {
-		return nil, errors.New("client certificate is required")
-	}
-	if cfg.Opts.RemoteCertificate.ClientKeyPath == "" {
-		return nil, errors.New("client key is required")
-	}
-	clientPair, err := tls.LoadX509KeyPair(cfg.Opts.RemoteCertificate.ClientCertPath, cfg.Opts.RemoteCertificate.ClientKeyPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
+		return nil, errors.New("certificate configuration is missing")
 	}
 
-	// Load the CA for the server certificate if present.
-	cp := x509.NewCertPool()
-	if cfg.Opts.RemoteCertificate.CACertPath != "" {
-		serverCA, err := ioutil.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
+	var clientCreds credentials.TransportCredentials
+
+	if cfg.Opts.RemoteCertificate.RequireTls {
+		if cfg.Opts.RemoteCertificate.ClientCertPath == "" {
+			return nil, errors.New("client certificate is required")
+		}
+		if cfg.Opts.RemoteCertificate.ClientKeyPath == "" {
+			return nil, errors.New("client key is required")
+		}
+		clientPair, err := tls.LoadX509KeyPair(cfg.Opts.RemoteCertificate.ClientCertPath, cfg.Opts.RemoteCertificate.ClientKeyPath)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to obtain server's CA certificate")
+			return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
 		}
-		if !cp.AppendCertsFromPEM(serverCA) {
-			return nil, errors.Wrap(err, "failed to add server's CA certificate to pool")
-		}
-	}
 
-	tlsCfg := &tls.Config{
-		Certificates: []tls.Certificate{clientPair},
-		RootCAs:      cp,
+		// Load the CA for the server certificate if present.
+		cp := x509.NewCertPool()
+		if cfg.Opts.RemoteCertificate.CACertPath != "" {
+			serverCA, err := ioutil.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to obtain server's CA certificate")
+			}
+			if !cp.AppendCertsFromPEM(serverCA) {
+				return nil, errors.Wrap(err, "failed to add server's CA certificate to pool")
+			}
+		}
+
+		tlsCfg := &tls.Config{
+			Certificates: []tls.Certificate{clientPair},
+			RootCAs:      cp,
+			MinVersion:   tls.VersionTLS13,
+		}
+		clientCreds = credentials.NewTLS(tlsCfg)
 	}
-	clientCreds := credentials.NewTLS(tlsCfg)
 
 	grpcOpts := []grpc.DialOption{
-		// Require TLS with client certificate.
-		grpc.WithTransportCredentials(clientCreds),
 		// Receive large messages without erroring.
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(cfg.MaxMessageSize)),
 	}
+	if cfg.Opts.RemoteCertificate.RequireTls {
+		// Require TLS with client certificate.
+		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(clientCreds))
+	} else {
+		grpcOpts = append(grpcOpts, grpc.WithInsecure())
+	}
+
 	conn, err := grpc.Dial(cfg.Opts.RemoteAddr, grpcOpts...)
 	if err != nil {
 		return nil, errors.New("failed to connect to remote wallet")
@@ -126,7 +137,9 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 			log.Errorf("Could not close keymanager config file: %v", err)
 		}
 	}()
-	opts := &KeymanagerOpts{}
+	opts := &KeymanagerOpts{
+		RemoteCertificate: &CertificateConfig{RequireTls: true},
+	}
 	if err := json.Unmarshal(enc, opts); err != nil {
 		return nil, errors.Wrap(err, "could not JSON unmarshal")
 	}
@@ -144,6 +157,13 @@ func (opts *KeymanagerOpts) String() string {
 	var b strings.Builder
 	strAddr := fmt.Sprintf("%s: %s\n", au.BrightMagenta("Remote gRPC address"), opts.RemoteAddr)
 	if _, err := b.WriteString(strAddr); err != nil {
+		log.Error(err)
+		return ""
+	}
+	strRequireTls := fmt.Sprintf(
+		"%s: %t\n", au.BrightMagenta("Require TLS"), opts.RemoteCertificate.RequireTls,
+	)
+	if _, err := b.WriteString(strRequireTls); err != nil {
 		log.Error(err)
 		return ""
 	}
@@ -172,13 +192,13 @@ func (opts *KeymanagerOpts) String() string {
 }
 
 // KeymanagerOpts for the remote keymanager.
-func (k *Keymanager) KeymanagerOpts() *KeymanagerOpts {
-	return k.opts
+func (km *Keymanager) KeymanagerOpts() *KeymanagerOpts {
+	return km.opts
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
-func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	resp, err := k.client.ListValidatingPublicKeys(ctx, &ptypes.Empty{})
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	resp, err := km.client.ListValidatingPublicKeys(ctx, &ptypes.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not list accounts from remote server")
 	}
@@ -190,13 +210,13 @@ func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte,
 }
 
 // FetchAllValidatingPublicKeys fetches the list of all public keys, including disabled ones.
-func (dr *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return dr.FetchValidatingPublicKeys(ctx)
+func (km *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	return km.FetchValidatingPublicKeys(ctx)
 }
 
 // Sign signs a message for a validator key via a gRPC request.
-func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	resp, err := k.client.Sign(ctx, req)
+func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	resp, err := km.client.Sign(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -207,4 +227,12 @@ func (k *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bl
 		return nil, ErrSigningFailed
 	}
 	return bls.SignatureFromBytes(resp.Signature)
+}
+
+// SubscribeAccountChanges is currently NOT IMPLEMENTED for the remote keymanager.
+// INVOKING THIS FUNCTION HAS NO EFFECT!
+func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+	return event.NewSubscription(func(i <-chan struct{}) error {
+		return nil
+	})
 }

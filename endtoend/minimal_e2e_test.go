@@ -46,6 +46,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
 			ev.ProcessesDepositsInBlocks,
+			ev.VerifyBlockGraffiti,
 			ev.ActivatesDepositedValidators,
 			ev.DepositedValidatorsAreActive,
 			ev.ProposeVoluntaryExit,

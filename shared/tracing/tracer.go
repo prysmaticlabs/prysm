@@ -36,7 +36,7 @@ func Setup(serviceName, processName, endpoint string, sampleFraction float64, en
 			ServiceName: serviceName,
 			Tags: []jaeger.Tag{
 				jaeger.StringTag("process_name", processName),
-				jaeger.StringTag("version", version.GetVersion()),
+				jaeger.StringTag("version", version.Version()),
 			},
 		},
 		BufferMaxCount: 10000,
