@@ -122,22 +122,9 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 				// ID format does not match any valid options.
 				return nil, status.Errorf(codes.Internal, "Invalid state ID: "+stateIdString)
 			}
-			currentSlot := bs.ChainInfoFetcher.HeadSlot()
+			currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
 			if slot > currentSlot {
 				return nil, status.Errorf(codes.Internal, "Slot cannot be in the future")
-			}
-			e, blks, err := bs.BeaconDB.BlocksBySlot(ctx, slot)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get blocks: %v", err)
-			}
-			if !e {
-				return nil, status.Errorf(codes.NotFound, "No block exists")
-			}
-			if len(blks) != 1 {
-				return nil, status.Errorf(codes.Internal, "Multiple blocks exist in same slot")
-			}
-			if blks[0] == nil || blks[0].Block == nil {
-				return nil, status.Error(codes.Internal, "Nil block")
 			}
 			state, err = bs.StateGenService.StateBySlot(ctx, slot)
 			if err != nil {
@@ -276,11 +263,11 @@ func (bs *Server) stateRootBySlot(ctx context.Context, slot uint64) ([]byte, err
 	if slot > currentSlot {
 		return nil, status.Errorf(codes.Internal, "Slot cannot be in the future")
 	}
-	e, blks, err := bs.BeaconDB.BlocksBySlot(ctx, slot)
+	found, blks, err := bs.BeaconDB.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get blocks: %v", err)
 	}
-	if !e {
+	if !found {
 		return nil, status.Errorf(codes.NotFound, "No block exists")
 	}
 	if len(blks) != 1 {
