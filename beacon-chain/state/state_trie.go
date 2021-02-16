@@ -172,6 +172,27 @@ func (b *BeaconState) Copy() *BeaconState {
 	return dst
 }
 
+// ReleaseStateReference performs the inverse of a state copy,
+// where instead of adding a reference to the reference counter
+// and sharing the relevant large fields from the parent state
+// it instead decrements references for all shared fields and tries.
+// By allowing the invoking of this method, a routine that requires
+// access to state for temporary usage can then call this method
+// to remove the reference after the usage has been completed.
+//
+// The effect of this is 2-fold, it prevents the reference counts for
+// state fields from being bloated by already discarded states. As
+// those reference counts are only decremented when the object is
+// actually destroyed by the Garbage Collector in the finalizer,
+// this method provides a manual way to invoke it.
+//
+// The 2nd effect of using this is that it prevents unnecessary copies
+// of large fields. However great care must be taken when invoking this
+// method, as anytime this method has been called, the relevant state
+// MUST not be actively utilised by any routine in the process. This
+// part is important as to ensure no issues with memory corruption
+// or potential errors/panics from the access of data from a non-existent
+// state.
 func (b *BeaconState) ReleaseStateReference() {
 	for field, v := range b.sharedFieldReferences {
 		v.MinusRef()
