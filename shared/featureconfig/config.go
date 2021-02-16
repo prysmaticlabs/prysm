@@ -43,7 +43,6 @@ type Flags struct {
 	SlasherProtection                  bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	EnableEth1DataMajorityVote         bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnablePruningDepositProofs         bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
@@ -174,11 +173,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBlst.Name) {
 		log.Warn("Disabling new BLS library blst")
 		cfg.EnableBlst = false
-	}
-	cfg.EnablePruningDepositProofs = true
-	if ctx.Bool(disablePruningDepositProofs.Name) {
-		log.Warn("Disabling pruning deposit proofs")
-		cfg.EnablePruningDepositProofs = false
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		log.Warn("Using a larger gossip history for the node")

@@ -22,10 +22,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisablePruningDepositProofs = &cli.BoolFlag{
+		Name:   "disable-pruning-deposit-proofs",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedEnableSyncBacktracking,
 	deprecatedDisableSyncBacktracking,
+	deprecatedDisablePruningDepositProofs,
 }

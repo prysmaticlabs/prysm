@@ -77,11 +77,6 @@ var (
 		Name:  "use-check-point-cache",
 		Usage: "Enables check point info caching",
 	}
-	disablePruningDepositProofs = &cli.BoolFlag{
-		Name: "disable-pruning-deposit-proofs",
-		Usage: "Disables pruning deposit proofs when they are no longer needed." +
-			"This will probably significantly increase the amount of memory taken up by deposits.",
-	}
 	enableLargerGossipHistory = &cli.BoolFlag{
 		Name:  "enable-larger-gossip-history",
 		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
@@ -168,7 +163,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
-	disablePruningDepositProofs,
 	disableBroadcastSlashingFlag,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
