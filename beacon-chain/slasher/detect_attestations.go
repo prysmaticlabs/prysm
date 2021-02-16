@@ -169,8 +169,8 @@ func (s *Service) applyAttestationForValidator(
 	chunksByChunkIdx map[uint64]Chunker,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := types.Epoch(attestation.Source)
-	targetEpoch := types.Epoch(attestation.Target)
+	sourceEpoch := attestation.Source
+	targetEpoch := attestation.Target
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
 	chunk, ok := chunksByChunkIdx[chunkIdx]
 	if !ok {

@@ -122,7 +122,10 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				return err
 			}
 			for _, att := range attestations {
-				encEpoch := ssz.MarshalUint64(make([]byte, 0), att.Target)
+				encEpoch, err := att.Target.MarshalSSZ()
+				if err != nil {
+					return err
+				}
 				key := append(encIdx, encEpoch...)
 				value, err := encodeAttestationRecord(att)
 				if err != nil {
@@ -200,8 +203,16 @@ func encodeAttestationRecord(att *slashertypes.CompactAttestation) ([]byte, erro
 		return nil, errors.New("encoding nil attestation")
 	}
 	value := make([]byte, 48)
-	copy(value[0:8], ssz.MarshalUint64(make([]byte, 0), att.Source))
-	copy(value[8:16], ssz.MarshalUint64(make([]byte, 0), att.Target))
+	encSource, err := att.Source.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	encTarget, err := att.Target.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	copy(value[0:8], encSource)
+	copy(value[8:16], encTarget)
 	copy(value[16:], att.SigningRoot[:])
 	return value, nil
 }
@@ -213,9 +224,16 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.CompactAttestation, 
 	}
 	var sr [32]byte
 	copy(sr[:], encoded[16:])
+	var source, target types.Epoch
+	if err := source.UnmarshalSSZ(encoded[0:8]); err != nil {
+		return nil, err
+	}
+	if err := target.UnmarshalSSZ(encoded[8:16]); err != nil {
+		return nil, err
+	}
 	return &slashertypes.CompactAttestation{
-		Source:      ssz.UnmarshallUint64(encoded[0:8]),
-		Target:      ssz.UnmarshallUint64(encoded[8:16]),
+		Source:      source,
+		Target:      target,
 		SigningRoot: sr,
 	}, nil
 }
