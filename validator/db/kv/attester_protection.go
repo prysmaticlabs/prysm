@@ -350,11 +350,13 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
+		bucket.FillPercent = 1.0
 		for _, att := range atts {
 			pkBucket, err := bucket.CreateBucketIfNotExists(att.PubKey[:])
 			if err != nil {
 				return errors.Wrap(err, "could not create public key bucket")
 			}
+			pkBucket.FillPercent = 1.0
 			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(att.Source)
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(att.Target)
 
@@ -362,6 +364,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err != nil {
 				return errors.Wrap(err, "could not create signing roots bucket")
 			}
+			signingRootsBucket.FillPercent = 1.0
 			if err := signingRootsBucket.Put(targetEpochBytes, att.SigningRoot[:]); err != nil {
 				return errors.Wrapf(err, "could not save signing signing root for epoch %d", att.Target)
 			}
@@ -369,6 +372,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err != nil {
 				return errors.Wrap(err, "could not create source epochs bucket")
 			}
+			sourceEpochsBucket.FillPercent = 1.0
 
 			// There can be multiple attested target epochs per source epoch.
 			// If a previous list exists, we append to that list with the incoming target epoch.
