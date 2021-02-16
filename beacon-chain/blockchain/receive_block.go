@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -23,7 +22,6 @@ var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
@@ -82,44 +80,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	}
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
-
-	return nil
-}
-
-// ReceiveBlockInitialSync processes the input block for the purpose of initial syncing.
-// This method should only be used on blocks during initial syncing phase.
-func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockNoVerify")
-	defer span.End()
-	blockCopy := stateTrie.CopySignedBeaconBlock(block)
-
-	// Apply state transition on the new block.
-	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy, blockRoot); err != nil {
-		err := errors.Wrap(err, "could not process block")
-		traceutil.AnnotateError(span, err)
-		return err
-	}
-
-	// Send notification of the processed block to the state feed.
-	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockProcessed,
-		Data: &statefeed.BlockProcessedData{
-			Slot:        blockCopy.Block.Slot,
-			BlockRoot:   blockRoot,
-			SignedBlock: blockCopy,
-			Verified:    true,
-		},
-	})
-
-	// Reports on blockCopy and fork choice metrics.
-	reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
-
-	// Log state transition data.
-	log.WithFields(logrus.Fields{
-		"slot":         blockCopy.Block.Slot,
-		"attestations": len(blockCopy.Block.Body.Attestations),
-		"deposits":     len(blockCopy.Block.Body.Deposits),
-	}).Debug("Finished applying state transition")
 
 	return nil
 }
