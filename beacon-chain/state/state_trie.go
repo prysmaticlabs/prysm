@@ -216,8 +216,8 @@ func (b *BeaconState) ReleaseStateReference() {
 		b.valMapHandler = nil
 	}
 	// Remove references to all large arrays.
-	b.sharedFieldReferences = make(map[fieldIndex]*reference, 0)
-	b.stateFieldLeaves = make(map[fieldIndex]*FieldTrie, 0)
+	b.sharedFieldReferences = make(map[fieldIndex]*reference)
+	b.stateFieldLeaves = make(map[fieldIndex]*FieldTrie)
 	b.merkleLayers = [][][]byte{}
 
 	// Large arrays, infrequently changed, constant size.
