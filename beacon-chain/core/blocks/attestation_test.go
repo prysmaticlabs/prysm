@@ -751,10 +751,6 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		sigs = append(sigs, keys[u].Sign(root[:]))
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
-
-	b := testutil.NewBeaconBlock()
-	b.Block.Body.Attestations = []*ethpb.Attestation{att1, att2}
-	require.NoError(t, blocks.VerifyAttestationsSignatures(ctx, st, b))
 }
 
 func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing.T) {
