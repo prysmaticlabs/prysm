@@ -48,6 +48,7 @@ type Flags struct {
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
+	ManualStateReference               bool // ManualStateReference enables manual de-referencing of discarded beacon states.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -195,6 +196,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(updateHeadTimely.Name) {
 		log.Warn("Enabling update head timely feature")
 		cfg.UpdateHeadTimely = true
+	}
+	if ctx.Bool(manualStateReference.Name) {
+		log.Warn("Enabling manual state reference collection")
+		cfg.ManualStateReference = true
 	}
 	Init(cfg)
 }

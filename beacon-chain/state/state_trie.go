@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -194,6 +195,10 @@ func (b *BeaconState) Copy() *BeaconState {
 // or potential errors/panics from the access of data from a non-existent
 // state.
 func (b *BeaconState) ReleaseStateReference() {
+	// Exit if flag is not enabled.
+	if !featureconfig.Get().ManualStateReference {
+		return
+	}
 	if !b.HasInnerState() {
 		return
 	}

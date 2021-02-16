@@ -118,6 +118,10 @@ var (
 		Name:  "update-head-timely",
 		Usage: "Improves update head time by updating head right after state transition",
 	}
+	manualStateReference = &cli.BoolFlag{
+		Name:  "manual-state-reference",
+		Usage: "Manually clears out discarded portions/fields of the beacon state rather than relying on the finalizer.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -126,6 +130,7 @@ var devModeFlags = []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	manualStateReference,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -173,6 +178,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	manualStateReference,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
